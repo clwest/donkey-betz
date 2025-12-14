@@ -1,5 +1,5 @@
 """
-Discord Voice AI Service - Session 438
+Discord Voice AI Service - Session 438/441
 
 Voice channel integration with ElevenLabs TTS and OpenAI Whisper STT.
 Enables voice-based interaction with the AI assistant in Discord voice channels.
@@ -9,6 +9,8 @@ Features:
 - Speak responses using ElevenLabs voices
 - Listen and transcribe using Whisper
 - Process voice commands like text commands
+- Record user voice for cloning (Session 441)
+- Clone voices via ElevenLabs API (Session 441)
 """
 
 import os
@@ -16,16 +18,53 @@ import io
 import logging
 import asyncio
 import tempfile
-from typing import Optional, Dict, Any, Callable
+import wave
+import struct
+from typing import Optional, Dict, Any, Callable, List
 from datetime import datetime
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import discord
 from discord.ext import commands
 from openai import OpenAI
 import httpx
 
+# Voice receiving extension for discord.py
+try:
+    import discord.ext.voice_recv as voice_recv
+    VOICE_RECV_AVAILABLE = True
+except ImportError:
+    VOICE_RECV_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# Load opus library for voice support (required on macOS)
+def ensure_opus_loaded():
+    """Ensure opus library is loaded for voice support."""
+    if discord.opus.is_loaded():
+        return True
+
+    opus_paths = [
+        '/opt/homebrew/lib/libopus.dylib',  # macOS Homebrew ARM
+        '/usr/local/lib/libopus.dylib',      # macOS Homebrew Intel
+        '/usr/lib/x86_64-linux-gnu/libopus.so.0',  # Linux
+        'opus',  # System default
+    ]
+
+    for path in opus_paths:
+        try:
+            discord.opus.load_opus(path)
+            logger.info(f"Opus library loaded from {path}")
+            return True
+        except Exception:
+            continue
+
+    logger.error("Could not load opus library from any known path!")
+    return False
+
+# Try to load opus at import time
+ensure_opus_loaded()
 
 # ElevenLabs configuration
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY') or os.getenv('ELEVEN_LABS_API')
@@ -63,6 +102,336 @@ class VoiceSession:
     current_voice: str = DEFAULT_VOICE
     conversation_history: list = field(default_factory=list)
     transcribe_callback: Optional[Callable] = None
+
+
+# =============================================================================
+# Session 441: Voice Recording for Cloning
+# =============================================================================
+
+@dataclass
+class RecordingSession:
+    """Tracks an active voice recording session for voice cloning."""
+    user_id: int
+    guild_id: int
+    channel_id: int
+    started_at: datetime = field(default_factory=datetime.now)
+    audio_chunks: List[bytes] = field(default_factory=list)
+    is_active: bool = True
+    output_path: Optional[str] = None
+
+
+class VoiceRecorder:
+    """
+    Records user voice from Discord for voice cloning.
+
+    Uses discord-ext-voice-recv to capture audio from voice channels.
+    Audio is saved as WAV format suitable for ElevenLabs cloning.
+    """
+
+    def __init__(self):
+        self.active_recordings: Dict[int, RecordingSession] = {}  # user_id -> RecordingSession
+        self.recording_dir = Path(tempfile.gettempdir()) / "discord_voice_recordings"
+        self.recording_dir.mkdir(exist_ok=True)
+
+        if not VOICE_RECV_AVAILABLE:
+            logger.warning("discord-ext-voice-recv not available - voice recording disabled")
+
+    def is_available(self) -> bool:
+        """Check if voice recording is available."""
+        return VOICE_RECV_AVAILABLE
+
+    def start_recording(self, user_id: int, guild_id: int, channel_id: int) -> Optional[RecordingSession]:
+        """Start recording a user's voice."""
+        if not VOICE_RECV_AVAILABLE:
+            logger.error("Cannot start recording - voice_recv not available")
+            return None
+
+        # Stop any existing recording for this user
+        if user_id in self.active_recordings:
+            self.stop_recording(user_id)
+
+        session = RecordingSession(
+            user_id=user_id,
+            guild_id=guild_id,
+            channel_id=channel_id
+        )
+        self.active_recordings[user_id] = session
+
+        logger.info(f"Started recording for user {user_id} in channel {channel_id}")
+        return session
+
+    def add_audio_chunk(self, user_id: int, audio_data: bytes) -> bool:
+        """Add audio data to a user's recording session."""
+        session = self.active_recordings.get(user_id)
+        if not session or not session.is_active:
+            return False
+
+        session.audio_chunks.append(audio_data)
+        return True
+
+    def stop_recording(self, user_id: int) -> Optional[str]:
+        """
+        Stop recording and save the audio to a WAV file.
+
+        Returns the path to the saved audio file, or None if failed.
+        """
+        session = self.active_recordings.get(user_id)
+        if not session:
+            return None
+
+        session.is_active = False
+
+        if not session.audio_chunks:
+            logger.warning(f"No audio data recorded for user {user_id}")
+            del self.active_recordings[user_id]
+            return None
+
+        # Combine all audio chunks
+        combined_audio = b''.join(session.audio_chunks)
+
+        # Save as WAV file
+        # Discord audio is 48kHz, 16-bit, stereo PCM
+        output_path = self.recording_dir / f"voice_clone_{user_id}_{int(datetime.now().timestamp())}.wav"
+
+        try:
+            with wave.open(str(output_path), 'wb') as wav_file:
+                wav_file.setnchannels(2)  # Stereo
+                wav_file.setsampwidth(2)  # 16-bit
+                wav_file.setframerate(48000)  # 48kHz
+                wav_file.writeframes(combined_audio)
+
+            session.output_path = str(output_path)
+            duration = len(combined_audio) / (48000 * 2 * 2)  # samples / (rate * channels * bytes_per_sample)
+
+            logger.info(f"Saved recording for user {user_id}: {output_path} ({duration:.1f} seconds)")
+
+            # Clean up session but keep reference for retrieval
+            return str(output_path)
+
+        except Exception as e:
+            logger.error(f"Failed to save recording for user {user_id}: {e}")
+            return None
+        finally:
+            # Clean up the active session
+            if user_id in self.active_recordings:
+                del self.active_recordings[user_id]
+
+    def get_recording_duration(self, user_id: int) -> float:
+        """Get the current recording duration in seconds."""
+        session = self.active_recordings.get(user_id)
+        if not session:
+            return 0.0
+
+        total_bytes = sum(len(chunk) for chunk in session.audio_chunks)
+        # 48kHz, stereo, 16-bit = 48000 * 2 * 2 = 192000 bytes per second
+        return total_bytes / 192000.0
+
+    def is_recording(self, user_id: int) -> bool:
+        """Check if a user is currently being recorded."""
+        session = self.active_recordings.get(user_id)
+        return session is not None and session.is_active
+
+    def cleanup_old_files(self, max_age_hours: int = 24):
+        """Clean up recording files older than max_age_hours."""
+        import time
+        now = time.time()
+        max_age_seconds = max_age_hours * 3600
+
+        for file_path in self.recording_dir.glob("voice_clone_*.wav"):
+            if now - file_path.stat().st_mtime > max_age_seconds:
+                try:
+                    file_path.unlink()
+                    logger.info(f"Cleaned up old recording: {file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to clean up {file_path}: {e}")
+
+
+class VoiceRecordingSink:
+    """
+    Audio sink that captures voice data for a specific user.
+
+    Used with discord-ext-voice-recv to capture audio from voice channels.
+    """
+
+    def __init__(self, recorder: VoiceRecorder, target_user_id: int):
+        self.recorder = recorder
+        self.target_user_id = target_user_id
+
+    def write(self, user: discord.User, data: voice_recv.VoiceData):
+        """Called when audio data is received from a user."""
+        if user.id == self.target_user_id:
+            # data.pcm contains the raw PCM audio data
+            self.recorder.add_audio_chunk(user.id, data.pcm)
+
+    def cleanup(self):
+        """Called when the sink is stopped."""
+        pass
+
+
+# =============================================================================
+# Session 441: ElevenLabs Voice Cloning API
+# =============================================================================
+
+class ElevenLabsVoiceCloner:
+    """
+    Handles voice cloning via ElevenLabs Instant Voice Clone (IVC) API.
+
+    Endpoint: POST https://api.elevenlabs.io/v1/voices/add
+    """
+
+    def __init__(self):
+        self.api_key = ELEVENLABS_API_KEY
+        self.api_url = f"{ELEVENLABS_API_URL}/voices/add"
+
+    def is_available(self) -> bool:
+        """Check if ElevenLabs API is configured."""
+        return bool(self.api_key)
+
+    async def clone_voice(
+        self,
+        audio_file_path: str,
+        voice_name: str,
+        description: str = "",
+        remove_background_noise: bool = True,
+        labels: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Clone a voice from an audio file using ElevenLabs IVC API.
+
+        Args:
+            audio_file_path: Path to the WAV audio file
+            voice_name: Name for the cloned voice
+            description: Optional description of the voice
+            remove_background_noise: Whether to apply noise reduction
+            labels: Optional categorization labels
+
+        Returns:
+            Dict with 'voice_id' on success, or 'error' on failure
+        """
+        if not self.is_available():
+            return {"error": "ElevenLabs API key not configured"}
+
+        if not os.path.exists(audio_file_path):
+            return {"error": f"Audio file not found: {audio_file_path}"}
+
+        # Check file size (ElevenLabs has limits)
+        file_size = os.path.getsize(audio_file_path)
+        if file_size > 10 * 1024 * 1024:  # 10MB limit
+            return {"error": "Audio file too large (max 10MB)"}
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # Prepare multipart form data
+                with open(audio_file_path, 'rb') as f:
+                    files = {
+                        'files': (os.path.basename(audio_file_path), f, 'audio/wav')
+                    }
+
+                    data = {
+                        'name': voice_name,
+                        'remove_background_noise': str(remove_background_noise).lower()
+                    }
+
+                    if description:
+                        data['description'] = description
+
+                    if labels:
+                        import json
+                        data['labels'] = json.dumps(labels)
+
+                    headers = {
+                        'xi-api-key': self.api_key
+                    }
+
+                    # Read file content for the request
+                    f.seek(0)
+                    file_content = f.read()
+
+                # Make the request
+                files = [
+                    ('files', (os.path.basename(audio_file_path), file_content, 'audio/wav'))
+                ]
+
+                response = await client.post(
+                    self.api_url,
+                    data=data,
+                    files=files,
+                    headers=headers
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"Voice cloned successfully: {result.get('voice_id')}")
+                    return {
+                        "voice_id": result.get("voice_id"),
+                        "requires_verification": result.get("requires_verification", False)
+                    }
+                else:
+                    error_detail = response.text
+                    logger.error(f"ElevenLabs API error: {response.status_code} - {error_detail}")
+                    return {"error": f"API error ({response.status_code}): {error_detail[:200]}"}
+
+        except Exception as e:
+            logger.error(f"Voice cloning failed: {e}")
+            return {"error": str(e)}
+
+    async def get_voice_info(self, voice_id: str) -> Dict[str, Any]:
+        """Get information about a cloned voice."""
+        if not self.is_available():
+            return {"error": "ElevenLabs API key not configured"}
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{ELEVENLABS_API_URL}/voices/{voice_id}",
+                    headers={'xi-api-key': self.api_key}
+                )
+
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    return {"error": f"API error: {response.status_code}"}
+
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def delete_voice(self, voice_id: str) -> bool:
+        """Delete a cloned voice from ElevenLabs."""
+        if not self.is_available():
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{ELEVENLABS_API_URL}/voices/{voice_id}",
+                    headers={'xi-api-key': self.api_key}
+                )
+                return response.status_code == 200
+
+        except Exception as e:
+            logger.error(f"Failed to delete voice {voice_id}: {e}")
+            return False
+
+
+# Global instances
+voice_recorder: Optional[VoiceRecorder] = None
+voice_cloner: Optional[ElevenLabsVoiceCloner] = None
+
+
+def get_voice_recorder() -> VoiceRecorder:
+    """Get or create the global voice recorder instance."""
+    global voice_recorder
+    if voice_recorder is None:
+        voice_recorder = VoiceRecorder()
+    return voice_recorder
+
+
+def get_voice_cloner() -> ElevenLabsVoiceCloner:
+    """Get or create the global voice cloner instance."""
+    global voice_cloner
+    if voice_cloner is None:
+        voice_cloner = ElevenLabsVoiceCloner()
+    return voice_cloner
 
 
 class DiscordVoiceService:
@@ -175,11 +544,39 @@ class DiscordVoiceService:
                 f.write(audio_data)
                 temp_path = f.name
 
-            # Play audio
-            audio_source = discord.FFmpegPCMAudio(temp_path)
+            logger.info(f"Audio saved to {temp_path}, size: {len(audio_data)} bytes")
+
+            # Pre-convert MP3 to WAV with correct format using subprocess
+            # Discord needs: 48kHz, stereo, 16-bit PCM
+            import subprocess
+            wav_path = temp_path.replace('.mp3', '.wav')
+
+            convert_cmd = [
+                'ffmpeg', '-y', '-i', temp_path,
+                '-ar', '48000',  # 48kHz sample rate
+                '-ac', '2',      # Stereo
+                '-acodec', 'pcm_s16le',  # 16-bit PCM
+                '-f', 'wav',
+                wav_path
+            ]
+
+            result = subprocess.run(convert_cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f"FFmpeg conversion failed: {result.stderr}")
+                return False
+
+            logger.info(f"Converted to WAV: {wav_path}")
+
+            # Use the converted WAV file - discord.py handles the rest
+            audio_source = discord.FFmpegPCMAudio(wav_path)
+
+            # Wrap in volume transformer for volume control
+            audio_source = discord.PCMVolumeTransformer(audio_source, volume=2.0)
+
+            logger.info(f"Playing audio in voice channel...")
             session.voice_client.play(
                 audio_source,
-                after=lambda e: self._cleanup_audio(temp_path, e)
+                after=lambda e: self._cleanup_audio_files([temp_path, wav_path], e)
             )
 
             # Wait for playback to complete
@@ -190,7 +587,9 @@ class DiscordVoiceService:
             return True
 
         except Exception as e:
+            import traceback
             logger.error(f"Error speaking: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             session.is_speaking = False
             return False
 
@@ -207,7 +606,7 @@ class DiscordVoiceService:
 
             data = {
                 "text": text,
-                "model_id": "eleven_monolingual_v1",
+                "model_id": "eleven_turbo_v2",  # Updated: old models deprecated for free tier
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.75
@@ -226,6 +625,17 @@ class DiscordVoiceService:
         except Exception as e:
             logger.error(f"Error generating speech: {e}")
             return None
+
+    def _cleanup_audio_files(self, paths: list, error: Optional[Exception]):
+        """Clean up multiple temp audio files after playback."""
+        if error:
+            logger.error(f"Audio playback error: {error}")
+        for path in paths:
+            try:
+                if os.path.exists(path):
+                    os.unlink(path)
+            except Exception as e:
+                logger.warning(f"Could not delete temp file {path}: {e}")
 
     def _cleanup_audio(self, path: str, error: Optional[Exception]):
         """Clean up temp audio file after playback."""
@@ -361,6 +771,55 @@ class DiscordVoiceService:
     def get_available_voices(self) -> list:
         """Get list of available voices."""
         return list(ELEVENLABS_VOICES.keys())
+
+    async def test_beep(self, session: VoiceSession) -> bool:
+        """Play a simple test beep to verify voice works."""
+        import subprocess
+
+        if not session.voice_client.is_connected():
+            logger.warning("Not connected to voice channel")
+            return False
+
+        try:
+            # Ensure opus is loaded
+            ensure_opus_loaded()
+            logger.info(f"Opus loaded: {discord.opus.is_loaded()}")
+
+            # Generate a 2-second beep tone as MP3 (FFmpegOpusAudio works better with this)
+            beep_path = '/tmp/discord_test_beep.mp3'
+            result = subprocess.run([
+                'ffmpeg', '-y', '-f', 'lavfi',
+                '-i', 'sine=frequency=440:duration=3',
+                '-ar', '48000', '-ac', '2',
+                '-b:a', '128k',
+                beep_path
+            ], capture_output=True, text=True)
+
+            if result.returncode != 0:
+                logger.error(f"FFmpeg beep generation failed: {result.stderr}")
+                return False
+
+            logger.info(f"Test beep generated at {beep_path}")
+
+            # Use FFmpegOpusAudio - specifically designed for Discord
+            audio_source = await discord.FFmpegOpusAudio.from_probe(beep_path)
+
+            logger.info(f"Audio source created, playing...")
+            session.voice_client.play(
+                audio_source,
+                after=lambda e: logger.info(f"Beep finished, error: {e}")
+            )
+
+            while session.voice_client.is_playing():
+                await asyncio.sleep(0.1)
+
+            logger.info("Beep playback complete")
+            return True
+        except Exception as e:
+            import traceback
+            logger.error(f"Test beep error: {e}")
+            logger.error(traceback.format_exc())
+            return False
 
 
 # Global instance (initialized when bot starts)
