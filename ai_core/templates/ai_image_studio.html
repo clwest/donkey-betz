@@ -1604,6 +1604,13 @@
                 </button>
             </li>
 
+            <!-- Session 451: User Upload -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" title="Upload your own videos and images">
+                    📤 Upload
+                </button>
+            </li>
+
             <!-- Session 100: Leadership Dashboard -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="leadership-tab" data-bs-toggle="tab" data-bs-target="#leadership" type="button" role="tab" title="Your AI-Human Co-Leadership Dashboard">
@@ -6757,6 +6764,10 @@
             <!-- SESSION 450: VOICE MARKETPLACE TAB -->
             {% include "components/panels/voice_marketplace_panel.html" %}
             <!-- END VOICE MARKETPLACE TAB -->
+
+            <!-- SESSION 451: USER UPLOAD TAB -->
+            {% include "components/panels/upload_panel.html" %}
+            <!-- END USER UPLOAD TAB -->
 
             <!-- SESSION 100: LEADERSHIP DASHBOARD TAB -->
             <div class="tab-pane fade" id="leadership" role="tabpanel">

@@ -21,7 +21,8 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.django_test_settings")
+# Session 416: Use main settings to ensure all config is available
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 import django
 django.setup()
@@ -445,6 +446,77 @@ def override_rate_limits():
 
 
 # =============================================================================
+# Sci-Fi Feature Fixtures (Session 416)
+# =============================================================================
+
+@pytest.fixture
+def agent(db):
+    """Create a test agent for sci-fi features."""
+    from core.models_unified_system import Agent
+    return Agent.objects.create(
+        name='TestAgent',
+        agent_type='test',
+        description='A test agent for unit testing',
+        system_prompt='You are a test agent.',
+        is_active=True
+    )
+
+
+@pytest.fixture
+def agent_dream(agent, db):
+    """Create a test agent dream."""
+    from core.models_unified_system import AgentDream
+    return AgentDream.objects.create(
+        agent=agent,
+        title='Test Dream',
+        content='This is a test dream about creative possibilities.',
+        dream_type='wild_thought',
+        inspiration='Unit testing',
+        vividness=0.8,
+        creativity=0.9,
+        shown_to_user=True
+    )
+
+
+@pytest.fixture
+def agent_decision(agent, db):
+    """Create a test boardroom decision."""
+    from core.models_unified_system import AgentDecisionSummary
+    return AgentDecisionSummary.objects.create(
+        topic='Test Decision Topic',
+        decision_type='product',
+        impact_area='pipeline',
+        key_insights=['Insight 1', 'Insight 2'],
+        recommended_stance='Test recommendation',
+        suggested_feature='Test feature suggestion',
+        rationale='Test rationale',
+        participants=[agent.name],
+        status='draft',
+        is_canonical=False,
+        source_type='conversation',
+        source_id=str(agent.id),
+        source_topic='Test topic'
+    )
+
+
+@pytest.fixture
+def agent_evolution(agent, db):
+    """Create a test agent evolution record."""
+    from core.models_unified_system import AgentEvolution
+    return AgentEvolution.objects.create(
+        agent=agent,
+        level=2,
+        level_title='Apprentice',
+        total_xp=150,
+        lifetime_xp=150,
+        prestige=0,
+        tasks_completed=10,
+        tasks_failed=1,
+        success_rate=90.9
+    )
+
+
+# =============================================================================
 # Marker Definitions
 # =============================================================================
 
@@ -458,4 +530,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers", "external_api: mark test as requiring external API access"
+    )
+    config.addinivalue_line(
+        "markers", "golden_path: mark test as a golden path smoke test"
     )

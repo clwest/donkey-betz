@@ -99,6 +99,13 @@ You MUST maintain consistency across all episodes:
 - Unified visual style
 - Consistent voice/tone
 
+USER UPLOADS (Session 451):
+Users can upload their own videos and images to use in series:
+- Use list_uploaded_content to see available uploaded media
+- Use use_uploaded_content to assign uploaded videos/images to episodes
+- Uploaded videos can replace AI-generated videos (usage: main_video)
+- Uploaded images can serve as character or scene references (usage: character_reference, scene_reference)
+
 When delegating to agents, provide detailed context including:
 - Series theme and target audience
 - Character descriptions (locked style)
@@ -275,6 +282,58 @@ Available agents to delegate to:
                     "required": ["episode_number", "title", "synopsis"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "use_uploaded_content",
+                "description": "Use user-uploaded videos or images in the series instead of generating new content. This allows incorporating existing media into episodes.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["video", "image"],
+                            "description": "Type of content to use"
+                        },
+                        "content_id": {
+                            "type": "string",
+                            "description": "ID of the uploaded video or image to use"
+                        },
+                        "episode_number": {
+                            "type": "integer",
+                            "description": "Episode number to use this content in (optional, applies to next generated episode if not specified)"
+                        },
+                        "usage": {
+                            "type": "string",
+                            "enum": ["background", "main_video", "character_reference", "scene_reference"],
+                            "description": "How to use the uploaded content in the episode"
+                        }
+                    },
+                    "required": ["content_type", "content_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_uploaded_content",
+                "description": "List all user-uploaded videos and images available for use in the series",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["video", "image", "all"],
+                            "description": "Filter by content type (default: all)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of items to return (default: 20)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -288,6 +347,9 @@ Available agents to delegate to:
         self._characters = []
         self._episode_results = []
         self._series_id = None  # Track current series for DB updates
+        # Session 451: Uploaded content for use in episodes
+        # Format: {episode_number: {'video': content_info, 'image': content_info}}
+        self._uploaded_content = {}
 
     @property
     def learning_service(self):
@@ -658,6 +720,13 @@ Start by researching the topic to understand trends and audience preferences.
             elif tool_name == "generate_episode":
                 return self._handle_generate_episode(arguments)
 
+            # Session 451: User upload integration
+            elif tool_name == "use_uploaded_content":
+                return self._handle_use_uploaded_content(arguments)
+
+            elif tool_name == "list_uploaded_content":
+                return self._handle_list_uploaded_content(arguments)
+
             else:
                 return {"error": f"Unknown tool: {tool_name}"}
 
@@ -835,6 +904,146 @@ Start by researching the topic to understand trends and audience preferences.
             'message': f"Defined character: {character['name']} ({character['role']})"
         }
 
+    # Session 451: User upload integration handlers
+
+    def _handle_use_uploaded_content(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle use_uploaded_content tool call - associates uploaded media with an episode.
+
+        This allows users to use their own uploaded videos/images in series episodes
+        instead of AI-generated content.
+        """
+        content_type = arguments.get('content_type')  # 'video' or 'image'
+        content_id = arguments.get('content_id')
+        episode_number = arguments.get('episode_number', 0)  # 0 means apply to next episode
+        usage = arguments.get('usage', 'main_video')
+
+        if not content_type or not content_id:
+            return {'success': False, 'error': 'content_type and content_id are required'}
+
+        # Verify the content exists and belongs to the user
+        content_info = None
+        try:
+            if content_type == 'video':
+                from content.models import VideoHistory
+                video = VideoHistory.objects.get(id=content_id, user=self.user)
+                content_info = {
+                    'id': str(video.id),
+                    'type': 'video',
+                    'filename': video.original_filename or video.title,
+                    'url': video.video_url if hasattr(video, 'video_url') else None,
+                    'file_path': video.video_file.url if video.video_file else None,
+                    'duration': video.duration,
+                    'resolution': f"{video.width}x{video.height}" if video.width else None,
+                    'usage': usage
+                }
+            elif content_type == 'image':
+                from content.models import ImageHistory
+                image = ImageHistory.objects.get(id=content_id, user=self.user)
+                content_info = {
+                    'id': str(image.id),
+                    'type': 'image',
+                    'filename': image.original_filename or image.prompt[:50],
+                    'url': image.image_url,
+                    'file_path': image.original_file.url if image.original_file else None,
+                    'size': f"{image.width}x{image.height}" if image.width else None,
+                    'usage': usage
+                }
+            else:
+                return {'success': False, 'error': f'Invalid content_type: {content_type}'}
+
+        except Exception as e:
+            logger.error(f"Failed to find uploaded content {content_id}: {e}")
+            return {'success': False, 'error': f'Content not found: {content_id}'}
+
+        # Store the content for use in episode generation
+        if episode_number not in self._uploaded_content:
+            self._uploaded_content[episode_number] = {}
+        self._uploaded_content[episode_number][content_type] = content_info
+
+        return {
+            'success': True,
+            'content': content_info,
+            'episode_number': episode_number if episode_number > 0 else 'next',
+            'message': f"Registered {content_type} '{content_info['filename']}' for episode {episode_number if episode_number > 0 else 'generation'}"
+        }
+
+    def _handle_list_uploaded_content(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle list_uploaded_content tool call - lists user's available uploaded media.
+        """
+        content_type = arguments.get('content_type', 'all')
+        limit = arguments.get('limit', 20)
+
+        results = {'videos': [], 'images': []}
+
+        try:
+            # Get uploaded videos
+            if content_type in ('all', 'video'):
+                from content.models import VideoHistory
+                videos = VideoHistory.objects.filter(
+                    user=self.user,
+                    source_type='uploaded'
+                ).order_by('-created_at')[:limit]
+
+                for video in videos:
+                    results['videos'].append({
+                        'id': str(video.id),
+                        'filename': video.original_filename or video.title,
+                        'duration': video.duration,
+                        'resolution': f"{video.width}x{video.height}" if video.width else None,
+                        'created_at': video.created_at.isoformat() if video.created_at else None
+                    })
+
+            # Get uploaded images
+            if content_type in ('all', 'image'):
+                from content.models import ImageHistory
+                images = ImageHistory.objects.filter(
+                    user=self.user,
+                    source_type='uploaded'
+                ).order_by('-created_at')[:limit]
+
+                for image in images:
+                    results['images'].append({
+                        'id': str(image.id),
+                        'filename': image.original_filename or image.prompt[:50] if image.prompt else 'Untitled',
+                        'size': f"{image.width}x{image.height}" if image.width else None,
+                        'created_at': image.created_at.isoformat() if image.created_at else None
+                    })
+
+        except Exception as e:
+            logger.error(f"Failed to list uploaded content: {e}")
+            return {'success': False, 'error': str(e)}
+
+        return {
+            'success': True,
+            'videos': results['videos'],
+            'images': results['images'],
+            'total_videos': len(results['videos']),
+            'total_images': len(results['images']),
+            'message': f"Found {len(results['videos'])} videos and {len(results['images'])} images"
+        }
+
+    def _get_uploaded_content(self, episode_number: int, content_type: str) -> Optional[Dict[str, Any]]:
+        """
+        Get uploaded content for a specific episode and content type.
+
+        Checks both episode-specific registrations and fallback to episode 0 (global).
+        """
+        # Check episode-specific first
+        if episode_number in self._uploaded_content:
+            content = self._uploaded_content[episode_number].get(content_type)
+            if content:
+                return content
+
+        # Fallback to global (episode 0)
+        if 0 in self._uploaded_content:
+            content = self._uploaded_content[0].get(content_type)
+            if content:
+                return content
+
+        return None
+
     def _handle_generate_episode(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle generate_episode tool call - creates/updates SeriesEpisode record.
@@ -888,11 +1097,32 @@ Start by researching the topic to understand trends and audience preferences.
             except Exception as e:
                 logger.error(f"Failed to get/create SeriesEpisode: {e}")
 
-        # 1. Generate character/scene images (with retry logic for reliability)
+        # 1. Generate character/scene images (check for uploads first - Session 451)
         character_result = None
         style_preset = self._style_config.get('style_preset', 'pixar')
         logger.info(f"Episode {episode_number}: self._characters = {len(self._characters)} characters, style={style_preset}")
-        if self._characters:
+
+        # Check for uploaded image to use as reference
+        uploaded_image = self._get_uploaded_content(episode_number, 'image')
+        if uploaded_image and uploaded_image.get('usage') in ('character_reference', 'scene_reference'):
+            # Use uploaded image as reference
+            logger.info(f"Using uploaded image reference for episode {episode_number}: {uploaded_image.get('filename')}")
+            episode_result['assets']['images'] = [{
+                'source': 'uploaded',
+                'id': uploaded_image.get('id'),
+                'url': uploaded_image.get('url') or uploaded_image.get('file_path'),
+                'filename': uploaded_image.get('filename'),
+                'usage': uploaded_image.get('usage')
+            }]
+            character_result = {
+                'success': True,
+                'source': 'uploaded',
+                'images': episode_result['assets']['images'],
+                'character': self._characters[0]['name'] if self._characters else 'reference'
+            }
+
+        elif self._characters:
+            # Generate images (original behavior)
             main_character = self._characters[0]
             char_name = main_character.get('name', 'character')
             # Keep description short (max 100 chars) to avoid Stability AI 400 errors
@@ -950,9 +1180,26 @@ Start by researching the topic to understand trends and audience preferences.
                 episode_result['assets']['voice'] = voice_result.data
                 voice_result_data = voice_result.data
 
-        # 4. Generate video (if we have images)
+        # 4. Generate video (check for uploaded content first - Session 451)
         video_result_data = None
-        if episode_result['assets'].get('images'):
+
+        # Check if user has registered uploaded video for this episode
+        uploaded_video = self._get_uploaded_content(episode_number, 'video')
+        if uploaded_video:
+            # Use uploaded video instead of generating
+            logger.info(f"Using uploaded video for episode {episode_number}: {uploaded_video.get('filename')}")
+            video_result_data = {
+                'source': 'uploaded',
+                'video_id': uploaded_video.get('id'),
+                'filename': uploaded_video.get('filename'),
+                'url': uploaded_video.get('url') or uploaded_video.get('file_path'),
+                'duration': uploaded_video.get('duration'),
+                'resolution': uploaded_video.get('resolution')
+            }
+            episode_result['assets']['video'] = video_result_data
+
+        elif episode_result['assets'].get('images'):
+            # Generate video from images (original behavior)
             first_image = episode_result['assets']['images'][0]
             image_id = first_image.get('id') if isinstance(first_image, dict) else None
 
