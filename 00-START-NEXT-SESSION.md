@@ -6,6 +6,31 @@
 
 ---
 
+## SESSION 453 PRIORITY: Personal Assistant Routing Overhaul
+
+**READ FIRST:** `docs/handoffs/SESSION_453_PERSONAL_ASSISTANT_ROUTING_OVERHAUL.md`
+
+### Why This Matters
+For the Golden Goose Strategy to work, users must TRUST the Personal Assistant to:
+- Route to correct agents without micromanagement
+- Know when to answer directly vs delegate
+- Suggest research before creation for business queries
+
+### Key Issues to Fix
+1. **Question detection is fuzzy** - "What's trending?" routes to agent instead of direct answer
+2. **Business research guard too simplistic** - Misses research opportunities
+3. **Fragmented sources of truth** - Keywords defined in 4+ places
+4. **Semantic routing fails silently** - No retry logic
+5. **No routing analytics** - Can't track what's working
+
+### Implementation Plan
+- Phase 1: Quick reliability fixes (question detection, logging)
+- Phase 2: Business intelligence routing (smart suggestions)
+- Phase 3: Unified registry (single source of truth)
+- Phase 4: Analytics dashboard (track accuracy)
+
+---
+
 ## The Golden Goose Strategy
 
 **READ THIS FIRST:** `docs/GOLDEN_GOOSE_STRATEGY.md`
