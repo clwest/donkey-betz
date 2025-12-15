@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 440 (December 13, 2025)
+**Last Updated:** Session 456 (December 15, 2025)
 
 ---
 
@@ -38,6 +38,7 @@
 | **Training Data Collection** | **14 Datasets** | **Production (Session 420)** |
 | **Voice Marketplace** | **14 API Endpoints** | **Production (Session 440)** |
 | **Content Pipeline** | **6 Tiers ($5-$50K)** | **Production (Session 440)** |
+| **Voice Interview** | **Whisper Transcription** | **Production (Session 456)** |
 
 ---
 
@@ -505,6 +506,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/create <prompt>` | Generate an image with AI | Core |
 | `/research <topic>` | Search spider data | Core |
 | `/clear` | Clear conversation history | Core |
+| `/sessions [action]` | View/manage sessions across web + Discord | Session 455 |
 | `/link <code>` | Link Discord to web account | Core |
 | `/unlink` | Check link status | Core |
 | `/gallery [count]` | View your recent images (#320, #321...) | Phase 1 |
@@ -594,6 +596,34 @@ Link your Discord account to your AI Studio web account so images created via `/
 - `POST /api/discord/unlink/` - Remove Discord link
 - `POST /api/discord/verify-link-code/` - Bot calls this to verify & link
 
+### Cross-Platform Session Continuity (Session 455)
+
+Resume conversations seamlessly between web app and Discord. Start a conversation on web, continue on Discord mobile, finish on web.
+
+**How It Works:**
+1. All conversations stored in database with platform tracking
+2. Linked accounts share sessions across platforms
+3. 24-hour session expiry (extended from 2 hours)
+4. Auto-generated session titles for easy identification
+
+**Discord Commands:**
+- `/sessions list` - Show active sessions from both web and Discord
+- `/sessions info` - Show current session details
+- `/sessions resume` - Instructions for resuming sessions
+
+**Session API Endpoints:**
+- `GET /api/sessions/active/` - List all active sessions
+- `GET /api/sessions/<id>/` - Get session details and history
+- `POST /api/sessions/resume/` - Resume session from another platform
+- `POST /api/sessions/end/` - End a session (mark inactive)
+- `GET /api/sessions/status/` - Cross-platform sync status
+
+**Database Fields (ChatConversation):**
+- `platform` - Where message originated (web, discord, api)
+- `discord_user_id` - Discord user for unlinked users
+- `session_title` - Auto-generated from first message
+- `session_active` - Whether session can be resumed
+
 ### Notification Types
 
 | Type | Channel | Trigger |
@@ -647,6 +677,45 @@ Requires `DISCORD_BOT_TOKEN` environment variable. When set, all agent activity 
 - `core/services/discord_notifications.py` - Main notification service
 - `core/services/discord_bot.py` - Interactive bot with slash commands
 - `core/views_discord.py` - User linking API endpoints
+
+---
+
+## Voice Interview with Whisper (Session 456)
+
+Voice input for the Profile Interview using OpenAI Whisper for speech-to-text transcription.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| Voice Recording | Browser MediaRecorder captures audio (webm format) |
+| Whisper Transcription | OpenAI Whisper API converts speech to text |
+| Interview Processing | Transcribed text processed through interview state machine |
+| Progress Tracking | Accurate progress based on 9 steps (name + 8 topics) |
+
+### Interview Flow (8 Topics)
+
+```
+1. Name → 2. Professional Situation → 3. Time Availability → 4. Skills
+→ 5. Background → 6. Income Goals → 7. Work Preferences → 8. Hidden Talents
+→ 9. Commitment → COMPLETE!
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/interview/voice/` | POST | Submit audio, get transcription + next question |
+| `/api/transcribe/` | POST | Transcribe audio only (no interview processing) |
+| `/api/interview/start/` | POST | Start new interview session |
+| `/api/interview/respond/` | POST | Submit text response to current question |
+| `/api/interview/status/` | GET | Get current interview status |
+
+### Key Files
+
+- `intelligence/personal_assistant_interviewer.py` - Interview state machine
+- `core/views_personal_assistant.py` - Voice/interview endpoints
+- `ai_core/templates/ai_image_studio.html` - Voice recording UI (microphone button)
 
 ---
 

@@ -1412,6 +1412,31 @@
                 transform: translateY(100vh) rotateZ(720deg);
             }
         }
+
+        /* Session 456: Voice Recording Pulse Animation */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .recording-pulse {
+            animation: recording-dot-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes recording-dot-pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1824,6 +1849,46 @@
                     <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
                     <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
                     <div class="col-lg-3">
+                        <!-- Session 455: Cross-Platform Sessions Card -->
+                        <div class="card mb-3" id="crossPlatformSessionsCard" style="background: rgba(6, 182, 212, 0.1); border: 2px solid rgba(6, 182, 212, 0.4);">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3); cursor: pointer;" onclick="toggleSessionsPanel()">
+                                <h6 class="mb-0" style="color: #67e8f9;">
+                                    <span id="sessionsHeaderIcon">📱</span> Sessions
+                                    <span id="crossPlatformBadge" style="display: none; background: rgba(236, 72, 153, 0.3); color: #f9a8d4; font-size: 9px; padding: 2px 6px; border-radius: 10px; margin-left: 6px;">Discord</span>
+                                </h6>
+                                <span id="sessionsToggle" style="color: #67e8f9;">▼</span>
+                            </div>
+                            <div class="card-body py-2" id="sessionsPanelBody">
+                                <div id="sessionsLoading" style="text-align: center; padding: 10px;">
+                                    <div class="spinner-border spinner-border-sm" style="color: #06b6d4;" role="status"></div>
+                                    <small style="color: #67e8f9; margin-left: 8px;">Loading sessions...</small>
+                                </div>
+                                <div id="sessionsData" style="display: none;">
+                                    <!-- Current Session Info -->
+                                    <div id="currentSessionInfo" style="display: none; padding: 8px; background: rgba(34, 197, 94, 0.15); border-radius: 6px; border-left: 3px solid #22c55e; margin-bottom: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <small style="color: #86efac; font-weight: 600;">📍 Current</small>
+                                                <div id="currentSessionTitle" style="font-size: 12px; color: #bbf7d0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+                                            </div>
+                                            <span id="currentSessionPlatform" style="font-size: 10px; background: rgba(34, 197, 94, 0.3); color: #86efac; padding: 2px 6px; border-radius: 8px;"></span>
+                                        </div>
+                                    </div>
+                                    <!-- Sessions List -->
+                                    <div id="sessionsList" style="max-height: 150px; overflow-y: auto;">
+                                        <small style="color: #a5f3fc; font-size: 11px;">No other sessions</small>
+                                    </div>
+                                    <!-- Cross-Platform Status -->
+                                    <div id="crossPlatformStatus" style="margin-top: 8px; padding: 6px; background: rgba(6, 182, 212, 0.1); border-radius: 6px; font-size: 10px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="color: #67e8f9;">Discord Linked:</span>
+                                            <span id="discordLinkStatus" style="color: #fbbf24;">Checking...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Session 394: Restored Project Selector Card - Users can select which project to work with -->
                         <div class="card mb-3" style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.4);">
                             <div class="card-header" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
@@ -7519,9 +7584,31 @@
 
                                             <!-- Text Input -->
                                             <div id="interview-input-text" class="mb-3" style="display: none;">
-                                                <textarea id="interview-text-response" class="form-control bg-dark text-white"
-                                                          rows="3" placeholder="Type your answer..."
-                                                          style="border: 1px solid #333;"></textarea>
+                                                <div class="d-flex gap-2 align-items-start">
+                                                    <textarea id="interview-text-response" class="form-control bg-dark text-white flex-grow-1"
+                                                              rows="3" placeholder="Type your answer or click the mic to speak..."
+                                                              style="border: 1px solid #333;"></textarea>
+                                                    <!-- Session 456: Voice Input Button -->
+                                                    <button id="interview-voice-btn" type="button" class="btn btn-lg"
+                                                            onclick="toggleVoiceRecording()"
+                                                            style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #ef4444; width: 60px; height: 60px; border-radius: 50%;"
+                                                            title="Click to speak your answer">
+                                                        <i class="fas fa-microphone fs-4"></i>
+                                                    </button>
+                                                </div>
+                                                <!-- Voice Recording Status -->
+                                                <div id="interview-voice-status" class="mt-2" style="display: none;">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <div id="voice-recording-indicator" class="recording-pulse" style="width: 12px; height: 12px; background: #ef4444; border-radius: 50%;"></div>
+                                                        <span id="voice-status-text" class="text-danger">Recording...</span>
+                                                        <span id="voice-recording-time" class="text-muted ms-2">0:00</span>
+                                                    </div>
+                                                </div>
+                                                <!-- Transcription Preview -->
+                                                <div id="interview-transcription-preview" class="mt-2 p-2 rounded" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981;">
+                                                    <small class="text-muted">You said:</small>
+                                                    <p id="transcription-text" class="mb-0 text-white"></p>
+                                                </div>
                                             </div>
 
                                             <!-- Yes/No Input -->
@@ -17144,6 +17231,201 @@
             content.style.display = styleInsightsVisible ? 'block' : 'none';
             toggle.textContent = styleInsightsVisible ? '▼' : '▶';
         }
+
+        // ============================================================
+        // SESSION 455: Cross-Platform Sessions Panel Functions
+        // ============================================================
+        let sessionsPanelVisible = true;
+        let currentSessionId = null;
+
+        function toggleSessionsPanel() {
+            const body = document.getElementById('sessionsPanelBody');
+            const toggle = document.getElementById('sessionsToggle');
+            sessionsPanelVisible = !sessionsPanelVisible;
+            body.style.display = sessionsPanelVisible ? 'block' : 'none';
+            toggle.textContent = sessionsPanelVisible ? '▼' : '▶';
+        }
+
+        async function loadCrossplatformSessions() {
+            const loading = document.getElementById('sessionsLoading');
+            const dataDiv = document.getElementById('sessionsData');
+            const sessionsList = document.getElementById('sessionsList');
+            const currentSessionInfo = document.getElementById('currentSessionInfo');
+            const discordLinkStatus = document.getElementById('discordLinkStatus');
+            const crossPlatformBadge = document.getElementById('crossPlatformBadge');
+
+            try {
+                // Fetch active sessions
+                const response = await authenticatedFetch('/api/sessions/active/');
+
+                if (!response.ok) {
+                    loading.innerHTML = '<small style="color: #f9a8d4;">Unable to load sessions</small>';
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Hide loading, show data
+                loading.style.display = 'none';
+                dataDiv.style.display = 'block';
+
+                // Check Discord link status
+                const statusResponse = await authenticatedFetch('/api/sessions/status/');
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    if (statusData.discord_linked) {
+                        discordLinkStatus.textContent = '✓ Connected';
+                        discordLinkStatus.style.color = '#86efac';
+                        crossPlatformBadge.style.display = 'inline';
+                    } else {
+                        discordLinkStatus.textContent = 'Not linked';
+                        discordLinkStatus.style.color = '#fbbf24';
+                        crossPlatformBadge.style.display = 'none';
+                    }
+                }
+
+                // Get sessions from response
+                const sessions = data.sessions || [];
+
+                // Find current session (if any) and other sessions
+                const currentSession = sessions.find(s => s.is_current);
+                const otherSessions = sessions.filter(s => !s.is_current);
+
+                // Display current session
+                if (currentSession) {
+                    currentSessionId = currentSession.id;
+                    currentSessionInfo.style.display = 'block';
+                    document.getElementById('currentSessionTitle').textContent = currentSession.title || 'Active Session';
+                    const platformBadge = document.getElementById('currentSessionPlatform');
+                    platformBadge.textContent = currentSession.platform === 'discord' ? '💬 Discord' : '🌐 Web';
+                    platformBadge.style.background = currentSession.platform === 'discord' ? 'rgba(236, 72, 153, 0.3)' : 'rgba(34, 197, 94, 0.3)';
+                } else {
+                    currentSessionInfo.style.display = 'none';
+                }
+
+                // Display other sessions
+                if (otherSessions.length > 0) {
+                    sessionsList.innerHTML = otherSessions.map(session => {
+                        const platformIcon = session.platform === 'discord' ? '💬' : '🌐';
+                        const platformColor = session.platform === 'discord' ? 'rgba(236, 72, 153, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+                        const timeAgo = formatTimeAgo(new Date(session.last_activity));
+
+                        return `
+                            <div onclick="resumeSession('${session.id}')"
+                                 style="padding: 8px; margin-bottom: 6px; background: rgba(6, 182, 212, 0.1); border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                                 onmouseover="this.style.background='rgba(6, 182, 212, 0.2)'; this.style.transform='translateX(2px)';"
+                                 onmouseout="this.style.background='rgba(6, 182, 212, 0.1)'; this.style.transform='translateX(0)';">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 11px; color: #a5f3fc; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            ${session.title || 'Untitled Session'}
+                                        </div>
+                                        <div style="font-size: 9px; color: #67e8f9; margin-top: 2px;">
+                                            ${session.message_count || 0} messages • ${timeAgo}
+                                        </div>
+                                    </div>
+                                    <span style="font-size: 10px; background: ${platformColor}; padding: 2px 6px; border-radius: 8px; white-space: nowrap; margin-left: 6px;">
+                                        ${platformIcon}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    sessionsList.innerHTML = '<small style="color: #67e8f9; font-size: 11px;">No other sessions</small>';
+                }
+
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                loading.innerHTML = '<small style="color: #f9a8d4;">Error loading sessions</small>';
+            }
+        }
+
+        async function resumeSession(conversationId) {
+            try {
+                const response = await authenticatedFetch('/api/sessions/resume/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ conversation_id: conversationId })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Load conversation history into chat
+                    if (data.history && data.history.length > 0) {
+                        // Clear current chat containers
+                        const tabMessages = document.getElementById('tabChatMessages');
+                        const sidebarMessages = document.getElementById('aiChatMessages');
+                        if (tabMessages) tabMessages.innerHTML = '';
+                        if (sidebarMessages) sidebarMessages.innerHTML = '';
+
+                        // Reset AIAssistant conversation if available
+                        if (window.aiAssistant) {
+                            window.aiAssistant.conversation = [];
+                            window.aiAssistant.sessionId = conversationId;
+                        }
+
+                        // Load history using AIAssistant.addMessage
+                        data.history.forEach(msg => {
+                            if (window.aiAssistant) {
+                                window.aiAssistant.addMessage(msg.role, msg.content);
+                                window.aiAssistant.conversation.push({
+                                    role: msg.role,
+                                    content: msg.content
+                                });
+                            }
+                        });
+
+                        // Update current session ID
+                        currentSessionId = conversationId;
+
+                        // Show success feedback
+                        showToast('success', 'Session resumed! ' + (data.platform === 'discord' ? '💬 From Discord' : '🌐 From Web'));
+
+                        // Reload sessions list to update current indicator
+                        loadCrossplatformSessions();
+
+                        // Scroll to the chat area
+                        const chatArea = document.getElementById('tabChatMessages') || document.getElementById('aiChatMessages');
+                        if (chatArea) {
+                            chatArea.scrollTop = chatArea.scrollHeight;
+                        }
+                    }
+                } else {
+                    showToast('error', 'Failed to resume session');
+                }
+            } catch (error) {
+                console.error('Error resuming session:', error);
+                showToast('error', 'Error resuming session');
+            }
+        }
+
+        // Helper function for time formatting (if not already defined)
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return `${diffDays}d ago`;
+        }
+
+        // Session 455: Load sessions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Only load if the sessions card exists (user is authenticated)
+            if (document.getElementById('crossPlatformSessionsCard')) {
+                console.log('📱 Loading cross-platform sessions...');
+                loadCrossplatformSessions();
+            }
+        });
 
         // ============================================================
         // SESSION 219: Intelligence Feed Functions (Phase A)
@@ -47619,6 +47901,201 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
             submitInterviewResponse(response);
         }
+
+        // ===== Session 456: Voice Recording for Interview =====
+        let interviewMediaRecorder = null;
+        let interviewAudioChunks = [];
+        let interviewRecordingStartTime = null;
+        let interviewRecordingTimer = null;
+        let isInterviewRecording = false;
+
+        async function toggleVoiceRecording() {
+            if (isInterviewRecording) {
+                stopVoiceRecording();
+            } else {
+                await startVoiceRecording();
+            }
+        }
+
+        async function startVoiceRecording() {
+            try {
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Create MediaRecorder with webm format
+                interviewMediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+
+                interviewAudioChunks = [];
+
+                interviewMediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        interviewAudioChunks.push(event.data);
+                    }
+                };
+
+                interviewMediaRecorder.onstop = async () => {
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Create audio blob and send to server
+                    const audioBlob = new Blob(interviewAudioChunks, { type: 'audio/webm' });
+                    await sendVoiceToInterview(audioBlob);
+                };
+
+                // Start recording
+                interviewMediaRecorder.start();
+                isInterviewRecording = true;
+                interviewRecordingStartTime = Date.now();
+
+                // Update UI
+                const voiceBtn = document.getElementById('interview-voice-btn');
+                voiceBtn.style.background = 'rgba(239, 68, 68, 0.8)';
+                voiceBtn.style.animation = 'pulse 1s infinite';
+                voiceBtn.innerHTML = '<i class="fas fa-stop fs-4"></i>';
+                voiceBtn.title = 'Click to stop recording';
+
+                document.getElementById('interview-voice-status').style.display = 'block';
+
+                // Start recording timer
+                interviewRecordingTimer = setInterval(updateRecordingTime, 1000);
+
+                console.log('🎤 Voice recording started');
+
+            } catch (error) {
+                console.error('Error starting voice recording:', error);
+                if (error.name === 'NotAllowedError') {
+                    showToast('error', 'Microphone permission denied. Please allow microphone access.');
+                } else {
+                    showToast('error', 'Could not start recording: ' + error.message);
+                }
+            }
+        }
+
+        function stopVoiceRecording() {
+            if (interviewMediaRecorder && isInterviewRecording) {
+                interviewMediaRecorder.stop();
+                isInterviewRecording = false;
+
+                // Clear timer
+                if (interviewRecordingTimer) {
+                    clearInterval(interviewRecordingTimer);
+                    interviewRecordingTimer = null;
+                }
+
+                // Update UI - show processing state
+                const voiceBtn = document.getElementById('interview-voice-btn');
+                voiceBtn.style.background = 'rgba(16, 185, 129, 0.2)';
+                voiceBtn.style.animation = 'none';
+                voiceBtn.innerHTML = '<i class="fas fa-spinner fa-spin fs-4"></i>';
+                voiceBtn.disabled = true;
+
+                document.getElementById('voice-status-text').textContent = 'Processing...';
+                document.getElementById('voice-status-text').className = 'text-warning';
+
+                console.log('🎤 Voice recording stopped, processing...');
+            }
+        }
+
+        function updateRecordingTime() {
+            if (interviewRecordingStartTime) {
+                const elapsed = Math.floor((Date.now() - interviewRecordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('voice-recording-time').textContent =
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                // Auto-stop after 2 minutes
+                if (elapsed >= 120) {
+                    stopVoiceRecording();
+                }
+            }
+        }
+
+        async function sendVoiceToInterview(audioBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                const response = await fetch('/api/interview/voice/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                                       document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                // Reset voice button
+                const voiceBtn = document.getElementById('interview-voice-btn');
+                voiceBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                voiceBtn.innerHTML = '<i class="fas fa-microphone fs-4"></i>';
+                voiceBtn.disabled = false;
+                voiceBtn.title = 'Click to speak your answer';
+                document.getElementById('interview-voice-status').style.display = 'none';
+
+                if (data.success) {
+                    console.log('✅ Voice transcribed:', data.transcribed_text);
+
+                    // Show transcription preview
+                    const previewEl = document.getElementById('interview-transcription-preview');
+                    document.getElementById('transcription-text').textContent = data.transcribed_text;
+                    previewEl.style.display = 'block';
+
+                    // Hide preview after 3 seconds
+                    setTimeout(() => {
+                        previewEl.style.display = 'none';
+                    }, 3000);
+
+                    // Update interview state (same as submitInterviewResponse)
+                    document.getElementById('interview-content').style.opacity = '1';
+
+                    if (data.interview_complete) {
+                        showInterviewComplete(data);
+                    } else {
+                        // Show acknowledgment if available
+                        if (data.acknowledgment) {
+                            const ackEl = document.getElementById('interview-acknowledgment');
+                            document.getElementById('interview-ack-text').textContent = data.acknowledgment;
+                            ackEl.style.display = 'block';
+
+                            setTimeout(() => {
+                                ackEl.style.display = 'none';
+                            }, 3000);
+                        }
+
+                        currentInterviewState = data.state;
+                        displayQuestion(data.question);
+                    }
+
+                    showToast('success', 'Voice response recorded!');
+                } else {
+                    console.error('Voice interview error:', data.error);
+                    showToast('error', data.error || 'Failed to process voice');
+
+                    // Show transcription in text area if we got it
+                    if (data.transcribed_text) {
+                        document.getElementById('interview-text-response').value = data.transcribed_text;
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error sending voice to interview:', error);
+                showToast('error', 'Failed to send voice recording');
+
+                // Reset voice button
+                const voiceBtn = document.getElementById('interview-voice-btn');
+                voiceBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                voiceBtn.innerHTML = '<i class="fas fa-microphone fs-4"></i>';
+                voiceBtn.disabled = false;
+                document.getElementById('interview-voice-status').style.display = 'none';
+            }
+        }
+        // ===== End Session 456: Voice Recording =====
 
         // Submit any response
         async function submitInterviewResponse(response) {

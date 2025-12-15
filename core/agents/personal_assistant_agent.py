@@ -28,25 +28,175 @@ import time
 from typing import Dict, Any, List, Optional, Tuple
 
 from core.agents.base_agent import BaseAgent, AgentResult, KnowledgeAttribution
+from core.agents.routing_config import get_intent_keywords, AGENT_ROUTING_CONFIG
 
 logger = logging.getLogger(__name__)
 
-# Semantic routing service (lazy loaded)
+# Session 454: Import keywords from unified routing config
+INTENT_KEYWORDS = get_intent_keywords()
+
+# Session 454: Improved semantic routing with retry logic
 _semantic_router = None
+_semantic_router_last_attempt = None
+_semantic_router_failure_count = 0
+SEMANTIC_ROUTER_RETRY_INTERVAL = 300  # 5 minutes between retries
+SEMANTIC_ROUTER_MAX_FAILURES = 3  # Give up after 3 consecutive failures
+
+# Session 454: Routing analytics tracking
+_routing_analytics = {
+    'total_routes': 0,
+    'routes_by_agent': {},
+    'routes_by_method': {'semantic': 0, 'keyword': 0, 'workflow': 0, 'business_context': 0, 'gpt': 0},
+    'question_vs_action': {'question': 0, 'action': 0},
+    'recent_routes': [],  # Last 100 routing decisions
+}
+ROUTING_ANALYTICS_MAX_RECENT = 100
+
+
+def record_routing_decision(
+    task: str,
+    selected_agent: str,
+    method: str,
+    confidence: float,
+    is_question: bool,
+    alternatives: list = None
+):
+    """
+    Session 454: Record routing decision for analytics.
+
+    Args:
+        task: The user's task (truncated)
+        selected_agent: Which agent was selected
+        method: How the decision was made (semantic, keyword, workflow, etc.)
+        confidence: Confidence score of the decision
+        is_question: Whether this was classified as a question
+        alternatives: Other agents that were considered
+    """
+    global _routing_analytics
+
+    _routing_analytics['total_routes'] += 1
+
+    # Track by agent
+    if selected_agent not in _routing_analytics['routes_by_agent']:
+        _routing_analytics['routes_by_agent'][selected_agent] = 0
+    _routing_analytics['routes_by_agent'][selected_agent] += 1
+
+    # Track by method
+    if method in _routing_analytics['routes_by_method']:
+        _routing_analytics['routes_by_method'][method] += 1
+
+    # Track question vs action
+    _routing_analytics['question_vs_action']['question' if is_question else 'action'] += 1
+
+    # Store recent decision (circular buffer)
+    decision = {
+        'timestamp': time.time(),
+        'task_preview': task[:100] if task else '',
+        'agent': selected_agent,
+        'method': method,
+        'confidence': confidence,
+        'is_question': is_question,
+        'alternatives': alternatives[:3] if alternatives else [],
+    }
+    _routing_analytics['recent_routes'].append(decision)
+    if len(_routing_analytics['recent_routes']) > ROUTING_ANALYTICS_MAX_RECENT:
+        _routing_analytics['recent_routes'].pop(0)
+
+    # Log for debugging
+    logger.info(
+        f"ROUTING: '{task[:50]}...' -> {selected_agent} "
+        f"(method={method}, confidence={confidence:.2f}, is_question={is_question})"
+    )
+
+
+def get_routing_analytics() -> dict:
+    """
+    Session 454: Get current routing analytics.
+
+    Returns:
+        Dict with routing statistics
+    """
+    global _routing_analytics
+
+    # Calculate percentages
+    total = _routing_analytics['total_routes']
+    if total == 0:
+        return _routing_analytics
+
+    analytics = _routing_analytics.copy()
+    analytics['agent_percentages'] = {
+        agent: (count / total * 100)
+        for agent, count in _routing_analytics['routes_by_agent'].items()
+    }
+    analytics['method_percentages'] = {
+        method: (count / total * 100)
+        for method, count in _routing_analytics['routes_by_method'].items()
+    }
+
+    return analytics
+
 
 def get_semantic_router():
-    """Lazy-load the semantic routing service."""
-    global _semantic_router
+    """
+    Lazy-load the semantic routing service with retry logic.
+
+    Session 454: Fixed silent failure by:
+    1. Adding retry mechanism with exponential backoff
+    2. Logging detailed failure reasons
+    3. Allowing recovery from transient failures
+    """
+    global _semantic_router, _semantic_router_last_attempt, _semantic_router_failure_count
+
+    # Already initialized successfully
+    if _semantic_router is not None and _semantic_router is not False:
+        return _semantic_router
+
+    # Check if we should retry after previous failure
+    if _semantic_router is False:
+        if _semantic_router_failure_count >= SEMANTIC_ROUTER_MAX_FAILURES:
+            # Too many failures, don't retry forever
+            return None
+
+        # Check if enough time has passed for retry
+        if _semantic_router_last_attempt:
+            elapsed = (time.time() - _semantic_router_last_attempt)
+            # Exponential backoff: 5min, 10min, 20min
+            retry_interval = SEMANTIC_ROUTER_RETRY_INTERVAL * (2 ** (_semantic_router_failure_count - 1))
+            if elapsed < retry_interval:
+                return None  # Not time to retry yet
+
+        # Reset for retry
+        _semantic_router = None
+        logger.info(f"Retrying semantic routing initialization (attempt {_semantic_router_failure_count + 1})")
+
+    # Attempt initialization
     if _semantic_router is None:
+        _semantic_router_last_attempt = time.time()
         try:
             from core.services.semantic_routing import SemanticRoutingService
-            _semantic_router = SemanticRoutingService()
-            _semantic_router.initialize()
-            logger.info("Semantic routing service initialized")
+            router = SemanticRoutingService()
+
+            if router.initialize():
+                _semantic_router = router
+                _semantic_router_failure_count = 0  # Reset on success
+                logger.info("Semantic routing service initialized successfully")
+            else:
+                raise Exception("SemanticRoutingService.initialize() returned False")
+
+        except ImportError as e:
+            _semantic_router = False
+            _semantic_router_failure_count += 1
+            logger.error(f"Semantic routing import failed: {e}")
+
         except Exception as e:
-            logger.warning(f"Failed to initialize semantic routing: {e}")
-            _semantic_router = False  # Mark as failed, don't retry
-    return _semantic_router if _semantic_router else None
+            _semantic_router = False
+            _semantic_router_failure_count += 1
+            logger.warning(
+                f"Semantic routing initialization failed (attempt {_semantic_router_failure_count}): {e}. "
+                f"Will retry in {SEMANTIC_ROUTER_RETRY_INTERVAL * (2 ** (_semantic_router_failure_count - 1))}s"
+            )
+
+    return _semantic_router if _semantic_router and _semantic_router is not False else None
 
 
 # Intent-to-Agent Mapping
@@ -115,109 +265,8 @@ INTENT_AGENT_MAP = {
     'workflow': 'WorkflowAgent',
 }
 
-# Keywords for intent detection
-INTENT_KEYWORDS = {
-    'ImageAgent': [
-        'logo', 'banner', 'image', 'picture', 'illustration', 'icon', 'graphic',
-        'thumbnail', 'avatar', 'portrait', 'landscape', 'poster', 'flyer'
-    ],
-    'VideoAgent': [
-        'video', 'animate', 'animation', 'motion', 'clip', 'movie'
-    ],
-    'AudioAgent': [
-        'audio', 'voice', 'speech', 'voiceover', 'narration', 'sound', 'tts'
-    ],
-    'ThreeDAgent': [
-        '3d', 'three-dimensional', 'model', 'mesh', 'sculpture'
-    ],
-    'ImageEditingAgent': [
-        'upscale', 'enlarge', 'remove background', 'transparent', 'recolor',
-        'variations', 'edit image', 'modify image', 'change color'
-    ],
-    'VideoEditingAgent': [
-        'trim', 'cut', 'edit video', 'add text to video', 'effects', 'slow motion',
-        'speed up', 'concatenate', 'merge videos'
-    ],
-    'ResearchAgent': [
-        'search', 'find', 'trending', 'what is', 'insights', 'hot in', 'hot right now', 'whats hot'
-    ],
-    # Session 293: Business Research Agents (no API credits!)
-    'CompetitorAnalysisAgent': [
-        'market', 'competition', 'competitors', 'competitor', 'startup', 'business idea',
-        'swot', 'analyze market', 'research market', 'competitive', 'landscape',
-        'who are the competitors', 'market analysis', 'industry analysis', 'for my startup'
-    ],
-    'CustomerResearchAgent': [
-        'customer', 'customers', 'personas', 'persona', 'pain points', 'customer needs',
-        'who buys', 'target audience', 'user research', 'customer research', 'sentiment'
-    ],
-    'WorkflowAgent': [
-        'research and create', 'brand identity', 'package', 'complete', 'full',
-        'end to end', 'workflow', 'step by step'
-    ],
-    # Session 403: Legal Assistant keywords
-    'LegalDocDrafterAgent': [
-        'legal', 'law', 'lawyer', 'attorney', 'court', 'judge', 'lawsuit',
-        'divorce', 'custody', 'child support', 'parenting time', 'visitation',
-        'motion', 'file motion', 'declaration', 'subpoena', 'served',
-        'pro se', 'self-represented', 'family law', 'family court',
-        'jdf', 'colorado court', 'colorado divorce', 'colorado custody',
-        'modification', 'enforce', 'order', 'decree', 'separation',
-        'parental responsibilities', 'parenting plan', 'child custody',
-        # Session 404: Added keywords for denied motion analysis
-        'denied', 'denied motion', 'motion denied', 'rejected', 'dismissal',
-        'rewrite motion', 'fix motion', 'correct motion', 'refile',
-        'magistrate', 'ruling', 'contempt', 'affidavit',
-    ],
-    # Session 411: Strategy agents
-    'BrandIdentityAgent': [
-        'brand identity', 'brand colors', 'brand style', 'color palette', 'brand guidelines',
-        'visual identity', 'brand consistency', 'brand voice', 'brand look'
-    ],
-    'ContentStrategyAgent': [
-        'content strategy', 'content plan', 'content calendar', 'what to post',
-        'content ideas', 'content pillars', 'editorial calendar'
-    ],
-    'SEOOptimizerAgent': [
-        'seo', 'keywords', 'hashtags', 'meta description', 'search optimization',
-        'meta tags', 'keyword research', 'ranking'
-    ],
-    'SocialMediaAgent': [
-        'social media', 'social strategy', 'instagram', 'tiktok', 'linkedin',
-        'twitter', 'platform strategy', 'social posts', 'engagement'
-    ],
-    # Session 411: Executive agents
-    'CTOAgent': [
-        'technical', 'architecture', 'tech stack', 'infrastructure', 'cto',
-        'technical planning', 'system design', 'scalability'
-    ],
-    'COOAgent': [
-        'operations', 'coo', 'operational', 'processes', 'efficiency',
-        'risk analysis', 'operational planning', 'workflows'
-    ],
-    'CreativeDirectorAgent': [
-        'creative direction', 'creative brief', 'art direction', 'creative guidance',
-        'visual direction', 'design direction', 'creative strategy'
-    ],
-    # Session 411: Analysis agents
-    'TrendAnalysisAgent': [
-        'trends', 'trend analysis', 'market trends', 'emerging trends',
-        'what\'s trending', 'industry trends', 'trend report'
-    ],
-    'OpportunityScoringAgent': [
-        'opportunity score', 'score opportunity', 'rate opportunity', 'evaluate opportunity',
-        'opportunity assessment', 'viability score', 'business viability'
-    ],
-    # Session 411: Training agents
-    'CharacterTrainingAgent': [
-        'train character', 'lora training', 'train model', 'character training',
-        'fine tune', 'custom model', 'train on images'
-    ],
-    'TrainedCreationAgent': [
-        'use trained model', 'use lora', 'trained character', 'my character',
-        'custom character', 'generate with lora'
-    ],
-}
+# Session 454: INTENT_KEYWORDS now imported from routing_config.py (single source of truth)
+# See: core/agents/routing_config.py for the unified agent routing configuration
 
 # Session 414: UI Navigation guidance for platform features
 # Maps keywords to helpful navigation instructions
@@ -458,7 +507,17 @@ Available agents:
 
                 if is_question:
                     # Answer directly without delegation
-                    return self._answer_question(task, scifi_context, spider_context, start_time)
+                    # Session 454: Pass question_type to enable enhanced handling
+                    # Session 454: Track routing analytics
+                    record_routing_decision(
+                        task=task,
+                        selected_agent='PersonalAssistantAgent',
+                        method='direct_answer',
+                        confidence=0.85,
+                        is_question=True,
+                        alternatives=[]
+                    )
+                    return self._answer_question(task, scifi_context, spider_context, start_time, question_type)
 
                 # It's an action request - determine which agent to use
                 suggested_agent = self._detect_agent(task)
@@ -470,6 +529,20 @@ Available agents:
                         reasoning=f"Keywords matched for {suggested_agent}",
                         alternatives=list(INTENT_KEYWORDS.keys()),
                         confidence=0.9
+                    )
+
+                    # Session 454: Track routing analytics
+                    # Determine routing method from the detect_agent decision
+                    routing_method = 'keyword'  # Default to keyword
+                    if hasattr(self, '_last_routing_method'):
+                        routing_method = self._last_routing_method or 'keyword'
+                    record_routing_decision(
+                        task=task,
+                        selected_agent=suggested_agent,
+                        method=routing_method,
+                        confidence=0.9,
+                        is_question=False,
+                        alternatives=list(INTENT_KEYWORDS.keys())[:5]
                     )
 
                     # Session 401: Get knowledge attribution before delegation
@@ -524,6 +597,15 @@ Available agents:
 
                 else:
                     # Couldn't determine agent - use GPT to decide
+                    # Session 454: Track GPT fallback routing
+                    record_routing_decision(
+                        task=task,
+                        selected_agent='GPT_FALLBACK',
+                        method='gpt',
+                        confidence=0.5,
+                        is_question=False,
+                        alternatives=[]
+                    )
                     return self._gpt_route(task, context, scifi_context, spider_context, start_time)
 
             except Exception as e:
@@ -539,27 +621,36 @@ Available agents:
         """
         Determine if the task is a question (requiring direct answer) vs action request.
 
+        Session 454: MAJOR FIX - Distinguish informational questions from action requests.
+        - "What's trending in AI?" → Answer directly with spider data (informational)
+        - "Research AI trends for my report" → Route to ResearchAgent (action request)
+
         Returns:
             Tuple of (is_question, question_type)
+            - question_type can be: 'knowledge_question', 'trend_question', 'direct_question', ''
         """
         task_lower = task.lower().strip()
 
-        # Session 272: Questions about trends/market/research should go to ResearchAgent
-        # These need spider data, not just GPT knowledge
-        # "hot" added for "what's hot in design" type queries
-        research_indicators = [
-            'trending', 'trends', 'market', 'news', 'latest',
-            'what\'s hot', "what's hot", 'whats hot', 'popular',
-            'current events', 'black friday', 'deals', 'happening',
-            'going on', 'hot in', 'hot right now'
+        # Session 454: Check for ACTION indicators first
+        # If the user wants us to DO something, it's not a question
+        action_indicators = [
+            'create', 'make', 'generate', 'design', 'build', 'produce',
+            'research for', 'research and', 'analyze for', 'prepare',
+            'write a', 'draft a', 'compile', 'put together'
         ]
-        if any(indicator in task_lower for indicator in research_indicators):
-            # Let this fall through to agent routing (ResearchAgent)
-            return False, ''
+        has_action_intent = any(indicator in task_lower for indicator in action_indicators)
 
-        # Question indicators
+        # Session 454: Trend/news QUESTIONS can be answered directly
+        # These use spider data but don't require agent routing
+        trend_indicators = [
+            'trending', 'trends', 'news', 'latest',
+            'what\'s hot', "what's hot", 'whats hot', 'popular',
+            'current events', 'happening', 'going on', 'hot in', 'hot right now'
+        ]
+
+        # Question starters that indicate informational intent
         question_starters = [
-            'what is', 'what are', 'what does', 'what do',
+            'what is', 'what are', 'what does', 'what do', "what's",
             'how do', 'how does', 'how can', 'how should',
             'why is', 'why does', 'why do',
             'when is', 'when does', 'when do',
@@ -571,6 +662,33 @@ Available agents:
             'is it', 'are there', 'do you', 'does it',
         ]
 
+        is_question_format = (
+            any(task_lower.startswith(starter) for starter in question_starters) or
+            task_lower.endswith('?')
+        )
+
+        # Session 454: INFORMATIONAL trend questions - answer directly with spider data
+        # "What's trending in AI?" - question format + trend topic = answer directly
+        # "Research AI trends for my report" - action intent = route to agent
+        has_trend_topic = any(indicator in task_lower for indicator in trend_indicators)
+
+        if has_trend_topic and is_question_format and not has_action_intent:
+            # This is an informational question about trends
+            # We'll answer directly using spider context (injected in _answer_question)
+            logger.info(f"Detected trend question (answering directly): {task[:50]}")
+            return True, 'trend_question'
+
+        # Session 454: Market/business research REQUESTS should still go to agents
+        # "What's the market for AI tools?" vs "Research the market for AI tools"
+        business_action_indicators = [
+            'research the market', 'analyze the market', 'competitor analysis',
+            'market research', 'business research', 'industry analysis'
+        ]
+        if any(indicator in task_lower for indicator in business_action_indicators):
+            # These are action requests, not questions
+            return False, ''
+
+        # Standard question detection
         for starter in question_starters:
             if task_lower.startswith(starter):
                 return True, 'knowledge_question'
@@ -578,8 +696,7 @@ Available agents:
         # Check for question mark at end
         if task_lower.endswith('?'):
             # But exclude action questions like "can you create a logo?"
-            action_indicators = ['create', 'make', 'generate', 'design', 'build']
-            if not any(word in task_lower for word in action_indicators):
+            if not has_action_intent:
                 return True, 'direct_question'
 
         return False, ''
@@ -591,6 +708,8 @@ Available agents:
         Session 293: Uses a two-tier approach:
         1. Semantic routing (embeddings) - higher accuracy for natural language
         2. Keyword fallback - for cases where semantic routing fails or low confidence
+
+        Session 454: Enhanced business context detection to suggest research workflows.
 
         Returns:
             Agent name or None if can't determine
@@ -607,12 +726,41 @@ Available agents:
         ]
         for pattern in workflow_patterns:
             if pattern in task_lower:
+                self._last_routing_method = 'workflow'  # Session 454: Track method
                 return 'WorkflowAgent'
 
         # Check for multi-step patterns (research + creation = workflow)
         has_research = any(w in task_lower for w in ['research', 'analyze', 'find'])
         has_creation = any(w in task_lower for w in ['create', 'make', 'generate', 'design'])
         if has_research and has_creation:
+            self._last_routing_method = 'workflow'  # Session 454: Track method
+            return 'WorkflowAgent'
+
+        # =========================================================================
+        # Session 454: SMART BUSINESS CONTEXT DETECTION
+        # =========================================================================
+        # Detect when user has business context (startup, business, market)
+        # AND wants to create something - suggest research-first workflow
+        business_context_indicators = [
+            'for my startup', 'for my business', 'for my company',
+            'startup', 'business idea', 'new business', 'my company',
+            'launching', 'going to market', 'go to market',
+            'brand new', 'new venture', 'entrepreneur'
+        ]
+        has_business_context = any(indicator in task_lower for indicator in business_context_indicators)
+
+        if has_business_context and has_creation:
+            # Session 454: Business + creation = suggest research-first workflow
+            # "Create a logo for my startup" → WorkflowAgent (research + create)
+            # This ensures users get market-informed designs, not generic ones
+            logger.info(f"Business context + creation detected: routing to WorkflowAgent for research-first approach")
+            self.record_decision(
+                decision_type="business_workflow_suggestion",
+                action="Routing to WorkflowAgent for research-first approach",
+                reasoning=f"Detected business context ({[i for i in business_context_indicators if i in task_lower]}) + creation intent",
+                confidence=0.85
+            )
+            self._last_routing_method = 'business_context'  # Session 454: Track method
             return 'WorkflowAgent'
 
         # =========================================================================
@@ -648,6 +796,7 @@ Available agents:
                             reasoning=f"Confidence: {result.confidence:.3f}, Top matches: {result.all_matches[:3]}",
                             confidence=result.confidence
                         )
+                        self._last_routing_method = 'semantic'  # Session 454: Track method
                         return selected_agent
 
             except Exception as e:
@@ -676,6 +825,7 @@ Available agents:
             for agent, keywords in business_research_checks:
                 for kw in keywords:
                     if kw in task_lower:
+                        self._last_routing_method = 'keyword'  # Session 454: Track method
                         return agent
 
         # Priority keywords that override other matches
@@ -707,6 +857,7 @@ Available agents:
         for agent, keywords in priority_checks:
             for kw in keywords:
                 if kw in task_lower:
+                    self._last_routing_method = 'keyword'  # Session 454: Track method
                     return agent
 
         # Check each agent's keywords with scoring
@@ -722,14 +873,49 @@ Available agents:
                 scores[agent] = score
 
         if scores:
-            # Return agent with highest score
-            return max(scores, key=scores.get)
+            # Session 454: Enhanced tie-breaking for keyword scoring
+            # When multiple agents have same score, use these criteria:
+            # 1. Agent priority from routing_config (higher = better)
+            # 2. Creation agents preferred for creation requests
+            # 3. Alphabetical as final fallback
+
+            max_score = max(scores.values())
+            tied_agents = [agent for agent, score in scores.items() if score == max_score]
+
+            if len(tied_agents) == 1:
+                selected_agent = tied_agents[0]
+            else:
+                # Tie-breaking needed
+                logger.info(f"Tie between {tied_agents} (score={max_score}), applying tie-breakers")
+
+                # Get priorities from routing config
+                agent_priorities = {}
+                for agent in tied_agents:
+                    config = AGENT_ROUTING_CONFIG.get(agent, {})
+                    agent_priorities[agent] = config.get('priority', 0)
+
+                # Sort by: priority (desc), then prefer creation agents for creation, then alphabetical
+                def tie_break_key(agent):
+                    priority = agent_priorities.get(agent, 0)
+                    # Boost creation agents if this is a creation request
+                    creation_boost = 100 if has_creation and agent in ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent'] else 0
+                    # Negative priority for descending sort (higher priority first)
+                    return (-priority - creation_boost, agent)
+
+                tied_agents.sort(key=tie_break_key)
+                selected_agent = tied_agents[0]
+                logger.info(f"Tie-breaker selected: {selected_agent}")
+
+            self._last_routing_method = 'keyword'  # Session 454: Track method
+            return selected_agent
 
         # Fallback: check for generic creation words
         if any(word in task_lower for word in ['create', 'make', 'generate', 'design']):
             # Default to ImageAgent for generic creation
+            self._last_routing_method = 'keyword'  # Session 454: Track method
             return 'ImageAgent'
 
+        self._last_routing_method = None  # Session 454: Track method
         return None
 
     def _check_ui_navigation(self, task: str) -> Optional[str]:
@@ -752,7 +938,8 @@ Available agents:
         task: str,
         scifi_context: Dict[str, Any],
         spider_context: Dict[str, Any],
-        start_time: float
+        start_time: float,
+        question_type: str = 'knowledge_question'
     ) -> AgentResult:
         """
         Answer a question directly using GPT.
@@ -760,6 +947,7 @@ Available agents:
         Session 401: Enhanced with knowledge attribution to show users
         what intelligence sources influenced the response.
         Session 414: Added UI navigation guidance for platform features.
+        Session 454: Enhanced trend question handling with fresh spider data.
         """
         try:
             # Session 414: Check for UI navigation questions first
@@ -775,11 +963,39 @@ Available agents:
                     decisions_made=1
                 )
 
+            # Session 454: For trend questions, fetch FRESH spider data
+            # This ensures "What's trending in AI?" gets current intelligence
+            enhanced_spider_context = spider_context.copy() if spider_context else {}
+
+            if question_type == 'trend_question':
+                try:
+                    fresh_trends = self._fetch_fresh_trends_for_question(task)
+                    if fresh_trends:
+                        enhanced_spider_context['relevant_trends'] = fresh_trends.get('trends', [])
+                        enhanced_spider_context['trend_articles'] = fresh_trends.get('articles', [])
+                        logger.info(f"Injected {len(fresh_trends.get('trends', []))} fresh trends for question")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch fresh trends: {e}")
+
             # Session 401: Build prompt with attribution to track what knowledge is used
-            prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
+            prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, enhanced_spider_context)
+
+            # Session 454: Enhanced instruction for trend questions
+            if question_type == 'trend_question' and enhanced_spider_context.get('trend_articles'):
+                articles = enhanced_spider_context['trend_articles'][:10]
+                prompt += "\n\n## Recent Articles for Context"
+                for article in articles:
+                    title = article.get('title', '')[:80]
+                    source = article.get('source', 'unknown')
+                    url = article.get('url', '')
+                    prompt += f"\n- [{source}] {title}"
+                    if url:
+                        prompt += f" ({url})"
 
             # Append instruction to answer directly
             prompt += "\n\nAnswer this question directly without delegating to an agent."
+            if question_type == 'trend_question':
+                prompt += " Use the trend data and articles provided above to give a current, relevant answer."
 
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
@@ -796,7 +1012,11 @@ Available agents:
             return AgentResult(
                 success=True,
                 message=answer,
-                data={'type': 'direct_answer', 'question': task},
+                data={
+                    'type': 'direct_answer',
+                    'question': task,
+                    'question_type': question_type  # Session 454
+                },
                 agent_name=self.name,
                 execution_time_ms=int((time.time() - start_time) * 1000),
                 decisions_made=self._tt_decision_count,
@@ -811,6 +1031,53 @@ Available agents:
                 agent_name=self.name,
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
+
+    def _fetch_fresh_trends_for_question(self, task: str) -> Dict[str, Any]:
+        """
+        Session 454: Fetch fresh spider trends for trend questions.
+
+        Extracts topic from question and queries spider intelligence.
+        """
+        try:
+            from core.services.spider_intelligence import SpiderIntelligenceService
+
+            service = SpiderIntelligenceService()
+
+            # Extract topic filter from question
+            task_lower = task.lower()
+            topic_filter = None
+
+            # Session 272 topic filters
+            if any(kw in task_lower for kw in ['ai', 'machine learning', 'llm', 'gpt', 'neural', 'deep learning']):
+                topic_filter = 'ai'
+            elif any(kw in task_lower for kw in ['web', 'javascript', 'react', 'frontend', 'backend', 'css']):
+                topic_filter = 'web'
+            elif any(kw in task_lower for kw in ['security', 'cyber', 'hack', 'privacy', 'encrypt']):
+                topic_filter = 'security'
+            elif any(kw in task_lower for kw in ['cloud', 'aws', 'docker', 'kubernetes', 'devops']):
+                topic_filter = 'cloud'
+            elif any(kw in task_lower for kw in ['design', 'ui', 'ux', 'figma', 'typography']):
+                topic_filter = 'design'
+
+            # Get trending topics
+            trends = service.get_trending_topics(hours=72, limit=10)
+
+            # Get recent articles with optional topic filter
+            articles = service.get_tech_trends(
+                hours=72,
+                limit=15,
+                topic_filter=topic_filter
+            )
+
+            return {
+                'trends': trends if isinstance(trends, list) else [],
+                'articles': articles if isinstance(articles, list) else [],
+                'topic_filter': topic_filter
+            }
+
+        except Exception as e:
+            logger.warning(f"Error fetching fresh trends: {e}")
+            return {'trends': [], 'articles': [], 'topic_filter': None}
 
     def _gpt_route(
         self,
