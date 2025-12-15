@@ -294,6 +294,68 @@ class KaggleSpider(BaseIntelligenceSpider):
 
         return intelligence_items
 
+    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional['IntelligenceData']:
+        """Process Kaggle raw data into a single IntelligenceData object."""
+        try:
+            from ai_core.spiders.base_spider import IntelligenceData as BaseIntelligenceData
+
+            competitions = raw_data.get('competitions', [])
+            datasets = raw_data.get('datasets', [])
+            kernels = raw_data.get('kernels', [])
+
+            # Build summary content
+            summary_parts = []
+
+            if competitions:
+                top_comps = competitions[:5]
+                comp_summary = "Top Competitions:\n" + "\n".join(
+                    f"- {c.get('title', 'Unknown')} ({c.get('reward', 'N/A')})"
+                    for c in top_comps
+                )
+                summary_parts.append(comp_summary)
+
+            if datasets:
+                top_datasets = sorted(datasets, key=lambda x: x.get('downloads', 0), reverse=True)[:5]
+                ds_summary = "Trending Datasets:\n" + "\n".join(
+                    f"- {d.get('title', 'Unknown')} ({d.get('downloads', 0):,} downloads)"
+                    for d in top_datasets
+                )
+                summary_parts.append(ds_summary)
+
+            if kernels:
+                top_kernels = sorted(kernels, key=lambda x: x.get('votes', 0), reverse=True)[:5]
+                kernel_summary = "Popular Notebooks:\n" + "\n".join(
+                    f"- {k.get('title', 'Unknown')} ({k.get('votes', 0)} votes)"
+                    for k in top_kernels
+                )
+                summary_parts.append(kernel_summary)
+
+            content = "\n\n".join(summary_parts) if summary_parts else "No Kaggle data available"
+
+            return BaseIntelligenceData(
+                spider_id=self.spider_id,
+                source_url='kaggle.com',
+                data_type='ml_trends',
+                content={
+                    'summary': content,
+                    'competitions_count': len(competitions),
+                    'datasets_count': len(datasets),
+                    'kernels_count': len(kernels),
+                    'competitions': competitions[:10],
+                    'datasets': datasets[:10],
+                    'kernels': kernels[:10],
+                },
+                quality_score=0.9 if raw_data.get('source') != 'mock' else 0.3,
+                metadata={
+                    'source': raw_data.get('source', 'unknown'),
+                    'fetched_at': raw_data.get('fetched_at'),
+                }
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error processing Kaggle data: {e}")
+            return None
+
     async def analyze_trends(self, data: List[IntelligenceData]) -> Dict[str, Any]:
         """Analyze Kaggle trends from collected data"""
         if not data:
