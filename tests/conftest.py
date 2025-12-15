@@ -204,17 +204,27 @@ def api_client():
 
 @pytest.fixture
 def authenticated_client(user):
-    """Return an authenticated API client for the test user."""
+    """Return an authenticated API client for the test user.
+
+    Session 452: Use login() instead of force_authenticate() to work with
+    the UnifiedTokenAuthenticationMiddleware which runs before DRF views.
+    """
     client = APIClient()
-    client.force_authenticate(user=user)
+    # Use Django's session authentication instead of DRF's force_authenticate
+    # because our middleware runs before DRF has a chance to authenticate
+    client.login(username='testuser', password='test123')
     return client
 
 
 @pytest.fixture
 def admin_client(admin_user):
-    """Return an authenticated API client for an admin user."""
+    """Return an authenticated API client for an admin user.
+
+    Session 452: Use login() instead of force_authenticate() to work with
+    the UnifiedTokenAuthenticationMiddleware which runs before DRF views.
+    """
     client = APIClient()
-    client.force_authenticate(user=admin_user)
+    client.login(username='admin', password='admin123')
     return client
 
 

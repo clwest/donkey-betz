@@ -1,4 +1,9 @@
 """
+import pytest
+
+# Session 452: Add django_db marker for all tests
+pytestmark = pytest.mark.django_db
+
 Tests for Agent Conversation Contract Enforcement
 ==================================================
 

@@ -1,4 +1,9 @@
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
+import pytest
+
+# Session 452: Add django_db marker for all tests
+pytestmark = pytest.mark.django_db
+
 #!/usr/bin/env python3
 """
 Test Code Generation - Demonstrate AI code generation using your codebase

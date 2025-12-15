@@ -1,4 +1,12 @@
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
+import pytest
+
+# Session 452: Add django_db marker for all tests
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.skip(reason="Requires unified_embeddings table from production DB")
+]
+
 #!/usr/bin/env python3
 """
 Test RAG system specifically with code-related queries

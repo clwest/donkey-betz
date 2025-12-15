@@ -95,6 +95,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         if any(request.path.startswith(path) for path in self.PUBLIC_PATHS):
             return None
 
+        # Session 452: Support DRF's force_authenticate() for testing
+        # DRF's force_authenticate sets _force_auth_user on the request
+        if hasattr(request, '_force_auth_user') and request._force_auth_user:
+            request.user = request._force_auth_user
+            logger.debug(f"DRF force_authenticate user {request.user.username} for {request.path}")
+            return None
+
         # Check if user is already authenticated via session
         if hasattr(request, 'user') and request.user.is_authenticated:
             # Session authentication is valid for API requests
