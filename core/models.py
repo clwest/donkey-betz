@@ -14,6 +14,9 @@ from .models_voice_marketplace import *
 # Import AI series models (Session 445)
 from .models_ai_series import *
 
+# Import pipeline feedback models for learning loops (Session 449)
+from .models_pipeline_feedback import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

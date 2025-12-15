@@ -568,6 +568,18 @@ from core.views_learning_loop import (
     learning_dashboard,
 )
 
+# Session 449: Import Pipeline Learning views (Learning Loops for AI Series)
+from core.views_learning import (
+    record_feedback as pipeline_record_feedback,
+    record_engagement as pipeline_record_engagement,
+    recommend_style as pipeline_recommend_style,
+    recommend_voice as pipeline_recommend_voice,
+    style_leaderboard as pipeline_style_leaderboard,
+    get_insights as pipeline_get_insights,
+    get_statistics as pipeline_get_statistics,
+    generate_insights as pipeline_generate_insights,
+)
+
 # Session 234: Import proactive system views (Phase 6)
 from core.views_proactive import (
     proactive_dashboard,
@@ -1406,6 +1418,16 @@ urlpatterns = [
     path('api/learning/insights/<uuid:insight_id>/read/', mark_insight_read, name='learning-insight-read'),
     path('api/learning/insights/<uuid:insight_id>/dismiss/', dismiss_insight, name='learning-insight-dismiss'),
     path('api/learning/compare/', get_performance_comparison, name='learning-compare'),
+
+    # Session 449: Pipeline Learning APIs (Learning Loops for AI Content Pipeline)
+    path('api/pipeline-learning/feedback/', pipeline_record_feedback, name='pipeline-learning-feedback'),
+    path('api/pipeline-learning/engagement/', pipeline_record_engagement, name='pipeline-learning-engagement'),
+    path('api/pipeline-learning/recommend/style/', pipeline_recommend_style, name='pipeline-learning-recommend-style'),
+    path('api/pipeline-learning/recommend/voice/', pipeline_recommend_voice, name='pipeline-learning-recommend-voice'),
+    path('api/pipeline-learning/leaderboard/styles/', pipeline_style_leaderboard, name='pipeline-learning-style-leaderboard'),
+    path('api/pipeline-learning/insights/', pipeline_get_insights, name='pipeline-learning-insights'),
+    path('api/pipeline-learning/insights/generate/', pipeline_generate_insights, name='pipeline-learning-insights-generate'),
+    path('api/pipeline-learning/stats/', pipeline_get_statistics, name='pipeline-learning-stats'),
 
     # Session 234: Proactive System APIs (Phase 6)
     # Dashboard & Overview
