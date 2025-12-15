@@ -2,11 +2,15 @@
 """
 Test script to verify both demo and real mode work for agent execution
 """
+import pytest
 
 import os
 import json
 import django
 from django.db import connection
+
+# Session 452: Add django_db marker for all tests
+pytestmark = pytest.mark.django_db
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
