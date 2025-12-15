@@ -55,7 +55,8 @@ class BaseValidationAgent(ABC):
             user: Optional user for authenticated requests. If None, creates test user.
         """
         self.user = user
-        self.client = Client()
+        # Use SERVER_NAME=localhost to avoid DisallowedHost errors
+        self.client = Client(SERVER_NAME='localhost')
         self.results: List[ValidationCheck] = []
 
         # Setup authenticated client if user provided

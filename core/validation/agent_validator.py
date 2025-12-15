@@ -130,7 +130,8 @@ class AgentOrchestrationValidator(BaseValidationAgent):
         """Verify agent-related API endpoints."""
         endpoints = [
             '/api/agents/',
-            '/api/agent-dashboard/',
+            '/api/agent-dashboard/agents/',
+            '/api/agent-dashboard/health/',
         ]
 
         for endpoint in endpoints:
@@ -144,10 +145,10 @@ class AgentOrchestrationValidator(BaseValidationAgent):
     def check_collective_intelligence(self):
         """Verify collective intelligence endpoints."""
         self.check_endpoint(
-            path='/api/collective/',
+            path='/api/collective/stats/',
             method='GET',
             expected_status=200,
-            name='collective_intelligence_endpoint'
+            name='collective_intelligence_stats'
         )
 
         # Check for agent conversations
