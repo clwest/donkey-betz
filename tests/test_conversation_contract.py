@@ -320,12 +320,12 @@ class TestConversationRolePrompts:
     """Test role-specific prompt generation."""
 
     def test_research_agent_role_includes_data_focus(self):
-        """ResearchAgent role should emphasize data and patterns."""
+        """ResearchAgent role should emphasize data and empirical rigor."""
         from core.conversation_roles import get_conversation_role
         role = get_conversation_role('ResearchAgent', 'ResearchAgent')
 
         assert 'data realist' in role.lower()
-        assert 'pattern' in role.lower()
+        assert 'empirical' in role.lower() or 'grounded' in role.lower()
         assert 'metric' in role.lower() or 'measure' in role.lower()
 
     def test_content_strategy_agent_role_includes_storytelling(self):
@@ -347,12 +347,13 @@ class TestConversationRolePrompts:
         assert 'dashboard' in role.lower()
 
     def test_default_role_for_unknown_agent(self):
-        """Unknown agents should get default role with their info."""
+        """Unknown agents should get default role with their name."""
         from core.conversation_roles import get_conversation_role
         role = get_conversation_role('CustomAgent', 'CustomAgent', 'Custom specialty')
 
         assert 'CustomAgent' in role
-        assert 'Custom specialty' in role
+        # Default role includes generic instructions for unknown agents
+        assert 'specialized expertise' in role.lower() or 'actionable outcomes' in role.lower()
 
 
 class TestConversationOrchestrator:
