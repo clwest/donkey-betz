@@ -6,6 +6,7 @@ Uses factory_boy to create model instances for testing. These factories
 provide a clean way to create test data with sensible defaults while
 allowing customization for specific test cases.
 """
+import uuid
 import factory
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
@@ -93,7 +94,8 @@ class VideoHistoryFactory(DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     project = factory.SubFactory(CreativeProjectFactory, user=factory.SelfAttribute('..user'))
-    video_id = factory.Sequence(lambda n: f'video-{n}')
+    # Session 452: Use proper UUIDs - the API falls back to querying by id (UUID) if video_id not found
+    video_id = factory.LazyFunction(lambda: str(uuid.uuid4()))
     video_url = factory.LazyAttribute(lambda o: f'https://example.com/{o.video_id}.mp4')
     video_type = 'text_to_video'
     prompt = factory.Sequence(lambda n: f'Test video prompt {n}')

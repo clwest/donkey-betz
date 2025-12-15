@@ -11,6 +11,7 @@ Test that agents now handle novel problems
 
 import sys
 sys.path.insert(0, '.')
+import json
 import time
 import threading
 from intelligence.novel_problem_handler import NovelProblemHandler, NovelProblemListener

@@ -19,8 +19,21 @@ from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution  # 
 
 @pytest.fixture
 def agent():
-    """Provide an agent matching 'odds' (or None)."""
-    return UnifiedAgentTemplate.objects.filter(name__icontains="odds").first()
+    """Provide any available agent for testing."""
+    # Session 452: Use any agent, not specifically 'odds' (sports betting removed)
+    # If no agents exist in test DB, create a minimal test agent
+    agent = UnifiedAgentTemplate.objects.first()
+    if agent is None:
+        agent = UnifiedAgentTemplate.objects.create(
+            name="TestAgent",
+            agent_type="content_generation",
+            description="Test agent for unit testing",
+            system_prompt="You are a test agent.",
+            llm_provider="openai",
+            llm_model="gpt-4o-mini",
+            is_active=True,
+        )
+    return agent
 
 
 def test_agent_fields_and_execution(agent):
@@ -28,7 +41,7 @@ def test_agent_fields_and_execution(agent):
     print("AGENT FIELD NAME VERIFICATION")
     print("=" * 60)
 
-    assert agent is not None, "❌ No agents found matching 'odds'"
+    assert agent is not None, "❌ No agents found in database"
 
     print(f"\n✅ Agent: {agent.name}")
     print(f"   Provider field: llm_provider = '{agent.llm_provider}'")
@@ -44,7 +57,7 @@ def test_agent_fields_and_execution(agent):
     execution = AgentExecution.objects.create(
         execution_id=f"test_{uuid.uuid4().hex[:8]}",
         template=agent,
-        task_description="Test: Calculate odds for Alabama -16.5",
+        task_description="Test: Verify agent execution with correct field names",
         task_type="test",
         status="pending",
     )
