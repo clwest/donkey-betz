@@ -1,5 +1,5 @@
 """
-AI Series Workflow Agent - Session 445
+AI Series Workflow Agent - Session 445 + Session 449 Learning Loops
 
 Master orchestrator that creates complete AI content series by chaining
 specialized agents through a 6-stage pipeline:
@@ -15,6 +15,12 @@ Design Decisions:
 - Series Types: educational, entertainment, marketing
 - Episode Count: 1-5 per series
 - Generation Mode: Sequential (for story continuity)
+
+Session 449 Additions:
+- Learning loops at each pipeline stage
+- Style preset recommendations based on historical performance
+- Voice selection optimization
+- Automatic feedback collection after episode completion
 
 Usage:
     from core.agent_router import AgentRouter
@@ -275,12 +281,24 @@ Available agents to delegate to:
     def __init__(self, user=None):
         super().__init__(user)
         self._router = None
+        self._learning_service = None
         # Series state maintained across execute()
         self._series_config = {}
         self._style_config = {}
         self._characters = []
         self._episode_results = []
         self._series_id = None  # Track current series for DB updates
+
+    @property
+    def learning_service(self):
+        """Lazy-load PipelineLearningService for feedback collection."""
+        if self._learning_service is None:
+            try:
+                from core.services.pipeline_learning import get_pipeline_learning_service
+                self._learning_service = get_pipeline_learning_service()
+            except Exception as e:
+                logger.warning(f"Could not load learning service: {e}")
+        return self._learning_service
 
     @property
     def router(self):
@@ -711,16 +729,53 @@ Start by researching the topic to understand trends and audience preferences.
             'message': f"Planned {episode_count}-episode {series_type} series"
         }
 
+    def _get_recommended_style(self) -> Dict[str, Any]:
+        """Get recommended style based on learning from historical performance."""
+        if not self.learning_service:
+            return {'style_preset': 'pixar', 'source': 'default'}
+
+        target_audience = self._series_config.get('target_audience', '')
+        series_type = self._series_config.get('series_type', '')
+
+        recommendation = self.learning_service.get_best_style_for_context(
+            target_audience=target_audience,
+            series_type=series_type,
+            fallback='pixar'
+        )
+
+        if recommendation.get('source') == 'learned':
+            logger.info(
+                f"Learning recommended {recommendation['style_preset']} style "
+                f"(rating: {recommendation['avg_rating']:.1f}/5, confidence: {recommendation['confidence']:.0%})"
+            )
+        return recommendation
+
     def _handle_lock_style(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle lock_style tool call - saves to AISeries.style_config."""
-        style_preset = arguments.get('style_preset', 'pixar')
+        """Handle lock_style tool call - saves to AISeries.style_config.
+
+        Session 449: Uses learning recommendations if no style specified.
+        """
+        # Check if style was explicitly provided
+        explicit_style = arguments.get('style_preset')
+
+        # If no explicit style, check learning recommendations
+        if not explicit_style:
+            recommendation = self._get_recommended_style()
+            style_preset = recommendation.get('style_preset', 'pixar')
+            recommendation_source = recommendation.get('source', 'default')
+            logger.info(f"Using {recommendation_source} style recommendation: {style_preset}")
+        else:
+            style_preset = explicit_style
+            recommendation_source = 'user_specified'
+
         color_palette = arguments.get('color_palette', ['#4ECDC4', '#FF6B6B', '#45B7D1'])
         art_direction = arguments.get('art_direction', 'friendly, colorful, professional')
 
         self._style_config = {
             'style_preset': style_preset,
             'color_palette': color_palette,
-            'art_direction': art_direction
+            'art_direction': art_direction,
+            'recommendation_source': recommendation_source  # Track where recommendation came from
         }
 
         # Save to database
@@ -944,6 +999,13 @@ Start by researching the topic to understand trends and audience preferences.
                     except Exception:
                         pass
 
+        # Session 449: Record automatic feedback for learning
+        self._record_episode_feedback(
+            episode_number=episode_number,
+            episode_id=str(db_episode.id) if db_episode else None,
+            episode_result=episode_result
+        )
+
         return {
             'success': True,
             'episode_number': episode_number,
@@ -952,6 +1014,104 @@ Start by researching the topic to understand trends and audience preferences.
             'assets_generated': list(episode_result['assets'].keys()),
             'message': f"Generated episode {episode_number}: {title}"
         }
+
+    def _record_episode_feedback(
+        self,
+        episode_number: int,
+        episode_id: str,
+        episode_result: Dict[str, Any]
+    ):
+        """Record automatic feedback for a completed episode (Session 449 Learning Loops)."""
+        if not self.learning_service:
+            return
+
+        try:
+            # Calculate automatic quality scores based on asset generation success
+            assets = episode_result.get('assets', {})
+            script = episode_result.get('script', '')
+
+            # Script stage feedback (based on length and presence)
+            if script:
+                script_words = len(script.split())
+                # Score based on target range (200-300 words is optimal)
+                if 180 <= script_words <= 350:
+                    script_rating = 4.5
+                elif 100 <= script_words < 180 or 350 < script_words <= 500:
+                    script_rating = 3.5
+                else:
+                    script_rating = 2.5
+
+                self.learning_service.record_stage_feedback(
+                    stage='script',
+                    rating=script_rating,
+                    context={
+                        'series_type': self._series_config.get('series_type', ''),
+                        'target_audience': self._series_config.get('target_audience', ''),
+                        'word_count': script_words,
+                        'arc_position': episode_result.get('arc_position', '')
+                    },
+                    series_id=self._series_id,
+                    episode_id=episode_id,
+                    feedback_type='automated',
+                    comment=f"Automated: {script_words} words generated"
+                )
+
+            # Image stage feedback (based on success of image generation)
+            if 'images' in assets and assets['images']:
+                image_count = len(assets['images'])
+                image_rating = 4.0 if image_count >= 2 else 3.5 if image_count == 1 else 2.0
+
+                self.learning_service.record_stage_feedback(
+                    stage='image',
+                    rating=image_rating,
+                    context={
+                        'style_preset': self._style_config.get('style_preset', ''),
+                        'target_audience': self._series_config.get('target_audience', ''),
+                        'series_type': self._series_config.get('series_type', ''),
+                        'image_count': image_count
+                    },
+                    series_id=self._series_id,
+                    episode_id=episode_id,
+                    feedback_type='automated',
+                    comment=f"Automated: {image_count} images generated"
+                )
+
+            # Voice stage feedback
+            if 'voice' in assets:
+                self.learning_service.record_stage_feedback(
+                    stage='voice',
+                    rating=4.0,  # Successful voice generation
+                    context={
+                        'series_type': self._series_config.get('series_type', ''),
+                        'target_audience': self._series_config.get('target_audience', ''),
+                        'voice_style': self._characters[0].get('voice_style', '') if self._characters else ''
+                    },
+                    series_id=self._series_id,
+                    episode_id=episode_id,
+                    feedback_type='automated',
+                    comment="Automated: Voice generated successfully"
+                )
+
+            # Video stage feedback
+            if 'video' in assets:
+                self.learning_service.record_stage_feedback(
+                    stage='video',
+                    rating=4.0,  # Successful video generation
+                    context={
+                        'style_preset': self._style_config.get('style_preset', ''),
+                        'series_type': self._series_config.get('series_type', ''),
+                        'target_audience': self._series_config.get('target_audience', '')
+                    },
+                    series_id=self._series_id,
+                    episode_id=episode_id,
+                    feedback_type='automated',
+                    comment="Automated: Video generated successfully"
+                )
+
+            logger.info(f"Recorded learning feedback for episode {episode_number}")
+
+        except Exception as e:
+            logger.warning(f"Failed to record episode feedback: {e}")
 
     def _generate_episode_script(
         self,

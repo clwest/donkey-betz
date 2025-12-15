@@ -305,6 +305,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
         await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
         await self.add_cog(SeriesCommands(self))  # Session 445: AI Series Workflow
+        await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
 
@@ -4625,6 +4626,359 @@ class SeriesCommands(commands.Cog):
                 embed=discord.Embed(
                     title="Error",
                     description=f"Failed to view episode: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+class PipelineLearningCommands(commands.Cog):
+    """
+    Session 449: Pipeline Learning Commands.
+
+    Commands for interacting with the AI Content Pipeline learning loops:
+    - Rate content quality at each stage
+    - View learning statistics and insights
+    - Get style recommendations based on performance data
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    @app_commands.command(name="rate-series", description="Rate a series or episode to help improve AI generation")
+    @app_commands.describe(
+        series_id="The series ID (from /series-list)",
+        stage="Pipeline stage to rate",
+        rating="Your rating from 1-5 stars",
+        comment="Optional comment about the quality"
+    )
+    @app_commands.choices(stage=[
+        app_commands.Choice(name="Research quality", value="research"),
+        app_commands.Choice(name="Script/narration", value="script"),
+        app_commands.Choice(name="Image/visuals", value="image"),
+        app_commands.Choice(name="Voice/audio", value="voice"),
+        app_commands.Choice(name="Video output", value="video"),
+        app_commands.Choice(name="Overall package", value="package"),
+    ])
+    async def rate_series(
+        self,
+        interaction: discord.Interaction,
+        series_id: str,
+        stage: str,
+        rating: int,
+        comment: str = ""
+    ):
+        """Rate a series stage to provide feedback for learning."""
+        await interaction.response.defer()
+
+        try:
+            # Validate rating
+            if not 1 <= rating <= 5:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Rating",
+                        description="Rating must be between 1 and 5",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Get linked user
+            linked_user = await self._get_linked_user(str(interaction.user.id))
+            if not linked_user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link` command.",
+                    ephemeral=True
+                )
+                return
+
+            # Record feedback
+            @sync_to_async
+            def record():
+                from core.services.pipeline_learning import get_pipeline_learning_service
+                from core.models_ai_series import AISeries
+
+                try:
+                    series = AISeries.objects.get(id=series_id)
+                except AISeries.DoesNotExist:
+                    return None, "Series not found"
+
+                service = get_pipeline_learning_service()
+                feedback = service.record_stage_feedback(
+                    stage=stage,
+                    rating=float(rating),
+                    context={
+                        'style_preset': series.style_config.get('style_preset', ''),
+                        'target_audience': series.target_audience,
+                        'series_type': series.series_type
+                    },
+                    series_id=series_id,
+                    user_id=linked_user.id,
+                    feedback_type='user_rating',
+                    comment=comment
+                )
+                return feedback, series.name
+
+            feedback, series_name = await record()
+
+            if feedback is None:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Error",
+                        description=series_name,  # This contains error message
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Success embed
+            stars = "⭐" * rating + "☆" * (5 - rating)
+            embed = discord.Embed(
+                title="Feedback Recorded",
+                description=f"Thank you for rating **{series_name}**!",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="Stage", value=stage.title(), inline=True)
+            embed.add_field(name="Rating", value=stars, inline=True)
+            if comment:
+                embed.add_field(name="Comment", value=comment, inline=False)
+            embed.set_footer(text="Your feedback helps improve AI content generation!")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Rate series error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to record feedback: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="learning-stats", description="View learning system statistics")
+    async def learning_stats(self, interaction: discord.Interaction):
+        """View pipeline learning statistics."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_stats():
+                from core.services.pipeline_learning import get_pipeline_learning_service
+                service = get_pipeline_learning_service()
+                return service.get_learning_statistics()
+
+            stats = await get_stats()
+
+            embed = discord.Embed(
+                title="📊 Pipeline Learning Statistics",
+                description="Feedback data collected to improve AI content generation",
+                color=discord.Color.blue()
+            )
+
+            # Feedback stats
+            feedback = stats.get('feedback', {})
+            embed.add_field(
+                name="Feedback Collected",
+                value=f"**{feedback.get('total_count', 0)}** ratings\n"
+                      f"Avg: **{feedback.get('avg_rating', 0):.1f}**/5",
+                inline=True
+            )
+
+            # Style stats
+            styles = stats.get('styles', {})
+            embed.add_field(
+                name="Style Performance",
+                value=f"**{styles.get('tracked_count', 0)}** styles tracked\n"
+                      f"Top: **{styles.get('top_style', 'N/A')}**",
+                inline=True
+            )
+
+            # Insights
+            insights = stats.get('insights', {})
+            embed.add_field(
+                name="Active Insights",
+                value=f"**{insights.get('active_count', 0)}** insights\n"
+                      f"Applied **{insights.get('total_applied', 0)}** times",
+                inline=True
+            )
+
+            # Engagement
+            engagement = stats.get('engagement', {})
+            embed.add_field(
+                name="Content Engagement",
+                value=f"**{engagement.get('total_tracked', 0)}** tracked\n"
+                      f"**{engagement.get('viral_count', 0)}** viral content",
+                inline=True
+            )
+
+            embed.set_footer(text="Use /rate-series to contribute feedback!")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Learning stats error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get stats: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="style-recommend", description="Get style recommendation for your content")
+    @app_commands.describe(
+        audience="Target audience for the content",
+        series_type="Type of series"
+    )
+    @app_commands.choices(series_type=[
+        app_commands.Choice(name="Educational", value="educational"),
+        app_commands.Choice(name="Entertainment", value="entertainment"),
+        app_commands.Choice(name="Marketing", value="marketing"),
+    ])
+    async def style_recommend(
+        self,
+        interaction: discord.Interaction,
+        audience: str,
+        series_type: str = "educational"
+    ):
+        """Get a style recommendation based on learning data."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_recommendation():
+                from core.services.pipeline_learning import get_pipeline_learning_service
+                service = get_pipeline_learning_service()
+                return service.get_best_style_for_context(
+                    target_audience=audience,
+                    series_type=series_type
+                )
+
+            rec = await get_recommendation()
+
+            if rec.get('source') == 'learned':
+                embed = discord.Embed(
+                    title="🎨 Style Recommendation (Learned)",
+                    description=f"Based on **{rec.get('sample_size', 0)}** data points",
+                    color=discord.Color.gold()
+                )
+                confidence = rec.get('confidence', 0) * 100
+                embed.add_field(
+                    name="Recommended Style",
+                    value=f"**{rec.get('style_preset', 'pixar').title()}**",
+                    inline=True
+                )
+                embed.add_field(
+                    name="Avg Rating",
+                    value=f"**{rec.get('avg_rating', 0):.1f}**/5",
+                    inline=True
+                )
+                embed.add_field(
+                    name="Confidence",
+                    value=f"**{confidence:.0f}%**",
+                    inline=True
+                )
+                if rec.get('approval_rate', 0) > 0:
+                    embed.add_field(
+                        name="Approval Rate",
+                        value=f"**{rec.get('approval_rate', 0):.0f}%**",
+                        inline=True
+                    )
+            else:
+                embed = discord.Embed(
+                    title="🎨 Style Recommendation (Default)",
+                    description="Not enough data yet - using sensible default",
+                    color=discord.Color.lighter_grey()
+                )
+                embed.add_field(
+                    name="Recommended Style",
+                    value=f"**{rec.get('style_preset', 'pixar').title()}**",
+                    inline=True
+                )
+
+            embed.add_field(
+                name="For",
+                value=f"**{audience}** ({series_type})",
+                inline=False
+            )
+            embed.set_footer(text="Recommendations improve with more feedback from /rate-series")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Style recommend error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get recommendation: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="style-leaderboard", description="View top-performing styles")
+    @app_commands.describe(limit="Number of results to show (default 5)")
+    async def style_leaderboard(self, interaction: discord.Interaction, limit: int = 5):
+        """View the style performance leaderboard."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_leaderboard():
+                from core.services.pipeline_learning import get_pipeline_learning_service
+                service = get_pipeline_learning_service()
+                return service.get_style_leaderboard(limit=min(limit, 10))
+
+            leaderboard = await get_leaderboard()
+
+            if not leaderboard:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="🏆 Style Leaderboard",
+                        description="No data yet! Create some series and rate them to build the leaderboard.",
+                        color=discord.Color.lighter_grey()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="🏆 Style Performance Leaderboard",
+                description="Top performing visual styles based on feedback",
+                color=discord.Color.gold()
+            )
+
+            for i, entry in enumerate(leaderboard, 1):
+                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else f"{i}."
+                stars = "⭐" * int(entry['avg_rating']) + ("½" if entry['avg_rating'] % 1 >= 0.5 else "")
+                value = (
+                    f"Rating: {stars} ({entry['avg_rating']:.1f})\n"
+                    f"Uses: {entry['total_uses']} | "
+                    f"Viral: {entry['viral_count']}"
+                )
+                if entry['target_audience']:
+                    name = f"{medal} {entry['style_preset'].title()} ({entry['target_audience']})"
+                else:
+                    name = f"{medal} {entry['style_preset'].title()}"
+                embed.add_field(name=name, value=value, inline=False)
+
+            embed.set_footer(text="Contribute with /rate-series!")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Style leaderboard error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get leaderboard: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )
