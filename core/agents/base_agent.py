@@ -340,10 +340,10 @@ class BaseAgent(ABC, TimeTravelMixin):
         results = []
 
         # Try semantic search on spider data first
-        # Session 434: DISABLED - semantic search generates embeddings on-the-fly
-        # which is extremely slow with 15k+ spider data items. Use keyword search instead.
-        # TODO: Re-enable once embeddings are pre-generated via Celery task
-        ENABLE_SEMANTIC_SEARCH = False  # Set to True when embeddings are ready
+        # Session 434: Was disabled due to slow on-the-fly embedding generation
+        # Session 452: RE-ENABLED - Celery task now pre-generates embeddings (~20% coverage)
+        # Embeddings are generated every 10 min by backfill_spider_embeddings task
+        ENABLE_SEMANTIC_SEARCH = True  # Re-enabled with pre-generated embeddings
 
         if ENABLE_SEMANTIC_SEARCH:
             try:
