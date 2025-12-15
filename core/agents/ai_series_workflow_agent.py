@@ -183,7 +183,13 @@ Available agents to delegate to:
                     "properties": {
                         "style_preset": {
                             "type": "string",
-                            "description": "Visual style preset (pixar, anime, corporate, etc.)"
+                            "enum": [
+                                "pixar", "disney", "dreamworks", "cartoon", "anime", "ghibli",
+                                "south_park", "simpsons", "family_guy", "adventure_time",
+                                "gravity_falls", "rick_and_morty", "looney_tunes", "bojack",
+                                "chibi", "comic", "watercolor", "gouache", "3d_render"
+                            ],
+                            "description": "Visual style preset - MUST be one of the listed options. Use 'pixar' for 3D Pixar style, 'cartoon' for general animation, 'anime' for Japanese style, etc."
                         },
                         "color_palette": {
                             "type": "array",
@@ -283,6 +289,57 @@ Available agents to delegate to:
             from core.agent_router import AgentRouter
             self._router = AgentRouter(user=self.user)
         return self._router
+
+    def _call_agent_with_retry(
+        self,
+        agent_name: str,
+        task: str,
+        context: Dict[str, Any],
+        max_retries: int = 3,
+        base_delay: float = 2.0
+    ) -> 'AgentResult':
+        """
+        Call an agent with retry logic and exponential backoff.
+
+        Args:
+            agent_name: Name of the agent to call (e.g., "ImageAgent")
+            task: The task to perform
+            context: Context dict for the agent
+            max_retries: Maximum number of retry attempts (default 3)
+            base_delay: Base delay in seconds between retries (default 2.0)
+
+        Returns:
+            AgentResult from the agent
+        """
+        last_result = None
+
+        for attempt in range(1, max_retries + 1):
+            logger.info(f"Calling {agent_name} (attempt {attempt}/{max_retries})")
+
+            result = self.router.route(
+                agent_name=agent_name,
+                task=task,
+                context=context
+            )
+
+            if result.success:
+                if attempt > 1:
+                    logger.info(f"{agent_name} succeeded on attempt {attempt}")
+                return result
+
+            last_result = result
+            error_msg = result.error or "Unknown error"
+            logger.warning(f"{agent_name} failed on attempt {attempt}: {error_msg}")
+
+            # Don't sleep after the last attempt
+            if attempt < max_retries:
+                # Exponential backoff: 2s, 4s, 8s, etc.
+                delay = base_delay * (2 ** (attempt - 1))
+                logger.info(f"Retrying {agent_name} in {delay:.1f} seconds...")
+                time.sleep(delay)
+
+        logger.error(f"{agent_name} failed after {max_retries} attempts")
+        return last_result
 
     def execute(
         self,
@@ -776,23 +833,36 @@ Start by researching the topic to understand trends and audience preferences.
             except Exception as e:
                 logger.error(f"Failed to get/create SeriesEpisode: {e}")
 
-        # 1. Generate character/scene images
+        # 1. Generate character/scene images (with retry logic for reliability)
         character_result = None
+        style_preset = self._style_config.get('style_preset', 'pixar')
+        logger.info(f"Episode {episode_number}: self._characters = {len(self._characters)} characters, style={style_preset}")
         if self._characters:
             main_character = self._characters[0]
-            image_task = f"Create a scene for '{title}' featuring {main_character['name']}: {main_character['description']}. Style: {self._style_config.get('style_preset', 'pixar')}. Scene: {synopsis[:100]}"
+            char_name = main_character.get('name', 'character')
+            # Keep description short (max 100 chars) to avoid Stability AI 400 errors
+            char_desc = main_character.get('description', '')[:100]
+            scene_desc = synopsis[:80] if synopsis else title
 
-            image_result = self.router.route(
+            # Simple, focused prompt - let the style preset do the heavy lifting
+            image_task = f"Create {char_name} in a {scene_desc} scene"
+            logger.info(f"Generating images for {char_name} with style={style_preset}")
+
+            # Use retry logic for ImageAgent - Stability AI can be flaky
+            image_result = self._call_agent_with_retry(
                 agent_name="ImageAgent",
                 task=image_task,
                 context={
                     'count': 2,
-                    'style': self._style_config.get('style_preset', 'pixar'),
-                    'series_episode': episode_number
-                }
+                    'style': style_preset,  # This maps to our 80+ built-in style presets
+                    'series_episode': episode_number,
+                    'character_hint': char_desc  # Optional hint, not in main prompt
+                },
+                max_retries=3,
+                base_delay=2.0
             )
 
-            if image_result.success:
+            if image_result and image_result.success:
                 episode_result['assets']['images'] = image_result.data.get('images', [])
                 character_result = {
                     'success': True,
