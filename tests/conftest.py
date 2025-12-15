@@ -125,6 +125,7 @@ def second_project(user, db):
 def image_history(user, project, db):
     """Create a test image history record."""
     from content.models import ImageHistory
+    # Session 452: Removed 'status' - ImageHistory doesn't have that field
     return ImageHistory.objects.create(
         user=user,
         project=project,
@@ -136,8 +137,7 @@ def image_history(user, project, db):
         model_used='ultra',
         style='photographic',
         image_width=1024,
-        image_height=1024,
-        status='completed'
+        image_height=1024
     )
 
 
@@ -163,11 +163,12 @@ def video_history(user, project, db):
 def ai_session(user, project, db):
     """Create a test AI session."""
     from content.models import AISession
+    # Session 452: Use conversation_transcript instead of transcript
     return AISession.objects.create(
         user=user,
         project=project,
         title='Test Session',
-        transcript=[
+        conversation_transcript=[
             {'role': 'user', 'content': 'Generate a test image'},
             {'role': 'assistant', 'content': 'I\'ll generate that for you.'}
         ]
@@ -178,14 +179,16 @@ def ai_session(user, project, db):
 def minifig_asset(user, project, image_history, db):
     """Create a test 3D minifig asset."""
     from content.models import MiniFigAsset
+    # Session 452: Fixed field names to match actual model
     return MiniFigAsset.objects.create(
         user=user,
         project=project,
-        source_image=image_history,
-        name='Test MiniFig',
+        source_image_asset=image_history,  # Not source_image
+        title='Test MiniFig',  # Not name
         status='completed',
-        glb_file_path='minifigs/test/test.glb',
-        stl_file_path='minifigs/test/test.stl'
+        three_d_file='https://example.com/test.glb',  # Required URL field
+        local_glb_path='minifigs/test/test.glb'  # Not glb_file_path
+        # Note: stl_file_path doesn't exist on model
     )
 
 
@@ -356,6 +359,7 @@ def multiple_images(user, project, db):
 
     images = []
     for i in range(5):
+        # Session 452: Removed 'status' - ImageHistory doesn't have that field
         img = ImageHistory.objects.create(
             user=user,
             project=project,
@@ -364,8 +368,7 @@ def multiple_images(user, project, db):
             image_type='generated',
             prompt=f'Test image {i}',
             parameters={'width': 1024, 'height': 1024},
-            model_used='ultra',
-            status='completed'
+            model_used='ultra'
         )
         images.append(img)
 
