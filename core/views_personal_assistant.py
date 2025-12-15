@@ -337,3 +337,181 @@ def voice_to_assistant(request):
             'error': 'Failed to process voice input',
             'details': str(e)
         }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def voice_interview_response(request):
+    """
+    Session 456: Voice input for Profile Interview.
+
+    Uses OpenAI Whisper to transcribe voice and submit as interview response.
+
+    Request:
+    - multipart/form-data with 'audio' file (webm/m4a/wav)
+
+    Response:
+    {
+        "success": true,
+        "transcribed_text": "what the user said...",
+        "acknowledgment": "Great answer!",
+        "question": { next question data },
+        "state": { interview state }
+    }
+    """
+    try:
+        # Step 1: Get and validate audio file
+        audio_file = request.FILES.get('audio')
+
+        if not audio_file:
+            return Response({
+                'error': 'No audio file provided'
+            }, status=400)
+
+        logger.info(f"🎤 Voice interview input from {request.user.username} ({audio_file.size} bytes)")
+
+        # Step 2: Transcribe audio using OpenAI Whisper
+        try:
+            import os
+            from openai import OpenAI
+            from io import BytesIO
+
+            client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+            # Convert Django InMemoryUploadedFile to BytesIO for OpenAI SDK
+            audio_file.seek(0)
+            audio_bytes = audio_file.read()
+            audio_file_like = BytesIO(audio_bytes)
+
+            # Always use .webm extension (frontend sends audio/webm format)
+            audio_file_like.name = "recording.webm"
+
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file_like,
+                language="en"
+            )
+
+            transcribed_text = transcript.text.strip()
+            logger.info(f"✅ Interview voice transcribed: '{transcribed_text[:100]}...'")
+
+            if not transcribed_text:
+                return Response({
+                    'error': 'Could not understand audio. Please speak more clearly.',
+                    'transcribed_text': ''
+                }, status=400)
+
+        except Exception as e:
+            logger.error(f"❌ Interview transcription failed: {str(e)}")
+            return Response({
+                'error': 'Failed to transcribe audio',
+                'details': str(e)
+            }, status=500)
+
+        # Step 3: Submit transcribed text as interview response
+        try:
+            from intelligence.personal_assistant_interviewer import personal_assistant_interviewer
+            from asgiref.sync import async_to_sync
+
+            user_id = str(request.user.id)
+
+            # Process the response through the interview system
+            # Use async_to_sync which properly handles Django's async context
+            result = async_to_sync(personal_assistant_interviewer.process_response)(user_id, transcribed_text)
+
+            if result.get('error'):
+                return Response({
+                    'error': result['error'],
+                    'transcribed_text': transcribed_text
+                }, status=400)
+
+            logger.info(f"✅ Interview voice response processed successfully")
+
+            return Response({
+                'success': True,
+                'transcribed_text': transcribed_text,
+                'acknowledgment': result.get('acknowledgment', ''),
+                'question': result.get('question'),
+                'interview_complete': result.get('interview_complete', False),
+                'profile': result.get('profile'),
+                'final_message': result.get('final_message'),
+                'state': result.get('state')
+            })
+
+        except Exception as e:
+            logger.error(f"❌ Interview processing failed: {str(e)}")
+            return Response({
+                'success': False,
+                'transcribed_text': transcribed_text,
+                'error': 'Transcription succeeded but interview processing failed',
+                'details': str(e)
+            }, status=500)
+
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Voice interview failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return Response({
+            'error': 'Failed to process voice input',
+            'details': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def transcribe_only(request):
+    """
+    Session 456: Transcribe audio only (no interview processing).
+
+    Useful for getting transcription before submitting to interview.
+
+    Request:
+    - multipart/form-data with 'audio' file (webm/m4a/wav)
+
+    Response:
+    {
+        "success": true,
+        "text": "transcribed text..."
+    }
+    """
+    try:
+        audio_file = request.FILES.get('audio')
+
+        if not audio_file:
+            return Response({
+                'error': 'No audio file provided'
+            }, status=400)
+
+        logger.info(f"🎤 Transcribe-only request from {request.user.username} ({audio_file.size} bytes)")
+
+        import os
+        from openai import OpenAI
+        from io import BytesIO
+
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        audio_file.seek(0)
+        audio_bytes = audio_file.read()
+        audio_file_like = BytesIO(audio_bytes)
+        audio_file_like.name = "recording.webm"
+
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file_like,
+            language="en"
+        )
+
+        transcribed_text = transcript.text.strip()
+        logger.info(f"✅ Transcribed: '{transcribed_text[:100]}...'")
+
+        return Response({
+            'success': True,
+            'text': transcribed_text
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Transcription failed: {str(e)}")
+        return Response({
+            'error': 'Failed to transcribe audio',
+            'details': str(e)
+        }, status=500)

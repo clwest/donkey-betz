@@ -72,6 +72,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -183,89 +184,279 @@ class ConversationMessage:
     timestamp: datetime = field(default_factory=datetime.now)
 
 
-class ConversationHistory:
+class DatabaseConversationHistory:
     """
-    Manages conversation history per Discord user.
+    Session 455: Database-backed conversation history for cross-platform session continuity.
+
+    Stores conversations in ChatConversation model so they can be:
+    - Persisted across bot restarts
+    - Accessed from web app
+    - Resumed on any platform (web ↔ Discord)
 
     Features:
     - Stores up to MAX_MESSAGES per user
-    - Auto-expires conversations after EXPIRY_HOURS of inactivity
-    - Thread-safe for async operations
+    - Sessions expire after EXPIRY_HOURS of inactivity
+    - Automatic session titles generated from first message
+    - Linked to user accounts when Discord is linked
     """
 
     MAX_MESSAGES = 20  # Keep last 20 messages per user
-    EXPIRY_HOURS = 2   # Conversations expire after 2 hours of inactivity
+    EXPIRY_HOURS = 24  # Sessions expire after 24 hours (extended from 2)
 
     def __init__(self):
-        # {user_id: {'messages': [ConversationMessage], 'last_activity': datetime}}
-        self._conversations: Dict[int, Dict[str, Any]] = {}
+        # In-memory cache for active sessions to reduce DB hits
+        # {discord_user_id: {'conversation_id': str, 'last_activity': datetime}}
+        self._session_cache: Dict[int, Dict[str, Any]] = {}
 
-    def add_message(self, user_id: int, role: str, content: str):
-        """Add a message to user's conversation history."""
-        now = datetime.now()
+    def _get_conversation_id(self, discord_user_id: int) -> str:
+        """Get or create conversation ID for a Discord user."""
+        import uuid
+        from django.utils import timezone
 
-        if user_id not in self._conversations:
-            self._conversations[user_id] = {
-                'messages': [],
-                'last_activity': now
+        # Check cache first
+        if discord_user_id in self._session_cache:
+            cache_entry = self._session_cache[discord_user_id]
+            # Check if session is still valid (within expiry window)
+            if timezone.now() - cache_entry['last_activity'] < timedelta(hours=self.EXPIRY_HOURS):
+                cache_entry['last_activity'] = timezone.now()
+                return cache_entry['conversation_id']
+
+        # Try to find recent active session in database
+        try:
+            from core.models import ChatConversation
+            cutoff = timezone.now() - timedelta(hours=self.EXPIRY_HOURS)
+
+            recent = ChatConversation.objects.filter(
+                discord_user_id=str(discord_user_id),
+                session_active=True,
+                created_at__gte=cutoff
+            ).order_by('-created_at').first()
+
+            if recent:
+                conversation_id = recent.conversation_id
+            else:
+                conversation_id = str(uuid.uuid4())
+
+            # Update cache
+            self._session_cache[discord_user_id] = {
+                'conversation_id': conversation_id,
+                'last_activity': timezone.now()
             }
+            return conversation_id
 
-        conv = self._conversations[user_id]
-        conv['messages'].append(ConversationMessage(role=role, content=content, timestamp=now))
-        conv['last_activity'] = now
+        except Exception as e:
+            logger.error(f"Error getting conversation ID: {e}")
+            return str(uuid.uuid4())
 
-        # Trim to max messages (keep most recent)
-        if len(conv['messages']) > self.MAX_MESSAGES:
-            conv['messages'] = conv['messages'][-self.MAX_MESSAGES:]
+    def add_message(self, user_id: int, role: str, content: str, channel_id: int = None, guild_id: int = None):
+        """
+        Add a message to user's conversation history.
+        Stores in database for persistence and cross-platform access.
+        """
+        from django.utils import timezone
+
+        try:
+            from core.models import ChatConversation, UnifiedUser
+
+            conversation_id = self._get_conversation_id(user_id)
+
+            # Try to find linked user
+            linked_user = None
+            try:
+                linked_user = UnifiedUser.objects.filter(discord_id=str(user_id)).first()
+            except Exception:
+                pass
+
+            # For assistant responses, update the last message instead of creating new
+            if role == 'assistant':
+                # Find the most recent user message in this conversation
+                last_user_msg = ChatConversation.objects.filter(
+                    conversation_id=conversation_id,
+                    discord_user_id=str(user_id)
+                ).order_by('-created_at').first()
+
+                if last_user_msg and not last_user_msg.assistant_response:
+                    # Update with assistant response
+                    last_user_msg.assistant_response = content[:10000]  # Limit length
+                    last_user_msg.save()
+
+                    # Generate session title from first message if not set
+                    if not last_user_msg.session_title:
+                        last_user_msg.generate_session_title()
+                    return
+
+            # Create new message entry
+            ChatConversation.objects.create(
+                user=linked_user,
+                conversation_id=conversation_id,
+                user_message=content[:10000] if role == 'user' else '',
+                assistant_response=content[:10000] if role == 'assistant' else '',
+                platform='discord',
+                discord_user_id=str(user_id),
+                discord_channel_id=str(channel_id) if channel_id else None,
+                discord_guild_id=str(guild_id) if guild_id else None,
+                session_active=True,
+                metadata={'source': 'discord_bot', 'timestamp': timezone.now().isoformat()}
+            )
+
+            # Update cache
+            if user_id in self._session_cache:
+                self._session_cache[user_id]['last_activity'] = timezone.now()
+
+        except Exception as e:
+            logger.error(f"Error adding message to database: {e}")
 
     def get_history(self, user_id: int) -> List[Dict[str, str]]:
         """
         Get conversation history for user as list of message dicts.
         Returns empty list if no history or expired.
         """
-        if user_id not in self._conversations:
+        from django.utils import timezone
+
+        try:
+            from core.models import ChatConversation
+
+            conversation_id = self._get_conversation_id(user_id)
+            cutoff = timezone.now() - timedelta(hours=self.EXPIRY_HOURS)
+
+            # Get messages from this conversation
+            messages = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                created_at__gte=cutoff
+            ).order_by('created_at')[:self.MAX_MESSAGES]
+
+            # Convert to LLM format
+            history = []
+            for msg in messages:
+                if msg.user_message:
+                    history.append({'role': 'user', 'content': msg.user_message})
+                if msg.assistant_response:
+                    history.append({'role': 'assistant', 'content': msg.assistant_response})
+
+            return history
+
+        except Exception as e:
+            logger.error(f"Error getting history from database: {e}")
             return []
-
-        conv = self._conversations[user_id]
-
-        # Check if conversation has expired
-        if datetime.now() - conv['last_activity'] > timedelta(hours=self.EXPIRY_HOURS):
-            self.clear(user_id)
-            return []
-
-        # Return messages in format suitable for LLM
-        return [
-            {'role': msg.role, 'content': msg.content}
-            for msg in conv['messages']
-        ]
 
     def clear(self, user_id: int) -> bool:
-        """Clear conversation history for user. Returns True if there was history to clear."""
-        if user_id in self._conversations:
-            del self._conversations[user_id]
-            return True
-        return False
+        """
+        Clear conversation history for user.
+        Marks session as inactive rather than deleting.
+        Returns True if there was history to clear.
+        """
+        try:
+            from core.models import ChatConversation
+
+            # Mark all active sessions for this user as inactive
+            updated = ChatConversation.objects.filter(
+                discord_user_id=str(user_id),
+                session_active=True
+            ).update(session_active=False)
+
+            # Clear from cache
+            if user_id in self._session_cache:
+                del self._session_cache[user_id]
+
+            return updated > 0
+
+        except Exception as e:
+            logger.error(f"Error clearing history: {e}")
+            return False
 
     def get_message_count(self, user_id: int) -> int:
-        """Get number of messages in user's history."""
-        if user_id not in self._conversations:
+        """Get number of messages in user's current session."""
+        try:
+            from core.models import ChatConversation
+            from django.utils import timezone
+
+            conversation_id = self._get_conversation_id(user_id)
+            cutoff = timezone.now() - timedelta(hours=self.EXPIRY_HOURS)
+
+            # Count messages with content
+            count = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                created_at__gte=cutoff
+            ).count()
+
+            # Each record has user + assistant, so multiply by 2 for message count
+            return count * 2
+
+        except Exception as e:
+            logger.error(f"Error getting message count: {e}")
             return 0
-        return len(self._conversations[user_id]['messages'])
 
     def cleanup_expired(self):
-        """Remove all expired conversations. Call periodically."""
-        now = datetime.now()
-        expired_users = [
-            user_id for user_id, conv in self._conversations.items()
-            if now - conv['last_activity'] > timedelta(hours=self.EXPIRY_HOURS)
-        ]
-        for user_id in expired_users:
-            del self._conversations[user_id]
-        return len(expired_users)
+        """Mark all expired sessions as inactive."""
+        from django.utils import timezone
+
+        try:
+            from core.models import ChatConversation
+
+            cutoff = timezone.now() - timedelta(hours=self.EXPIRY_HOURS)
+
+            # Mark old sessions as inactive
+            updated = ChatConversation.objects.filter(
+                platform='discord',
+                session_active=True,
+                created_at__lt=cutoff
+            ).update(session_active=False)
+
+            # Clear cache entries
+            now = timezone.now()
+            expired_users = [
+                uid for uid, cache in self._session_cache.items()
+                if now - cache['last_activity'] > timedelta(hours=self.EXPIRY_HOURS)
+            ]
+            for uid in expired_users:
+                del self._session_cache[uid]
+
+            return updated
+
+        except Exception as e:
+            logger.error(f"Error cleaning up expired sessions: {e}")
+            return 0
+
+    def get_session_info(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get info about user's current session.
+        Useful for showing session continuity to user.
+        """
+        try:
+            from core.models import ChatConversation
+            from django.utils import timezone
+
+            conversation_id = self._get_conversation_id(user_id)
+
+            first_msg = ChatConversation.objects.filter(
+                conversation_id=conversation_id
+            ).order_by('created_at').first()
+
+            if not first_msg:
+                return None
+
+            last_msg = ChatConversation.objects.filter(
+                conversation_id=conversation_id
+            ).order_by('-created_at').first()
+
+            return {
+                'conversation_id': conversation_id,
+                'session_title': first_msg.session_title or first_msg.user_message[:50],
+                'started_at': first_msg.created_at,
+                'last_activity': last_msg.created_at if last_msg else first_msg.created_at,
+                'message_count': self.get_message_count(user_id),
+                'platform': 'discord',
+                'linked_user': first_msg.user.username if first_msg.user else None,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting session info: {e}")
+            return None
 
 
-# Global conversation history instance
-conversation_history = ConversationHistory()
+# Global conversation history instance - now uses database!
+# Session 455: Upgraded from in-memory to database storage for cross-platform continuity
+conversation_history = DatabaseConversationHistory()
 
 
 class DonkeyBetzBot(commands.Bot):
@@ -1215,6 +1406,161 @@ class InteractiveCommands(commands.Cog):
 
         embed.set_footer(text=f"Requested by {interaction.user.display_name}")
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="sessions", description="View and manage your conversation sessions across platforms")
+    @app_commands.describe(action="Action to perform: list, info, or resume")
+    @app_commands.choices(action=[
+        app_commands.Choice(name="list - Show active sessions", value="list"),
+        app_commands.Choice(name="info - Show current session info", value="info"),
+        app_commands.Choice(name="resume - Resume a web session", value="resume"),
+    ])
+    async def sessions(self, interaction: discord.Interaction, action: str = "list"):
+        """
+        Session 455: Cross-platform session management.
+
+        Shows sessions from both Discord and web, allowing users to resume
+        conversations started on the web app from Discord.
+        """
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = interaction.user.id
+
+        try:
+            if action == "list":
+                # Get session info using the database-backed conversation history
+                @sync_to_async
+                def get_user_sessions():
+                    from core.models import ChatConversation, UnifiedUser
+                    from django.utils import timezone
+                    from django.db.models import Max, Min, Count
+
+                    cutoff = timezone.now() - timedelta(hours=24)
+
+                    # Check if user is linked
+                    linked_user = UnifiedUser.objects.filter(discord_id=str(user_id)).first()
+
+                    # Build query
+                    if linked_user:
+                        from django.db import models as db_models
+                        sessions_query = ChatConversation.objects.filter(
+                            db_models.Q(user=linked_user) | db_models.Q(discord_user_id=str(user_id)),
+                            session_active=True,
+                            created_at__gte=cutoff
+                        )
+                    else:
+                        sessions_query = ChatConversation.objects.filter(
+                            discord_user_id=str(user_id),
+                            session_active=True,
+                            created_at__gte=cutoff
+                        )
+
+                    # Group by conversation_id
+                    session_data = sessions_query.values('conversation_id', 'platform').annotate(
+                        first_message=Min('created_at'),
+                        last_activity=Max('created_at'),
+                        message_count=Count('id')
+                    ).order_by('-last_activity')[:10]
+
+                    sessions = []
+                    seen = set()
+                    for s in session_data:
+                        if s['conversation_id'] in seen:
+                            continue
+                        seen.add(s['conversation_id'])
+
+                        # Get title from first message
+                        first = ChatConversation.objects.filter(
+                            conversation_id=s['conversation_id']
+                        ).order_by('created_at').first()
+
+                        title = first.session_title if first and first.session_title else (
+                            first.user_message[:40] + '...' if first and len(first.user_message) > 40 else
+                            first.user_message if first else 'Untitled'
+                        )
+
+                        sessions.append({
+                            'id': s['conversation_id'][:8],  # Short ID for display
+                            'title': title,
+                            'platform': s['platform'],
+                            'messages': s['message_count'] * 2,
+                            'last_activity': s['last_activity'],
+                        })
+
+                    return sessions, bool(linked_user)
+
+                sessions, is_linked = await get_user_sessions()
+
+                if not sessions:
+                    embed = discord.Embed(
+                        title="📋 Your Sessions",
+                        description="No active sessions found in the last 24 hours.\n\nStart a conversation with `/ask`!",
+                        color=discord.Color.blue()
+                    )
+                else:
+                    embed = discord.Embed(
+                        title="📋 Your Sessions",
+                        description=f"Found {len(sessions)} active session(s):",
+                        color=discord.Color.green()
+                    )
+
+                    for s in sessions:
+                        platform_emoji = "💬" if s['platform'] == 'discord' else "🌐"
+                        time_ago = timezone.now() - s['last_activity'] if s['last_activity'] else timedelta(0)
+                        time_str = f"{int(time_ago.total_seconds() / 60)}m ago" if time_ago.total_seconds() < 3600 else f"{int(time_ago.total_seconds() / 3600)}h ago"
+
+                        embed.add_field(
+                            name=f"{platform_emoji} {s['title'][:30]}",
+                            value=f"ID: `{s['id']}` | {s['messages']} msgs | {time_str}",
+                            inline=False
+                        )
+
+                link_status = "✅ Web account linked" if is_linked else "⚠️ Link your web account with `/link` to sync sessions"
+                embed.set_footer(text=link_status)
+
+            elif action == "info":
+                # Show current session info
+                session_info = conversation_history.get_session_info(user_id)
+
+                if session_info:
+                    embed = discord.Embed(
+                        title="📍 Current Session",
+                        color=discord.Color.green()
+                    )
+                    embed.add_field(name="Title", value=session_info['session_title'][:50], inline=False)
+                    embed.add_field(name="Session ID", value=f"`{session_info['conversation_id'][:8]}`", inline=True)
+                    embed.add_field(name="Messages", value=str(session_info['message_count']), inline=True)
+                    embed.add_field(name="Platform", value=session_info['platform'], inline=True)
+
+                    if session_info['linked_user']:
+                        embed.add_field(name="Linked To", value=session_info['linked_user'], inline=True)
+
+                    embed.set_footer(text=f"Started: {session_info['started_at'].strftime('%Y-%m-%d %H:%M')}")
+                else:
+                    embed = discord.Embed(
+                        title="📍 No Active Session",
+                        description="You don't have an active conversation.\nStart one with `/ask`!",
+                        color=discord.Color.light_gray()
+                    )
+
+            elif action == "resume":
+                embed = discord.Embed(
+                    title="🔄 Resume Session",
+                    description="To resume a session from the web:\n\n"
+                                "1. Use `/sessions list` to see available sessions\n"
+                                "2. Copy the session ID\n"
+                                "3. Simply use `/ask` - your linked account will automatically use your most recent session\n\n"
+                                "**Tip:** Link your account with `/link` to sync sessions between web and Discord!",
+                    color=discord.Color.blue()
+                )
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/sessions error: {e}")
+            await interaction.followup.send(
+                f"Error: {str(e)[:200]}",
+                ephemeral=True
+            )
 
     @app_commands.command(name="link", description="Link your Discord account to your AI Studio web account")
     @app_commands.describe(code="The 6-character link code from the AI Studio web app")

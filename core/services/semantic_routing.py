@@ -36,6 +36,15 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
+# Session 454: Import from unified routing config
+try:
+    from core.agents.routing_config import get_semantic_capabilities
+    AGENT_CAPABILITIES = get_semantic_capabilities()
+    logger.info("Loaded agent capabilities from unified routing config")
+except ImportError:
+    logger.warning("Could not import from routing_config, using fallback")
+    AGENT_CAPABILITIES = {}  # Will be defined below as fallback
+
 # Try to import OpenAI for embeddings
 try:
     import openai
@@ -56,129 +65,27 @@ class RoutingResult:
     match_time_ms: int = 0
 
 
-# Agent capability descriptions - these get embedded for semantic matching
-AGENT_CAPABILITIES = {
-    "ImageAgent": {
-        "description": "Generate images, logos, banners, illustrations, graphics, icons, avatars, and visual content from text descriptions",
-        "examples": [
-            "create a logo for my tech startup",
-            "generate a cyberpunk city illustration",
-            "make a banner for my YouTube channel",
-            "design an icon for my app",
-            "create a watercolor portrait",
-        ],
-        "keywords": ["image", "logo", "banner", "illustration", "graphic", "icon", "picture", "design", "create", "generate"],
-    },
-    "VideoAgent": {
-        "description": "Create videos, animations, motion graphics, and animate still images into video content",
-        "examples": [
-            "create a video showing a sunset over mountains",
-            "animate this logo into a video",
-            "make a motion graphic for my intro",
-            "generate a promotional video",
-        ],
-        "keywords": ["video", "animate", "animation", "motion", "clip", "movie"],
-    },
-    "AudioAgent": {
-        "description": "Generate audio content including text-to-speech, voiceovers, narration, and sound effects",
-        "examples": [
-            "create a voiceover for my video",
-            "generate text-to-speech narration",
-            "make an audio introduction",
-            "create sound effects for my game",
-        ],
-        "keywords": ["audio", "voice", "speech", "voiceover", "narration", "sound", "tts"],
-    },
-    "ThreeDAgent": {
-        "description": "Create 3D models, convert images to 3D objects for printing or rendering",
-        "examples": [
-            "convert this image to a 3D model",
-            "create a 3D object from this logo",
-            "make a 3D printable version",
-            "generate a 3D mesh",
-        ],
-        "keywords": ["3d", "three-dimensional", "model", "mesh", "print"],
-    },
-    "ImageEditingAgent": {
-        "description": "Edit existing images - upscale, remove background, recolor, create variations, search and replace objects",
-        "examples": [
-            "upscale image 5 to 4x resolution",
-            "remove the background from this image",
-            "make the logo blue instead of red",
-            "create 3 variations of this design",
-        ],
-        "keywords": ["upscale", "remove background", "recolor", "variations", "edit"],
-    },
-    "VideoEditingAgent": {
-        "description": "Edit existing videos - trim, add effects, slow motion, add text overlays, concatenate clips",
-        "examples": [
-            "trim this video to 30 seconds",
-            "add slow motion effect",
-            "add text overlay to the video",
-            "combine these video clips",
-        ],
-        "keywords": ["trim", "cut", "slow motion", "effects", "edit video"],
-    },
-    "ResearchAgent": {
-        "description": "Search the web and spider network for trending topics, news, and general information",
-        "examples": [
-            "what's trending in design right now",
-            "find the latest AI news",
-            "search for web development trends",
-            "what's hot in cybersecurity",
-        ],
-        "keywords": ["search", "find", "trending", "news", "latest", "whats hot"],
-    },
-    "CompetitorAnalysisAgent": {
-        "description": "Research business markets, analyze competitors, create SWOT analysis, evaluate startup ideas and business landscapes",
-        "examples": [
-            "research the AI writing assistant market for my startup idea",
-            "analyze competitors in the coffee subscription space",
-            "do a SWOT analysis for project management tools",
-            "who are the main competitors in ed-tech",
-            "research the competitive landscape for my business idea",
-        ],
-        "keywords": ["market", "competitor", "startup", "business idea", "swot", "landscape", "industry"],
-    },
-    "CustomerResearchAgent": {
-        "description": "Build customer personas, research pain points, analyze customer sentiment and needs from forums and social media",
-        "examples": [
-            "build customer personas for fitness apps",
-            "what are the pain points for project management users",
-            "research customer needs for food delivery",
-            "who are the target customers for online education",
-        ],
-        "keywords": ["customer", "persona", "pain point", "sentiment", "target audience"],
-    },
-    "WorkflowAgent": {
-        "description": "Execute multi-step workflows that combine research and creation, like research-and-create logo packages or brand identity kits",
-        "examples": [
-            "research and create 3 logos for my AI startup",
-            "create a complete brand identity package",
-            "make a YouTube thumbnail package with research",
-            "research trending styles and create banners",
-        ],
-        "keywords": ["research and create", "package", "workflow", "brand identity", "complete"],
-    },
-    "ContentStrategyAgent": {
-        "description": "Develop content strategy, recommend what to create, plan content calendars based on trends",
-        "examples": [
-            "what content should I create for my tech blog",
-            "develop a content strategy for my YouTube channel",
-            "recommend topics for my newsletter",
-        ],
-        "keywords": ["content strategy", "what should I create", "recommend", "plan"],
-    },
-    "BrandIdentityAgent": {
-        "description": "Develop brand identity including colors, typography, style guidelines, and visual consistency",
-        "examples": [
-            "help me develop my brand colors",
-            "what typography should my brand use",
-            "create brand guidelines for consistency",
-        ],
-        "keywords": ["brand", "colors", "typography", "identity", "style guide"],
-    },
-}
+# Session 454: AGENT_CAPABILITIES now imported from routing_config.py (single source of truth)
+# Fallback definition only used if import fails
+if not AGENT_CAPABILITIES:
+    logger.warning("Using fallback AGENT_CAPABILITIES - import from routing_config failed")
+    AGENT_CAPABILITIES = {
+        "ImageAgent": {
+            "description": "Generate images, logos, banners, illustrations",
+            "examples": ["create a logo", "generate an illustration"],
+            "keywords": ["image", "logo", "banner", "illustration"],
+        },
+        "VideoAgent": {
+            "description": "Create videos and animations",
+            "examples": ["create a video", "animate this image"],
+            "keywords": ["video", "animate", "animation"],
+        },
+        "ResearchAgent": {
+            "description": "Search for information and trends",
+            "examples": ["what's trending", "find news"],
+            "keywords": ["search", "find", "trending"],
+        },
+    }
 
 
 class SemanticRoutingService:

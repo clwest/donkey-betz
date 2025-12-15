@@ -63,10 +63,13 @@ class InterviewState:
     started_at: datetime
     last_activity: datetime
     topics_covered: List[str] = None  # Track what we've asked about
+    last_question_text: str = None  # Session 456: Track last asked question for conversational extraction
 
     def __post_init__(self):
         if self.topics_covered is None:
             self.topics_covered = []
+        if self.last_question_text is None:
+            self.last_question_text = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -78,7 +81,8 @@ class InterviewState:
             'completion_percentage': self.completion_percentage,
             'started_at': self.started_at.isoformat(),
             'last_activity': self.last_activity.isoformat(),
-            'topics_covered': self.topics_covered
+            'topics_covered': self.topics_covered,
+            'last_question_text': self.last_question_text  # Session 456
         }
 
 
@@ -307,6 +311,7 @@ Keep it conversational, not robotic. Be genuinely interested."""
         profile = state.profile_data
         name = profile.get('name', '')
 
+        # Session 456: Use topics_covered for reliable state tracking
         # Skip name if we have it (and it's not a mistaken extraction)
         if not name or name.lower() in ['there', 'hi', 'hello', 'hey']:
             return "name and how they'd like to be addressed"
@@ -314,21 +319,17 @@ Keep it conversational, not robotic. Be genuinely interested."""
             return "current professional situation"
         elif 'time_availability' not in state.topics_covered:
             return "time availability for additional work"
-        elif not profile.get('available_hours'):
-            return "time availability for additional work"
-        elif not profile.get('skills', {}).get('technical'):
+        elif 'skills' not in state.topics_covered:
             return "technical skills and expertise"
-        elif not profile.get('skills', {}).get('strongest_skill'):
-            return "strongest skill with a specific example"
-        elif not profile.get('experience', {}).get('background'):
+        elif 'background' not in state.topics_covered:
             return "professional background and experience"
-        elif not profile.get('goals', {}).get('monthly_income'):
+        elif 'income_goals' not in state.topics_covered and not profile.get('goals', {}).get('monthly_income'):
             return "income goals and financial targets"
-        elif not profile.get('goals', {}).get('work_preferences'):
+        elif 'work_preferences' not in state.topics_covered and not profile.get('goals', {}).get('work_preferences'):
             return "work preferences and ideal opportunities"
-        elif not profile.get('hidden_talents'):
+        elif 'hidden_talents' not in state.topics_covered and not profile.get('hidden_talents'):
             return "unique abilities or hidden talents"
-        elif not profile.get('commitment_level'):
+        elif 'commitment' not in state.topics_covered and not profile.get('commitment_level'):
             return "commitment level and readiness to start"
         else:
             return "any final thoughts or questions"
@@ -342,35 +343,35 @@ Keep it conversational, not robotic. Be genuinely interested."""
         if not name or name == 'there' or name.lower() in ['hi', 'hello', 'hey']:
             return "Let's start with the basics - what's your name? How would you like me to address you?"
 
+        # Session 456: Fixed - Don't add to topics_covered here!
+        # That happens in _extract_profile_data AFTER user answers
         # If we have a name but nothing else, move straight to important stuff
         elif name and 'professional_situation' not in state.topics_covered:
-            state.topics_covered.append('professional_situation')
+            # Don't add to topics_covered here - wait for user response
             return f"Great, {name}! Let's dive right in. Tell me about your current professional situation - are you working, studying, building something, or exploring new opportunities?"
 
         elif 'professional_situation' in state.topics_covered and 'time_availability' not in state.topics_covered:
-            state.topics_covered.append('time_availability')
+            # Don't add to topics_covered here - wait for user response
             return f"Thanks for sharing that, {name}! Now, how much time could you realistically dedicate to earning additional income each week?"
 
         elif 'time_availability' in state.topics_covered and 'skills' not in state.topics_covered:
-            state.topics_covered.append('skills')
+            # Don't add to topics_covered here - wait for user response
             return f"Perfect, {name}! Now I'd love to learn about your skills and expertise. What would you say you're really good at? What comes naturally to you?"
 
-        elif not profile.get('skills', {}).get('technical') and not profile.get('skills', {}).get('strongest_skill'):
-            return f"Now {name}, I'd love to learn about your skills and expertise. What would you say you're really good at? What comes naturally to you?"
-
-        elif not profile.get('experience', {}).get('background'):
+        # Session 456: Use topics_covered for ALL subsequent checks to stay in sync with _determine_next_info_needed
+        elif 'skills' in state.topics_covered and 'background' not in state.topics_covered:
             return f"That's a great skill set, {name}! Can you tell me more about your professional background? Any specific projects or achievements you're proud of?"
 
-        elif not profile.get('goals', {}).get('monthly_income'):
+        elif 'background' in state.topics_covered and 'income_goals' not in state.topics_covered:
             return f"Based on what you've told me, {name}, you have some great opportunities ahead! What kind of monthly income are you hoping to generate?"
 
-        elif not profile.get('goals', {}).get('work_preferences'):
+        elif 'income_goals' in state.topics_covered and 'work_preferences' not in state.topics_covered:
             return f"Perfect! Now {name}, what type of work environment do you prefer? Remote, flexible hours, project-based, or something else?"
 
-        elif not profile.get('hidden_talents'):
+        elif 'work_preferences' in state.topics_covered and 'hidden_talents' not in state.topics_covered:
             return f"{name}, here's something fun - what do people often ask you for help with? Sometimes our hidden talents are things we don't even realize are special!"
 
-        elif not profile.get('commitment_level'):
+        elif 'hidden_talents' in state.topics_covered and 'commitment' not in state.topics_covered:
             return f"We're almost done, {name}! One last question - how serious are you about generating income in the next 30 days? Just exploring or ready to dive in?"
 
         else:
@@ -749,6 +750,10 @@ Keep it conversational, not robotic. Be genuinely interested."""
             if first_question.get('id') == 'intro_welcome':
                 first_question['text'] = f"Hi {user_name}! I'm your personal AI assistant. Let's build on your profile so I can find the perfect income opportunities for you. This interview takes about 10 minutes. Ready to dive in?"
 
+        # Session 456: Store first question text for extraction
+        state.last_question_text = first_question.get('text', '')
+        logger.info(f"Session 456: Initial last_question_text: '{state.last_question_text[:50]}...'")
+
         return {
             'success': True,
             'interview_started': True,
@@ -795,15 +800,23 @@ Keep it conversational, not robotic. Be genuinely interested."""
         # Extract profile data from response
         if current_question:
             await self._extract_profile_data(state, current_question, response)
-            # Track what we've covered
-            if 'professional situation' in current_question.text.lower():
+
+        # Session 456: Track topics using the ACTUAL question text that was asked
+        # (not the predefined question template which might not match)
+        actual_question_text = state.last_question_text.lower() if state.last_question_text else ''
+        if actual_question_text:
+            if 'professional situation' in actual_question_text and 'professional_situation' not in state.topics_covered:
                 state.topics_covered.append('professional_situation')
-            elif 'time' in current_question.text.lower() and 'dedicate' in current_question.text.lower():
+                logger.info("Session 456: Tracked 'professional_situation' topic")
+            elif ('time' in actual_question_text and 'dedicate' in actual_question_text) and 'time_availability' not in state.topics_covered:
                 state.topics_covered.append('time_availability')
-            elif 'skills' in current_question.text.lower() or 'good at' in current_question.text.lower():
+                logger.info("Session 456: Tracked 'time_availability' topic")
+            elif ('skills' in actual_question_text or 'good at' in actual_question_text) and 'skills' not in state.topics_covered:
                 state.topics_covered.append('skills')
-            elif 'background' in current_question.text.lower() or 'experience' in current_question.text.lower():
+                logger.info("Session 456: Tracked 'skills' topic")
+            elif ('background' in actual_question_text or 'experience' in actual_question_text) and 'background' not in state.topics_covered:
                 state.topics_covered.append('background')
+                logger.info("Session 456: Tracked 'background' topic")
 
         # IMPORTANT: Update the current question ID to advance the interview
         # Get next question to update state
@@ -839,6 +852,10 @@ Keep it conversational, not robotic. Be genuinely interested."""
         next_question_data = self._get_next_question_structured(state)
         next_question_data['text'] = next_question_text  # Override with conversational text
 
+        # Session 456: Store the question text for extraction on next response
+        state.last_question_text = next_question_text
+        logger.info(f"Session 456: Stored last_question_text: '{next_question_text[:50]}...'")
+
         return {
             'success': True,
             'response_processed': True,
@@ -858,11 +875,41 @@ Keep it conversational, not robotic. Be genuinely interested."""
         # Determine what info we need next
         next_info = self._determine_next_info_needed(state)
 
+        # Session 456: Check if interview is complete (all required topics covered)
+        required_topics = ['professional_situation', 'time_availability', 'skills', 'background',
+                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment']
+        topics_covered = state.topics_covered
+
+        if all(topic in topics_covered for topic in required_topics):
+            # All topics covered - mark interview as complete
+            state.phase = InterviewPhase.COMPLETE
+            logger.info(f"Session 456: Interview COMPLETE - all {len(required_topics)} topics covered: {topics_covered}")
+            return {
+                'id': 'complete',
+                'phase': InterviewPhase.COMPLETE.value,
+                'text': '',
+                'input_type': 'complete',
+                'options': None,
+                'required': False,
+                'progress': 100.0
+            }
+
         # Map to appropriate input type
         input_type = 'text'  # Default
         options = None
 
-        if 'income' in next_info or 'financial' in next_info:
+        # Session 456: Add professional situation options
+        if 'professional situation' in next_info:
+            input_type = 'multiple_choice'
+            options = [
+                "Employed - looking for more income",
+                "Unemployed - need income ASAP",
+                "Student - want part-time work",
+                "Entrepreneur - scaling my business",
+                "Retired - exploring opportunities",
+                "Other"
+            ]
+        elif 'income' in next_info or 'financial' in next_info:
             input_type = 'multiple_choice'
             options = [
                 "Less than $1,000/month",
@@ -897,6 +944,18 @@ Keep it conversational, not robotic. Be genuinely interested."""
                 "Passive income",
                 "Service delivery"
             ]
+        # Session 456: Add skills/expertise options
+        elif 'skills' in next_info or 'expertise' in next_info:
+            input_type = 'multi_select'
+            options = [
+                "Technical (coding, data, AI)",
+                "Creative (design, writing, video)",
+                "Business (sales, marketing, consulting)",
+                "Communication (teaching, support, presenting)",
+                "Analytical (research, finance, strategy)",
+                "Other specialized skills"
+            ]
+        # Session 456: Background is freeform text - no changes needed
 
         return {
             'id': f"dynamic_{datetime.now().timestamp()}",
@@ -1027,9 +1086,132 @@ Keep it conversational, not robotic. Be genuinely interested."""
         """Extract profile data from user response"""
         profile = state.profile_data
 
-        # Extract based on question ID
+        # Session 456: ALWAYS use last_question_text (the actual conversational question shown)
+        # NOT question.text (the predefined template which doesn't match what was asked)
+        question_text = state.last_question_text.lower() if state.last_question_text else (question.text.lower() if question else '')
+        question_id = question.id if question else ''
+        logger.info(f"Session 456: Extracting from ACTUAL question: '{question_text[:50]}...' (response: '{str(response)[:30]}...')")
+
+        # For conversational mode, extract based on what was actually asked
+        # Check the actual question text for keywords to determine what data to extract
+        if question_text:
+            # Session 456: Professional situation extraction
+            if 'professional situation' in question_text or ('situation' in question_text and ('working' in question_text or 'studying' in question_text)):
+                profile['current_situation'] = str(response)
+                if 'professional_situation' not in state.topics_covered:
+                    state.topics_covered.append('professional_situation')
+                logger.info(f"Session 456: Extracted professional situation: {response}")
+                return
+
+            # Check what was being asked based on topics NOT yet covered
+            # Background question includes: background, experience, achievements, projects
+            elif 'background' in question_text or 'professional background' in question_text or 'achievements' in question_text or 'projects' in question_text:
+                if 'experience' not in profile:
+                    profile['experience'] = {}
+                profile['experience']['background'] = str(response)
+                if 'background' not in state.topics_covered:
+                    state.topics_covered.append('background')
+                logger.info(f"Session 456: Extracted background from conversational question")
+                return  # Extracted successfully
+
+            elif 'skill' in question_text and ('good at' in question_text or 'strongest' in question_text or 'expertise' in question_text):
+                # Session 456: Handle both multi-select (list) and text responses
+                if isinstance(response, list):
+                    # Multi-select response - categorize skills
+                    if 'skills' not in profile:
+                        profile['skills'] = {}
+                    for skill in response:
+                        skill_lower = skill.lower()
+                        if 'technical' in skill_lower or 'coding' in skill_lower or 'data' in skill_lower or 'ai' in skill_lower:
+                            profile['skills']['technical'] = profile['skills'].get('technical', []) + [skill]
+                        elif 'creative' in skill_lower or 'design' in skill_lower or 'writing' in skill_lower or 'video' in skill_lower:
+                            profile['skills']['creative'] = profile['skills'].get('creative', []) + [skill]
+                        elif 'business' in skill_lower or 'sales' in skill_lower or 'marketing' in skill_lower or 'consulting' in skill_lower:
+                            profile['skills']['business'] = profile['skills'].get('business', []) + [skill]
+                        elif 'communication' in skill_lower or 'teaching' in skill_lower or 'support' in skill_lower or 'presenting' in skill_lower:
+                            profile['skills']['communication'] = profile['skills'].get('communication', []) + [skill]
+                        elif 'analytical' in skill_lower or 'research' in skill_lower or 'finance' in skill_lower or 'strategy' in skill_lower:
+                            profile['skills']['analytical'] = profile['skills'].get('analytical', []) + [skill]
+                        else:
+                            profile['skills']['other'] = profile['skills'].get('other', []) + [skill]
+                    # Also store as strongest_skill for the profile
+                    profile['strongest_skill'] = ', '.join(response)
+                    logger.info(f"Session 456: Extracted skills from multi-select: {profile['skills']}")
+                else:
+                    # Text response - store as strongest skill
+                    profile['strongest_skill'] = str(response)
+                    logger.info(f"Session 456: Extracted strongest skill from text: {response}")
+
+                if 'skills' not in state.topics_covered:
+                    state.topics_covered.append('skills')
+                return
+
+            # Session 456: Time availability extraction for conversational mode
+            elif 'time' in question_text and ('dedicate' in question_text or 'hours' in question_text or 'week' in question_text):
+                response_str = str(response)
+                if '1-5' in response_str or '1 to 5' in response_str:
+                    profile['available_hours'] = 3
+                elif '10-20' in response_str or '10 to 20' in response_str:
+                    profile['available_hours'] = 15
+                elif '20-40' in response_str or '20 to 40' in response_str:
+                    profile['available_hours'] = 30
+                elif '40+' in response_str or '40 plus' in response_str:
+                    profile['available_hours'] = 50
+                else:
+                    profile['available_hours'] = response_str
+                if 'time_availability' not in state.topics_covered:
+                    state.topics_covered.append('time_availability')
+                logger.info(f"Session 456: Extracted time availability: {profile['available_hours']}")
+                return
+
+            # Session 456: IMPORTANT - Check commitment BEFORE income because commitment question contains "income"
+            # "how serious are you about generating income in the next 30 days" has both "income" AND "serious"/"30 days"
+            elif ('serious' in question_text and '30 days' in question_text) or 'commitment' in question_text:
+                profile['commitment_level'] = str(response)
+                if 'commitment' not in state.topics_covered:
+                    state.topics_covered.append('commitment')
+                logger.info(f"Session 456: Extracted commitment level from conversational question")
+                return
+
+            elif 'income' in question_text or 'earning' in question_text or 'monthly' in question_text:
+                if 'goals' not in profile:
+                    profile['goals'] = {}
+                # Try to extract income amount
+                response_str = str(response)
+                if '$5,000' in response_str or '5000' in response_str or '5k' in response_str.lower():
+                    profile['goals']['monthly_income'] = 5000
+                elif '$2,500' in response_str or '2500' in response_str:
+                    profile['goals']['monthly_income'] = 2500
+                elif '$1,000' in response_str or '1000' in response_str or '1k' in response_str.lower():
+                    profile['goals']['monthly_income'] = 1000
+                else:
+                    profile['goals']['monthly_income_text'] = response_str
+                if 'income_goals' not in state.topics_covered:
+                    state.topics_covered.append('income_goals')
+                logger.info(f"Session 456: Extracted income goal from conversational question")
+                return
+
+            elif 'work' in question_text and ('prefer' in question_text or 'environment' in question_text or 'type' in question_text):
+                if 'goals' not in profile:
+                    profile['goals'] = {}
+                profile['goals']['work_preferences'] = str(response)
+                if 'work_preferences' not in state.topics_covered:
+                    state.topics_covered.append('work_preferences')
+                logger.info(f"Session 456: Extracted work preferences from conversational question")
+                return
+
+            elif 'hidden' in question_text or 'talent' in question_text or 'people ask' in question_text:
+                if not profile.get('hidden_talents'):
+                    profile['hidden_talents'] = []
+                profile['hidden_talents'].append(str(response))
+                if 'hidden_talents' not in state.topics_covered:
+                    state.topics_covered.append('hidden_talents')
+                logger.info(f"Session 456: Extracted hidden talents from conversational question")
+                return
+
+        # Extract based on question ID (original logic for predefined questions)
         # Always extract current_situation from intro_situation response or any question about professional situation
-        if question.id == 'intro_situation' or 'professional situation' in question.text.lower():
+        if question_id == 'intro_situation' or 'professional situation' in question_text:
             profile['current_situation'] = str(response)
         elif 'time' in question.text.lower() and 'dedicate' in question.text.lower():
             profile['available_hours'] = str(response)
@@ -1044,32 +1226,49 @@ Keep it conversational, not robotic. Be genuinely interested."""
                     profile['name'] = name_part.title()
                     logger.info(f"Extracted name '{name_part}' from welcome response")
 
-        elif question.id == 'intro_name':
-            # Smart name extraction - avoid common greetings
+        elif question.id == 'intro_name' or 'name' in question_text or 'call you' in question_text:
+            # Session 456: Smart name extraction - handles conversational responses
             name = str(response).strip()
-
-            # Check if response contains common greeting phrases
-            greetings_to_ignore = ['hi there', 'hello there', 'hey there', 'hi!', 'hello!', 'hey!']
             name_lower = name.lower()
 
-            # If the response is just a greeting, don't save it as name
+            # Check if response contains common greeting phrases (ignore these)
+            greetings_to_ignore = ['hi there', 'hello there', 'hey there', 'hi!', 'hello!', 'hey!']
+
             if name_lower in greetings_to_ignore:
                 logger.warning(f"Ignoring greeting '{name}' as name")
                 profile['name'] = ''
-            # Also check if "there" appears to be incorrectly extracted
             elif name.lower() == 'there':
                 logger.warning("'there' detected as name - likely extraction error")
                 profile['name'] = ''
-            # Valid name
             else:
-                # Remove any "Hi, I'm" or "My name is" prefixes
-                for prefix in ['hi, i\'m ', 'hello, i\'m ', 'my name is ', 'i\'m ', 'call me ']:
+                # Session 456: Extended prefix list for natural speech
+                prefixes_to_remove = [
+                    'please call me ',
+                    'you can call me ',
+                    'just call me ',
+                    'call me ',
+                    'my name is ',
+                    'i\'m ',
+                    'i am ',
+                    'it\'s ',
+                    'hi, i\'m ',
+                    'hello, i\'m ',
+                    'hey, i\'m ',
+                ]
+
+                for prefix in prefixes_to_remove:
                     if name_lower.startswith(prefix):
                         name = name[len(prefix):].strip()
+                        name_lower = name.lower()
+                        logger.info(f"Session 456: Removed prefix, extracted name: '{name}'")
                         break
 
-                # Capitalize properly
+                # Remove trailing punctuation
+                name = name.rstrip('.!,')
+
+                # Capitalize properly (just first letter of each word)
                 profile['name'] = name.title() if name else ''
+                logger.info(f"Session 456: Final extracted name: '{profile['name']}'")
 
         elif question.id == 'intro_situation':
             profile['current_situation'] = response
@@ -1118,8 +1317,15 @@ Keep it conversational, not robotic. Be genuinely interested."""
                     profile['goals']['monthly_income'] = 3750
                 elif '$5,000+' in response:
                     profile['goals']['monthly_income'] = 7500
+                # Session 456: Track income_goals topic
+                if 'income_goals' not in state.topics_covered:
+                    state.topics_covered.append('income_goals')
+                    logger.info("Session 456: Tracked 'income_goals' topic")
             elif question.id == 'goals_work_type':
                 profile['goals']['work_preferences'] = response if isinstance(response, list) else [response]
+                if 'work_preferences' not in state.topics_covered:
+                    state.topics_covered.append('work_preferences')
+                    logger.info("Session 456: Tracked 'work_preferences' topic")
             elif question.id == 'goals_avoid':
                 profile['goals']['avoid'] = response
             elif question.id == 'goals_preferences':
@@ -1132,6 +1338,10 @@ Keep it conversational, not robotic. Be genuinely interested."""
                 profile['hidden_talents'].append({'type': 'natural_strengths', 'description': response})
             elif question.id == 'talents_passionate':
                 profile['hidden_talents'].append({'type': 'passions', 'description': response})
+            # Session 456: Track hidden_talents topic after any talents question
+            if 'hidden_talents' not in state.topics_covered:
+                state.topics_covered.append('hidden_talents')
+                logger.info("Session 456: Tracked 'hidden_talents' topic")
 
         elif question.id.startswith('verify_'):
             if question.id == 'verify_assets':
@@ -1145,6 +1355,10 @@ Keep it conversational, not robotic. Be genuinely interested."""
                     profile['commitment_level'] = CommitmentLevel.EXPLORING.value
                 else:
                     profile['commitment_level'] = CommitmentLevel.JUST_BROWSING.value
+                # Session 456: Track commitment topic
+                if 'commitment' not in state.topics_covered:
+                    state.topics_covered.append('commitment')
+                    logger.info("Session 456: Tracked 'commitment' topic")
             elif question.id == 'verify_auto_apply':
                 profile['auto_apply_preference'] = response
 
@@ -1185,10 +1399,22 @@ Keep it conversational, not robotic. Be genuinely interested."""
         return insights
 
     def _calculate_completion(self, state: InterviewState) -> float:
-        """Calculate interview completion percentage"""
-        total_questions = len(self.questions)
-        answered_questions = len(state.responses)
-        return min(100.0, (answered_questions / total_questions) * 100)
+        """Calculate interview completion percentage based on topics covered"""
+        # Session 456: Use topics_covered for accurate progress in conversational mode
+        # We have 8 required topics, not the full question bank
+        required_topics = ['professional_situation', 'time_availability', 'skills', 'background',
+                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment']
+
+        # Count how many required topics are covered
+        topics_done = sum(1 for topic in required_topics if topic in state.topics_covered)
+
+        # Add 1 for having a name (the first step)
+        if state.profile_data.get('name'):
+            topics_done += 1
+
+        # Total is 9 steps (name + 8 topics)
+        total_steps = 9
+        return min(100.0, (topics_done / total_steps) * 100)
 
     async def _build_final_profile(self, state: InterviewState) -> Dict[str, Any]:
         """Build the final comprehensive user profile"""

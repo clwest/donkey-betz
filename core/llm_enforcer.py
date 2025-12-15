@@ -136,7 +136,7 @@ class LLMEnforcer:
                 # Use Claude
                 response = self._call_claude(full_prompt, max_tokens, temperature)
                 provider = "anthropic"
-                model = "claude-3-haiku"  # Keep Claude as alternative
+                model = "claude-3-haiku"
             elif self.openai_client:
                 # Session 129: Pass context separately so GPT can see project assets
                 # Session 129: Pass previous_response_id for chain of thought

@@ -797,7 +797,8 @@ from core.views_profile import (
 # Import Personal Assistant views
 from core.views_personal_assistant import (
     chat_with_assistant, get_assistant_context, get_learning_summary,
-    provide_feedback, reset_assistant, voice_to_assistant
+    provide_feedback, reset_assistant, voice_to_assistant,
+    voice_interview_response, transcribe_only  # Session 456: Voice interview
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
 from core.views_assistant_bypass import assistant_chat_bypass
@@ -1903,6 +1904,10 @@ urlpatterns = [
     path('api/interview/resume/', resume_interview, name='interview-resume'),
     path('api/profile/summary/', get_user_profile_summary, name='profile-summary'),
 
+    # Session 456: Voice Interview (Whisper transcription)
+    path('api/interview/voice/', voice_interview_response, name='interview-voice'),
+    path('api/transcribe/', transcribe_only, name='transcribe-only'),
+
     # ===== UNIFIED BRIDGE: REAL MONEY-MAKING ENDPOINTS =====
     # These endpoints connect all components and enable actual revenue generation
     path('api/bridge/profile/sync/', sync_user_profile, name='bridge-profile-sync'),
@@ -2822,6 +2827,26 @@ urlpatterns += [
     path('api/legal/litigation/<uuid:case_profile_id>/threads/', get_document_threads, name='litigation-document-threads'),
     path('api/legal/litigation/document/<uuid:document_id>/thread/', get_document_thread, name='litigation-document-thread'),
     path('api/legal/litigation/<uuid:case_profile_id>/needs-response/', get_documents_needing_response, name='litigation-needs-response'),
+]
+
+# =============================================================================
+# Session 455: Cross-Platform Session Handoff API
+# =============================================================================
+from core.views_session_handoff import (
+    get_active_sessions,
+    get_session_details,
+    resume_session,
+    end_session,
+    get_cross_platform_status,
+)
+
+urlpatterns += [
+    # Session management
+    path('api/sessions/active/', get_active_sessions, name='sessions-active'),
+    path('api/sessions/<str:conversation_id>/', get_session_details, name='sessions-detail'),
+    path('api/sessions/resume/', resume_session, name='sessions-resume'),
+    path('api/sessions/end/', end_session, name='sessions-end'),
+    path('api/sessions/status/', get_cross_platform_status, name='sessions-cross-platform-status'),
 ]
 
 # Serve media files in development
