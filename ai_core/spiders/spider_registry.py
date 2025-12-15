@@ -138,6 +138,8 @@ from .specialized.sec_spider import SECSpider
 from .specialized.github_spider import GitHubSpider
 # HuggingFace - AI/ML models and datasets (HUGGING_FACE_API)
 from .specialized.huggingface_spider import HuggingFaceSpider
+# Session 452: Kaggle - ML competitions, datasets, notebooks (KAGGLE_USERNAME/KAGGLE_KEY)
+from .specialized.kaggle_spider import KaggleSpider
 
 # Session 343: ADDITIONAL API SPIDERS (4 new - reaching 100 spiders!)
 # NewsAPI - Breaking news from 80k+ sources (NEWS_API_KEY)
@@ -720,6 +722,16 @@ class SpiderRegistry:
             'requires_auth': False,  # Works without auth, better with auth
             'api_key_env': 'HUGGING_FACE_API',
             'targets': ['huggingface.co']
+        })
+
+        # Session 452: Kaggle - ML competitions, datasets, notebooks
+        self.register_spider('kaggle', KaggleSpider, {
+            'category': 'ai_ml',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'KAGGLE_KEY',
+            'targets': ['kaggle.com']
         })
 
         # ============================================================

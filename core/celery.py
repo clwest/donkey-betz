@@ -550,6 +550,15 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 452: Pipeline Learning <-> Collective Intelligence Bridge
+    # Syncs content pipeline insights (style/voice performance) to collective intelligence
+    'sync-pipeline-to-collective': {
+        'task': 'core.tasks.sync_pipeline_insights_to_collective',
+        'schedule': crontab(hour='*/6', minute=10),  # Every 6 hours at :10
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

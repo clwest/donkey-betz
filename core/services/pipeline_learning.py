@@ -770,6 +770,125 @@ class PipelineLearningService:
             logger.error(f"Failed to get learning statistics: {e}")
             return {}
 
+    # =========================================================================
+    # SESSION 452: COLLECTIVE INTELLIGENCE BRIDGE
+    # =========================================================================
+
+    def share_insights_to_collective(self) -> int:
+        """
+        Bridge pipeline learning insights to the collective intelligence system.
+
+        Takes active pipeline insights and shares them as knowledge items
+        that agents can access and learn from.
+
+        Returns:
+            Number of insights shared
+        """
+        try:
+            from core.models_pipeline_feedback import PipelineLearningInsight
+            from core.services.agent_collaboration_hub import get_collaboration_hub
+
+            hub = get_collaboration_hub()
+            insights = PipelineLearningInsight.objects.filter(is_active=True)
+            shared_count = 0
+
+            for insight in insights:
+                # Convert pipeline insight to knowledge item
+                knowledge_content = {
+                    'insight_type': 'pipeline_learning',
+                    'stage': insight.stage,
+                    'finding': insight.insight_text,
+                    'improvement': insight.improvement_percentage,
+                    'context': {
+                        'target_audience': insight.target_audience,
+                        'series_type': insight.series_type,
+                        'style_preset': insight.style_preset,
+                        'voice_id': insight.voice_id,
+                    },
+                    'sample_size': insight.sample_size,
+                    'times_applied': insight.times_applied,
+                    'created_at': insight.created_at.isoformat() if insight.created_at else None,
+                }
+
+                # Determine relevant tags based on insight content
+                tags = ['pipeline_learning', insight.stage]
+                if insight.target_audience:
+                    tags.append(f"audience:{insight.target_audience}")
+                if insight.series_type:
+                    tags.append(f"type:{insight.series_type}")
+                if insight.style_preset:
+                    tags.append(f"style:{insight.style_preset}")
+
+                # Share to collective intelligence
+                hub.share_knowledge(
+                    agent_name='PipelineLearningService',
+                    category='content_optimization',
+                    title=f"Pipeline Insight: {insight.insight_text[:100]}",
+                    content=knowledge_content,
+                    confidence=min(1.0, 0.5 + (insight.sample_size / 20)),  # Higher sample = higher confidence
+                    tags=tags
+                )
+
+                shared_count += 1
+                logger.debug(f"Shared pipeline insight to collective: {insight.insight_text[:50]}...")
+
+            logger.info(f"Shared {shared_count} pipeline insights to collective intelligence")
+            return shared_count
+
+        except Exception as e:
+            logger.error(f"Failed to share insights to collective: {e}")
+            return 0
+
+    def sync_collective_knowledge_to_recommendations(self) -> Dict[str, Any]:
+        """
+        Pull relevant knowledge from collective intelligence to enhance recommendations.
+
+        Checks if other agents have shared content optimization knowledge
+        that could improve pipeline recommendations.
+
+        Returns:
+            Dict with synced knowledge summary
+        """
+        try:
+            from core.services.agent_collaboration_hub import get_collaboration_hub
+
+            hub = get_collaboration_hub()
+            synced = {'style_hints': [], 'voice_hints': [], 'general_tips': []}
+
+            # Query for content optimization knowledge
+            knowledge_items = hub.query_knowledge(
+                category='content_optimization',
+                tags=['style', 'voice', 'audience'],
+                min_confidence=0.6,
+                limit=20
+            )
+
+            for item in knowledge_items:
+                content = item.content if hasattr(item, 'content') else item.get('content', {})
+
+                # Extract style-related knowledge
+                if 'style' in str(content).lower():
+                    synced['style_hints'].append({
+                        'source': item.source_agent if hasattr(item, 'source_agent') else 'unknown',
+                        'hint': str(content)[:200],
+                        'confidence': item.confidence if hasattr(item, 'confidence') else 0.7
+                    })
+
+                # Extract voice-related knowledge
+                if 'voice' in str(content).lower():
+                    synced['voice_hints'].append({
+                        'source': item.source_agent if hasattr(item, 'source_agent') else 'unknown',
+                        'hint': str(content)[:200],
+                        'confidence': item.confidence if hasattr(item, 'confidence') else 0.7
+                    })
+
+            logger.info(f"Synced {len(synced['style_hints'])} style hints, {len(synced['voice_hints'])} voice hints from collective")
+            return synced
+
+        except Exception as e:
+            logger.error(f"Failed to sync from collective: {e}")
+            return {'style_hints': [], 'voice_hints': [], 'general_tips': [], 'error': str(e)}
+
 
 # Singleton instance for easy access
 _learning_service = None
@@ -780,3 +899,214 @@ def get_pipeline_learning_service() -> PipelineLearningService:
     if _learning_service is None:
         _learning_service = PipelineLearningService()
     return _learning_service
+
+
+# =============================================================================
+# Session 452: A/B Testing Integration for Series Generation
+# =============================================================================
+
+def get_ab_test_style_for_series(
+    user_id: int,
+    series_type: str,
+    target_audience: str = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Check for an active style A/B test and return a variant if enrolled.
+
+    This function is called during series creation to potentially override
+    the GPT-selected style with an A/B test variant.
+
+    Args:
+        user_id: User creating the series
+        series_type: educational, entertainment, marketing
+        target_audience: Optional audience description
+
+    Returns:
+        Dict with 'style_preset' and 'experiment_id' if enrolled, None otherwise
+    """
+    try:
+        from core.services.ab_testing import get_ab_testing_service
+
+        service = get_ab_testing_service()
+
+        # Get active experiments for style domain
+        experiments = service.get_active_experiments(domain='content_style')
+
+        if not experiments:
+            return None
+
+        # Check each experiment (prefer most specific match)
+        for exp in experiments:
+            # Check if experiment matches this series type
+            exp_config = exp.get('config', {})
+            exp_series_types = exp_config.get('series_types', [])
+
+            if exp_series_types and series_type not in exp_series_types:
+                continue  # Experiment doesn't apply to this series type
+
+            # Get variant for user
+            variant = service.get_variant_for_user(
+                experiment_id=exp['id'],
+                user_id=user_id
+            )
+
+            if variant and variant.config:
+                style_preset = variant.config.get('style_preset')
+                if style_preset:
+                    # Mark exposure
+                    service.mark_exposure(
+                        experiment_id=exp['id'],
+                        user_id=user_id
+                    )
+
+                    logger.info(
+                        f"[SESSION 452] A/B test assigning style '{style_preset}' "
+                        f"(variant: {variant.variant_name}, experiment: {variant.experiment_name})"
+                    )
+
+                    return {
+                        'style_preset': style_preset,
+                        'experiment_id': exp['id'],
+                        'variant_id': variant.variant_id,
+                        'variant_name': variant.variant_name,
+                        'is_control': variant.is_control
+                    }
+
+        return None
+
+    except Exception as e:
+        logger.error(f"[SESSION 452] A/B test style lookup failed: {e}")
+        return None
+
+
+def track_ab_test_series_feedback(
+    experiment_id: str,
+    user_id: int,
+    series_id: str,
+    feedback_type: str,
+    rating: float = None,
+    metadata: Dict = None
+):
+    """
+    Track A/B test feedback when a series receives ratings/engagement.
+
+    Called from the Discord reaction feedback or explicit ratings.
+
+    Args:
+        experiment_id: The A/B experiment
+        user_id: User who reacted
+        series_id: The series that received feedback
+        feedback_type: engagement, completion, rating, share
+        rating: Optional rating value (1-5)
+        metadata: Additional data
+    """
+    try:
+        from core.services.ab_testing import get_ab_testing_service
+
+        service = get_ab_testing_service()
+
+        # Determine conversion value based on feedback type
+        value = 1.0
+        if feedback_type == 'rating' and rating:
+            value = rating / 5.0  # Normalize to 0-1
+        elif feedback_type == 'completion':
+            value = 1.0  # Series was completed
+        elif feedback_type == 'share':
+            value = 2.0  # Higher value for shares
+
+        conversion_meta = {
+            'series_id': series_id,
+            'feedback_type': feedback_type,
+            'rating': rating,
+            **(metadata or {})
+        }
+
+        service.track_conversion(
+            experiment_id=experiment_id,
+            conversion_type=feedback_type,
+            user_id=user_id,
+            value=value,
+            metadata=conversion_meta
+        )
+
+        logger.info(
+            f"[SESSION 452] A/B test conversion tracked: "
+            f"{feedback_type} (value={value}) for series {series_id[:8]}..."
+        )
+
+    except Exception as e:
+        logger.error(f"[SESSION 452] Failed to track A/B conversion: {e}")
+
+
+def create_style_ab_test(
+    name: str,
+    styles: List[str],
+    series_types: List[str] = None,
+    traffic_percentage: int = 50,
+    created_by_id: int = None
+) -> Dict[str, Any]:
+    """
+    Create an A/B test for comparing different style presets.
+
+    Example:
+        create_style_ab_test(
+            name="Pixar vs Disney for Kids",
+            styles=["pixar", "disney", "dreamworks"],
+            series_types=["educational", "entertainment"],
+            traffic_percentage=30
+        )
+
+    Args:
+        name: Experiment name
+        styles: List of style presets to test (first is control)
+        series_types: Limit to these series types (or None for all)
+        traffic_percentage: % of users to include in test
+        created_by_id: User creating the test
+
+    Returns:
+        Created experiment info
+    """
+    try:
+        from core.services.ab_testing import get_ab_testing_service
+
+        service = get_ab_testing_service()
+
+        # Build variants from styles
+        variants = []
+        weight = 100 // len(styles)
+
+        for i, style in enumerate(styles):
+            variants.append({
+                'name': f'{style}_variant' if i > 0 else 'control',
+                'is_control': (i == 0),
+                'weight': weight if i < len(styles) - 1 else (100 - weight * (len(styles) - 1)),
+                'config': {
+                    'style_preset': style
+                }
+            })
+
+        experiment = service.create_experiment(
+            name=name,
+            description=f"Testing style presets: {', '.join(styles)} for content series",
+            experiment_type='content',
+            domain='content_style',
+            traffic_percentage=traffic_percentage,
+            variants=variants,
+            config={
+                'series_types': series_types or [],
+                'styles_tested': styles,
+            },
+            created_by_id=created_by_id
+        )
+
+        # Auto-start the experiment
+        if experiment.get('id'):
+            service.start_experiment(experiment['id'])
+            experiment['status'] = 'running'
+
+        logger.info(f"[SESSION 452] Created style A/B test: {name} with {len(styles)} variants")
+        return experiment
+
+    except Exception as e:
+        logger.error(f"[SESSION 452] Failed to create style A/B test: {e}")
+        raise

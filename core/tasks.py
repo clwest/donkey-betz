@@ -10594,13 +10594,39 @@ def generate_ai_series(self, series_id: str):
         # Get the agent
         agent = get_ai_series_workflow_agent(user=series.created_by)
 
-        # Build the task prompt
+        # Session 452: Check for A/B test style variant
+        ab_test_style = None
+        try:
+            from core.services.pipeline_learning import get_ab_test_style_for_series
+            if series.created_by:
+                ab_test_style = get_ab_test_style_for_series(
+                    user_id=series.created_by.id,
+                    series_type=series.series_type,
+                    target_audience=series.target_audience
+                )
+                if ab_test_style:
+                    logger.info(
+                        f"🎬 [SESSION 452] A/B test style '{ab_test_style['style_preset']}' "
+                        f"assigned to series {series_id}"
+                    )
+                    # Store experiment info on series for feedback tracking
+                    series.ab_experiment_id = ab_test_style['experiment_id']
+                    series.ab_variant_id = ab_test_style['variant_id']
+                    series.save(update_fields=['ab_experiment_id', 'ab_variant_id'] if hasattr(series, 'ab_experiment_id') else [])
+        except Exception as ab_err:
+            logger.debug(f"A/B test lookup skipped: {ab_err}")
+
+        # Build the task prompt - include A/B test style if assigned
+        style_instruction = ""
+        if ab_test_style:
+            style_instruction = f"\n\nIMPORTANT: You MUST use the '{ab_test_style['style_preset']}' style preset for all visuals. This is required for a/b testing purposes."
+
         task = f"""Create a {series.series_type} series called "{series.name}".
 
 Description: {series.description}
 Target Audience: {series.target_audience}
 Number of Episodes: {series.episode_count}
-
+{style_instruction}
 Generate all {series.episode_count} episodes with consistent characters, style, and story progression.
 Each episode should have: title, synopsis, images, script, voiceover, and video.
 """
@@ -10613,6 +10639,12 @@ Each episode should have: title, synopsis, images, script, voiceover, and video.
             'style_config': series.style_config,
             'character_config': series.character_config,
         }
+
+        # Session 452: Add A/B test info to context if assigned
+        if ab_test_style:
+            context['ab_test_style'] = ab_test_style['style_preset']
+            context['ab_experiment_id'] = ab_test_style['experiment_id']
+            context['ab_variant_id'] = ab_test_style['variant_id']
 
         result = agent.execute(
             task=task,
@@ -10856,3 +10888,56 @@ def cleanup_expired_uploads():
 
     logger.info(f"🧹 [SESSION 451] Cleaned up {cleaned} expired upload sessions")
     return {'cleaned': cleaned}
+
+
+# =============================================================================
+# Session 452: Pipeline Learning <-> Collective Intelligence Bridge
+# =============================================================================
+
+@shared_task
+def sync_pipeline_insights_to_collective():
+    """
+    Session 452: Sync pipeline learning insights to the collective intelligence system.
+
+    This task bridges the Pipeline Learning system (style/voice performance from AI content)
+    with the Collective Intelligence system (agent knowledge sharing).
+
+    Benefits:
+    - Insights like "Pixar style 23% better for kids content" become agent knowledge
+    - Agents can use content performance data in their recommendations
+    - Creates feedback loop between content success and agent decision-making
+
+    Run every 6 hours via Celery Beat.
+    """
+    logger.info("🔗 [SESSION 452] Starting pipeline-to-collective sync...")
+
+    try:
+        from core.services.pipeline_learning import get_pipeline_learning_service
+
+        service = get_pipeline_learning_service()
+
+        # Step 1: Generate fresh insights from recent data
+        insights = service.generate_insights()
+        logger.info(f"🔗 [SESSION 452] Generated {len(insights)} pipeline insights")
+
+        # Step 2: Share insights to collective intelligence
+        shared_count = service.share_insights_to_collective()
+        logger.info(f"🔗 [SESSION 452] Shared {shared_count} insights to collective")
+
+        # Step 3: Pull collective knowledge back to enhance recommendations
+        synced = service.sync_collective_knowledge_to_recommendations()
+        style_hints = synced.get('style_hints', [])
+        voice_hints = synced.get('voice_hints', [])
+        logger.info(f"🔗 [SESSION 452] Received {len(style_hints)} style hints, {len(voice_hints)} voice hints from collective")
+
+        return {
+            'status': 'completed',
+            'insights_generated': len(insights),
+            'insights_shared': shared_count,
+            'style_hints_received': len(style_hints),
+            'voice_hints_received': len(voice_hints),
+        }
+
+    except Exception as e:
+        logger.error(f"🔗 [SESSION 452] Pipeline-collective sync failed: {e}")
+        return {'status': 'failed', 'error': str(e)}

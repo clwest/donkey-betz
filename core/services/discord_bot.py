@@ -308,6 +308,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
+        await self.add_cog(ReactionFeedbackCog(self))  # Session 452: Auto-feedback from reactions
 
         # Sync slash commands with Discord
         try:
@@ -4819,9 +4820,24 @@ class SeriesCommands(commands.Cog):
 
             if audio_file:
                 embed.add_field(name="Audio", value="Voiceover attached below", inline=True)
-                await interaction.followup.send(embed=embed, file=audio_file)
+                msg = await interaction.followup.send(embed=embed, file=audio_file)
             else:
-                await interaction.followup.send(embed=embed)
+                msg = await interaction.followup.send(embed=embed)
+
+            # Session 452: Track this message for reaction feedback
+            if msg and ep.status == 'complete':
+                track_content_message(msg.id, {
+                    'type': 'episode',
+                    'series_id': str(series.id),
+                    'episode_id': str(ep.id),
+                    'context': {
+                        'series_type': series.series_type,
+                        'episode_number': ep.episode_number,
+                        'style_preset': getattr(series, 'locked_style', None),
+                        'has_voice': bool(ep.voice_result),
+                        'has_video': bool(ep.video_result),
+                    }
+                })
 
         except Exception as e:
             logger.error(f"Series view error: {e}", exc_info=True)
@@ -7265,6 +7281,271 @@ class HelpCommands(commands.Cog):
         embed.set_footer(text="Session 434 | Discord-First Platform Phase 5 - Full Agent Access")
 
         await interaction.response.send_message(embed=embed)
+
+
+# =============================================================================
+# Session 452: Discord Reaction Feedback System
+# =============================================================================
+
+# In-memory cache for message->content mappings
+# Format: {message_id: {'type': 'episode', 'series_id': '...', 'episode_id': '...', 'context': {...}}}
+# Falls back to Redis if available
+_message_content_map: Dict[int, Dict[str, Any]] = {}
+_map_max_size = 10000  # Keep last 10k messages in memory
+
+
+def track_content_message(message_id: int, content_info: Dict[str, Any]):
+    """
+    Track a message ID to content mapping for reaction feedback.
+
+    Args:
+        message_id: Discord message ID
+        content_info: Dict with keys like:
+            - type: 'episode', 'image', 'voice', 'video'
+            - series_id: UUID string
+            - episode_id: UUID string
+            - stage: Pipeline stage name
+            - context: Additional context (style, audience, etc.)
+    """
+    global _message_content_map
+
+    # Store in memory
+    _message_content_map[message_id] = {
+        **content_info,
+        'tracked_at': datetime.now().isoformat()
+    }
+
+    # Prune old entries if too large
+    if len(_message_content_map) > _map_max_size:
+        # Remove oldest 1000 entries
+        sorted_ids = sorted(_message_content_map.keys())
+        for old_id in sorted_ids[:1000]:
+            del _message_content_map[old_id]
+
+    # Also try Redis for persistence across restarts
+    try:
+        import redis
+        import json
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        key = f"discord:content:{message_id}"
+        r.setex(key, 86400, json.dumps(content_info))  # Expire after 24h
+    except Exception:
+        pass  # Redis not available, memory-only
+
+
+def get_content_for_message(message_id: int) -> Optional[Dict[str, Any]]:
+    """Get content info for a tracked message ID."""
+    # Check memory first
+    if message_id in _message_content_map:
+        return _message_content_map[message_id]
+
+    # Fall back to Redis
+    try:
+        import redis
+        import json
+        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        key = f"discord:content:{message_id}"
+        data = r.get(key)
+        if data:
+            return json.loads(data)
+    except Exception:
+        pass
+
+    return None
+
+
+# Emoji to rating mapping
+REACTION_RATINGS = {
+    # Positive (5 stars)
+    '👍': 5.0,
+    '❤️': 5.0,
+    '🔥': 5.0,
+    '⭐': 5.0,
+    '💯': 5.0,
+    '🎉': 5.0,
+    '👏': 5.0,
+    '💪': 5.0,
+    '🚀': 5.0,
+
+    # Good (4 stars)
+    '👌': 4.0,
+    '✨': 4.0,
+    '💜': 4.0,
+    '😊': 4.0,
+    '🙌': 4.0,
+
+    # Neutral (3 stars)
+    '🤔': 3.0,
+    '😐': 3.0,
+    '👀': 3.0,
+
+    # Needs improvement (2 stars)
+    '😕': 2.0,
+    '🤷': 2.0,
+    '😬': 2.0,
+
+    # Poor (1 star)
+    '👎': 1.0,
+    '❌': 1.0,
+    '💔': 1.0,
+    '😞': 1.0,
+}
+
+
+class ReactionFeedbackCog(commands.Cog):
+    """
+    Session 452: Automatic feedback from Discord reactions.
+
+    When users react to AI-generated content with emojis,
+    those reactions are captured and fed into the pipeline
+    learning system to improve future content generation.
+
+    Positive reactions (👍❤️🔥⭐) = 5 stars
+    Good reactions (👌✨) = 4 stars
+    Neutral reactions (🤔😐) = 3 stars
+    Needs improvement (😕🤷) = 2 stars
+    Poor reactions (👎❌) = 1 star
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+        self._feedback_cooldown: Dict[str, datetime] = {}  # user_id:message_id -> last_feedback
+        self._cooldown_seconds = 60  # Prevent spam feedback from same user on same message
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """
+        Handle reaction additions on tracked messages.
+
+        We use raw reaction event because it works for messages not in cache.
+        """
+        # Ignore bot reactions
+        if payload.user_id == self.bot.user.id:
+            return
+
+        # Get emoji as string
+        emoji = str(payload.emoji)
+
+        # Check if this emoji maps to a rating
+        rating = REACTION_RATINGS.get(emoji)
+        if rating is None:
+            return  # Not a feedback emoji
+
+        # Check if we're tracking this message
+        content_info = get_content_for_message(payload.message_id)
+        if not content_info:
+            return  # Not a tracked content message
+
+        # Check cooldown
+        cooldown_key = f"{payload.user_id}:{payload.message_id}"
+        now = datetime.now()
+        if cooldown_key in self._feedback_cooldown:
+            last = self._feedback_cooldown[cooldown_key]
+            if (now - last).total_seconds() < self._cooldown_seconds:
+                return  # Still in cooldown
+        self._feedback_cooldown[cooldown_key] = now
+
+        # Submit feedback
+        await self._submit_reaction_feedback(
+            user_id=payload.user_id,
+            message_id=payload.message_id,
+            emoji=emoji,
+            rating=rating,
+            content_info=content_info
+        )
+
+    async def _submit_reaction_feedback(
+        self,
+        user_id: int,
+        message_id: int,
+        emoji: str,
+        rating: float,
+        content_info: Dict[str, Any]
+    ):
+        """Submit reaction as feedback to pipeline learning service."""
+        try:
+            @sync_to_async
+            def record_feedback():
+                from core.services.pipeline_learning import (
+                    get_pipeline_learning_service,
+                    track_ab_test_series_feedback
+                )
+                from django.contrib.auth import get_user_model
+
+                User = get_user_model()
+
+                # Try to get linked user
+                user = User.objects.filter(discord_id=str(user_id)).first()
+                user_pk = user.pk if user else None
+
+                service = get_pipeline_learning_service()
+
+                # Determine stage from content type
+                content_type = content_info.get('type', 'package')
+                stage_map = {
+                    'episode': 'package',
+                    'script': 'script',
+                    'image': 'image',
+                    'voice': 'voice',
+                    'video': 'video',
+                }
+                stage = stage_map.get(content_type, 'package')
+
+                # Build context
+                context = content_info.get('context', {})
+                context['discord_reaction'] = emoji
+                context['discord_message_id'] = str(message_id)
+                context['discord_user_id'] = str(user_id)
+
+                # Record the feedback
+                feedback = service.record_stage_feedback(
+                    stage=stage,
+                    rating=rating,
+                    context=context,
+                    series_id=content_info.get('series_id'),
+                    episode_id=content_info.get('episode_id'),
+                    user_id=user_pk,
+                    feedback_type='discord_reaction',
+                    comment=f"Discord reaction: {emoji}"
+                )
+
+                # Session 452: Also track A/B test conversion if series is in an experiment
+                series_id = content_info.get('series_id')
+                if series_id and user_pk:
+                    try:
+                        from core.models_ai_series import AISeries
+                        series = AISeries.objects.get(id=series_id)
+                        # Check if series has A/B experiment tracking
+                        if hasattr(series, 'ab_experiment_id') and series.ab_experiment_id:
+                            track_ab_test_series_feedback(
+                                experiment_id=series.ab_experiment_id,
+                                user_id=user_pk,
+                                series_id=series_id,
+                                feedback_type='rating',
+                                rating=rating,
+                                metadata={
+                                    'emoji': emoji,
+                                    'stage': stage,
+                                    'episode_id': content_info.get('episode_id')
+                                }
+                            )
+                    except Exception as ab_err:
+                        # Don't fail if A/B tracking fails
+                        pass
+
+                return feedback
+
+            feedback = await record_feedback()
+
+            if feedback:
+                logger.info(
+                    f"[SESSION 452] Discord reaction feedback: {emoji} = {rating}/5 "
+                    f"for {content_info.get('type', 'unknown')} "
+                    f"(message {message_id})"
+                )
+
+        except Exception as e:
+            logger.error(f"[SESSION 452] Failed to submit reaction feedback: {e}")
 
 
 # Bot instance (created when module loads)
