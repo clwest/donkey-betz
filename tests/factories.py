@@ -111,11 +111,12 @@ class MiniFigAssetFactory(DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     project = factory.SubFactory(CreativeProjectFactory, user=factory.SelfAttribute('..user'))
-    source_image = factory.SubFactory(ImageHistoryFactory, user=factory.SelfAttribute('..user'))
-    name = factory.Sequence(lambda n: f'MiniFig {n}')
+    # Session 452: Fixed field names to match actual model
+    source_image_asset = factory.SubFactory(ImageHistoryFactory, user=factory.SelfAttribute('..user'))
+    title = factory.Sequence(lambda n: f'MiniFig {n}')
     status = 'completed'
-    glb_file_path = factory.Sequence(lambda n: f'minifigs/test/minifig_{n}.glb')
-    stl_file_path = factory.Sequence(lambda n: f'minifigs/test/minifig_{n}.stl')
+    three_d_file = factory.Sequence(lambda n: f'https://example.com/minifigs/{n}.glb')
+    local_glb_path = factory.Sequence(lambda n: f'minifigs/test/minifig_{n}.glb')
 
 
 # =============================================================================
@@ -131,7 +132,8 @@ class AISessionFactory(DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     project = factory.SubFactory(CreativeProjectFactory, user=factory.SelfAttribute('..user'))
     title = factory.Sequence(lambda n: f'Test Session {n}')
-    transcript = [
+    # Session 452: Use conversation_transcript instead of transcript
+    conversation_transcript = [
         {'role': 'user', 'content': 'Hello'},
         {'role': 'assistant', 'content': 'Hi there!'}
     ]

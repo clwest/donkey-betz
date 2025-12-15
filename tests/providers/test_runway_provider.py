@@ -1,5 +1,9 @@
 # tests/providers/test_runway_provider.py
-"""Tests for Runway ML video provider."""
+"""Tests for Runway ML video provider.
+
+Session 452: Fixed tests to patch Django settings instead of os.environ
+- RunwayMLProvider reads from settings.EXTERNAL_API_KEYS or settings.RUNWAY_API_KEY
+"""
 import pytest
 from unittest.mock import patch, MagicMock
 import responses
@@ -14,13 +18,19 @@ class TestRunwayMLProvider:
     @pytest.fixture
     def provider(self):
         """Create a provider instance with test API key."""
-        with patch.dict(os.environ, {'RUNWAY_API_KEY': 'test-runway-key'}):
+        # Session 452: Patch Django settings instead of os.environ
+        with patch('content.video_provider.settings') as mock_settings:
+            mock_settings.EXTERNAL_API_KEYS = {'RUNWAY_API_KEY': 'test-runway-key'}
+            mock_settings.RUNWAY_MOCK_MODE = False
             from content.video_provider import RunwayMLProvider
             return RunwayMLProvider()
 
     def test_provider_initialization(self):
-        """Test provider initializes with API key from environment."""
-        with patch.dict(os.environ, {'RUNWAY_API_KEY': 'test-key'}):
+        """Test provider initializes with API key from settings."""
+        # Session 452: Patch Django settings instead of os.environ
+        with patch('content.video_provider.settings') as mock_settings:
+            mock_settings.EXTERNAL_API_KEYS = {'RUNWAY_API_KEY': 'test-key'}
+            mock_settings.RUNWAY_MOCK_MODE = False
             from content.video_provider import RunwayMLProvider
             provider = RunwayMLProvider()
             assert provider.api_key == 'test-key'

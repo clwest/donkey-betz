@@ -1,5 +1,9 @@
 # tests/agents_tests/test_video_agent.py
-"""Tests for Video Agent."""
+"""Tests for Video Agent.
+
+Session 452: Updated tests to match actual API signature:
+- execute(task: str, context: Dict, scifi_context: Dict, spider_context: Dict)
+"""
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -55,23 +59,36 @@ class TestVideoAgent:
         mock_provider.return_value = mock_provider_instance
 
         if hasattr(agent, 'execute'):
-            result = agent.execute({
-                'type': 'video_generation',
-                'prompt': 'A dog running in a field',
-                'duration': 10
-            })
+            # Session 452: Use correct execute signature
+            result = agent.execute(
+                task='Generate a video of a dog running in a field',
+                context={
+                    'type': 'video_generation',
+                    'duration': 10
+                },
+                scifi_context={},
+                spider_context={}
+            )
 
-            assert isinstance(result, dict)
+            # execute returns AgentResult dataclass
+            assert result is not None
+            assert hasattr(result, 'success')
 
-    def test_execute_with_invalid_task(self, agent):
-        """Test execution fails gracefully with invalid task."""
+    def test_execute_with_empty_task(self, agent):
+        """Test execution fails gracefully with empty task."""
         if hasattr(agent, 'execute'):
-            result = agent.execute({'type': 'unknown_type'})
+            # Session 452: Use correct execute signature
+            result = agent.execute(
+                task='',
+                context={},
+                scifi_context={},
+                spider_context={}
+            )
 
-            assert isinstance(result, dict)
-            # Should have error info or success=False
-            if 'success' in result:
-                assert result['success'] is False
+            # Should return AgentResult with success=False
+            assert result is not None
+            assert hasattr(result, 'success')
+            assert result.success is False
 
 
 class TestVideoAgentConfiguration:
@@ -154,24 +171,33 @@ class TestVideoAgentErrorHandling:
 
             if hasattr(agent, 'execute'):
                 try:
-                    result = agent.execute({
-                        'type': 'video_generation',
-                        'prompt': 'Test'
-                    })
-                    # Should return error dict, not raise
-                    assert isinstance(result, dict)
+                    # Session 452: Use correct execute signature
+                    result = agent.execute(
+                        task='Generate a test video',
+                        context={},
+                        scifi_context={},
+                        spider_context={}
+                    )
+                    # Should return error result, not raise
+                    assert result is not None
                 except Exception:
                     # Or it might raise, which is also acceptable
                     pass
 
-    def test_handles_missing_parameters(self, agent):
-        """Test agent handles missing parameters gracefully."""
+    def test_handles_empty_task(self, agent):
+        """Test agent handles empty task gracefully."""
         if hasattr(agent, 'execute'):
-            result = agent.execute({})
+            # Session 452: Use correct execute signature
+            result = agent.execute(
+                task='',
+                context={},
+                scifi_context={},
+                spider_context={}
+            )
 
-            assert isinstance(result, dict)
-            if 'success' in result:
-                assert result['success'] is False
+            assert result is not None
+            assert hasattr(result, 'success')
+            assert result.success is False
 
     def test_handles_invalid_video_path(self, agent):
         """Test agent handles invalid video paths."""
