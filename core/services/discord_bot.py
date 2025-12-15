@@ -3330,6 +3330,209 @@ class VoiceMarketplaceCommands(commands.Cog):
             logger.error(f"/voice-market error: {e}")
             await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
 
+    @app_commands.command(name="voice-buy", description="Purchase voice generation credits")
+    @app_commands.describe(
+        voice_name="Voice name or ID to purchase",
+        text_length="Number of characters you want to generate (e.g., 500)",
+        content_type="What you'll use the voice for"
+    )
+    @app_commands.choices(content_type=[
+        app_commands.Choice(name="Animated Series", value="animated_series"),
+        app_commands.Choice(name="Audiobook", value="audiobook"),
+        app_commands.Choice(name="Video Narration", value="video"),
+        app_commands.Choice(name="Podcast", value="podcast"),
+        app_commands.Choice(name="Commercial", value="commercial"),
+        app_commands.Choice(name="Personal Use", value="personal"),
+    ])
+    async def voice_buy(
+        self,
+        interaction: discord.Interaction,
+        voice_name: str,
+        text_length: int,
+        content_type: str = "personal"
+    ):
+        """
+        Purchase voice generation credits via Stripe.
+
+        Session 450: Stripe voice marketplace integration.
+        """
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from asgiref.sync import sync_to_async
+            from django.db.models import Q
+            from django.contrib.auth import get_user_model
+            from core.models import VoiceProfile, DiscordLinkCode
+            from core.services.stripe_voice_payments import get_stripe_voice_service
+            import os
+
+            User = get_user_model()
+
+            # Validate text length
+            if text_length < 10:
+                await interaction.followup.send(
+                    "Text length must be at least 10 characters.",
+                    ephemeral=True
+                )
+                return
+
+            if text_length > 50000:
+                await interaction.followup.send(
+                    "Text length cannot exceed 50,000 characters per purchase.",
+                    ephemeral=True
+                )
+                return
+
+            # Get linked user
+            @sync_to_async
+            def get_linked_user(discord_id):
+                return User.objects.filter(discord_id=str(discord_id)).first()
+
+            linked_user = await get_linked_user(interaction.user.id)
+
+            if not linked_user:
+                await interaction.followup.send(
+                    "Please link your Discord account first using `/link`",
+                    ephemeral=True
+                )
+                return
+
+            # Find the voice by name or partial ID
+            @sync_to_async
+            def find_voice(search_term):
+                # Try exact name match first
+                voice = VoiceProfile.objects.filter(
+                    name__iexact=search_term,
+                    is_public=True,
+                    is_active=True
+                ).first()
+
+                if not voice:
+                    # Try partial ID match
+                    voice = VoiceProfile.objects.filter(
+                        Q(id__startswith=search_term) |
+                        Q(name__icontains=search_term),
+                        is_public=True,
+                        is_active=True
+                    ).first()
+
+                return voice
+
+            voice = await find_voice(voice_name)
+
+            if not voice:
+                await interaction.followup.send(
+                    f"Voice '{voice_name}' not found in marketplace.\n"
+                    f"Use `/voice-market browse` to see available voices.",
+                    ephemeral=True
+                )
+                return
+
+            # Get price estimate
+            service = get_stripe_voice_service()
+            price_info = service.get_voice_price_estimate(
+                voice_id=str(voice.id),
+                text_length=text_length
+            )
+
+            if not price_info:
+                await interaction.followup.send(
+                    "Error calculating price. Please try again.",
+                    ephemeral=True
+                )
+                return
+
+            # Create checkout session
+            base_url = os.getenv('SITE_URL', 'http://localhost:8000')
+            result = service.create_checkout_session(
+                voice_id=str(voice.id),
+                buyer=linked_user,
+                text_length=text_length,
+                content_type=content_type,
+                success_url=f"{base_url}/voice-checkout/success/?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}/voice-checkout/cancel/",
+                metadata={
+                    'discord_user_id': str(interaction.user.id),
+                    'discord_username': interaction.user.display_name,
+                }
+            )
+
+            if not result:
+                await interaction.followup.send(
+                    "Error creating checkout session. Please try again.",
+                    ephemeral=True
+                )
+                return
+
+            # Build response embed
+            embed = discord.Embed(
+                title="Voice Purchase",
+                description=f"Ready to purchase **{voice.name}**",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="Voice",
+                value=f"{voice.name}\nby {voice.owner.username}",
+                inline=True
+            )
+
+            embed.add_field(
+                name="Characters",
+                value=f"{text_length:,}",
+                inline=True
+            )
+
+            embed.add_field(
+                name="Price",
+                value=result['price_display'],
+                inline=True
+            )
+
+            embed.add_field(
+                name="Use Case",
+                value=content_type.replace('_', ' ').title(),
+                inline=True
+            )
+
+            # Estimate duration
+            est_minutes = text_length / 150 / 60
+            embed.add_field(
+                name="Est. Audio",
+                value=f"~{result.get('duration_estimate', 0)}s",
+                inline=True
+            )
+
+            embed.add_field(
+                name="Revenue Split",
+                value="70% creator / 30% platform",
+                inline=True
+            )
+
+            if result.get('simulated'):
+                embed.add_field(
+                    name="Test Mode",
+                    value="Stripe not configured - this is a test checkout",
+                    inline=False
+                )
+
+            embed.add_field(
+                name="Complete Purchase",
+                value=f"[Click here to checkout]({result['url']})",
+                inline=False
+            )
+
+            embed.set_footer(text="You'll be redirected to Stripe secure checkout")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+            logger.info(f"/voice-buy: {interaction.user.display_name} -> {voice.name} ({text_length} chars, {result['price_display']})")
+
+        except Exception as e:
+            logger.error(f"/voice-buy error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+
     @app_commands.command(name="voice-clone", description="Clone your voice for the marketplace")
     @app_commands.describe(
         action="Clone action",
