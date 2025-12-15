@@ -21,9 +21,11 @@ New spider that fetches ML intelligence from Kaggle's API:
 - **Datasets:** Trending datasets with download counts, votes, usability scores
 - **Notebooks/Kernels:** Popular notebooks with votes, language, competition links
 
-**Authentication:** Uses `KAGGLE_USERNAME` and `KAGGLE_KEY` environment variables.
+**Authentication:** Uses `KAGGLE_USERNAME` and `KAGGLE_API_KEY` (or `KAGGLE_KEY`) environment variables.
 
 **Registration:** Added to `ai_core/spiders/spider_registry.py` under `ai_ml` category.
+
+**Fix Applied:** Added missing `process_data()` abstract method implementation (required by BaseIntelligenceSpider).
 
 **Data Collected:**
 ```python
