@@ -2374,13 +2374,12 @@ class Revenue(UnifiedBaseModel):
     )
 
     class Meta:
+        # Session 452: This is a DUPLICATE model - the real one is in models_unified_system.py
+        # Setting managed=False prevents Django from trying to create/migrate this table
+        # TODO: Remove this class entirely and update all imports to use models_unified_system.Revenue
+        managed = False
         db_table = 'core_revenue'
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['status', 'amount']),
-        ]
 
     def __str__(self):
         return f"${self.amount} - {self.opportunity_title} ({self.status})"
