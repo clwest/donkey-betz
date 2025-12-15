@@ -40,7 +40,7 @@ def test_context_compression():
     
     print(f"Query: '{test_query}'")
     print(f"Context length: {len(context)} characters")
-    print(f"Sources found: {len(ources)}")
+    print(f"Sources found: {len(sources)}")
     
     # Verify context is within limits
     if len(context) <= 200:
@@ -74,7 +74,7 @@ def test_response_validation():
         
         # Simulate the validation logic
         sentences = [s.strip() for s in response.split('.') if s.strip()]
-        if len(entences) > 3:
+        if len(sentences) > 3:
             validated = '. '.join(sentences[:3]) + '.'
             print(f"✂️ Truncated to 3 sentences: {len(validated)} chars")
         elif len(response) > 300:
