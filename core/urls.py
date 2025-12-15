@@ -2728,6 +2728,28 @@ urlpatterns = [
     path('api/voice-marketplace/<uuid:voice_id>/reviews/', add_review, name='voice-marketplace-add-review'),
 ]
 
+# =============================================================================
+# Session 450: Stripe Voice Checkout API
+# =============================================================================
+from core.views_stripe_voice import (
+    create_checkout, price_estimate, stripe_webhook,
+    checkout_status, checkout_success, checkout_cancel,
+    simulate_purchase
+)
+
+urlpatterns += [
+    # Checkout
+    path('api/voice-checkout/create/', create_checkout, name='voice-checkout-create'),
+    path('api/voice-checkout/price/', price_estimate, name='voice-checkout-price'),
+    path('api/voice-checkout/webhook/', stripe_webhook, name='voice-checkout-webhook'),
+    path('api/voice-checkout/status/<str:session_id>/', checkout_status, name='voice-checkout-status'),
+    path('api/voice-checkout/simulate/', simulate_purchase, name='voice-checkout-simulate'),
+
+    # Success/Cancel pages
+    path('voice-checkout/success/', checkout_success, name='voice-checkout-success'),
+    path('voice-checkout/cancel/', checkout_cancel, name='voice-checkout-cancel'),
+]
+
 # Add WebSocket test endpoint if available
 try:
     from core.health import websocket_test
