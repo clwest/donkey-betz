@@ -53,7 +53,8 @@ class KaggleSpider(BaseIntelligenceSpider):
     def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
         super().__init__(spider_id, targets, subscribers, redis_config)
         self.kaggle_username = os.getenv('KAGGLE_USERNAME', '')
-        self.kaggle_key = os.getenv('KAGGLE_KEY', '')
+        # Support both KAGGLE_API_KEY (standard) and KAGGLE_KEY (legacy)
+        self.kaggle_key = os.getenv('KAGGLE_API_KEY', os.getenv('KAGGLE_KEY', ''))
 
     def _get_auth_header(self) -> Dict[str, str]:
         """Generate Basic Auth header for Kaggle API"""
