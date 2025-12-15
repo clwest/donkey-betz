@@ -10670,3 +10670,189 @@ Each episode should have: title, synopsis, images, script, voiceover, and video.
 
         # Retry with exponential backoff
         raise self.retry(exc=e, countdown=120 * (2 ** self.request.retries))
+
+
+# =============================================================================
+# Session 451: User Upload Tasks
+# =============================================================================
+
+@shared_task
+def assemble_chunked_upload(upload_id: str):
+    """
+    Assemble chunks into final file and create content record.
+
+    Session 451: Called when all chunks of a large file upload are received.
+    """
+    from content.models import UploadSession, ImageHistory, VideoHistory, MediaSourceType
+    from pathlib import Path
+    from django.conf import settings
+    from django.utils import timezone
+    import shutil
+    import uuid as uuid_module
+
+    logger.info(f"📦 [SESSION 451] Assembling chunked upload: {upload_id}")
+
+    try:
+        session = UploadSession.objects.get(id=upload_id)
+    except UploadSession.DoesNotExist:
+        logger.error(f"📦 [SESSION 451] Upload session not found: {upload_id}")
+        return {'status': 'failed', 'error': 'Upload session not found'}
+
+    try:
+        temp_dir = Path(session.temp_path)
+
+        # Get all chunks in order
+        chunks = sorted(temp_dir.glob('chunk_*'))
+
+        if len(chunks) != session.chunks_total:
+            raise ValueError(f"Expected {session.chunks_total} chunks, found {len(chunks)}")
+
+        # Determine final path
+        ext = Path(session.filename).suffix.lower()
+        new_filename = f"{uuid_module.uuid4()}{ext}"
+
+        if session.content_type == 'video':
+            final_dir = Path(settings.MEDIA_ROOT) / 'uploads' / 'videos' / timezone.now().strftime('%Y/%m')
+        else:
+            final_dir = Path(settings.MEDIA_ROOT) / 'uploads' / 'images' / timezone.now().strftime('%Y/%m')
+
+        final_dir.mkdir(parents=True, exist_ok=True)
+        final_path = final_dir / new_filename
+
+        # Assemble chunks
+        logger.info(f"📦 [SESSION 451] Assembling {len(chunks)} chunks into {final_path}")
+        with open(final_path, 'wb') as final_file:
+            for chunk_path in chunks:
+                with open(chunk_path, 'rb') as chunk:
+                    final_file.write(chunk.read())
+
+        # Create content record
+        if session.content_type == 'video':
+            # Extract video metadata
+            from core.views_upload import _extract_video_metadata, _generate_video_thumbnail
+            metadata = _extract_video_metadata(str(final_path))
+
+            video = VideoHistory.objects.create(
+                user=session.user,
+                source_type=MediaSourceType.UPLOADED,
+                video_file=str(final_path.relative_to(settings.MEDIA_ROOT)),
+                original_filename=session.filename,
+                video_url=f"/media/{final_path.relative_to(settings.MEDIA_ROOT)}",
+                file_size_bytes=session.file_size,
+                mime_type=session.mime_type,
+                video_type='uploaded',
+                prompt=f'Uploaded: {session.filename}',
+                project=session.project,
+                duration=int(metadata.get('duration', 0)) if metadata.get('duration') else None,
+                video_width=metadata.get('width'),
+                video_height=metadata.get('height'),
+                fps=metadata.get('fps'),
+                codec=metadata.get('codec'),
+                status='completed',
+            )
+
+            _generate_video_thumbnail(video, str(final_path))
+
+            session.result_content_type = 'video'
+            session.result_id = video.id
+
+            logger.info(f"📦 [SESSION 451] Created VideoHistory: {video.id}")
+
+        else:
+            # Image handling
+            from PIL import Image
+            from core.views_upload import _generate_image_thumbnail
+
+            width, height = None, None
+            try:
+                with Image.open(final_path) as img:
+                    width, height = img.size
+            except Exception as e:
+                logger.warning(f"Could not get image dimensions: {e}")
+
+            image = ImageHistory.objects.create(
+                user=session.user,
+                source_type=MediaSourceType.UPLOADED,
+                original_file=str(final_path.relative_to(settings.MEDIA_ROOT)),
+                original_filename=session.filename,
+                filename=new_filename,
+                file_path=f"/media/{final_path.relative_to(settings.MEDIA_ROOT)}",
+                file_size_bytes=session.file_size,
+                mime_type=session.mime_type,
+                image_type='uploaded',
+                image_width=width,
+                image_height=height,
+                prompt=f'Uploaded: {session.filename}',
+                project=session.project,
+            )
+
+            # Generate thumbnail
+            with open(final_path, 'rb') as f:
+                from django.core.files.uploadedfile import SimpleUploadedFile
+                temp_file = SimpleUploadedFile(session.filename, f.read())
+                _generate_image_thumbnail(image, temp_file)
+
+            session.result_content_type = 'image'
+            session.result_id = image.id
+
+            logger.info(f"📦 [SESSION 451] Created ImageHistory: {image.id}")
+
+        # Cleanup temp files
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        session.status = 'completed'
+        session.save()
+
+        logger.info(f"📦 [SESSION 451] Chunked upload {upload_id} completed successfully")
+
+        return {
+            'status': 'completed',
+            'upload_id': str(upload_id),
+            'result_type': session.result_content_type,
+            'result_id': str(session.result_id),
+        }
+
+    except Exception as e:
+        logger.error(f"📦 [SESSION 451] Failed to assemble chunked upload {upload_id}: {e}")
+        session.status = 'failed'
+        session.error_message = str(e)
+        session.save()
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def cleanup_expired_uploads():
+    """
+    Clean up incomplete upload sessions older than expiry time.
+    Run hourly via Celery Beat.
+
+    Session 451: Automatic cleanup of abandoned uploads.
+    """
+    from content.models import UploadSession
+    from django.utils import timezone
+    from pathlib import Path
+    import shutil
+
+    logger.info("🧹 [SESSION 451] Starting upload cleanup task")
+
+    expired = UploadSession.objects.filter(
+        status__in=['pending', 'uploading'],
+        expires_at__lt=timezone.now()
+    )
+
+    cleaned = 0
+    for session in expired:
+        # Remove temp files
+        if session.temp_path:
+            temp_path = Path(session.temp_path)
+            if temp_path.exists():
+                shutil.rmtree(temp_path, ignore_errors=True)
+                logger.info(f"🧹 [SESSION 451] Cleaned temp files for upload {session.id}")
+
+        session.status = 'cancelled'
+        session.error_message = 'Upload session expired'
+        session.save()
+        cleaned += 1
+
+    logger.info(f"🧹 [SESSION 451] Cleaned up {cleaned} expired upload sessions")
+    return {'cleaned': cleaned}

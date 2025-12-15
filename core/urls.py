@@ -2750,6 +2750,29 @@ urlpatterns += [
     path('voice-checkout/cancel/', checkout_cancel, name='voice-checkout-cancel'),
 ]
 
+# =============================================================================
+# Session 451: User Upload API
+# =============================================================================
+from core.views_upload import (
+    upload_image, upload_video,
+    chunked_upload_init, chunked_upload_chunk, chunked_upload_status,
+    get_uploads
+)
+
+urlpatterns += [
+    # Simple uploads (< 50MB)
+    path('api/upload/image/', upload_image, name='upload-image'),
+    path('api/upload/video/', upload_video, name='upload-video'),
+
+    # Chunked uploads (large files)
+    path('api/upload/chunked/init/', chunked_upload_init, name='chunked-upload-init'),
+    path('api/upload/chunked/<uuid:upload_id>/chunk/', chunked_upload_chunk, name='chunked-upload-chunk'),
+    path('api/upload/chunked/<uuid:upload_id>/status/', chunked_upload_status, name='chunked-upload-status'),
+
+    # List uploads
+    path('api/upload/list/', get_uploads, name='upload-list'),
+]
+
 # Add WebSocket test endpoint if available
 try:
     from core.health import websocket_test

@@ -102,6 +102,17 @@ class ContentSource(models.TextChoices):
     BETTING_SYSTEM = 'betting_system', 'Betting Analysis System'
 
 
+class MediaSourceType(models.TextChoices):
+    """
+    Session 451: Track how media content was created
+    Used by ImageHistory, VideoHistory, AudioHistory
+    """
+    GENERATED = 'generated', 'AI Generated'
+    UPLOADED = 'uploaded', 'User Uploaded'
+    IMPORTED = 'imported', 'External Import'
+    EDITED = 'edited', 'Edited Version'
+
+
 class EmbeddingModel(models.TextChoices):
     """Vector embedding models"""
     OPENAI_SMALL = 'openai_text_embedding_3_small', 'OpenAI text-embedding-3-small'
@@ -1756,6 +1767,7 @@ class ImageHistory(UnifiedBaseModel):
             ('background_removed', 'Background Removed'),
             ('sketch_control', 'Sketch to Image'),
             ('structure_control', 'Structure Transfer'),
+            ('uploaded', 'User Uploaded'),  # Session 451: User uploads
         ],
         help_text="Type of operation that created this image"
     )
@@ -1808,7 +1820,34 @@ class ImageHistory(UnifiedBaseModel):
         blank=True,
         help_text="File size in bytes"
     )
-    
+
+    # Session 451: User Upload Support
+    source_type = models.CharField(
+        max_length=20,
+        choices=MediaSourceType.choices,
+        default=MediaSourceType.GENERATED,
+        help_text="How this content was created (generated, uploaded, imported, edited)"
+    )
+
+    original_file = models.FileField(
+        upload_to='uploads/images/%Y/%m/',
+        null=True,
+        blank=True,
+        help_text="Original uploaded file (for uploaded images)"
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Original filename from upload"
+    )
+
+    mime_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="MIME type of the file"
+    )
+
     # Lineage tracking for composite workflows
     parent_image = models.ForeignKey(
         'self',
@@ -2061,6 +2100,7 @@ class VideoHistory(UnifiedBaseModel):
             ('image_to_video', 'Image to Video'),
             ('extend_video', 'Video Extension'),  # Session 66 Part 2: Runway Extend
             ('chained_video', 'Chained Video'),  # Session 67: DaVinci Resolve chaining
+            ('uploaded', 'User Uploaded'),  # Session 451: User uploads
         ],
         help_text="Type of video generation"
     )
@@ -2115,6 +2155,45 @@ class VideoHistory(UnifiedBaseModel):
         null=True,
         blank=True,
         help_text="File size in bytes"
+    )
+
+    # Session 451: User Upload Support
+    source_type = models.CharField(
+        max_length=20,
+        choices=MediaSourceType.choices,
+        default=MediaSourceType.GENERATED,
+        help_text="How this content was created (generated, uploaded, imported, edited)"
+    )
+
+    video_file = models.FileField(
+        upload_to='uploads/videos/%Y/%m/',
+        null=True,
+        blank=True,
+        help_text="Uploaded video file (for user uploads)"
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Original filename from upload"
+    )
+
+    mime_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="MIME type of the file"
+    )
+
+    fps = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Frames per second"
+    )
+
+    codec = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Video codec (h264, hevc, etc.)"
     )
 
     # Status tracking
@@ -3876,3 +3955,106 @@ class ProjectShare(models.Model):
         """Revoke the share link"""
         self.is_active = False
         self.save(update_fields=['is_active'])
+
+
+class UploadSession(models.Model):
+    """
+    Session 451: Track multi-part/chunked uploads for large files.
+    Enables resume capability for failed uploads.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='upload_sessions')
+
+    # Upload metadata
+    filename = models.CharField(max_length=255, help_text="Original filename")
+    file_size = models.BigIntegerField(help_text="Total file size in bytes")
+    mime_type = models.CharField(max_length=100, help_text="MIME type of the file")
+    content_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('image', 'Image'),
+            ('video', 'Video'),
+            ('audio', 'Audio'),
+        ],
+        default='video',
+        help_text="Type of content being uploaded"
+    )
+    chunk_size = models.IntegerField(default=5242880, help_text="Chunk size in bytes (default 5MB)")
+
+    # Progress tracking
+    chunks_received = models.IntegerField(default=0, help_text="Number of chunks received")
+    chunks_total = models.IntegerField(help_text="Total number of chunks expected")
+    bytes_received = models.BigIntegerField(default=0, help_text="Bytes received so far")
+
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('uploading', 'Uploading'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        default='pending',
+        help_text="Upload status"
+    )
+
+    # Temp storage path
+    temp_path = models.CharField(max_length=500, blank=True, help_text="Path to temp directory for chunks")
+
+    # Error tracking
+    error_message = models.TextField(blank=True, help_text="Error message if upload failed")
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(help_text="Auto-cleanup incomplete uploads after this time")
+
+    # Result - link to created content
+    result_content_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Type of content created (image, video, audio)"
+    )
+    result_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="ID of the created ImageHistory, VideoHistory, or AudioHistory"
+    )
+
+    # Optional project association
+    project = models.ForeignKey(
+        'core.PartnershipProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='upload_sessions',
+        help_text="Project to associate uploaded content with"
+    )
+
+    class Meta:
+        verbose_name = "Upload Session"
+        verbose_name_plural = "Upload Sessions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['status']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.filename} ({self.status})"
+
+    @property
+    def progress_percent(self):
+        """Calculate upload progress percentage"""
+        if self.file_size == 0:
+            return 0
+        return round(self.bytes_received / self.file_size * 100, 1)
+
+    @property
+    def is_complete(self):
+        """Check if all chunks have been received"""
+        return self.chunks_received >= self.chunks_total

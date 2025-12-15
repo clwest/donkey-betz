@@ -134,3 +134,18 @@ CHANNEL_LAYERS = {
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'test_media')
 MEDIA_URL = '/media/'
+
+# Redis URL for testing (uses Redis if available, fake if not)
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/1')
+
+# OpenAI/GPT configuration for testing
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', 'test-key-not-used-in-tests')
+
+# Stability AI configuration for testing
+STABILITY_API_KEY = os.environ.get('STABILITY_API_KEY', 'test-key')
+
+# ElevenLabs configuration for testing
+ELEVENLABS_API_KEY = os.environ.get('ELEVENLABS_API_KEY', 'test-key')
+
+# Use clean agent architecture
+USE_CLEAN_AGENT_ARCHITECTURE = True
