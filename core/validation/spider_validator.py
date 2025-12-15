@@ -77,8 +77,9 @@ class SpiderValidationAgent(BaseValidationAgent):
     def check_spider_endpoints(self):
         """Verify spider-related API endpoints."""
         endpoints = [
-            '/api/spider-dashboard/',
-            '/api/spider-intelligence/',
+            '/api/spider-dashboard/network/',
+            '/api/spider-dashboard/activity/',
+            '/api/spider/stats/',
         ]
 
         for endpoint in endpoints:
