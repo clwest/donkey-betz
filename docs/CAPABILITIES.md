@@ -78,22 +78,40 @@
 
 ## Video Generation (Runway ML)
 
-| Feature | Description |
-|---------|-------------|
-| Text-to-Video | Generate video from text prompt |
-| Image-to-Video | Animate still images |
-| Video Extension | Extend existing videos |
-| Lip Sync | Sync video to audio |
-| Video Chaining | Concatenate multiple clips |
+| Feature | Model | Description |
+|---------|-------|-------------|
+| Text-to-Video | veo3.1 / veo3.1_fast | Generate video from text prompt |
+| Image-to-Video | gen4_turbo | Animate still images |
+| **Video-to-Video** | **gen4_aleph** | **Transform existing videos with AI** |
+| Video Extension | gen4_aleph | Extend existing videos seamlessly |
+| Lip Sync | gen4_turbo | Sync video to audio |
+| Video Chaining | - | Concatenate multiple clips |
+
+### Video-to-Video Capabilities (Gen-4 Aleph)
+- **Scene Transformation** - "Make it winter", "Add fog", "Change to night"
+- **Object Manipulation** - Add, remove, or replace objects
+- **Shot Continuation** - Seamlessly extend video narrative
+- **Style Transfer** - Apply new visual styles with reference images
+- **Novel Camera Angles** - Generate new perspectives
+
+### Available Models
+| Model | Type | Best For |
+|-------|------|----------|
+| veo3.1 | Text-to-Video | High quality generation |
+| veo3.1_fast | Text-to-Video | Fast drafts |
+| gen4_turbo | Image-to-Video | Animating images |
+| gen4_aleph | Video-to-Video | Transformations & extensions |
+| *gen4.5* | *Coming Soon* | *Next-gen quality (API pending)* |
 
 ### Supported Resolutions
 - 1280x720 (720p)
 - 1920x1080 (1080p)
+- 960x960 (Square)
+- 1584x672 (Cinematic)
 
 ### Duration Options
-- 5 seconds
-- 10 seconds
-- Extended via chaining
+- 4-10 seconds per generation
+- Extended via chaining or gen4_aleph continuation
 
 ---
 

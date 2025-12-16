@@ -7064,7 +7064,7 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="pref-agents-tab" data-bs-toggle="pill" data-bs-target="#pref-agents" type="button" role="tab" style="border: 1px solid #a855f7; color: #a855f7;">
-                                🤖 Agents
+                                🤖 Agents & Learning
                             </button>
                         </li>
                     </ul>
@@ -7654,16 +7654,164 @@
                                         </select>
                                         <small class="text-info" id="pref-research-depth-learned" style="display: none;">✓ Learned from your choices</small>
                                     </div>
+
+                                    <!-- Session 457: Expanded Research Sources -->
                                     <div class="preference-item mb-3">
-                                        <label class="form-label text-muted small">Include Sources</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pref-research-include_academic" onchange="updatePreference('research', 'include_academic', this.checked)">
-                                            <label class="form-check-label text-light" for="pref-research-include_academic">Academic papers</label>
+                                        <label class="form-label text-muted small d-flex justify-content-between align-items-center">
+                                            <span>Include Sources</span>
+                                            <div>
+                                                <button class="btn btn-xs btn-outline-success me-1" onclick="selectAllResearchSources()" style="font-size: 10px; padding: 2px 6px;">Select All</button>
+                                                <button class="btn btn-xs btn-outline-secondary" onclick="clearAllResearchSources()" style="font-size: 10px; padding: 2px 6px;">Clear All</button>
+                                            </div>
+                                        </label>
+
+                                        <!-- News & Media -->
+                                        <div class="mb-2 mt-2">
+                                            <small class="text-info fw-bold">📰 News & Media</small>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pref-research-include_news" onchange="updatePreference('research', 'include_news', this.checked)" checked>
-                                            <label class="form-check-label text-light" for="pref-research-include_news">News articles</label>
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_news" onchange="updateResearchSources()" checked>
+                                            <label class="form-check-label text-light" for="pref-research-include_news">News articles (Google News, Reuters, BBC)</label>
                                         </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_tech_blogs" onchange="updateResearchSources()" checked>
+                                            <label class="form-check-label text-light" for="pref-research-include_tech_blogs">Tech blogs (TechCrunch, Wired, The Verge, Ars Technica)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_industry" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_industry">Industry publications (MIT Tech Review, Axios)</label>
+                                        </div>
+
+                                        <!-- Academic & Research -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">📚 Academic & Research</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_academic" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_academic">Academic papers (arXiv, research journals)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_wikipedia" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_wikipedia">Wikipedia & encyclopedias</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_science" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_science">Science & health publications</label>
+                                        </div>
+
+                                        <!-- Community & Social -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">💬 Community & Social</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_reddit" onchange="updateResearchSources()" checked>
+                                            <label class="form-check-label text-light" for="pref-research-include_reddit">Reddit discussions (20+ subreddits)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_hackernews" onchange="updateResearchSources()" checked>
+                                            <label class="form-check-label text-light" for="pref-research-include_hackernews">Hacker News discussions</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_devto" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_devto">Dev.to & developer blogs</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_social" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_social">Social media (Bluesky, YouTube)</label>
+                                        </div>
+
+                                        <!-- Market & Business -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">💼 Market & Business</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_jobs" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_jobs">Job market data (RemoteOK, WeWorkRemotely, Adzuna)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_financial" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_financial">Financial news (Yahoo Finance, SEC Edgar)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_crypto" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_crypto">Cryptocurrency data (CoinGecko, Etherscan)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_startups" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_startups">Startups & launches (ProductHunt, Kickstarter)</label>
+                                        </div>
+
+                                        <!-- Creative & Design -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">🎨 Creative & Design</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_design" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_design">Design inspiration (Behance, Awwwards, Dribbble)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_images" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_images">Stock imagery (Unsplash, Giphy)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_entertainment" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_entertainment">Entertainment (Variety, Polygon Gaming)</label>
+                                        </div>
+
+                                        <!-- Technical -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">💻 Technical</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_github" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_github">GitHub repositories & code</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_ai_ml" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_ai_ml">AI/ML resources (HuggingFace, Kaggle)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_docs" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_docs">Documentation & tutorials (FreeCodeCamp)</label>
+                                        </div>
+
+                                        <!-- Legal & Government -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">⚖️ Legal & Government</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_legal" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_legal">Legal databases (CourtListener, FindLaw, Justia)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_government" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_government">Government & public records</label>
+                                        </div>
+
+                                        <!-- Lifestyle -->
+                                        <div class="mb-2 mt-3">
+                                            <small class="text-info fw-bold">🌍 Lifestyle</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_lifestyle" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_lifestyle">Lifestyle (Lifehacker, parenting, food, travel)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_education" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_education">Education (Coursera, online courses)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input research-source" type="checkbox" id="pref-research-include_real_estate" onchange="updateResearchSources()">
+                                            <label class="form-check-label text-light" for="pref-research-include_real_estate">Real estate & property data</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Source count indicator -->
+                                    <div class="mt-3 p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 6px;">
+                                        <small class="text-info">
+                                            <span id="research-source-count">4</span> sources selected ·
+                                            <span id="research-spider-count">66</span> spiders available
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -7672,149 +7820,129 @@
                         </div>
                         <!-- END RESEARCH SUB-TAB -->
 
-                        <!-- ==================== AGENTS SUB-TAB ==================== -->
+                        <!-- ==================== AGENTS & LEARNING SUB-TAB ==================== -->
                         <div class="tab-pane fade" id="pref-agents" role="tabpanel">
 
-                    <!-- SESSION 210: Implicit Learning & Recommendations Section -->
-                    <div class="row mb-4">
-                        <!-- Style Recommendations Card -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
-                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
-                                    <h5 class="mb-0" style="color: #10b981;">✨ Style Recommendations</h5>
-                                    <button class="btn btn-sm btn-outline-success" onclick="loadImplicitRecommendations()">
-                                        🔄 Refresh
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <p class="text-muted small mb-3">Personalized style suggestions based on your behavior</p>
-                                    <div id="implicit-recommendations-list" style="max-height: 250px; overflow-y: auto;">
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
-                                            <p class="text-muted small mt-2">Loading recommendations...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Style Evolution Card -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
-                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(99, 102, 241, 0.1); border-bottom: 1px solid #333;">
-                                    <h5 class="mb-0" style="color: #6366f1;">📈 Style Evolution</h5>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="loadStyleEvolution()">
-                                        🔄 Refresh
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <p class="text-muted small mb-3">How your style preferences have changed over time</p>
-                                    <div id="style-evolution-content" style="max-height: 250px; overflow-y: auto;">
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                            <p class="text-muted small mt-2">Loading evolution data...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Behavior Summary Card -->
-                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
-                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(244, 114, 182, 0.1); border-bottom: 1px solid #333;">
-                            <h5 class="mb-0" style="color: #f472b6;">📊 Behavior Insights</h5>
-                            <button class="btn btn-sm btn-outline-pink" style="border-color: #f472b6; color: #f472b6;" onclick="loadBehaviorInsights()">
-                                🔄 Refresh
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div class="row" id="behavior-insights-row">
-                                <div class="col-md-3 text-center">
-                                    <h3 class="mb-0" id="behavior-downloads" style="color: #10b981;">0</h3>
-                                    <small class="text-muted">Downloads</small>
-                                </div>
-                                <div class="col-md-3 text-center">
-                                    <h3 class="mb-0" id="behavior-shares" style="color: #06b6d4;">0</h3>
-                                    <small class="text-muted">Shares</small>
-                                </div>
-                                <div class="col-md-3 text-center">
-                                    <h3 class="mb-0" id="behavior-generations" style="color: #8b5cf6;">0</h3>
-                                    <small class="text-muted">Generations</small>
-                                </div>
-                                <div class="col-md-3 text-center">
-                                    <h3 class="mb-0" id="behavior-satisfaction" style="color: #fbbf24;">--%</h3>
-                                    <small class="text-muted">Satisfaction</small>
-                                </div>
-                            </div>
-                            <div class="mt-3" id="top-styles-section" style="display: none;">
-                                <p class="mb-2 text-muted small">Your Top Styles:</p>
-                                <div id="top-styles-badges"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Session 219: Agent Learning Section -->
+                    <!-- Session 457: Agent Browser Section -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.1); border-bottom: 1px solid #333;">
-                            <h5 class="mb-0" style="color: #a855f7;">🤖 Agent Learning</h5>
-                            <button class="btn btn-sm btn-outline-purple" style="border-color: #a855f7; color: #a855f7;" onclick="loadAgentLearning()">
-                                🔄 Refresh
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted small mb-3">Your AI agents learn from every interaction to personalize their behavior</p>
-
-                            <!-- Agent Learning Stats -->
-                            <div class="row mb-3" id="agent-learning-stats">
-                                <div class="col-4 text-center">
-                                    <h3 class="mb-0" id="agent-total-interactions" style="color: #a855f7;">0</h3>
-                                    <small class="text-muted">Interactions</small>
-                                </div>
-                                <div class="col-4 text-center">
-                                    <h3 class="mb-0" id="agent-total-preferences" style="color: #22d3ee;">0</h3>
-                                    <small class="text-muted">Preferences</small>
-                                </div>
-                                <div class="col-4 text-center">
-                                    <h3 class="mb-0" id="agent-total-agents" style="color: #34d399;">0</h3>
-                                    <small class="text-muted">Agents Active</small>
-                                </div>
-                            </div>
-
-                            <!-- Agent Preferences List -->
-                            <div id="agent-learning-list" style="max-height: 300px; overflow-y: auto;">
-                                <div class="text-center py-3">
-                                    <div class="spinner-border spinner-border-sm" style="color: #a855f7;" role="status"></div>
-                                    <p class="text-muted small mt-2">Loading agent learning data...</p>
-                                </div>
-                            </div>
-
-                            <!-- Share Learning Button -->
-                            <div class="mt-3 text-center">
-                                <button class="btn btn-sm btn-outline-success" onclick="shareAllAgentLearning()">
-                                    🔗 Share Learning Across Agents
+                            <h5 class="mb-0" style="color: #a855f7;">🤖 My AI Agents</h5>
+                            <div>
+                                <select class="form-select form-select-sm bg-dark text-white d-inline-block" id="agent-category-filter" onchange="filterAgentsByCategory()" style="width: auto;">
+                                    <option value="all">All Categories</option>
+                                    <option value="favorites">⭐ Favorites</option>
+                                    <option value="creation">🎨 Creation</option>
+                                    <option value="editing">✏️ Editing</option>
+                                    <option value="research">🔬 Research</option>
+                                    <option value="strategy">📊 Strategy</option>
+                                    <option value="executive">👔 Executive</option>
+                                    <option value="business">💼 Business</option>
+                                    <option value="development">💻 Development</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-purple ms-2" style="border-color: #a855f7; color: #a855f7;" onclick="loadMyAgents()">
+                                    🔄
                                 </button>
                             </div>
                         </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-3 text-center">
+                                    <h4 class="mb-0" id="agents-total-count" style="color: #a855f7;">32</h4>
+                                    <small class="text-muted">Total Agents</small>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <h4 class="mb-0" id="agents-favorites-count" style="color: #fbbf24;">0</h4>
+                                    <small class="text-muted">Favorites</small>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <h4 class="mb-0" id="agents-active-count" style="color: #10b981;">0</h4>
+                                    <small class="text-muted">Used Today</small>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <h4 class="mb-0" id="advisors-count" style="color: #06b6d4;">25</h4>
+                                    <small class="text-muted">Advisors</small>
+                                </div>
+                            </div>
+
+                            <!-- Agent Grid -->
+                            <div id="agents-grid" style="max-height: 350px; overflow-y: auto;">
+                                <div class="row g-2" id="agents-grid-content">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm" style="color: #a855f7;"></div>
+                                        <p class="text-muted small mt-2">Loading agents...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Preference History Section -->
+                    <!-- Learning Stats Row -->
+                    <div class="row mb-4">
+                        <!-- Quick Stats Card -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #10b981;">📊 Learning Stats</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <h4 class="mb-0" id="learning-interactions" style="color: #a855f7;">0</h4>
+                                            <small class="text-muted">Interactions</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h4 class="mb-0" id="learning-preferences" style="color: #22d3ee;">0</h4>
+                                            <small class="text-muted">Learned</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h4 class="mb-0" id="learning-accuracy" style="color: #10b981;">--%</h4>
+                                            <small class="text-muted">Accuracy</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">Top learned preferences:</small>
+                                        <div id="top-learned-prefs" class="mt-1">
+                                            <span class="badge bg-secondary me-1">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Style Recommendations Card -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(99, 102, 241, 0.1); border-bottom: 1px solid #333;">
+                                    <h6 class="mb-0" style="color: #6366f1;">✨ Recommendations</h6>
+                                    <button class="btn btn-xs btn-outline-primary" onclick="loadImplicitRecommendations()" style="font-size: 10px; padding: 2px 6px;">🔄</button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="implicit-recommendations-list" style="max-height: 150px; overflow-y: auto;">
+                                        <div class="text-center py-2">
+                                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                                            <p class="text-muted small mt-1 mb-0">Loading...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity Card -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
                         <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid #333;">
-                            <h5 class="mb-0" style="color: #fbbf24;">📜 Recent Learning Activity</h5>
-                            <button class="btn btn-sm btn-outline-warning" onclick="loadPreferenceHistory()">
-                                🔄 Refresh
-                            </button>
+                            <h6 class="mb-0" style="color: #fbbf24;">📜 Recent Agent Activity</h6>
+                            <button class="btn btn-xs btn-outline-warning" onclick="loadRecentAgentActivity()" style="font-size: 10px; padding: 2px 6px;">🔄</button>
                         </div>
                         <div class="card-body">
-                            <div id="preference-history-list" style="max-height: 300px; overflow-y: auto;">
-                                <p class="text-muted text-center">Loading history...</p>
+                            <div id="recent-agent-activity" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted text-center small mb-0">Loading recent activity...</p>
                             </div>
                         </div>
                     </div>
 
                         </div>
-                        <!-- END AGENTS SUB-TAB -->
+                        <!-- END AGENTS & LEARNING SUB-TAB -->
 
                     </div>
                     <!-- END SUB-TAB CONTENT -->
@@ -47598,10 +47726,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             // Research preferences
             if (preferences.research) {
                 setSelectValue('pref-research-depth', preferences.research.depth);
-                const academicEl = document.getElementById('pref-research-include_academic');
-                const newsEl = document.getElementById('pref-research-include_news');
-                if (academicEl) academicEl.checked = preferences.research.include_academic || false;
-                if (newsEl) newsEl.checked = preferences.research.include_news !== false;
+
+                // Session 457: Load expanded research sources
+                if (preferences.research.sources) {
+                    loadResearchSources(preferences.research.sources);
+                } else {
+                    // Legacy fallback for old preferences format
+                    const academicEl = document.getElementById('pref-research-include_academic');
+                    const newsEl = document.getElementById('pref-research-include_news');
+                    if (academicEl) academicEl.checked = preferences.research.include_academic || false;
+                    if (newsEl) newsEl.checked = preferences.research.include_news !== false;
+                }
             }
 
             // Update learning stage banner
@@ -47679,6 +47814,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 206: Load Preference History
         async function loadPreferenceHistory() {
             const container = document.getElementById('preference-history-list');
+            if (!container) return; // Session 457: Element removed in redesign
             try {
                 const response = await fetch('/api/preferences/history/?limit=20', {
                     headers: { 'X-CSRFToken': getCsrfToken() }
@@ -47776,6 +47912,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 210: Load Style Evolution
         async function loadStyleEvolution() {
             const container = document.getElementById('style-evolution-content');
+            if (!container) return; // Session 457: Element removed in redesign
             try {
                 const response = await authenticatedFetch('/api/preferences/evolution/?days=30');
                 if (!response.ok) throw new Error('Failed to load evolution');
@@ -47833,6 +47970,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // Session 210: Load Behavior Insights
         async function loadBehaviorInsights() {
+            // Session 457: Check if elements exist (redesigned tab may not have them)
+            const downloadsEl = document.getElementById('behavior-downloads');
+            if (!downloadsEl) return;
+
             try {
                 const response = await authenticatedFetch('/api/preferences/implicit/?days=30');
                 if (!response.ok) throw new Error('Failed to load behavior insights');
@@ -47843,19 +47984,23 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     const summary = data.behavior_summary || {};
                     const prefs = data.preferences || {};
 
-                    // Update stats
-                    document.getElementById('behavior-downloads').textContent = summary.total_downloads || 0;
-                    document.getElementById('behavior-shares').textContent = summary.total_shares || 0;
-                    document.getElementById('behavior-generations').textContent = summary.total_generations || 0;
+                    // Update stats (with null checks)
+                    if (downloadsEl) downloadsEl.textContent = summary.total_downloads || 0;
+                    const sharesEl = document.getElementById('behavior-shares');
+                    if (sharesEl) sharesEl.textContent = summary.total_shares || 0;
+                    const gensEl = document.getElementById('behavior-generations');
+                    if (gensEl) gensEl.textContent = summary.total_generations || 0;
 
                     const satisfaction = summary.satisfaction_rate;
                     if (satisfaction !== undefined) {
-                        document.getElementById('behavior-satisfaction').textContent = Math.round(satisfaction * 100) + '%';
+                        const satEl = document.getElementById('behavior-satisfaction');
+                        if (satEl) satEl.textContent = Math.round(satisfaction * 100) + '%';
                     }
 
                     // Show top styles
-                    if (prefs.top_styles && prefs.top_styles.length > 0) {
-                        document.getElementById('top-styles-section').style.display = 'block';
+                    const topStylesSection = document.getElementById('top-styles-section');
+                    if (prefs.top_styles && prefs.top_styles.length > 0 && topStylesSection) {
+                        topStylesSection.style.display = 'block';
                         let badgesHtml = '';
                         prefs.top_styles.forEach((style, idx) => {
                             const colors = ['#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4'];
@@ -47926,6 +48071,235 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 alert('Failed to update preference: ' + error.message);
             }
         }
+
+        // Session 457: Research Sources Management
+        function selectAllResearchSources() {
+            document.querySelectorAll('.research-source').forEach(cb => cb.checked = true);
+            updateResearchSources();
+        }
+
+        function clearAllResearchSources() {
+            document.querySelectorAll('.research-source').forEach(cb => cb.checked = false);
+            updateResearchSources();
+        }
+
+        function updateResearchSources() {
+            // Collect all selected sources
+            const sources = {};
+            document.querySelectorAll('.research-source').forEach(cb => {
+                const key = cb.id.replace('pref-research-include_', '');
+                sources[key] = cb.checked;
+            });
+
+            // Update count display
+            const selectedCount = Object.values(sources).filter(v => v).length;
+            const countEl = document.getElementById('research-source-count');
+            if (countEl) countEl.textContent = selectedCount;
+
+            // Save to preferences
+            updatePreference('research', 'sources', sources);
+        }
+
+        function loadResearchSources(sources) {
+            if (!sources) return;
+
+            Object.entries(sources).forEach(([key, value]) => {
+                const el = document.getElementById(`pref-research-include_${key}`);
+                if (el) el.checked = value;
+            });
+
+            // Update count
+            const selectedCount = Object.values(sources).filter(v => v).length;
+            const countEl = document.getElementById('research-source-count');
+            if (countEl) countEl.textContent = selectedCount;
+        }
+
+        // ========== Session 457: Agent Browser Functions ==========
+        let allAgents = [];
+        let favoriteAgents = JSON.parse(localStorage.getItem('favoriteAgents') || '[]');
+
+        async function loadMyAgents() {
+            const gridContent = document.getElementById('agents-grid-content');
+            if (!gridContent) return;
+
+            gridContent.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color: #a855f7;"></div></div>';
+
+            try {
+                const response = await authenticatedFetch('/api/agents/');
+                const data = await response.json();
+
+                if (data.success && data.agents) {
+                    allAgents = data.agents;
+                    renderAgentGrid(allAgents);
+                    updateAgentCounts();
+                } else {
+                    // Fallback: use hardcoded agent list
+                    allAgents = getDefaultAgentList();
+                    renderAgentGrid(allAgents);
+                    updateAgentCounts();
+                }
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                // Fallback to default list
+                allAgents = getDefaultAgentList();
+                renderAgentGrid(allAgents);
+                updateAgentCounts();
+            }
+        }
+
+        function getDefaultAgentList() {
+            return [
+                { id: 'image_agent', name: 'Image Agent', category: 'creation', description: 'Generate images, logos, banners' },
+                { id: 'video_agent', name: 'Video Agent', category: 'creation', description: 'Create videos and animations' },
+                { id: 'audio_agent', name: 'Audio Agent', category: 'creation', description: 'Generate audio and voiceovers' },
+                { id: 'three_d_agent', name: '3D Agent', category: 'creation', description: 'Create 3D models' },
+                { id: 'image_editing_agent', name: 'Image Editing', category: 'editing', description: 'Edit, upscale, remove backgrounds' },
+                { id: 'video_editing_agent', name: 'Video Editing', category: 'editing', description: 'Trim, add effects, text overlays' },
+                { id: 'research_agent', name: 'Research Agent', category: 'research', description: 'Web search and spider queries' },
+                { id: 'content_strategy_agent', name: 'Content Strategy', category: 'strategy', description: 'Content recommendations' },
+                { id: 'brand_identity_agent', name: 'Brand Identity', category: 'strategy', description: 'Brand colors and consistency' },
+                { id: 'seo_optimizer_agent', name: 'SEO Optimizer', category: 'strategy', description: 'Keywords and metadata' },
+                { id: 'social_media_agent', name: 'Social Media', category: 'strategy', description: 'Platform-specific strategies' },
+                { id: 'cto_agent', name: 'CTO Agent', category: 'executive', description: 'Technical planning' },
+                { id: 'coo_agent', name: 'COO Agent', category: 'executive', description: 'Operations and risk' },
+                { id: 'creative_director_agent', name: 'Creative Director', category: 'executive', description: 'Creative guidance' },
+                { id: 'competitor_analysis_agent', name: 'Competitor Analysis', category: 'business', description: 'SWOT and market analysis' },
+                { id: 'customer_research_agent', name: 'Customer Research', category: 'business', description: 'Personas and sentiment' },
+                { id: 'brand_strategy_agent', name: 'Brand Strategy', category: 'business', description: 'Positioning and messaging' },
+                { id: 'marketing_strategy_agent', name: 'Marketing Strategy', category: 'business', description: 'Campaigns and funnels' },
+                { id: 'code_generator_agent', name: 'Code Generator', category: 'development', description: 'Generate code from specs' },
+                { id: 'fullstack_developer_agent', name: 'Full Stack Dev', category: 'development', description: 'Complete features' },
+                { id: 'code_review_agent', name: 'Code Review', category: 'development', description: 'Quality and security review' },
+                { id: 'devops_agent', name: 'DevOps Agent', category: 'development', description: 'CI/CD and infrastructure' },
+                { id: 'workflow_agent', name: 'Workflow Agent', category: 'strategy', description: 'Multi-step orchestration' },
+                { id: 'personal_assistant_agent', name: 'Personal Assistant', category: 'strategy', description: 'Main interaction hub' },
+            ];
+        }
+
+        function renderAgentGrid(agents) {
+            const gridContent = document.getElementById('agents-grid-content');
+            if (!gridContent) return;
+
+            const categoryColors = {
+                creation: '#10b981',
+                editing: '#f59e0b',
+                research: '#3b82f6',
+                strategy: '#8b5cf6',
+                executive: '#ec4899',
+                business: '#06b6d4',
+                development: '#22c55e'
+            };
+
+            gridContent.innerHTML = agents.map(agent => {
+                const isFavorite = favoriteAgents.includes(agent.id);
+                const color = categoryColors[agent.category] || '#6b7280';
+                return `
+                    <div class="col-md-4 col-sm-6 agent-card" data-category="${agent.category}">
+                        <div class="p-2" style="background: #252525; border-radius: 8px; border-left: 3px solid ${color};">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <strong class="text-white" style="font-size: 12px;">${agent.name}</strong>
+                                    <p class="text-muted mb-0" style="font-size: 10px;">${agent.description || ''}</p>
+                                </div>
+                                <button class="btn btn-sm p-0" onclick="toggleFavorite('${agent.id}')" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+                                    ${isFavorite ? '⭐' : '☆'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterAgentsByCategory() {
+            const filter = document.getElementById('agent-category-filter').value;
+            let filtered;
+
+            if (filter === 'all') {
+                filtered = allAgents;
+            } else if (filter === 'favorites') {
+                filtered = allAgents.filter(a => favoriteAgents.includes(a.id));
+            } else {
+                filtered = allAgents.filter(a => a.category === filter);
+            }
+
+            renderAgentGrid(filtered);
+        }
+
+        function toggleFavorite(agentId) {
+            const idx = favoriteAgents.indexOf(agentId);
+            if (idx > -1) {
+                favoriteAgents.splice(idx, 1);
+            } else {
+                favoriteAgents.push(agentId);
+            }
+            localStorage.setItem('favoriteAgents', JSON.stringify(favoriteAgents));
+            filterAgentsByCategory();
+            updateAgentCounts();
+        }
+
+        function updateAgentCounts() {
+            const totalEl = document.getElementById('agents-total-count');
+            const favEl = document.getElementById('agents-favorites-count');
+            if (totalEl) totalEl.textContent = allAgents.length;
+            if (favEl) favEl.textContent = favoriteAgents.length;
+        }
+
+        async function loadRecentAgentActivity() {
+            const container = document.getElementById('recent-agent-activity');
+            if (!container) return;
+
+            try {
+                // Try to load from agent executions API instead
+                const response = await authenticatedFetch('/api/agent-executions/?limit=10');
+                if (!response.ok) {
+                    container.innerHTML = '<p class="text-muted text-center small mb-0">No recent activity</p>';
+                    return;
+                }
+                const data = await response.json();
+
+                if (data.success && data.executions && data.executions.length > 0) {
+                    container.innerHTML = data.executions.slice(0, 10).map(a => `
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-dark">
+                            <div>
+                                <span class="text-white small">${a.agent_name || a.agent_id || 'Agent'}</span>
+                                <span class="text-muted small ms-2">${a.status || 'executed'}</span>
+                            </div>
+                            <small class="text-muted">${formatTimeAgo(a.created_at || a.timestamp)}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center small mb-0">No recent activity</p>';
+                }
+            } catch (error) {
+                // Silently fail - this is optional UI
+                container.innerHTML = '<p class="text-muted text-center small mb-0">No recent activity</p>';
+            }
+        }
+
+        function formatTimeAgo(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+            return Math.floor(diff / 86400) + 'd ago';
+        }
+
+        // Load agents when tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const agentsTab = document.getElementById('pref-agents-tab');
+            if (agentsTab) {
+                agentsTab.addEventListener('shown.bs.tab', function() {
+                    loadMyAgents();
+                    loadRecentAgentActivity();
+                });
+            }
+        });
+
+        // ========== END Agent Browser Functions ==========
 
         // Session 206: Clear Domain Preferences
         async function clearDomainPreferences(domain) {
@@ -49040,6 +49414,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 219: Load Agent Learning Data
         async function loadAgentLearning() {
             const listEl = document.getElementById('agent-learning-list');
+            // Session 457: Check if elements exist (redesigned tab may not have them)
+            if (!listEl) return;
 
             try {
                 // Load stats and all preferences in parallel
@@ -49054,9 +49430,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Update stats - Session 222: Add null check for stats object
                 if (statsData.success && statsData.stats) {
                     const stats = statsData.stats;
-                    document.getElementById('agent-total-interactions').textContent = stats.total_interactions || 0;
-                    document.getElementById('agent-total-preferences').textContent = stats.total_preferences || 0;
-                    document.getElementById('agent-total-agents').textContent = stats.agents_with_preferences || 0;
+                    const intEl = document.getElementById('agent-total-interactions');
+                    const prefEl = document.getElementById('agent-total-preferences');
+                    const agentsEl = document.getElementById('agent-total-agents');
+                    if (intEl) intEl.textContent = stats.total_interactions || 0;
+                    if (prefEl) prefEl.textContent = stats.total_preferences || 0;
+                    if (agentsEl) agentsEl.textContent = stats.agents_with_preferences || 0;
                 }
 
                 // Build preferences list

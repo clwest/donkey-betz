@@ -89,7 +89,7 @@ The 6-phase plan to transform spider data into revenue:
 | Category | Status |
 |----------|--------|
 | Stability AI | 13/13 features |
-| Runway ML Video | 5/5 features |
+| Runway ML Video | 6/6 features (incl. Gen-4 Aleph video-to-video) |
 | ElevenLabs Audio | 2/2 features |
 | Video Editing | 14/14 features |
 | 3D Generation | Complete |
