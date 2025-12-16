@@ -740,7 +740,8 @@ from core.views_unified_intelligence import (
     implement_insight, investigate_behavior, approve_proposal, reject_proposal
 )
 from core.views_dashboard_stats import (
-    dashboard_stats, live_agent_activity, advisor_insights
+    dashboard_stats, live_agent_activity, advisor_insights,
+    dashboard_summary,  # Session 459: Personalized greeting + "While You Were Away"
 )
 from core.views_public_stats import public_system_stats
 # Import agent instance views
@@ -1733,6 +1734,7 @@ urlpatterns = [
     path('api/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
     path('api/dashboard/agents/', live_agent_activity, name='live-agent-activity'),
     path('api/dashboard/advisors/', advisor_insights, name='advisor-insights'),
+    path('api/dashboard/summary/', dashboard_summary, name='dashboard-summary'),  # Session 459: Personalized greeting
     path('api/public/system-stats/', public_system_stats, name='public-system-stats'),
 
     # AI Job Market Intelligence Training Dashboard

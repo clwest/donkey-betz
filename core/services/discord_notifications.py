@@ -40,6 +40,9 @@ class DiscordNotificationService:
     CHANNEL_OPPORTUNITIES = "1448867150948335777"  # Session 424: High-value opportunity alerts
     CHANNEL_GALLERY = "1449059813765021859"  # Session 430: User gallery for image delivery
     CHANNEL_PROFILE = "1449059839581098135"  # Session 430: User profile channel
+    CHANNEL_MARKET_ALERTS = "1448867150948335777"  # Session 460: Market/SEC alerts (shares with opportunities)
+    CHANNEL_STOCK_ALERTS = "1450589539562426418"  # Session 461: Stock audit agent alerts
+    CHANNEL_BLOCKCHAIN_ALERTS = "1450589795058192465"  # Session 461: Blockchain audit agent alerts
 
     # Discord API base URL
     API_BASE = "https://discord.com/api/v10"
@@ -723,6 +726,223 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
 
+    # =========================================================================
+    # Session 460: Autonomous Intelligence Loop - SEC/Market Alerts
+    # =========================================================================
+
+    def send_sec_filing_alert(self, company: str, form_type: str, description: str,
+                               filed_at: str, url: str = "", is_high_impact: bool = False,
+                               items: List[str] = None) -> bool:
+        """
+        Send an SEC filing alert to #market-alerts (Session 460).
+
+        Args:
+            company: Company name
+            form_type: Filing type (8-K, 10-K, 10-Q, etc.)
+            description: Filing description or items
+            filed_at: Filing date string
+            url: URL to the SEC filing
+            is_high_impact: Whether this is a high-impact filing
+            items: List of 8-K items (e.g., "Item 2.02: Results of Operations")
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Form type descriptions and colors
+        form_config = {
+            "8-K": {"emoji": "🚨", "color": 0xE74C3C, "desc": "Material Event"},
+            "10-K": {"emoji": "📊", "color": 0x3498DB, "desc": "Annual Report"},
+            "10-Q": {"emoji": "📈", "color": 0x2ECC71, "desc": "Quarterly Report"},
+            "4": {"emoji": "👤", "color": 0xF39C12, "desc": "Insider Trading"},
+            "S-1": {"emoji": "🚀", "color": 0x9B59B6, "desc": "IPO Registration"},
+            "13F-HR": {"emoji": "🏦", "color": 0x1ABC9C, "desc": "Institutional Holdings"},
+        }
+        config = form_config.get(form_type, {"emoji": "📄", "color": 0x95A5A6, "desc": "Filing"})
+
+        # High impact gets special treatment
+        if is_high_impact:
+            config["emoji"] = "🔥"
+            config["color"] = 0xFFD700  # Gold
+
+        # Build embed
+        embed = {
+            "title": f"{config['emoji']} {company} - {form_type}",
+            "description": description[:2000] if description else f"{form_type} Filing",
+            "color": config["color"],
+            "author": {
+                "name": f"📈 SEC EDGAR - {config['desc']}"
+            },
+            "fields": [
+                {"name": "📅 Filed", "value": filed_at, "inline": True},
+                {"name": "📋 Type", "value": form_type, "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Market Intelligence"
+            }
+        }
+
+        # Add items if present (for 8-K filings)
+        if items:
+            items_str = "\n".join([f"• {item}" for item in items[:5]])
+            embed["fields"].append({"name": "📝 Items", "value": items_str, "inline": False})
+
+        # Add URL if present
+        if url:
+            embed["url"] = url
+
+        # Add high impact indicator
+        if is_high_impact:
+            embed["fields"].insert(0, {"name": "⚠️ Impact", "value": "**HIGH IMPACT**", "inline": True})
+
+        return self._send_message(self.CHANNEL_MARKET_ALERTS, "", embed=embed)
+
+    def send_market_digest(self, filings_count: int, high_impact_count: int,
+                           companies: List[str] = None, period: str = "24h") -> bool:
+        """
+        Send a market activity digest (Session 460).
+
+        Args:
+            filings_count: Total filings in period
+            high_impact_count: Number of high-impact filings
+            companies: List of company names with filings
+            period: Time period (e.g., "24h", "7d")
+        """
+        # Color based on activity level
+        if high_impact_count >= 5:
+            color = 0xFFD700  # Gold - lots of action
+            emoji = "🔥"
+        elif high_impact_count >= 2:
+            color = 0xE74C3C  # Red - some action
+            emoji = "📊"
+        else:
+            color = 0x3498DB  # Blue - normal
+            emoji = "📈"
+
+        companies_str = ", ".join(companies[:10]) if companies else "Various"
+        if companies and len(companies) > 10:
+            companies_str += f" +{len(companies) - 10} more"
+
+        embed = {
+            "title": f"{emoji} Market Activity Digest",
+            "description": f"**{filings_count}** SEC filings in the last **{period}**",
+            "color": color,
+            "fields": [
+                {"name": "📊 Total Filings", "value": str(filings_count), "inline": True},
+                {"name": "🔥 High Impact", "value": str(high_impact_count), "inline": True},
+                {"name": "🏢 Companies", "value": companies_str, "inline": False},
+            ],
+            "footer": {
+                "text": "AI Studio Market Intelligence"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_MARKET_ALERTS, "", embed=embed)
+
+    def send_content_opportunity(self, topic: str, satire_angle: str, style_suggestion: str,
+                                  source: str = "", urgency: str = "normal") -> bool:
+        """
+        Send a content creation opportunity notification (Session 460).
+
+        Args:
+            topic: The trending topic
+            satire_angle: Suggested satire/commentary angle
+            style_suggestion: Suggested art style (e.g., "South Park", "Political Cartoon")
+            source: Where the topic was found
+            urgency: How time-sensitive (low, normal, high)
+        """
+        urgency_config = {
+            "low": {"emoji": "💡", "color": 0x3498DB},
+            "normal": {"emoji": "🎨", "color": 0x9B59B6},
+            "high": {"emoji": "🔥", "color": 0xE74C3C},
+        }
+        config = urgency_config.get(urgency, urgency_config["normal"])
+
+        embed = {
+            "title": f"{config['emoji']} Content Opportunity",
+            "description": f"**Topic:** {topic[:500]}",
+            "color": config["color"],
+            "fields": [
+                {"name": "🎭 Satire Angle", "value": satire_angle[:500], "inline": False},
+                {"name": "🎨 Style", "value": style_suggestion, "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Content Opportunity Scanner"
+            }
+        }
+
+        if source:
+            embed["fields"].append({"name": "📰 Source", "value": source, "inline": True})
+
+        return self._send_message(self.CHANNEL_OPPORTUNITIES, "", embed=embed)
+
+    def send_daily_digest(self, date: str, sec_summary: dict = None,
+                          tech_news: List[str] = None, job_opportunities: List[dict] = None,
+                          content_ideas: List[str] = None, agent_activity: dict = None) -> bool:
+        """
+        Send a comprehensive daily intelligence digest (Session 460).
+
+        Args:
+            date: Date string
+            sec_summary: Dict with {filings: int, high_impact: int, top_companies: []}
+            tech_news: List of top tech headlines
+            job_opportunities: List of {title, company, salary} dicts
+            content_ideas: List of content opportunity descriptions
+            agent_activity: Dict with {dreams: int, conversations: int, learnings: int}
+        """
+        # Build description sections
+        sections = []
+
+        # SEC Summary
+        if sec_summary:
+            sections.append(f"**📈 Market Activity**")
+            sections.append(f"• {sec_summary.get('filings', 0)} SEC filings")
+            sections.append(f"• {sec_summary.get('high_impact', 0)} high-impact events")
+            if sec_summary.get('top_companies'):
+                sections.append(f"• Top: {', '.join(sec_summary['top_companies'][:5])}")
+            sections.append("")
+
+        # Tech News
+        if tech_news:
+            sections.append(f"**💻 Tech News Highlights**")
+            for headline in tech_news[:5]:
+                sections.append(f"• {headline[:100]}")
+            sections.append("")
+
+        # Job Opportunities
+        if job_opportunities:
+            sections.append(f"**💼 Job Opportunities**")
+            for job in job_opportunities[:5]:
+                salary = job.get('salary', 'N/A')
+                sections.append(f"• {job.get('title', 'Unknown')} @ {job.get('company', 'Unknown')} ({salary})")
+            sections.append("")
+
+        # Content Ideas
+        if content_ideas:
+            sections.append(f"**🎨 Content Ideas**")
+            for idea in content_ideas[:3]:
+                sections.append(f"• {idea[:100]}")
+            sections.append("")
+
+        # Agent Activity
+        if agent_activity:
+            sections.append(f"**🤖 Agent Activity**")
+            sections.append(f"• {agent_activity.get('dreams', 0)} dreams")
+            sections.append(f"• {agent_activity.get('conversations', 0)} conversations")
+            sections.append(f"• {agent_activity.get('learnings', 0)} learnings")
+
+        description = "\n".join(sections) if sections else "No activity to report."
+
+        embed = {
+            "title": f"☀️ Daily Intelligence Digest - {date}",
+            "description": description[:4000],
+            "color": 0xFFD700,  # Gold
+            "footer": {
+                "text": "AI Studio Autonomous Intelligence Loop"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
@@ -952,6 +1172,332 @@ class DiscordNotificationService:
 
         return results
 
+    # =========================================================================
+    # Session 461: Stock Audit Agent Alerts
+    # =========================================================================
+
+    def send_stock_alert(self, ticker: str, severity: str, alert_type: str,
+                          message: str, details: List[dict] = None,
+                          is_correlated: bool = False) -> bool:
+        """
+        Send a stock market alert to #stock-alerts (Session 461).
+
+        Args:
+            ticker: Stock ticker symbol
+            severity: Alert severity (CRITICAL, HIGH, MEDIUM, LOW)
+            alert_type: Type of alert (MARKET_MOVEMENT, INSIDER_TRADING, etc.)
+            message: Alert message
+            details: List of detailed findings
+            is_correlated: Whether multiple systems flagged this stock
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Severity colors and emojis
+        severity_config = {
+            "CRITICAL": {"emoji": "🚨", "color": 0xFF0000},  # Red
+            "HIGH": {"emoji": "⚠️", "color": 0xFFA500},  # Orange
+            "MEDIUM": {"emoji": "📊", "color": 0xFFD700},  # Gold
+            "LOW": {"emoji": "ℹ️", "color": 0x3498DB},  # Blue
+        }
+        config = severity_config.get(severity, {"emoji": "📈", "color": 0x95A5A6})
+
+        # Correlated alerts get special treatment
+        title_prefix = "🔗 CORRELATED " if is_correlated else ""
+
+        # Build embed
+        embed = {
+            "title": f"{config['emoji']} {title_prefix}STOCK ALERT: {ticker}",
+            "description": message[:2000] if message else "Stock alert triggered",
+            "color": config["color"],
+            "author": {
+                "name": f"📈 Stock Audit System - {severity}"
+            },
+            "fields": [
+                {"name": "🎯 Severity", "value": severity, "inline": True},
+                {"name": "📋 Type", "value": alert_type, "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Stock Intelligence"
+            }
+        }
+
+        # Add correlation indicator if applicable
+        if is_correlated:
+            embed["fields"].append({
+                "name": "🔗 Correlated",
+                "value": "Multiple systems flagged this stock",
+                "inline": True
+            })
+
+        # Add details if provided (limit to 3 to avoid spam)
+        if details:
+            detail_text = []
+            for detail in details[:3]:
+                detail_msg = detail.get('message', str(detail))[:100]
+                detail_text.append(f"• {detail_msg}")
+            if detail_text:
+                embed["fields"].append({
+                    "name": "📋 Details",
+                    "value": "\n".join(detail_text),
+                    "inline": False
+                })
+
+        return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
+
+    def send_stock_audit_summary(self, total_alerts: int, critical_count: int,
+                                   high_count: int, tickers_flagged: List[str],
+                                   correlated_count: int = 0) -> bool:
+        """
+        Send a summary of the stock audit cycle (Session 461).
+
+        Args:
+            total_alerts: Total number of alerts generated
+            critical_count: Number of CRITICAL alerts
+            high_count: Number of HIGH alerts
+            tickers_flagged: List of tickers with alerts
+            correlated_count: Number of correlated findings
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Determine overall color based on severity
+        if critical_count > 0:
+            color = 0xFF0000  # Red
+            emoji = "🚨"
+        elif high_count > 0:
+            color = 0xFFA500  # Orange
+            emoji = "⚠️"
+        elif total_alerts > 0:
+            color = 0xFFD700  # Gold
+            emoji = "📊"
+        else:
+            color = 0x2ECC71  # Green
+            emoji = "✅"
+
+        # Format tickers list
+        tickers_str = ", ".join(tickers_flagged[:10]) if tickers_flagged else "None"
+        if len(tickers_flagged) > 10:
+            tickers_str += f" (+{len(tickers_flagged) - 10} more)"
+
+        embed = {
+            "title": f"{emoji} Stock Audit Cycle Complete",
+            "description": f"Scanned market for anomalies and insider activity.",
+            "color": color,
+            "fields": [
+                {"name": "📊 Total Alerts", "value": str(total_alerts), "inline": True},
+                {"name": "🚨 Critical", "value": str(critical_count), "inline": True},
+                {"name": "⚠️ High", "value": str(high_count), "inline": True},
+                {"name": "🔗 Correlated", "value": str(correlated_count), "inline": True},
+                {"name": "📈 Tickers Flagged", "value": tickers_str, "inline": False},
+            ],
+            "footer": {
+                "text": "AI Studio Stock Audit System"
+            }
+        }
+
+        return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
+
+    # ==================== Session 461: Blockchain Audit Methods ====================
+
+    def send_blockchain_alert(self, alert: dict) -> bool:
+        """
+        Send a blockchain security alert to Discord (Session 461).
+
+        Args:
+            alert: Alert dict with severity, type, title, description, etc.
+
+        Returns:
+            True if notification sent successfully
+        """
+        severity = alert.get('severity', 'MEDIUM')
+        alert_type = alert.get('type', 'unknown')
+
+        # Determine color and emoji based on severity
+        severity_config = {
+            'CRITICAL': {'color': 0xFF0000, 'emoji': '🚨'},  # Red
+            'HIGH': {'color': 0xFFA500, 'emoji': '⚠️'},      # Orange
+            'MEDIUM': {'color': 0xFFD700, 'emoji': '📊'},    # Gold
+            'LOW': {'color': 0x3498DB, 'emoji': 'ℹ️'},       # Blue
+        }
+        config = severity_config.get(severity, severity_config['MEDIUM'])
+
+        embed = {
+            "title": f"{config['emoji']} BLOCKCHAIN ALERT",
+            "description": alert.get('title', 'Security Alert'),
+            "color": config['color'],
+            "fields": [
+                {"name": "Severity", "value": severity, "inline": True},
+                {"name": "Type", "value": alert_type, "inline": True},
+            ],
+            "footer": {
+                "text": f"AI Studio Blockchain Audit • {alert.get('timestamp', '')}"
+            }
+        }
+
+        if alert.get('description'):
+            embed["fields"].append({
+                "name": "Details",
+                "value": alert['description'][:1000],
+                "inline": False
+            })
+
+        if alert.get('affected_addresses'):
+            addresses = alert['affected_addresses'][:5]
+            addr_text = "\n".join([f"`{a[:10]}...{a[-6:]}`" for a in addresses])
+            embed["fields"].append({
+                "name": "Affected Addresses",
+                "value": addr_text,
+                "inline": False
+            })
+
+        if alert.get('estimated_impact_usd'):
+            embed["fields"].append({
+                "name": "Est. Impact",
+                "value": f"${alert['estimated_impact_usd']:,.0f}",
+                "inline": True
+            })
+
+        if alert.get('recommended_actions'):
+            actions = alert['recommended_actions'][:3]
+            embed["fields"].append({
+                "name": "Recommended Actions",
+                "value": "\n".join([f"• {a}" for a in actions]),
+                "inline": False
+            })
+
+        return self._send_message(self.CHANNEL_BLOCKCHAIN_ALERTS, "", embed=embed)
+
+    def send_whale_alert(self, alert: dict) -> bool:
+        """
+        Send a whale movement alert to Discord (Session 461).
+
+        Args:
+            alert: Whale alert dict with token, amount, addresses, etc.
+
+        Returns:
+            True if notification sent successfully
+        """
+        severity = alert.get('severity', 'MEDIUM')
+        market_impact = alert.get('market_impact', 'UNKNOWN')
+
+        # Determine color based on market impact
+        impact_colors = {
+            'BULLISH': 0x2ECC71,   # Green
+            'BEARISH': 0xFF6B6B,   # Red
+            'NEUTRAL': 0x95A5A6,   # Gray
+            'UNKNOWN': 0x3498DB,   # Blue
+        }
+        color = impact_colors.get(market_impact, 0x3498DB)
+
+        # Format amount
+        amount = alert.get('amount', 0)
+        token = alert.get('token', 'ETH')
+        usd_value = alert.get('usd_value', 0)
+
+        embed = {
+            "title": f"🐋 WHALE ALERT: {amount:,.2f} {token}",
+            "description": f"Large {alert.get('subtype', 'transfer')} detected",
+            "color": color,
+            "fields": [
+                {"name": "Amount", "value": f"{amount:,.2f} {token}", "inline": True},
+                {"name": "USD Value", "value": f"${usd_value:,.0f}", "inline": True},
+                {"name": "Market Impact", "value": market_impact, "inline": True},
+            ],
+            "footer": {
+                "text": f"AI Studio Whale Watcher • {alert.get('timestamp', '')}"
+            }
+        }
+
+        if alert.get('from_address'):
+            from_addr = alert['from_address']
+            embed["fields"].append({
+                "name": "From",
+                "value": f"`{from_addr[:10]}...{from_addr[-6:]}`",
+                "inline": True
+            })
+
+        if alert.get('to_address'):
+            to_addr = alert['to_address']
+            embed["fields"].append({
+                "name": "To",
+                "value": f"`{to_addr[:10]}...{to_addr[-6:]}`",
+                "inline": True
+            })
+
+        return self._send_message(self.CHANNEL_BLOCKCHAIN_ALERTS, "", embed=embed)
+
+    def send_exploit_alert(self, alert: dict) -> bool:
+        """
+        Send an exploit detection alert to Discord (Session 461).
+
+        Args:
+            alert: Exploit alert dict with exploit_type, status, target_protocol, etc.
+
+        Returns:
+            True if notification sent successfully
+        """
+        severity = alert.get('severity', 'HIGH')
+        status = alert.get('status', 'SUSPECTED')
+
+        # Status emojis
+        status_emoji = {
+            'ACTIVE': '🔴',
+            'COMPLETED': '⚫',
+            'SUSPECTED': '🟡',
+            'PREVENTED': '🟢',
+        }
+        emoji = status_emoji.get(status, '🟡')
+
+        # Severity colors
+        severity_colors = {
+            'CRITICAL': 0xFF0000,
+            'HIGH': 0xFFA500,
+            'MEDIUM': 0xFFD700,
+            'LOW': 0x3498DB,
+        }
+        color = severity_colors.get(severity, 0xFFA500)
+
+        embed = {
+            "title": f"{emoji} EXPLOIT DETECTED: {alert.get('exploit_type', 'Unknown')}",
+            "description": f"Target: **{alert.get('target_protocol', 'Unknown Protocol')}**",
+            "color": color,
+            "fields": [
+                {"name": "Severity", "value": severity, "inline": True},
+                {"name": "Status", "value": status, "inline": True},
+                {"name": "Exploit Type", "value": alert.get('exploit_type', 'Unknown'), "inline": True},
+            ],
+            "footer": {
+                "text": f"AI Studio Exploit Detector • {alert.get('timestamp', '')}"
+            }
+        }
+
+        if alert.get('estimated_loss_usd'):
+            embed["fields"].append({
+                "name": "Est. Loss",
+                "value": f"${alert['estimated_loss_usd']:,.0f}",
+                "inline": True
+            })
+
+        if alert.get('attacker_addresses'):
+            addresses = alert['attacker_addresses'][:3]
+            addr_text = "\n".join([f"`{a[:10]}...{a[-6:]}`" for a in addresses])
+            embed["fields"].append({
+                "name": "Attacker Addresses",
+                "value": addr_text,
+                "inline": False
+            })
+
+        if alert.get('recommended_actions'):
+            actions = alert['recommended_actions'][:4]
+            embed["fields"].append({
+                "name": "Recommended Actions",
+                "value": "\n".join([f"• {a}" for a in actions]),
+                "inline": False
+            })
+
+        return self._send_message(self.CHANNEL_BLOCKCHAIN_ALERTS, "", embed=embed)
+
 
 # Singleton instance for easy imports
 discord_notify = DiscordNotificationService()
@@ -1037,3 +1583,20 @@ def send_weekly_opportunity_digest_notification(period_start: str, period_end: s
         tasks_created, tasks_won, tasks_lost, total_revenue, win_rate,
         top_opportunities, by_category
     )
+
+
+# ==================== Session 461: Blockchain Audit Notifications ====================
+
+def send_blockchain_alert_notification(alert: dict) -> bool:
+    """Send blockchain security alert to Discord."""
+    return discord_notify.send_blockchain_alert(alert)
+
+
+def send_whale_alert_notification(alert: dict) -> bool:
+    """Send whale movement alert to Discord."""
+    return discord_notify.send_whale_alert(alert)
+
+
+def send_exploit_alert_notification(alert: dict) -> bool:
+    """Send exploit detection alert to Discord."""
+    return discord_notify.send_exploit_alert(alert)

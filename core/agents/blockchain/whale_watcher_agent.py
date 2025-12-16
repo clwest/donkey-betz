@@ -1,0 +1,637 @@
+"""
+WhaleWatcherAgent - Monitors large token movements and whale activity.
+
+Session 461: Part of the Blockchain Audit Agent Group
+
+This agent specializes in:
+- Tracking large value transfers (whale movements)
+- Monitoring token holder distribution changes
+- Detecting accumulation/distribution patterns
+- Alerting on significant exchange flows
+- Tracking known whale addresses
+"""
+
+import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from ..base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+# Whale thresholds by token type
+WHALE_THRESHOLDS = {
+    'ETH': 1000,      # 1000 ETH (~$3M at $3000/ETH)
+    'WETH': 1000,
+    'USDC': 1000000,  # $1M
+    'USDT': 1000000,
+    'DAI': 1000000,
+    'WBTC': 50,       # 50 WBTC (~$2.5M at $50k/BTC)
+    'default': 500000  # $500k USD equivalent
+}
+
+# Known whale categories
+WHALE_CATEGORIES = {
+    'exchange': ['binance', 'coinbase', 'kraken', 'ftx', 'kucoin'],
+    'defi_protocol': ['aave', 'compound', 'makerdao', 'uniswap'],
+    'whale_fund': ['3ac', 'alameda', 'jump', 'wintermute'],
+    'government': ['us_seized', 'uk_seized'],
+    'unknown': []
+}
+
+
+class WhaleWatcherAgent(BaseAgent):
+    """Agent specialized in monitoring whale movements and large transfers."""
+
+    name = "WhaleWatcherAgent"
+
+    system_prompt = """You are WhaleWatcherAgent, an expert at tracking large cryptocurrency movements and whale behavior.
+
+Your monitoring capabilities:
+1. **Large Transfer Detection** - Identify transfers above whale thresholds
+2. **Accumulation Tracking** - Detect addresses accumulating tokens
+3. **Distribution Analysis** - Identify selling/distribution patterns
+4. **Exchange Flow Monitoring** - Track deposits/withdrawals from exchanges
+5. **Holder Analysis** - Monitor changes in top holder positions
+6. **Correlation Analysis** - Find patterns across multiple whale addresses
+
+Market impact analysis:
+- Large exchange deposits often precede selling pressure
+- Large exchange withdrawals suggest accumulation/holding
+- Whale wallet activity can signal market direction
+- Coordinated whale movements may indicate insider activity
+
+You MUST:
+- Quantify movements in both token amounts and USD value
+- Identify the source/destination category (exchange, DeFi, unknown)
+- Consider market impact potential
+- Track historical patterns for known addresses
+- Generate alerts for significant movements
+
+You have access to these tools:
+- monitor_large_transfers: Watch for transfers above thresholds
+- analyze_whale_wallet: Deep analysis of a whale address
+- track_exchange_flows: Monitor exchange deposit/withdrawal patterns
+- detect_accumulation: Identify accumulation patterns
+- generate_whale_alert: Create alert for significant whale activity
+
+You CANNOT create images, videos, or perform non-blockchain operations."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "monitor_large_transfers",
+                "description": "Monitor for large token transfers above whale thresholds.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "token": {
+                            "type": "string",
+                            "description": "Token to monitor (ETH, USDC, etc.)"
+                        },
+                        "threshold_usd": {
+                            "type": "number",
+                            "description": "Minimum value in USD to track",
+                            "default": 500000
+                        },
+                        "time_window_hours": {
+                            "type": "integer",
+                            "description": "Hours to look back",
+                            "default": 24
+                        },
+                        "exclude_contracts": {
+                            "type": "boolean",
+                            "description": "Exclude known contract addresses",
+                            "default": False
+                        }
+                    },
+                    "required": ["token"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_whale_wallet",
+                "description": "Deep analysis of a whale wallet address.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "address": {
+                            "type": "string",
+                            "description": "Wallet address to analyze"
+                        },
+                        "include_history": {
+                            "type": "boolean",
+                            "description": "Include transaction history analysis",
+                            "default": True
+                        },
+                        "include_holdings": {
+                            "type": "boolean",
+                            "description": "Include current holdings breakdown",
+                            "default": True
+                        }
+                    },
+                    "required": ["address"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "track_exchange_flows",
+                "description": "Monitor deposit/withdrawal flows for exchanges.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "exchange": {
+                            "type": "string",
+                            "description": "Exchange to track (binance, coinbase, kraken, all)",
+                            "default": "all"
+                        },
+                        "token": {
+                            "type": "string",
+                            "description": "Token to track (ETH, BTC, USDC, all)",
+                            "default": "ETH"
+                        },
+                        "time_window_hours": {
+                            "type": "integer",
+                            "description": "Hours to analyze",
+                            "default": 24
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "detect_accumulation",
+                "description": "Detect accumulation or distribution patterns.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "address": {
+                            "type": "string",
+                            "description": "Address to analyze (or 'top_holders' for general analysis)"
+                        },
+                        "token": {
+                            "type": "string",
+                            "description": "Token to analyze"
+                        },
+                        "time_window_days": {
+                            "type": "integer",
+                            "description": "Days to analyze",
+                            "default": 7
+                        }
+                    },
+                    "required": ["token"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_whale_alert",
+                "description": "Generate an alert for significant whale activity.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "alert_type": {
+                            "type": "string",
+                            "description": "Type of whale activity",
+                            "enum": ["large_transfer", "exchange_deposit", "exchange_withdrawal", "accumulation", "distribution", "unknown_whale"]
+                        },
+                        "token": {
+                            "type": "string",
+                            "description": "Token involved"
+                        },
+                        "amount": {
+                            "type": "number",
+                            "description": "Amount transferred"
+                        },
+                        "usd_value": {
+                            "type": "number",
+                            "description": "USD value"
+                        },
+                        "from_address": {
+                            "type": "string",
+                            "description": "Source address"
+                        },
+                        "to_address": {
+                            "type": "string",
+                            "description": "Destination address"
+                        },
+                        "market_impact": {
+                            "type": "string",
+                            "description": "Expected market impact",
+                            "enum": ["BULLISH", "BEARISH", "NEUTRAL", "UNKNOWN"]
+                        }
+                    },
+                    "required": ["alert_type", "token", "amount", "usd_value"]
+                }
+            }
+        }
+    ]
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute a whale watching task."""
+        import time
+
+        start_time = time.time()
+        tool_calls_made = []
+
+        with self.time_travel_session("whale_watch", task, input_data=context):
+            try:
+                full_prompt, knowledge_attribution = self._build_prompt_with_attribution(
+                    task, scifi_context, spider_context
+                )
+
+                gpt_response = self._call_openai(full_prompt)
+
+                if gpt_response.get('tool_calls'):
+                    all_results = []
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Selected {tool_name} for whale monitoring",
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        if tool_result.get('success'):
+                            all_results.append({
+                                'source': tool_name,
+                                'data': tool_result
+                            })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=str(tool_result)[:100]
+                        )
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    if all_results:
+                        return AgentResult(
+                            success=True,
+                            message=f"Whale monitoring completed with {len(all_results)} analysis(es)",
+                            data={'results': all_results, 'query': task},
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            decisions_made=self._tt_decision_count,
+                            tool_calls=tool_calls_made,
+                            knowledge_attribution=knowledge_attribution
+                        )
+
+                content = gpt_response.get('content', 'I can help monitor whale activity. Specify a token, address, or exchange to track.')
+                return AgentResult(
+                    success=True,
+                    message=content,
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+            except Exception as e:
+                logger.error(f"Whale monitoring failed: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name
+                )
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a specific tool call."""
+
+        if tool_name == "monitor_large_transfers":
+            return self._monitor_large_transfers(**arguments)
+        elif tool_name == "analyze_whale_wallet":
+            return self._analyze_whale_wallet(**arguments)
+        elif tool_name == "track_exchange_flows":
+            return self._track_exchange_flows(**arguments)
+        elif tool_name == "detect_accumulation":
+            return self._detect_accumulation(**arguments)
+        elif tool_name == "generate_whale_alert":
+            return self._generate_whale_alert(**arguments)
+
+        return {"error": f"Unknown tool: {tool_name}"}
+
+    def _monitor_large_transfers(
+        self,
+        token: str,
+        threshold_usd: float = 500000,
+        time_window_hours: int = 24,
+        exclude_contracts: bool = False
+    ) -> Dict[str, Any]:
+        """Monitor for large transfers."""
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        # Get token-specific threshold
+        token_threshold = WHALE_THRESHOLDS.get(token.upper(), WHALE_THRESHOLDS['default'])
+
+        prompt = f"""Analyze large {token} transfers for whale activity:
+
+**MONITORING PARAMETERS:**
+- Token: {token}
+- Minimum USD Value: ${threshold_usd:,.0f}
+- Time Window: Last {time_window_hours} hours
+- Token-specific threshold: {token_threshold} {token}
+- Exclude contracts: {exclude_contracts}
+
+**WHALE THRESHOLDS:**
+{json.dumps(WHALE_THRESHOLDS, indent=2)}
+
+**ANALYSIS FRAMEWORK:**
+1. Identify transfers above threshold
+2. Categorize source/destination:
+   - Exchange (hot wallet, cold storage)
+   - DeFi Protocol (Aave, Compound, Uniswap)
+   - Known Whale
+   - Unknown/New Whale
+3. Assess market impact potential
+4. Look for patterns (multiple transfers, splitting)
+
+**OUTPUT:**
+1. Summary of large transfers detected
+2. Top 5 most significant transfers
+3. Net exchange flow (in vs out)
+4. Market sentiment indicator (BULLISH/BEARISH/NEUTRAL)
+5. Addresses to watch"""
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are a whale movement analyst. Track large crypto transfers and assess market impact."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=4000
+        )
+
+        return {
+            "success": True,
+            "monitoring_type": "large_transfers",
+            "token": token,
+            "threshold_usd": threshold_usd,
+            "time_window_hours": time_window_hours,
+            "analysis": response.choices[0].message.content
+        }
+
+    def _analyze_whale_wallet(
+        self,
+        address: str,
+        include_history: bool = True,
+        include_holdings: bool = True
+    ) -> Dict[str, Any]:
+        """Deep analysis of a whale wallet."""
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        prompt = f"""Analyze this whale wallet address:
+
+**ADDRESS:** {address}
+
+**ANALYSIS SCOPE:**
+- Transaction History: {include_history}
+- Current Holdings: {include_holdings}
+
+**ANALYZE:**
+1. **Identity**: Known entity? Exchange? Fund? Protocol?
+2. **Holdings Profile**: Token distribution, concentration
+3. **Behavior Pattern**: Trading style, timing, frequency
+4. **Historical Performance**: Past profitable trades
+5. **Risk Indicators**: Connections to scams/hacks
+6. **Market Influence**: Size relative to token markets
+
+**WHALE CATEGORIES:**
+{json.dumps(WHALE_CATEGORIES, indent=2)}
+
+**OUTPUT:**
+1. Wallet identity/category
+2. Current holdings summary
+3. Recent activity summary
+4. Behavior classification (trader, holder, smart money)
+5. Follow recommendation (WATCH / IGNORE / ALERT)"""
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are a whale wallet analyst. Identify, categorize, and assess whale addresses."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=4000
+        )
+
+        return {
+            "success": True,
+            "analysis_type": "whale_wallet",
+            "address": address,
+            "analysis": response.choices[0].message.content
+        }
+
+    def _track_exchange_flows(
+        self,
+        exchange: str = "all",
+        token: str = "ETH",
+        time_window_hours: int = 24
+    ) -> Dict[str, Any]:
+        """Track exchange deposit/withdrawal flows."""
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        prompt = f"""Analyze exchange flows for {token}:
+
+**PARAMETERS:**
+- Exchange: {exchange}
+- Token: {token}
+- Time Window: {time_window_hours} hours
+
+**KNOWN EXCHANGES:**
+{json.dumps(WHALE_CATEGORIES['exchange'], indent=2)}
+
+**ANALYSIS:**
+1. **Net Flow**: Total deposits vs withdrawals
+2. **Deposit Analysis**:
+   - Large deposits (selling pressure indicator)
+   - Source addresses (whale? retail? defi?)
+3. **Withdrawal Analysis**:
+   - Large withdrawals (accumulation indicator)
+   - Destination patterns
+4. **Cross-Exchange Flows**: Movement between exchanges
+5. **Historical Comparison**: vs 7-day, 30-day averages
+
+**MARKET SIGNALS:**
+- High net deposits = potential selling pressure
+- High net withdrawals = accumulation/bullish
+- Stable flows = consolidation
+
+**OUTPUT:**
+1. Net flow summary (deposit-heavy vs withdrawal-heavy)
+2. Top deposit sources
+3. Top withdrawal destinations
+4. Market sentiment indicator
+5. 24h change in exchange balance"""
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are an exchange flow analyst. Track crypto movements in/out of exchanges."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=4000
+        )
+
+        return {
+            "success": True,
+            "analysis_type": "exchange_flows",
+            "exchange": exchange,
+            "token": token,
+            "time_window_hours": time_window_hours,
+            "analysis": response.choices[0].message.content
+        }
+
+    def _detect_accumulation(
+        self,
+        token: str,
+        address: str = None,
+        time_window_days: int = 7
+    ) -> Dict[str, Any]:
+        """Detect accumulation or distribution patterns."""
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        target = address if address else "top holders"
+
+        prompt = f"""Detect accumulation/distribution patterns for {token}:
+
+**PARAMETERS:**
+- Token: {token}
+- Target: {target}
+- Time Window: {time_window_days} days
+
+**ACCUMULATION INDICATORS:**
+- Consistent buying over time
+- Withdrawal from exchanges
+- Increasing wallet balance
+- Smart money addresses accumulating
+
+**DISTRIBUTION INDICATORS:**
+- Consistent selling over time
+- Deposits to exchanges
+- Decreasing wallet balance
+- Early investors selling
+
+**ANALYZE:**
+1. Balance changes over time window
+2. Transaction frequency and direction
+3. Source/destination patterns
+4. Correlation with price movement
+5. Whale behavior vs retail
+
+**OUTPUT:**
+1. Pattern detected: ACCUMULATION / DISTRIBUTION / NEUTRAL
+2. Confidence level (0-100%)
+3. Key addresses involved
+4. Volume analysis
+5. Market implication"""
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are a crypto accumulation pattern analyst. Detect buying and selling patterns."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=4000
+        )
+
+        return {
+            "success": True,
+            "analysis_type": "accumulation_detection",
+            "token": token,
+            "target": target,
+            "time_window_days": time_window_days,
+            "analysis": response.choices[0].message.content
+        }
+
+    def _generate_whale_alert(
+        self,
+        alert_type: str,
+        token: str,
+        amount: float,
+        usd_value: float,
+        from_address: str = None,
+        to_address: str = None,
+        market_impact: str = "UNKNOWN"
+    ) -> Dict[str, Any]:
+        """Generate whale movement alert."""
+
+        alert = {
+            "success": True,
+            "alert": {
+                "type": "whale_movement",
+                "subtype": alert_type,
+                "token": token,
+                "amount": amount,
+                "usd_value": usd_value,
+                "from_address": from_address,
+                "to_address": to_address,
+                "market_impact": market_impact,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+
+        # Determine severity based on USD value
+        if usd_value >= 10000000:  # $10M+
+            alert['alert']['severity'] = 'CRITICAL'
+        elif usd_value >= 1000000:  # $1M+
+            alert['alert']['severity'] = 'HIGH'
+        elif usd_value >= 500000:  # $500k+
+            alert['alert']['severity'] = 'MEDIUM'
+        else:
+            alert['alert']['severity'] = 'LOW'
+
+        logger.info(f"WHALE ALERT: {amount:,.2f} {token} (${usd_value:,.0f}) - {alert_type}")
+
+        # Share as knowledge
+        try:
+            self._share_knowledge(
+                knowledge_type='market',
+                title=f"Whale Alert: {amount:,.0f} {token} ({alert_type})",
+                knowledge_value=alert['alert'],
+                confidence=0.9
+            )
+        except Exception as e:
+            logger.debug(f"Could not share whale knowledge: {e}")
+
+        # Try Discord notification
+        try:
+            from core.services.discord_notifications import discord_notify
+            discord_notify.send_whale_alert(alert['alert'])
+        except Exception as e:
+            logger.debug(f"Could not send Discord whale alert: {e}")
+
+        return alert
