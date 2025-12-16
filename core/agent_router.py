@@ -133,6 +133,21 @@ from core.agents.legal import (
     LegalDocDrafterAgent,
 )
 
+# Session 436: Development Agents
+from core.agents.code_generator_agent import CodeGeneratorAgent
+from core.agents.fullstack_developer_agent import FullStackDeveloperAgent
+from core.agents.code_review_agent import CodeReviewAgent
+from core.agents.devops_agent import DevOpsAgent
+
+# Session 461: Security Agents (full set)
+from core.agents.security import ContentAuditAgent
+
+# Session 461: Stock Audit Agents
+from core.agents.stocks import StockAuditCoordinator
+
+# Session 461: Blockchain Audit Agents
+from core.agents.blockchain import BlockchainAuditCoordinator
+
 # Session 445: Series Workflow Agent
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 
@@ -204,6 +219,21 @@ class AgentRouter:
 
         # Legal Agents (Session 403)
         "LegalDocDrafterAgent": LegalDocDrafterAgent,
+
+        # Development Agents (Session 436)
+        "CodeGeneratorAgent": CodeGeneratorAgent,
+        "FullStackDeveloperAgent": FullStackDeveloperAgent,
+        "CodeReviewAgent": CodeReviewAgent,
+        "DevOpsAgent": DevOpsAgent,
+
+        # Security Agents (Session 461)
+        "ContentAuditAgent": ContentAuditAgent,
+
+        # Stock Audit Agents (Session 461)
+        "StockAuditCoordinator": StockAuditCoordinator,
+
+        # Blockchain Audit Agents (Session 461)
+        "BlockchainAuditCoordinator": BlockchainAuditCoordinator,
 
         # Series Workflow Agent (Session 445)
         "AISeriesWorkflowAgent": AISeriesWorkflowAgent,

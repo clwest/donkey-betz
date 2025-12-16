@@ -376,7 +376,139 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
     },
 
     # =========================================================================
-    # ORCHESTRATION AGENT
+    # DEVELOPMENT AGENTS (Session 461)
+    # =========================================================================
+    "CodeGeneratorAgent": {
+        "description": "Generate code from specifications in Python, JavaScript, TypeScript, and other languages",
+        "examples": [
+            "write a Python function to parse JSON",
+            "generate a React component for user login",
+            "create a REST API endpoint",
+            "implement a sorting algorithm",
+        ],
+        "keywords": [
+            "write code", "generate code", "code", "function", "implement", "script",
+            "program", "algorithm", "snippet", "boilerplate"
+        ],
+        "category": "development",
+        "priority": 15,
+    },
+    "FullStackDeveloperAgent": {
+        "description": "Build complete features with frontend, backend, and database components",
+        "examples": [
+            "build a user authentication system",
+            "create a complete CRUD feature",
+            "develop a dashboard with API",
+            "build a feature end to end",
+        ],
+        "keywords": [
+            "build feature", "full stack", "fullstack", "frontend and backend",
+            "complete feature", "end to end feature", "develop feature", "create app"
+        ],
+        "category": "development",
+        "priority": 15,
+    },
+    "CodeReviewAgent": {
+        "description": "Review code for quality, security vulnerabilities, performance issues, and best practices",
+        "examples": [
+            "review this code for security issues",
+            "check my code for bugs",
+            "audit this function for performance",
+            "review my pull request",
+        ],
+        "keywords": [
+            "review code", "code review", "audit code", "check code", "analyze code",
+            "code quality", "security review", "code audit", "pr review"
+        ],
+        "category": "development",
+        "priority": 15,
+    },
+    "DevOpsAgent": {
+        "description": "Create CI/CD pipelines, Docker configurations, Kubernetes manifests, and infrastructure automation",
+        "examples": [
+            "create a Dockerfile for my app",
+            "set up a CI/CD pipeline",
+            "write Kubernetes deployment manifests",
+            "configure GitHub Actions workflow",
+        ],
+        "keywords": [
+            "docker", "dockerfile", "kubernetes", "k8s", "ci/cd", "cicd", "pipeline",
+            "deploy", "deployment", "infrastructure", "github actions", "devops",
+            "container", "helm", "terraform"
+        ],
+        "category": "development",
+        "priority": 15,
+    },
+
+    # =========================================================================
+    # SECURITY AGENTS (Session 461)
+    # =========================================================================
+    "ContentAuditAgent": {
+        "description": "Audit content for policy violations, inappropriate material, and safety concerns",
+        "examples": [
+            "check this content for policy violations",
+            "audit this image for safety",
+            "review content for appropriateness",
+            "moderate this submission",
+        ],
+        "keywords": [
+            "audit content", "content audit", "moderate", "moderation", "check content",
+            "content safety", "policy check", "inappropriate", "content review"
+        ],
+        "category": "security",
+        "priority": 10,
+    },
+    "MemoryIsolationAgent": {
+        "description": "Manage memory isolation and data security between users and contexts",
+        "examples": [
+            "isolate user data",
+            "secure this memory context",
+            "check data isolation",
+        ],
+        "keywords": [
+            "memory isolation", "data isolation", "secure memory", "isolate data",
+            "data security", "context isolation"
+        ],
+        "category": "security",
+        "priority": 10,
+    },
+
+    # =========================================================================
+    # AUDIT AGENTS (Session 461 - Stock & Blockchain)
+    # =========================================================================
+    "StockAuditCoordinator": {
+        "description": "Run comprehensive stock market audit for insider trading, manipulation, and anomalies",
+        "examples": [
+            "run a stock market audit",
+            "check for insider trading activity",
+            "analyze stock manipulation patterns",
+            "audit market anomalies",
+        ],
+        "keywords": [
+            "stock audit", "market audit", "insider trading", "stock manipulation",
+            "market anomaly", "sec violation", "stock analysis", "market surveillance"
+        ],
+        "category": "audit",
+        "priority": 20,
+    },
+    "BlockchainAuditCoordinator": {
+        "description": "Run blockchain security audit for smart contract vulnerabilities, whale movements, and exploits",
+        "examples": [
+            "audit a smart contract",
+            "check for blockchain exploits",
+            "monitor whale movements",
+            "analyze blockchain security",
+        ],
+        "keywords": [
+            "blockchain audit", "smart contract audit", "contract security", "blockchain security",
+            "whale watch", "exploit detection", "defi audit", "crypto audit"
+        ],
+        "category": "audit",
+        "priority": 20,
+    },
+
+    # =========================================================================
+    # ORCHESTRATION AGENTS
     # =========================================================================
     "WorkflowAgent": {
         "description": "Execute multi-step workflows that combine research and creation, like research-and-create logo packages or brand identity kits",
@@ -392,6 +524,20 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
         ],
         "category": "orchestration",
         "priority": 25,  # High priority for multi-step workflows
+    },
+    "AISeriesWorkflowAgent": {
+        "description": "Create multi-episode content series with consistent characters and style across episodes",
+        "examples": [
+            "create a 5-episode educational series",
+            "make a content series about AI",
+            "build a multi-part video series",
+        ],
+        "keywords": [
+            "series", "episodes", "multi-episode", "content series", "video series",
+            "educational series", "episode", "serial content"
+        ],
+        "category": "orchestration",
+        "priority": 20,
     },
 }
 
@@ -474,5 +620,8 @@ AGENT_CATEGORIES = [
     "analysis",
     "training",
     "legal",
+    "development",  # Session 461: Code generation, full stack, review, devops
+    "security",     # Session 461: Content audit, memory isolation
+    "audit",        # Session 461: Stock and blockchain auditing
     "orchestration",
 ]

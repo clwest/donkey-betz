@@ -798,6 +798,25 @@ class BaseAgent(ABC, TimeTravelMixin):
                     result.data['mythology_violations'] = validated.get('violations', 0)
                     result.data['mythology_warning'] = validated.get('warning', '')
 
+                    # Session 461: Publish hallucination event for real-time dashboard
+                    try:
+                        from intelligence.hallucination_publisher import HallucinationPublisher
+                        publisher = HallucinationPublisher()
+                        violations = validated.get('violations', [])
+                        patterns = [v.get('type', 'unknown') for v in violations] if isinstance(violations, list) else []
+                        risk_score = len(patterns) * 0.2  # Rough estimate
+                        severity = 'critical' if risk_score > 0.6 else 'high' if risk_score > 0.4 else 'medium'
+                        publisher.publish_hallucination_blocked(
+                            agent_name=self.name,
+                            original_text=str(result.message)[:500],
+                            patterns=patterns,
+                            risk_score=min(risk_score, 1.0),
+                            corrected_text=validated.get('result', '')[:500] if validated.get('result') else None,
+                            severity=severity
+                        )
+                    except Exception as pub_error:
+                        logger.debug(f"HallucinationPublisher not available: {pub_error}")
+
             # Also validate any text in data
             if result.data:
                 self._validate_data_dict(result.data)
