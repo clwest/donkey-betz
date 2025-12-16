@@ -6589,6 +6589,239 @@ class AgentAccessCommands(commands.Cog):
                 )
             )
 
+    # =========================================================================
+    # Session 461: Blockchain Audit Commands
+    # =========================================================================
+
+    @app_commands.command(name="audit-contract", description="Audit a smart contract by its Ethereum address")
+    @app_commands.describe(
+        address="The Ethereum contract address (0x...)",
+        quick="Quick risk analysis only (faster)"
+    )
+    async def audit_contract(self, interaction: discord.Interaction, address: str, quick: bool = False):
+        """Audit a smart contract from Etherscan by address."""
+        await interaction.response.defer()
+
+        # Validate address format
+        if not address.startswith('0x') or len(address) != 42:
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="❌ Invalid Address",
+                    description="Please provide a valid Ethereum address (0x... format, 42 characters)",
+                    color=discord.Color.red()
+                ),
+                ephemeral=True
+            )
+            return
+
+        try:
+            from core.services.blockchain_event_listener import get_event_listener, audit_contract_by_address
+
+            # Show initial processing message
+            processing_embed = discord.Embed(
+                title="🔍 Auditing Contract...",
+                description=f"**Address:** `{address}`\n\nFetching source code from Etherscan...",
+                color=discord.Color.blue()
+            )
+            await interaction.followup.send(embed=processing_embed)
+
+            # Perform the audit
+            @sync_to_async
+            def run_audit():
+                if quick:
+                    listener = get_event_listener()
+                    return listener.analyze_contract_risk(address)
+                else:
+                    return audit_contract_by_address(address)
+
+            result = await run_audit()
+
+            # Build response embed
+            if result.get('success') or result.get('risk_level'):
+                # Success - show audit results
+                risk_level = result.get('risk_analysis', {}).get('risk_level') or result.get('risk_level', 'UNKNOWN')
+                risk_score = result.get('risk_analysis', {}).get('risk_score') or result.get('risk_score', 0)
+
+                # Color based on risk level
+                color_map = {
+                    'CRITICAL': discord.Color.dark_red(),
+                    'HIGH': discord.Color.red(),
+                    'MEDIUM': discord.Color.orange(),
+                    'LOW': discord.Color.green(),
+                }
+                embed_color = color_map.get(risk_level, discord.Color.grey())
+
+                # Risk emoji
+                emoji_map = {
+                    'CRITICAL': '🚨',
+                    'HIGH': '⚠️',
+                    'MEDIUM': '📊',
+                    'LOW': '✅',
+                }
+                risk_emoji = emoji_map.get(risk_level, '❓')
+
+                result_embed = discord.Embed(
+                    title=f"{risk_emoji} Contract Audit: {result.get('contract_name', 'Unknown')}",
+                    description=f"**Address:** `{address}`",
+                    color=embed_color
+                )
+
+                # Risk score
+                result_embed.add_field(
+                    name="Risk Assessment",
+                    value=f"**Level:** {risk_level}\n**Score:** {risk_score}/100",
+                    inline=True
+                )
+
+                # Contract info
+                if result.get('compiler_version'):
+                    result_embed.add_field(
+                        name="Contract Info",
+                        value=f"**Compiler:** {result.get('compiler_version')}\n**Proxy:** {'Yes' if result.get('is_proxy') else 'No'}",
+                        inline=True
+                    )
+
+                # Red flags
+                red_flags = result.get('risk_analysis', {}).get('red_flags') or result.get('red_flags', [])
+                if red_flags:
+                    flags_text = "\n".join(f"• {flag}" for flag in red_flags[:5])
+                    if len(red_flags) > 5:
+                        flags_text += f"\n*...and {len(red_flags) - 5} more*"
+                    result_embed.add_field(
+                        name=f"🚩 Red Flags ({len(red_flags)})",
+                        value=flags_text,
+                        inline=False
+                    )
+
+                # Transaction analysis
+                tx_analysis = result.get('risk_analysis', {}).get('transaction_analysis') or result.get('transaction_analysis', {})
+                if tx_analysis and tx_analysis.get('total_transactions'):
+                    result_embed.add_field(
+                        name="Transaction Analysis",
+                        value=(
+                            f"**Total Txs:** {tx_analysis.get('total_transactions', 'N/A')}\n"
+                            f"**Error Rate:** {tx_analysis.get('error_rate', 'N/A')}\n"
+                            f"**Recent Volume:** {tx_analysis.get('recent_volume_eth', 0):.2f} ETH"
+                        ),
+                        inline=True
+                    )
+
+                # Recommendations
+                recommendations = result.get('risk_analysis', {}).get('recommendations') or result.get('recommendations', [])
+                if recommendations:
+                    rec_text = "\n".join(f"• {rec}" for rec in recommendations[:3])
+                    result_embed.add_field(
+                        name="📋 Recommendations",
+                        value=rec_text,
+                        inline=False
+                    )
+
+                # Links
+                result_embed.add_field(
+                    name="🔗 Links",
+                    value=f"[View on Etherscan](https://etherscan.io/address/{address})",
+                    inline=False
+                )
+
+                result_embed.set_footer(text="Session 461 | Blockchain Audit Agents")
+
+                await interaction.edit_original_response(embed=result_embed)
+
+            else:
+                # Error
+                error_embed = discord.Embed(
+                    title="❌ Audit Failed",
+                    description=result.get('error', 'Unknown error occurred'),
+                    color=discord.Color.red()
+                )
+                if result.get('recommendation'):
+                    error_embed.add_field(
+                        name="Recommendation",
+                        value=result.get('recommendation'),
+                        inline=False
+                    )
+                await interaction.edit_original_response(embed=error_embed)
+
+        except Exception as e:
+            logger.error(f"/audit-contract error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to audit contract: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="blockchain-status", description="Check blockchain monitoring status")
+    async def blockchain_status(self, interaction: discord.Interaction):
+        """Check the status of blockchain audit agents."""
+        await interaction.response.defer()
+
+        try:
+            from core.services.blockchain_event_listener import get_event_listener
+            import os
+
+            listener = get_event_listener()
+            api_configured = bool(os.environ.get('ETHERSCAN_API_KEY'))
+
+            embed = discord.Embed(
+                title="⛓️ Blockchain Audit Status",
+                color=discord.Color.purple() if api_configured else discord.Color.orange()
+            )
+
+            # API Status
+            embed.add_field(
+                name="Etherscan API",
+                value="✅ Configured" if api_configured else "⚠️ Not Configured",
+                inline=True
+            )
+
+            # Listener Status
+            embed.add_field(
+                name="Event Listener",
+                value="✅ Running" if listener.running else "⏹️ Stopped",
+                inline=True
+            )
+
+            # Last Block
+            embed.add_field(
+                name="Last Block",
+                value=f"#{listener._last_block}" if listener._last_block else "Not started",
+                inline=True
+            )
+
+            # Agents
+            agents_status = (
+                "• SmartContractAuditorAgent: ✅\n"
+                "• TransactionMonitorAgent: ✅\n"
+                "• WhaleWatcherAgent: ✅\n"
+                "• ExploitDetectorAgent: ✅\n"
+                "• BlockchainAuditCoordinator: ✅"
+            )
+            embed.add_field(
+                name="Audit Agents",
+                value=agents_status,
+                inline=False
+            )
+
+            # Commands
+            embed.add_field(
+                name="Available Commands",
+                value=(
+                    "`/audit-contract <address>` - Audit a contract\n"
+                    "`/blockchain-status` - This command"
+                ),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 461 | Blockchain Audit Agent Group")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/blockchain-status error: {e}")
+            await interaction.followup.send(f"Error: {str(e)[:100]}", ephemeral=True)
+
     @app_commands.command(name="voice-ask", description="Ask a question and hear the AI speak the answer")
     @app_commands.describe(
         question="Your question",

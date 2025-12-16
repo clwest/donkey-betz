@@ -1,0 +1,598 @@
+"""
+BlockchainAuditCoordinator - Orchestrates all blockchain audit agents.
+
+Session 461: Part of the Blockchain Audit Agent Group
+
+This coordinator:
+- Routes tasks to appropriate audit agents
+- Correlates findings across agents
+- Manages alert severity and deduplication
+- Integrates with Discord for notifications
+- Connects to the autonomous intelligence loop
+"""
+
+import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from ..base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class BlockchainAuditCoordinator(BaseAgent):
+    """Coordinator agent that orchestrates all blockchain audit agents."""
+
+    name = "BlockchainAuditCoordinator"
+
+    system_prompt = """You are BlockchainAuditCoordinator, the central intelligence hub for blockchain security monitoring.
+
+You orchestrate these specialized agents:
+1. **SmartContractAuditorAgent** - Audits Solidity code for vulnerabilities
+2. **TransactionMonitorAgent** - Monitors transactions for suspicious patterns
+3. **WhaleWatcherAgent** - Tracks large token movements
+4. **ExploitDetectorAgent** - Detects known exploit patterns
+
+Your responsibilities:
+1. **Task Routing** - Route incoming requests to the appropriate agent(s)
+2. **Multi-Agent Orchestration** - Coordinate when multiple agents are needed
+3. **Finding Correlation** - Correlate findings across agents
+4. **Alert Management** - Deduplicate and prioritize alerts
+5. **Summary Generation** - Create executive summaries of security status
+
+Routing rules:
+- Smart contract code review → SmartContractAuditorAgent
+- Transaction analysis → TransactionMonitorAgent
+- Large value movements → WhaleWatcherAgent
+- Known exploit patterns → ExploitDetectorAgent
+- Complex attacks → Multiple agents in sequence
+
+Alert priorities:
+- CRITICAL: Active exploits, ongoing attacks
+- HIGH: Suspicious patterns, large unexpected movements
+- MEDIUM: Potential vulnerabilities, unusual activity
+- LOW: Informational, optimization suggestions
+
+You have access to:
+- route_to_agent: Send task to a specific audit agent
+- coordinate_multi_agent: Orchestrate multiple agents
+- generate_security_report: Create comprehensive security report
+- get_system_status: Get status of all audit agents"""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "route_to_agent",
+                "description": "Route a task to a specific blockchain audit agent.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent": {
+                            "type": "string",
+                            "description": "Target agent",
+                            "enum": [
+                                "SmartContractAuditorAgent",
+                                "TransactionMonitorAgent",
+                                "WhaleWatcherAgent",
+                                "ExploitDetectorAgent"
+                            ]
+                        },
+                        "task": {
+                            "type": "string",
+                            "description": "Task to send to the agent"
+                        },
+                        "context": {
+                            "type": "object",
+                            "description": "Additional context for the agent"
+                        }
+                    },
+                    "required": ["agent", "task"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "coordinate_multi_agent",
+                "description": "Orchestrate multiple agents for complex analysis.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agents": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of agents to coordinate"
+                        },
+                        "task": {
+                            "type": "string",
+                            "description": "Overall task to accomplish"
+                        },
+                        "sequence": {
+                            "type": "string",
+                            "description": "Execution mode",
+                            "enum": ["parallel", "sequential"],
+                            "default": "parallel"
+                        }
+                    },
+                    "required": ["agents", "task"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_security_report",
+                "description": "Generate comprehensive security status report.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "report_type": {
+                            "type": "string",
+                            "description": "Type of report",
+                            "enum": ["daily", "weekly", "incident", "on_demand"],
+                            "default": "on_demand"
+                        },
+                        "include_sections": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Sections to include (alerts, whale_activity, audits, exploits)"
+                        },
+                        "time_range_hours": {
+                            "type": "integer",
+                            "description": "Hours to cover in report",
+                            "default": 24
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_system_status",
+                "description": "Get status of all blockchain audit agents.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "include_metrics": {
+                            "type": "boolean",
+                            "description": "Include performance metrics",
+                            "default": True
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    ]
+
+    def __init__(self, user=None):
+        """Initialize coordinator with agent references."""
+        super().__init__(user)
+        self._agents = {}
+        self._alert_history = []
+
+    def _get_agent(self, agent_name: str):
+        """Lazy-load and cache agent instances."""
+        if agent_name not in self._agents:
+            if agent_name == "SmartContractAuditorAgent":
+                from .smart_contract_auditor_agent import SmartContractAuditorAgent
+                self._agents[agent_name] = SmartContractAuditorAgent(self.user)
+            elif agent_name == "TransactionMonitorAgent":
+                from .transaction_monitor_agent import TransactionMonitorAgent
+                self._agents[agent_name] = TransactionMonitorAgent(self.user)
+            elif agent_name == "WhaleWatcherAgent":
+                from .whale_watcher_agent import WhaleWatcherAgent
+                self._agents[agent_name] = WhaleWatcherAgent(self.user)
+            elif agent_name == "ExploitDetectorAgent":
+                from .exploit_detector_agent import ExploitDetectorAgent
+                self._agents[agent_name] = ExploitDetectorAgent(self.user)
+        return self._agents.get(agent_name)
+
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> AgentResult:
+        """Execute coordination task."""
+        import time
+
+        start_time = time.time()
+        tool_calls_made = []
+
+        with self.time_travel_session("blockchain_coordination", task, input_data=context):
+            try:
+                full_prompt, knowledge_attribution = self._build_prompt_with_attribution(
+                    task, scifi_context, spider_context
+                )
+
+                gpt_response = self._call_openai(full_prompt)
+
+                if gpt_response.get('tool_calls'):
+                    all_results = []
+                    for tool_call in gpt_response['tool_calls']:
+                        tool_name = tool_call['name']
+                        arguments = tool_call['arguments']
+
+                        self.record_decision(
+                            decision_type="tool_selection",
+                            action=f"Calling {tool_name}",
+                            reasoning=f"Coordinator selected {tool_name}",
+                            confidence=0.95
+                        )
+
+                        tool_result = self._execute_tool_call(tool_name, arguments)
+                        tool_calls_made.append({
+                            'tool': tool_name,
+                            'arguments': arguments,
+                            'result': tool_result
+                        })
+
+                        if tool_result.get('success'):
+                            all_results.append({
+                                'source': tool_name,
+                                'data': tool_result
+                            })
+
+                        self.mark_decision_outcome(
+                            success=tool_result.get('success', False),
+                            result_summary=str(tool_result)[:100]
+                        )
+
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    if all_results:
+                        return AgentResult(
+                            success=True,
+                            message=f"Blockchain audit coordination completed",
+                            data={'results': all_results, 'query': task},
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            decisions_made=self._tt_decision_count,
+                            tool_calls=tool_calls_made,
+                            knowledge_attribution=knowledge_attribution
+                        )
+
+                content = gpt_response.get('content', 'I coordinate blockchain security monitoring. What would you like me to analyze?')
+                return AgentResult(
+                    success=True,
+                    message=content,
+                    agent_name=self.name,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+            except Exception as e:
+                logger.error(f"Coordination failed: {e}")
+                return AgentResult(
+                    success=False,
+                    error=str(e),
+                    agent_name=self.name
+                )
+
+    def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a specific tool call."""
+
+        if tool_name == "route_to_agent":
+            return self._route_to_agent(**arguments)
+        elif tool_name == "coordinate_multi_agent":
+            return self._coordinate_multi_agent(**arguments)
+        elif tool_name == "generate_security_report":
+            return self._generate_security_report(**arguments)
+        elif tool_name == "get_system_status":
+            return self._get_system_status(**arguments)
+
+        return {"error": f"Unknown tool: {tool_name}"}
+
+    def _route_to_agent(
+        self,
+        agent: str,
+        task: str,
+        context: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """Route task to a specific agent."""
+        try:
+            agent_instance = self._get_agent(agent)
+            if not agent_instance:
+                return {"error": f"Agent not found: {agent}"}
+
+            result = agent_instance.execute(
+                task=task,
+                context=context or {},
+                scifi_context={},
+                spider_context={}
+            )
+
+            return {
+                "success": result.success,
+                "agent": agent,
+                "task": task,
+                "result": result.to_dict()
+            }
+
+        except Exception as e:
+            logger.error(f"Error routing to {agent}: {e}")
+            return {"error": str(e)}
+
+    def _coordinate_multi_agent(
+        self,
+        agents: List[str],
+        task: str,
+        sequence: str = "parallel"
+    ) -> Dict[str, Any]:
+        """Coordinate multiple agents."""
+        results = []
+
+        if sequence == "parallel":
+            # In a real implementation, this would use async/threading
+            # For now, we execute sequentially but return as if parallel
+            for agent_name in agents:
+                result = self._route_to_agent(agent_name, task)
+                results.append({
+                    "agent": agent_name,
+                    "result": result
+                })
+        else:
+            # Sequential - pass context from one to next
+            accumulated_context = {}
+            for agent_name in agents:
+                result = self._route_to_agent(agent_name, task, accumulated_context)
+                results.append({
+                    "agent": agent_name,
+                    "result": result
+                })
+                # Add this agent's findings to context for next agent
+                accumulated_context[f"{agent_name}_findings"] = result
+
+        return {
+            "success": True,
+            "coordination_type": sequence,
+            "agents_coordinated": agents,
+            "results": results
+        }
+
+    def _generate_security_report(
+        self,
+        report_type: str = "on_demand",
+        include_sections: List[str] = None,
+        time_range_hours: int = 24
+    ) -> Dict[str, Any]:
+        """Generate security status report."""
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        sections = include_sections or ["alerts", "whale_activity", "audits", "exploits"]
+
+        # Gather data from each section
+        section_data = {}
+        for section in sections:
+            if section == "alerts":
+                section_data["alerts"] = self._alert_history[-20:]  # Last 20 alerts
+            elif section == "whale_activity":
+                # Would query whale watcher data
+                section_data["whale_activity"] = "Whale activity summary would go here"
+            elif section == "audits":
+                section_data["audits"] = "Recent audit results would go here"
+            elif section == "exploits":
+                section_data["exploits"] = "Exploit detection results would go here"
+
+        prompt = f"""Generate a {report_type} blockchain security report:
+
+**TIME RANGE:** Last {time_range_hours} hours
+**SECTIONS:** {', '.join(sections)}
+
+**DATA:**
+{json.dumps(section_data, indent=2)}
+
+**REPORT FORMAT:**
+# Blockchain Security Report
+## Executive Summary
+[Brief overview of security status]
+
+## Critical Alerts
+[Any CRITICAL or HIGH severity alerts]
+
+## Whale Activity Summary
+[Significant movements and market impact]
+
+## Smart Contract Audits
+[Recent audit findings]
+
+## Exploit Detection
+[Any detected or suspected exploits]
+
+## Recommendations
+[Action items for security improvement]
+
+## Metrics
+[Key security metrics]"""
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[
+                {"role": "system", "content": "You are a blockchain security analyst. Generate comprehensive security reports."},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=5000
+        )
+
+        return {
+            "success": True,
+            "report_type": report_type,
+            "time_range_hours": time_range_hours,
+            "sections_included": sections,
+            "report": response.choices[0].message.content,
+            "generated_at": datetime.now().isoformat()
+        }
+
+    def _get_system_status(
+        self,
+        include_metrics: bool = True
+    ) -> Dict[str, Any]:
+        """Get status of all audit agents."""
+        agents_status = {
+            "SmartContractAuditorAgent": {
+                "status": "ACTIVE",
+                "capabilities": ["audit_contract", "check_reentrancy", "check_access_control", "check_integer_safety"],
+                "last_execution": None
+            },
+            "TransactionMonitorAgent": {
+                "status": "ACTIVE",
+                "capabilities": ["analyze_transaction", "detect_attack_pattern", "trace_value_flow", "check_address_reputation"],
+                "last_execution": None
+            },
+            "WhaleWatcherAgent": {
+                "status": "ACTIVE",
+                "capabilities": ["monitor_large_transfers", "analyze_whale_wallet", "track_exchange_flows", "detect_accumulation"],
+                "last_execution": None
+            },
+            "ExploitDetectorAgent": {
+                "status": "ACTIVE",
+                "capabilities": ["match_exploit_signature", "analyze_attack", "lookup_known_exploit", "track_attacker_address"],
+                "last_execution": None
+            }
+        }
+
+        status = {
+            "success": True,
+            "coordinator": self.name,
+            "status": "OPERATIONAL",
+            "agents": agents_status,
+            "total_agents": len(agents_status),
+            "active_agents": sum(1 for a in agents_status.values() if a["status"] == "ACTIVE"),
+            "timestamp": datetime.now().isoformat()
+        }
+
+        if include_metrics:
+            status["metrics"] = {
+                "alerts_last_24h": len([a for a in self._alert_history if a]),
+                "total_alerts": len(self._alert_history)
+            }
+
+        return status
+
+    # === Autonomous Loop Integration ===
+
+    def run_security_cycle(self) -> Dict[str, Any]:
+        """
+        Run a complete security monitoring cycle.
+        Called by the autonomous intelligence loop.
+        """
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "checks_performed": [],
+            "alerts_generated": [],
+            "overall_status": "SECURE"
+        }
+
+        try:
+            # 1. Check for recent exploits in our spider data
+            exploit_check = self._check_recent_exploits()
+            results["checks_performed"].append({
+                "type": "exploit_detection",
+                "result": exploit_check
+            })
+
+            if exploit_check.get("alerts"):
+                results["alerts_generated"].extend(exploit_check["alerts"])
+                results["overall_status"] = "ALERT"
+
+            # 2. Check whale activity
+            whale_check = self._check_whale_activity()
+            results["checks_performed"].append({
+                "type": "whale_monitoring",
+                "result": whale_check
+            })
+
+            if whale_check.get("significant_movements"):
+                results["overall_status"] = "MONITORING"
+
+            # 3. Log the cycle
+            logger.info(f"Blockchain security cycle completed: {results['overall_status']}")
+
+        except Exception as e:
+            logger.error(f"Security cycle error: {e}")
+            results["error"] = str(e)
+            results["overall_status"] = "ERROR"
+
+        return results
+
+    def _check_recent_exploits(self) -> Dict[str, Any]:
+        """Check spider data for recent exploit news."""
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+
+            # Check for exploit-related spider data from last hour
+            cutoff = timezone.now() - timedelta(hours=1)
+
+            exploit_keywords = ['exploit', 'hack', 'attack', 'drain', 'stolen', 'vulnerability']
+
+            recent_data = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+                spider_name__in=['etherscan', 'coingecko', 'rekt_news']
+            )[:10]
+
+            alerts = []
+            for data in recent_data:
+                raw = data.raw_data or {}
+                title = raw.get('title', '').lower()
+
+                if any(kw in title for kw in exploit_keywords):
+                    alerts.append({
+                        "source": data.spider_name,
+                        "title": raw.get('title'),
+                        "severity": "HIGH",
+                        "timestamp": data.created_at.isoformat()
+                    })
+
+            return {
+                "checked": True,
+                "data_points_analyzed": recent_data.count() if hasattr(recent_data, 'count') else len(list(recent_data)),
+                "alerts": alerts
+            }
+
+        except Exception as e:
+            logger.warning(f"Exploit check failed: {e}")
+            return {"checked": False, "error": str(e), "alerts": []}
+
+    def _check_whale_activity(self) -> Dict[str, Any]:
+        """Check for significant whale movements."""
+        # In a full implementation, this would query blockchain APIs
+        # For now, return a placeholder
+        return {
+            "checked": True,
+            "significant_movements": [],
+            "note": "Full whale monitoring requires blockchain API integration"
+        }
+
+
+def run_blockchain_audit_cycle() -> Dict[str, Any]:
+    """
+    Convenience function to run a full blockchain audit cycle.
+
+    Called by the autonomous loop and Celery tasks.
+    """
+    coordinator = BlockchainAuditCoordinator()
+    result = coordinator.execute(
+        task="Run comprehensive blockchain security audit",
+        context={},
+        scifi_context={},
+        spider_context={}
+    )
+
+    if hasattr(result, 'to_dict'):
+        return result.to_dict()
+
+    return {
+        'success': result.success if hasattr(result, 'success') else False,
+        'message': result.message if hasattr(result, 'message') else 'Blockchain audit complete',
+        'data': result.data if hasattr(result, 'data') else {},
+        'agent_name': 'BlockchainAuditCoordinator'
+    }

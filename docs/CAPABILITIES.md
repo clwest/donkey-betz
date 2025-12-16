@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 457 (December 15, 2025)
+**Last Updated:** Session 461 (December 16, 2025)
 
 ---
 
@@ -15,7 +15,7 @@
 | 3D Generation | Complete | Production |
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
-| Spiders | 65 | Active (60 working) |
+| Spiders | 66 | Active (61 working) |
 | Clean Agents | 17 | Production |
 | **Development Agents** | **4** | **Production (Session 436)** |
 | Legacy Agents | 22 | Production |
@@ -29,7 +29,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **43 Commands + Voice AI** | **Production (Session 440)** |
+| **Discord Integration** | **45 Commands + Voice AI** | **Production (Session 461)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
@@ -42,6 +42,9 @@
 | **User Certifications** | **File Upload + Display** | **Production (Session 457)** |
 | **Voice Management UI** | **Add/Preview/Delete Voices** | **Production (Session 457)** |
 | **Style Presets UI** | **80+ Organized Options** | **Production (Session 457)** |
+| **Autonomous Loop** | **SEC + Jobs + Content Monitoring** | **Production (Session 460)** |
+| **Blockchain Audit** | **4 Agents + Event Listener** | **Production (Session 461)** |
+| **Stock Audit** | **4 Agents + Coordinator** | **Production (Session 461)** |
 
 ---
 
@@ -513,8 +516,10 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `#system-status` | System health and status updates | Variable |
 | `#gallery` | Auto-delivery of created images (Phase 1) | - |
 | `#client-*` | Per-client delivery channels (Phase 3) | - |
+| `#stock-agents` | Stock audit alerts (Session 461) | Severity-based |
+| `#blockchain-agents` | Blockchain audit alerts (Session 461) | Severity-based |
 
-### Discord Bot Commands (43 Total - Sessions 426-440)
+### Discord Bot Commands (45 Total - Sessions 426-461)
 
 | Command | Description | Phase |
 |---------|-------------|-------|
@@ -561,6 +566,8 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/create-content <tier> <prompt>` | AI Content Factory - create packages | Content (S440) |
 | `/content-status [id]` | Check content generation progress | Content (S440) |
 | `/showroom [category] [tier]` | Browse content marketplace | Content (S440) |
+| `/audit-contract <address> [quick]` | Full smart contract security audit | Blockchain (S461) |
+| `/blockchain-status` | Check blockchain monitoring status | Blockchain (S461) |
 | `/help` | Show all commands | Core |
 
 ### Discord-First Platform Phases
@@ -840,6 +847,123 @@ Result:
 - `core/models_content_pipeline.py` - Database models
 - `core/services/content_pipeline.py` - Pipeline orchestration
 - `docs/UNIFIED_CONTENT_PIPELINE.md` - Master documentation
+
+---
+
+## Blockchain Audit System (Session 461)
+
+Autonomous blockchain security monitoring with 24/7 surveillance and real-time event listening.
+
+### Agents
+
+| Agent | Purpose |
+|-------|---------|
+| SmartContractAuditorAgent | Audit Solidity code for vulnerabilities |
+| TransactionMonitorAgent | Watch for suspicious tx patterns |
+| WhaleWatcherAgent | Track large token movements (100+ ETH) |
+| ExploitDetectorAgent | Pattern match known exploits |
+| BlockchainAuditCoordinator | Orchestrate all blockchain agents |
+
+### Blockchain Event Listener
+
+Real-time monitoring service with background polling (15s intervals):
+
+| Event Type | Description |
+|------------|-------------|
+| WHALE_TRANSFER | Large ETH movements (100+ ETH) |
+| CONTRACT_DEPLOY | New contract deployments |
+| SUSPICIOUS_TX | Unusual transaction patterns |
+| EXPLOIT_SIGNATURE | Known exploit pattern detection |
+
+### Contract Audit by Address
+
+Audit any verified smart contract by Ethereum address:
+
+```python
+from core.services.blockchain_event_listener import audit_contract_by_address
+
+result = audit_contract_by_address("0xdAC17F958D2ee523a2206206994597C13D831ec7")
+# Returns: contract source, risk analysis, GPT-powered audit
+```
+
+### Discord Commands
+
+| Command | Description |
+|---------|-------------|
+| `/audit-contract <address> [quick]` | Full smart contract audit by address |
+| `/blockchain-status` | Check monitoring status and API health |
+
+### Spiders
+
+| Spider | Source | Data |
+|--------|--------|------|
+| EtherscanAPISpider | Etherscan API V2 | Real-time transactions, contract source |
+| DefiLlamaSpider | DeFi Llama | TVL, protocol health |
+| RektNewsSpider | Rekt.news | Known exploits |
+
+### Alert Types
+
+| Severity | Trigger | Discord Channel |
+|----------|---------|-----------------|
+| CRITICAL | Active exploit detected | #blockchain-agents |
+| HIGH | Suspicious transaction pattern | #blockchain-agents |
+| MEDIUM | Vulnerability in popular contract | #blockchain-agents |
+| LOW | Informational (new deployments) | #blockchain-agents |
+
+### Integration
+
+- Wired into AutonomousIntelligenceLoop (15-min checks)
+- Discord `#blockchain-agents` channel (ID: 1450589795058192465)
+- Real-time event listener with handler registration
+- Etherscan API V2 (V1 deprecated Dec 2025)
+
+---
+
+## Stock Audit System (Session 461)
+
+Autonomous stock market monitoring with multi-agent analysis and correlation detection.
+
+### Agents
+
+| Agent | Purpose |
+|-------|---------|
+| StockAnalystAgent | SEC filings, fundamentals, valuations |
+| MarketMovementMonitorAgent | Price/volume spike detection |
+| InstitutionalWatcherAgent | Insider trading & 13F filings |
+| MarketAnomalyDetectorAgent | Pump & dump, manipulation patterns |
+| StockAuditCoordinator | Orchestrate and correlate findings |
+
+### Detection Thresholds
+
+| Type | Threshold |
+|------|-----------|
+| Volume Spike | 2x average volume |
+| Price Change (Critical) | 20% change |
+| Price Change (High) | 10% change |
+| Pump & Dump | 50% price + 10x volume |
+| Large Transaction | $1M+ value |
+
+### Correlated Alerts
+
+When multiple agents flag the same ticker, severity is automatically upgraded:
+- 2+ agents flagging same stock → CORRELATED alert
+- HIGH alert with correlation → upgraded to CRITICAL
+
+### Alert Types
+
+| Severity | Trigger | Discord Channel |
+|----------|---------|-----------------|
+| CRITICAL | Multiple agents flag same ticker | #stock-agents |
+| HIGH | Significant price/volume anomaly | #stock-agents |
+| MEDIUM | Insider trading activity | #stock-agents |
+| LOW | Unusual but explainable activity | #stock-agents |
+
+### Integration
+
+- Celery Beat: Every 30 min during market hours (9am-4pm M-F)
+- Discord `#stock-agents` channel (ID: 1450589539562426418)
+- Wired into AutonomousIntelligenceLoop
+- Data from SEC Edgar + Yahoo Finance spiders
 
 ---
 

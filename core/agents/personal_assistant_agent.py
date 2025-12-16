@@ -667,6 +667,14 @@ Available agents:
             task_lower.endswith('?')
         )
 
+        # Session 459: SEC/financial queries need to route to ResearchAgent FIRST
+        # (before trend_question check, since "latest" is a trend indicator)
+        sec_indicators = ['sec filing', 'sec filings', '10-k', '10k', '10-q', '10q', '8-k', '8k', 'edgar', 'company filing']
+        if any(indicator in task_lower for indicator in sec_indicators):
+            # SEC queries need to go to ResearchAgent to use the SEC spider
+            logger.info(f"Routing SEC query to ResearchAgent: {task[:50]}")
+            return False, ''
+
         # Session 454: INFORMATIONAL trend questions - answer directly with spider data
         # "What's trending in AI?" - question format + trend topic = answer directly
         # "Research AI trends for my report" - action intent = route to agent
@@ -1009,6 +1017,11 @@ Available agents:
 
             answer = response.choices[0].message.content
 
+            # Session 459: Handle empty GPT responses gracefully
+            if not answer or not answer.strip():
+                logger.warning(f"GPT returned empty response for question: {task[:50]}")
+                answer = f"I don't have specific information about that topic right now. Try asking about trending topics in AI, tech, security, or financial news, or use the SEC spider directly for company filings."
+
             return AgentResult(
                 success=True,
                 message=answer,
@@ -1047,7 +1060,7 @@ Available agents:
             task_lower = task.lower()
             topic_filter = None
 
-            # Session 272 topic filters
+            # Session 272 topic filters + Session 459: Added financial/SEC topics
             if any(kw in task_lower for kw in ['ai', 'machine learning', 'llm', 'gpt', 'neural', 'deep learning']):
                 topic_filter = 'ai'
             elif any(kw in task_lower for kw in ['web', 'javascript', 'react', 'frontend', 'backend', 'css']):
@@ -1058,6 +1071,9 @@ Available agents:
                 topic_filter = 'cloud'
             elif any(kw in task_lower for kw in ['design', 'ui', 'ux', 'figma', 'typography']):
                 topic_filter = 'design'
+            # Session 459: Financial/SEC topics
+            elif any(kw in task_lower for kw in ['sec', 'filing', 'stock', 'market', 'financial', '10-k', '10k', '8-k', '8k', 'earnings', 'investor']):
+                topic_filter = 'financial'
 
             # Get trending topics
             trends = service.get_trending_topics(hours=72, limit=10)

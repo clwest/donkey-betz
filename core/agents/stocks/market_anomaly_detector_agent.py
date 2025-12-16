@@ -1,0 +1,378 @@
+"""
+Market Anomaly Detector Agent
+=============================
+
+Session 461: Detects pump & dump, unusual options activity, manipulation.
+Equivalent to ExploitDetectorAgent in the blockchain audit system.
+
+Key capabilities:
+- Pump & dump pattern detection
+- Unusual options flow analysis
+- Market manipulation flags
+- Coordinated trading detection
+"""
+
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class MarketAnomalyDetectorAgent(BaseAgent):
+    """
+    Detects market anomalies and potential manipulation.
+
+    Tools:
+    - detect_pump_dump: Identify pump & dump patterns
+    - analyze_options_flow: Detect unusual options activity
+    - flag_manipulation: Pattern match known manipulation tactics
+    - detect_coordinated: Find coordinated trading patterns
+    """
+
+    name = "MarketAnomalyDetectorAgent"
+
+    system_prompt = """You are a market surveillance specialist detecting:
+1. Pump & dump schemes (rapid price rise on low-cap stocks followed by crash)
+2. Unusual options activity (large positions before news events)
+3. Market manipulation patterns (spoofing, layering, wash trading)
+4. Coordinated trading (social media driven buying/selling)
+5. Front-running indicators
+
+Alert criteria:
+- CRITICAL: Active manipulation detected, regulatory flags
+- HIGH: Strong pump & dump indicators, unusual options before announcements
+- MEDIUM: Suspicious patterns requiring monitoring
+- LOW: Anomalies within acceptable parameters
+
+Focus on patterns that suggest informed trading or manipulation."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "detect_pump_dump",
+                "description": "Identify pump & dump patterns",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "lookback_days": {"type": "integer", "description": "Days to analyze"},
+                        "volume_threshold": {"type": "number", "description": "Volume spike multiplier"}
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_options_flow",
+                "description": "Detect unusual options activity",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "option_type": {"type": "string", "enum": ["CALL", "PUT", "ALL"]},
+                        "min_premium": {"type": "number", "description": "Minimum premium to flag"}
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "flag_manipulation",
+                "description": "Pattern match known manipulation tactics",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "patterns": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Patterns to check (spoofing, layering, wash_trade)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "detect_coordinated",
+                "description": "Find coordinated trading patterns (social media driven)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "social_sources": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Social sources to correlate (reddit, twitter, discord)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        }
+    ]
+
+    # Pattern detection thresholds
+    PUMP_DUMP_PRICE_SPIKE = 0.50  # 50% price increase
+    PUMP_DUMP_VOLUME_SPIKE = 10  # 10x volume
+    UNUSUAL_OPTIONS_MULTIPLIER = 5  # 5x normal options volume
+
+    # Known manipulation patterns
+    MANIPULATION_PATTERNS = [
+        'spoofing',  # Large orders that get cancelled
+        'layering',  # Multiple orders at different prices
+        'wash_trading',  # Self-dealing for artificial volume
+        'front_running',  # Trading ahead of large orders
+        'momentum_ignition',  # Rapid trades to trigger momentum
+    ]
+
+    def execute(self, task: str, context: Dict[str, Any] = None,
+                scifi_context: Dict[str, Any] = None,
+                spider_context: Dict[str, Any] = None) -> AgentResult:
+        """
+        Execute anomaly detection.
+
+        Args:
+            task: Detection task description
+            context: Additional context
+            scifi_context: Sci-fi features context
+            spider_context: Spider data context
+
+        Returns:
+            AgentResult with anomaly findings
+        """
+        start_time = datetime.now()
+        context = context or {}
+
+        logger.info(f"MarketAnomalyDetectorAgent executing: {task[:100]}...")
+
+        try:
+            # Get market data
+            market_data = self._get_market_data(context.get('ticker'))
+            social_data = self._get_social_data(context.get('ticker'))
+
+            # Run detection algorithms
+            pump_dump_flags = self._detect_pump_dump(market_data)
+            manipulation_flags = self._detect_manipulation(market_data)
+            coordinated_flags = self._detect_coordinated(market_data, social_data)
+
+            # Compile all anomalies
+            anomalies = pump_dump_flags + manipulation_flags + coordinated_flags
+
+            # Determine overall risk
+            risk_level = self._calculate_risk_level(anomalies)
+
+            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+            return AgentResult(
+                success=True,
+                message=f"Anomaly scan complete. Risk level: {risk_level}",
+                data={
+                    'anomalies': anomalies,
+                    'risk_level': risk_level,
+                    'pump_dump_flags': pump_dump_flags,
+                    'manipulation_flags': manipulation_flags,
+                    'coordinated_flags': coordinated_flags,
+                    'total_flags': len(anomalies),
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time
+            )
+
+        except Exception as e:
+            logger.error(f"MarketAnomalyDetectorAgent error: {e}")
+            return AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name
+            )
+
+    def _get_market_data(self, ticker: str = None) -> List[Dict[str, Any]]:
+        """Fetch market data for analysis."""
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+
+            cutoff = timezone.now() - timedelta(days=7)
+            query = SpiderData.objects.filter(
+                spider_name__in=['yahoo_finance', 'finnhub', 'coingecko'],
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:100]
+
+            results = []
+            for data in query:
+                raw = data.raw_data or {}
+                item = {
+                    'ticker': raw.get('symbol', raw.get('ticker', '')),
+                    'price': raw.get('price', raw.get('regularMarketPrice', 0)),
+                    'change_pct': raw.get('change_pct', raw.get('regularMarketChangePercent', 0)),
+                    'volume': raw.get('volume', raw.get('regularMarketVolume', 0)),
+                    'market_cap': raw.get('market_cap', raw.get('marketCap', 0)),
+                    'timestamp': str(data.created_at),
+                }
+
+                if ticker and ticker.upper() != item['ticker'].upper():
+                    continue
+
+                results.append(item)
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error fetching market data: {e}")
+            return []
+
+    def _get_social_data(self, ticker: str = None) -> List[Dict[str, Any]]:
+        """Fetch social media data for correlation."""
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+
+            cutoff = timezone.now() - timedelta(days=3)
+            query = SpiderData.objects.filter(
+                spider_name__in=['reddit', 'bluesky', 'hackernews'],
+                created_at__gte=cutoff
+            ).order_by('-created_at')[:50]
+
+            results = []
+            for data in query:
+                raw = data.raw_data or {}
+                text = str(raw.get('title', '')) + ' ' + str(raw.get('content', ''))
+
+                if ticker and ticker.upper() not in text.upper():
+                    continue
+
+                results.append({
+                    'source': data.spider_name,
+                    'text': text[:500],
+                    'engagement': raw.get('score', raw.get('ups', 0)),
+                    'timestamp': str(data.created_at),
+                })
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error fetching social data: {e}")
+            return []
+
+    def _detect_pump_dump(self, market_data: List[Dict]) -> List[Dict]:
+        """Detect pump & dump patterns."""
+        flags = []
+
+        for item in market_data:
+            try:
+                change_pct = abs(float(item.get('change_pct', 0) or 0))
+                market_cap = float(item.get('market_cap', 0) or 0)
+
+                # Low market cap + high price spike = potential pump & dump
+                is_small_cap = market_cap < 1_000_000_000  # < $1B
+                is_spike = change_pct >= self.PUMP_DUMP_PRICE_SPIKE
+
+                if is_small_cap and is_spike:
+                    flags.append({
+                        'type': 'PUMP_DUMP_INDICATOR',
+                        'severity': 'HIGH',
+                        'ticker': item.get('ticker', ''),
+                        'change_pct': change_pct,
+                        'market_cap': market_cap,
+                        'message': f"Potential pump & dump: {item.get('ticker', '')} up {change_pct*100:.1f}% (small cap)",
+                    })
+
+            except (ValueError, TypeError):
+                continue
+
+        return flags
+
+    def _detect_manipulation(self, market_data: List[Dict]) -> List[Dict]:
+        """Detect manipulation patterns."""
+        flags = []
+
+        # Group by ticker to analyze patterns
+        by_ticker = {}
+        for item in market_data:
+            ticker = item.get('ticker', '')
+            if ticker:
+                by_ticker.setdefault(ticker, []).append(item)
+
+        for ticker, data_points in by_ticker.items():
+            if len(data_points) < 2:
+                continue
+
+            # Look for rapid reversals (potential spoofing result)
+            changes = [float(d.get('change_pct', 0) or 0) for d in data_points]
+
+            # If we see big swings in both directions, could indicate manipulation
+            has_big_up = any(c > 0.10 for c in changes)
+            has_big_down = any(c < -0.10 for c in changes)
+
+            if has_big_up and has_big_down:
+                flags.append({
+                    'type': 'VOLATILITY_MANIPULATION',
+                    'severity': 'MEDIUM',
+                    'ticker': ticker,
+                    'message': f"Unusual volatility pattern in {ticker}: rapid swings detected",
+                })
+
+        return flags
+
+    def _detect_coordinated(self, market_data: List[Dict], social_data: List[Dict]) -> List[Dict]:
+        """Detect coordinated trading (social media driven)."""
+        flags = []
+
+        # Check for social media buzz correlating with price moves
+        social_tickers = {}
+        for post in social_data:
+            text = post.get('text', '').upper()
+            engagement = post.get('engagement', 0)
+
+            # Simple ticker extraction (could be enhanced)
+            for word in text.split():
+                if word.startswith('$') and len(word) <= 6:
+                    ticker = word[1:]
+                    social_tickers[ticker] = social_tickers.get(ticker, 0) + engagement
+
+        # Check if high-social-buzz stocks also have unusual moves
+        for item in market_data:
+            ticker = item.get('ticker', '').upper()
+            social_buzz = social_tickers.get(ticker, 0)
+            change_pct = abs(float(item.get('change_pct', 0) or 0))
+
+            if social_buzz > 100 and change_pct > 0.10:
+                flags.append({
+                    'type': 'COORDINATED_TRADING',
+                    'severity': 'MEDIUM',
+                    'ticker': ticker,
+                    'social_buzz': social_buzz,
+                    'change_pct': change_pct,
+                    'message': f"Potential coordinated trading: {ticker} with high social buzz ({social_buzz}) and {change_pct*100:.1f}% move",
+                })
+
+        return flags
+
+    def _calculate_risk_level(self, anomalies: List[Dict]) -> str:
+        """Calculate overall risk level from anomalies."""
+        if not anomalies:
+            return 'LOW'
+
+        severities = [a.get('severity', 'LOW') for a in anomalies]
+
+        if 'CRITICAL' in severities:
+            return 'CRITICAL'
+        elif severities.count('HIGH') >= 2:
+            return 'CRITICAL'
+        elif 'HIGH' in severities:
+            return 'HIGH'
+        elif 'MEDIUM' in severities:
+            return 'MEDIUM'
+        else:
+            return 'LOW'

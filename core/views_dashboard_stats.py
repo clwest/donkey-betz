@@ -275,3 +275,106 @@ def advisor_insights(request):
         'total_advisors': advisors.count(),
         'timestamp': datetime.now().isoformat()
     })
+
+
+# =============================================================================
+# Session 459: Personalized Dashboard Summary + "While You Were Away"
+# =============================================================================
+
+@require_http_methods(["GET"])
+def dashboard_summary(request):
+    """
+    Get personalized greeting data and "While You Were Away" summary.
+    This powers the Assistant Tab landing page personalization.
+
+    Returns:
+    - user_name: First name or username for personalized greeting
+    - last_visit: When user last visited (for "while you were away" calculation)
+    - while_away: Stats on activity since last visit
+    """
+    from django.utils import timezone
+    from content.models import ImageHistory
+
+    # Allow unauthenticated users (will get generic greeting)
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
+
+    user = request.user
+
+    # Get user's display name
+    user_name = user.first_name or user.username or 'there'
+
+    # Try to get last visit time from session or profile
+    last_visit = None
+    try:
+        # Check session for last visit
+        last_visit_str = request.session.get('last_dashboard_visit')
+        if last_visit_str:
+            last_visit = datetime.fromisoformat(last_visit_str)
+        else:
+            # Default to 24 hours ago for first visit
+            last_visit = timezone.now() - timedelta(hours=24)
+    except Exception:
+        last_visit = timezone.now() - timedelta(hours=24)
+
+    # Update last visit timestamp
+    request.session['last_dashboard_visit'] = timezone.now().isoformat()
+
+    # Calculate "While You Were Away" stats
+    while_away = {
+        'new_spider_data': 0,
+        'agent_dreams': 0,
+        'agent_conversations': 0,
+        'new_opportunities': 0,
+        'images_created': 0,
+    }
+
+    try:
+        # Spider data since last visit
+        while_away['new_spider_data'] = SpiderData.objects.filter(
+            created_at__gte=last_visit
+        ).count()
+    except Exception:
+        pass
+
+    try:
+        # Agent dreams since last visit
+        from core.models_unified_system import AgentDream
+        while_away['agent_dreams'] = AgentDream.objects.filter(
+            created_at__gte=last_visit
+        ).count()
+    except Exception:
+        pass
+
+    try:
+        # Agent conversations since last visit
+        from core.models_unified_system import AgentConversation
+        while_away['agent_conversations'] = AgentConversation.objects.filter(
+            created_at__gte=last_visit
+        ).count()
+    except Exception:
+        pass
+
+    try:
+        # New opportunities since last visit
+        while_away['new_opportunities'] = Opportunity.objects.filter(
+            created_at__gte=last_visit
+        ).count()
+    except Exception:
+        pass
+
+    try:
+        # Images created by this user since last visit
+        while_away['images_created'] = ImageHistory.objects.filter(
+            user=user,
+            created_at__gte=last_visit
+        ).count()
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': True,
+        'user_name': user_name,
+        'last_visit': last_visit.isoformat() if last_visit else None,
+        'while_away': while_away,
+    })

@@ -56,6 +56,9 @@ from .specialized.weworkremotely_spider import WeWorkRemotelySpider
 # Session 218: FINANCIAL spiders (Session 397: Removed opensea, seekingalpha, bloomberg, reuters - no public API)
 from .specialized.etherscan_spider import EtherscanSpider
 
+# Session 461: BLOCKCHAIN AUDIT spiders
+from .specialized.etherscan_api_spider import EtherscanAPISpider
+
 # Session 218: TECH spiders
 from .specialized.hackernews_spider import HackerNewsSpider
 from .specialized.devto_spider import DevToSpider
@@ -775,6 +778,22 @@ class SpiderRegistry:
             'requires_auth': True,
             'api_key_env': 'GIPHY_API_Key',
             'targets': ['giphy.com', 'api.giphy.com']
+        })
+
+        # ============================================================
+        # SESSION 461: BLOCKCHAIN AUDIT SPIDERS
+        # ============================================================
+
+        # Etherscan API - Real blockchain transaction monitoring
+        # Used by BlockchainAuditCoordinator for whale watching and exploit detection
+        self.register_spider('etherscan_api', EtherscanAPISpider, {
+            'category': 'blockchain',
+            'priority': 1,
+            'rate_limit': 0.2,  # 5 calls/second free tier
+            'requires_auth': False,  # Works without API key (limited), better with key
+            'api_key_env': 'ETHERSCAN_API_KEY',
+            'targets': ['api.etherscan.io'],
+            'description': 'Real-time Ethereum transaction monitoring for security audits'
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")

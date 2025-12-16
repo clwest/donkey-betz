@@ -559,6 +559,42 @@ app.conf.beat_schedule = {
             'expires': 21600,  # 6 hours
         }
     },
+    # =========================================================================
+    # Session 460: Autonomous Intelligence Loop
+    # The conductor that makes everything work together!
+    # =========================================================================
+    # Full intelligence cycle - checks SEC, content opportunities, jobs
+    'autonomous-intelligence-loop': {
+        'task': 'core.tasks.run_autonomous_intelligence_loop',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    # Daily digest - morning summary of overnight activity
+    'daily-intelligence-digest': {
+        'task': 'core.tasks.run_daily_intelligence_digest',
+        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Quick SEC check - catch high-impact filings fast
+    'sec-filings-quick-check': {
+        'task': 'core.tasks.check_sec_filings_alert',
+        'schedule': crontab(minute='*/5', hour='9-16', day_of_week='1-5'),  # Every 5 min during market hours
+        'options': {
+            'expires': 300,  # 5 minutes
+        }
+    },
+    # Session 461: Stock Audit - comprehensive market monitoring
+    'stock-audit-cycle': {
+        'task': 'core.tasks.run_stock_audit_cycle',
+        'schedule': crontab(minute='*/30', hour='9-16', day_of_week='1-5'),  # Every 30 min during market hours
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
 }
 
 # Spider-specific task routing configuration

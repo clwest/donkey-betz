@@ -34,7 +34,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (35 total):
+Available Agents (40 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -94,6 +94,13 @@ Available Agents (35 total):
 
     ENTRY POINT (1):
         PersonalAssistantAgent  - Main user interaction and routing
+
+    BLOCKCHAIN AUDIT AGENTS (5) - Session 461:
+        SmartContractAuditorAgent   - Solidity code vulnerability detection
+        TransactionMonitorAgent     - Suspicious transaction pattern monitoring
+        WhaleWatcherAgent           - Large token movement tracking
+        ExploitDetectorAgent        - Known exploit signature matching
+        BlockchainAuditCoordinator  - Orchestrates all blockchain audit agents
 
 Legacy Compatibility:
     The old `agents` package still works but emits deprecation warnings:
@@ -208,6 +215,15 @@ from core.agents.devops_agent import DevOpsAgent
 # Series Workflow Agent (Session 445)
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent, get_ai_series_workflow_agent
 
+# Blockchain Audit Agents (Session 461)
+from core.agents.blockchain import (
+    SmartContractAuditorAgent,
+    TransactionMonitorAgent,
+    WhaleWatcherAgent,
+    ExploitDetectorAgent,
+    BlockchainAuditCoordinator,
+)
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -295,4 +311,11 @@ __all__ = [
     # Series Workflow Agent (1) - Session 445
     'AISeriesWorkflowAgent',
     'get_ai_series_workflow_agent',
+
+    # Blockchain Audit Agents (5) - Session 461
+    'SmartContractAuditorAgent',
+    'TransactionMonitorAgent',
+    'WhaleWatcherAgent',
+    'ExploitDetectorAgent',
+    'BlockchainAuditCoordinator',
 ]

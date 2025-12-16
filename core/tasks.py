@@ -10941,3 +10941,140 @@ def sync_pipeline_insights_to_collective():
     except Exception as e:
         logger.error(f"🔗 [SESSION 452] Pipeline-collective sync failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 460: Autonomous Intelligence Loop Tasks
+# =============================================================================
+
+@shared_task
+def run_autonomous_intelligence_loop():
+    """
+    Session 460: The conductor that makes everything work together.
+
+    This task runs every 15 minutes to:
+    1. Check for new high-value spider data (SEC filings, etc.)
+    2. Analyze with appropriate agents
+    3. Generate alerts and opportunities
+    4. Send notifications to Discord
+
+    This transforms the platform from isolated components into a
+    self-operating intelligence machine.
+    """
+    logger.info("🔄 [SESSION 460] Starting Autonomous Intelligence Loop...")
+
+    try:
+        from core.services.autonomous_loop import run_intelligence_cycle
+
+        results = run_intelligence_cycle()
+
+        logger.info(f"🔄 [SESSION 460] Intelligence loop complete: "
+                   f"{results.get('sec_alerts', 0)} SEC alerts, "
+                   f"{results.get('content_opportunities', 0)} content opps, "
+                   f"{results.get('job_opportunities', 0)} job opps")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🔄 [SESSION 460] Intelligence loop failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def run_daily_intelligence_digest():
+    """
+    Session 460: Generate and send the daily intelligence digest.
+
+    Runs once per day (8am) to send a summary of:
+    - Overnight SEC filings
+    - Top tech news headlines
+    - Job opportunities matching user skills
+    - Content creation ideas
+    - Agent activity summary
+
+    This is the "Good morning, here's what happened" notification.
+    """
+    logger.info("☀️ [SESSION 460] Generating daily intelligence digest...")
+
+    try:
+        from core.services.autonomous_loop import run_daily_digest
+
+        success = run_daily_digest()
+
+        if success:
+            logger.info("☀️ [SESSION 460] Daily digest sent successfully!")
+            return {'status': 'completed', 'sent': True}
+        else:
+            logger.warning("☀️ [SESSION 460] Daily digest send failed")
+            return {'status': 'completed', 'sent': False}
+
+    except Exception as e:
+        logger.error(f"☀️ [SESSION 460] Daily digest failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def check_sec_filings_alert():
+    """
+    Session 460: Quick SEC filing check task.
+
+    Runs more frequently (every 5 minutes during market hours)
+    to catch high-impact SEC filings quickly.
+
+    Only sends alerts for high-impact filings (material events,
+    earnings, M&A, leadership changes).
+    """
+    logger.info("📈 [SESSION 460] Checking for high-impact SEC filings...")
+
+    try:
+        from core.services.autonomous_loop import autonomous_loop
+
+        results = autonomous_loop.check_sec_filings()
+
+        if results.get('alerts_sent', 0) > 0:
+            logger.info(f"📈 [SESSION 460] Sent {results['alerts_sent']} SEC alerts!")
+        else:
+            logger.debug("📈 [SESSION 460] No high-impact filings found")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📈 [SESSION 460] SEC check failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def run_stock_audit_cycle():
+    """
+    Session 461: Stock Audit Agent Group task.
+
+    Runs the full stock audit system:
+    - StockAnalystAgent: SEC filing analysis
+    - MarketMovementMonitorAgent: Price/volume monitoring
+    - InstitutionalWatcherAgent: Insider trading tracking
+    - MarketAnomalyDetectorAgent: Manipulation detection
+
+    Sends alerts to Discord for significant findings.
+    """
+    logger.info("📈 [SESSION 461] Starting Stock Audit Cycle...")
+
+    try:
+        from core.services.autonomous_loop import run_stock_audit
+
+        results = run_stock_audit()
+
+        total_alerts = results.get('total_alerts', 0)
+        critical = results.get('critical', 0)
+        high = results.get('high', 0)
+
+        if total_alerts > 0:
+            logger.info(f"📈 [SESSION 461] Stock audit found {total_alerts} alerts "
+                       f"({critical} critical, {high} high)")
+        else:
+            logger.debug("📈 [SESSION 461] No stock alerts generated")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📈 [SESSION 461] Stock audit failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
