@@ -298,13 +298,31 @@ python manage.py validate_section --section=images
 
 ## Part 9: Implementation Roadmap
 
-### Phase 1: Critical Gaps (Immediate)
+### Phase 1: Critical Gaps (Immediate) - COMPLETED Session 461
 
-| Task | Effort | Impact |
-|------|--------|--------|
-| Wire HallucinationPublisher to UI | 2 hours | Real-time hallucination visibility |
-| Add missing agent routing patterns | 1 hour | 6 more agents accessible |
-| Create auto-verification Celery task | 3 hours | Complete hallucination workflow |
+| Task | Effort | Impact | Status |
+|------|--------|--------|--------|
+| Wire HallucinationPublisher to BaseAgent | 2 hours | Real-time hallucination visibility | **DONE** |
+| Add missing agent routing patterns | 1 hour | 8 more agents accessible | **DONE** |
+| Create auto-verification Celery task | 3 hours | Complete hallucination workflow | Pending |
+
+**Session 461 Implementation Notes:**
+
+1. **Agent Routing Patterns Added** (routing_config.py):
+   - CodeGeneratorAgent: "write code", "generate code", "function", "implement"
+   - FullStackDeveloperAgent: "build feature", "full stack", "frontend and backend"
+   - CodeReviewAgent: "review code", "code review", "audit code", "check code"
+   - DevOpsAgent: "docker", "kubernetes", "ci/cd", "deploy", "pipeline"
+   - ContentAuditAgent: "audit content", "moderate", "content safety"
+   - MemoryIsolationAgent: "memory isolation", "data isolation"
+   - StockAuditCoordinator: "stock audit", "insider trading", "market manipulation"
+   - BlockchainAuditCoordinator: "blockchain audit", "smart contract audit"
+
+2. **HallucinationPublisher Wired** (base_agent.py:801-818):
+   - Publishes to Redis on every mythology correction
+   - Includes: agent_name, original_text, patterns, risk_score, corrected_text, severity
+   - Real-time events available at `hallucination_events` Redis channel
+   - History stored in `hallucination_history` Redis key
 
 ### Phase 2: Learning Loop Completion (This Week)
 
