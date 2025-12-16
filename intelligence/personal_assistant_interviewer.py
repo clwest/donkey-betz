@@ -372,7 +372,17 @@ Keep it conversational, not robotic. Be genuinely interested."""
             return f"{name}, here's something fun - what do people often ask you for help with? Sometimes our hidden talents are things we don't even realize are special!"
 
         elif 'hidden_talents' in state.topics_covered and 'commitment' not in state.topics_covered:
-            return f"We're almost done, {name}! One last question - how serious are you about generating income in the next 30 days? Just exploring or ready to dive in?"
+            return f"We're almost done, {name}! How serious are you about generating income in the next 30 days? Just exploring or ready to dive in?"
+
+        # Session 457: New questions for current_projects, quarterly_objectives, certifications
+        elif 'commitment' in state.topics_covered and 'current_projects' not in state.topics_covered:
+            return f"Great commitment, {name}! What projects are you currently working on? Any side projects, businesses, or initiatives you're building?"
+
+        elif 'current_projects' in state.topics_covered and 'quarterly_objectives' not in state.topics_covered:
+            return f"Nice, {name}! What are your main goals for the next 90 days? What do you want to accomplish in the short term?"
+
+        elif 'quarterly_objectives' in state.topics_covered and 'certifications' not in state.topics_covered:
+            return f"Last one, {name}! Do you have any certifications, credentials, or formal qualifications that could help you earn income? (e.g., degrees, licenses, online certifications)"
 
         else:
             return f"Thanks for sharing all of this, {name}! Is there anything else you'd like me to know about your goals or preferences?"
@@ -875,9 +885,11 @@ Keep it conversational, not robotic. Be genuinely interested."""
         # Determine what info we need next
         next_info = self._determine_next_info_needed(state)
 
-        # Session 456: Check if interview is complete (all required topics covered)
+        # Session 457: Check if interview is complete (all required topics covered)
+        # Added: current_projects, quarterly_objectives, certifications
         required_topics = ['professional_situation', 'time_availability', 'skills', 'background',
-                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment']
+                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment',
+                          'current_projects', 'quarterly_objectives', 'certifications']
         topics_covered = state.topics_covered
 
         if all(topic in topics_covered for topic in required_topics):
@@ -1209,6 +1221,39 @@ Keep it conversational, not robotic. Be genuinely interested."""
                 logger.info(f"Session 456: Extracted hidden talents from conversational question")
                 return
 
+            # Session 457: Extract current_projects
+            elif 'project' in question_text and ('working on' in question_text or 'current' in question_text or 'side' in question_text):
+                if not profile.get('current_projects'):
+                    profile['current_projects'] = []
+                profile['current_projects'].append(str(response))
+                if 'current_projects' not in state.topics_covered:
+                    state.topics_covered.append('current_projects')
+                logger.info(f"Session 457: Extracted current projects from conversational question")
+                return
+
+            # Session 457: Extract quarterly_objectives
+            elif ('goal' in question_text or 'objective' in question_text) and ('90' in question_text or 'quarter' in question_text or 'short term' in question_text):
+                if not profile.get('quarterly_objectives'):
+                    profile['quarterly_objectives'] = []
+                profile['quarterly_objectives'].append(str(response))
+                if 'quarterly_objectives' not in state.topics_covered:
+                    state.topics_covered.append('quarterly_objectives')
+                logger.info(f"Session 457: Extracted quarterly objectives from conversational question")
+                return
+
+            # Session 457: Extract certifications
+            elif 'certification' in question_text or 'credential' in question_text or 'qualification' in question_text or 'degree' in question_text or 'license' in question_text:
+                if not profile.get('certifications'):
+                    profile['certifications'] = []
+                response_str = str(response).strip()
+                # Handle "none" or negative responses
+                if response_str.lower() not in ['none', 'no', 'n/a', 'nothing', "don't have any", "i don't have"]:
+                    profile['certifications'].append(response_str)
+                if 'certifications' not in state.topics_covered:
+                    state.topics_covered.append('certifications')
+                logger.info(f"Session 457: Extracted certifications from conversational question")
+                return
+
         # Extract based on question ID (original logic for predefined questions)
         # Always extract current_situation from intro_situation response or any question about professional situation
         if question_id == 'intro_situation' or 'professional situation' in question_text:
@@ -1400,10 +1445,11 @@ Keep it conversational, not robotic. Be genuinely interested."""
 
     def _calculate_completion(self, state: InterviewState) -> float:
         """Calculate interview completion percentage based on topics covered"""
-        # Session 456: Use topics_covered for accurate progress in conversational mode
-        # We have 8 required topics, not the full question bank
+        # Session 457: Updated to include 11 required topics
+        # Added: current_projects, quarterly_objectives, certifications
         required_topics = ['professional_situation', 'time_availability', 'skills', 'background',
-                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment']
+                          'income_goals', 'work_preferences', 'hidden_talents', 'commitment',
+                          'current_projects', 'quarterly_objectives', 'certifications']
 
         # Count how many required topics are covered
         topics_done = sum(1 for topic in required_topics if topic in state.topics_covered)
@@ -1412,8 +1458,8 @@ Keep it conversational, not robotic. Be genuinely interested."""
         if state.profile_data.get('name'):
             topics_done += 1
 
-        # Total is 9 steps (name + 8 topics)
-        total_steps = 9
+        # Total is 12 steps (name + 11 topics)
+        total_steps = 12
         return min(100.0, (topics_done / total_steps) * 100)
 
     async def _build_final_profile(self, state: InterviewState) -> Dict[str, Any]:

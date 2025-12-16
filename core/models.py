@@ -1825,7 +1825,12 @@ class EnhancedUserProfile(models.Model):
         verbose_name_plural = "Enhanced User Profiles"
 
     def calculate_completeness(self) -> float:
-        """Calculate profile completeness percentage."""
+        """Calculate profile completeness percentage.
+
+        Session 457: Removed dietary_preferences and travel_preferences from
+        completeness calculation - they're personal assistant prefs, not
+        relevant to income-focused profile completion.
+        """
         from datetime import datetime
 
         required_fields = [
@@ -1839,9 +1844,11 @@ class EnhancedUserProfile(models.Model):
             if value and (not isinstance(value, (list, dict)) or len(value) > 0):
                 completed += 1
 
+        # Session 457: Only income-relevant optional fields
+        # Removed: dietary_preferences, travel_preferences (personal assistant stuff)
         optional_fields = [
             'secondary_roles', 'current_projects', 'quarterly_objectives',
-            'dietary_preferences', 'travel_preferences', 'certifications'
+            'certifications'
         ]
 
         for field in optional_fields:
