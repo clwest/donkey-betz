@@ -29,6 +29,26 @@
             --text-secondary: #cbd5e1;
         }
 
+        /* Session 456: Preferences Sub-Tab Styling */
+        #preferencesSubTabs .nav-link {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        #preferencesSubTabs .nav-link:not(.active):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #preferencesSubTabs .nav-link.active {
+            color: white !important;
+        }
+        #pref-profile-tab.active { background: #10b981 !important; border-color: #10b981 !important; }
+        #pref-image-tab.active { background: #8b5cf6 !important; border-color: #8b5cf6 !important; }
+        #pref-video-tab.active { background: #ec4899 !important; border-color: #ec4899 !important; }
+        #pref-audio-tab.active { background: #10b981 !important; border-color: #10b981 !important; }
+        #pref-research-tab.active { background: #3b82f6 !important; border-color: #3b82f6 !important; }
+        #pref-agents-tab.active { background: #a855f7 !important; border-color: #a855f7 !important; }
+
         body {
             background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
             color: var(--text-primary);
@@ -7002,8 +7022,7 @@
 
             <!-- SESSION 206: PREFERENCES DASHBOARD TAB -->
             <div class="tab-pane fade" id="preferences" role="tabpanel">
-                <h3 class="mb-4">🧠 AI Learning Preferences</h3>
-                <p class="text-muted mb-4">See what your AI has learned about your creative preferences. Edit or reset at any time.</p>
+                <h3 class="mb-3">🧠 Preferences</h3>
 
                 <!-- Loading State -->
                 <div id="preferences-loading" class="text-center py-5">
@@ -7016,63 +7035,101 @@
                 <!-- Preferences Container (hidden until loaded) -->
                 <div id="preferences-container" style="display: none;">
 
-                    <!-- Learning Stage Banner -->
-                    <div id="learning-stage-banner" class="alert mb-4" style="background: rgba(6, 182, 212, 0.15); border: 1px solid #06b6d4;">
-                        <div class="d-flex align-items-center">
-                            <span class="fs-4 me-3" id="learning-stage-icon">🌱</span>
-                            <div>
-                                <strong id="learning-stage-title">Learning Stage</strong>
-                                <p class="mb-0 small" id="learning-stage-description">We're still learning your preferences</p>
-                            </div>
-                            <div class="ms-auto">
-                                <button class="btn btn-sm btn-outline-info" onclick="loadPreferencesStats()">
-                                    📊 View Stats
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Session 456: Sub-Tab Navigation -->
+                    <ul class="nav nav-pills mb-4" id="preferencesSubTabs" role="tablist" style="gap: 8px;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pref-profile-tab" data-bs-toggle="pill" data-bs-target="#pref-profile" type="button" role="tab" style="background: #10b981; border: none;">
+                                👤 Profile
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pref-image-tab" data-bs-toggle="pill" data-bs-target="#pref-image" type="button" role="tab" style="border: 1px solid #8b5cf6; color: #8b5cf6;">
+                                🎨 Image
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pref-video-tab" data-bs-toggle="pill" data-bs-target="#pref-video" type="button" role="tab" style="border: 1px solid #ec4899; color: #ec4899;">
+                                🎬 Video
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pref-audio-tab" data-bs-toggle="pill" data-bs-target="#pref-audio" type="button" role="tab" style="border: 1px solid #10b981; color: #10b981;">
+                                🎵 Audio
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pref-research-tab" data-bs-toggle="pill" data-bs-target="#pref-research" type="button" role="tab" style="border: 1px solid #3b82f6; color: #3b82f6;">
+                                🔬 Research
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pref-agents-tab" data-bs-toggle="pill" data-bs-target="#pref-agents" type="button" role="tab" style="border: 1px solid #a855f7; color: #a855f7;">
+                                🤖 Agents
+                            </button>
+                        </li>
+                    </ul>
 
-                    <!-- Preference Stats Row -->
-                    <div class="row mb-4" id="preference-stats-row">
-                        <div class="col-md-3">
-                            <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
-                                <div class="card-body">
-                                    <h2 class="mb-0" id="pref-total-interactions">0</h2>
-                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Interactions</small>
+                    <!-- Sub-Tab Content -->
+                    <div class="tab-content" id="preferencesSubTabContent">
+
+                        <!-- ==================== PROFILE SUB-TAB ==================== -->
+                        <div class="tab-pane fade show active" id="pref-profile" role="tabpanel">
+                            <!-- Learning Stage Banner -->
+                            <div id="learning-stage-banner" class="alert mb-4" style="background: rgba(6, 182, 212, 0.15); border: 1px solid #06b6d4;">
+                                <div class="d-flex align-items-center">
+                                    <span class="fs-4 me-3" id="learning-stage-icon">🌱</span>
+                                    <div>
+                                        <strong id="learning-stage-title">Learning Stage</strong>
+                                        <p class="mb-0 small" id="learning-stage-description">We're still learning your preferences</p>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <button class="btn btn-sm btn-outline-info" onclick="loadPreferencesStats()">
+                                            📊 View Stats
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
-                                <div class="card-body">
-                                    <h2 class="mb-0" id="pref-total-choices">0</h2>
-                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Choices Made</small>
+
+                            <!-- Preference Stats Row -->
+                            <div class="row mb-4" id="preference-stats-row">
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0" id="pref-total-interactions">0</h2>
+                                            <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Interactions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0" id="pref-total-choices">0</h2>
+                                            <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Choices</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0" id="pref-styles-learned">0</h2>
+                                            <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Styles</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                                        <div class="card-body py-3">
+                                            <h2 class="mb-0" id="pref-models-learned">0</h2>
+                                            <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Models</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; border: none;">
-                                <div class="card-body">
-                                    <h2 class="mb-0" id="pref-styles-learned">0</h2>
-                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Styles Learned</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card text-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
-                                <div class="card-body">
-                                    <h2 class="mb-0" id="pref-models-learned">0</h2>
-                                    <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Models Preferred</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Session 429: Discord Integration Card -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
-                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(114, 137, 218, 0.1); border-bottom: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(114, 137, 218, 0.1); border-bottom: 1px solid #333;">
                             <h5 class="mb-0" style="color: #7289da;">🎮 Discord Integration</h5>
-                            <small class="text-muted">Session 429</small>
                         </div>
                         <div class="card-body">
                             <div id="discord-link-status">
@@ -7124,9 +7181,8 @@
 
                     <!-- Session 430: User Profile Card -->
                     <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
-                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
+                        <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
                             <h5 class="mb-0" style="color: #10b981;">👤 My Profile</h5>
-                            <small class="text-muted">Session 430</small>
                         </div>
                         <div class="card-body">
                             <!-- Loading State -->
@@ -7197,6 +7253,19 @@
                                     </div>
                                 </div>
 
+                                <!-- Session 457: Certifications Section -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="form-label text-muted small mb-0">📜 Certifications</label>
+                                        <button class="btn btn-sm btn-outline-success" onclick="showAddCertificationModal()">
+                                            + Add Certification
+                                        </button>
+                                    </div>
+                                    <div id="certifications-list">
+                                        <span class="text-muted fst-italic">No certifications yet</span>
+                                    </div>
+                                </div>
+
                                 <!-- Action Buttons -->
                                 <div class="d-flex gap-2 flex-wrap">
                                     <button id="start-interview-btn" class="btn btn-success" onclick="startUserInterview()" style="background: #10b981; border-color: #10b981;">
@@ -7229,11 +7298,14 @@
                             </div>
                         </div>
                     </div>
+                        </div>
+                        <!-- END PROFILE SUB-TAB -->
 
-                    <!-- Domain Preferences Cards -->
-                    <div class="row mb-4">
+                        <!-- ==================== IMAGE SUB-TAB ==================== -->
+                        <div class="tab-pane fade" id="pref-image" role="tabpanel">
+                            <div class="row">
                         <!-- Image Preferences -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-lg-8 mb-4">
                             <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
                                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
                                     <h5 class="mb-0" style="color: #8b5cf6;">🎨 Image Preferences</h5>
@@ -7246,13 +7318,96 @@
                                         <label class="form-label text-muted small">Preferred Style</label>
                                         <select class="form-select form-select-sm bg-dark text-white" id="pref-image-style" onchange="updatePreference('image', 'style', this.value)">
                                             <option value="">Default (No preference)</option>
-                                            <option value="photorealistic">Photorealistic</option>
-                                            <option value="digital-art">Digital Art</option>
-                                            <option value="anime">Anime</option>
-                                            <option value="3d-model">3D Model</option>
-                                            <option value="cinematic">Cinematic</option>
-                                            <option value="neon-punk">Neon Punk</option>
-                                            <option value="fantasy-art">Fantasy Art</option>
+                                            <optgroup label="🎬 Animation Styles">
+                                                <option value="pixar">Pixar</option>
+                                                <option value="disney">Disney</option>
+                                                <option value="dreamworks">DreamWorks</option>
+                                                <option value="ghibli">Studio Ghibli</option>
+                                                <option value="anime">Anime</option>
+                                                <option value="manga">Manga</option>
+                                                <option value="chibi">Chibi</option>
+                                                <option value="cartoon">Cartoon</option>
+                                                <option value="south_park">South Park</option>
+                                                <option value="simpsons">Simpsons</option>
+                                                <option value="family_guy">Family Guy</option>
+                                                <option value="rick_and_morty">Rick and Morty</option>
+                                                <option value="archer">Archer</option>
+                                                <option value="adventure_time">Adventure Time</option>
+                                                <option value="gravity_falls">Gravity Falls</option>
+                                                <option value="bojack">BoJack Horseman</option>
+                                                <option value="looney_tunes">Looney Tunes</option>
+                                            </optgroup>
+                                            <optgroup label="🖼️ Classic Art Styles">
+                                                <option value="watercolor">Watercolor</option>
+                                                <option value="oil_painting">Oil Painting</option>
+                                                <option value="pencil">Pencil Sketch</option>
+                                                <option value="charcoal">Charcoal</option>
+                                                <option value="pastel">Pastel</option>
+                                                <option value="impressionist">Impressionist</option>
+                                                <option value="surreal">Surrealist</option>
+                                                <option value="cubist">Cubist</option>
+                                                <option value="pop_art">Pop Art</option>
+                                                <option value="art_deco">Art Deco</option>
+                                                <option value="art_nouveau">Art Nouveau</option>
+                                                <option value="baroque">Baroque</option>
+                                                <option value="renaissance">Renaissance</option>
+                                                <option value="minimalist">Minimalist</option>
+                                                <option value="abstract">Abstract</option>
+                                            </optgroup>
+                                            <optgroup label="📸 Photography Styles">
+                                                <option value="photorealistic">Photorealistic</option>
+                                                <option value="cinematic">Cinematic</option>
+                                                <option value="portrait">Portrait</option>
+                                                <option value="landscape">Landscape</option>
+                                                <option value="macro">Macro</option>
+                                                <option value="street">Street Photography</option>
+                                                <option value="fashion">Fashion</option>
+                                                <option value="product">Product Shot</option>
+                                                <option value="food">Food Photography</option>
+                                                <option value="architectural">Architectural</option>
+                                                <option value="noir">Film Noir</option>
+                                                <option value="vintage">Vintage</option>
+                                                <option value="polaroid">Polaroid</option>
+                                            </optgroup>
+                                            <optgroup label="🎮 Digital & Gaming">
+                                                <option value="digital-art">Digital Art</option>
+                                                <option value="3d-model">3D Model</option>
+                                                <option value="low_poly">Low Poly</option>
+                                                <option value="pixel_art">Pixel Art</option>
+                                                <option value="voxel">Voxel Art</option>
+                                                <option value="isometric">Isometric</option>
+                                                <option value="concept_art">Concept Art</option>
+                                                <option value="game_art">Game Art</option>
+                                                <option value="character_design">Character Design</option>
+                                            </optgroup>
+                                            <optgroup label="🌆 Genre & Aesthetic">
+                                                <option value="cyberpunk">Cyberpunk</option>
+                                                <option value="steampunk">Steampunk</option>
+                                                <option value="dieselpunk">Dieselpunk</option>
+                                                <option value="solarpunk">Solarpunk</option>
+                                                <option value="fantasy-art">Fantasy</option>
+                                                <option value="scifi">Sci-Fi</option>
+                                                <option value="gothic">Gothic</option>
+                                                <option value="horror">Horror</option>
+                                                <option value="dark_fantasy">Dark Fantasy</option>
+                                                <option value="neon-punk">Neon Punk</option>
+                                                <option value="vaporwave">Vaporwave</option>
+                                                <option value="retrowave">Retrowave</option>
+                                                <option value="synthwave">Synthwave</option>
+                                                <option value="psychedelic">Psychedelic</option>
+                                            </optgroup>
+                                            <optgroup label="🏢 Commercial & Branding">
+                                                <option value="logo">Logo Design</option>
+                                                <option value="icon">Icon Design</option>
+                                                <option value="flat_design">Flat Design</option>
+                                                <option value="material_design">Material Design</option>
+                                                <option value="infographic">Infographic</option>
+                                                <option value="editorial">Editorial</option>
+                                                <option value="magazine">Magazine Style</option>
+                                                <option value="poster">Poster Art</option>
+                                                <option value="album_cover">Album Cover</option>
+                                                <option value="book_cover">Book Cover</option>
+                                            </optgroup>
                                         </select>
                                         <small class="text-info" id="pref-image-style-learned" style="display: none;">✓ Learned from your choices</small>
                                     </div>
@@ -7282,9 +7437,15 @@
                                 </div>
                             </div>
                         </div>
+                            </div>
+                        </div>
+                        <!-- END IMAGE SUB-TAB -->
 
+                        <!-- ==================== VIDEO SUB-TAB ==================== -->
+                        <div class="tab-pane fade" id="pref-video" role="tabpanel">
+                            <div class="row">
                         <!-- Video Preferences -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-lg-8 mb-4">
                             <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
                                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid #333;">
                                     <h5 class="mb-0" style="color: #ec4899;">🎬 Video Preferences</h5>
@@ -7314,9 +7475,15 @@
                                 </div>
                             </div>
                         </div>
+                            </div>
+                        </div>
+                        <!-- END VIDEO SUB-TAB -->
 
+                        <!-- ==================== AUDIO SUB-TAB ==================== -->
+                        <div class="tab-pane fade" id="pref-audio" role="tabpanel">
+                            <div class="row">
                         <!-- Audio Preferences -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-lg-6 mb-4">
                             <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
                                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid #333;">
                                     <h5 class="mb-0" style="color: #10b981;">🎵 Audio Preferences</h5>
@@ -7329,28 +7496,146 @@
                                         <label class="form-label text-muted small">Preferred Voice</label>
                                         <select class="form-select form-select-sm bg-dark text-white" id="pref-audio-voice_id" onchange="updatePreference('audio', 'voice_id', this.value)">
                                             <option value="">Default (Rachel)</option>
-                                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Professional)</option>
-                                            <option value="AZnzlk1XvdvUeBnXmlld">Domi (Friendly)</option>
-                                            <option value="EXAVITQu4vr4xnSDxMaL">Bella (Warm)</option>
-                                            <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Young)</option>
+                                            <optgroup label="📦 Stock Voices" id="stock-voices-group">
+                                                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Professional Female)</option>
+                                                <option value="AZnzlk1XvdvUeBnXmlld">Domi (Friendly Female)</option>
+                                                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Warm Female)</option>
+                                                <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Young Female)</option>
+                                                <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Deep Male)</option>
+                                                <option value="VR6AewLTigWG4xSOukaG">Arnold (Strong Male)</option>
+                                                <option value="pNInz6obpgDQGcFmaJgB">Adam (Warm Male)</option>
+                                                <option value="yoZ06aMxZJJ28mfd3POQ">Sam (Casual Male)</option>
+                                                <option value="ErXwobaYiN019PkySvjV">Antoni (Smooth Male)</option>
+                                                <option value="onwK4e9ZLuTAKqWW03F9">Daniel (British Male)</option>
+                                            </optgroup>
+                                            <optgroup label="🎤 My Voices" id="my-voices-group">
+                                                <!-- Populated by JavaScript -->
+                                            </optgroup>
                                         </select>
                                         <small class="text-info" id="pref-audio-voice_id-learned" style="display: none;">✓ Learned from your choices</small>
                                     </div>
                                     <div class="preference-item mb-3">
-                                        <label class="form-label text-muted small">Preferred Stability</label>
+                                        <label class="form-label text-muted small">Voice Stability</label>
                                         <input type="range" class="form-range" id="pref-audio-stability" min="0" max="1" step="0.1" value="0.5" onchange="updatePreference('audio', 'stability', this.value)">
                                         <div class="d-flex justify-content-between">
-                                            <small class="text-muted">Variable</small>
+                                            <small class="text-muted">More Variable</small>
                                             <small class="text-muted" id="pref-audio-stability-value">0.5</small>
-                                            <small class="text-muted">Stable</small>
+                                            <small class="text-muted">More Stable</small>
+                                        </div>
+                                    </div>
+                                    <div class="preference-item mb-3">
+                                        <label class="form-label text-muted small">Similarity Boost</label>
+                                        <input type="range" class="form-range" id="pref-audio-similarity" min="0" max="1" step="0.1" value="0.75" onchange="updatePreference('audio', 'similarity_boost', this.value)">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Low</small>
+                                            <small class="text-muted" id="pref-audio-similarity-value">0.75</small>
+                                            <small class="text-muted">High</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Session 457: My Voices Card -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid #333;">
+                                    <h5 class="mb-0" style="color: #8b5cf6;">🎤 My Voices</h5>
+                                    <button class="btn btn-sm btn-outline-success" onclick="showAddVoiceModal()">
+                                        + Add Voice
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="my-voices-loading" class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                    <div id="my-voices-list" style="display: none;">
+                                        <!-- Populated by JavaScript -->
+                                    </div>
+                                    <div id="my-voices-empty" style="display: none;" class="text-center py-4">
+                                        <span class="fs-1">🎙️</span>
+                                        <p class="text-muted mt-2 mb-3">No voices yet</p>
+                                        <p class="text-muted small">Add a voice by linking your ElevenLabs voice ID,<br>or clone your voice via Discord!</p>
+                                        <button class="btn btn-sm btn-outline-success" onclick="showAddVoiceModal()">
+                                            + Add Your First Voice
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
+                        <!-- END AUDIO SUB-TAB -->
+
+                    <!-- Session 457: Add Voice Modal -->
+                    <div class="modal fade" id="addVoiceModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                                <div class="modal-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                                    <h5 class="modal-title" style="color: #8b5cf6;">🎤 Add Voice</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info small" style="background: rgba(59, 130, 246, 0.1); border-color: #3b82f6;">
+                                        <strong>💡 Tip:</strong> Get your ElevenLabs voice ID from your <a href="https://elevenlabs.io/voice-library" target="_blank" class="text-info">ElevenLabs Voice Library</a> or clone your voice via Discord with <code>/voice-clone</code>
+                                    </div>
+                                    <form id="add-voice-form">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Voice Name *</label>
+                                            <input type="text" class="form-control bg-dark text-white" id="voice-name"
+                                                   placeholder="e.g., My Professional Voice" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">ElevenLabs Voice ID *</label>
+                                            <input type="text" class="form-control bg-dark text-white" id="voice-elevenlabs-id"
+                                                   placeholder="e.g., 21m00Tcm4TlvDq8ikWAM" required>
+                                            <small class="text-muted">Find this in your ElevenLabs account under Voice Settings</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Description</label>
+                                            <textarea class="form-control bg-dark text-white" id="voice-description" rows="2"
+                                                      placeholder="Describe your voice (optional)"></textarea>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label text-muted small">Gender</label>
+                                                <select class="form-select bg-dark text-white" id="voice-gender">
+                                                    <option value="neutral">Neutral</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label text-muted small">Use Case</label>
+                                                <select class="form-select bg-dark text-white" id="voice-use-case">
+                                                    <option value="general">General Purpose</option>
+                                                    <option value="narration">Narration/Audiobook</option>
+                                                    <option value="animation">Animation/Character</option>
+                                                    <option value="commercial">Commercial</option>
+                                                    <option value="podcast">Podcast/YouTube</option>
+                                                    <option value="assistant">Virtual Assistant</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-success" onclick="saveVoice()" style="background: #8b5cf6; border-color: #8b5cf6;">
+                                        🎤 Add Voice
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                        <!-- ==================== RESEARCH SUB-TAB ==================== -->
+                        <div class="tab-pane fade" id="pref-research" role="tabpanel">
+                            <div class="row">
                         <!-- Research Preferences -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-lg-8 mb-4">
                             <div class="card h-100" style="background: #1a1a1a; border: 1px solid #333;">
                                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid #333;">
                                     <h5 class="mb-0" style="color: #3b82f6;">🔬 Research Preferences</h5>
@@ -7383,7 +7668,12 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                            </div>
+                        </div>
+                        <!-- END RESEARCH SUB-TAB -->
+
+                        <!-- ==================== AGENTS SUB-TAB ==================== -->
+                        <div class="tab-pane fade" id="pref-agents" role="tabpanel">
 
                     <!-- SESSION 210: Implicit Learning & Recommendations Section -->
                     <div class="row mb-4">
@@ -7523,8 +7813,14 @@
                         </div>
                     </div>
 
-                    <!-- Actions Row -->
-                    <div class="row">
+                        </div>
+                        <!-- END AGENTS SUB-TAB -->
+
+                    </div>
+                    <!-- END SUB-TAB CONTENT -->
+
+                    <!-- Actions Row (always visible) -->
+                    <div class="row mt-4">
                         <div class="col-12 d-flex justify-content-between">
                             <button class="btn btn-outline-danger" onclick="clearAllPreferences()">
                                 🗑️ Reset All Preferences
@@ -7828,6 +8124,64 @@
                                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                                     <button type="button" class="btn btn-info" onclick="openProfileEditor()" data-bs-dismiss="modal">
                                         ✏️ Edit Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session 457: Add Certification Modal -->
+                    <div class="modal fade" id="addCertificationModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #10b981;">
+                                <div class="modal-header" style="background: rgba(16, 185, 129, 0.2); border-bottom: 1px solid #10b981;">
+                                    <h5 class="modal-title" style="color: #10b981;">📜 Add Certification</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="certification-form" enctype="multipart/form-data">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Certificate Name *</label>
+                                            <input type="text" class="form-control bg-dark text-white" id="cert-name"
+                                                   placeholder="e.g., Python for Data Science" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Issuing Organization</label>
+                                            <input type="text" class="form-control bg-dark text-white" id="cert-issuer"
+                                                   placeholder="e.g., Udemy, Coursera, AWS">
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label text-muted small">Issue Date</label>
+                                                <input type="date" class="form-control bg-dark text-white" id="cert-issue-date">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label text-muted small">Expiry Date (optional)</label>
+                                                <input type="date" class="form-control bg-dark text-white" id="cert-expiry-date">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Credential ID</label>
+                                            <input type="text" class="form-control bg-dark text-white" id="cert-credential-id"
+                                                   placeholder="e.g., UC-12345678">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Certificate File (PDF or Image)</label>
+                                            <input type="file" class="form-control bg-dark text-white" id="cert-file"
+                                                   accept=".pdf,.jpg,.jpeg,.png,.gif">
+                                            <small class="text-muted">Upload your certificate file</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Verification URL (optional)</label>
+                                            <input type="url" class="form-control bg-dark text-white" id="cert-verification-url"
+                                                   placeholder="https://www.udemy.com/certificate/...">
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-success" onclick="saveCertification()" style="background: #10b981; border-color: #10b981;">
+                                        📜 Save Certification
                                     </button>
                                 </div>
                             </div>
@@ -47736,6 +48090,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         btnIcon.textContent = '🎯';
                     }
 
+                    // Session 457: Load certifications
+                    await loadCertifications();
+
                     // Show content
                     loadingEl.style.display = 'none';
                     contentEl.style.display = 'block';
@@ -47757,6 +48114,315 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             }
         }
+
+        // ========== SESSION 457: CERTIFICATION FUNCTIONS ==========
+
+        async function loadCertifications() {
+            try {
+                const response = await authenticatedFetch('/api/certifications/');
+                const data = await response.json();
+
+                const listEl = document.getElementById('certifications-list');
+                if (!listEl) return;
+
+                if (data.success && data.certifications && data.certifications.length > 0) {
+                    listEl.innerHTML = data.certifications.map(cert => `
+                        <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: #252525; border-radius: 8px;">
+                            <div>
+                                <strong class="text-white">${cert.name}</strong>
+                                ${cert.issuer ? `<small class="text-muted ms-2">${cert.issuer}</small>` : ''}
+                                ${cert.issue_date ? `<small class="text-muted ms-2">(${cert.issue_date})</small>` : ''}
+                            </div>
+                            <div>
+                                ${cert.file_url ? `<a href="${cert.file_url}" target="_blank" class="btn btn-sm btn-outline-info me-1" title="View Certificate">📄</a>` : ''}
+                                ${cert.verification_url ? `<a href="${cert.verification_url}" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="Verify Online">🔗</a>` : ''}
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCertification(${cert.id}, '${cert.name.replace(/'/g, "\\'")}')" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = '<span class="text-muted fst-italic">No certifications yet - add your first one!</span>';
+                }
+            } catch (error) {
+                console.error('Error loading certifications:', error);
+            }
+        }
+
+        function showAddCertificationModal() {
+            // Clear form
+            document.getElementById('certification-form').reset();
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addCertificationModal'));
+            modal.show();
+        }
+
+        async function saveCertification() {
+            const name = document.getElementById('cert-name').value.trim();
+            if (!name) {
+                alert('Certificate name is required');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('issuer', document.getElementById('cert-issuer').value.trim());
+            formData.append('issue_date', document.getElementById('cert-issue-date').value || '');
+            formData.append('expiry_date', document.getElementById('cert-expiry-date').value || '');
+            formData.append('credential_id', document.getElementById('cert-credential-id').value.trim());
+            formData.append('verification_url', document.getElementById('cert-verification-url').value.trim());
+
+            // Add file if selected
+            const fileInput = document.getElementById('cert-file');
+            if (fileInput.files.length > 0) {
+                formData.append('certificate_file', fileInput.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/certifications/add/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'same-origin',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('addCertificationModal')).hide();
+
+                    // Reload certifications list
+                    await loadCertifications();
+
+                    // Update completeness bar if returned
+                    if (data.profile_completeness !== undefined) {
+                        document.getElementById('profile-completeness-percent').textContent = `${Math.round(data.profile_completeness)}%`;
+                        document.getElementById('profile-completeness-bar').style.width = `${data.profile_completeness}%`;
+                    }
+
+                    // Show success message
+                    showToast('success', `Certificate "${data.certification.name}" added!`);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to save certification'));
+                }
+            } catch (error) {
+                console.error('Error saving certification:', error);
+                alert('Error saving certification');
+            }
+        }
+
+        async function deleteCertification(certId, certName) {
+            if (!confirm(`Delete certification "${certName}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/certifications/${certId}/delete/`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload certifications list
+                    await loadCertifications();
+
+                    // Update completeness bar if returned
+                    if (data.profile_completeness !== undefined) {
+                        document.getElementById('profile-completeness-percent').textContent = `${Math.round(data.profile_completeness)}%`;
+                        document.getElementById('profile-completeness-bar').style.width = `${data.profile_completeness}%`;
+                    }
+
+                    showToast('success', data.message);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete certification'));
+                }
+            } catch (error) {
+                console.error('Error deleting certification:', error);
+                alert('Error deleting certification');
+            }
+        }
+
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // ========== END CERTIFICATION FUNCTIONS ==========
+
+        // ========== SESSION 457: VOICE MANAGEMENT FUNCTIONS ==========
+
+        async function loadMyVoices() {
+            const loadingEl = document.getElementById('my-voices-loading');
+            const listEl = document.getElementById('my-voices-list');
+            const emptyEl = document.getElementById('my-voices-empty');
+            const dropdownGroup = document.getElementById('my-voices-group');
+
+            try {
+                const response = await authenticatedFetch('/api/voice-marketplace/my-voices/');
+                const data = await response.json();
+
+                if (loadingEl) loadingEl.style.display = 'none';
+
+                if (data.success && data.voices && data.voices.length > 0) {
+                    // Populate the list
+                    if (listEl) {
+                        listEl.style.display = 'block';
+                        listEl.innerHTML = data.voices.map(voice => `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: #252525; border-radius: 8px;">
+                                <div>
+                                    <strong class="text-white">${voice.name}</strong>
+                                    <small class="text-muted ms-2">${voice.gender} · ${voice.primary_use_case}</small>
+                                    ${voice.is_public ? '<span class="badge bg-success ms-2">Public</span>' : '<span class="badge bg-secondary ms-2">Private</span>'}
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-info me-1" onclick="previewVoice('${voice.id}')" title="Preview">▶️</button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVoice('${voice.id}', '${voice.name.replace(/'/g, "\\'")}')" title="Delete">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                    if (emptyEl) emptyEl.style.display = 'none';
+
+                    // Populate the dropdown
+                    if (dropdownGroup) {
+                        dropdownGroup.innerHTML = data.voices.map(voice =>
+                            `<option value="${voice.elevenlabs_voice_id}">${voice.name} (My Voice)</option>`
+                        ).join('');
+                    }
+                } else {
+                    if (listEl) listEl.style.display = 'none';
+                    if (emptyEl) emptyEl.style.display = 'block';
+                    if (dropdownGroup) dropdownGroup.innerHTML = '<option value="" disabled>No custom voices yet</option>';
+                }
+            } catch (error) {
+                console.error('Error loading voices:', error);
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (emptyEl) emptyEl.style.display = 'block';
+            }
+        }
+
+        function showAddVoiceModal() {
+            document.getElementById('add-voice-form').reset();
+            const modal = new bootstrap.Modal(document.getElementById('addVoiceModal'));
+            modal.show();
+        }
+
+        async function saveVoice() {
+            const name = document.getElementById('voice-name').value.trim();
+            const elevenlabsId = document.getElementById('voice-elevenlabs-id').value.trim();
+
+            if (!name || !elevenlabsId) {
+                alert('Voice name and ElevenLabs ID are required');
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch('/api/voice-marketplace/create/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        elevenlabs_voice_id: elevenlabsId,
+                        description: document.getElementById('voice-description').value.trim(),
+                        gender: document.getElementById('voice-gender').value,
+                        primary_use_case: document.getElementById('voice-use-case').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('addVoiceModal')).hide();
+                    await loadMyVoices();
+                    showToast('success', `Voice "${name}" added successfully!`);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to add voice'));
+                }
+            } catch (error) {
+                console.error('Error saving voice:', error);
+                alert('Error saving voice');
+            }
+        }
+
+        async function deleteVoice(voiceId, voiceName) {
+            if (!confirm(`Delete voice "${voiceName}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/voice-marketplace/${voiceId}/update/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: false })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    await loadMyVoices();
+                    showToast('success', `Voice "${voiceName}" deleted`);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete voice'));
+                }
+            } catch (error) {
+                console.error('Error deleting voice:', error);
+                alert('Error deleting voice');
+            }
+        }
+
+        async function previewVoice(voiceId) {
+            try {
+                showToast('info', 'Generating preview...');
+                const response = await authenticatedFetch(`/api/voice-marketplace/${voiceId}/preview/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: 'Hello! This is a preview of my voice.' })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.audio) {
+                    // Backend returns base64 audio - decode and play
+                    const audioBlob = await fetch(`data:${data.audio_format || 'audio/mpeg'};base64,${data.audio}`).then(r => r.blob());
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.onended = () => URL.revokeObjectURL(audioUrl);
+                    audio.play();
+                    showToast('success', 'Playing preview...');
+                } else {
+                    showToast('error', data.error || 'Failed to generate preview');
+                }
+            } catch (error) {
+                console.error('Error previewing voice:', error);
+                showToast('error', 'Error generating preview');
+            }
+        }
+
+        // Load voices when Audio tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const audioTab = document.getElementById('pref-audio-tab');
+            if (audioTab) {
+                audioTab.addEventListener('shown.bs.tab', function() {
+                    loadMyVoices();
+                });
+            }
+        });
+
+        // ========== END VOICE MANAGEMENT FUNCTIONS ==========
 
         // Start the interview
         async function startUserInterview() {

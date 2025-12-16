@@ -817,7 +817,9 @@ from core.views_enhanced_profile import (
 # Session 430: Import Interview views
 from core.views_interview import (
     start_interview, respond_interview, interview_status,
-    resume_interview, get_user_profile_summary
+    resume_interview, get_user_profile_summary,
+    # Session 457: Certification endpoints
+    list_certifications, add_certification, delete_certification
 )
 # Import Unified Bridge views for REAL money-making functionality
 from core.views_unified_bridge import (
@@ -1907,6 +1909,11 @@ urlpatterns = [
     # Session 456: Voice Interview (Whisper transcription)
     path('api/interview/voice/', voice_interview_response, name='interview-voice'),
     path('api/transcribe/', transcribe_only, name='transcribe-only'),
+
+    # Session 457: Certifications
+    path('api/certifications/', list_certifications, name='certifications-list'),
+    path('api/certifications/add/', add_certification, name='certifications-add'),
+    path('api/certifications/<int:cert_id>/delete/', delete_certification, name='certifications-delete'),
 
     # ===== UNIFIED BRIDGE: REAL MONEY-MAKING ENDPOINTS =====
     # These endpoints connect all components and enable actual revenue generation
