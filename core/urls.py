@@ -2098,6 +2098,10 @@ urlpatterns = [
     path('api/v1/audio/voice-isolation/', lambda r: __import__('core.views_audio', fromlist=['voice_isolation']).voice_isolation(r), name='audio-voice-isolation'),
     path('api/v1/audio/status/<str:task_id>/', lambda r, task_id: __import__('core.views_audio', fromlist=['check_audio_status']).check_audio_status(r, task_id), name='audio-status'),
 
+    # Session 458: Chat Voice Output - TTS for assistant responses
+    path('api/tts/speak/', lambda r: __import__('core.views_audio', fromlist=['speak_text']).speak_text(r), name='tts-speak'),
+    path('api/tts/settings/', lambda r: __import__('core.views_audio', fromlist=['get_user_voice_settings']).get_user_voice_settings(r), name='tts-settings'),
+
     # Image Generation endpoints (Phase 2: Frontend Reality Fix)
     path('api/v1/gallery/generate/', gallery_generate, name='gallery-generate'),
     path('api/v1/gallery/optimize-prompt/', optimize_image_prompt, name='optimize-image-prompt'),  # Session 32: Intelligent prompting

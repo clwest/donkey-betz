@@ -7492,6 +7492,19 @@
                                     </button>
                                 </div>
                                 <div class="card-body" id="audio-preferences-body">
+                                    <!-- Session 458: Voice Output Toggle for Chat -->
+                                    <div class="preference-item mb-3 pb-3" style="border-bottom: 1px solid #333;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <label class="form-label text-white mb-0">🔊 Voice Output for Chat</label>
+                                                <small class="d-block text-muted">Read assistant responses aloud</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="voice-output-toggle" style="width: 50px; height: 25px;" onchange="toggleVoiceOutput(this.checked)">
+                                            </div>
+                                        </div>
+                                        <small class="text-success mt-2" id="voice-output-status" style="display: none;">✓ Using your cloned voice</small>
+                                    </div>
                                     <div class="preference-item mb-3">
                                         <label class="form-label text-muted small">Preferred Voice</label>
                                         <select class="form-select form-select-sm bg-dark text-white" id="pref-audio-voice_id" onchange="updatePreference('audio', 'voice_id', this.value)">
@@ -28750,6 +28763,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         </button>
                     `);
 
+                    // Session 458: Speak button for voice output
+                    buttons.push(`
+                        <button class="btn btn-sm btn-outline-light speak-btn"
+                                data-text="${originalContent.replace(/"/g, '&quot;').replace(/\n/g, ' ')}"
+                                style="font-size: 11px; padding: 2px 8px;"
+                                title="Read aloud">
+                            🔊 Speak
+                        </button>
+                    `);
+
                     // Legacy "Use This" button for backwards compatibility
                     if (metadata.prompt) {
                         buttons.push(`
@@ -28888,6 +28911,84 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 e.target.classList.remove('btn-success');
                                 e.target.classList.add('btn-outline-light');
                             }, 2000);
+                        });
+                    }
+
+                    // Session 458: Speak button for voice output
+                    const speakBtn = document.querySelector(`#${messageId} .speak-btn`);
+                    if (speakBtn) {
+                        speakBtn.addEventListener('click', async (e) => {
+                            const text = e.target.dataset.text;
+                            const btn = e.target;
+
+                            // Check if already speaking
+                            if (window.currentSpeakingAudio) {
+                                window.currentSpeakingAudio.pause();
+                                window.currentSpeakingAudio = null;
+                                btn.innerHTML = '🔊 Speak';
+                                btn.classList.remove('btn-info');
+                                btn.classList.add('btn-outline-light');
+                                return;
+                            }
+
+                            // Show loading state
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = '⏳ Loading...';
+                            btn.disabled = true;
+
+                            try {
+                                const response = await authenticatedFetch('/api/tts/speak/', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ text: text })
+                                });
+
+                                const data = await response.json();
+
+                                if (data.success && data.audio) {
+                                    // Convert base64 to audio and play
+                                    const audioBlob = await fetch(`data:${data.audio_format || 'audio/mpeg'};base64,${data.audio}`).then(r => r.blob());
+                                    const audioUrl = URL.createObjectURL(audioBlob);
+                                    const audio = new Audio(audioUrl);
+
+                                    window.currentSpeakingAudio = audio;
+
+                                    // Update button to show playing state
+                                    btn.innerHTML = '⏹️ Stop';
+                                    btn.disabled = false;
+                                    btn.classList.add('btn-info');
+                                    btn.classList.remove('btn-outline-light');
+
+                                    audio.onended = () => {
+                                        URL.revokeObjectURL(audioUrl);
+                                        window.currentSpeakingAudio = null;
+                                        btn.innerHTML = originalText;
+                                        btn.classList.remove('btn-info');
+                                        btn.classList.add('btn-outline-light');
+                                    };
+
+                                    audio.onerror = () => {
+                                        URL.revokeObjectURL(audioUrl);
+                                        window.currentSpeakingAudio = null;
+                                        btn.innerHTML = originalText;
+                                        btn.disabled = false;
+                                        btn.classList.remove('btn-info');
+                                        btn.classList.add('btn-outline-light');
+                                        showToast('error', 'Audio playback failed');
+                                    };
+
+                                    audio.play();
+                                } else {
+                                    btn.innerHTML = originalText;
+                                    btn.disabled = false;
+                                    showToast('error', data.error || 'Failed to generate speech');
+                                }
+                            } catch (error) {
+                                console.error('TTS error:', error);
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                                showToast('error', 'Failed to generate speech');
+                            }
                         });
                     }
 
@@ -48638,6 +48739,74 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // ========== END CERTIFICATION FUNCTIONS ==========
 
         // ========== SESSION 457: VOICE MANAGEMENT FUNCTIONS ==========
+
+        // Session 458: Voice Output Toggle for Chat
+        function toggleVoiceOutput(enabled) {
+            localStorage.setItem('voiceOutputEnabled', enabled ? 'true' : 'false');
+
+            const statusEl = document.getElementById('voice-output-status');
+            if (statusEl) {
+                if (enabled) {
+                    // Check if user has a cloned voice
+                    authenticatedFetch('/api/tts/settings/')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success && data.has_cloned_voice) {
+                                statusEl.textContent = `✓ Using "${data.voice_name}"`;
+                                statusEl.style.display = 'block';
+                            } else {
+                                statusEl.textContent = '✓ Using default voice (Rachel)';
+                                statusEl.style.display = 'block';
+                            }
+                        })
+                        .catch(() => {
+                            statusEl.textContent = '✓ Using default voice';
+                            statusEl.style.display = 'block';
+                        });
+                } else {
+                    statusEl.style.display = 'none';
+                }
+            }
+
+            showToast('success', enabled ? 'Voice output enabled' : 'Voice output disabled');
+        }
+
+        // Session 458: Initialize voice output toggle on page load
+        function initVoiceOutputToggle() {
+            const toggle = document.getElementById('voice-output-toggle');
+            if (toggle) {
+                const enabled = localStorage.getItem('voiceOutputEnabled') === 'true';
+                toggle.checked = enabled;
+
+                // Update status display
+                if (enabled) {
+                    const statusEl = document.getElementById('voice-output-status');
+                    authenticatedFetch('/api/tts/settings/')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (statusEl && data.success) {
+                                if (data.has_cloned_voice) {
+                                    statusEl.textContent = `✓ Using "${data.voice_name}"`;
+                                } else {
+                                    statusEl.textContent = '✓ Using default voice (Rachel)';
+                                }
+                                statusEl.style.display = 'block';
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }
+        }
+
+        // Call init when Audio tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const audioTab = document.getElementById('pref-audio-tab');
+            if (audioTab) {
+                audioTab.addEventListener('shown.bs.tab', function() {
+                    initVoiceOutputToggle();
+                });
+            }
+        });
 
         async function loadMyVoices() {
             const loadingEl = document.getElementById('my-voices-loading');
