@@ -76,3 +76,7 @@
 
 Add notes here as ideas come up during development sessions.
 
+### Session 458 Notes
+- **Assistant Tab (Landing Page)** - Review and improve the main landing page experience. Currently the first thing users see when they load the app. Could be more engaging/useful.
+- **Voice Output** - Implemented! 🔊 Speak button on chat messages using ElevenLabs + cloned voice.
+

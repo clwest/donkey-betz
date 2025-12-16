@@ -278,3 +278,200 @@ def check_audio_status(request, task_id):
             'status': 'failed',
             'error_message': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 458: Chat Voice Output - Speak assistant responses
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def speak_text(request):
+    """
+    POST /api/tts/speak/
+    Convert text to speech for chat voice output.
+
+    Uses ElevenLabs for high-quality voice synthesis.
+    Supports user's cloned voice or stock voices.
+
+    Body: {
+        "text": "Text to speak",
+        "voice_id": "optional - ElevenLabs voice ID",
+        "model": "eleven_flash_v2_5" (fast) or "eleven_multilingual_v2" (quality)
+    }
+
+    Returns: {
+        "success": true,
+        "audio": "base64 encoded audio",
+        "audio_format": "audio/mpeg"
+    }
+    """
+    import json
+    import base64
+    import requests
+    from django.conf import settings
+
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+        voice_id = data.get('voice_id')
+        model = data.get('model', 'eleven_flash_v2_5')  # Fast by default for chat
+
+        if not text:
+            return JsonResponse({
+                'success': False,
+                'error': 'Text is required'
+            }, status=400)
+
+        # Limit text length to prevent abuse (ElevenLabs charges per character)
+        max_chars = 2000
+        if len(text) > max_chars:
+            text = text[:max_chars] + "..."
+            logger.warning(f"⚠️ Text truncated to {max_chars} chars for TTS")
+
+        logger.info(f"🔊 [TTS] Speak request: {len(text)} chars")
+
+        # Get voice ID - check for user's cloned voice if not specified
+        if not voice_id and request.user.is_authenticated:
+            try:
+                from core.models_voice_marketplace import VoiceProfile
+                # Get user's own cloned voice
+                user_voice = VoiceProfile.objects.filter(
+                    owner=request.user,
+                    is_active=True
+                ).first()
+                if user_voice:
+                    voice_id = user_voice.elevenlabs_voice_id
+                    logger.info(f"🎤 Using user's cloned voice: {user_voice.name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not get user voice: {e}")
+
+        # Fall back to default voice
+        if not voice_id:
+            voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel - warm and expressive
+            logger.info("🎤 Using default voice (Rachel)")
+
+        # Get API key
+        api_key = settings.EXTERNAL_API_KEYS.get('ELEVENLABS_API_KEY', '') if hasattr(settings, 'EXTERNAL_API_KEYS') else ''
+
+        if not api_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'ElevenLabs API key not configured'
+            }, status=500)
+
+        # Call ElevenLabs API
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "text": text,
+            "model_id": model,
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75,
+                "style": 0.0,
+                "use_speaker_boost": True
+            }
+        }
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            params={"output_format": "mp3_44100_128"},
+            timeout=30
+        )
+
+        if response.status_code != 200:
+            logger.error(f"❌ ElevenLabs error: {response.status_code} - {response.text[:200]}")
+            return JsonResponse({
+                'success': False,
+                'error': f"TTS generation failed: {response.status_code}"
+            }, status=500)
+
+        # Return audio as base64 for immediate playback
+        audio_base64 = base64.b64encode(response.content).decode('utf-8')
+
+        logger.info(f"✅ [TTS] Generated {len(response.content)} bytes of audio")
+
+        return JsonResponse({
+            'success': True,
+            'audio': audio_base64,
+            'audio_format': 'audio/mpeg'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"❌ [TTS] Speak error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_user_voice_settings(request):
+    """
+    GET /api/tts/settings/
+    Get user's voice output settings.
+
+    Returns: {
+        "success": true,
+        "voice_enabled": true/false,
+        "voice_id": "elevenlabs_voice_id",
+        "voice_name": "Voice Name",
+        "has_cloned_voice": true/false
+    }
+    """
+    try:
+        voice_enabled = False
+        voice_id = None
+        voice_name = "Rachel (Default)"
+        has_cloned_voice = False
+
+        if request.user.is_authenticated:
+            # Check for user's cloned voice
+            try:
+                from core.models_voice_marketplace import VoiceProfile
+                user_voice = VoiceProfile.objects.filter(
+                    owner=request.user,
+                    is_active=True
+                ).first()
+                if user_voice:
+                    has_cloned_voice = True
+                    voice_id = user_voice.elevenlabs_voice_id
+                    voice_name = user_voice.name
+            except Exception as e:
+                logger.warning(f"⚠️ Could not get user voice: {e}")
+
+            # Check user preference for voice enabled (stored in profile)
+            try:
+                from core.models.users.models import EnhancedUserProfile
+                profile = EnhancedUserProfile.objects.filter(user=request.user).first()
+                if profile and hasattr(profile, 'voice_output_enabled'):
+                    voice_enabled = profile.voice_output_enabled
+            except Exception as e:
+                logger.warning(f"⚠️ Could not get voice preference: {e}")
+
+        return JsonResponse({
+            'success': True,
+            'voice_enabled': voice_enabled,
+            'voice_id': voice_id,
+            'voice_name': voice_name,
+            'has_cloned_voice': has_cloned_voice
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Get voice settings error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
