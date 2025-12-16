@@ -1,14 +1,24 @@
 # Start Next Session Here
 
-**Last Session:** 458 - Runway Model Research & Documentation
+**Last Session:** 458 - Voice Output for Chat
 **Date:** December 16, 2025
-**Status:** DOCS VERIFIED | Gen-4 Aleph Confirmed | Roadmap Created | Gen-4.5 Coming Soon
+**Status:** VOICE OUTPUT WORKING | Speak Button | Cloned Voice | Roadmap Created
 
 ---
 
-## SESSION 458 COMPLETE: Runway Model Research & Documentation
+## SESSION 458 COMPLETE: Voice Output for Chat
 
-### What Was Done
+### What Was Built
+
+| Feature | Description |
+|---------|-------------|
+| **🔊 Speak Button** | Every assistant message has a Speak button |
+| **TTS Endpoint** | `POST /api/tts/speak/` - ElevenLabs text-to-speech |
+| **Cloned Voice** | Auto-uses DonkeyKing's Voice if available |
+| **Voice Toggle** | Preferences > Audio > Voice Output for Chat |
+| **Stop/Play** | Click again to stop playback |
+
+### Also Done
 
 | Task | Status |
 |------|--------|
@@ -17,6 +27,7 @@
 | Researched Runway GWM-1 | World model with Avatars (early access applied) |
 | Verified Gen-4 Aleph | Already fully integrated! |
 | Updated `docs/CAPABILITIES.md` | Added Video-to-Video section |
+| Fixed pre-commit hook | Added GitHub Actions secrets pattern |
 
 ### Runway Model Status
 
