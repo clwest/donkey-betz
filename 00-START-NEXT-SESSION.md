@@ -1,40 +1,52 @@
 # Start Next Session Here
 
-**Last Session:** 456 - Voice Interview with Whisper Integration
+**Last Session:** 457 - Preferences Tab Enhancements
 **Date:** December 15, 2025
-**Status:** VOICE INTERVIEW COMPLETE | Whisper Transcription | Full Interview Flow Working!
+**Status:** PREFERENCES ENHANCED | Certifications | 80+ Styles | Voice Management UI
 
 ---
 
-## SESSION 456 COMPLETE: Voice Interview with Whisper
+## SESSION 457 COMPLETE: Preferences Tab Enhancements
 
-**READ:** `docs/handoffs/SESSION_456_VOICE_INTERVIEW_WHISPER.md`
+**READ:** `docs/handoffs/SESSION_457_PREFERENCES_ENHANCEMENTS.md`
 
 ### What Was Built
 
-User wanted voice input for Profile Interview - speak answers instead of typing!
+Four major improvements to the Preferences tab:
 
-| Component | Status |
-|-----------|--------|
-| Voice Interview Endpoint | `/api/interview/voice/` with Whisper transcription |
-| Transcribe-Only Endpoint | `/api/transcribe/` for standalone use |
-| Microphone UI | Recording button with pulse animation |
-| MediaRecorder Integration | Browser audio capture (webm) |
-| Interview Flow Fixes | Fixed 6+ loop bugs in question progression |
-| Progress Calculation | Now based on 9 steps (accurate %) |
+| Feature | Description |
+|---------|-------------|
+| Profile Completeness Fix | Fixed wrong file edit (was 83.3%, now correctly 100%) |
+| Certifications Upload | New `UserCertification` model with file upload |
+| Style Dropdown | Expanded from 7 to 80+ options in 6 categories |
+| Voice Management UI | Connected ElevenLabs voices to Preferences > Audio |
 
-### Interview Flow (8 Questions)
+### Certifications Feature
 ```
-1. Name → 2. Professional Situation → 3. Time Availability → 4. Skills
-→ 5. Background → 6. Income Goals → 7. Work Preferences → 8. Hidden Talents
-→ 9. Commitment → COMPLETE!
+- Upload PDF/image certificates
+- Store issuer, dates, credential ID, verification URL
+- Skills association
+- Displayed in Profile sub-tab
 ```
 
-### Key Fixes This Session
-- **Question/Options Sync** - Both functions now use `topics_covered`
-- **Commitment vs Income** - Reordered extraction (commitment contains "income")
-- **Interview Completion** - Added phase=COMPLETE trigger
-- **Progress Bar** - Based on 9 actual steps, not question bank
+### Style Categories (80+ Options)
+```
+1. Animation Styles (17) - pixar, disney, ghibli, anime...
+2. Classic Art Styles (15) - watercolor, oil_painting, impressionist...
+3. Photography Styles (13) - portrait, landscape, macro...
+4. Digital & Gaming (9) - cyberpunk, steampunk, retro_gaming...
+5. Genre & Aesthetic (14) - fantasy, gothic, art_deco...
+6. Commercial & Branding (10) - corporate, startup, luxury...
+```
+
+### Voice Management UI
+```
+- My Voices card (loads from ElevenLabs)
+- Add Voice modal (link voice ID)
+- Preview button (plays audio sample)
+- Delete button (soft delete)
+- 10 stock voices (male/female variants)
+```
 
 ---
 
@@ -44,9 +56,9 @@ User wanted voice input for Profile Interview - speak answers instead of typing!
 # Start the platform
 make start
 
-# Test voice interview
+# Test preferences
 open http://localhost:8000/ai-studio/
-# → Preferences tab → Start Interview → Use microphone button
+# → Preferences tab → Check Profile, Image, Audio sub-tabs
 ```
 
 ---
@@ -56,7 +68,8 @@ open http://localhost:8000/ai-studio/
 | Feature | Status |
 |---------|--------|
 | AI Studio | 100% - All creation tools working |
-| Voice Interview | NEW - Whisper transcription |
+| Preferences Tab | ENHANCED - Profile, Image, Audio |
+| Voice Interview | 100% - Whisper transcription |
 | Cross-Platform Sessions | 100% - Web ↔ Discord |
 | Discord Bot | 29 commands |
 | Agent Ecosystem | 32 agents + learning hooks |
@@ -66,24 +79,15 @@ open http://localhost:8000/ai-studio/
 
 ## Suggested Next Steps
 
-1. **Voice Output** - Add TTS responses using ElevenLabs (already integrated)
-2. **Higher Profile Strength** - Add optional follow-up questions
-3. **Re-enable AI Questions** - Fix repetitive name issue
-4. **Continuous Voice Mode** - Auto-record after each question
+1. **Research Sub-tab** - User requested enhancements (next in queue)
+2. **Voice Output** - Add TTS responses using ElevenLabs
+3. **Higher Profile Strength** - Add optional follow-up questions
 
 ---
 
 ## Important Files
 
-- `intelligence/personal_assistant_interviewer.py` - Interview state machine
-- `core/views_personal_assistant.py` - Voice/interview endpoints
-- `ai_core/templates/ai_image_studio.html` - Voice recording UI
-
----
-
-## Recent Sessions
-
-- **456**: Voice Interview + Whisper - Complete voice input for profile interview
-- **455**: Cross-Platform Sessions - Web ↔ Discord session continuity
-- **454**: Personal Assistant Routing Fix - Deterministic agent routing
-- **453**: Personal Assistant Overhaul - Major routing improvements
+- `core/models/users/models.py` - UserCertification model, calculate_completeness()
+- `core/views_interview.py` - Certification API endpoints
+- `core/views_voice_marketplace.py` - my_voices API (updated with gender/use_case)
+- `ai_core/templates/ai_image_studio.html` - All UI changes

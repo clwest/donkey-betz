@@ -209,6 +209,9 @@ def my_voices(request):
             voice_list.append({
                 'id': str(voice.id),
                 'name': voice.name,
+                'elevenlabs_voice_id': voice.elevenlabs_voice_id,
+                'gender': voice.gender or 'neutral',
+                'primary_use_case': voice.primary_use_case or 'general',
                 'is_public': voice.is_public,
                 'price': str(voice.price),
                 'pricing_model': voice.pricing_model,

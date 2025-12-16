@@ -676,9 +676,12 @@ class EnhancedUserProfile(models.Model):
         verbose_name_plural = "Enhanced User Profiles"
 
     def calculate_completeness(self) -> float:
-        """Calculate profile completeness percentage."""
-        from datetime import datetime
+        """Calculate profile completeness percentage.
 
+        Session 457: Removed dietary_preferences and travel_preferences from
+        completeness calculation - they're personal assistant prefs, not
+        relevant to income-focused profile completion.
+        """
         required_fields = [
             'primary_role', 'long_term_goals', 'communication_style',
             'work_schedule', 'core_competencies', 'learning_style'
@@ -690,9 +693,10 @@ class EnhancedUserProfile(models.Model):
             if value and (not isinstance(value, (list, dict)) or len(value) > 0):
                 completed += 1
 
+        # Session 457: Only income-relevant optional fields
         optional_fields = [
             'secondary_roles', 'current_projects', 'quarterly_objectives',
-            'dietary_preferences', 'travel_preferences', 'certifications'
+            'certifications'
         ]
 
         for field in optional_fields:
@@ -996,6 +1000,85 @@ class UserPreference(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.key}"
+
+
+class UserCertification(models.Model):
+    """
+    Session 457: Store user certifications with file uploads.
+
+    Supports PDF certificates, images, and links to online credentials.
+    Each certification can have a file upload and/or a verification URL.
+    """
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name='certifications'
+    )
+
+    # Certificate details
+    name = models.CharField(
+        max_length=200,
+        help_text="Certificate name (e.g., 'AWS Solutions Architect')"
+    )
+    issuer = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Issuing organization (e.g., 'Udemy', 'AWS', 'Google')"
+    )
+    issue_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the certificate was issued"
+    )
+    expiry_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Expiration date (if applicable)"
+    )
+    credential_id = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Credential ID or certificate number"
+    )
+
+    # File upload
+    certificate_file = models.FileField(
+        upload_to='certifications/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text="PDF or image of the certificate"
+    )
+
+    # Online verification
+    verification_url = models.URLField(
+        blank=True,
+        help_text="URL to verify the credential online"
+    )
+
+    # Metadata
+    skills = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Skills associated with this certification"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_usercertification'
+        verbose_name = 'User Certification'
+        verbose_name_plural = 'User Certifications'
+        ordering = ['-issue_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.name} ({self.issuer})"
+
+    def get_file_url(self):
+        """Get the certificate file URL."""
+        if self.certificate_file:
+            return self.certificate_file.url
+        return None
 
 
 # Signal handlers to create profile and statistics when user is created
