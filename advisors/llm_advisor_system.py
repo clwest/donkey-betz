@@ -28,6 +28,23 @@ from core.llm_enforcer import get_llm_enforcer
 
 logger = logging.getLogger(__name__)
 
+# Session 461: Domain-to-Spider mappings for advisor intelligence
+ADVISOR_DOMAIN_SPIDERS = {
+    'investing': ['yahoo_finance', 'coindesk', 'financial_news', 'market_data', 'seeking_alpha'],
+    'value_investing': ['yahoo_finance', 'financial_news', 'sec_filings', 'market_data', 'seeking_alpha'],
+    'tech_investing': ['techcrunch', 'the_verge', 'wired', 'axios', 'yahoo_finance', 'coindesk'],
+    'crypto': ['coindesk', 'cryptonews', 'etherscan_api', 'blockchain_news', 'defi_pulse'],
+    'tech': ['techcrunch', 'the_verge', 'wired', 'mit_tech_review', 'axios', 'hackernews_api'],
+    'startups': ['techcrunch', 'ycombinator', 'producthunt', 'indiegogo', 'kickstarter'],
+    'venture_capital': ['techcrunch', 'crunchbase', 'ycombinator', 'producthunt'],
+    'macro': ['financial_news', 'yahoo_finance', 'market_data', 'economic_data'],
+    'innovation': ['techcrunch', 'mit_tech_review', 'wired', 'producthunt'],
+    'entrepreneurship': ['techcrunch', 'ycombinator', 'producthunt', 'indiegogo', 'forbes'],
+    'ai': ['techcrunch', 'the_verge', 'mit_tech_review', 'arxiv_ai', 'huggingface'],
+    'blockchain': ['coindesk', 'etherscan_api', 'cryptonews', 'blockchain_news'],
+    'general': ['techcrunch', 'financial_news', 'yahoo_finance', 'market_data'],
+}
+
 
 class LLMAdvisor(AIEnforcedAgent):
     """
@@ -58,6 +75,103 @@ class LLMAdvisor(AIEnforcedAgent):
 
         logger.info(f"🧠 Initialized LLM Advisor: {advisor_name}")
         logger.info(f"   Expertise: {self.expertise_level} in {self.domain}")
+
+    def _get_domain_spider_intelligence(self, topic: str = "", hours: int = 168, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Session 461: Get fresh spider intelligence relevant to this advisor's domain.
+
+        Each advisor has access to spider data from their area of expertise:
+        - Warren Buffett gets financial/market data
+        - Cathie Wood gets tech/innovation data
+        - Elon Musk gets crypto/blockchain data
+        - etc.
+
+        Args:
+            topic: The consultation topic (for additional filtering)
+            hours: How far back to look (default 7 days)
+            limit: Max items to return
+
+        Returns:
+            List of spider intelligence items relevant to advisor's domain
+        """
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(hours=hours)
+
+            # Get spiders relevant to this advisor's domain
+            domain = self.domain.lower().replace(' ', '_')
+            spider_sources = ADVISOR_DOMAIN_SPIDERS.get(domain, ADVISOR_DOMAIN_SPIDERS['general'])
+
+            # Also check specializations for additional spider sources
+            for spec in self.specializations[:3]:
+                spec_key = spec.lower().replace(' ', '_')
+                if spec_key in ADVISOR_DOMAIN_SPIDERS:
+                    spider_sources = list(set(spider_sources + ADVISOR_DOMAIN_SPIDERS[spec_key]))
+
+            logger.info(f"🕷️ Fetching spider data for {self.advisor_profile['name']} (domain: {domain})")
+            logger.info(f"   Sources: {spider_sources[:5]}...")
+
+            # Query SpiderData for domain-relevant content
+            query = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+                spider_name__in=spider_sources
+            )
+
+            # If topic provided, try to filter by relevance
+            if topic:
+                topic_words = [w.lower() for w in topic.split() if len(w) > 3]
+                # Note: We can't do complex text search without full-text search
+                # So we'll get all and filter in Python for now
+
+            results = query.order_by('-created_at')[:limit * 2]  # Get extra to filter
+
+            intelligence = []
+            topic_lower = topic.lower() if topic else ""
+
+            for item in results:
+                # SpiderData stores data in raw_data or processed_data JSON fields
+                raw_data = item.raw_data or {}
+                processed_data = item.processed_data or {}
+
+                title = raw_data.get('title') or processed_data.get('title') or 'Untitled'
+                content = raw_data.get('description') or raw_data.get('content') or \
+                          raw_data.get('summary') or processed_data.get('summary') or ''
+
+                # Calculate relevance score based on topic match
+                relevance = 0
+                if topic_lower:
+                    text_lower = (title + ' ' + content).lower()
+                    for word in topic_lower.split():
+                        if len(word) > 3 and word in text_lower:
+                            relevance += 1
+
+                intelligence.append({
+                    'title': title[:100] if title else 'Untitled',
+                    'content': content[:400] if content else '',
+                    'source': item.spider_name,
+                    'url': item.source_url or raw_data.get('url') or raw_data.get('link') or '',
+                    'created_at': item.created_at.isoformat() if item.created_at else None,
+                    'relevance': relevance,
+                })
+
+            # Sort by relevance (if topic provided) and limit
+            if topic:
+                intelligence.sort(key=lambda x: x['relevance'], reverse=True)
+
+            final_intelligence = intelligence[:limit]
+            logger.info(f"✅ Found {len(final_intelligence)} spider intelligence items for {self.advisor_profile['name']}")
+
+            return final_intelligence
+
+        except ImportError as e:
+            logger.warning(f"Could not import SpiderData model: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Error fetching spider intelligence for advisor: {e}")
+            return []
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
         """
@@ -143,6 +257,9 @@ class LLMAdvisor(AIEnforcedAgent):
     def _build_advisor_prompt(self, topic: str, context: Dict[str, Any], consultation_type: str) -> str:
         """Build a prompt that captures this advisor's unique perspective"""
 
+        # Session 461: Get fresh spider intelligence relevant to this advisor
+        spider_intelligence = self._get_domain_spider_intelligence(topic=topic, hours=168, limit=5)
+
         # Start with advisor identity and philosophy
         prompt = f"""You are {self.advisor_profile['name']}, {self.title}.
 
@@ -158,7 +275,26 @@ You are providing {consultation_type} consultation on: {topic}
 
 Context:
 {json.dumps(context, indent=2) if context else 'General consultation requested'}
+"""
 
+        # Session 461: Add fresh spider intelligence if available
+        if spider_intelligence:
+            prompt += f"""
+
+FRESH MARKET INTELLIGENCE (from your domain sources):
+The following recent data is from sources relevant to your expertise. Consider this fresh intelligence when providing advice:
+"""
+            for idx, intel in enumerate(spider_intelligence[:5], 1):
+                prompt += f"""
+{idx}. {intel['title']}
+   Source: {intel['source']}
+   {intel['content'][:200]}...
+"""
+            prompt += """
+Use this fresh intelligence to inform your advice where relevant.
+"""
+
+        prompt += f"""
 Instructions:
 1. Provide advice that aligns with your known philosophy and approach
 2. Reference your real-world experience and successes when relevant
