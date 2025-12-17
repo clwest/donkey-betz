@@ -499,8 +499,13 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
                 }
             )
 
+            # Calculate changes from previous day and save
+            changes = brief_obj.calculate_changes()
+            brief_obj.save()  # Save the updated changes_from_yesterday
+
             action = "created" if created else "updated"
-            logger.info(f"💾 Brief {action} for {today} - {total_stocks} stocks, {gpt_success_rate:.1f}% GPT success")
+            change_count = len(changes.get('changes', []))
+            logger.info(f"💾 Brief {action} for {today} - {total_stocks} stocks, {gpt_success_rate:.1f}% GPT success, {change_count} changes detected")
 
         except Exception as e:
             logger.error(f"Failed to save brief: {e}")
