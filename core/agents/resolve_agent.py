@@ -779,9 +779,10 @@ If asked to do something outside your scope, politely explain you can only handl
         Resolve video IDs to file paths.
 
         Supports multiple ID formats:
-        1. User-friendly sequential number (#1, #2, 1, 2)
-        2. UUID (with or without .mp4 extension)
-        3. Filename from rescued_videos directory
+        1. R1, R2, R3... - Rescued videos by index
+        2. #1, #2... or 1, 2... - Database videos by index
+        3. UUID (with or without .mp4 extension)
+        4. Filename from rescued_videos directory
         """
         from django.conf import settings
         from pathlib import Path
@@ -791,12 +792,30 @@ If asked to do something outside your scope, politely explain you can only handl
         media_root = Path(settings.MEDIA_ROOT)
         rescued_dir = Path(settings.BASE_DIR) / 'media' / 'rescued_videos'
 
+        # Cache rescued video list for R1, R2 lookups
+        rescued_files = []
+        if rescued_dir.exists():
+            rescued_files = sorted(rescued_dir.glob('*.mp4'))
+
         try:
             from content.models import VideoHistory
 
             for raw_id in video_ids:
                 video_path = None
                 video_id = raw_id.strip()
+
+                # Strategy 0: R1, R2, R3... format for rescued videos
+                r_match = re.match(r'^[Rr](\d+)$', video_id)
+                if r_match:
+                    idx = int(r_match.group(1)) - 1  # R1 = index 0
+                    if 0 <= idx < len(rescued_files):
+                        rescued_path = rescued_files[idx]
+                        paths.append(str(rescued_path))
+                        logger.info(f"Resolved '{raw_id}' to rescued video R{idx+1}: {rescued_path}")
+                        continue
+                    else:
+                        logger.warning(f"Rescued video index out of range: {raw_id} (have {len(rescued_files)} videos)")
+                        continue
 
                 # Strip # prefix and file extensions
                 video_id = video_id.lstrip('#')
