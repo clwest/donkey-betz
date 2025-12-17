@@ -1080,6 +1080,795 @@ class OpportunityScore(models.Model):
         return f"Score Details for: {self.opportunity.title}"
 
 
+# =============================================================================
+# Session 470: ML Scoring Models - Market Intelligence Architecture
+# =============================================================================
+
+class MLModelVersion(models.Model):
+    """
+    Track ML model versions for opportunity scoring.
+
+    Enables model versioning, accuracy tracking, and rollback capability.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    version = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Model version string (e.g., v1.0, v2.1)"
+    )
+
+    # Training metadata
+    trained_at = models.DateTimeField(
+        help_text="When the model was trained"
+    )
+    training_samples = models.IntegerField(
+        default=0,
+        help_text="Number of samples used for training"
+    )
+    training_duration_seconds = models.IntegerField(
+        default=0,
+        help_text="How long training took"
+    )
+
+    # Model metrics
+    train_mse = models.FloatField(
+        null=True, blank=True,
+        help_text="Mean squared error on training set"
+    )
+    test_mse = models.FloatField(
+        null=True, blank=True,
+        help_text="Mean squared error on test set"
+    )
+    train_r2 = models.FloatField(
+        null=True, blank=True,
+        help_text="R-squared score on training set"
+    )
+    test_r2 = models.FloatField(
+        null=True, blank=True,
+        help_text="R-squared score on test set"
+    )
+
+    # Feature importance (top 10)
+    feature_importance = models.JSONField(
+        default=list,
+        help_text="Feature importance rankings from XGBoost"
+    )
+
+    # Status
+    is_active = models.BooleanField(
+        default=False,
+        help_text="Whether this is the currently active model"
+    )
+    is_archived = models.BooleanField(
+        default=False,
+        help_text="Whether this model has been archived"
+    )
+
+    # Model file location
+    model_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Path to the saved model file"
+    )
+
+    # Notes
+    notes = models.TextField(
+        blank=True,
+        help_text="Training notes or comments"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-trained_at']
+        indexes = [
+            models.Index(fields=['version']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        status = " (ACTIVE)" if self.is_active else ""
+        return f"ML Model {self.version}{status}"
+
+    def activate(self):
+        """Activate this model version, deactivating others."""
+        MLModelVersion.objects.filter(is_active=True).update(is_active=False)
+        self.is_active = True
+        self.save()
+
+
+class ScoringExplanation(models.Model):
+    """
+    SHAP-based explanation for an opportunity score.
+
+    Stores feature contributions and explanations for transparency
+    and debugging of ML scoring decisions.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    opportunity = models.OneToOneField(
+        Opportunity,
+        on_delete=models.CASCADE,
+        related_name='ml_explanation'
+    )
+
+    # Model used
+    model_version = models.ForeignKey(
+        MLModelVersion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='explanations'
+    )
+
+    # Scores
+    ml_score = models.FloatField(
+        help_text="Raw ML model score (0-100)"
+    )
+    rule_score = models.FloatField(
+        help_text="Rule-based score (0-100)"
+    )
+    hybrid_score = models.FloatField(
+        help_text="Combined hybrid score (0-100)"
+    )
+    confidence = models.FloatField(
+        help_text="Confidence in the score (0-100)"
+    )
+
+    # SHAP explanation data
+    shap_base_value = models.FloatField(
+        null=True, blank=True,
+        help_text="SHAP base/expected value"
+    )
+    shap_values = models.JSONField(
+        default=list,
+        help_text="SHAP values for each feature"
+    )
+    feature_names = models.JSONField(
+        default=list,
+        help_text="Feature names in order"
+    )
+    feature_values = models.JSONField(
+        default=list,
+        help_text="Feature values in order"
+    )
+
+    # Top contributing features (cached for quick access)
+    top_positive_features = models.JSONField(
+        default=list,
+        help_text="Top features that increased the score"
+    )
+    top_negative_features = models.JSONField(
+        default=list,
+        help_text="Top features that decreased the score"
+    )
+
+    # Rule-based reasoning
+    rule_reasoning = models.JSONField(
+        default=dict,
+        help_text="Reasoning from rule-based scoring"
+    )
+
+    # Timing
+    scoring_time_ms = models.IntegerField(
+        default=0,
+        help_text="Time taken to generate this score in milliseconds"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['hybrid_score']),
+        ]
+
+    def __str__(self):
+        return f"Explanation for {self.opportunity.title[:50]} (score: {self.hybrid_score:.1f})"
+
+    def get_top_features(self, n: int = 5):
+        """Get top N features by absolute SHAP value."""
+        if not self.shap_values or not self.feature_names:
+            return []
+
+        indexed = list(enumerate(self.shap_values))
+        sorted_features = sorted(indexed, key=lambda x: abs(x[1]), reverse=True)
+
+        top = []
+        for idx, shap_val in sorted_features[:n]:
+            if idx < len(self.feature_names):
+                top.append({
+                    'feature': self.feature_names[idx],
+                    'value': self.feature_values[idx] if idx < len(self.feature_values) else None,
+                    'shap_value': round(shap_val, 4),
+                    'impact': 'positive' if shap_val > 0 else 'negative'
+                })
+        return top
+
+
+# =============================================================================
+# Session 470: Phase 2 - Scoring Dispatcher Configuration
+# =============================================================================
+
+class ScoringConfiguration(models.Model):
+    """
+    Configuration for the ML Scoring Dispatcher.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    Controls whether scoring happens in real-time or batch mode,
+    and SLA thresholds for automatic mode switching.
+    """
+
+    SCORING_MODE_CHOICES = [
+        ('realtime', 'Real-time (immediate scoring)'),
+        ('batch', 'Batch (hourly processing)'),
+        ('auto', 'Auto (switch based on SLA)'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('high', 'High (user-triggered, immediate)'),
+        ('normal', 'Normal (background scoring)'),
+        ('low', 'Low (backfill/reprocessing)'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # User-specific configuration (null = global default)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='scoring_config',
+        null=True, blank=True,
+        help_text="User this config applies to (null = global default)"
+    )
+
+    # Scoring mode
+    scoring_mode = models.CharField(
+        max_length=20,
+        choices=SCORING_MODE_CHOICES,
+        default='auto',
+        help_text="How scoring requests should be processed"
+    )
+
+    # SLA settings
+    sla_threshold_ms = models.IntegerField(
+        default=500,
+        help_text="Max acceptable latency in milliseconds"
+    )
+    auto_switch_threshold_ms = models.IntegerField(
+        default=1000,
+        help_text="Latency at which to switch from realtime to batch"
+    )
+
+    # Priority settings
+    default_priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='normal',
+        help_text="Default priority for scoring requests"
+    )
+
+    # Batch settings
+    batch_size = models.IntegerField(
+        default=100,
+        help_text="Number of items to process per batch"
+    )
+    batch_interval_minutes = models.IntegerField(
+        default=60,
+        help_text="Minutes between batch processing runs"
+    )
+
+    # Feature flags
+    enable_shap_explanations = models.BooleanField(
+        default=True,
+        help_text="Generate SHAP explanations (adds latency)"
+    )
+    enable_model_fallback = models.BooleanField(
+        default=True,
+        help_text="Fallback to rule-based scoring if ML fails"
+    )
+    store_explanations = models.BooleanField(
+        default=True,
+        help_text="Store ScoringExplanation records in database"
+    )
+
+    # Metrics tracking
+    total_requests = models.IntegerField(default=0)
+    realtime_requests = models.IntegerField(default=0)
+    batch_requests = models.IntegerField(default=0)
+    avg_latency_ms = models.FloatField(default=0.0)
+    sla_breaches = models.IntegerField(default=0)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Scoring Configuration"
+        verbose_name_plural = "Scoring Configurations"
+
+    def __str__(self):
+        if self.user:
+            return f"Scoring Config for {self.user.username}"
+        return "Global Scoring Config"
+
+    def record_request(self, latency_ms: float, mode: str):
+        """Record a scoring request for metrics tracking."""
+        self.total_requests += 1
+        if mode == 'realtime':
+            self.realtime_requests += 1
+        else:
+            self.batch_requests += 1
+
+        # Update rolling average latency
+        if self.total_requests == 1:
+            self.avg_latency_ms = latency_ms
+        else:
+            self.avg_latency_ms = (
+                (self.avg_latency_ms * (self.total_requests - 1) + latency_ms)
+                / self.total_requests
+            )
+
+        # Check SLA breach
+        if latency_ms > self.sla_threshold_ms:
+            self.sla_breaches += 1
+
+        self.save(update_fields=[
+            'total_requests', 'realtime_requests', 'batch_requests',
+            'avg_latency_ms', 'sla_breaches', 'updated_at'
+        ])
+
+    @classmethod
+    def get_config(cls, user=None):
+        """Get scoring configuration for a user or global default."""
+        if user:
+            config, _ = cls.objects.get_or_create(user=user)
+            return config
+        # Get or create global config
+        config, _ = cls.objects.get_or_create(user=None)
+        return config
+
+
+class ScoringQueueItem(models.Model):
+    """
+    Queue item for batch/async scoring.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    Tracks scoring requests in the priority queue for
+    asynchronous processing.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired'),
+    ]
+
+    PRIORITY_CHOICES = [
+        (1, 'High'),
+        (2, 'Normal'),
+        (3, 'Low'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # What to score
+    spider_data = models.ForeignKey(
+        'SpiderData',
+        on_delete=models.CASCADE,
+        related_name='scoring_queue_items'
+    )
+
+    # Queue management
+    priority = models.IntegerField(
+        choices=PRIORITY_CHOICES,
+        default=2,
+        help_text="Processing priority (1=high, 2=normal, 3=low)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    # Request context
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='scoring_requests'
+    )
+    request_source = models.CharField(
+        max_length=50,
+        default='system',
+        help_text="Where the request came from (api, celery, user, etc.)"
+    )
+
+    # Results
+    result_score = models.FloatField(null=True, blank=True)
+    result_explanation_id = models.UUIDField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+
+    # Timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['priority', 'created_at']
+        indexes = [
+            models.Index(fields=['status', 'priority', 'created_at']),
+            models.Index(fields=['spider_data']),
+        ]
+
+    def __str__(self):
+        return f"ScoringQueue[{self.priority}] {self.spider_data_id} - {self.status}"
+
+    @property
+    def latency_ms(self):
+        """Calculate processing latency in milliseconds."""
+        if self.started_at and self.completed_at:
+            delta = self.completed_at - self.started_at
+            return delta.total_seconds() * 1000
+        return None
+
+
+# =============================================================================
+# Session 470: Phase 3 - Human-in-the-Loop Validation
+# =============================================================================
+
+class ValidationRequest(models.Model):
+    """
+    Request for human validation of a scored opportunity.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    When ML scoring confidence falls in the 50-85% range,
+    a validation request is created for human review.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('assigned', 'Assigned to Reviewer'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('escalated', 'Escalated'),
+        ('expired', 'Expired'),
+        ('auto_approved', 'Auto-Approved (High Confidence)'),
+        ('auto_rejected', 'Auto-Rejected (Low Confidence)'),
+    ]
+
+    PRIORITY_CHOICES = [
+        (1, 'Critical'),
+        (2, 'High'),
+        (3, 'Normal'),
+        (4, 'Low'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # What needs validation
+    opportunity = models.ForeignKey(
+        'Opportunity',
+        on_delete=models.CASCADE,
+        related_name='validation_requests'
+    )
+    scoring_explanation = models.ForeignKey(
+        'ScoringExplanation',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='validation_requests'
+    )
+
+    # Scores that triggered validation
+    ml_score = models.FloatField(help_text="ML score at time of request")
+    rule_score = models.FloatField(help_text="Rule-based score at time of request")
+    hybrid_score = models.FloatField(help_text="Combined score at time of request")
+    confidence = models.FloatField(help_text="Confidence level that triggered validation")
+
+    # Validation status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    priority = models.IntegerField(
+        choices=PRIORITY_CHOICES,
+        default=3,
+        help_text="Review priority (1=critical, 4=low)"
+    )
+
+    # Assignment
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assigned_validations'
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
+
+    # Request context
+    request_reason = models.CharField(
+        max_length=100,
+        default='confidence_threshold',
+        help_text="Why validation was requested"
+    )
+    request_source = models.CharField(
+        max_length=50,
+        default='auto',
+        help_text="What triggered this request (auto, manual, escalation)"
+    )
+
+    # Deadlines
+    deadline = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Time by which decision must be made"
+    )
+    escalate_after = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Escalate if not reviewed by this time"
+    )
+
+    # Timing
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['priority', 'created_at']
+        indexes = [
+            models.Index(fields=['status', 'priority', 'created_at']),
+            models.Index(fields=['assigned_to', 'status']),
+            models.Index(fields=['deadline']),
+        ]
+
+    def __str__(self):
+        return f"Validation[{self.status}] {self.opportunity.title[:30]}... (conf: {self.confidence:.0f}%)"
+
+    @property
+    def is_overdue(self):
+        """Check if validation is past deadline."""
+        if self.deadline and self.status in ['pending', 'assigned']:
+            from django.utils import timezone
+            return timezone.now() > self.deadline
+        return False
+
+    @property
+    def should_escalate(self):
+        """Check if validation should be escalated."""
+        if self.escalate_after and self.status in ['pending', 'assigned']:
+            from django.utils import timezone
+            return timezone.now() > self.escalate_after
+        return False
+
+    def assign_to(self, user):
+        """Assign this validation to a user."""
+        from django.utils import timezone
+        self.assigned_to = user
+        self.assigned_at = timezone.now()
+        self.status = 'assigned'
+        self.save(update_fields=['assigned_to', 'assigned_at', 'status', 'updated_at'])
+
+
+class ValidationDecision(models.Model):
+    """
+    Decision made on a validation request.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Records the human decision and reasoning, enabling
+    the learning loop to improve ML scoring over time.
+    """
+
+    DECISION_CHOICES = [
+        ('approve', 'Approve'),
+        ('approve_with_changes', 'Approve with Score Override'),
+        ('reject', 'Reject'),
+        ('escalate', 'Escalate to Higher Authority'),
+        ('defer', 'Defer Decision'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to request
+    validation_request = models.OneToOneField(
+        ValidationRequest,
+        on_delete=models.CASCADE,
+        related_name='decision'
+    )
+
+    # Decision
+    decision = models.CharField(
+        max_length=30,
+        choices=DECISION_CHOICES
+    )
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='validation_decisions'
+    )
+
+    # Score override (if approve_with_changes)
+    override_score = models.FloatField(
+        null=True, blank=True,
+        help_text="Human-assigned score (if different from ML)"
+    )
+
+    # Reasoning (for ML learning)
+    reasoning = models.TextField(
+        blank=True,
+        help_text="Why this decision was made"
+    )
+    reasoning_tags = models.JSONField(
+        default=list,
+        help_text="Structured tags for reasoning (e.g., ['price_too_high', 'wrong_category'])"
+    )
+
+    # Quality indicators
+    agreement_with_ml = models.BooleanField(
+        default=True,
+        help_text="Did human agree with ML's assessment?"
+    )
+    ml_error_magnitude = models.FloatField(
+        null=True, blank=True,
+        help_text="How far off was ML? (override_score - hybrid_score)"
+    )
+
+    # Timing
+    decision_time_seconds = models.IntegerField(
+        null=True, blank=True,
+        help_text="How long the human took to decide"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        indexes = [
+            models.Index(fields=['decision']),
+            models.Index(fields=['decided_by', 'created_at']),
+            models.Index(fields=['agreement_with_ml']),
+        ]
+
+    def __str__(self):
+        return f"Decision: {self.decision} by {self.decided_by} ({self.created_at.date()})"
+
+    def save(self, *args, **kwargs):
+        """Calculate ML error magnitude on save."""
+        if self.override_score is not None:
+            request = self.validation_request
+            self.ml_error_magnitude = self.override_score - request.hybrid_score
+            self.agreement_with_ml = abs(self.ml_error_magnitude) <= 10  # Within 10 points
+        super().save(*args, **kwargs)
+
+
+class ValidationConfig(models.Model):
+    """
+    Configuration for the HITL validation system.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Defines confidence thresholds and validation rules.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # User-specific config (null = global default)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='validation_config',
+        null=True, blank=True
+    )
+
+    # Confidence thresholds
+    auto_approve_threshold = models.FloatField(
+        default=85.0,
+        help_text="Auto-approve if confidence >= this (0-100)"
+    )
+    auto_reject_threshold = models.FloatField(
+        default=50.0,
+        help_text="Auto-reject if confidence < this (0-100)"
+    )
+
+    # Validation queue settings
+    default_deadline_hours = models.IntegerField(
+        default=24,
+        help_text="Default hours until validation deadline"
+    )
+    escalation_delay_hours = models.IntegerField(
+        default=4,
+        help_text="Hours before unreviewed items escalate"
+    )
+
+    # Auto-assignment settings
+    enable_auto_assignment = models.BooleanField(
+        default=True,
+        help_text="Automatically assign validations to reviewers"
+    )
+    max_assignments_per_user = models.IntegerField(
+        default=10,
+        help_text="Max pending assignments per reviewer"
+    )
+
+    # Feature flags
+    require_reasoning = models.BooleanField(
+        default=False,
+        help_text="Require reasoning for all decisions"
+    )
+    require_reasoning_for_overrides = models.BooleanField(
+        default=True,
+        help_text="Require reasoning when overriding ML score"
+    )
+
+    # Metrics
+    total_validations = models.IntegerField(default=0)
+    total_approved = models.IntegerField(default=0)
+    total_rejected = models.IntegerField(default=0)
+    total_overrides = models.IntegerField(default=0)
+    avg_decision_time_seconds = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Validation Configuration"
+        verbose_name_plural = "Validation Configurations"
+
+    def __str__(self):
+        if self.user:
+            return f"Validation Config for {self.user.username}"
+        return "Global Validation Config"
+
+    @classmethod
+    def get_config(cls, user=None):
+        """Get validation configuration for a user or global default."""
+        if user:
+            config, _ = cls.objects.get_or_create(user=user)
+            return config
+        config, _ = cls.objects.get_or_create(user=None)
+        return config
+
+    def record_decision(self, decision: str, decision_time: int = None):
+        """Record a validation decision for metrics."""
+        self.total_validations += 1
+        if decision in ['approve', 'approve_with_changes', 'auto_approved']:
+            self.total_approved += 1
+        elif decision in ['reject', 'auto_rejected']:
+            self.total_rejected += 1
+        if decision == 'approve_with_changes':
+            self.total_overrides += 1
+
+        # Update average decision time
+        if decision_time:
+            if self.total_validations == 1:
+                self.avg_decision_time_seconds = float(decision_time)
+            else:
+                self.avg_decision_time_seconds = (
+                    (self.avg_decision_time_seconds * (self.total_validations - 1) + decision_time)
+                    / self.total_validations
+                )
+
+        self.save(update_fields=[
+            'total_validations', 'total_approved', 'total_rejected',
+            'total_overrides', 'avg_decision_time_seconds', 'updated_at'
+        ])
+
+
 class OpportunityAction(models.Model):
     """
     Track actions taken on opportunities.
@@ -16477,3 +17266,1329 @@ class AgentAccuracyMetrics(models.Model):
         self.confidence_multiplier = max(0.5, min(1.5, self.confidence_multiplier))
 
         self.save()
+
+
+# =============================================================================
+# Session 472: Market Intelligence Provenance & Compliance (Phase 5)
+# =============================================================================
+
+
+class DataProvenance(models.Model):
+    """
+    Session 472: Market Intelligence Provenance Tracking
+
+    Tracks the complete lineage of data through the Market Intelligence pipeline:
+    Spider Data → Opportunity → Score → Validation → Decision → Outcome
+
+    Features:
+    - Immutable lineage chain with parent references
+    - Source attribution (which spider, which agent, which user)
+    - Metadata capture at each stage
+    - Compliance verification status
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Data item identification
+    entity_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('spider_data', 'Spider Data'),
+            ('opportunity', 'Opportunity'),
+            ('scoring_result', 'Scoring Result'),
+            ('validation_request', 'Validation Request'),
+            ('validation_decision', 'Validation Decision'),
+            ('outcome', 'Outcome'),
+            ('ml_model', 'ML Model'),
+            ('alert', 'System Alert'),
+        ],
+        db_index=True,
+        help_text="Type of entity this provenance record tracks"
+    )
+
+    entity_id = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="ID of the entity (UUID or other identifier)"
+    )
+
+    # Lineage chain
+    parent = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='children',
+        help_text="Parent provenance record in the lineage chain"
+    )
+
+    root = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='descendants',
+        help_text="Root provenance record (original spider data)"
+    )
+
+    # Lineage depth (0 = root/spider_data, 1 = opportunity, etc.)
+    depth = models.PositiveIntegerField(
+        default=0,
+        help_text="Depth in the lineage chain (0 = root)"
+    )
+
+    # Source attribution
+    source_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('spider', 'Spider Crawl'),
+            ('api', 'External API'),
+            ('user_input', 'User Input'),
+            ('ml_prediction', 'ML Prediction'),
+            ('agent_action', 'Agent Action'),
+            ('system', 'System Process'),
+            ('human_review', 'Human Review'),
+        ],
+        help_text="Type of source that created this data"
+    )
+
+    source_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Name of the source (spider name, agent name, username, etc.)"
+    )
+
+    source_version = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Version of the source (model version, spider version, etc.)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    data_timestamp = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Original timestamp of the data (may differ from record creation)"
+    )
+
+    # Metadata capture
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Full metadata snapshot at this stage"
+    )
+
+    # Cryptographic verification
+    content_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+        help_text="SHA-256 hash of the entity content for integrity verification"
+    )
+
+    previous_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Hash of the parent provenance record (blockchain-style)"
+    )
+
+    # Compliance status
+    compliance_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending Review'),
+            ('compliant', 'Compliant'),
+            ('non_compliant', 'Non-Compliant'),
+            ('exempt', 'Exempt'),
+        ],
+        default='pending',
+        help_text="Compliance verification status"
+    )
+
+    compliance_checked_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When compliance was last checked"
+    )
+
+    compliance_notes = models.TextField(
+        blank=True,
+        help_text="Notes from compliance review"
+    )
+
+    # User attribution
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='provenance_records_created',
+        help_text="User who triggered this data creation (if applicable)"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Data Provenance"
+        verbose_name_plural = "Data Provenance Records"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['entity_type', 'entity_id']),
+            models.Index(fields=['source_type', 'source_name']),
+            models.Index(fields=['compliance_status']),
+            models.Index(fields=['root', 'depth']),
+        ]
+
+    def __str__(self):
+        return f"{self.entity_type}:{self.entity_id[:8]}... (depth={self.depth})"
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate depth and root
+        if self.parent:
+            self.depth = self.parent.depth + 1
+            self.root = self.parent.root or self.parent
+            self.previous_hash = self.parent.content_hash
+        else:
+            self.depth = 0
+            self.root = None
+            self.previous_hash = ''
+
+        super().save(*args, **kwargs)
+
+    def get_full_lineage(self):
+        """Get the complete lineage chain from root to this record."""
+        lineage = [self]
+        current = self
+
+        while current.parent:
+            lineage.insert(0, current.parent)
+            current = current.parent
+
+        return lineage
+
+    def get_lineage_summary(self):
+        """Get a summary of the lineage chain."""
+        lineage = self.get_full_lineage()
+        return [
+            {
+                'id': str(p.id),
+                'entity_type': p.entity_type,
+                'entity_id': p.entity_id,
+                'source_type': p.source_type,
+                'source_name': p.source_name,
+                'created_at': p.created_at.isoformat(),
+                'depth': p.depth,
+            }
+            for p in lineage
+        ]
+
+
+class AuditLog(models.Model):
+    """
+    Session 472: Immutable Audit Trail
+
+    Records all significant actions in the Market Intelligence pipeline.
+    This log is append-only and designed to be immutable for compliance.
+
+    Features:
+    - All scoring, validation, and decision actions
+    - User attribution for human actions
+    - Agent attribution for automated actions
+    - Full before/after state capture
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Action details
+    action_type = models.CharField(
+        max_length=50,
+        choices=[
+            # Data collection
+            ('spider_crawl', 'Spider Crawl'),
+            ('data_import', 'Data Import'),
+            # Scoring
+            ('ml_score', 'ML Scoring'),
+            ('rule_score', 'Rule-Based Scoring'),
+            ('hybrid_score', 'Hybrid Scoring'),
+            # Validation
+            ('validation_queued', 'Validation Queued'),
+            ('validation_assigned', 'Validation Assigned'),
+            ('validation_approved', 'Validation Approved'),
+            ('validation_rejected', 'Validation Rejected'),
+            ('validation_escalated', 'Validation Escalated'),
+            ('validation_expired', 'Validation Expired'),
+            # Decisions
+            ('auto_approved', 'Auto-Approved'),
+            ('auto_rejected', 'Auto-Rejected'),
+            ('human_override', 'Human Override'),
+            # Outcomes
+            ('outcome_recorded', 'Outcome Recorded'),
+            # ML Model
+            ('model_trained', 'Model Trained'),
+            ('model_deployed', 'Model Deployed'),
+            # System
+            ('config_changed', 'Configuration Changed'),
+            ('alert_triggered', 'Alert Triggered'),
+        ],
+        db_index=True,
+        help_text="Type of action being logged"
+    )
+
+    # Actor
+    actor_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('user', 'Human User'),
+            ('agent', 'AI Agent'),
+            ('system', 'System Process'),
+            ('scheduler', 'Scheduled Task'),
+        ],
+        help_text="Type of actor that performed this action"
+    )
+
+    actor_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="ID of the actor (user ID, agent ID, or task name)"
+    )
+
+    actor_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Human-readable name of the actor"
+    )
+
+    # Target entity
+    target_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Type of entity being acted upon"
+    )
+
+    target_id = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text="ID of the target entity"
+    )
+
+    # State capture
+    before_state = models.JSONField(
+        default=dict,
+        help_text="State of the entity before the action (for changes)"
+    )
+
+    after_state = models.JSONField(
+        default=dict,
+        help_text="State of the entity after the action"
+    )
+
+    # Provenance link
+    provenance = models.ForeignKey(
+        DataProvenance,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='audit_logs',
+        help_text="Associated provenance record"
+    )
+
+    # Context
+    context = models.JSONField(
+        default=dict,
+        help_text="Additional context about the action"
+    )
+
+    reason = models.TextField(
+        blank=True,
+        help_text="Reason for the action (especially for human actions)"
+    )
+
+    # Timestamps
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Integrity
+    log_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Hash of the log entry for integrity verification"
+    )
+
+    previous_log_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Hash of the previous log entry (chain verification)"
+    )
+
+    # Request tracking
+    request_id = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text="Request/correlation ID for tracing"
+    )
+
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True,
+        help_text="IP address of the request (for user actions)"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Audit Log"
+        verbose_name_plural = "Audit Logs"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['action_type', 'timestamp']),
+            models.Index(fields=['actor_type', 'actor_id']),
+            models.Index(fields=['target_type', 'target_id']),
+            models.Index(fields=['request_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.action_type} by {self.actor_name or self.actor_id} at {self.timestamp}"
+
+    def save(self, *args, **kwargs):
+        import hashlib
+        import json
+
+        # Generate log hash
+        content = json.dumps({
+            'action_type': self.action_type,
+            'actor_type': self.actor_type,
+            'actor_id': self.actor_id,
+            'target_type': self.target_type,
+            'target_id': self.target_id,
+            'after_state': self.after_state,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+        }, sort_keys=True, default=str)
+
+        self.log_hash = hashlib.sha256(content.encode()).hexdigest()
+
+        super().save(*args, **kwargs)
+
+
+class ComplianceCheck(models.Model):
+    """
+    Session 472: Compliance Verification Records
+
+    Records compliance checks performed on data and decisions.
+    Used for regulatory compliance, data quality assurance, and auditing.
+
+    Features:
+    - Rule-based compliance checking
+    - Data freshness validation
+    - Source attribution requirements
+    - Confidence threshold verification
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Target of compliance check
+    provenance = models.ForeignKey(
+        DataProvenance,
+        on_delete=models.CASCADE,
+        related_name='compliance_checks',
+        help_text="Provenance record being checked"
+    )
+
+    # Check details
+    check_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('data_freshness', 'Data Freshness'),
+            ('source_attribution', 'Source Attribution'),
+            ('confidence_threshold', 'Confidence Threshold'),
+            ('human_review', 'Human Review Required'),
+            ('model_version', 'Model Version Compliance'),
+            ('data_quality', 'Data Quality'),
+            ('bias_check', 'Bias Detection'),
+            ('rate_limit', 'Rate Limit Compliance'),
+            ('retention', 'Data Retention'),
+            ('privacy', 'Privacy Compliance'),
+        ],
+        help_text="Type of compliance check"
+    )
+
+    # Check configuration
+    rule_name = models.CharField(
+        max_length=100,
+        help_text="Name of the compliance rule"
+    )
+
+    rule_version = models.CharField(
+        max_length=20,
+        default='1.0',
+        help_text="Version of the compliance rule"
+    )
+
+    rule_config = models.JSONField(
+        default=dict,
+        help_text="Configuration parameters for the rule"
+    )
+
+    # Check result
+    passed = models.BooleanField(
+        help_text="Whether the check passed"
+    )
+
+    severity = models.CharField(
+        max_length=20,
+        choices=[
+            ('info', 'Informational'),
+            ('warning', 'Warning'),
+            ('error', 'Error'),
+            ('critical', 'Critical'),
+        ],
+        default='warning',
+        help_text="Severity if check failed"
+    )
+
+    # Result details
+    actual_value = models.JSONField(
+        null=True, blank=True,
+        help_text="Actual value that was checked"
+    )
+
+    expected_value = models.JSONField(
+        null=True, blank=True,
+        help_text="Expected value or threshold"
+    )
+
+    message = models.TextField(
+        blank=True,
+        help_text="Human-readable result message"
+    )
+
+    details = models.JSONField(
+        default=dict,
+        help_text="Additional check details"
+    )
+
+    # Remediation
+    remediation_required = models.BooleanField(
+        default=False,
+        help_text="Whether remediation is required"
+    )
+
+    remediation_action = models.TextField(
+        blank=True,
+        help_text="Suggested remediation action"
+    )
+
+    remediated = models.BooleanField(
+        default=False,
+        help_text="Whether the issue has been remediated"
+    )
+
+    remediated_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the issue was remediated"
+    )
+
+    remediated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='remediations',
+        help_text="User who performed the remediation"
+    )
+
+    # Timestamps
+    checked_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Audit link
+    audit_log = models.ForeignKey(
+        AuditLog,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='compliance_checks',
+        help_text="Associated audit log entry"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Compliance Check"
+        verbose_name_plural = "Compliance Checks"
+        ordering = ['-checked_at']
+        indexes = [
+            models.Index(fields=['check_type', 'passed']),
+            models.Index(fields=['provenance', 'check_type']),
+            models.Index(fields=['severity', 'remediated']),
+        ]
+
+    def __str__(self):
+        status = "PASS" if self.passed else "FAIL"
+        return f"{self.check_type} [{status}] - {self.rule_name}"
+
+
+class ComplianceRule(models.Model):
+    """
+    Session 472: Compliance Rule Definitions
+
+    Stores configurable compliance rules that can be applied to data.
+    Rules are versioned and can be enabled/disabled.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Rule identification
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique name for this rule"
+    )
+
+    display_name = models.CharField(
+        max_length=200,
+        help_text="Human-readable name"
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Description of what this rule checks"
+    )
+
+    version = models.CharField(
+        max_length=20,
+        default='1.0',
+        help_text="Version of the rule"
+    )
+
+    # Rule type and target
+    check_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('data_freshness', 'Data Freshness'),
+            ('source_attribution', 'Source Attribution'),
+            ('confidence_threshold', 'Confidence Threshold'),
+            ('human_review', 'Human Review Required'),
+            ('model_version', 'Model Version Compliance'),
+            ('data_quality', 'Data Quality'),
+            ('bias_check', 'Bias Detection'),
+            ('rate_limit', 'Rate Limit Compliance'),
+            ('retention', 'Data Retention'),
+            ('privacy', 'Privacy Compliance'),
+        ],
+        help_text="Type of compliance check"
+    )
+
+    entity_types = ArrayField(
+        models.CharField(max_length=50),
+        default=list,
+        help_text="Entity types this rule applies to"
+    )
+
+    # Rule configuration
+    config = models.JSONField(
+        default=dict,
+        help_text="Rule configuration parameters"
+    )
+
+    # Severity and behavior
+    severity = models.CharField(
+        max_length=20,
+        choices=[
+            ('info', 'Informational'),
+            ('warning', 'Warning'),
+            ('error', 'Error'),
+            ('critical', 'Critical'),
+        ],
+        default='warning',
+        help_text="Severity level if rule fails"
+    )
+
+    blocking = models.BooleanField(
+        default=False,
+        help_text="Whether a failure blocks the operation"
+    )
+
+    auto_remediate = models.BooleanField(
+        default=False,
+        help_text="Whether to attempt automatic remediation"
+    )
+
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this rule is active"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Compliance Rule"
+        verbose_name_plural = "Compliance Rules"
+        ordering = ['check_type', 'name']
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.display_name} v{self.version} [{status}]"
+
+    @classmethod
+    def get_active_rules(cls, entity_type: str = None):
+        """Get all active rules, optionally filtered by entity type."""
+        rules = cls.objects.filter(is_active=True)
+
+        if entity_type:
+            rules = rules.filter(entity_types__contains=[entity_type])
+
+        return rules
+
+
+# =============================================================================
+# PHASE 6: ROI METRICS & ATTRIBUTION (Session 472)
+# =============================================================================
+# These models track the complete revenue attribution pipeline:
+# Spider Source → Opportunity → User Action → Conversion → Revenue
+
+
+class ConversionEvent(models.Model):
+    """
+    Tracks conversion funnel events from opportunity to revenue.
+
+    The conversion funnel:
+    view → click → apply → interview → convert → revenue
+
+    Session 472: Market Intelligence Architecture - Phase 6
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    # Event type in conversion funnel
+    event_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('view', 'Opportunity Viewed'),
+            ('click', 'Link Clicked'),
+            ('apply', 'Application Started'),
+            ('submit', 'Application Submitted'),
+            ('interview', 'Interview Scheduled'),
+            ('offer', 'Offer Received'),
+            ('convert', 'Conversion Complete'),
+            ('revenue', 'Revenue Received'),
+            ('churn', 'Customer Churned'),
+            ('refund', 'Refund Issued'),
+        ],
+        db_index=True,
+        help_text="Type of conversion event"
+    )
+
+    # Link to opportunity
+    opportunity = models.ForeignKey(
+        'Opportunity',
+        on_delete=models.CASCADE,
+        related_name='conversion_events',
+        null=True,
+        blank=True,
+        help_text="The opportunity this event relates to"
+    )
+
+    # Link to spider data source
+    spider_data = models.ForeignKey(
+        'SpiderData',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conversion_events',
+        help_text="Original spider data source"
+    )
+
+    # User who triggered the event
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conversion_events',
+        help_text="User who triggered the event"
+    )
+
+    # Session tracking
+    session_id = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Browser/app session ID"
+    )
+
+    # Monetary value (for revenue events)
+    value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Monetary value if applicable"
+    )
+
+    currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text="Currency code"
+    )
+
+    # Attribution tracking
+    attribution_source = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Source attribution (spider name, campaign, etc.)"
+    )
+
+    attribution_medium = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Medium (organic, paid, email, etc.)"
+    )
+
+    attribution_campaign = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Campaign identifier"
+    )
+
+    # Previous event in funnel (for path tracking)
+    previous_event = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='next_events',
+        help_text="Previous event in conversion path"
+    )
+
+    # Metadata
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Additional event metadata"
+    )
+
+    # Timestamps
+    event_timestamp = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+        help_text="When the event occurred"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Conversion Event"
+        verbose_name_plural = "Conversion Events"
+        ordering = ['-event_timestamp']
+        indexes = [
+            models.Index(fields=['event_type', 'event_timestamp']),
+            models.Index(fields=['attribution_source', 'event_timestamp']),
+            models.Index(fields=['user', 'event_timestamp']),
+        ]
+
+    def __str__(self):
+        value_str = f" (${self.value})" if self.value else ""
+        return f"{self.event_type}{value_str} - {self.event_timestamp.date()}"
+
+    @property
+    def funnel_position(self) -> int:
+        """Position in the conversion funnel (0-7)."""
+        funnel_order = ['view', 'click', 'apply', 'submit', 'interview', 'offer', 'convert', 'revenue']
+        try:
+            return funnel_order.index(self.event_type)
+        except ValueError:
+            return -1
+
+    def get_conversion_path(self) -> list:
+        """Get the full conversion path leading to this event."""
+        path = [self]
+        current = self
+
+        while current.previous_event:
+            path.insert(0, current.previous_event)
+            current = current.previous_event
+
+        return path
+
+
+class ROIMetric(models.Model):
+    """
+    Aggregated ROI metrics by source, time period, and dimension.
+
+    Tracks cost, revenue, and derived metrics for ROI analysis.
+
+    Session 472: Market Intelligence Architecture - Phase 6
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    # Time period
+    period_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('hourly', 'Hourly'),
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('monthly', 'Monthly'),
+            ('quarterly', 'Quarterly'),
+            ('yearly', 'Yearly'),
+        ],
+        db_index=True,
+        help_text="Aggregation period"
+    )
+
+    period_start = models.DateTimeField(
+        db_index=True,
+        help_text="Start of the period"
+    )
+
+    period_end = models.DateTimeField(
+        help_text="End of the period"
+    )
+
+    # Dimension for grouping
+    dimension = models.CharField(
+        max_length=50,
+        choices=[
+            ('overall', 'Overall Platform'),
+            ('spider_source', 'By Spider Source'),
+            ('opportunity_category', 'By Opportunity Category'),
+            ('user_segment', 'By User Segment'),
+            ('agent', 'By Agent'),
+            ('campaign', 'By Campaign'),
+        ],
+        db_index=True,
+        help_text="Grouping dimension"
+    )
+
+    dimension_value = models.CharField(
+        max_length=200,
+        db_index=True,
+        help_text="Value of the dimension (e.g., spider name)"
+    )
+
+    # Funnel metrics (counts)
+    views = models.IntegerField(default=0, help_text="Number of views")
+    clicks = models.IntegerField(default=0, help_text="Number of clicks")
+    applications = models.IntegerField(default=0, help_text="Number of applications")
+    conversions = models.IntegerField(default=0, help_text="Number of conversions")
+
+    # Financial metrics
+    total_revenue = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Total revenue generated"
+    )
+
+    total_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Total cost (API calls, compute, etc.)"
+    )
+
+    # Calculated metrics (stored for query performance)
+    click_through_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="CTR = clicks / views"
+    )
+
+    conversion_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="CR = conversions / applications"
+    )
+
+    cost_per_acquisition = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="CPA = cost / conversions"
+    )
+
+    return_on_investment = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="ROI = (revenue - cost) / cost"
+    )
+
+    average_revenue_per_user = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="ARPU = revenue / unique users"
+    )
+
+    lifetime_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Estimated LTV"
+    )
+
+    # Unique counts
+    unique_users = models.IntegerField(
+        default=0,
+        help_text="Unique users in period"
+    )
+
+    unique_opportunities = models.IntegerField(
+        default=0,
+        help_text="Unique opportunities viewed"
+    )
+
+    # Timestamps
+    calculated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When metrics were last calculated"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "ROI Metric"
+        verbose_name_plural = "ROI Metrics"
+        ordering = ['-period_start', 'dimension']
+        unique_together = ['period_type', 'period_start', 'dimension', 'dimension_value']
+        indexes = [
+            models.Index(fields=['dimension', 'dimension_value', 'period_start']),
+        ]
+
+    def __str__(self):
+        return f"{self.dimension}:{self.dimension_value} ({self.period_type} {self.period_start.date()})"
+
+    def calculate_derived_metrics(self):
+        """Calculate all derived metrics from base counts."""
+        from decimal import Decimal
+
+        # Click-through rate
+        if self.views > 0:
+            self.click_through_rate = Decimal(self.clicks) / Decimal(self.views)
+        else:
+            self.click_through_rate = None
+
+        # Conversion rate
+        if self.applications > 0:
+            self.conversion_rate = Decimal(self.conversions) / Decimal(self.applications)
+        else:
+            self.conversion_rate = None
+
+        # Cost per acquisition
+        if self.conversions > 0:
+            self.cost_per_acquisition = self.total_cost / Decimal(self.conversions)
+        else:
+            self.cost_per_acquisition = None
+
+        # Return on investment
+        if self.total_cost > 0:
+            self.return_on_investment = (self.total_revenue - self.total_cost) / self.total_cost
+        else:
+            self.return_on_investment = None
+
+        # Average revenue per user
+        if self.unique_users > 0:
+            self.average_revenue_per_user = self.total_revenue / Decimal(self.unique_users)
+        else:
+            self.average_revenue_per_user = None
+
+
+class AttributionPath(models.Model):
+    """
+    Tracks the complete attribution path from data source to revenue.
+
+    Maps the journey: Spider → Opportunity → User Actions → Revenue
+
+    Session 472: Market Intelligence Architecture - Phase 6
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    # Final conversion event (revenue)
+    conversion_event = models.OneToOneField(
+        ConversionEvent,
+        on_delete=models.CASCADE,
+        related_name='attribution_path',
+        help_text="The final conversion/revenue event"
+    )
+
+    # Attribution model used
+    attribution_model = models.CharField(
+        max_length=30,
+        choices=[
+            ('first_touch', 'First Touch'),
+            ('last_touch', 'Last Touch'),
+            ('linear', 'Linear'),
+            ('time_decay', 'Time Decay'),
+            ('position_based', 'Position Based'),
+            ('data_driven', 'Data Driven'),
+        ],
+        default='last_touch',
+        help_text="Attribution model used"
+    )
+
+    # Path components (ordered list of touchpoints)
+    path_data = models.JSONField(
+        default=list,
+        help_text="Ordered list of touchpoints in the path"
+    )
+
+    # Path statistics
+    path_length = models.IntegerField(
+        default=0,
+        help_text="Number of touchpoints"
+    )
+
+    time_to_conversion_hours = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours from first touch to conversion"
+    )
+
+    # Attribution credits (for multi-touch models)
+    attribution_credits = models.JSONField(
+        default=dict,
+        help_text="Credit distribution by source"
+    )
+
+    # Primary attributed source
+    primary_source = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text="Primary source for this conversion"
+    )
+
+    primary_source_credit = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=1.0,
+        help_text="Credit assigned to primary source (0-1)"
+    )
+
+    # Value attribution
+    attributed_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Value attributed to this path"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Attribution Path"
+        verbose_name_plural = "Attribution Paths"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['primary_source', 'created_at']),
+            models.Index(fields=['attribution_model', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.primary_source} → ${self.attributed_value} ({self.attribution_model})"
+
+    def calculate_credits(self):
+        """Calculate attribution credits based on the selected model."""
+        from decimal import Decimal
+
+        if not self.path_data:
+            return
+
+        num_touchpoints = len(self.path_data)
+        if num_touchpoints == 0:
+            return
+
+        credits = {}
+
+        if self.attribution_model == 'first_touch':
+            # All credit to first touchpoint
+            first = self.path_data[0]
+            source = first.get('source', 'unknown')
+            credits[source] = 1.0
+
+        elif self.attribution_model == 'last_touch':
+            # All credit to last touchpoint
+            last = self.path_data[-1]
+            source = last.get('source', 'unknown')
+            credits[source] = 1.0
+
+        elif self.attribution_model == 'linear':
+            # Equal credit to all touchpoints
+            credit_per = 1.0 / num_touchpoints
+            for touchpoint in self.path_data:
+                source = touchpoint.get('source', 'unknown')
+                credits[source] = credits.get(source, 0) + credit_per
+
+        elif self.attribution_model == 'time_decay':
+            # More credit to recent touchpoints
+            total_weight = sum(range(1, num_touchpoints + 1))
+            for i, touchpoint in enumerate(self.path_data):
+                source = touchpoint.get('source', 'unknown')
+                weight = (i + 1) / total_weight
+                credits[source] = credits.get(source, 0) + weight
+
+        elif self.attribution_model == 'position_based':
+            # 40% first, 40% last, 20% distributed among middle
+            if num_touchpoints == 1:
+                source = self.path_data[0].get('source', 'unknown')
+                credits[source] = 1.0
+            elif num_touchpoints == 2:
+                credits[self.path_data[0].get('source', 'unknown')] = 0.5
+                credits[self.path_data[-1].get('source', 'unknown')] = \
+                    credits.get(self.path_data[-1].get('source', 'unknown'), 0) + 0.5
+            else:
+                # First and last get 40% each
+                credits[self.path_data[0].get('source', 'unknown')] = 0.4
+                credits[self.path_data[-1].get('source', 'unknown')] = \
+                    credits.get(self.path_data[-1].get('source', 'unknown'), 0) + 0.4
+
+                # Middle touchpoints share 20%
+                middle_count = num_touchpoints - 2
+                if middle_count > 0:
+                    middle_credit = 0.2 / middle_count
+                    for touchpoint in self.path_data[1:-1]:
+                        source = touchpoint.get('source', 'unknown')
+                        credits[source] = credits.get(source, 0) + middle_credit
+
+        self.attribution_credits = credits
+
+        # Set primary source (highest credit)
+        if credits:
+            self.primary_source = max(credits, key=credits.get)
+            self.primary_source_credit = Decimal(str(credits[self.primary_source]))
+
+
+class WeeklyIntelligenceBrief(models.Model):
+    """
+    Weekly intelligence brief summarizing ROI and performance.
+
+    Auto-generated summary for stakeholders.
+
+    Session 472: Market Intelligence Architecture - Phase 6
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    # Time period
+    week_start = models.DateField(
+        db_index=True,
+        help_text="Start of the week"
+    )
+
+    week_end = models.DateField(
+        help_text="End of the week"
+    )
+
+    # Summary metrics
+    total_revenue = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0
+    )
+
+    total_conversions = models.IntegerField(default=0)
+    total_opportunities = models.IntegerField(default=0)
+    total_spider_records = models.IntegerField(default=0)
+
+    # Week-over-week changes
+    revenue_change_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="% change from previous week"
+    )
+
+    conversions_change_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    # Top performers
+    top_spider_sources = models.JSONField(
+        default=list,
+        help_text="Top performing spider sources"
+    )
+
+    top_opportunity_categories = models.JSONField(
+        default=list,
+        help_text="Top performing categories"
+    )
+
+    top_agents = models.JSONField(
+        default=list,
+        help_text="Top performing agents"
+    )
+
+    # Insights and recommendations
+    key_insights = models.JSONField(
+        default=list,
+        help_text="AI-generated insights"
+    )
+
+    recommendations = models.JSONField(
+        default=list,
+        help_text="AI-generated recommendations"
+    )
+
+    # Full report content
+    executive_summary = models.TextField(
+        blank=True,
+        help_text="Executive summary text"
+    )
+
+    detailed_report = models.JSONField(
+        default=dict,
+        help_text="Full detailed report data"
+    )
+
+    # Generation status
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending Generation'),
+            ('generating', 'Generating'),
+            ('complete', 'Complete'),
+            ('failed', 'Failed'),
+        ],
+        default='pending'
+    )
+
+    generation_error = models.TextField(blank=True)
+
+    # Timestamps
+    generated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Weekly Intelligence Brief"
+        verbose_name_plural = "Weekly Intelligence Briefs"
+        ordering = ['-week_start']
+        unique_together = ['week_start']
+
+    def __str__(self):
+        return f"Week of {self.week_start} - ${self.total_revenue}"

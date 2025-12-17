@@ -349,7 +349,10 @@ class BaseAgent(ABC, TimeTravelMixin):
             try:
                 from core.services.spider_semantic_search import get_spider_semantic_search
                 search = get_spider_semantic_search()
-                semantic_results = search.semantic_search(task, limit=3)
+                # Session 468: Use pre-computed embeddings to avoid on-the-fly generation
+                # This is MUCH faster than semantic_search() which generates embeddings
+                # for every spider data entry on each call
+                semantic_results = search.semantic_search_with_db_embeddings(task, limit=3)
 
                 for sr in semantic_results:
                     results.append({

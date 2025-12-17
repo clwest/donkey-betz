@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 466 (December 17, 2025)
+**Last Updated:** Session 474 (December 17, 2025)
 
 ---
 
@@ -48,7 +48,12 @@
 | **Stock Audit** | **4 Agents + Coordinator** | **Production (Session 461)** |
 | **Market Intelligence Desk** | **5 Agents + TTS Briefs + Auto-scheduling** | **Production (Session 465)** |
 | **Autonomous Content Studio** | **4 Agents + Internal Debate + Learning Loop** | **Production (Session 466)** |
-| **Studio Discord Commands** | **6 Commands (create/list/status/pause/resume/performance)** | **Production (Session 466)** |
+| **Studio Discord Commands** | **7 Commands (+episode view)** | **Production (Session 469)** |
+| **ML Scoring Engine** | **XGBoost + SHAP Explainability** | **Production (Session 470)** |
+| **Narrative Drift Detector** | **30 Narratives, 8 Domains, 4 Agents** | **Production (Session 471)** |
+| **Provenance & Compliance** | **Blockchain-style Hash Chain** | **Production (Session 472)** |
+| **ROI Metrics** | **Conversion Funnel + Attribution** | **Production (Session 472)** |
+| **Unified Intelligence Pipeline** | **All 3 Autonomous Systems Connected** | **Production (Session 474)** |
 
 ---
 
@@ -1242,6 +1247,292 @@ Unlike simpler systems, this NEVER needs intervention:
 - ✅ Persists knowledge (Property #1: TopicPerformance, ContentChannel)
 
 **It's a synthetic organization that runs forever and gets smarter over time.**
+
+---
+
+## ML Scoring Engine (Session 470)
+
+**Status:** Phase 1 Complete
+
+An XGBoost-based machine learning scoring system with SHAP explainability for opportunity scoring.
+
+### Architecture
+
+| Component | Description |
+|-----------|-------------|
+| MLScoringEngine | XGBoost model + SHAP for explainable predictions (~500 lines) |
+| MLModelVersion | Tracks model versions, metrics, feature importance |
+| ScoringExplanation | Stores SHAP values for each scored opportunity |
+
+### Hybrid Scoring Formula
+
+```
+final_score = (0.6 * ml_score) + (0.4 * rule_based_score)
+```
+
+### Feature Extraction (15 features)
+
+The ML model extracts these features from SpiderData:
+1. Title length
+2. Content length
+3. Source authority score
+4. Freshness (hours since discovery)
+5. Category match score
+6. Keyword relevance
+7. Has URL (boolean)
+8. Content quality indicators
+9. Source reliability history
+10. Time of day discovered
+11. Day of week discovered
+12. Topic trending score
+13. Competition saturation
+14. Historical performance (similar topics)
+15. User preference alignment
+
+### SHAP Explainability
+
+Every scored opportunity includes feature contributions explaining WHY:
+```json
+{
+  "score": 78.5,
+  "explanation": {
+    "source_authority": +12.3,
+    "freshness": +8.7,
+    "keyword_relevance": +6.2,
+    "competition_saturation": -4.1
+  }
+}
+```
+
+### Auto-Training
+
+- **Trigger:** 100+ OpportunityOutcome records
+- **Schedule:** Weekly (Sunday 3:30 AM)
+- **Evaluation:** Daily (6:30 AM) - checks accuracy, triggers retraining if degraded
+
+### Celery Tasks
+
+| Task | Schedule | Purpose |
+|------|----------|---------|
+| `train_ml_scoring_model` | Sunday 3:30 AM | Retrain XGBoost model |
+| `evaluate_ml_model_performance` | Daily 6:30 AM | Check accuracy, trigger retraining if needed |
+
+### Database Models
+
+```python
+# MLModelVersion - Tracks model versions
+class MLModelVersion(models.Model):
+    version = models.CharField(max_length=50)
+    model_type = models.CharField(max_length=50)  # 'xgboost', 'lightgbm'
+    trained_at = models.DateTimeField()
+    training_samples = models.IntegerField()
+    accuracy = models.DecimalField()
+    precision = models.DecimalField()
+    recall = models.DecimalField()
+    f1_score = models.DecimalField()
+    feature_importance = models.JSONField()
+    is_active = models.BooleanField(default=False)
+    model_path = models.CharField()
+
+# ScoringExplanation - Stores SHAP values
+class ScoringExplanation(models.Model):
+    opportunity = models.ForeignKey('Opportunity')
+    model_version = models.ForeignKey('MLModelVersion')
+    ml_score = models.DecimalField()
+    rule_score = models.DecimalField()
+    final_score = models.DecimalField()
+    shap_values = models.JSONField()
+    created_at = models.DateTimeField()
+```
+
+### Current State
+
+| Component | Status |
+|-----------|--------|
+| ML Model | Not yet trained (needs OpportunityOutcome data) |
+| Scoring | Using rule-based fallback with hybrid structure |
+| Ready For | Auto-training when 100+ outcomes exist |
+
+### Usage
+
+```python
+from core.services.ml_scoring_engine import MLScoringEngine
+from core.models import SpiderData
+
+engine = MLScoringEngine()
+spider_data = SpiderData.objects.first()
+result = engine.score_opportunity(spider_data)
+print(f"Score: {result['score']}")
+print(f"Explanation: {result['explanation']}")
+```
+
+---
+
+## Narrative Drift Detector (Session 471)
+
+**Status:** COMPLETE (Tier 1 Autonomous Situation #2)
+
+Monitors public narratives across 8 domains and detects when the conversation is shifting.
+
+### Architecture
+
+| Component | Description |
+|-----------|-------------|
+| 30 Narratives | Tracked statements across 8 domains |
+| 8 Domains | tech, markets, politics, culture, geopolitics, crypto, climate, health |
+| 4 Agents | Historian, TrendBreak, CulturalImpact, Coordinator |
+| 5 Statuses | emerging, dominant, shifting, fading, dead |
+
+### Key Models
+
+| Model | Purpose |
+|-------|---------|
+| `Narrative` | Core narrative statements with keywords |
+| `NarrativeEvidence` | Spider data matching narratives |
+| `NarrativeShift` | Detected shift with confidence/importance |
+| `NarrativeAlert` | Notifications for significant shifts |
+
+### Agents
+
+1. **NarrativeHistorianAgent** - Historical context for narratives
+2. **TrendBreakDetectorAgent** - Identifies why shifts are happening
+3. **CulturalImpactAnalystAgent** - Predicts downstream effects
+4. **NarrativeDriftCoordinator** - Orchestrates the autonomous cycle
+
+---
+
+## Provenance & Compliance (Session 472)
+
+**Status:** COMPLETE (Market Intelligence Phase 5)
+
+Blockchain-style data lineage tracking with cryptographic integrity verification.
+
+### Architecture
+
+| Component | Description |
+|-----------|-------------|
+| DataProvenance | Entity lineage with hash chains |
+| AuditLog | Immutable append-only audit trail |
+| ComplianceCheck | Rule evaluation records |
+| ComplianceRule | Configurable compliance definitions |
+
+### Data Lineage Chain
+
+```
+SpiderData → Opportunity → Score → Validation → Outcome
+     ↓
+NarrativeEvidence → NarrativeShift → ContentEpisode
+```
+
+### Cryptographic Integrity
+
+- **Content Hash:** SHA-256 of entity content
+- **Chain Hash:** Previous record's hash (blockchain-style)
+- **Verification:** Full chain integrity checking
+
+### API Endpoints (11)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/mi/lineage/<entity_type>/<entity_id>/` | Get lineage chain |
+| `/api/mi/provenance/<id>/verify/` | Verify integrity |
+| `/api/mi/compliance/summary/` | Compliance statistics |
+| `/api/mi/audit/trail/` | Query audit logs |
+
+---
+
+## ROI Metrics (Session 472)
+
+**Status:** COMPLETE (Market Intelligence Phase 6)
+
+Revenue attribution and conversion tracking with multi-touch attribution.
+
+### Conversion Funnel
+
+```
+view → click → apply → submit → interview → offer → convert → revenue
+```
+
+### Attribution Models
+
+| Model | Description |
+|-------|-------------|
+| first_touch | First interaction gets full credit |
+| last_touch | Last interaction gets full credit |
+| linear | Equal credit to all touchpoints |
+| time_decay | Recent touchpoints get more credit |
+| position_based | 40% first, 40% last, 20% middle |
+
+### Key Models
+
+| Model | Purpose |
+|-------|---------|
+| `ConversionEvent` | Track funnel events |
+| `ROIMetric` | Aggregated ROI statistics |
+| `AttributionPath` | Multi-touch attribution chains |
+| `WeeklyIntelligenceBrief` | Auto-generated summaries |
+
+### API Endpoints (15)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/mi/roi/summary/` | ROI summary |
+| `/api/mi/roi/dashboard/` | Dashboard overview |
+| `/api/mi/conversion/record/` | Record event |
+| `/api/mi/funnel/` | Funnel metrics |
+| `/api/mi/attribution/by-source/` | By spider source |
+| `/api/mi/briefs/generate/` | Generate weekly brief |
+
+---
+
+## Unified Intelligence Pipeline (Session 474)
+
+**Status:** COMPLETE (All 3 Tier 1 Autonomous Situations Connected)
+
+Orchestrates all three autonomous systems as ONE unified pipeline.
+
+### Pipeline Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Spider Network → ML Score → Narrative Check → Content Gen → Track │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 6-Phase Pipeline
+
+| Phase | Description |
+|-------|-------------|
+| 1. Spider Data | Check recent crawls |
+| 2. ML Scoring | Score unscored opportunities |
+| 3. Narrative Drift | Run autonomous cycle |
+| 4. Content Generation | Create shift reports |
+| 5. Provenance | Collect lineage stats |
+| 6. Revenue | Track outcome revenue |
+
+### Celery Tasks
+
+| Task | Schedule |
+|------|----------|
+| `unified_pipeline.run_complete_cycle` | Every 12 hours |
+| `unified_pipeline.health_check` | Every 2 hours |
+
+### Provenance Chain
+
+Full data lineage tracking from spider to content:
+- `create_narrative_evidence_provenance()`
+- `create_narrative_shift_provenance()`
+- `create_content_episode_provenance()`
+
+### System Metrics
+
+| Metric | Value |
+|--------|-------|
+| Total Spiders | 67 |
+| Narratives Tracked | 30 |
+| Domains | 8 |
+| Agents | 53 |
+| Autonomous Systems | 3 (all connected) |
 
 ---
 

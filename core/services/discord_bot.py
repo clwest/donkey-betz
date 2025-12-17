@@ -501,6 +501,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
         await self.add_cog(ReactionFeedbackCog(self))  # Session 452: Auto-feedback from reactions
+        await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
 
         # Sync slash commands with Discord
         try:
@@ -5536,6 +5537,7 @@ class StudioCommands(commands.Cog):
                 else:  # monthly
                     next_due = now + timedelta(days=30)
 
+                # Session 469: Fixed - use status='active' instead of is_active=True
                 channel = ContentChannel.objects.create(
                     name=name,
                     topic_domain=domain,
@@ -5543,7 +5545,7 @@ class StudioCommands(commands.Cog):
                     target_audience=audience,
                     content_style=style,
                     next_content_due=next_due,
-                    is_active=True
+                    status='active'
                 )
                 return channel
 
@@ -5592,7 +5594,8 @@ class StudioCommands(commands.Cog):
             @sync_to_async
             def get_channels():
                 from core.models_autonomous_studio import ContentChannel
-                return list(ContentChannel.objects.filter(is_active=True).values(
+                # Session 469: Fixed - use status='active' instead of is_active=True
+                return list(ContentChannel.objects.filter(status='active').values(
                     'id', 'name', 'topic_domain', 'content_frequency', 'total_episodes_created',
                     'total_views', 'avg_retention_rate', 'confidence_multiplier', 'next_content_due'
                 ).order_by('-created_at')[:10])
@@ -5665,11 +5668,11 @@ class StudioCommands(commands.Cog):
 
                 channel = channels.first()
 
-                # Get recent episodes
+                # Get recent episodes (Session 469: Fixed field name - use created_at not published_at)
                 recent_episodes = list(ChannelEpisode.objects.filter(
                     channel=channel
-                ).order_by('-published_at')[:5].values(
-                    'title', 'topic', 'views', 'retention_rate', 'performance_score', 'published_at'
+                ).order_by('-created_at')[:5].values(
+                    'title', 'topic', 'views', 'retention_rate', 'performance_score', 'publish_date', 'created_at'
                 ))
 
                 # Get top topics
@@ -5701,7 +5704,8 @@ class StudioCommands(commands.Cog):
 
             embed = discord.Embed(
                 title=f"📊 {channel.name}",
-                description=f"**Domain:** {channel.topic_domain}\n**Status:** {'🟢 Active' if channel.is_active else '🔴 Paused'}",
+                # Session 469: Fixed - use status=='active' instead of is_active
+                description=f"**Domain:** {channel.topic_domain}\n**Status:** {'🟢 Active' if channel.status == 'active' else '🔴 Paused'}",
                 color=discord.Color.blue()
             )
 
@@ -5779,12 +5783,13 @@ class StudioCommands(commands.Cog):
             def pause_channel():
                 from core.models_autonomous_studio import ContentChannel
 
-                channels = ContentChannel.objects.filter(id__startswith=channel_id, is_active=True)
+                # Session 469: Fixed - use status='active' instead of is_active=True
+                channels = ContentChannel.objects.filter(id__startswith=channel_id, status='active')
                 if not channels.exists():
                     return None
 
                 channel = channels.first()
-                channel.is_active = False
+                channel.status = 'paused'
                 channel.save()
                 return channel
 
@@ -5835,12 +5840,13 @@ class StudioCommands(commands.Cog):
             def resume_channel():
                 from core.models_autonomous_studio import ContentChannel
 
-                channels = ContentChannel.objects.filter(id__startswith=channel_id, is_active=False)
+                # Session 469: Fixed - use status='paused' instead of is_active=False
+                channels = ContentChannel.objects.filter(id__startswith=channel_id, status='paused')
                 if not channels.exists():
                     return None
 
                 channel = channels.first()
-                channel.is_active = True
+                channel.status = 'active'
                 channel.save()
                 return channel
 
@@ -5993,6 +5999,121 @@ class StudioCommands(commands.Cog):
                 embed=discord.Embed(
                     title="Error",
                     description=f"Failed to get performance data: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-episode", description="View episode content (script, research) from a channel")
+    @app_commands.describe(channel_id="Channel ID (first 8 characters)")
+    async def studio_episode(self, interaction: discord.Interaction, channel_id: str):
+        """View the latest episode content from a channel."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_episode_content():
+                from core.models_autonomous_studio import ContentChannel, ChannelEpisode
+                from core.models_ai_series import AISeries, SeriesEpisode
+
+                channels = ContentChannel.objects.filter(id__startswith=channel_id)
+                if not channels.exists():
+                    return None, "Channel not found"
+
+                channel = channels.first()
+
+                # Find matching AISeries by looking for channel name in series name
+                # Session 469: Series are created with channel name in the prompt/name
+                series = AISeries.objects.filter(
+                    name__icontains=channel.name
+                ).order_by('-created_at').first()
+
+                if not series:
+                    # Try finding by topic domain
+                    series = AISeries.objects.filter(
+                        name__icontains=channel.topic_domain.split(',')[0].strip()
+                    ).order_by('-created_at').first()
+
+                if not series:
+                    return {'channel': channel, 'episode': None, 'series': None}, "No episodes generated yet"
+
+                # Get the latest episode from this series
+                episode = SeriesEpisode.objects.filter(series=series).order_by('-id').first()
+
+                return {
+                    'channel': channel,
+                    'series': series,
+                    'episode': episode
+                }, None
+
+            data, error = await get_episode_content()
+
+            if error == "Channel not found":
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Channel Not Found",
+                        description=f"No channel found with ID starting with `{channel_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            channel = data['channel']
+
+            if not data.get('episode'):
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title=f"📺 {channel.name}",
+                        description="No episodes have been generated yet.\n\nEpisodes are created automatically by Celery Beat every 4 hours, or you can trigger one manually.",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            episode = data['episode']
+            series = data['series']
+
+            # Create embed with episode content
+            embed = discord.Embed(
+                title=f"📺 {episode.title}",
+                description=f"**Channel:** {channel.name}\n**Status:** {episode.status}",
+                color=discord.Color.green()
+            )
+
+            # Synopsis
+            if episode.synopsis:
+                embed.add_field(
+                    name="📝 Synopsis",
+                    value=episode.synopsis[:500] + ("..." if len(episode.synopsis) > 500 else ""),
+                    inline=False
+                )
+
+            # Script preview
+            if episode.script:
+                script_preview = episode.script[:800]
+                if len(episode.script) > 800:
+                    script_preview += f"\n\n... ({len(episode.script) - 800} more characters)"
+                embed.add_field(
+                    name="📜 Script",
+                    value=script_preview,
+                    inline=False
+                )
+
+            # Series info
+            embed.add_field(
+                name="📦 Series Info",
+                value=f"**Type:** {series.series_type}\n**Episode #:** {episode.episode_number}",
+                inline=True
+            )
+
+            embed.set_footer(text=f"Series ID: {str(series.id)[:8]}... | Episode ID: {str(episode.id)[:8]}...")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio episode error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get episode content: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )
@@ -8663,247 +8784,6 @@ class HelpCommands(commands.Cog):
 
         await interaction.response.send_message(embed=embed)
 
-    # =============================================================================
-    # Session 463: Learning Loop Feedback Commands
-    # =============================================================================
-
-    @app_commands.command(name="brief-feedback", description="Rate today's Market Intelligence Brief")
-    @app_commands.describe(
-        rating="How helpful was today's brief? (helpful/not-helpful)",
-        comment="Optional: Tell us why"
-    )
-    @app_commands.choices(rating=[
-        app_commands.Choice(name="📈 Helpful", value="helpful"),
-        app_commands.Choice(name="📉 Not Helpful", value="not-helpful"),
-    ])
-    async def brief_feedback_command(
-        self,
-        interaction: discord.Interaction,
-        rating: app_commands.Choice[str],
-        comment: Optional[str] = None
-    ):
-        """Submit feedback on today's Market Intelligence Brief."""
-        await interaction.response.defer()
-
-        try:
-            # Get linked user
-            from core.models import DiscordUser
-            discord_user = await sync_to_async(DiscordUser.objects.filter(
-                discord_user_id=str(interaction.user.id)
-            ).select_related('user').first)()
-
-            if not discord_user or not discord_user.user:
-                await interaction.followup.send(
-                    "❌ Please link your Discord account first with `/link`",
-                    ephemeral=True
-                )
-                return
-
-            # Get today's brief
-            from datetime import date
-            from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
-
-            today = date.today()
-            brief = await sync_to_async(MarketIntelligenceBrief.objects.filter(
-                brief_date=today
-            ).first)()
-
-            if not brief:
-                await interaction.followup.send(
-                    f"❌ No Market Intelligence Brief found for {today.strftime('%B %d, %Y')}.\n"
-                    f"The brief is generated at 8 AM on weekdays.",
-                    ephemeral=True
-                )
-                return
-
-            # Create or update feedback
-            was_helpful = (rating.value == "helpful")
-            feedback, created = await sync_to_async(UserBriefFeedback.objects.update_or_create)(
-                user=discord_user.user,
-                brief=brief,
-                defaults={
-                    'was_helpful': was_helpful,
-                    'helpfulness_score': 5 if was_helpful else 1,
-                    'comment': comment or '',
-                }
-            )
-
-            # Send confirmation
-            embed = discord.Embed(
-                title="📊 Feedback Recorded",
-                description=f"Thanks for rating today's Market Intelligence Brief!",
-                color=discord.Color.green() if was_helpful else discord.Color.orange(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="Your Rating",
-                value="📈 Helpful" if was_helpful else "📉 Not Helpful",
-                inline=True
-            )
-
-            if comment:
-                embed.add_field(
-                    name="Your Comment",
-                    value=comment[:500],
-                    inline=False
-                )
-
-            embed.add_field(
-                name="📚 Learning Loop",
-                value=(
-                    "Your feedback helps the system learn which market analyses "
-                    "are most valuable. Bull and Bear agents adjust their strategies "
-                    "based on what users find helpful!"
-                ),
-                inline=False
-            )
-
-            embed.set_footer(text="Session 463: Learning Loop")
-
-            await interaction.followup.send(embed=embed)
-
-            logger.info(
-                f"[SESSION 463] Brief feedback from {discord_user.user.username}: "
-                f"{rating.value} for {today}"
-            )
-
-        except Exception as e:
-            logger.error(f"[SESSION 463] Brief feedback failed: {e}")
-            await interaction.followup.send(
-                f"❌ Failed to record feedback: {str(e)}",
-                ephemeral=True
-            )
-
-    @app_commands.command(name="action", description="Record a stock action (buy/sell/hold/ignore)")
-    @app_commands.describe(
-        ticker="Stock ticker symbol (e.g., AAPL)",
-        action="What action are you taking?",
-        reason="Why? (bull_case/bear_warning/debate_zone/other)"
-    )
-    @app_commands.choices(
-        action=[
-            app_commands.Choice(name="📈 Buy", value="buy"),
-            app_commands.Choice(name="📉 Sell", value="sell"),
-            app_commands.Choice(name="🤝 Hold", value="hold"),
-            app_commands.Choice(name="👀 Ignore", value="ignore"),
-        ],
-        reason=[
-            app_commands.Choice(name="🐂 Bull Case", value="bull_case"),
-            app_commands.Choice(name="🐻 Bear Warning", value="bear_warning"),
-            app_commands.Choice(name="⚔️ Debate Zone", value="debate_zone"),
-            app_commands.Choice(name="📊 Other", value="other"),
-        ]
-    )
-    async def action_command(
-        self,
-        interaction: discord.Interaction,
-        ticker: str,
-        action: app_commands.Choice[str],
-        reason: Optional[app_commands.Choice[str]] = None
-    ):
-        """Record an investment action for learning loop tracking."""
-        await interaction.response.defer()
-
-        try:
-            # Get linked user
-            from core.models import DiscordUser
-            discord_user = await sync_to_async(DiscordUser.objects.filter(
-                discord_user_id=str(interaction.user.id)
-            ).select_related('user').first)()
-
-            if not discord_user or not discord_user.user:
-                await interaction.followup.send(
-                    "❌ Please link your Discord account first with `/link`",
-                    ephemeral=True
-                )
-                return
-
-            # Get today's brief
-            from datetime import date
-            from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
-
-            today = date.today()
-            brief = await sync_to_async(MarketIntelligenceBrief.objects.filter(
-                brief_date=today
-            ).first)()
-
-            if not brief:
-                await interaction.followup.send(
-                    f"❌ No Market Intelligence Brief found for {today.strftime('%B %d, %Y')}.",
-                    ephemeral=True
-                )
-                return
-
-            # Get or create feedback entry for today
-            feedback, created = await sync_to_async(UserBriefFeedback.objects.get_or_create)(
-                user=discord_user.user,
-                brief=brief,
-                defaults={'was_helpful': None}
-            )
-
-            # Record the action
-            ticker_upper = ticker.upper()
-            reason_value = reason.value if reason else "other"
-
-            await sync_to_async(feedback.record_action)(
-                ticker=ticker_upper,
-                action=action.value,
-                reason=reason_value
-            )
-
-            # Send confirmation
-            action_emoji = {
-                "buy": "📈",
-                "sell": "📉",
-                "hold": "🤝",
-                "ignore": "👀"
-            }.get(action.value, "📊")
-
-            reason_text = {
-                "bull_case": "🐂 Bull Case",
-                "bear_warning": "🐻 Bear Warning",
-                "debate_zone": "⚔️ Debate Zone",
-                "other": "📊 Other Analysis"
-            }.get(reason_value, "📊 Other")
-
-            embed = discord.Embed(
-                title=f"{action_emoji} Action Recorded",
-                description=f"Tracked your {action.value} decision for {ticker_upper}",
-                color=discord.Color.green(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(name="Ticker", value=ticker_upper, inline=True)
-            embed.add_field(name="Action", value=f"{action_emoji} {action.value.title()}", inline=True)
-            embed.add_field(name="Reason", value=reason_text, inline=True)
-
-            embed.add_field(
-                name="📚 Learning Impact",
-                value=(
-                    f"Your action helps the system learn! We'll track whether "
-                    f"following the {reason_text.lower()} was profitable and use "
-                    f"that to improve future predictions."
-                ),
-                inline=False
-            )
-
-            embed.set_footer(text="Session 463: Learning Loop")
-
-            await interaction.followup.send(embed=embed)
-
-            logger.info(
-                f"[SESSION 463] Action recorded: {discord_user.user.username} "
-                f"{action.value} {ticker_upper} (reason: {reason_value})"
-            )
-
-        except Exception as e:
-            logger.error(f"[SESSION 463] Action recording failed: {e}")
-            await interaction.followup.send(
-                f"❌ Failed to record action: {str(e)}",
-                ephemeral=True
-            )
-
 
 # =============================================================================
 # Session 452: Discord Reaction Feedback System
@@ -9168,6 +9048,408 @@ class ReactionFeedbackCog(commands.Cog):
 
         except Exception as e:
             logger.error(f"[SESSION 452] Failed to submit reaction feedback: {e}")
+
+
+# =============================================================================
+# Session 471: Narrative Drift Detector Commands
+# Tier 1 Autonomous Situation #2 - "The system watches the world for story shifts"
+# =============================================================================
+
+class NarrativeCommands(commands.Cog):
+    """Commands for the Narrative Drift Detector system."""
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="narratives", description="List tracked narratives")
+    @app_commands.describe(
+        domain="Filter by domain (politics, markets, tech, culture, etc.)",
+        status="Filter by status (emerging, dominant, shifting, fading)",
+        limit="Number of narratives to show (default: 10)"
+    )
+    async def narratives_command(
+        self,
+        interaction: discord.Interaction,
+        domain: str = None,
+        status: str = None,
+        limit: int = 10
+    ):
+        """List tracked narratives from the Narrative Drift Detector."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_narratives():
+                from core.models_narrative_drift import Narrative, NarrativeDomain, NarrativeStatus
+
+                queryset = Narrative.objects.all()
+
+                if domain:
+                    valid_domains = [choice[0] for choice in NarrativeDomain.choices]
+                    if domain.lower() in valid_domains:
+                        queryset = queryset.filter(domain=domain.lower())
+
+                if status:
+                    valid_statuses = [choice[0] for choice in NarrativeStatus.choices]
+                    if status.lower() in valid_statuses:
+                        queryset = queryset.filter(status=status.lower())
+
+                return list(queryset.order_by('-mention_count')[:limit])
+
+            narratives = await get_narratives()
+
+            if not narratives:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="📰 No Narratives Found",
+                        description="No narratives match your filters. Try running `/narrative-scan` to detect new narratives.",
+                        color=discord.Color.yellow()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="📰 Tracked Narratives",
+                description=f"Showing {len(narratives)} narratives" + (f" in {domain}" if domain else ""),
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            # Status emoji mapping
+            status_emoji = {
+                'emerging': '🌱',
+                'dominant': '🔥',
+                'shifting': '🔄',
+                'fading': '📉',
+                'dead': '💀'
+            }
+
+            for n in narratives:
+                emoji = status_emoji.get(n.status, '📋')
+                embed.add_field(
+                    name=f"{emoji} {n.title[:50]}",
+                    value=(
+                        f"**Domain:** {n.domain}\n"
+                        f"**Status:** {n.status}\n"
+                        f"**Mentions:** {n.mention_count}\n"
+                        f"**ID:** `{str(n.id)[:8]}`"
+                    ),
+                    inline=True
+                )
+
+            embed.set_footer(text="Session 471 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narratives error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to fetch narratives: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-shifts", description="List recent narrative shifts")
+    @app_commands.describe(
+        domain="Filter by domain",
+        limit="Number of shifts to show (default: 5)"
+    )
+    async def narrative_shifts_command(
+        self,
+        interaction: discord.Interaction,
+        domain: str = None,
+        limit: int = 5
+    ):
+        """List recent narrative shifts detected by the system."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_shifts():
+                from core.models_narrative_drift import NarrativeShift
+
+                queryset = NarrativeShift.objects.all()
+
+                if domain:
+                    queryset = queryset.filter(domain=domain.lower())
+
+                return list(queryset.order_by('-detected_at')[:limit])
+
+            shifts = await get_shifts()
+
+            if not shifts:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="🔄 No Shifts Detected",
+                        description="No narrative shifts have been detected yet. The system scans every 4 hours.",
+                        color=discord.Color.yellow()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="🔄 Recent Narrative Shifts",
+                description=f"Showing {len(shifts)} recent shifts" + (f" in {domain}" if domain else ""),
+                color=discord.Color.orange(),
+                timestamp=datetime.now()
+            )
+
+            for shift in shifts:
+                new_title = shift.new_narrative.title[:30] if shift.new_narrative else "Unknown"
+                embed.add_field(
+                    name=f"📌 {shift.old_narrative.title[:40]}",
+                    value=(
+                        f"**→** {new_title}\n"
+                        f"**Domain:** {shift.domain}\n"
+                        f"**Confidence:** {float(shift.confidence) * 100:.0f}%\n"
+                        f"**Importance:** {float(shift.importance) * 100:.0f}%\n"
+                        f"**Detected:** {shift.detected_at.strftime('%Y-%m-%d %H:%M')}"
+                    ),
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 471 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-shifts error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to fetch shifts: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-scan", description="Run a narrative drift scan")
+    @app_commands.describe(
+        domain="Domain to scan (optional - scans all if not specified)"
+    )
+    async def narrative_scan_command(
+        self,
+        interaction: discord.Interaction,
+        domain: str = None
+    ):
+        """Trigger a narrative drift scan manually."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def run_scan():
+                from core.agents.narrative import NarrativeDriftCoordinator
+
+                coordinator = NarrativeDriftCoordinator()
+                result = coordinator._run_full_scan({'hours_back': 24, 'domain': domain})
+                return result
+
+            result = await run_scan()
+
+            shifts_found = result.get('potential_shifts_found', 0)
+            domains_checked = len(result.get('domains_checked', []))
+
+            embed = discord.Embed(
+                title="📰 Narrative Scan Complete",
+                description=f"Scanned {domains_checked} domains for narrative shifts.",
+                color=discord.Color.green() if shifts_found > 0 else discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="📊 Results",
+                value=(
+                    f"**Potential Shifts:** {shifts_found}\n"
+                    f"**Domains Scanned:** {domains_checked}\n"
+                    f"**Hours Analyzed:** 24"
+                ),
+                inline=False
+            )
+
+            # Show top shifts
+            shifts = result.get('shifts_detected', [])[:3]
+            if shifts:
+                shifts_text = "\n".join([
+                    f"• {s.get('title', 'Unknown')[:40]} ({s.get('confidence', 0) * 100:.0f}%)"
+                    for s in shifts
+                ])
+                embed.add_field(
+                    name="🔥 Top Potential Shifts",
+                    value=shifts_text or "None detected",
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 471 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-scan error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Scan Failed",
+                    description=f"Failed to run scan: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-seed", description="Seed narratives for a domain")
+    @app_commands.describe(
+        domain="Domain to seed (politics, markets, tech, culture, etc.)",
+        count="Number of narratives to create (default: 5)"
+    )
+    async def narrative_seed_command(
+        self,
+        interaction: discord.Interaction,
+        domain: str,
+        count: int = 5
+    ):
+        """Seed initial narratives for a domain from spider data."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def seed_narratives():
+                from core.agents.narrative import NarrativeDriftCoordinator
+
+                coordinator = NarrativeDriftCoordinator()
+                result = coordinator._seed_domain_narratives({
+                    'domain': domain.lower(),
+                    'count': count
+                })
+                return result
+
+            result = await seed_narratives()
+
+            if 'error' in result:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ Seeding Failed",
+                        description=result['error'],
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            created = result.get('created', 0)
+            narratives = result.get('narratives', [])
+
+            embed = discord.Embed(
+                title="🌱 Narratives Seeded",
+                description=f"Created {created} narratives for **{domain}**",
+                color=discord.Color.green() if created > 0 else discord.Color.yellow(),
+                timestamp=datetime.now()
+            )
+
+            if narratives:
+                for n in narratives[:5]:
+                    embed.add_field(
+                        name=f"📰 {n.get('title', 'Unknown')[:50]}",
+                        value=f"ID: `{n.get('id', 'N/A')[:8]}`",
+                        inline=True
+                    )
+
+            embed.set_footer(text="Session 471 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-seed error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Seeding Failed",
+                    description=f"Failed to seed narratives: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-status", description="Get Narrative Drift system status")
+    async def narrative_status_command(self, interaction: discord.Interaction):
+        """Get the current status of the Narrative Drift Detector system."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_status():
+                from core.agents.narrative import NarrativeDriftCoordinator
+
+                coordinator = NarrativeDriftCoordinator()
+                return coordinator._get_system_status({})
+
+            status = await get_status()
+
+            embed = discord.Embed(
+                title="📰 Narrative Drift Detector Status",
+                description="Tier 1 Autonomous Situation #2",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            # Narratives
+            n_stats = status.get('narratives', {})
+            embed.add_field(
+                name="📋 Narratives",
+                value=(
+                    f"**Total:** {n_stats.get('total', 0)}\n"
+                    f"**By Status:** {', '.join(f'{k}: {v}' for k, v in n_stats.get('by_status', {}).items()) or 'None'}"
+                ),
+                inline=False
+            )
+
+            # Shifts
+            s_stats = status.get('shifts', {})
+            embed.add_field(
+                name="🔄 Shifts",
+                value=(
+                    f"**Total:** {s_stats.get('total', 0)}\n"
+                    f"**Last 24h:** {s_stats.get('last_24h', 0)}\n"
+                    f"**Last 7d:** {s_stats.get('last_7d', 0)}"
+                ),
+                inline=True
+            )
+
+            # Evidence
+            e_stats = status.get('evidence', {})
+            embed.add_field(
+                name="📝 Evidence",
+                value=(
+                    f"**Total:** {e_stats.get('total', 0)}\n"
+                    f"**Last 24h:** {e_stats.get('last_24h', 0)}"
+                ),
+                inline=True
+            )
+
+            # Alerts
+            a_stats = status.get('alerts', {})
+            embed.add_field(
+                name="🔔 Alerts",
+                value=(
+                    f"**Total:** {a_stats.get('total', 0)}\n"
+                    f"**Unread:** {a_stats.get('unread', 0)}\n"
+                    f"**Last 24h:** {a_stats.get('last_24h', 0)}"
+                ),
+                inline=True
+            )
+
+            # Domain breakdown
+            by_domain = n_stats.get('by_domain', {})
+            if by_domain:
+                domain_text = "\n".join([f"• **{k}:** {v}" for k, v in by_domain.items()])
+                embed.add_field(
+                    name="🌍 By Domain",
+                    value=domain_text,
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 471 | Narrative Drift Detector | Runs every 4 hours")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-status error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
 
 
 # Bot instance (created when module loads)

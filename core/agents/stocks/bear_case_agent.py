@@ -349,26 +349,83 @@ Be specific and data-driven. Use the market data provided. Counter any obvious b
             logger.error(f"GPT bear analysis error for {ticker}: {e}")
             return {'gpt_powered': False}
 
+    def _get_confidence_multiplier(self) -> float:
+        """
+        Session 464: Get confidence multiplier based on agent's recent accuracy.
+
+        Returns:
+            float: Confidence multiplier (0.5-1.5x) based on track record
+        """
+        try:
+            from core.models_unified_system import AgentAccuracyMetrics
+            from datetime import date, timedelta
+
+            # Get the most recent metrics for this agent
+            latest_metrics = AgentAccuracyMetrics.objects.filter(
+                agent_name='BearCaseAgent'
+            ).order_by('-period_end').first()
+
+            if latest_metrics:
+                multiplier = latest_metrics.confidence_multiplier
+                logger.debug(f"🐻 [SESSION 464] BearCaseAgent confidence multiplier: {multiplier:.2f}x "
+                           f"(based on {latest_metrics.accuracy_rate_7_days:.1f}% recent accuracy)")
+                return multiplier
+            else:
+                # No metrics yet - use neutral multiplier
+                logger.debug("🐻 [SESSION 464] No accuracy metrics yet - using 1.0x multiplier")
+                return 1.0
+
+        except Exception as e:
+            logger.warning(f"🐻 [SESSION 464] Failed to get confidence multiplier: {e}")
+            return 1.0  # Fallback to neutral
+
     def _determine_bear_conviction(self, momentum: str, trading_signal: str,
                                    price_position: Dict, volatility: str) -> str:
-        """Determine conviction level based on bearish indicators."""
+        """
+        Determine conviction level based on bearish indicators.
+
+        Session 464: Now incorporates confidence multiplier from learning loop.
+        """
+        # Session 464: Get confidence multiplier based on historical accuracy
+        confidence_multiplier = self._get_confidence_multiplier()
+
+        # Calculate base conviction score (0-3)
+        base_score = 0
+
         # High conviction: Strong bearish momentum + sell signal + high volatility
         if momentum in ['STRONG_BEARISH', 'BEARISH']:
+            base_score += 1.5
             if trading_signal in ['STRONG_SELL', 'SELL']:
+                base_score += 1.0
                 if volatility in ['HIGH', 'EXTREME']:
-                    return 'HIGH'
-                return 'MEDIUM'
+                    base_score += 0.5
 
         # Medium conviction: Some bearish signals
-        if momentum in ['BEARISH', 'SLIGHTLY_BEARISH'] or trading_signal == 'SELL':
-            return 'MEDIUM'
+        elif momentum in ['SLIGHTLY_BEARISH'] or trading_signal == 'SELL':
+            base_score += 1.0
 
-        # High conviction if near 52-week high (pullback risk)
+        # Elevated risk near 52-week high (pullback risk)
         if price_position.get('near_high', False):
-            return 'MEDIUM'  # Elevated risk near highs
+            base_score += 0.5
 
-        # Low conviction: Weak or mixed signals
-        return 'LOW'
+        # Apply confidence multiplier from learning loop
+        adjusted_score = base_score * confidence_multiplier
+
+        # Convert adjusted score to conviction level
+        if adjusted_score >= 2.5:
+            conviction = 'HIGH'
+        elif adjusted_score >= 1.0:
+            conviction = 'MEDIUM'
+        else:
+            conviction = 'LOW'
+
+        # Log multiplier application
+        if abs(confidence_multiplier - 1.0) > 0.05:
+            logger.info(f"🐻 [SESSION 464] Conviction adjusted: base_score={base_score:.2f}, "
+                       f"multiplier={confidence_multiplier:.2f}x, "
+                       f"adjusted={adjusted_score:.2f} → {conviction}")
+
+        return conviction
 
     def _generate_bear_arguments(self, ticker: str, stock_data: Dict,
                                  momentum: str, price_position: Dict, volatility: str) -> List[str]:
