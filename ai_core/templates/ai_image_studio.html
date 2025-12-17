@@ -5748,6 +5748,7 @@
                             <option value="all">🌐 All Content</option>
                             <option value="images">🖼️ Images Only</option>
                             <option value="videos">🎬 Videos Only</option>
+                            <option value="resolve">🎥 DaVinci Resolve</option>
                             <option value="audio">🎵 Audio Only</option>
                         </select>
                     </div>
@@ -33684,7 +33685,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const mediaTypeEmoji = {
                 'image': '🖼️',
                 'video': '🎬',
-                'audio': '🎵'
+                'audio': '🎵',
+                'resolve': '🎥'  // Session 479: DaVinci Resolve renders
             };
 
             const typeEmoji = mediaTypeEmoji[item.type] || '📄';
@@ -33701,6 +33703,24 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     <video class="card-img-top" controls>
                         <source src="${item.url}" type="video/mp4">
                     </video>
+                `;
+            } else if (item.type === 'resolve') {
+                // Session 479: DaVinci Resolve professional renders
+                const colorGrade = item.parameters?.color_grade || 'Unknown';
+                const userRating = item.user_rating ? '⭐'.repeat(item.user_rating) : 'Unrated';
+                mediaElement = item.url ? `
+                    <video class="card-img-top" controls style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                        <source src="${item.url}" type="video/mp4">
+                    </video>
+                ` : `
+                    <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 200px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                        <div class="text-center text-light">
+                            <h1>🎥</h1>
+                            <small>DaVinci Resolve</small><br>
+                            <span class="badge bg-info">${colorGrade}</span><br>
+                            <small>${userRating}</small>
+                        </div>
+                    </div>
                 `;
             } else if (item.type === 'audio') {
                 mediaElement = `
