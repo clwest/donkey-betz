@@ -155,6 +155,9 @@ from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 from core.agents.autonomous_content_studio_coordinator import AutonomousContentStudioCoordinator
 from core.agents.content import TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
 
+# Session 478: DaVinci Resolve Integration
+from core.agents.resolve_agent import ResolveAgent
+
 logger = logging.getLogger(__name__)
 
 
@@ -247,6 +250,9 @@ class AgentRouter:
         "TopicMinerAgent": TopicMinerAgent,
         "ContrarianAgent": ContrarianAgent,
         "PerformanceAnalystAgent": PerformanceAnalystAgent,
+
+        # Rendering Agents (Session 478)
+        "ResolveAgent": ResolveAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
