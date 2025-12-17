@@ -1,8 +1,8 @@
-# Session 476 - Start Here
+# Session 477 - Start Here
 
-**Previous Sessions:** 471-475 (Narrative Drift + Provenance + Integration + Unified Pipeline + **ROI Integration**)
+**Previous Sessions:** 471-476 (Narrative Drift + Provenance + Integration + Unified Pipeline + ROI + **Schedule Fixes**)
 **Handoff Docs:**
-- `docs/handoffs/SESSION_475_ROI_PIPELINE_INTEGRATION.md` (NEW!)
+- `docs/handoffs/SESSION_475_ROI_PIPELINE_INTEGRATION.md`
 - `docs/handoffs/SESSION_474_UNIFIED_INTELLIGENCE_PIPELINE.md`
 - `docs/handoffs/SESSION_473_NARRATIVE_CONTENT_INTEGRATION.md`
 - `docs/handoffs/SESSION_472_PROVENANCE_COMPLIANCE.md`
@@ -11,41 +11,71 @@
 
 ---
 
-## Session 475 Achievements: ROI PIPELINE FULLY INTEGRATED!
+## Session 476 Achievements: 100% HEALTH RESTORED!
 
-Fixed critical issues and connected ROI tracking throughout the system:
+Fixed two critical issues that were preventing proper autonomous operation:
 
-| Fix/Feature | Status |
-|-------------|--------|
-| Removed duplicate model conflict (`models_learning_loop.py`) | COMPLETE |
-| ROI tracking hooks in opportunity endpoints | COMPLETE |
-| Provenance hooks in data creation points | COMPLETE |
-| 6 new Celery tasks for ROI automation | COMPLETE |
-| Beat schedules for daily/weekly ROI | COMPLETE |
+| Fix | Issue | Resolution |
+|-----|-------|------------|
+| Celery Beat Schedules | Only 20/35 loading | Added 15 missing schedules to settings.py |
+| Health Check Field | `detected_at` error | Fixed to use `created_at` for NarrativeEvidence |
 
-### New Automated Tasks
+### System Health: 100%
 
 ```
-roi-metrics-daily-aggregation: Daily at 2:00 AM
+✓ market_intelligence: healthy (469 spider data in 6h)
+✓ narrative_drift: healthy (30 narratives, 902 evidence)
+✓ content_studio: healthy (3 channels, 3 episodes)
+✓ provenance: healthy (2 records)
+```
+
+### All 35 Celery Beat Schedules Now Active
+
+```
+# Tier 1 Autonomous Situations
+autonomous-content-studio-loop: Every 4 hours
+track-content-performance-daily: Daily 8 PM
+narrative-drift-detector-cycle: Every 4 hours
+narrative-process-spider-data: Hourly at :30
+narrative-update-statuses: Every 6 hours
+narrative-daily-digest: Daily 9 AM
+narrative-shifts-to-content: Every 6 hours at :30
+
+# Unified Pipeline
+unified-pipeline-complete-cycle: Every 12 hours
+unified-pipeline-health-check: Every 2 hours
+
+# ROI Automation
+roi-metrics-daily-aggregation: Daily 2:00 AM
 roi-metrics-weekly-brief: Monday 7:00 AM
+
+# ML Scoring
+ml-scoring-weekly-retrain: Sunday 3:30 AM
+ml-scoring-evaluate-performance: Daily 6:30 AM
+process-realtime-scoring-queue: Every 30 seconds
+process-batch-scoring-queue: Hourly
+
+# Plus 17 more core schedules (agents, spiders, etc.)
 ```
 
 ---
 
-## Complete Data Flow (NOW CONNECTED!)
+## Complete Data Flow (FULLY OPERATIONAL!)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    FULLY CONNECTED PIPELINE                          │
+│                    FULLY CONNECTED PIPELINE @ 100%                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  67 Spiders → SpiderData → Opportunity → Scoring                    │
+│  67 Spiders → SpiderData → Opportunity → ML Scoring                 │
 │       ↓                                                              │
 │  NarrativeEvidence → NarrativeShift → ChannelEpisode                │
 │       ↓                                                              │
 │  ROI TRACKING: View → Click → Apply → Revenue                       │
 │       ↓                                                              │
 │  PROVENANCE: Full lineage with hash chains                          │
+│       ↓                                                              │
+│  AUTOMATED: 35 Celery tasks running autonomously                    │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -54,66 +84,48 @@ roi-metrics-weekly-brief: Monday 7:00 AM
 
 ## Tier 1 Autonomous Situations Status
 
-| Situation | Status | ROI Tracking |
-|-----------|--------|--------------|
-| Autonomous Content Studio | COMPLETE | ✅ Episode provenance |
-| Narrative Drift Detector | COMPLETE | ✅ Evidence/Shift provenance |
-| Market Intelligence Desk | COMPLETE | ✅ ROI conversion funnel |
+| Situation | Status | Health | Automation |
+|-----------|--------|--------|------------|
+| Autonomous Content Studio | COMPLETE | 100% | Every 4 hours |
+| Narrative Drift Detector | COMPLETE | 100% | Every 4 hours |
+| Market Intelligence Desk | COMPLETE | 100% | Daily 6:30 AM |
 
-**All 3 systems now track complete data lineage!**
+**All 3 systems fully operational with 100% health!**
 
 ---
 
-## Current System State
+## Current System Metrics
 
-### System Metrics
 ```
-SpiderData: 18,964 records
+SpiderData: 18,964+ records
 Narratives: 30 (across 8 domains)
-Evidence: 730 records
+Evidence: 902+ records (growing!)
 Shifts: 1
 Channels: 3
 Episodes: 3
 ConversionEvents: 6
+Provenance Records: 2+
 Agents: 53
-```
-
-### All Autonomous Schedules
-```
-# Unified Pipeline
-unified-pipeline-complete-cycle: Every 12 hours at :00
-unified-pipeline-health-check: Every 2 hours at :15
-
-# ROI Automation (NEW!)
-roi-metrics-daily-aggregation: Daily at 2:00 AM
-roi-metrics-weekly-brief: Monday 7:00 AM
-
-# Narrative Drift
-narrative-drift-cycle: Every 6 hours at :00
-narrative-shifts-to-content: Every 6 hours at :30
-
-# Content Studio
-run-autonomous-content-studio: Every 4 hours
-track-content-performance: Daily at 8 PM
+Celery Schedules: 35 (all active)
 ```
 
 ---
 
-## Session 476 Options
+## Session 477 Options
 
-### Option A: Stress Test (Recommended First!)
-Let the system run autonomously for 24 hours:
-- Monitor all 3 autonomous situations
+### Option A: 24-Hour Stress Test (Recommended!)
+Let the system run autonomously and observe:
+- Monitor all 3 autonomous situations processing data
 - Watch provenance records accumulate
-- Verify ROI tracking captures events
-- Check for any errors in logs
+- Verify ROI tracking captures user events
+- Check for any errors in Celery logs
 
-### Option B: Dashboard Visualization
-Build a real-time dashboard showing:
+### Option B: Real-Time Dashboard
+Build a unified dashboard showing:
 - All three autonomous situations status
 - Live provenance chain visualization
 - ROI funnel metrics
-- System health
+- System health (already at 100%)
 
 ### Option C: AI-Generated Images for Content
 Add visual content to shift reports:
@@ -121,8 +133,8 @@ Add visual content to shift reports:
 - Add thumbnails to episodes
 - Create visual timeline of shifts
 
-### Option D: Blockchain Audit Activation
-Convert the existing Blockchain Audit agents into a 4th Tier 1 Autonomous Situation:
+### Option D: 4th Autonomous Situation - Blockchain Audit
+Convert existing Blockchain Audit agents into Tier 1 Autonomous:
 - Add models for persistent context
 - Add Celery tasks for autonomy
 - Connect to unified pipeline
@@ -133,7 +145,7 @@ Convert the existing Blockchain Audit agents into a 4th Tier 1 Autonomous Situat
 
 ```bash
 make start       # Start Daphne web server
-make celery      # Start Celery worker + beat (RESTART FOR NEW SCHEDULES!)
+make celery      # Start Celery worker + beat (ALL 35 SCHEDULES ACTIVE!)
 make discord-bot # Start Discord bot (separate terminal)
 ```
 
@@ -142,6 +154,22 @@ make discord-bot # Start Discord bot (separate terminal)
 ## Quick Test Commands
 
 ```bash
+# Run unified pipeline health check (should be 100%)
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.tasks import unified_pipeline_health_check
+import json
+result = unified_pipeline_health_check()
+print(json.dumps(result, indent=2, default=str))
+"
+
+# Check Celery beat schedule count
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+from django.conf import settings
+import django; django.setup()
+print(f'Active schedules: {len(settings.CELERY_BEAT_SCHEDULE)}')
+"
+
 # Run ROI aggregation manually
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
@@ -149,40 +177,22 @@ from core.tasks import aggregate_roi_metrics_daily
 result = aggregate_roi_metrics_daily()
 print(f'Result: {result}')
 "
-
-# Check provenance records
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.models_unified_system import DataProvenance
-from django.db.models import Count
-types = DataProvenance.objects.values('entity_type').annotate(count=Count('id'))
-for t in types:
-    print(f\"{t['entity_type']}: {t['count']}\")
-"
-
-# Run unified pipeline health check
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.tasks import unified_pipeline_health_check
-result = unified_pipeline_health_check()
-print(f'Health: {result.get(\"health_percentage\")}%')
-"
 ```
 
 ---
 
 ## Key Files
 
+### Session 476: Schedule Fixes
+- `core/settings.py` (lines 998-1074) - Added 15 missing Celery schedules
+- `core/tasks.py` (line 13777) - Fixed health check field name
+
 ### Session 475: ROI Integration
 - `core/tasks.py` (lines 13815-14100) - ROI tasks
-- `core/celery.py` (lines 806-827) - ROI beat schedules
 - `core/views_opportunity.py` - ROI tracking hooks
 
 ### Session 474: Unified Pipeline
 - `core/tasks.py` (lines 13460-13815) - Unified pipeline tasks
-
-### Provenance
-- `core/services/provenance_tracker.py` - All provenance functions
 
 ---
 
@@ -198,7 +208,7 @@ print(f'Health: {result.get(\"health_percentage\")}%')
 
 ---
 
-**Session 475 Complete - ROI Pipeline Fully Integrated!**
+**Session 476 Complete - System at 100% Health!**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -206,6 +216,6 @@ print(f'Health: {result.get(\"health_percentage\")}%')
 │                                                                      │
 │  Spider → Score → Narrative → Content → ROI → Provenance            │
 │                                                                      │
-│              ALL SYSTEMS CONNECTED AND TRACKING!                     │
+│         ALL SYSTEMS OPERATIONAL - 100% HEALTH - 35 SCHEDULES        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
