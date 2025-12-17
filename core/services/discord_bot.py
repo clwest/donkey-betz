@@ -10306,6 +10306,102 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
+    @app_commands.command(name="render-download", description="Download a completed render")
+    @app_commands.describe(
+        job_id="Resolve render job ID"
+    )
+    async def render_download_command(
+        self,
+        interaction: discord.Interaction,
+        job_id: str
+    ):
+        """Download a completed render as a Discord attachment."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_render_file():
+                from pathlib import Path
+                from django.conf import settings
+
+                # Check results directory
+                results_dir = Path(settings.BASE_DIR) / 'resolve_node' / 'results'
+
+                # Try different extensions
+                for ext in ['.mov', '.mp4']:
+                    file_path = results_dir / f"render_{job_id}{ext}"
+                    if file_path.exists():
+                        size_mb = file_path.stat().st_size / 1024 / 1024
+                        return {
+                            'found': True,
+                            'path': str(file_path),
+                            'filename': file_path.name,
+                            'size_mb': size_mb
+                        }
+
+                # Also check by partial match
+                for f in results_dir.glob(f"render_{job_id[:8]}*"):
+                    size_mb = f.stat().st_size / 1024 / 1024
+                    return {
+                        'found': True,
+                        'path': str(f),
+                        'filename': f.name,
+                        'size_mb': size_mb
+                    }
+
+                return {'found': False, 'error': f'No render found for job {job_id}'}
+
+            result = await get_render_file()
+
+            if not result['found']:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ Render Not Found",
+                        description=result.get('error', 'File not found'),
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Check file size - Discord limit is 25MB (or 100MB with Nitro)
+            if result['size_mb'] > 25:
+                embed = discord.Embed(
+                    title="📁 Render Too Large for Discord",
+                    description=f"File is {result['size_mb']:.1f}MB (Discord limit: 25MB)",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(
+                    name="📂 Local Path",
+                    value=f"`{result['path']}`",
+                    inline=False
+                )
+                embed.set_footer(text="Open the file directly on your Mac")
+                await interaction.edit_original_response(embed=embed)
+                return
+
+            # Upload the file to Discord
+            file = discord.File(result['path'], filename=result['filename'])
+            embed = discord.Embed(
+                title="🎬 Your Rendered Video",
+                description=f"**Job:** {job_id[:8]}...\n**Size:** {result['size_mb']:.1f}MB",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+            embed.set_footer(text="Session 479 | DaVinci Resolve Integration")
+
+            await interaction.edit_original_response(embed=embed, attachments=[file])
+
+        except Exception as e:
+            logger.error(f"/render-download error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to download: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
     @app_commands.command(name="trending-grades", description="Show color grades matching current spider trends")
     async def trending_grades_command(self, interaction: discord.Interaction):
         """Show which color grades match current spider trends."""
