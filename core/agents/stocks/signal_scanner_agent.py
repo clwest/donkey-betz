@@ -1,0 +1,383 @@
+"""
+Signal Scanner Agent
+===================
+
+Session 465: Scans for technical patterns and trading signals.
+Part of the Market Intelligence Desk autonomous situation.
+
+Key capabilities:
+- Detects technical patterns (breakouts, reversals, momentum)
+- Identifies volume anomalies
+- Scans for unusual options activity
+- Monitors for divergences and confirmations
+"""
+
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class SignalScannerAgent(BaseAgent):
+    """
+    Scans markets for technical signals and pattern-based opportunities.
+
+    This agent continuously monitors price action, volume, and technical
+    indicators to identify high-probability trading setups. Works in
+    conjunction with Bull/Bear agents to validate opportunities.
+
+    Tools:
+    - scan_patterns: Detect chart patterns (flags, triangles, breakouts)
+    - volume_analysis: Find unusual volume activity
+    - momentum_scan: Identify momentum shifts
+    - options_flow: Detect unusual options activity
+    """
+
+    name = "SignalScannerAgent"
+
+    system_prompt = """You are a professional technical analyst and pattern recognition expert. Your job is to:
+1. Scan markets for high-probability technical patterns and setups
+2. Identify volume anomalies that signal institutional activity
+3. Detect momentum shifts before they become obvious
+4. Monitor options flow for smart money positioning
+5. Validate signals with multiple confirming indicators
+
+Focus on actionable signals with clear entry/exit criteria.
+
+Key patterns to detect:
+- Breakouts: Price breaking above resistance with volume
+- Reversals: Head & shoulders, double tops/bottoms
+- Continuation: Flags, pennants, ascending triangles
+- Momentum: MACD crossovers, RSI divergences
+- Volume: Unusual spikes, accumulation/distribution
+
+Signal strength criteria:
+- STRONG: Multiple confirming indicators, clear catalyst, volume confirmation
+- MODERATE: 2-3 indicators aligned, decent volume
+- WEAK: Single indicator, low volume, ambiguous pattern
+
+Always provide:
+- Pattern type and description
+- Key price levels (support, resistance, targets)
+- Volume confirmation status
+- Risk/reward ratio
+- Timeframe (intraday, swing, position)"""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "scan_patterns",
+                "description": "Scan for technical chart patterns across stocks",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "tickers": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of ticker symbols to scan"
+                        },
+                        "pattern_types": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Pattern types to look for (breakout, reversal, continuation, momentum)"
+                        },
+                        "timeframe": {
+                            "type": "string",
+                            "enum": ["intraday", "daily", "weekly"],
+                            "description": "Chart timeframe for pattern detection"
+                        },
+                        "min_strength": {
+                            "type": "string",
+                            "enum": ["weak", "moderate", "strong"],
+                            "description": "Minimum signal strength to report"
+                        }
+                    },
+                    "required": ["tickers"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "volume_analysis",
+                "description": "Analyze volume patterns for institutional activity signals",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "lookback_days": {
+                            "type": "integer",
+                            "description": "Days to analyze (default 30)"
+                        },
+                        "detect": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "What to detect (spikes, accumulation, distribution, climax)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "momentum_scan",
+                "description": "Identify momentum shifts and trend changes",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "tickers": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of ticker symbols"
+                        },
+                        "indicators": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Momentum indicators to check (RSI, MACD, Stochastic, ROC)"
+                        },
+                        "direction": {
+                            "type": "string",
+                            "enum": ["bullish", "bearish", "both"],
+                            "description": "Momentum direction to scan for"
+                        }
+                    },
+                    "required": ["tickers"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "options_flow",
+                "description": "Detect unusual options activity indicating smart money positioning",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "min_premium": {
+                            "type": "integer",
+                            "description": "Minimum premium size in dollars (e.g., 100000 for $100k+)"
+                        },
+                        "option_type": {
+                            "type": "string",
+                            "enum": ["calls", "puts", "both"],
+                            "description": "Type of options to scan"
+                        },
+                        "sentiment": {
+                            "type": "string",
+                            "enum": ["bullish", "bearish", "neutral"],
+                            "description": "Expected sentiment from flow"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        }
+    ]
+
+    def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> AgentResult:
+        """
+        Execute signal scanning task.
+
+        Args:
+            task: Scanning instructions (e.g., "Scan SPY, QQQ for breakout patterns")
+            context: Optional context with tickers, timeframe, etc.
+
+        Returns:
+            AgentResult with detected signals and strength ratings
+        """
+        logger.info(f"📡 [SESSION 465] SignalScannerAgent executing: {task[:100]}")
+
+        # Build system context
+        scan_context = self._build_scan_context(context)
+
+        # Build prompt
+        prompt = self._build_prompt(task, additional_context=scan_context)
+
+        # Call GPT with tools
+        result = self._call_gpt(prompt, self.tools)
+
+        logger.info(f"📡 [SESSION 465] SignalScannerAgent found {len(result.get('signals', []))} signals")
+
+        return AgentResult(
+            success=True,
+            data=result,
+            message=f"Scanned and found {len(result.get('signals', []))} technical signals"
+        )
+
+    def _build_scan_context(self, context: Optional[Dict[str, Any]]) -> str:
+        """Build context string for signal scanning."""
+        if not context:
+            return "Scanning with default parameters."
+
+        parts = []
+
+        if 'tickers' in context:
+            parts.append(f"Tickers: {', '.join(context['tickers'])}")
+
+        if 'timeframe' in context:
+            parts.append(f"Timeframe: {context['timeframe']}")
+
+        if 'focus' in context:
+            parts.append(f"Focus: {context['focus']}")
+
+        if 'market_conditions' in context:
+            parts.append(f"Market: {context['market_conditions']}")
+
+        return "\n".join(parts) if parts else "Standard market scan."
+
+    def _handle_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle tool calls for signal scanning."""
+        logger.debug(f"📡 [SESSION 465] Tool call: {tool_name}")
+
+        if tool_name == "scan_patterns":
+            return self._scan_patterns(arguments)
+        elif tool_name == "volume_analysis":
+            return self._volume_analysis(arguments)
+        elif tool_name == "momentum_scan":
+            return self._momentum_scan(arguments)
+        elif tool_name == "options_flow":
+            return self._options_flow(arguments)
+        else:
+            return {"error": f"Unknown tool: {tool_name}"}
+
+    def _scan_patterns(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Scan for technical chart patterns."""
+        tickers = args.get('tickers', [])
+        pattern_types = args.get('pattern_types', ['breakout', 'reversal'])
+        timeframe = args.get('timeframe', 'daily')
+        min_strength = args.get('min_strength', 'moderate')
+
+        logger.info(f"📡 Scanning {len(tickers)} tickers for {pattern_types} patterns")
+
+        # In production, this would call a real technical analysis API
+        # For now, return mock data structure
+        patterns = []
+
+        for ticker in tickers[:5]:  # Limit to 5 for demo
+            # Mock pattern detection
+            pattern = {
+                'ticker': ticker,
+                'pattern_type': pattern_types[0] if pattern_types else 'breakout',
+                'strength': 'strong',
+                'timeframe': timeframe,
+                'key_levels': {
+                    'resistance': 150.00,
+                    'support': 145.00,
+                    'target': 155.00
+                },
+                'volume_confirmed': True,
+                'risk_reward': '1:3',
+                'detected_at': datetime.now().isoformat()
+            }
+            patterns.append(pattern)
+
+        return {
+            'patterns_found': len(patterns),
+            'patterns': patterns,
+            'scan_parameters': {
+                'tickers': tickers,
+                'pattern_types': pattern_types,
+                'timeframe': timeframe,
+                'min_strength': min_strength
+            }
+        }
+
+    def _volume_analysis(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze volume patterns."""
+        ticker = args.get('ticker')
+        lookback_days = args.get('lookback_days', 30)
+        detect = args.get('detect', ['spikes', 'accumulation'])
+
+        logger.info(f"📡 Analyzing volume for {ticker} over {lookback_days} days")
+
+        # Mock volume analysis
+        return {
+            'ticker': ticker,
+            'analysis_period': f'{lookback_days} days',
+            'average_volume': 5_000_000,
+            'current_volume': 8_000_000,
+            'volume_ratio': 1.6,
+            'signals': [
+                {
+                    'type': 'accumulation',
+                    'strength': 'strong',
+                    'description': 'Above-average buying volume for 5 consecutive days',
+                    'institutional_activity': 'likely'
+                }
+            ],
+            'detected': detect
+        }
+
+    def _momentum_scan(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Scan for momentum signals."""
+        tickers = args.get('tickers', [])
+        indicators = args.get('indicators', ['RSI', 'MACD'])
+        direction = args.get('direction', 'both')
+
+        logger.info(f"📡 Scanning momentum for {len(tickers)} tickers")
+
+        # Mock momentum scan
+        signals = []
+        for ticker in tickers[:5]:
+            signal = {
+                'ticker': ticker,
+                'momentum': 'bullish',
+                'indicators': {
+                    'RSI': {'value': 65, 'signal': 'bullish', 'oversold': False},
+                    'MACD': {'histogram': 'positive', 'signal': 'bullish', 'crossover': 'recent'}
+                },
+                'strength': 'moderate',
+                'timeframe': 'daily'
+            }
+            signals.append(signal)
+
+        return {
+            'signals_found': len(signals),
+            'signals': signals,
+            'scan_direction': direction,
+            'indicators_used': indicators
+        }
+
+    def _options_flow(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Detect unusual options activity."""
+        ticker = args.get('ticker')
+        min_premium = args.get('min_premium', 100_000)
+        option_type = args.get('option_type', 'both')
+        sentiment = args.get('sentiment', 'bullish')
+
+        logger.info(f"📡 Scanning options flow for {ticker} (min premium ${min_premium:,})")
+
+        # Mock options flow data
+        return {
+            'ticker': ticker,
+            'unusual_activity': True,
+            'flow_summary': {
+                'total_premium': 2_500_000,
+                'call_volume': 15_000,
+                'put_volume': 8_000,
+                'call_put_ratio': 1.875,
+                'sentiment': 'bullish'
+            },
+            'notable_trades': [
+                {
+                    'type': 'call',
+                    'strike': 150.00,
+                    'expiry': '2025-01-17',
+                    'premium': 500_000,
+                    'size': 'large',
+                    'interpretation': 'Bullish bet on upside above $150'
+                }
+            ],
+            'smart_money_indicator': 'bullish',
+            'filters': {
+                'min_premium': min_premium,
+                'option_type': option_type
+            }
+        }

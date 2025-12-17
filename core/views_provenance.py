@@ -747,3 +747,635 @@ def extract_watermark(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# MARKET INTELLIGENCE DATA LINEAGE ENDPOINTS (Phase 5 - Session 472)
+# =============================================================================
+# These endpoints track data provenance through the Market Intelligence pipeline:
+# Spider Data → Opportunity → Scoring → Validation → Decision → Outcome
+
+from django.utils import timezone
+from datetime import timedelta
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_lineage(request, entity_type, entity_id):
+    """
+    Get the complete lineage chain for a Market Intelligence entity.
+
+    GET /api/mi/lineage/<entity_type>/<entity_id>/
+
+    Entity types: spider_data, opportunity, scoring_result, validation_request,
+                  validation_decision, opportunity_outcome
+
+    Query params:
+        include_metadata: bool (default True) - Include metadata in response
+        include_compliance: bool (default True) - Include compliance status
+
+    Returns:
+        {
+            "success": true,
+            "lineage": [...],
+            "total_depth": 4,
+            "integrity_verified": true
+        }
+    """
+    try:
+        from .services.provenance_tracker import get_provenance_tracker
+
+        tracker = get_provenance_tracker()
+        include_metadata = request.GET.get('include_metadata', 'true').lower() == 'true'
+        include_compliance = request.GET.get('include_compliance', 'true').lower() == 'true'
+
+        result = tracker.get_lineage(entity_type, entity_id)
+
+        if not result.success:
+            return JsonResponse({
+                'success': False,
+                'error': result.error
+            }, status=404)
+
+        # Build response
+        lineage_data = []
+        for item in result.lineage:
+            item_data = {
+                'id': str(item.id),
+                'entity_type': item.entity_type,
+                'entity_id': item.entity_id,
+                'depth': item.depth,
+                'source_type': item.source_type,
+                'source_name': item.source_name,
+                'created_at': item.created_at.isoformat(),
+                'compliance_status': item.compliance_status,
+            }
+
+            if include_metadata:
+                item_data['metadata'] = item.metadata
+
+            if include_compliance:
+                item_data['compliance_checks'] = list(
+                    item.compliance_checks.values(
+                        'check_type', 'passed', 'severity', 'details'
+                    )
+                )
+
+            lineage_data.append(item_data)
+
+        return JsonResponse({
+            'success': True,
+            'lineage': lineage_data,
+            'total_depth': len(lineage_data),
+            'integrity_verified': result.integrity_verified
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI lineage: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_descendants(request, provenance_id):
+    """
+    Get all descendants of a provenance record.
+
+    GET /api/mi/provenance/<provenance_id>/descendants/
+
+    Query params:
+        max_depth: int (default None) - Maximum depth to traverse
+
+    Returns:
+        {
+            "success": true,
+            "root_id": "...",
+            "descendants": [...],
+            "total_count": 15
+        }
+    """
+    try:
+        from .models_unified_system import DataProvenance
+        from .services.provenance_tracker import get_provenance_tracker
+
+        tracker = get_provenance_tracker()
+        max_depth = request.GET.get('max_depth')
+        if max_depth:
+            max_depth = int(max_depth)
+
+        descendants = tracker.get_descendants(provenance_id, max_depth)
+
+        return JsonResponse({
+            'success': True,
+            'root_id': provenance_id,
+            'descendants': descendants,
+            'total_count': len(descendants)
+        })
+
+    except DataProvenance.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Provenance record {provenance_id} not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting MI descendants: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def verify_mi_integrity(request, provenance_id):
+    """
+    Verify the cryptographic integrity of a provenance chain.
+
+    GET /api/mi/provenance/<provenance_id>/verify/
+
+    Returns:
+        {
+            "success": true,
+            "verified": true,
+            "chain_length": 4,
+            "verification_details": [...],
+            "errors": []
+        }
+    """
+    try:
+        from .models_unified_system import DataProvenance
+        from .services.provenance_tracker import get_provenance_tracker
+
+        tracker = get_provenance_tracker()
+        result = tracker.verify_integrity(provenance_id)
+
+        return JsonResponse({
+            'success': True,
+            **result
+        })
+
+    except DataProvenance.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Provenance record {provenance_id} not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error verifying MI integrity: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_provenance_detail(request, provenance_id):
+    """
+    Get detailed information about a single provenance record.
+
+    GET /api/mi/provenance/<provenance_id>/
+
+    Returns detailed provenance information including hash chain and compliance.
+    """
+    try:
+        from .models_unified_system import DataProvenance
+
+        provenance = DataProvenance.objects.get(id=provenance_id)
+
+        return JsonResponse({
+            'success': True,
+            'provenance': {
+                'id': str(provenance.id),
+                'entity_type': provenance.entity_type,
+                'entity_id': provenance.entity_id,
+                'parent_id': str(provenance.parent_id) if provenance.parent_id else None,
+                'root_id': str(provenance.root_id) if provenance.root_id else None,
+                'depth': provenance.depth,
+                'source_type': provenance.source_type,
+                'source_name': provenance.source_name,
+                'content_hash': provenance.content_hash,
+                'previous_hash': provenance.previous_hash,
+                'compliance_status': provenance.compliance_status,
+                'metadata': provenance.metadata,
+                'created_at': provenance.created_at.isoformat(),
+                'compliance_checks': list(
+                    provenance.compliance_checks.values(
+                        'id', 'check_type', 'passed', 'severity',
+                        'details', 'remediation_required', 'remediated_at'
+                    )
+                )
+            }
+        })
+
+    except DataProvenance.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Provenance record {provenance_id} not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting MI provenance detail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# AUDIT TRAIL ENDPOINTS (Phase 5 - Session 472)
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_audit_trail(request):
+    """
+    Get audit trail with filtering options.
+
+    GET /api/mi/audit/trail/
+
+    Query params:
+        entity_type: str - Filter by entity type
+        entity_id: str - Filter by entity ID
+        action_type: str - Filter by action type
+        actor_type: str - Filter by actor type (user, agent, system)
+        actor_id: str - Filter by actor ID
+        start_date: str (ISO format) - Start of date range
+        end_date: str (ISO format) - End of date range
+        limit: int (default 100) - Maximum results
+        offset: int (default 0) - Pagination offset
+
+    Returns:
+        {
+            "success": true,
+            "audit_trail": [...],
+            "total_count": 500,
+            "limit": 100,
+            "offset": 0
+        }
+    """
+    try:
+        from .services.provenance_tracker import get_provenance_tracker
+
+        tracker = get_provenance_tracker()
+
+        # Parse query params
+        filters = {}
+        for key in ['entity_type', 'entity_id', 'action_type', 'actor_type',
+                    'actor_id', 'start_date', 'end_date']:
+            value = request.GET.get(key)
+            if value:
+                filters[key] = value
+
+        limit = int(request.GET.get('limit', 100))
+        offset = int(request.GET.get('offset', 0))
+
+        audit_entries = tracker.get_audit_trail(**filters)
+
+        # Count total before pagination
+        total_count = len(audit_entries)
+
+        # Apply pagination
+        paginated = audit_entries[offset:offset + limit]
+
+        return JsonResponse({
+            'success': True,
+            'audit_trail': paginated,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI audit trail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# COMPLIANCE ENDPOINTS (Phase 5 - Session 472)
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_compliance_summary(request):
+    """
+    Get compliance statistics and summary.
+
+    GET /api/mi/compliance/summary/
+
+    Query params:
+        entity_type: str - Filter by entity type
+        start_date: str - Start of date range
+        end_date: str - End of date range
+
+    Returns compliance summary with pass rates and failure breakdown.
+    """
+    try:
+        from .services.provenance_tracker import get_provenance_tracker
+
+        tracker = get_provenance_tracker()
+
+        entity_type = request.GET.get('entity_type')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+
+        summary = tracker.get_compliance_summary(
+            entity_type=entity_type,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        return JsonResponse({
+            'success': True,
+            'summary': summary
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI compliance summary: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_compliance_rules(request):
+    """
+    Get all active compliance rules.
+
+    GET /api/mi/compliance/rules/
+
+    Returns list of active compliance rules and their configurations.
+    """
+    try:
+        from .models_unified_system import ComplianceRule
+
+        rules = ComplianceRule.objects.filter(is_active=True).values(
+            'id', 'name', 'check_type', 'entity_types',
+            'severity', 'blocking', 'config', 'description'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'rules': list(rules)
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI compliance rules: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_compliance_issues(request):
+    """
+    Get outstanding compliance issues requiring remediation.
+
+    GET /api/mi/compliance/issues/
+
+    Query params:
+        severity: str - Filter by severity (critical, high, medium, low)
+        entity_type: str - Filter by entity type
+        unremediated_only: bool (default True) - Only show unremediated issues
+        limit: int (default 100)
+
+    Returns list of compliance issues with details.
+    """
+    try:
+        from .models_unified_system import ComplianceCheck
+
+        severity = request.GET.get('severity')
+        entity_type = request.GET.get('entity_type')
+        unremediated_only = request.GET.get('unremediated_only', 'true').lower() == 'true'
+        limit = int(request.GET.get('limit', 100))
+
+        # Build query
+        queryset = ComplianceCheck.objects.filter(
+            passed=False,
+            remediation_required=True
+        )
+
+        if unremediated_only:
+            queryset = queryset.filter(remediated_at__isnull=True)
+
+        if severity:
+            queryset = queryset.filter(severity=severity)
+
+        if entity_type:
+            queryset = queryset.filter(provenance__entity_type=entity_type)
+
+        queryset = queryset.order_by('severity', '-created_at')
+
+        total_count = queryset.count()
+        critical_count = queryset.filter(severity='critical').count()
+
+        issues = []
+        for check in queryset[:limit]:
+            issues.append({
+                'id': check.id,
+                'check_type': check.check_type,
+                'severity': check.severity,
+                'details': check.details,
+                'created_at': check.created_at.isoformat(),
+                'entity_type': check.provenance.entity_type,
+                'entity_id': check.provenance.entity_id,
+                'provenance_id': str(check.provenance_id),
+                'remediated_at': check.remediated_at.isoformat() if check.remediated_at else None
+            })
+
+        return JsonResponse({
+            'success': True,
+            'issues': issues,
+            'total_count': total_count,
+            'critical_count': critical_count
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI compliance issues: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def remediate_mi_compliance_issue(request, check_id):
+    """
+    Mark a compliance issue as remediated.
+
+    POST /api/mi/compliance/<check_id>/remediate/
+
+    Body:
+        {
+            "remediation_notes": "Fixed data freshness by re-crawling source"
+        }
+
+    Returns confirmation of remediation.
+    """
+    try:
+        from .models_unified_system import ComplianceCheck
+        from .services.provenance_tracker import get_provenance_tracker
+
+        check = ComplianceCheck.objects.get(id=check_id)
+
+        if check.remediated_at:
+            return JsonResponse({
+                'success': False,
+                'error': 'Issue already remediated'
+            }, status=400)
+
+        # Parse body
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            body = {}
+
+        remediation_notes = body.get('remediation_notes', '')
+
+        # Update check
+        check.remediated_at = timezone.now()
+        check.remediated_by = request.user
+        check.details['remediation_notes'] = remediation_notes
+        check.save()
+
+        # Log the remediation
+        tracker = get_provenance_tracker()
+        tracker._create_audit_log(
+            action_type='compliance_remediated',
+            actor_type='user',
+            actor_id=str(request.user.id),
+            entity_type=check.provenance.entity_type,
+            entity_id=check.provenance.entity_id,
+            before_state={'remediated_at': None},
+            after_state={
+                'remediated_at': check.remediated_at.isoformat(),
+                'remediation_notes': remediation_notes
+            },
+            metadata={
+                'check_id': check.id,
+                'check_type': check.check_type
+            }
+        )
+
+        return JsonResponse({
+            'success': True,
+            'check_id': check.id,
+            'remediated_at': check.remediated_at.isoformat()
+        })
+
+    except ComplianceCheck.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Compliance check {check_id} not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error remediating MI compliance issue: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
+# STATISTICS ENDPOINTS (Phase 5 - Session 472)
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_mi_provenance_stats(request):
+    """
+    Get overall provenance and audit statistics.
+
+    GET /api/mi/provenance/stats/
+
+    Returns comprehensive statistics about the provenance system.
+    """
+    try:
+        from django.db.models import Count, Avg
+        from .models_unified_system import DataProvenance, AuditLog, ComplianceCheck
+
+        # Basic counts
+        total_provenance = DataProvenance.objects.count()
+        total_audit_logs = AuditLog.objects.count()
+
+        # By entity type
+        by_entity_type = dict(
+            DataProvenance.objects.values('entity_type')
+            .annotate(count=Count('id'))
+            .values_list('entity_type', 'count')
+        )
+
+        # By source type
+        by_source_type = dict(
+            DataProvenance.objects.values('source_type')
+            .annotate(count=Count('id'))
+            .values_list('source_type', 'count')
+        )
+
+        # Average chain depth
+        avg_depth = DataProvenance.objects.aggregate(avg=Avg('depth'))['avg'] or 0
+
+        # Compliance stats
+        total_checks = ComplianceCheck.objects.count()
+        passed_checks = ComplianceCheck.objects.filter(passed=True).count()
+        pass_rate = passed_checks / total_checks if total_checks > 0 else 1.0
+        open_issues = ComplianceCheck.objects.filter(
+            passed=False,
+            remediation_required=True,
+            remediated_at__isnull=True
+        ).count()
+
+        # Recent activity
+        now = timezone.now()
+        last_24h = DataProvenance.objects.filter(
+            created_at__gte=now - timedelta(hours=24)
+        ).count()
+        last_7d = DataProvenance.objects.filter(
+            created_at__gte=now - timedelta(days=7)
+        ).count()
+
+        audit_24h = AuditLog.objects.filter(
+            created_at__gte=now - timedelta(hours=24)
+        ).count()
+        audit_7d = AuditLog.objects.filter(
+            created_at__gte=now - timedelta(days=7)
+        ).count()
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'total_provenance_records': total_provenance,
+                'by_entity_type': by_entity_type,
+                'by_source_type': by_source_type,
+                'avg_chain_depth': round(avg_depth, 2),
+                'total_audit_logs': total_audit_logs,
+                'compliance': {
+                    'total_checks': total_checks,
+                    'pass_rate': round(pass_rate, 3),
+                    'open_issues': open_issues
+                },
+                'recent_activity': {
+                    'provenance_24h': last_24h,
+                    'provenance_7d': last_7d,
+                    'audit_24h': audit_24h,
+                    'audit_7d': audit_7d
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting MI provenance stats: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

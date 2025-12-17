@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
+from celery.schedules import crontab
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -974,6 +975,25 @@ CELERY_BEAT_SCHEDULE = {
     'propagate-new-policies': {
         'task': 'core.tasks.propagate_new_policies',
         'schedule': 600.0,  # Every 10 minutes - propagate new policies to agents
+    },
+    # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
+    'track-prediction-outcomes': {
+        'task': 'learning_loop.track_prediction_outcomes',
+        'schedule': crontab(hour=18, minute=0),  # 6 PM daily (after market close)
+    },
+    'calculate-agent-accuracy': {
+        'task': 'learning_loop.calculate_agent_accuracy',
+        'schedule': crontab(day_of_week=0, hour=20, minute=0),  # Sunday 8 PM (weekly)
+    },
+    # Session 465: Market Intelligence Desk - Daily autonomous brief generation
+    'run-market-intelligence-desk': {
+        'task': 'core.tasks.run_market_intelligence_desk',
+        'schedule': crontab(hour=6, minute=30, day_of_week='1-5'),  # 6:30 AM Mon-Fri (before market open)
+    },
+    # Session 465: Event-driven Market Intelligence Desk re-runs
+    'check-market-events': {
+        'task': 'core.tasks.check_market_events_and_rerun',
+        'schedule': crontab(minute='*/30', hour='9-16', day_of_week='1-5'),  # Every 30 min during market hours (9 AM - 4 PM Mon-Fri)
     },
 }
 

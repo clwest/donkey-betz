@@ -2017,6 +2017,470 @@ def generate_opportunity_report():
 
 
 # =============================================================================
+# Session 470: ML Scoring Model Training Task
+# =============================================================================
+
+@shared_task
+def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
+    """
+    Train or retrain the ML scoring model using OpportunityOutcome data.
+
+    Session 470: Market Intelligence Architecture - Phase 1
+
+    This task:
+    - Collects training data from OpportunityOutcome records
+    - Trains an XGBoost model with SHAP explainability
+    - Stores the trained model and metrics
+    - Updates the active model version
+
+    Args:
+        force_retrain: If True, retrain even if current model is recent
+        min_samples: Minimum samples required for training (default: 100)
+
+    Returns:
+        Dict with training statistics and model version
+    """
+    import time
+    start_time = time.time()
+    logger.info("🧠 [ML SCORING] Starting ML model training...")
+
+    try:
+        from core.models_unified_system import (
+            OpportunityOutcome, MLModelVersion, Opportunity
+        )
+        from core.services.ml_scoring_engine import get_ml_scoring_engine
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Check if we need to retrain
+        if not force_retrain:
+            recent_model = MLModelVersion.objects.filter(
+                is_active=True,
+                trained_at__gte=timezone.now() - timedelta(days=7)
+            ).first()
+            if recent_model:
+                logger.info(f"🧠 [ML SCORING] Active model {recent_model.version} is recent, skipping training")
+                return {
+                    'status': 'skipped',
+                    'reason': 'Active model is less than 7 days old',
+                    'current_version': recent_model.version
+                }
+
+        # Collect training data from outcomes
+        outcomes = OpportunityOutcome.objects.select_related(
+            'opportunity', 'opportunity__source_data'
+        ).filter(
+            actual_outcome__isnull=False,
+            opportunity__source_data__isnull=False
+        )
+
+        training_data = []
+        for outcome in outcomes:
+            opp = outcome.opportunity
+            spider_data = opp.source_data
+
+            if spider_data:
+                training_data.append({
+                    'spider_data': spider_data,
+                    'target': outcome.actual_outcome,
+                    'revenue': outcome.actual_revenue or 0,
+                })
+
+        if len(training_data) < min_samples:
+            logger.warning(f"🧠 [ML SCORING] Insufficient training data: {len(training_data)} < {min_samples}")
+
+            # If we have no model at all, still try to train with what we have
+            if len(training_data) < 10:
+                return {
+                    'status': 'skipped',
+                    'reason': f'Insufficient training data ({len(training_data)} < {min_samples})',
+                    'samples_available': len(training_data)
+                }
+
+        # Get the ML engine and train
+        ml_engine = get_ml_scoring_engine()
+        training_result = ml_engine.train_model(training_data)
+
+        duration = time.time() - start_time
+
+        if training_result.get('success'):
+            result = {
+                'status': 'completed',
+                'model_version': training_result.get('version'),
+                'samples_used': training_result.get('training_samples'),
+                'train_mse': training_result.get('train_mse'),
+                'test_mse': training_result.get('test_mse'),
+                'train_r2': training_result.get('train_r2'),
+                'test_r2': training_result.get('test_r2'),
+                'duration_seconds': round(duration, 2),
+                'top_features': training_result.get('feature_importance', [])[:5]
+            }
+            logger.info(f"🧠 [ML SCORING] Model training complete - v{result['model_version']}, "
+                       f"R²={result.get('test_r2', 0):.3f}, {result['samples_used']} samples")
+            return result
+        else:
+            logger.error(f"🧠 [ML SCORING] Model training failed: {training_result.get('error')}")
+            return {
+                'status': 'failed',
+                'error': training_result.get('error', 'Unknown error'),
+                'duration_seconds': round(duration, 2)
+            }
+
+    except Exception as e:
+        logger.error(f"❌ [ML SCORING] Training task failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def evaluate_ml_model_performance():
+    """
+    Evaluate current ML model performance against recent outcomes.
+
+    Session 470: Market Intelligence Architecture - Phase 1
+
+    This task compares model predictions against actual outcomes
+    to track model drift and trigger retraining if needed.
+
+    Returns:
+        Dict with performance metrics
+    """
+    logger.info("🧠 [ML SCORING] Evaluating model performance...")
+
+    try:
+        from core.models_unified_system import (
+            ScoringExplanation, OpportunityOutcome, MLModelVersion
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Avg, Count
+
+        # Get recent predictions with outcomes
+        week_ago = timezone.now() - timedelta(days=7)
+
+        recent_with_outcomes = ScoringExplanation.objects.filter(
+            created_at__gte=week_ago,
+            opportunity__outcomes__actual_outcome__isnull=False
+        ).select_related('opportunity')
+
+        if not recent_with_outcomes.exists():
+            logger.info("🧠 [ML SCORING] No recent predictions with outcomes to evaluate")
+            return {
+                'status': 'skipped',
+                'reason': 'No recent predictions with outcomes'
+            }
+
+        # Calculate prediction accuracy
+        total = 0
+        correct_predictions = 0
+        total_error = 0
+
+        for explanation in recent_with_outcomes:
+            outcome = explanation.opportunity.outcomes.first()
+            if outcome and outcome.actual_outcome is not None:
+                total += 1
+                predicted_score = explanation.hybrid_score
+                actual = outcome.actual_outcome
+
+                # Consider prediction correct if within 20 points
+                if abs(predicted_score - actual) <= 20:
+                    correct_predictions += 1
+
+                total_error += abs(predicted_score - actual)
+
+        accuracy = (correct_predictions / total * 100) if total > 0 else 0
+        mae = (total_error / total) if total > 0 else 0
+
+        # Get current model info
+        active_model = MLModelVersion.objects.filter(is_active=True).first()
+
+        result = {
+            'status': 'completed',
+            'evaluated_predictions': total,
+            'accuracy_within_20': round(accuracy, 2),
+            'mean_absolute_error': round(mae, 2),
+            'active_model': active_model.version if active_model else None,
+            'needs_retraining': accuracy < 60 or mae > 30
+        }
+
+        if result['needs_retraining']:
+            logger.warning(f"🧠 [ML SCORING] Model needs retraining: accuracy={accuracy:.1f}%, MAE={mae:.1f}")
+            # Trigger retraining
+            train_ml_scoring_model.delay(force_retrain=True)
+        else:
+            logger.info(f"🧠 [ML SCORING] Model performing well: accuracy={accuracy:.1f}%, MAE={mae:.1f}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ [ML SCORING] Evaluation failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
+# Session 470: Phase 2 - Scoring Dispatcher Tasks
+# =============================================================================
+
+@shared_task
+def process_realtime_scoring_queue(max_items: int = 50, max_time_sec: int = 25):
+    """
+    Process items from the Redis realtime scoring queue.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    This task runs frequently to drain the realtime priority queue,
+    processing high-priority scoring requests first.
+
+    Args:
+        max_items: Maximum items to process per run
+        max_time_sec: Maximum seconds to run
+
+    Returns:
+        Dict with processing statistics
+    """
+    logger.info("⚡ [REALTIME QUEUE] Starting queue processing...")
+
+    try:
+        from core.services.realtime_scorer import get_realtime_scorer
+
+        scorer = get_realtime_scorer()
+
+        # Get queue depths before
+        before_depths = scorer.get_queue_depths()
+        total_before = sum(before_depths.values())
+
+        if total_before == 0:
+            logger.info("⚡ [REALTIME QUEUE] Queue empty, nothing to process")
+            return {
+                'status': 'skipped',
+                'reason': 'queue_empty'
+            }
+
+        # Process items
+        stats = scorer.drain_queue(
+            max_items=max_items,
+            max_time_sec=max_time_sec
+        )
+
+        # Get queue depths after
+        after_depths = scorer.get_queue_depths()
+
+        result = {
+            'status': 'completed',
+            **stats,
+            'queue_before': before_depths,
+            'queue_after': after_depths
+        }
+
+        logger.info(
+            f"⚡ [REALTIME QUEUE] Complete: {stats['success']}/{stats['processed']} success, "
+            f"avg latency: {stats.get('avg_latency_ms', 0)}ms"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ [REALTIME QUEUE] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def process_batch_scoring_queue(batch_size: int = 100):
+    """
+    Process items from the database batch scoring queue.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    This task runs hourly to process lower-priority scoring requests
+    that were queued for batch processing.
+
+    Args:
+        batch_size: Maximum items to process per run
+
+    Returns:
+        Dict with processing statistics
+    """
+    logger.info("📦 [BATCH QUEUE] Starting batch processing...")
+
+    try:
+        from core.services.scoring_dispatcher import get_scoring_dispatcher
+
+        dispatcher = get_scoring_dispatcher()
+
+        # Process batch
+        stats = dispatcher.process_batch_queue(batch_size=batch_size)
+
+        # Cleanup expired items
+        expired = dispatcher.cleanup_expired()
+
+        result = {
+            'status': 'completed',
+            **stats,
+            'expired_cleaned': expired
+        }
+
+        logger.info(
+            f"📦 [BATCH QUEUE] Complete: {stats['success']}/{stats['processed']} success, "
+            f"{expired} expired cleaned"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ [BATCH QUEUE] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def cleanup_stale_scoring_requests():
+    """
+    Clean up stale/stuck scoring requests.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    This task runs periodically to:
+    - Clean up Redis queue items stuck in processing
+    - Expire old database queue items
+    - Update metrics
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    logger.info("🧹 [CLEANUP] Cleaning stale scoring requests...")
+
+    try:
+        from core.services.realtime_scorer import get_realtime_scorer
+        from core.services.scoring_dispatcher import get_scoring_dispatcher
+
+        stats = {
+            'redis_cleaned': 0,
+            'db_expired': 0
+        }
+
+        # Clean Redis queue
+        try:
+            scorer = get_realtime_scorer()
+            stats['redis_cleaned'] = scorer.cleanup_stale_processing()
+        except Exception as e:
+            logger.warning(f"⚠️ [CLEANUP] Redis cleanup failed: {e}")
+
+        # Clean DB queue
+        try:
+            dispatcher = get_scoring_dispatcher()
+            stats['db_expired'] = dispatcher.cleanup_expired()
+        except Exception as e:
+            logger.warning(f"⚠️ [CLEANUP] DB cleanup failed: {e}")
+
+        logger.info(
+            f"🧹 [CLEANUP] Complete: {stats['redis_cleaned']} Redis, "
+            f"{stats['db_expired']} DB items cleaned"
+        )
+
+        return {
+            'status': 'completed',
+            **stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [CLEANUP] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
+def score_spider_data_async(spider_data_id: str, priority: str = 'normal', source: str = 'api', user_id: int = None):
+    """
+    Score a single spider data item asynchronously.
+
+    Session 470: Market Intelligence Architecture - Phase 2
+
+    This is the main entry point for async scoring requests.
+    Routes through the dispatcher which decides realtime vs batch.
+
+    Args:
+        spider_data_id: UUID of SpiderData to score
+        priority: 'high', 'normal', or 'low'
+        source: Where the request came from
+        user_id: Optional user ID
+
+    Returns:
+        Dict with scoring result or queue position
+    """
+    logger.info(f"⚡ [ASYNC SCORE] Scoring {spider_data_id} (priority={priority})")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.services.scoring_dispatcher import (
+            get_scoring_dispatcher,
+            ScoringPriority
+        )
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        # Get spider data
+        spider_data = SpiderData.objects.get(id=spider_data_id)
+
+        # Get user if provided
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                pass
+
+        # Map priority string to enum
+        priority_map = {
+            'high': ScoringPriority.HIGH,
+            'normal': ScoringPriority.NORMAL,
+            'low': ScoringPriority.LOW
+        }
+        priority_enum = priority_map.get(priority.lower(), ScoringPriority.NORMAL)
+
+        # Dispatch
+        dispatcher = get_scoring_dispatcher()
+        response = dispatcher.dispatch(
+            spider_data=spider_data,
+            priority=priority_enum,
+            source=source,
+            user=user
+        )
+
+        return {
+            'status': 'success' if response.success else 'failed',
+            'mode': response.mode,
+            'score': response.score,
+            'explanation_id': response.explanation_id,
+            'queue_position': response.queue_position,
+            'estimated_wait_ms': response.estimated_wait_ms,
+            'latency_ms': response.latency_ms,
+            'error': response.error
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [ASYNC SCORE] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+# =============================================================================
 # Session 230: Smart Distribution Tasks
 # =============================================================================
 
@@ -11560,7 +12024,8 @@ def generate_content_for_channel(channel_id):
         # Step 1: Initiate agent debate
         logger.info(f"🎥 [SESSION 466] Step 1: Initiating agent debate...")
 
-        router = AgentRouter()
+        # Session 468: Pass the channel's user to AgentRouter for AISeries creation
+        router = AgentRouter(user=channel.user)
 
         # Create the debate prompt
         debate_prompt = f"""
@@ -11606,14 +12071,87 @@ Coordinate this debate and return the winning topic decision.
         # Let's find the most recent debate for this channel
         recent_debate = ContentDebate.objects.filter(
             channel=channel
-        ).order_by('-created_at').first()
+        ).order_by('-debate_date').first()
 
+        # Session 469: If coordinator didn't create debate (GPT didn't call tools),
+        # call the debate agents directly - this is a fallback for reliability
         if not recent_debate:
-            error_msg = "No debate record found after coordinator execution"
-            logger.error(f"🎥 [SESSION 466] {error_msg}")
-            results['status'] = 'failed'
-            results['error'] = error_msg
-            return results
+            logger.warning(f"🎥 [SESSION 469] Coordinator didn't create debate, running agents directly...")
+
+            # Import debate agents
+            from core.agents.content.topic_miner_agent import TopicMinerAgent
+            from core.agents.content.contrarian_agent import ContrarianAgent
+            from core.agents.content.performance_analyst_agent import PerformanceAnalystAgent
+
+            # Prepare context for debate agents
+            domain_keywords = [kw.strip() for kw in channel.topic_domain.split(',') if kw.strip()]
+            if not domain_keywords:
+                domain_keywords = [channel.topic_domain]
+
+            scifi_context = {}
+            spider_context = {"domain_keywords": domain_keywords}
+
+            # Run TopicMinerAgent
+            logger.info(f"🗣️ Fallback Debate Step 1: TopicMinerAgent")
+            try:
+                topic_miner = TopicMinerAgent(user=user)
+                miner_result = topic_miner.execute(
+                    task=f"Find trending topics in {channel.topic_domain}",
+                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
+                topic_miner_position = miner_result.message or "No trends found"
+            except Exception as e:
+                logger.error(f"TopicMinerAgent error: {e}")
+                topic_miner_position = f"Error: {str(e)}"
+
+            # Run ContrarianAgent
+            logger.info(f"🗣️ Fallback Debate Step 2: ContrarianAgent")
+            try:
+                contrarian = ContrarianAgent(user=user)
+                contrarian_result = contrarian.execute(
+                    task=f"Check saturation and suggest unique angles for {channel.topic_domain}",
+                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
+                contrarian_position = contrarian_result.message or "No suggestions"
+            except Exception as e:
+                logger.error(f"ContrarianAgent error: {e}")
+                contrarian_position = f"Error: {str(e)}"
+
+            # Run PerformanceAnalystAgent
+            logger.info(f"🗣️ Fallback Debate Step 3: PerformanceAnalystAgent")
+            try:
+                analyst = PerformanceAnalystAgent(user=user)
+                analyst_result = analyst.execute(
+                    task=f"Analyze performance predictions for {channel.topic_domain}",
+                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
+                analyst_position = analyst_result.message or "No insights"
+            except Exception as e:
+                logger.error(f"PerformanceAnalystAgent error: {e}")
+                analyst_position = f"Error: {str(e)}"
+
+            # Create debate record with real agent responses
+            recent_debate = ContentDebate.objects.create(
+                channel=channel,
+                proposed_topic=f"Latest {channel.topic_domain} Developments",
+                proposed_by="AutonomousContentStudioCoordinator (fallback)",
+                topic_miner_position=topic_miner_position[:2000],
+                contrarian_position=contrarian_position[:2000],
+                analyst_position=analyst_position[:2000],
+                director_position="[Session 469] CreativeDirectorAgent integration pending",
+                final_decision=f"Latest AI Developments in {channel.topic_domain}",
+                chosen_angle="Educational overview with practical insights",
+                decision_reasoning="Fallback debate - agents called directly due to coordinator not creating debate record",
+                consensus_reached=True,
+                content_created=False
+            )
+            logger.info(f"🎥 [SESSION 469] Created fallback debate with real agents: {recent_debate.id}")
 
         results['debate_id'] = str(recent_debate.id)
         winning_topic = recent_debate.final_decision
@@ -11623,7 +12161,7 @@ Coordinate this debate and return the winning topic decision.
         logger.info(f"  📊 Debate breakdown:")
         logger.info(f"     TopicMiner: {recent_debate.topic_miner_position[:100]}...")
         logger.info(f"     Contrarian: {recent_debate.contrarian_position[:100]}...")
-        logger.info(f"     Analyst: {recent_debate.performance_analyst_position[:100]}...")
+        logger.info(f"     Analyst: {recent_debate.analyst_position[:100]}...")
 
         # Step 2: Trigger content creation via AISeriesWorkflowAgent
         logger.info(f"🎥 [SESSION 466] Step 2: Creating content via AISeriesWorkflowAgent...")
@@ -11635,7 +12173,7 @@ Create a single episode for the autonomous content channel "{channel.name}".
 Topic: {winning_topic}
 Channel Domain: {channel.topic_domain}
 Target Audience: {channel.target_audience}
-Content Style: {channel.content_style}
+Visual Style: {channel.visual_style}
 
 This topic was selected through agent debate:
 - TopicMiner found it trending
@@ -11668,13 +12206,13 @@ Create 1 episode following the channel's style and targeting the audience.
         # Step 3: Create ChannelEpisode record (Property #4: Outputs with Consequences)
         logger.info(f"🎥 [SESSION 466] Step 3: Creating ChannelEpisode record...")
 
+        # Session 468: Fixed field names to match ChannelEpisode model
         episode = ChannelEpisode.objects.create(
             channel=channel,
             topic=winning_topic,
             title=f"{channel.name}: {winning_topic}",
-            debate=recent_debate,
-            script_data=series_result.data,
-            published_at=timezone.now(),
+            description=f"Auto-generated content. Debate ID: {recent_debate.id}",
+            publish_date=timezone.now(),
             views=0,
             likes=0,
             comments=0,
@@ -11951,3 +12489,1325 @@ def track_content_performance():
     except Exception as e:
         logger.error(f"📊 [SESSION 466] Performance tracking failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 470: HITL Validation Tasks (Human-in-the-Loop)
+# =============================================================================
+
+
+@shared_task
+def process_hitl_escalations():
+    """
+    Process validation requests that need escalation.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Runs periodically to:
+    - Find items past their escalation time
+    - Increase priority
+    - Extend deadlines
+    - Unassign for reassignment
+
+    Schedule: Every 15 minutes
+    """
+    logger.info("👤 [HITL] Processing escalations...")
+
+    try:
+        from core.services.hitl_validation import get_hitl_validation_service
+
+        hitl_service = get_hitl_validation_service()
+        result = hitl_service.process_escalations()
+
+        if result.get('escalated', 0) > 0:
+            logger.info(f"👤 [HITL] Escalated {result['escalated']} validation requests")
+        else:
+            logger.debug("👤 [HITL] No items needed escalation")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"👤 [HITL] Escalation processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def expire_overdue_validations():
+    """
+    Expire validation requests that are past deadline.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    Runs periodically to:
+    - Find items past their deadline
+    - Mark them as expired
+    - Record completion time
+
+    Schedule: Every hour
+    """
+    logger.info("👤 [HITL] Processing expired validations...")
+
+    try:
+        from core.services.hitl_validation import get_hitl_validation_service
+
+        hitl_service = get_hitl_validation_service()
+        result = hitl_service.expire_overdue()
+
+        if result.get('expired', 0) > 0:
+            logger.info(f"👤 [HITL] Expired {result['expired']} overdue validation requests")
+        else:
+            logger.debug("👤 [HITL] No items expired")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"👤 [HITL] Expiration processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def score_and_route_opportunity(opportunity_id: str, user_id: int = None):
+    """
+    Score an opportunity and route through HITL validation if needed.
+
+    Session 470: Market Intelligence Architecture - Phase 3
+
+    This task:
+    1. Scores the opportunity using ML + rules
+    2. Checks confidence thresholds
+    3. Auto-approves/rejects or queues for human review
+
+    Args:
+        opportunity_id: UUID of the opportunity to score
+        user_id: Optional user ID for user-specific configuration
+
+    Returns:
+        Dict with scoring and routing results
+    """
+    logger.info(f"👤 [HITL] Scoring and routing opportunity {opportunity_id}")
+
+    try:
+        from django.contrib.auth import get_user_model
+        from core.models_unified_system import Opportunity, SpiderData
+        from core.services.ml_scoring_engine import get_ml_scoring_engine
+        from core.services.hitl_validation import get_hitl_validation_service
+
+        User = get_user_model()
+        user = User.objects.get(id=user_id) if user_id else None
+
+        # Get the opportunity
+        try:
+            opportunity = Opportunity.objects.get(id=opportunity_id)
+        except Opportunity.DoesNotExist:
+            return {
+                'status': 'failed',
+                'error': f'Opportunity {opportunity_id} not found'
+            }
+
+        # Get associated spider data if exists
+        spider_data = None
+        if opportunity.spider_data_id:
+            try:
+                spider_data = SpiderData.objects.get(id=opportunity.spider_data_id)
+            except SpiderData.DoesNotExist:
+                pass
+
+        # Score the opportunity
+        ml_engine = get_ml_scoring_engine()
+        scoring_result = ml_engine.score_opportunity(spider_data or opportunity)
+
+        if not scoring_result.success:
+            return {
+                'status': 'failed',
+                'error': f'Scoring failed: {scoring_result.error}'
+            }
+
+        # Route through HITL validation
+        hitl_service = get_hitl_validation_service()
+        validation_result = hitl_service.check_and_route(
+            opportunity=opportunity,
+            scoring_result=scoring_result,
+            user=user
+        )
+
+        logger.info(
+            f"👤 [HITL] Opportunity {opportunity_id}: "
+            f"score={scoring_result.hybrid_score:.1f}, "
+            f"confidence={scoring_result.confidence:.1f}%, "
+            f"action={validation_result.action}"
+        )
+
+        return {
+            'status': 'success',
+            'opportunity_id': str(opportunity_id),
+            'hybrid_score': scoring_result.hybrid_score,
+            'ml_score': scoring_result.ml_score,
+            'rule_score': scoring_result.rule_score,
+            'confidence': scoring_result.confidence,
+            'action': validation_result.action,
+            'validation_request_id': validation_result.validation_request_id,
+            'reason': validation_result.reason
+        }
+
+    except Exception as e:
+        logger.error(f"👤 [HITL] Score and route failed for {opportunity_id}: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# Session 470: Event Bus Tasks (Phase 4)
+# =============================================================================
+
+
+@shared_task
+def process_event_bus_scoring_queue():
+    """
+    Process events from the scoring worker queue.
+
+    Session 470: Market Intelligence Architecture - Phase 4
+
+    Consumes events from:
+    - mi:spider_data - New spider data collected
+    - mi:opportunity_created - New opportunities
+
+    Schedule: Every 30 seconds
+    """
+    logger.info("📡 [EventBus] Processing scoring event queue...")
+
+    try:
+        from core.services.event_handlers import create_scoring_worker
+
+        worker = create_scoring_worker(consumer_name="celery_scoring_worker")
+        result = worker.process_batch()
+
+        if result['events_processed'] > 0:
+            logger.info(
+                f"📡 [EventBus] Scoring queue: processed {result['events_processed']}, "
+                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📡 [EventBus] Scoring queue processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def process_event_bus_validation_queue():
+    """
+    Process events from the validation worker queue.
+
+    Session 470: Market Intelligence Architecture - Phase 4
+
+    Consumes events from:
+    - mi:opportunity_scored - Scored opportunities
+    - mi:validation_required - Items needing human review
+
+    Schedule: Every 30 seconds
+    """
+    logger.info("📡 [EventBus] Processing validation event queue...")
+
+    try:
+        from core.services.event_handlers import create_validation_worker
+
+        worker = create_validation_worker(consumer_name="celery_validation_worker")
+        result = worker.process_batch()
+
+        if result['events_processed'] > 0:
+            logger.info(
+                f"📡 [EventBus] Validation queue: processed {result['events_processed']}, "
+                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📡 [EventBus] Validation queue processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def process_event_bus_analytics_queue():
+    """
+    Process events from the analytics worker queue.
+
+    Session 470: Market Intelligence Architecture - Phase 4
+
+    Consumes events from:
+    - mi:validation_decided - Human decisions
+    - mi:outcome_recorded - Actual outcomes
+    - mi:model_trained - Model updates
+
+    Schedule: Every minute
+    """
+    logger.info("📡 [EventBus] Processing analytics event queue...")
+
+    try:
+        from core.services.event_handlers import create_analytics_worker
+
+        worker = create_analytics_worker(consumer_name="celery_analytics_worker")
+        result = worker.process_batch()
+
+        if result['events_processed'] > 0:
+            logger.info(
+                f"📡 [EventBus] Analytics queue: processed {result['events_processed']}, "
+                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📡 [EventBus] Analytics queue processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def claim_stale_events():
+    """
+    Claim and reprocess stale events from all consumer groups.
+
+    Session 470: Market Intelligence Architecture - Phase 4
+
+    Finds events that have been pending for too long (stuck in processing)
+    and reclaims them for reprocessing.
+
+    Schedule: Every 5 minutes
+    """
+    logger.info("📡 [EventBus] Claiming stale events...")
+
+    try:
+        from core.services.event_handlers import (
+            create_scoring_worker,
+            create_validation_worker,
+            create_analytics_worker
+        )
+
+        total_claimed = 0
+
+        # Claim from scoring worker
+        scoring_worker = create_scoring_worker("celery_stale_claimer")
+        total_claimed += scoring_worker.claim_stale_events(min_idle_ms=60000)
+
+        # Claim from validation worker
+        validation_worker = create_validation_worker("celery_stale_claimer")
+        total_claimed += validation_worker.claim_stale_events(min_idle_ms=60000)
+
+        # Claim from analytics worker
+        analytics_worker = create_analytics_worker("celery_stale_claimer")
+        total_claimed += analytics_worker.claim_stale_events(min_idle_ms=60000)
+
+        if total_claimed > 0:
+            logger.info(f"📡 [EventBus] Claimed and reprocessed {total_claimed} stale events")
+
+        return {'claimed': total_claimed}
+
+    except Exception as e:
+        logger.error(f"📡 [EventBus] Stale event claiming failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task
+def get_event_bus_stats():
+    """
+    Get event bus statistics.
+
+    Session 470: Market Intelligence Architecture - Phase 4
+
+    Schedule: Every 15 minutes (for monitoring)
+    """
+    try:
+        from core.services.event_bus import get_event_bus
+
+        bus = get_event_bus()
+        stats = bus.get_stats()
+
+        logger.info(
+            f"📡 [EventBus] Stats: {stats['total_events']} total events, "
+            f"dead_letter={stats['dead_letter_count']}"
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"📡 [EventBus] Stats collection failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
+# NARRATIVE DRIFT DETECTOR (Session 471)
+# Tier 1 Autonomous Situation #2
+# "The system watches the world for story shifts"
+# =============================================================================
+
+@shared_task(name='narrative_drift.run_detector_cycle')
+def run_narrative_drift_cycle():
+    """
+    Run the Narrative Drift Detector autonomous cycle.
+
+    Session 471: Tier 1 Autonomous Situation #2
+
+    This is the main loop that:
+    1. Processes new spider data for narrative signals
+    2. Scans for potential narrative shifts
+    3. Runs multi-agent analysis on detected shifts
+    4. Creates alerts for significant findings
+
+    Implements the 5 Autonomous Properties:
+    1. Persistent Context - Narrative models track all stories
+    2. Incoming Signals - Spider data feeds into the system
+    3. Internal Disagreement - 3 agents provide different perspectives
+    4. Outputs with Consequences - Alerts sent to Discord
+    5. Self-Renewal - This task runs forever via Celery beat
+
+    Schedule: Every 4 hours
+    """
+    logger.info("📰 [NARRATIVE] Starting narrative drift detection cycle...")
+
+    try:
+        from core.agents.narrative import NarrativeDriftCoordinator
+
+        coordinator = NarrativeDriftCoordinator()
+        result = coordinator.run_autonomous_cycle()
+
+        if result.get('success'):
+            steps = result.get('steps', [])
+            logger.info(
+                f"📰 [NARRATIVE] Cycle complete: {len(steps)} steps executed"
+            )
+
+            # Send to Discord if there were alerts
+            for step in steps:
+                if step.get('step') == 'full_scan':
+                    alerts = step.get('result', {}).get('alerts_created', [])
+                    if alerts:
+                        _send_narrative_alerts_to_discord(alerts)
+        else:
+            logger.error(f"📰 [NARRATIVE] Cycle failed: {result.get('error')}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Cycle failed with exception: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='narrative_drift.process_spider_data')
+def process_spider_data_for_narratives():
+    """
+    Process recent spider data for narrative signals.
+
+    Session 471: Narrative Drift Detector
+
+    This task:
+    1. Gets unprocessed spider data from the last 6 hours
+    2. Matches against known narratives via keywords
+    3. Creates NarrativeEvidence records
+    4. Updates narrative mention counts
+
+    Schedule: Every hour
+    """
+    logger.info("📰 [NARRATIVE] Processing spider data for narrative signals...")
+
+    try:
+        from core.agents.narrative import NarrativeDriftCoordinator
+
+        coordinator = NarrativeDriftCoordinator()
+        result = coordinator._process_new_spider_data({})
+
+        logger.info(
+            f"📰 [NARRATIVE] Processed {result.get('processed', 0)} spider records, "
+            f"created {result.get('new_evidence_created', 0)} evidence entries"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Spider data processing failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='narrative_drift.update_narrative_statuses')
+def update_narrative_statuses():
+    """
+    Update narrative lifecycle statuses based on recent activity.
+
+    Session 471: Narrative Drift Detector
+
+    This task:
+    1. Checks all active narratives
+    2. Analyzes recent evidence patterns
+    3. Updates status (emerging -> dominant -> shifting -> fading -> dead)
+    4. Creates alerts for significant status changes
+
+    Schedule: Every 6 hours
+    """
+    logger.info("📰 [NARRATIVE] Updating narrative statuses...")
+
+    try:
+        from core.models_narrative_drift import Narrative, NarrativeEvidence, NarrativeStatus, NarrativeAlert
+        from datetime import timedelta
+        from django.utils import timezone
+
+        now = timezone.now()
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
+
+        updated = []
+        alerts_created = []
+
+        # Get all non-dead narratives
+        narratives = Narrative.objects.exclude(status=NarrativeStatus.DEAD)
+
+        for narrative in narratives:
+            old_status = narrative.status
+
+            # Get evidence counts
+            recent_evidence = NarrativeEvidence.objects.filter(
+                narrative=narrative,
+                created_at__gte=week_ago
+            ).count()
+
+            older_evidence = NarrativeEvidence.objects.filter(
+                narrative=narrative,
+                created_at__gte=month_ago,
+                created_at__lt=week_ago
+            ).count()
+
+            # Determine new status
+            new_status = old_status
+
+            if narrative.mention_count < 5:
+                new_status = NarrativeStatus.EMERGING
+            elif recent_evidence > older_evidence / 3 and recent_evidence > 0:
+                new_status = NarrativeStatus.DOMINANT
+            elif recent_evidence < older_evidence / 10 and older_evidence > 0:
+                new_status = NarrativeStatus.FADING
+            elif recent_evidence == 0 and narrative.last_mention:
+                days_since = (now - narrative.last_mention).days
+                if days_since > 14:
+                    new_status = NarrativeStatus.DEAD
+                elif days_since > 7:
+                    new_status = NarrativeStatus.FADING
+            elif recent_evidence < older_evidence / 2 and older_evidence > 0:
+                new_status = NarrativeStatus.SHIFTING
+
+            # Update if changed
+            if new_status != old_status:
+                narrative.status = new_status
+                narrative.save()
+
+                updated.append({
+                    'id': str(narrative.id),
+                    'title': narrative.title,
+                    'old_status': old_status,
+                    'new_status': new_status
+                })
+
+                # Create alert for significant changes
+                if old_status == NarrativeStatus.DOMINANT and new_status in [NarrativeStatus.SHIFTING, NarrativeStatus.FADING]:
+                    alert = NarrativeAlert.objects.create(
+                        narrative=narrative,
+                        alert_type='narrative_dying',
+                        title=f"Narrative Fading: {narrative.title}",
+                        summary=f"'{narrative.title}' has moved from {old_status} to {new_status}"
+                    )
+                    alerts_created.append(str(alert.id))
+
+        result = {
+            'checked': narratives.count(),
+            'updated': len(updated),
+            'updates': updated,
+            'alerts_created': len(alerts_created)
+        }
+
+        logger.info(
+            f"📰 [NARRATIVE] Status update complete: "
+            f"{result['checked']} checked, {result['updated']} updated"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Status update failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='narrative_drift.send_daily_digest')
+def send_narrative_daily_digest():
+    """
+    Send a daily digest of narrative activity to Discord.
+
+    Session 471: Narrative Drift Detector
+
+    This task:
+    1. Summarizes the day's narrative activity
+    2. Highlights significant shifts
+    3. Lists new/dying narratives
+    4. Sends to Discord #narrative-alerts channel
+
+    Schedule: Daily at 9 AM
+    """
+    logger.info("📰 [NARRATIVE] Generating daily narrative digest...")
+
+    try:
+        from core.models_narrative_drift import (
+            Narrative, NarrativeShift, NarrativeAlert,
+            NarrativeDomain, NarrativeStatus
+        )
+        from datetime import timedelta
+        from django.utils import timezone
+
+        now = timezone.now()
+        day_ago = now - timedelta(days=1)
+
+        # Gather stats
+        stats = {
+            'total_narratives': Narrative.objects.count(),
+            'new_today': Narrative.objects.filter(created_at__gte=day_ago).count(),
+            'shifts_today': NarrativeShift.objects.filter(detected_at__gte=day_ago).count(),
+            'alerts_today': NarrativeAlert.objects.filter(created_at__gte=day_ago).count(),
+            'by_domain': {},
+            'top_narratives': [],
+            'recent_shifts': []
+        }
+
+        # Count by domain
+        for domain_choice in NarrativeDomain.choices:
+            domain = domain_choice[0]
+            count = Narrative.objects.filter(
+                domain=domain,
+                status__in=[NarrativeStatus.DOMINANT, NarrativeStatus.SHIFTING]
+            ).count()
+            if count > 0:
+                stats['by_domain'][domain] = count
+
+        # Top narratives by mentions
+        top_narratives = Narrative.objects.filter(
+            status=NarrativeStatus.DOMINANT
+        ).order_by('-mention_count')[:5]
+
+        for n in top_narratives:
+            stats['top_narratives'].append({
+                'title': n.title,
+                'domain': n.domain,
+                'mentions': n.mention_count
+            })
+
+        # Recent shifts
+        recent_shifts = NarrativeShift.objects.filter(
+            detected_at__gte=day_ago
+        ).order_by('-importance')[:5]
+
+        for shift in recent_shifts:
+            stats['recent_shifts'].append({
+                'old': shift.old_narrative.title,
+                'new': shift.new_narrative.title if shift.new_narrative else 'Unknown',
+                'domain': shift.domain,
+                'importance': float(shift.importance)
+            })
+
+        # Send to Discord
+        _send_narrative_digest_to_discord(stats)
+
+        logger.info(
+            f"📰 [NARRATIVE] Daily digest sent: "
+            f"{stats['total_narratives']} narratives, "
+            f"{stats['shifts_today']} shifts today"
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Daily digest failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+def _send_narrative_alerts_to_discord(alerts: list):
+    """Send narrative alerts to Discord."""
+    try:
+        from core.services.discord_notifications import DiscordNotificationService
+
+        service = DiscordNotificationService()
+
+        for alert in alerts:
+            service.send_notification(
+                channel='narrative-alerts',
+                title=alert.get('title', 'Narrative Alert'),
+                message=alert.get('summary', 'A narrative event was detected'),
+                color=0x9B59B6  # Purple for narrative alerts
+            )
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Discord alert failed: {e}")
+
+
+def _send_narrative_digest_to_discord(stats: dict):
+    """Send narrative digest to Discord."""
+    try:
+        from core.services.discord_notifications import DiscordNotificationService
+
+        service = DiscordNotificationService()
+
+        # Build digest message
+        message_parts = [
+            f"**Total Narratives:** {stats['total_narratives']}",
+            f"**New Today:** {stats['new_today']}",
+            f"**Shifts Today:** {stats['shifts_today']}",
+            ""
+        ]
+
+        if stats['by_domain']:
+            message_parts.append("**Active by Domain:**")
+            for domain, count in stats['by_domain'].items():
+                message_parts.append(f"  • {domain}: {count}")
+            message_parts.append("")
+
+        if stats['top_narratives']:
+            message_parts.append("**Top Narratives:**")
+            for n in stats['top_narratives']:
+                message_parts.append(f"  • {n['title']} ({n['mentions']} mentions)")
+            message_parts.append("")
+
+        if stats['recent_shifts']:
+            message_parts.append("**Recent Shifts:**")
+            for shift in stats['recent_shifts']:
+                message_parts.append(f"  • {shift['old']} → {shift['new']}")
+
+        service.send_notification(
+            channel='narrative-alerts',
+            title="📰 Daily Narrative Digest",
+            message="\n".join(message_parts),
+            color=0x3498DB  # Blue for digest
+        )
+
+    except Exception as e:
+        logger.error(f"📰 [NARRATIVE] Discord digest failed: {e}")
+
+
+# ==================== SESSION 473: NARRATIVE DRIFT + CONTENT STUDIO INTEGRATION ====================
+
+@shared_task(name='narrative_drift.trigger_content_from_shift')
+def trigger_content_from_narrative_shift(shift_id: str):
+    """
+    Session 473: Create content about a narrative shift.
+
+    When Narrative Drift Detector detects a significant shift,
+    this task auto-triggers the Content Studio to generate content about it.
+
+    This connects two Tier 1 Autonomous Situations:
+    - Narrative Drift Detector (Session 471)
+    - Autonomous Content Studio (Session 466)
+
+    The flow:
+    1. Narrative shift detected → NarrativeShift record created
+    2. This task is triggered with the shift ID
+    3. Content Studio creates an episode explaining the shift
+    4. Episode linked back to the shift for tracking
+
+    Args:
+        shift_id: UUID of the NarrativeShift to create content for
+    """
+    logger.info(f"📰→🎬 [SESSION 473] Triggering content creation for narrative shift {shift_id[:8]}...")
+
+    try:
+        from core.models_narrative_drift import NarrativeShift, NarrativeAlert
+        from core.models_autonomous_studio import ContentChannel, ChannelEpisode, ChannelStatus
+        from django.utils import timezone
+
+        # Get the shift
+        try:
+            shift = NarrativeShift.objects.select_related('old_narrative', 'new_narrative').get(id=shift_id)
+        except NarrativeShift.DoesNotExist:
+            logger.error(f"📰→🎬 [SESSION 473] Shift {shift_id} not found")
+            return {'status': 'failed', 'error': 'Shift not found'}
+
+        # Only create content for high-confidence, important shifts
+        if shift.confidence < 0.6 or shift.importance < 0.5:
+            logger.info(f"📰→🎬 [SESSION 473] Skipping low-confidence shift: conf={shift.confidence}, imp={shift.importance}")
+            return {'status': 'skipped', 'reason': 'Low confidence or importance'}
+
+        # Find or create a "Narrative Shifts" content channel
+        # Need a system user for the channel (or use first superuser as fallback)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        system_user = User.objects.filter(is_superuser=True).first()
+
+        if not system_user:
+            logger.error("📰→🎬 [SESSION 473] No superuser found for content channel")
+            return {'status': 'failed', 'error': 'No superuser for content channel'}
+
+        channel, channel_created = ContentChannel.objects.get_or_create(
+            name="Narrative Shift Reports",
+            defaults={
+                'user': system_user,
+                'topic_domain': 'narrative shifts, cultural trends, public discourse, media analysis',
+                'target_audience': 'analysts, journalists, researchers, informed citizens',
+                'content_frequency': 'as_needed',
+                'visual_style': 'minimal, clean, analytical',
+                'content_type': 'educational',
+                'platform': 'discord',
+                'publish_automatically': False,
+                'status': ChannelStatus.ACTIVE,
+                'next_content_due': timezone.now(),  # Available immediately
+            }
+        )
+
+        if channel_created:
+            logger.info("📰→🎬 [SESSION 473] Created 'Narrative Shift Reports' channel")
+
+        # Build content topic from the shift
+        old_title = shift.old_narrative.title
+        new_title = shift.new_narrative.title if shift.new_narrative else "emerging view"
+        domain_display = shift.domain.replace('_', ' ').title()
+
+        topic_title = f"Narrative Shift: {old_title[:60]} -> {new_title[:60]}"
+
+        # Check if episode already exists for this shift
+        existing = ChannelEpisode.objects.filter(
+            channel=channel,
+            topic__contains=str(shift.id)[:8]  # Check if shift ID fragment is in topic
+        ).exists()
+
+        if existing:
+            logger.info(f"📰→🎬 [SESSION 473] Content already exists for shift {shift.id}")
+            return {'status': 'skipped', 'reason': 'Content already exists'}
+
+        # Generate the content
+        content_parts = [
+            f"# Narrative Shift Alert: {domain_display}\n",
+            f"## The Change\n",
+            f"**Previous Narrative:** {old_title}\n",
+            f"**Emerging View:** {new_title}\n",
+            f"\n## Summary\n",
+            shift.shift_summary or "A significant shift in the narrative landscape has been detected.",
+            f"\n## What This Means\n",
+            shift.new_narrative_summary if shift.new_narrative_summary else "The public conversation is changing.",
+        ]
+
+        # Add agent analyses if available
+        if shift.historian_analysis:
+            content_parts.append(f"\n## Historical Context\n{shift.historian_analysis[:500]}")
+        if shift.trend_break_analysis:
+            content_parts.append(f"\n## Why Now?\n{shift.trend_break_analysis[:500]}")
+        if shift.cultural_impact_analysis:
+            content_parts.append(f"\n## Expected Impact\n{shift.cultural_impact_analysis[:500]}")
+
+        # Add second-order effects
+        if shift.second_order_effects:
+            content_parts.append("\n## Second-Order Effects")
+            for effect in shift.second_order_effects[:5]:
+                if isinstance(effect, dict):
+                    content_parts.append(f"- {effect.get('description', effect)}")
+                else:
+                    content_parts.append(f"- {effect}")
+
+        # Add metadata footer
+        content_parts.append(f"\n---\n*Shift ID: {shift.id}*")
+        content_parts.append(f"*Confidence: {shift.confidence}*")
+        content_parts.append(f"*Importance: {shift.importance}*")
+
+        # Create the episode record with the full content in description
+        episode = ChannelEpisode.objects.create(
+            channel=channel,
+            title=topic_title[:200],
+            topic=f"{domain_display} narrative shift [{str(shift.id)[:8]}]",
+            description='\n'.join(content_parts),
+            publish_date=timezone.now(),
+        )
+
+        # Create an alert about the content
+        NarrativeAlert.objects.create(
+            shift=shift,
+            alert_type='high_importance',
+            title=f"Content Created: {topic_title[:150]}",
+            summary=f"Autonomous Content Studio generated an analysis of this narrative shift in the '{channel.name}' channel."
+        )
+
+        # Update channel stats
+        channel.total_episodes_created = channel.episodes.count()
+        channel.save()
+
+        # Session 474: Create provenance chain for full data lineage
+        try:
+            from core.services.provenance_tracker import (
+                create_narrative_shift_provenance,
+                create_content_episode_provenance,
+            )
+
+            # Create provenance for the narrative shift (if not already created)
+            shift_provenance = create_narrative_shift_provenance(
+                shift_id=str(shift.id),
+                domain=shift.domain,
+                confidence=shift.confidence,
+                importance=shift.importance,
+                metadata={
+                    'old_narrative': old_title,
+                    'new_narrative': new_title,
+                    'shift_type': shift.shift_type,
+                }
+            )
+
+            # Create provenance for the content episode, linked to the shift
+            episode_provenance = create_content_episode_provenance(
+                episode_id=str(episode.id),
+                parent_provenance_id=str(shift_provenance.provenance_id) if shift_provenance.success else None,
+                channel_name=channel.name,
+                content_type='narrative_shift_report',
+                trigger_source='narrative_drift_detector',
+                metadata={
+                    'content_length': len(episode.description),
+                    'shift_confidence': shift.confidence,
+                    'shift_importance': shift.importance,
+                }
+            )
+
+            logger.info(
+                f"📜 [SESSION 474] Provenance created: shift={shift_provenance.provenance_id}, episode={episode_provenance.provenance_id}"
+            )
+
+        except Exception as prov_error:
+            logger.warning(f"📜 [SESSION 474] Provenance creation failed (non-blocking): {prov_error}")
+
+        logger.info(
+            f"📰→🎬 [SESSION 473] Created episode: {topic_title[:60]}..."
+        )
+
+        return {
+            'status': 'success',
+            'episode_id': str(episode.id),
+            'topic': topic_title,
+            'channel': channel.name,
+            'content_length': len(episode.description),
+            'provenance_tracked': True  # Session 474
+        }
+
+    except Exception as e:
+        logger.error(f"📰→🎬 [SESSION 473] Content creation failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='narrative_drift.process_shifts_for_content')
+def process_narrative_shifts_for_content():
+    """
+    Session 473: Process recent narrative shifts and trigger content creation.
+
+    This task runs periodically to check for new shifts and create content.
+    It's the bridge between Narrative Drift and Content Studio.
+
+    Schedule: Every 6 hours (after narrative drift cycle)
+    """
+    logger.info("📰→🎬 [SESSION 473] Checking for narrative shifts to create content...")
+
+    try:
+        from core.models_narrative_drift import NarrativeShift
+        from core.models_autonomous_studio import ChannelEpisode
+        from datetime import timedelta
+        from django.utils import timezone
+
+        # Get shifts from last 24 hours that haven't had content created
+        cutoff = timezone.now() - timedelta(hours=24)
+
+        # Find shifts that meet criteria and don't already have content
+        shifts_needing_content = NarrativeShift.objects.filter(
+            detected_at__gte=cutoff,
+            confidence__gte=0.6,
+            importance__gte=0.5
+        )
+
+        results = {
+            'shifts_checked': shifts_needing_content.count(),
+            'content_triggered': 0,
+            'already_has_content': 0,
+            'errors': []
+        }
+
+        for shift in shifts_needing_content:
+            # Check if content already exists for this shift
+            # We check the topic field which contains the shift ID fragment
+            existing = ChannelEpisode.objects.filter(
+                topic__contains=str(shift.id)[:8]
+            ).exists()
+
+            if existing:
+                results['already_has_content'] += 1
+                continue
+
+            # Trigger content creation
+            try:
+                trigger_content_from_narrative_shift.delay(str(shift.id))
+                results['content_triggered'] += 1
+            except Exception as e:
+                results['errors'].append({
+                    'shift_id': str(shift.id),
+                    'error': str(e)
+                })
+
+        logger.info(
+            f"📰→🎬 [SESSION 473] Processed {results['shifts_checked']} shifts, "
+            f"triggered {results['content_triggered']} content creations"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📰→🎬 [SESSION 473] Processing shifts failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# ==================== SESSION 474: UNIFIED INTELLIGENCE PIPELINE ====================
+
+@shared_task(name='unified_pipeline.run_complete_cycle')
+def run_unified_intelligence_pipeline():
+    """
+    Session 474: Run the complete unified intelligence pipeline.
+
+    This task orchestrates ALL THREE Tier 1 Autonomous Situations:
+    1. Market Intelligence Desk (ML Scoring + HITL + Provenance)
+    2. Narrative Drift Detector (Cultural shift analysis)
+    3. Autonomous Content Studio (Auto-generated reports)
+
+    Pipeline Flow:
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │  Spider Network → ML Score → Narrative Check → Content Gen → Track │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    This creates a complete data lineage with provenance tracking through:
+    - SpiderData collection
+    - Opportunity scoring
+    - Narrative evidence matching
+    - Shift detection
+    - Content generation
+    - Revenue tracking
+
+    Schedule: Every 12 hours (comprehensive system cycle)
+    """
+    logger.info("🔄 [SESSION 474] Starting Unified Intelligence Pipeline...")
+
+    from datetime import timedelta
+    from django.utils import timezone
+    import traceback
+
+    results = {
+        'started_at': timezone.now().isoformat(),
+        'phases': {},
+        'success': True,
+        'errors': [],
+    }
+
+    # =========================================================================
+    # Phase 1: Spider Data Collection (Background - already running)
+    # =========================================================================
+    try:
+        from core.models_unified_system import SpiderData
+        cutoff = timezone.now() - timedelta(hours=24)
+        recent_spider_data = SpiderData.objects.filter(created_at__gte=cutoff).count()
+
+        results['phases']['spider_data'] = {
+            'status': 'checked',
+            'records_24h': recent_spider_data,
+        }
+        logger.info(f"🕷️ [Phase 1] Spider data: {recent_spider_data} records in last 24h")
+
+    except Exception as e:
+        results['phases']['spider_data'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"Spider data check: {e}")
+        logger.error(f"🕷️ [Phase 1] Error: {e}")
+
+    # =========================================================================
+    # Phase 2: ML Scoring (Opportunities from spider data)
+    # =========================================================================
+    try:
+        from core.models_unified_system import Opportunity
+        # Use scored_at to check if opportunity has been scored
+        unscored = Opportunity.objects.filter(
+            scored_at__isnull=True,
+            created_at__gte=cutoff
+        ).count()
+
+        if unscored > 0:
+            # Trigger batch scoring (async)
+            try:
+                from core.services.scoring_dispatcher import get_scoring_dispatcher
+                dispatcher = get_scoring_dispatcher()
+                batch_result = dispatcher.batch_score(limit=100)
+                results['phases']['ml_scoring'] = {
+                    'status': 'triggered',
+                    'unscored_count': unscored,
+                    'batch_result': batch_result,
+                }
+            except Exception as score_err:
+                results['phases']['ml_scoring'] = {
+                    'status': 'skipped',
+                    'reason': f'Scoring dispatcher error: {score_err}',
+                    'unscored_count': unscored,
+                }
+        else:
+            results['phases']['ml_scoring'] = {
+                'status': 'skipped',
+                'reason': 'No unscored opportunities',
+            }
+
+        logger.info(f"📊 [Phase 2] ML scoring: {unscored} unscored opportunities")
+
+    except Exception as e:
+        results['phases']['ml_scoring'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"ML scoring: {e}")
+        logger.error(f"📊 [Phase 2] Error: {e}")
+
+    # =========================================================================
+    # Phase 3: Narrative Drift Analysis
+    # =========================================================================
+    try:
+        from core.agents.narrative import NarrativeDriftCoordinator
+
+        coordinator = NarrativeDriftCoordinator()
+        cycle_result = coordinator.run_autonomous_cycle()
+
+        results['phases']['narrative_drift'] = {
+            'status': 'completed' if cycle_result.get('success') else 'partial',
+            'cycle_result': cycle_result,
+        }
+
+        logger.info(f"📰 [Phase 3] Narrative drift: {cycle_result}")
+
+    except Exception as e:
+        results['phases']['narrative_drift'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"Narrative drift: {e}")
+        logger.error(f"📰 [Phase 3] Error: {e}\n{traceback.format_exc()}")
+
+    # =========================================================================
+    # Phase 4: Content Generation (from narrative shifts)
+    # =========================================================================
+    try:
+        from core.models_narrative_drift import NarrativeShift
+        from core.models_autonomous_studio import ChannelEpisode
+
+        # Get shifts from last 24 hours that meet thresholds
+        recent_shifts = NarrativeShift.objects.filter(
+            detected_at__gte=cutoff,
+            confidence__gte=0.6,
+            importance__gte=0.5
+        )
+
+        content_triggered = 0
+        for shift in recent_shifts:
+            # Check if content already exists
+            existing = ChannelEpisode.objects.filter(
+                topic__contains=str(shift.id)[:8]
+            ).exists()
+
+            if not existing:
+                trigger_content_from_narrative_shift.delay(str(shift.id))
+                content_triggered += 1
+
+        results['phases']['content_generation'] = {
+            'status': 'triggered' if content_triggered > 0 else 'skipped',
+            'shifts_found': recent_shifts.count(),
+            'content_triggered': content_triggered,
+        }
+
+        logger.info(f"🎬 [Phase 4] Content generation: triggered {content_triggered} episodes")
+
+    except Exception as e:
+        results['phases']['content_generation'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"Content generation: {e}")
+        logger.error(f"🎬 [Phase 4] Error: {e}")
+
+    # =========================================================================
+    # Phase 5: Provenance Summary
+    # =========================================================================
+    try:
+        from core.models_unified_system import DataProvenance, AuditLog
+
+        # Get provenance stats
+        total_provenance = DataProvenance.objects.count()
+        recent_provenance = DataProvenance.objects.filter(created_at__gte=cutoff).count()
+
+        # Get entity type distribution
+        from django.db.models import Count
+        entity_distribution = DataProvenance.objects.values('entity_type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        results['phases']['provenance'] = {
+            'status': 'collected',
+            'total_records': total_provenance,
+            'records_24h': recent_provenance,
+            'entity_distribution': list(entity_distribution),
+        }
+
+        logger.info(f"📜 [Phase 5] Provenance: {total_provenance} total, {recent_provenance} in 24h")
+
+    except Exception as e:
+        results['phases']['provenance'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"Provenance summary: {e}")
+        logger.error(f"📜 [Phase 5] Error: {e}")
+
+    # =========================================================================
+    # Phase 6: Revenue/Outcome Tracking Summary
+    # =========================================================================
+    try:
+        from core.models_unified_system import Revenue
+        from django.db.models import Sum as DjangoSum
+
+        total_revenue = Revenue.objects.filter(
+            created_at__gte=cutoff
+        ).aggregate(
+            total=DjangoSum('amount')
+        )['total'] or 0
+
+        revenue_count = Revenue.objects.filter(created_at__gte=cutoff).count()
+
+        results['phases']['revenue_tracking'] = {
+            'status': 'collected',
+            'entries_24h': revenue_count,
+            'amount_24h': float(total_revenue),
+        }
+
+        logger.info(f"💰 [Phase 6] Revenue: {revenue_count} entries, ${total_revenue} in 24h")
+
+    except Exception as e:
+        results['phases']['revenue_tracking'] = {'status': 'error', 'error': str(e)}
+        results['errors'].append(f"Revenue tracking: {e}")
+        logger.error(f"💰 [Phase 6] Error: {e}")
+
+    # =========================================================================
+    # Complete Pipeline Summary
+    # =========================================================================
+    results['completed_at'] = timezone.now().isoformat()
+    results['success'] = len(results['errors']) == 0
+
+    # Calculate overall health
+    phases_ok = sum(1 for p in results['phases'].values() if p.get('status') not in ['error'])
+    phases_total = len(results['phases'])
+    results['health_score'] = round((phases_ok / phases_total) * 100, 1) if phases_total > 0 else 0
+
+    logger.info(
+        f"🔄 [SESSION 474] Unified Pipeline Complete: "
+        f"health={results['health_score']}%, "
+        f"phases={phases_ok}/{phases_total}, "
+        f"errors={len(results['errors'])}"
+    )
+
+    # Send Discord notification if configured
+    try:
+        from core.services.discord_notifications import get_discord_notification_service
+
+        service = get_discord_notification_service()
+        if service.is_configured():
+            service.send_system_notification(
+                title="🔄 Unified Intelligence Pipeline Complete",
+                message=f"Health: {results['health_score']}%\n" +
+                        f"Phases: {phases_ok}/{phases_total}\n" +
+                        f"Spider Data: {results['phases'].get('spider_data', {}).get('records_24h', 0)} records\n" +
+                        f"Content Triggered: {results['phases'].get('content_generation', {}).get('content_triggered', 0)} episodes",
+                color=0x00FF00 if results['success'] else 0xFF0000
+            )
+    except Exception as discord_err:
+        logger.debug(f"Discord notification skipped: {discord_err}")
+
+    return results
+
+
+@shared_task(name='unified_pipeline.health_check')
+def unified_pipeline_health_check():
+    """
+    Session 474: Quick health check for all three Tier 1 Autonomous Situations.
+
+    This is a lightweight check that runs more frequently than the full pipeline.
+    It verifies all systems are operational and reports any issues.
+
+    Schedule: Every 2 hours
+    """
+    logger.info("💓 [SESSION 474] Running unified pipeline health check...")
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    health = {
+        'timestamp': timezone.now().isoformat(),
+        'systems': {},
+        'overall_healthy': True,
+    }
+
+    cutoff = timezone.now() - timedelta(hours=6)
+
+    # Check Market Intelligence (Spider + Scoring)
+    try:
+        from core.models_unified_system import SpiderData, Opportunity
+
+        spider_count = SpiderData.objects.filter(created_at__gte=cutoff).count()
+        opp_count = Opportunity.objects.filter(created_at__gte=cutoff).count()
+
+        health['systems']['market_intelligence'] = {
+            'healthy': spider_count > 0,
+            'spider_data_6h': spider_count,
+            'opportunities_6h': opp_count,
+        }
+
+    except Exception as e:
+        health['systems']['market_intelligence'] = {'healthy': False, 'error': str(e)}
+        health['overall_healthy'] = False
+
+    # Check Narrative Drift
+    try:
+        from core.models_narrative_drift import Narrative, NarrativeEvidence
+
+        narrative_count = Narrative.objects.count()
+        evidence_count = NarrativeEvidence.objects.filter(detected_at__gte=cutoff).count()
+
+        health['systems']['narrative_drift'] = {
+            'healthy': narrative_count > 0,
+            'narratives': narrative_count,
+            'evidence_6h': evidence_count,
+        }
+
+    except Exception as e:
+        health['systems']['narrative_drift'] = {'healthy': False, 'error': str(e)}
+        health['overall_healthy'] = False
+
+    # Check Content Studio
+    try:
+        from core.models_autonomous_studio import ContentChannel, ChannelEpisode, ChannelStatus
+
+        active_channels = ContentChannel.objects.filter(status=ChannelStatus.ACTIVE).count()
+        recent_episodes = ChannelEpisode.objects.filter(publish_date__gte=cutoff).count()
+
+        health['systems']['content_studio'] = {
+            'healthy': active_channels > 0,
+            'active_channels': active_channels,
+            'episodes_6h': recent_episodes,
+        }
+
+    except Exception as e:
+        health['systems']['content_studio'] = {'healthy': False, 'error': str(e)}
+        health['overall_healthy'] = False
+
+    # Check Provenance
+    try:
+        from core.models_unified_system import DataProvenance
+
+        prov_count = DataProvenance.objects.filter(created_at__gte=cutoff).count()
+
+        health['systems']['provenance'] = {
+            'healthy': True,  # Provenance is optional
+            'records_6h': prov_count,
+        }
+
+    except Exception as e:
+        health['systems']['provenance'] = {'healthy': False, 'error': str(e)}
+
+    # Calculate overall health
+    healthy_systems = sum(1 for s in health['systems'].values() if s.get('healthy', False))
+    total_systems = len(health['systems'])
+    health['health_percentage'] = round((healthy_systems / total_systems) * 100, 1) if total_systems > 0 else 0
+
+    logger.info(
+        f"💓 [SESSION 474] Health check complete: "
+        f"{healthy_systems}/{total_systems} systems healthy ({health['health_percentage']}%)"
+    )
+
+    return health

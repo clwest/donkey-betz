@@ -234,6 +234,14 @@ from core.agents.blockchain import (
     BlockchainAuditCoordinator,
 )
 
+# Narrative Drift Detector Agents (Session 471)
+from core.agents.narrative import (
+    NarrativeHistorianAgent,
+    TrendBreakDetectorAgent,
+    CulturalImpactAgent,
+    NarrativeDriftCoordinator,
+)
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -334,4 +342,10 @@ __all__ = [
     'WhaleWatcherAgent',
     'ExploitDetectorAgent',
     'BlockchainAuditCoordinator',
+
+    # Narrative Drift Detector Agents (4) - Session 471
+    'NarrativeHistorianAgent',
+    'TrendBreakDetectorAgent',
+    'CulturalImpactAgent',
+    'NarrativeDriftCoordinator',
 ]

@@ -2862,6 +2862,109 @@ urlpatterns += [
     path('api/sessions/status/', get_cross_platform_status, name='sessions-cross-platform-status'),
 ]
 
+# =============================================================================
+# Session 470: HITL Validation API (Human-in-the-Loop)
+# =============================================================================
+from core.views_validation import (
+    validation_queue, validation_approve, validation_reject,
+    validation_escalate, validation_defer, validation_stats,
+    validation_detail, validation_assign, validation_unassign
+)
+
+urlpatterns += [
+    # Validation Queue
+    path('api/validation/queue/', validation_queue, name='validation-queue'),
+    path('api/validation/stats/', validation_stats, name='validation-stats'),
+
+    # Validation Actions
+    path('api/validation/<uuid:validation_id>/', validation_detail, name='validation-detail'),
+    path('api/validation/<uuid:validation_id>/approve/', validation_approve, name='validation-approve'),
+    path('api/validation/<uuid:validation_id>/reject/', validation_reject, name='validation-reject'),
+    path('api/validation/<uuid:validation_id>/escalate/', validation_escalate, name='validation-escalate'),
+    path('api/validation/<uuid:validation_id>/defer/', validation_defer, name='validation-defer'),
+
+    # Assignment
+    path('api/validation/<uuid:validation_id>/assign/', validation_assign, name='validation-assign'),
+    path('api/validation/<uuid:validation_id>/unassign/', validation_unassign, name='validation-unassign'),
+]
+
+# =============================================================================
+# MARKET INTELLIGENCE PROVENANCE & COMPLIANCE (Phase 5 - Session 472)
+# =============================================================================
+from core.views_provenance import (
+    # Data Lineage
+    get_mi_lineage, get_mi_descendants, verify_mi_integrity, get_mi_provenance_detail,
+    # Audit Trail
+    get_mi_audit_trail,
+    # Compliance
+    get_mi_compliance_summary, get_mi_compliance_rules, get_mi_compliance_issues,
+    remediate_mi_compliance_issue,
+    # Statistics
+    get_mi_provenance_stats,
+)
+
+urlpatterns += [
+    # Data Lineage
+    path('api/mi/lineage/<str:entity_type>/<str:entity_id>/', get_mi_lineage, name='mi-lineage'),
+    path('api/mi/provenance/<uuid:provenance_id>/', get_mi_provenance_detail, name='mi-provenance-detail'),
+    path('api/mi/provenance/<uuid:provenance_id>/descendants/', get_mi_descendants, name='mi-descendants'),
+    path('api/mi/provenance/<uuid:provenance_id>/verify/', verify_mi_integrity, name='mi-verify-integrity'),
+
+    # Audit Trail
+    path('api/mi/audit/trail/', get_mi_audit_trail, name='mi-audit-trail'),
+
+    # Compliance
+    path('api/mi/compliance/summary/', get_mi_compliance_summary, name='mi-compliance-summary'),
+    path('api/mi/compliance/rules/', get_mi_compliance_rules, name='mi-compliance-rules'),
+    path('api/mi/compliance/issues/', get_mi_compliance_issues, name='mi-compliance-issues'),
+    path('api/mi/compliance/<int:check_id>/remediate/', remediate_mi_compliance_issue, name='mi-compliance-remediate'),
+
+    # Statistics
+    path('api/mi/provenance/stats/', get_mi_provenance_stats, name='mi-provenance-stats'),
+]
+
+# =============================================================================
+# MARKET INTELLIGENCE ROI METRICS (Phase 6 - Session 472)
+# =============================================================================
+from core.views_roi_metrics import (
+    # ROI Summary
+    roi_summary, roi_aggregate, roi_dashboard, roi_stats,
+    # Conversion Events
+    record_conversion, conversion_events_list, conversion_path,
+    # Funnel
+    funnel_metrics,
+    # Attribution
+    attribution_by_source, attribution_paths, attribution_path_detail,
+    # Weekly Briefs
+    weekly_briefs_list, generate_weekly_brief, weekly_brief_detail,
+)
+
+urlpatterns += [
+    # ROI Summary
+    path('api/mi/roi/summary/', roi_summary, name='mi-roi-summary'),
+    path('api/mi/roi/aggregate/', roi_aggregate, name='mi-roi-aggregate'),
+    path('api/mi/roi/dashboard/', roi_dashboard, name='mi-roi-dashboard'),
+    path('api/mi/roi/stats/', roi_stats, name='mi-roi-stats'),
+
+    # Conversion Events
+    path('api/mi/conversion/record/', record_conversion, name='mi-conversion-record'),
+    path('api/mi/conversion/events/', conversion_events_list, name='mi-conversion-events'),
+    path('api/mi/conversion/<uuid:event_id>/path/', conversion_path, name='mi-conversion-path'),
+
+    # Funnel
+    path('api/mi/funnel/', funnel_metrics, name='mi-funnel'),
+
+    # Attribution
+    path('api/mi/attribution/by-source/', attribution_by_source, name='mi-attribution-by-source'),
+    path('api/mi/attribution/paths/', attribution_paths, name='mi-attribution-paths'),
+    path('api/mi/attribution/<uuid:path_id>/', attribution_path_detail, name='mi-attribution-detail'),
+
+    # Weekly Briefs
+    path('api/mi/briefs/', weekly_briefs_list, name='mi-briefs-list'),
+    path('api/mi/briefs/generate/', generate_weekly_brief, name='mi-briefs-generate'),
+    path('api/mi/briefs/<uuid:brief_id>/', weekly_brief_detail, name='mi-brief-detail'),
+]
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

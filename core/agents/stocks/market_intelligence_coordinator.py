@@ -27,6 +27,7 @@ import json
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.models_unified_system import MarketIntelligenceBrief
+from content.elevenlabs_provider import elevenlabs_provider
 
 logger = logging.getLogger(__name__)
 
@@ -484,16 +485,91 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
 
         return len(all_tickers)
 
+    def _generate_spoken_brief(self, brief: Dict) -> Optional[str]:
+        """
+        Generate spoken audio version of the market brief using ElevenLabs TTS.
+
+        Session 465: Market Intelligence Desk completion - spoken output capability.
+
+        Args:
+            brief: Market intelligence brief dict
+
+        Returns:
+            URL to audio file, or None if generation failed
+        """
+        try:
+            # Build concise script for spoken delivery (audio briefs should be shorter)
+            summary = brief.get('executive_summary', '')
+            high_conviction = brief.get('high_conviction', [])
+            debate_zone = brief.get('debate_zone', [])
+            risk_alerts = brief.get('risk_alerts', [])
+
+            # Create natural-sounding script
+            script_parts = []
+            script_parts.append(f"Good morning. Here's your market intelligence brief.")
+
+            if summary:
+                script_parts.append(summary)
+
+            if high_conviction:
+                script_parts.append(f"\nHigh conviction opportunities: We found {len(high_conviction)} stocks with strong agreement.")
+                for opp in high_conviction[:3]:  # Top 3 for audio
+                    ticker = opp.get('ticker', 'Unknown')
+                    direction = opp.get('direction', 'neutral')
+                    conviction = opp.get('conviction', 'medium')
+                    script_parts.append(f"{ticker} - {direction} bias, {conviction} conviction.")
+
+            if debate_zone:
+                script_parts.append(f"\nDebate zone: {len(debate_zone)} stocks with significant disagreement between bull and bear cases.")
+                for debate in debate_zone[:2]:  # Top 2 for audio
+                    ticker = debate.get('ticker', 'Unknown')
+                    script_parts.append(f"{ticker} shows conflicting signals.")
+
+            if risk_alerts:
+                script_parts.append(f"\nRisk alerts: {len(risk_alerts)} items require attention.")
+
+            script_parts.append("\nEnd of brief. Markets never sleep, and neither do we.")
+
+            spoken_text = " ".join(script_parts)
+
+            logger.info(f"🎤 [SESSION 465] Generating spoken brief ({len(spoken_text)} chars)...")
+
+            # Generate TTS using ElevenLabs
+            # Use "Drew" voice - professional male narrator
+            result = elevenlabs_provider.text_to_speech(
+                text=spoken_text,
+                voice="Drew",
+                model="eleven_multilingual_v2"  # Highest quality
+            )
+
+            if result.get('success'):
+                audio_url = result.get('audio_url')
+                logger.info(f"✅ [SESSION 465] Spoken brief generated: {audio_url}")
+                return audio_url
+            else:
+                error = result.get('error_message', 'Unknown error')
+                logger.warning(f"⚠️ [SESSION 465] TTS generation failed: {error}")
+                return None
+
+        except Exception as e:
+            logger.error(f"❌ [SESSION 465] Spoken brief generation error: {e}")
+            return None
+
     def _prepare_delivery(self, brief: Dict, context: Dict) -> Dict[str, Any]:
         """Prepare brief for multi-channel delivery and actually send it."""
+
+        # Session 465: Generate spoken brief first
+        spoken_url = self._generate_spoken_brief(brief)
+
         delivery_status = {
             'discord_ready': True,
-            'voice_ready': True,
+            'voice_ready': bool(spoken_url),  # True only if audio was generated
             'web_dashboard_ready': True,
             'brief_text': brief.get('executive_summary', ''),
             'brief_structured': brief,
             'delivery_channels': ['discord', 'voice', 'web'],
             'discord_sent': False,
+            'spoken_brief_url': spoken_url,  # Session 465: Add audio URL
         }
 
         # Send to Discord

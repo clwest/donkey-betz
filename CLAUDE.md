@@ -1,8 +1,8 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 17, 2025 - Session 466 (Autonomous Content Studio)
+**Last Updated:** December 17, 2025 - Session 470 (ML Scoring Engine + Real Agent Debates)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
-**Current Focus:** Autonomous Content Studio | Tier 1 Autonomous Situation | Self-Renewal System!
+**Current Focus:** ML Scoring Engine (XGBoost+SHAP) | Real Agent Debates | Autonomous Content Studio!
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 62 spiders | 57 working | 6,500+ data records | **Agents USE learned knowledge!**
 **Agent Ecosystem:** 36 clean agents + learning hooks | Autonomous Content Generation | 3-Agent Debates
@@ -406,6 +406,9 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 470:** ML Scoring Engine (Phase 1) - Built XGBoost-based ML scoring with SHAP explainability for opportunity scoring. New components: `MLScoringEngine` (~500 lines), `MLModelVersion` and `ScoringExplanation` models, migration 0100, training/evaluation Celery tasks (Sunday 3:30 AM / Daily 6:30 AM). Hybrid scoring: 60% ML + 40% rule-based. 15 features extracted from SpiderData. Auto-trains when 100+ OpportunityOutcome records exist. Handoff: `docs/handoffs/SESSION_470_ML_SCORING_ENGINE.md`
+- **Session 469:** Discord Studio Fixes + Real Agent Debates - Fixed Discord bot duplicate commands (brief-feedback, action), fixed `/studio-status` field errors (published_at→created_at, is_active→status). **Implemented REAL agent debates** - TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent now actually execute during content debates (replacing placeholders). Added `/studio-episode` command to view episode scripts. Tested both channels successfully. Handoff: `docs/handoffs/SESSION_469_DISCORD_STUDIO_FIXES_AND_REAL_DEBATES.md`
+- **Session 468:** Autonomous Content Studio Bug Fixes - Fixed 7 critical bugs: (1) Slow embeddings 10min→<1s (use pre-computed), (2) Wrong model imports in coordinator, (3) Missing user in AgentRouter, (4) ChannelEpisode field names, (5) ContentChannel field reference, (6) Debate ordering, (7) GPT tool calling fallback. Handoff: `docs/handoffs/SESSION_468_AUTONOMOUS_STUDIO_BUGFIXES.md`
 - **Session 466:** Autonomous Content Studio COMPLETE - Built Tier 1 Autonomous Situation with ALL 5 properties: (1) Persistent Context via ContentChannel/TopicPerformance models, (2) Incoming Signals from spider network + platform metrics, (3) Internal Disagreement with 3-agent debates (TopicMiner vs Contrarian vs PerformanceAnalyst), (4) Outputs with Consequences through performance tracking + learning loop, (5) Self-Renewal via auto-scheduling (runs forever!). Added 4 new agents, 3 Celery tasks, 6 Discord commands (`/studio-create`, `/studio-list`, `/studio-status`, `/studio-pause`, `/studio-resume`, `/studio-performance`). System generates content autonomously and gets smarter over time. Handoff: `docs/handoffs/SESSION_466_AUTONOMOUS_CONTENT_STUDIO_COMPLETE.md`
 - **Session 445:** AISeriesWorkflowAgent - Built master orchestrator for multi-episode content series. New agent chains Research → Script → Character → Voice → Video → Package stages. 3 new Discord commands: `/series-create`, `/series-status`, `/series-list`. Supports educational, entertainment, and marketing series with 1-5 episodes. Maintains character/style consistency across episodes. Handoff: `docs/handoffs/SESSION_445_AI_SERIES_WORKFLOW_AGENT.md`
 - **Session 444:** Voice Chat (Whisper Integration) - Added `/voice-chat` command for full voice conversations! Join voice channel → speak your question → Whisper transcribes → agent processes → TTS responds in your cloned voice. Complete speech-to-speech loop working in Discord!

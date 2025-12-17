@@ -634,6 +634,174 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+    # Session 470: ML Scoring Engine (Market Intelligence Architecture - Phase 1)
+    # Weekly model retraining and daily performance evaluation
+    'ml-scoring-weekly-retrain': {
+        'task': 'core.tasks.train_ml_scoring_model',
+        'schedule': crontab(day_of_week=0, hour=3, minute=30),  # Sunday 3:30 AM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+    'ml-scoring-evaluate-performance': {
+        'task': 'core.tasks.evaluate_ml_model_performance',
+        'schedule': crontab(hour=6, minute=30),  # Daily at 6:30 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Session 470: Phase 2 - Scoring Dispatcher Tasks
+    # Real-time queue processing (every 30 seconds for low latency)
+    'process-realtime-scoring-queue': {
+        'task': 'core.tasks.process_realtime_scoring_queue',
+        'schedule': 30.0,  # Every 30 seconds
+        'options': {
+            'expires': 25,  # Expire before next run
+        }
+    },
+    # Batch queue processing (every hour)
+    'process-batch-scoring-queue': {
+        'task': 'core.tasks.process_batch_scoring_queue',
+        'schedule': crontab(minute=0),  # Every hour at :00
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Cleanup stale scoring requests (every 15 minutes)
+    'cleanup-stale-scoring-requests': {
+        'task': 'core.tasks.cleanup_stale_scoring_requests',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    # Session 470: Phase 3 - HITL Validation Tasks
+    # Process escalations (every 15 minutes)
+    'process-hitl-escalations': {
+        'task': 'core.tasks.process_hitl_escalations',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    # Expire overdue validations (every hour)
+    'expire-overdue-validations': {
+        'task': 'core.tasks.expire_overdue_validations',
+        'schedule': crontab(minute=30),  # Every hour at :30
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Session 470: Phase 4 - Event Bus Tasks
+    # Process scoring event queue (every 30 seconds)
+    'process-event-bus-scoring-queue': {
+        'task': 'core.tasks.process_event_bus_scoring_queue',
+        'schedule': 30.0,  # Every 30 seconds
+        'options': {
+            'expires': 25,  # Expire before next run
+        }
+    },
+    # Process validation event queue (every 30 seconds)
+    'process-event-bus-validation-queue': {
+        'task': 'core.tasks.process_event_bus_validation_queue',
+        'schedule': 30.0,  # Every 30 seconds
+        'options': {
+            'expires': 25,  # Expire before next run
+        }
+    },
+    # Process analytics event queue (every minute)
+    'process-event-bus-analytics-queue': {
+        'task': 'core.tasks.process_event_bus_analytics_queue',
+        'schedule': 60.0,  # Every minute
+        'options': {
+            'expires': 55,  # Expire before next run
+        }
+    },
+    # Claim stale events (every 5 minutes)
+    'claim-stale-events': {
+        'task': 'core.tasks.claim_stale_events',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # 5 minutes
+        }
+    },
+    # Event bus stats (every 15 minutes)
+    'event-bus-stats': {
+        'task': 'core.tasks.get_event_bus_stats',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    # =========================================================================
+    # Session 471: Narrative Drift Detector (Tier 1 Autonomous Situation #2)
+    # "The system watches the world for story shifts"
+    # =========================================================================
+    # Main detection cycle - scans for narrative shifts
+    'narrative-drift-detector-cycle': {
+        'task': 'narrative_drift.run_detector_cycle',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+    # Process spider data for narrative signals
+    'narrative-process-spider-data': {
+        'task': 'narrative_drift.process_spider_data',
+        'schedule': crontab(minute=30),  # Every hour at :30
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Update narrative lifecycle statuses
+    'narrative-update-statuses': {
+        'task': 'narrative_drift.update_narrative_statuses',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+    # Daily narrative digest to Discord
+    'narrative-daily-digest': {
+        'task': 'narrative_drift.send_daily_digest',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    # Session 473: Process narrative shifts for content creation
+    # Runs 30 min after narrative status updates to catch new shifts
+    'narrative-shifts-to-content': {
+        'task': 'narrative_drift.process_shifts_for_content',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+
+    # =========================================================================
+    # Session 474: Unified Intelligence Pipeline
+    # =========================================================================
+
+    # Full pipeline run - comprehensive cycle through all 3 Tier 1 Autonomous Situations
+    # Spider → ML Score → Narrative Check → Content Gen → Revenue Track
+    'unified-pipeline-complete-cycle': {
+        'task': 'unified_pipeline.run_complete_cycle',
+        'schedule': crontab(minute=0, hour='*/12'),  # Every 12 hours at :00
+        'options': {
+            'expires': 43200,  # 12 hours
+        }
+    },
+
+    # Quick health check - lightweight verification all systems are operational
+    'unified-pipeline-health-check': {
+        'task': 'unified_pipeline.health_check',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

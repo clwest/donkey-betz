@@ -3,9 +3,12 @@ Opportunity Scoring Agent - Clean Architecture
 ===============================================
 
 Session 280: Phase 3 - Agent Architecture Unification
+Session 470: Market Intelligence Architecture - ML Scoring Integration
 
 This agent transforms raw spider data into scored, actionable opportunities
 that feed into the content creation pipeline.
+
+Now supports hybrid ML + rule-based scoring with SHAP explainability.
 
 Tools Available:
     - score_data: Score spider data for opportunities
@@ -34,6 +37,22 @@ from dataclasses import dataclass, field
 from core.agents.base_agent import BaseAgent, AgentResult
 
 logger = logging.getLogger(__name__)
+
+# Session 470: ML Scoring Engine
+_ml_scoring_engine = None
+
+
+def _get_ml_scoring_engine():
+    """Lazy load ML scoring engine."""
+    global _ml_scoring_engine
+    if _ml_scoring_engine is None:
+        try:
+            from core.services.ml_scoring_engine import get_ml_scoring_engine
+            _ml_scoring_engine = get_ml_scoring_engine()
+            logger.info("ML Scoring Engine loaded successfully")
+        except Exception as e:
+            logger.warning(f"ML Scoring Engine not available: {e}")
+    return _ml_scoring_engine
 
 
 @dataclass
@@ -561,11 +580,47 @@ You score and analyze - you do NOT create content or execute workflows."""
             }
 
     def _calculate_score(self, spider_data) -> Dict[str, Any]:
-        """Calculate score for a spider data item."""
+        """
+        Calculate score for a spider data item.
+
+        Session 470: Now uses hybrid ML + rule-based scoring with SHAP explanations.
+        """
         raw_data = spider_data.raw_data or {}
         title = raw_data.get('title', f"{spider_data.data_type} from {spider_data.spider_name}")
 
-        # Base scores from relevance
+        # Session 470: Try ML scoring first
+        ml_engine = _get_ml_scoring_engine()
+        if ml_engine:
+            try:
+                ml_result = ml_engine.score_opportunity(spider_data)
+                if ml_result.success:
+                    # Store explanation if we have an opportunity
+                    explanation_data = None
+                    if ml_result.shap_explanation:
+                        explanation_data = ml_result.shap_explanation.to_dict()
+
+                    return {
+                        'title': title[:100],
+                        'source': spider_data.spider_name,
+                        'profit_potential': ml_result.profit_potential,
+                        'competition_level': ml_result.competition_level,
+                        'effort_required': ml_result.effort_required,
+                        'time_sensitivity': ml_result.time_sensitivity,
+                        'overall_score': min(100, max(1, int(ml_result.hybrid_score))),
+                        'content_types': self._suggest_content_types('trend', title),
+                        # Session 470: ML scoring metadata
+                        'ml_score': ml_result.ml_score,
+                        'rule_score': ml_result.rule_score,
+                        'hybrid_score': ml_result.hybrid_score,
+                        'confidence': ml_result.confidence,
+                        'model_version': ml_result.model_version,
+                        'explanation': explanation_data,
+                        'scoring_method': 'hybrid_ml',
+                    }
+            except Exception as e:
+                logger.warning(f"ML scoring failed, falling back to rules: {e}")
+
+        # Fallback: Original rule-based scoring
         base = spider_data.relevance_score / 2 + 25
 
         profit = min(100, max(1, int(base + 10)))
@@ -592,6 +647,7 @@ You score and analyze - you do NOT create content or execute workflows."""
             'time_sensitivity': timing,
             'overall_score': min(100, max(1, overall)),
             'content_types': self._suggest_content_types('trend', title),
+            'scoring_method': 'rule_based',
         }
 
     def _calculate_trend_scores(self, topic: str) -> Dict[str, Any]:

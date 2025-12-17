@@ -21,6 +21,7 @@ Stock Audit Agents:
 Market Intelligence Desk Agents (NEW - Session 462):
 - BullCaseAgent: Argues why stocks should go UP
 - BearCaseAgent: Argues why stocks should go DOWN
+- SignalScannerAgent: Detects technical patterns and trading signals (Session 465)
 - MarketIntelligenceCoordinator: Orchestrates debate, generates daily brief
 """
 
@@ -33,6 +34,7 @@ from .stock_audit_coordinator import StockAuditCoordinator, run_stock_audit_cycl
 # Session 462: Market Intelligence Desk
 from .bull_case_agent import BullCaseAgent
 from .bear_case_agent import BearCaseAgent
+from .signal_scanner_agent import SignalScannerAgent
 from .market_intelligence_coordinator import MarketIntelligenceCoordinator, run_market_intelligence_desk
 
 __all__ = [
@@ -47,6 +49,7 @@ __all__ = [
     # Market Intelligence Desk (Session 462)
     'BullCaseAgent',
     'BearCaseAgent',
+    'SignalScannerAgent',
     'MarketIntelligenceCoordinator',
     'run_market_intelligence_desk',
 ]

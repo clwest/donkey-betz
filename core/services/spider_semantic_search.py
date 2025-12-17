@@ -460,9 +460,11 @@ class SpiderSemanticSearch:
         entries = list(queryset.order_by('-created_at')[:500])  # Limit for performance
 
         if not entries:
-            # Fall back to on-the-fly embedding
-            logger.info("No DB embeddings found, falling back to regular semantic search")
-            return self.semantic_search(query, category, hours, limit, min_similarity)
+            # Session 468: Do NOT fall back to slow on-the-fly embedding generation
+            # This was causing 10+ minute delays in agent execution
+            # Instead, return empty results - agents have other knowledge sources
+            logger.info("No DB embeddings found, returning empty results (no fallback)")
+            return []
 
         # Calculate similarities
         results = []
