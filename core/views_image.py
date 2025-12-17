@@ -4293,6 +4293,54 @@ def unified_gallery(request):
                     'scale': model.metadata.get('scale', 'medium'),
                 })
 
+        # Fetch DaVinci Resolve renders if requested (Session 479)
+        if media_type in ['all', 'videos', 'resolve']:
+            from core.models_unified_system import ResolveRenderJob
+
+            # Only show completed resolve renders
+            resolve_queryset = ResolveRenderJob.objects.filter(user=user, status='done')
+
+            # Apply filters
+            if search_term:
+                resolve_queryset = resolve_queryset.filter(
+                    Q(color_grade__icontains=search_term) |
+                    Q(template__icontains=search_term)
+                )
+
+            # Convert to unified format
+            for render in resolve_queryset:
+                # Build URL for the rendered video
+                render_url = render.output_url or ''
+
+                # Convert relative URLs to absolute URLs
+                if render_url and not render_url.startswith(('http://', 'https://')):
+                    render_url = request.build_absolute_uri(render_url)
+
+                all_items.append({
+                    'id': str(render.id),
+                    'type': 'resolve',  # Special type for DaVinci Resolve renders
+                    'url': render_url,
+                    'thumbnail_url': render_url,  # Use video as thumbnail
+                    'prompt': f"DaVinci Resolve: {render.color_grade} grade",
+                    'created_at': render.created_at,
+                    'is_favorite': False,  # No favorite field on ResolveRenderJob yet
+                    'view_count': 0,
+                    'download_count': 0,
+                    'model_used': 'DaVinci Resolve',
+                    'parameters': {
+                        'template': render.template,
+                        'color_grade': render.color_grade,
+                        'auto_selected': render.auto_grade_selected,
+                        'spider_trends': render.spider_trends_used,
+                    },
+                    # Resolve-specific fields
+                    'video_type': 'resolve_render',
+                    'resolve_job_id': render.resolve_job_id,
+                    'user_rating': render.user_rating,
+                    'was_used': render.was_used,
+                    'revenue_generated': float(render.revenue_generated) if render.revenue_generated else 0,
+                })
+
         # NOTE: Audio support will be added when AudioHistory model is created.
         # See content/models.py for current model inventory.
         # if media_type in ['all', 'audio']:
