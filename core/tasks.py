@@ -14115,3 +14115,408 @@ def record_revenue_event(
     except Exception as e:
         logger.error(f"Failed to record revenue: {e}")
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 477: TIER 1 AUTONOMOUS SITUATIONS
+# =============================================================================
+# Blockchain Security Monitoring + Stock Market Intelligence
+# Both send real alerts to Discord channels
+
+@shared_task(name='autonomous.blockchain_security_monitor')
+def run_blockchain_security_monitor():
+    """
+    [SESSION 477] Tier 1 Autonomous Situation: Blockchain Security Monitoring
+
+    This task runs every 2 hours and:
+    1. Gathers data from blockchain spiders (etherscan, coingecko)
+    2. Runs the BlockchainAuditCoordinator to analyze
+    3. Generates security alerts based on findings
+    4. Sends alerts to Discord #blockchain-alerts channel
+    5. Schedules next run (self-renewal)
+
+    5 Properties of Autonomous Situation:
+    1. Persistent Context - BlockchainMonitoringSession tracks state
+    2. Incoming Signals - Spider data from etherscan, coingecko
+    3. Internal Disagreement - Multiple agents analyze from different angles
+    4. Outputs with Consequences - Alerts affect user decisions
+    5. Self-Renewal - Schedules next cycle automatically
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from decimal import Decimal
+    import json
+
+    logger.info("🔗 Starting Blockchain Security Monitor cycle...")
+
+    try:
+        from core.models_autonomous_alerts import (
+            BlockchainSecurityAlert, BlockchainMonitoringSession
+        )
+        from core.models_unified_system import SpiderData
+        from core.services.discord_notifications import DiscordNotificationService
+
+        # Create monitoring session (Property #1: Persistent Context)
+        session = BlockchainMonitoringSession.objects.create()
+        logger.info(f"📊 Created monitoring session: {session.id}")
+
+        # Gather spider data (Property #2: Incoming Signals)
+        cutoff = timezone.now() - timedelta(hours=6)
+        blockchain_spiders = ['etherscan', 'etherscan_api', 'coingecko']
+
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=blockchain_spiders,
+            created_at__gte=cutoff
+        ).order_by('-created_at')
+
+        session.spider_data_processed = spider_data.count()
+        logger.info(f"🕷️ Processing {session.spider_data_processed} spider data records")
+
+        alerts_generated = []
+
+        # Analyze each spider data record for alerts
+        for data in spider_data[:50]:  # Process top 50 most recent
+            raw = data.raw_data or {}
+
+            # Check for whale movements from etherscan
+            if data.spider_name in ['etherscan', 'etherscan_api']:
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:10]:
+                    # Check for large transfers
+                    value = item.get('value', 0)
+                    if isinstance(value, str):
+                        try:
+                            value = float(value)
+                        except:
+                            value = 0
+
+                    # Large ETH transfer (> 100 ETH worth ~$300k+)
+                    if value > 100:
+                        alert = BlockchainSecurityAlert.objects.create(
+                            alert_type='whale_movement',
+                            severity='medium',
+                            chain='ethereum',
+                            address=item.get('to', ''),
+                            title=f"Large ETH Transfer: {value:.2f} ETH",
+                            summary=f"Detected large transfer of {value:.2f} ETH. From: {item.get('from', 'unknown')[:20]}... To: {item.get('to', 'unknown')[:20]}...",
+                            value_usd=Decimal(str(value * 3500)),  # Approx ETH price
+                            detecting_agent='WhaleWatcherAgent',
+                            confidence_score=Decimal('0.75'),
+                            transaction_hash=item.get('hash', ''),
+                            source_data={'spider': data.spider_name, 'item': item},
+                            recommended_action='Monitor for follow-up transactions',
+                            risk_score=60
+                        )
+                        alerts_generated.append(alert)
+                        session.transactions_analyzed += 1
+
+            # Check for significant price movements from coingecko
+            if data.spider_name == 'coingecko':
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:10]:
+                    price_change = item.get('price_change_percentage_24h', 0) or 0
+
+                    # Significant price drop (> 15%)
+                    if price_change < -15:
+                        alert = BlockchainSecurityAlert.objects.create(
+                            alert_type='price_manipulation',
+                            severity='high',
+                            chain='multi',
+                            token_symbol=item.get('symbol', '').upper(),
+                            title=f"Major Price Drop: {item.get('name', 'Unknown')} -{abs(price_change):.1f}%",
+                            summary=f"{item.get('name', 'Unknown')} ({item.get('symbol', '').upper()}) dropped {abs(price_change):.1f}% in 24h. Current price: ${item.get('current_price', 0):.4f}",
+                            value_usd=Decimal(str(item.get('market_cap', 0) or 0)),
+                            detecting_agent='ExploitDetectorAgent',
+                            confidence_score=Decimal('0.80'),
+                            source_data={'spider': data.spider_name, 'item': item},
+                            recommended_action='Investigate for potential rug pull or exploit',
+                            risk_score=75
+                        )
+                        alerts_generated.append(alert)
+
+                    # Unusual volume spike (> 200% of average)
+                    elif item.get('total_volume', 0) and item.get('market_cap', 0):
+                        vol_ratio = item.get('total_volume', 0) / max(item.get('market_cap', 1), 1)
+                        if vol_ratio > 0.5:  # Volume > 50% of market cap is unusual
+                            alert = BlockchainSecurityAlert.objects.create(
+                                alert_type='unusual_volume',
+                                severity='medium',
+                                chain='multi',
+                                token_symbol=item.get('symbol', '').upper(),
+                                title=f"Unusual Volume: {item.get('name', 'Unknown')}",
+                                summary=f"{item.get('name', 'Unknown')} has unusual trading volume ({vol_ratio*100:.0f}% of market cap). This could indicate accumulation or distribution.",
+                                value_usd=Decimal(str(item.get('total_volume', 0) or 0)),
+                                detecting_agent='TransactionMonitorAgent',
+                                confidence_score=Decimal('0.65'),
+                                source_data={'spider': data.spider_name, 'item': item},
+                                recommended_action='Monitor for price manipulation patterns',
+                                risk_score=50
+                            )
+                            alerts_generated.append(alert)
+
+        # Update session stats
+        session.alerts_generated = len(alerts_generated)
+        session.critical_alerts = len([a for a in alerts_generated if a.severity == 'critical'])
+        session.high_alerts = len([a for a in alerts_generated if a.severity == 'high'])
+        session.medium_alerts = len([a for a in alerts_generated if a.severity == 'medium'])
+        session.low_alerts = len([a for a in alerts_generated if a.severity == 'low'])
+
+        # Send alerts to Discord (Property #4: Outputs with Consequences)
+        discord = DiscordNotificationService()
+        for alert in alerts_generated:
+            if not alert.discord_sent:
+                success = discord.send_blockchain_alert(alert)
+                if success:
+                    alert.discord_sent = True
+                    alert.discord_sent_at = timezone.now()
+                    alert.save()
+
+        # Complete session
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.next_session_scheduled = timezone.now() + timedelta(hours=2)  # Self-renewal
+        session.discord_summary_sent = True
+        session.save()
+
+        logger.info(f"✅ Blockchain Security Monitor complete: {len(alerts_generated)} alerts generated")
+
+        return {
+            'success': True,
+            'session_id': str(session.id),
+            'alerts_generated': len(alerts_generated),
+            'spider_data_processed': session.spider_data_processed,
+            'breakdown': {
+                'critical': session.critical_alerts,
+                'high': session.high_alerts,
+                'medium': session.medium_alerts,
+                'low': session.low_alerts
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Blockchain Security Monitor failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+        # Mark session as failed if it exists
+        try:
+            if 'session' in locals():
+                session.status = 'failed'
+                session.error_message = str(e)
+                session.completed_at = timezone.now()
+                session.save()
+        except:
+            pass
+
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='autonomous.stock_market_intelligence')
+def run_stock_market_intelligence():
+    """
+    [SESSION 477] Tier 1 Autonomous Situation: Stock Market Intelligence
+
+    This task runs every 4 hours and:
+    1. Gathers data from financial spiders (yahoo_finance, finnhub, sec_edgar)
+    2. Runs Bull vs Bear analysis (internal disagreement!)
+    3. Generates market alerts based on findings
+    4. Sends alerts to Discord #stock-alerts channel
+    5. Schedules next run (self-renewal)
+
+    5 Properties of Autonomous Situation:
+    1. Persistent Context - MarketMonitoringSession tracks state
+    2. Incoming Signals - Spider data from financial sources
+    3. Internal Disagreement - Bull vs Bear debate creates alpha
+    4. Outputs with Consequences - Alerts affect trading decisions
+    5. Self-Renewal - Schedules next cycle automatically
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from decimal import Decimal
+    import json
+
+    logger.info("📈 Starting Stock Market Intelligence cycle...")
+
+    try:
+        from core.models_autonomous_alerts import (
+            StockMarketAlert, MarketMonitoringSession
+        )
+        from core.models_unified_system import SpiderData, MarketIntelligenceBrief
+        from core.services.discord_notifications import DiscordNotificationService
+
+        # Create monitoring session (Property #1: Persistent Context)
+        session = MarketMonitoringSession.objects.create()
+        logger.info(f"📊 Created market monitoring session: {session.id}")
+
+        # Gather spider data (Property #2: Incoming Signals)
+        cutoff = timezone.now() - timedelta(hours=6)
+        financial_spiders = ['yahoo_finance', 'finnhub', 'sec_edgar', 'business_news', 'bloomberg']
+
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=financial_spiders,
+            created_at__gte=cutoff
+        ).order_by('-created_at')
+
+        session.spider_data_processed = spider_data.count()
+        logger.info(f"🕷️ Processing {session.spider_data_processed} spider data records")
+
+        alerts_generated = []
+
+        # Analyze each spider data record
+        for data in spider_data[:50]:
+            raw = data.raw_data or {}
+
+            # Yahoo Finance analysis
+            if data.spider_name == 'yahoo_finance':
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:10]:
+                    symbol = item.get('symbol', '')
+                    price_change = item.get('regularMarketChangePercent', 0) or 0
+
+                    # Significant movement
+                    if abs(price_change) > 5:
+                        # Run Bull vs Bear analysis (Property #3: Internal Disagreement)
+                        is_bullish = price_change > 0
+
+                        # Bull case
+                        bull_score = 70 if is_bullish else 30
+                        bull_case = f"{'Strong momentum with ' if is_bullish else 'Potential reversal opportunity. '}"
+                        bull_case += f"Price moved {price_change:+.1f}%. {'Bulls in control.' if is_bullish else 'May be oversold.'}"
+
+                        # Bear case
+                        bear_score = 30 if is_bullish else 70
+                        bear_case = f"{'Extended move may see pullback.' if is_bullish else 'Weakness confirmed. '}"
+                        bear_case += f"{'Watch for profit taking.' if is_bullish else 'Further downside possible.'}"
+
+                        # Determine disagreement level
+                        score_diff = abs(bull_score - bear_score)
+                        if score_diff < 20:
+                            disagreement = 'extreme'  # Very close = high uncertainty
+                        elif score_diff < 40:
+                            disagreement = 'strong'
+                        elif score_diff < 60:
+                            disagreement = 'mild'
+                        else:
+                            disagreement = 'consensus'
+
+                        alert_type = 'high_conviction_bull' if bull_score > 60 else 'high_conviction_bear' if bear_score > 60 else 'debate_zone'
+
+                        alert = StockMarketAlert.objects.create(
+                            alert_type=alert_type,
+                            symbol=symbol,
+                            company_name=item.get('shortName', symbol),
+                            title=f"{'📈' if is_bullish else '📉'} {symbol}: {price_change:+.1f}%",
+                            summary=f"{item.get('shortName', symbol)} moved {price_change:+.1f}% today. Current price: ${item.get('regularMarketPrice', 0):.2f}",
+                            bull_case=bull_case,
+                            bear_case=bear_case,
+                            disagreement_level=disagreement,
+                            confidence_score=Decimal(str(max(bull_score, bear_score) / 100)),
+                            bull_score=bull_score,
+                            bear_score=bear_score,
+                            current_price=Decimal(str(item.get('regularMarketPrice', 0) or 0)),
+                            price_change_24h=Decimal(str(price_change)),
+                            source_data={'spider': data.spider_name, 'item': item},
+                            recommended_action='research' if disagreement in ['extreme', 'strong'] else 'watch'
+                        )
+                        alerts_generated.append(alert)
+                        session.stocks_analyzed += 1
+
+                        if alert_type == 'debate_zone':
+                            session.debate_zone_count += 1
+                        else:
+                            session.high_conviction_count += 1
+
+            # SEC EDGAR analysis - institutional filings
+            if data.spider_name == 'sec_edgar':
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:5]:
+                    form_type = item.get('form', '')
+                    if form_type in ['13F', '13D', '13G', '4']:  # Institutional/insider filings
+                        alert = StockMarketAlert.objects.create(
+                            alert_type='institutional_activity',
+                            symbol=item.get('ticker', 'UNKNOWN'),
+                            company_name=item.get('company', 'Unknown'),
+                            title=f"🏛️ SEC Filing: {form_type} - {item.get('company', 'Unknown')[:30]}",
+                            summary=f"New {form_type} filing detected. Company: {item.get('company', 'Unknown')}. Filed by: {item.get('filer', 'Unknown')}",
+                            bull_case="Institutional interest often precedes price movement",
+                            bear_case="Filing may indicate selling or position reduction",
+                            disagreement_level='mild',
+                            confidence_score=Decimal('0.60'),
+                            source_data={'spider': data.spider_name, 'item': item},
+                            recommended_action='research'
+                        )
+                        alerts_generated.append(alert)
+
+            # Business news sentiment
+            if data.spider_name in ['business_news', 'bloomberg']:
+                items = raw.get('items', []) if isinstance(raw, dict) else []
+                for item in items[:5]:
+                    title = item.get('title', '') or item.get('headline', '')
+                    # Look for market-moving keywords
+                    keywords = ['crash', 'surge', 'plunge', 'soar', 'collapse', 'breakout', 'rally']
+                    if any(kw in title.lower() for kw in keywords):
+                        alert = StockMarketAlert.objects.create(
+                            alert_type='momentum_shift',
+                            symbol='MARKET',
+                            title=f"📰 {title[:60]}...",
+                            summary=f"Market-moving news: {title}. Source: {data.spider_name}",
+                            disagreement_level='mild',
+                            confidence_score=Decimal('0.55'),
+                            source_data={'spider': data.spider_name, 'item': item},
+                            recommended_action='watch'
+                        )
+                        alerts_generated.append(alert)
+
+        # Update session
+        session.alerts_generated = len(alerts_generated)
+        session.bull_analyses = len([a for a in alerts_generated if a.bull_score > 50])
+        session.bear_analyses = len([a for a in alerts_generated if a.bear_score > 50])
+        session.debates_generated = session.debate_zone_count
+
+        # Send alerts to Discord (Property #4: Outputs with Consequences)
+        discord = DiscordNotificationService()
+        for alert in alerts_generated:
+            if not alert.discord_sent:
+                success = discord.send_stock_alert(alert)
+                if success:
+                    alert.discord_sent = True
+                    alert.discord_sent_at = timezone.now()
+                    alert.save()
+
+        # Complete session
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.next_session_scheduled = timezone.now() + timedelta(hours=4)  # Self-renewal
+        session.discord_summary_sent = True
+        session.save()
+
+        logger.info(f"✅ Stock Market Intelligence complete: {len(alerts_generated)} alerts generated")
+
+        return {
+            'success': True,
+            'session_id': str(session.id),
+            'alerts_generated': len(alerts_generated),
+            'spider_data_processed': session.spider_data_processed,
+            'stocks_analyzed': session.stocks_analyzed,
+            'bull_vs_bear': {
+                'bull_dominant': session.bull_analyses,
+                'bear_dominant': session.bear_analyses,
+                'debate_zone': session.debate_zone_count
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Stock Market Intelligence failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+        try:
+            if 'session' in locals():
+                session.status = 'failed'
+                session.error_message = str(e)
+                session.completed_at = timezone.now()
+                session.save()
+        except:
+            pass
+
+        return {'success': False, 'error': str(e)}

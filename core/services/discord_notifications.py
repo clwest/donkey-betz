@@ -1181,26 +1181,166 @@ class DiscordNotificationService:
         return results
 
     # =========================================================================
-    # Session 461: Stock Audit Agent Alerts
+    # Session 461/477: Stock Market Intelligence Alerts
     # =========================================================================
 
-    def send_stock_alert(self, ticker: str, severity: str, alert_type: str,
-                          message: str, details: List[dict] = None,
+    def send_stock_alert(self, alert_or_ticker, severity: str = None, alert_type: str = None,
+                          message: str = None, details: List[dict] = None,
                           is_correlated: bool = False) -> bool:
         """
-        Send a stock market alert to #stock-alerts (Session 461).
+        Send a stock market alert to #stock-alerts (Session 461/477).
 
         Args:
-            ticker: Stock ticker symbol
-            severity: Alert severity (CRITICAL, HIGH, MEDIUM, LOW)
-            alert_type: Type of alert (MARKET_MOVEMENT, INSIDER_TRADING, etc.)
-            message: Alert message
-            details: List of detailed findings
+            alert_or_ticker: StockMarketAlert model object OR ticker string (legacy)
+            severity: Alert severity (only if ticker string provided)
+            alert_type: Type of alert (only if ticker string provided)
+            message: Alert message (only if ticker string provided)
+            details: List of detailed findings (only if ticker string provided)
             is_correlated: Whether multiple systems flagged this stock
 
         Returns:
             True if notification sent successfully
         """
+        # Handle StockMarketAlert model object (Session 477)
+        if hasattr(alert_or_ticker, 'symbol'):
+            alert = alert_or_ticker
+            ticker = alert.symbol or 'UNKNOWN'
+            alert_type = alert.alert_type or 'market_movement'
+            title = alert.title or f'{ticker} Alert'
+            summary = alert.summary or ''
+            company_name = alert.company_name or ticker
+            bull_case = alert.bull_case or ''
+            bear_case = alert.bear_case or ''
+            disagreement = alert.disagreement_level or 'mild'
+            bull_score = alert.bull_score or 50
+            bear_score = alert.bear_score or 50
+            confidence = float(alert.confidence_score) if alert.confidence_score else 0.5
+            current_price = float(alert.current_price) if alert.current_price else 0
+            price_change = float(alert.price_change_24h) if alert.price_change_24h else 0
+            recommended_action = alert.recommended_action or 'watch'
+
+            # Determine severity from alert type and scores
+            if alert_type in ['high_conviction_bull', 'high_conviction_bear']:
+                severity = 'HIGH'
+            elif alert_type == 'debate_zone':
+                severity = 'MEDIUM'
+            elif alert_type == 'risk_alert':
+                severity = 'HIGH'
+            else:
+                severity = 'LOW'
+
+            # Alert type emojis and colors
+            type_config = {
+                'high_conviction_bull': {'emoji': '🐂📈', 'color': 0x2ECC71},  # Green
+                'high_conviction_bear': {'emoji': '🐻📉', 'color': 0xE74C3C},  # Red
+                'debate_zone': {'emoji': '⚔️🤔', 'color': 0xFF00FF},  # Magenta - disagreement!
+                'risk_alert': {'emoji': '🚨⚠️', 'color': 0xFFA500},  # Orange
+                'momentum_shift': {'emoji': '🔄📊', 'color': 0x3498DB},  # Blue
+                'institutional_activity': {'emoji': '🏛️💼', 'color': 0x9B59B6},  # Purple
+                'anomaly_detected': {'emoji': '🔍❓', 'color': 0xF39C12},  # Yellow
+                'earnings_alert': {'emoji': '📊💰', 'color': 0x1ABC9C},  # Teal
+            }
+            config = type_config.get(alert_type, {'emoji': '📈', 'color': 0x95A5A6})
+
+            embed = {
+                "title": f"{config['emoji']} {title[:150]}",
+                "description": summary[:2000] if summary else f"Stock market alert for {ticker}",
+                "color": config['color'],
+                "author": {
+                    "name": f"📈 Market Intelligence - {alert_type.replace('_', ' ').title()}"
+                },
+                "fields": [
+                    {"name": "🏷️ Symbol", "value": f"**{ticker}**", "inline": True},
+                ],
+                "footer": {
+                    "text": "AI Studio Market Intelligence Desk"
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            # Add company name if different from ticker
+            if company_name and company_name != ticker:
+                embed["fields"].append({"name": "🏢 Company", "value": company_name[:50], "inline": True})
+
+            # Add price info
+            if current_price > 0:
+                price_emoji = "📈" if price_change > 0 else "📉" if price_change < 0 else "➖"
+                embed["fields"].append({"name": f"{price_emoji} Price", "value": f"${current_price:.2f}", "inline": True})
+
+            if price_change != 0:
+                change_color = "🟢" if price_change > 0 else "🔴"
+                embed["fields"].append({"name": f"{change_color} 24h Change", "value": f"{price_change:+.2f}%", "inline": True})
+
+            # Bull vs Bear analysis (key feature!)
+            if bull_case or bear_case:
+                # Show disagreement level with visual indicator
+                disagreement_indicator = {
+                    'consensus': '🤝 Consensus',
+                    'mild': '🟡 Mild Disagreement',
+                    'strong': '🟠 Strong Disagreement',
+                    'extreme': '🔴 Extreme Disagreement'
+                }
+                embed["fields"].append({
+                    "name": "⚖️ Agent Disagreement",
+                    "value": disagreement_indicator.get(disagreement, disagreement),
+                    "inline": True
+                })
+
+                # Bull score vs Bear score visualization
+                bull_bar = "🟢" * (bull_score // 20) + "⚪" * (5 - bull_score // 20)
+                bear_bar = "🔴" * (bear_score // 20) + "⚪" * (5 - bear_score // 20)
+                embed["fields"].append({
+                    "name": "🐂 Bull",
+                    "value": f"{bull_bar} {bull_score}%",
+                    "inline": True
+                })
+                embed["fields"].append({
+                    "name": "🐻 Bear",
+                    "value": f"{bear_bar} {bear_score}%",
+                    "inline": True
+                })
+
+                if bull_case:
+                    embed["fields"].append({
+                        "name": "🐂 Bull Case",
+                        "value": bull_case[:400],
+                        "inline": False
+                    })
+
+                if bear_case:
+                    embed["fields"].append({
+                        "name": "🐻 Bear Case",
+                        "value": bear_case[:400],
+                        "inline": False
+                    })
+
+            # Add confidence
+            embed["fields"].append({"name": "📊 Confidence", "value": f"{confidence:.0%}", "inline": True})
+
+            # Add recommended action
+            action_emojis = {
+                'watch': '👀',
+                'research': '🔍',
+                'consider_buy': '💚',
+                'consider_sell': '❤️',
+                'hedge': '🛡️',
+                'avoid': '🚫'
+            }
+            action_emoji = action_emojis.get(recommended_action, '📋')
+            embed["fields"].append({
+                "name": f"{action_emoji} Action",
+                "value": recommended_action.replace('_', ' ').title(),
+                "inline": True
+            })
+
+            return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
+
+        # Legacy: Handle ticker string (old API)
+        ticker = alert_or_ticker
+        severity = severity or 'MEDIUM'
+        alert_type = alert_type or 'MARKET_MOVEMENT'
+        message = message or 'Stock alert triggered'
+
         # Severity colors and emojis
         severity_config = {
             "CRITICAL": {"emoji": "🚨", "color": 0xFF0000},  # Red
@@ -1208,7 +1348,7 @@ class DiscordNotificationService:
             "MEDIUM": {"emoji": "📊", "color": 0xFFD700},  # Gold
             "LOW": {"emoji": "ℹ️", "color": 0x3498DB},  # Blue
         }
-        config = severity_config.get(severity, {"emoji": "📈", "color": 0x95A5A6})
+        config = severity_config.get(severity.upper(), {"emoji": "📈", "color": 0x95A5A6})
 
         # Correlated alerts get special treatment
         title_prefix = "🔗 CORRELATED " if is_correlated else ""
@@ -1216,7 +1356,7 @@ class DiscordNotificationService:
         # Build embed
         embed = {
             "title": f"{config['emoji']} {title_prefix}STOCK ALERT: {ticker}",
-            "description": message[:2000] if message else "Stock alert triggered",
+            "description": message[:2000],
             "color": config["color"],
             "author": {
                 "name": f"📈 Stock Audit System - {severity}"
@@ -1395,20 +1535,49 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
 
-    # ==================== Session 461: Blockchain Audit Methods ====================
+    # ==================== Session 461/477: Blockchain Audit Methods ====================
 
-    def send_blockchain_alert(self, alert: dict) -> bool:
+    def send_blockchain_alert(self, alert) -> bool:
         """
-        Send a blockchain security alert to Discord (Session 461).
+        Send a blockchain security alert to Discord (Session 461/477).
 
         Args:
-            alert: Alert dict with severity, type, title, description, etc.
+            alert: BlockchainSecurityAlert model object OR dict with alert data
 
         Returns:
             True if notification sent successfully
         """
-        severity = alert.get('severity', 'MEDIUM')
-        alert_type = alert.get('type', 'unknown')
+        # Handle both model objects and dicts
+        if hasattr(alert, 'severity'):
+            # It's a model object (BlockchainSecurityAlert)
+            severity = alert.severity.upper() if alert.severity else 'MEDIUM'
+            alert_type = alert.alert_type or 'unknown'
+            title = alert.title or 'Security Alert'
+            summary = alert.summary or ''
+            address = alert.address or ''
+            token_symbol = alert.token_symbol or ''
+            chain = alert.chain or 'ethereum'
+            value_usd = float(alert.value_usd) if alert.value_usd else 0
+            detecting_agent = alert.detecting_agent or 'Unknown'
+            confidence = float(alert.confidence_score) if alert.confidence_score else 0.5
+            recommended_action = alert.recommended_action or ''
+            risk_score = alert.risk_score or 50
+            tx_hash = alert.transaction_hash or ''
+        else:
+            # It's a dict
+            severity = alert.get('severity', 'MEDIUM').upper()
+            alert_type = alert.get('type', alert.get('alert_type', 'unknown'))
+            title = alert.get('title', 'Security Alert')
+            summary = alert.get('description', alert.get('summary', ''))
+            address = alert.get('address', '')
+            token_symbol = alert.get('token_symbol', '')
+            chain = alert.get('chain', 'ethereum')
+            value_usd = alert.get('estimated_impact_usd', alert.get('value_usd', 0)) or 0
+            detecting_agent = alert.get('detecting_agent', 'Unknown')
+            confidence = alert.get('confidence', alert.get('confidence_score', 0.5))
+            recommended_action = alert.get('recommended_action', '')
+            risk_score = alert.get('risk_score', 50)
+            tx_hash = alert.get('transaction_hash', '')
 
         # Determine color and emoji based on severity
         severity_config = {
@@ -1419,47 +1588,70 @@ class DiscordNotificationService:
         }
         config = severity_config.get(severity, severity_config['MEDIUM'])
 
+        # Alert type emojis
+        type_emojis = {
+            'whale_movement': '🐋',
+            'price_manipulation': '📉',
+            'unusual_volume': '📊',
+            'contract_exploit': '💥',
+            'flash_loan': '⚡',
+            'rug_pull': '🏃',
+            'suspicious_tx': '🔍',
+            'governance_attack': '🏛️',
+        }
+        type_emoji = type_emojis.get(alert_type, '🔗')
+
         embed = {
-            "title": f"{config['emoji']} BLOCKCHAIN ALERT",
-            "description": alert.get('title', 'Security Alert'),
+            "title": f"{config['emoji']} {type_emoji} {title[:150]}",
+            "description": summary[:2000] if summary else "Blockchain security alert triggered",
             "color": config['color'],
+            "author": {
+                "name": f"🔗 Blockchain Security Monitor - {severity}"
+            },
             "fields": [
-                {"name": "Severity", "value": severity, "inline": True},
-                {"name": "Type", "value": alert_type, "inline": True},
+                {"name": "🎯 Severity", "value": severity, "inline": True},
+                {"name": "📋 Type", "value": alert_type.replace('_', ' ').title(), "inline": True},
+                {"name": "⛓️ Chain", "value": chain.title(), "inline": True},
             ],
             "footer": {
-                "text": f"AI Studio Blockchain Audit • {alert.get('timestamp', '')}"
-            }
+                "text": f"AI Studio Blockchain Audit • Detected by {detecting_agent}"
+            },
+            "timestamp": datetime.utcnow().isoformat()
         }
 
-        if alert.get('description'):
+        # Add token/address info
+        if token_symbol:
+            embed["fields"].append({"name": "🪙 Token", "value": token_symbol.upper(), "inline": True})
+
+        if address:
+            short_addr = f"`{address[:10]}...{address[-6:]}`" if len(address) > 16 else f"`{address}`"
+            embed["fields"].append({"name": "📍 Address", "value": short_addr, "inline": True})
+
+        # Add value if significant
+        if value_usd and value_usd > 0:
+            embed["fields"].append({"name": "💰 Value", "value": f"${value_usd:,.2f}", "inline": True})
+
+        # Add risk score
+        risk_emoji = "🔴" if risk_score >= 75 else "🟠" if risk_score >= 50 else "🟡" if risk_score >= 25 else "🟢"
+        embed["fields"].append({"name": f"{risk_emoji} Risk Score", "value": f"{risk_score}/100", "inline": True})
+
+        # Add confidence
+        embed["fields"].append({"name": "📊 Confidence", "value": f"{confidence:.0%}", "inline": True})
+
+        # Add recommended action
+        if recommended_action:
             embed["fields"].append({
-                "name": "Details",
-                "value": alert['description'][:1000],
+                "name": "💡 Recommended Action",
+                "value": recommended_action[:500],
                 "inline": False
             })
 
-        if alert.get('affected_addresses'):
-            addresses = alert['affected_addresses'][:5]
-            addr_text = "\n".join([f"`{a[:10]}...{a[-6:]}`" for a in addresses])
+        # Add transaction hash if available
+        if tx_hash:
+            etherscan_link = f"https://etherscan.io/tx/{tx_hash}"
             embed["fields"].append({
-                "name": "Affected Addresses",
-                "value": addr_text,
-                "inline": False
-            })
-
-        if alert.get('estimated_impact_usd'):
-            embed["fields"].append({
-                "name": "Est. Impact",
-                "value": f"${alert['estimated_impact_usd']:,.0f}",
-                "inline": True
-            })
-
-        if alert.get('recommended_actions'):
-            actions = alert['recommended_actions'][:3]
-            embed["fields"].append({
-                "name": "Recommended Actions",
-                "value": "\n".join([f"• {a}" for a in actions]),
+                "name": "🔗 Transaction",
+                "value": f"[View on Etherscan]({etherscan_link})",
                 "inline": False
             })
 
