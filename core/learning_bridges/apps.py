@@ -43,5 +43,13 @@ class LearningBridgesConfig(AppConfig):
             logger.info("  - Sports Betting Bridge: ✓")
             logger.info("  - Spider Data Bridge: ✓")
 
+            # Session 477: Connect situation trigger signals
+            try:
+                from core.signals.trigger_signals import connect_trigger_signals
+                connect_trigger_signals()
+                logger.info("  - Situation Trigger Signals: ✓")
+            except Exception as trigger_error:
+                logger.warning(f"  - Situation Trigger Signals: ✗ ({trigger_error})")
+
         except Exception as e:
             logger.error(f"❌ Failed to initialize Learning Bridges: {e}", exc_info=True)
