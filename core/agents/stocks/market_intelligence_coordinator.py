@@ -131,7 +131,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message=f"Market Intelligence Brief generated for {len(tickers)} stocks",
                 data={
@@ -149,13 +149,56 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 execution_time_ms=execution_time
             )
 
+            # === Session 462: Priority 5 - Learning Infrastructure ===
+            # Record outcome for XP and pattern learning
+            self._record_learning_outcome(
+                result=result,
+                task=task,
+                context=context,
+                spider_data_used=True,  # Uses Yahoo Finance spider for stock data
+                scifi_context_used=False
+            )
+
+            # Create memory of successful execution
+            self._create_execution_memory(
+                result=result,
+                task=task,
+                memory_type="success",
+                importance=0.8  # High importance - daily brief with market insights
+            )
+
+            return result
+
         except Exception as e:
             logger.error(f"MarketIntelligenceCoordinator error: {e}")
-            return AgentResult(
+            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+            result = AgentResult(
                 success=False,
                 error=str(e),
-                agent_name=self.name
+                agent_name=self.name,
+                execution_time_ms=execution_time
             )
+
+            # === Session 462: Priority 5 - Learning Infrastructure ===
+            # Record failed outcome for learning
+            self._record_learning_outcome(
+                result=result,
+                task=task,
+                context=context or {},
+                spider_data_used=True,
+                scifi_context_used=False
+            )
+
+            # Create memory of failure to learn from
+            self._create_execution_memory(
+                result=result,
+                task=task,
+                memory_type="failure",
+                importance=0.9  # Very high importance - learn from failures
+            )
+
+            return result
 
     def _load_previous_brief(self, context: Dict) -> Optional[Dict]:
         """Load yesterday's brief for change tracking (persistent context)."""
