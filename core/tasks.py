@@ -14860,7 +14860,7 @@ def start_resolve_render(self, job_id: str, video_ids: list, template: str, colo
         }
 
         # Send to resolve node
-        headers = {'Authorization': f'Bearer {token}'} if token else {}
+        headers = {'X-Render-Token': token} if token else {}
         response = requests.post(
             f'{resolve_url}/render/start',
             json=render_payload,
@@ -14951,7 +14951,7 @@ def poll_resolve_job_status(self, job_id: str):
         resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
         token = os.environ.get('RENDER_NODE_TOKEN', '')
 
-        headers = {'Authorization': f'Bearer {token}'} if token else {}
+        headers = {'X-Render-Token': token} if token else {}
         response = requests.get(
             f'{resolve_url}/render/status/{job.resolve_job_id}',
             headers=headers,
