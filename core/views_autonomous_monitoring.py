@@ -93,8 +93,8 @@ def api_content_studio_status(request):
                 'status': channel.status,
                 'episode_count': channel.episodes.count(),
                 'episodes_24h': recent_episodes,
-                'last_run': channel.last_run.isoformat() if channel.last_run else None,
-                'next_run': channel.next_scheduled_run.isoformat() if channel.next_scheduled_run else None,
+                'last_run': channel.last_content_created.isoformat() if channel.last_content_created else None,
+                'next_run': channel.next_content_due.isoformat() if channel.next_content_due else None,
             })
 
         # Recent episodes
@@ -111,11 +111,11 @@ def api_content_studio_status(request):
         } for ep in recent_episodes]
 
         # Topic performance
-        top_topics = TopicPerformance.objects.order_by('-success_rate')[:5]
+        top_topics = TopicPerformance.objects.order_by('-avg_performance_score')[:5]
         topic_data = [{
             'topic': tp.topic,
-            'success_rate': float(tp.success_rate),
-            'times_used': tp.times_used,
+            'success_rate': float(tp.avg_performance_score) if tp.avg_performance_score else 0,
+            'times_used': tp.episode_count,
         } for tp in top_topics]
 
         # Recent debates
@@ -194,16 +194,16 @@ def api_narrative_drift_status(request):
 
         shift_data = [{
             'id': str(s.id),
-            'narrative': s.narrative.title if s.narrative else 'Unknown',
-            'direction': s.direction,
-            'importance': s.importance,
+            'narrative': s.old_narrative.title if s.old_narrative else 'Unknown',
+            'domain': s.domain,
+            'importance': float(s.importance),
             'detected_at': s.detected_at.isoformat(),
-            'summary': s.summary[:100] if s.summary else '',
+            'summary': s.shift_summary[:100] if s.shift_summary else '',
         } for s in recent_shifts]
 
-        # Active alerts
+        # Active alerts (not dismissed)
         active_alerts = NarrativeAlert.objects.filter(
-            status='active'
+            dismissed=False
         ).count()
 
         return JsonResponse({
@@ -234,9 +234,7 @@ def api_market_intelligence_status(request):
     Returns spider data, opportunities, and scoring metrics.
     """
     try:
-        from core.models_unified_system import (
-            SpiderData, Opportunity, ScoringResult
-        )
+        from core.models_unified_system import SpiderData, Opportunity
 
         now = timezone.now()
         day_ago = now - timedelta(hours=24)
@@ -263,14 +261,10 @@ def api_market_intelligence_status(request):
             count=Count('id')
         ).order_by('-count')
 
-        # Scoring stats
-        scoring_24h = ScoringResult.objects.filter(
-            scored_at__gte=day_ago
-        ).count()
-
-        avg_score = ScoringResult.objects.filter(
-            scored_at__gte=day_ago
-        ).aggregate(avg=Avg('final_score'))['avg'] or 0
+        # Get avg opportunity score from Opportunity.overall_score field
+        avg_score = Opportunity.objects.filter(
+            created_at__gte=day_ago
+        ).aggregate(avg=Avg('overall_score'))['avg'] or 0
 
         return JsonResponse({
             'success': True,
@@ -281,7 +275,6 @@ def api_market_intelligence_status(request):
                 'opportunities_24h': opportunities_24h,
                 'opportunities_total': Opportunity.objects.count(),
                 'opp_by_category': list(opp_by_category),
-                'scoring_24h': scoring_24h,
                 'avg_score': round(float(avg_score), 2),
             }
         })
@@ -300,7 +293,7 @@ def api_roi_metrics(request):
     Returns conversion events and revenue tracking.
     """
     try:
-        from core.models_unified_system import ConversionEvent, ROIMetrics
+        from core.models_unified_system import ConversionEvent
 
         now = timezone.now()
         day_ago = now - timedelta(hours=24)
@@ -340,7 +333,7 @@ def api_roi_metrics(request):
         # Top sources
         top_sources = ConversionEvent.objects.filter(
             created_at__gte=week_ago
-        ).values('source').annotate(
+        ).values('attribution_source').annotate(
             count=Count('id'),
             revenue=Sum('value')
         ).order_by('-count')[:5]
@@ -391,14 +384,14 @@ def api_provenance_chain(request):
             'entity_type': p.entity_type,
             'entity_id': p.entity_id,
             'created_at': p.created_at.isoformat(),
-            'hash': p.content_hash[:16] + '...' if p.content_hash else None,
-            'has_parent': bool(p.parent_provenance_id),
+            'hash': p.content_hash[:16] + '...' if hasattr(p, 'content_hash') and p.content_hash else None,
+            'has_parent': bool(p.parent_id),
         } for p in recent]
 
         # Chain depth stats
         total_records = DataProvenance.objects.count()
         records_with_parent = DataProvenance.objects.filter(
-            parent_provenance__isnull=False
+            parent__isnull=False
         ).count()
 
         return JsonResponse({
@@ -460,7 +453,7 @@ def api_activity_stream(request):
             activities.append({
                 'type': 'shift',
                 'icon': '⚡',
-                'title': f"Shift detected: {sh.summary[:50] if sh.summary else 'New shift'}",
+                'title': f"Shift detected: {sh.shift_summary[:50] if sh.shift_summary else 'New shift'}",
                 'source': 'Narrative Drift',
                 'timestamp': sh.detected_at.isoformat(),
             })
@@ -470,7 +463,7 @@ def api_activity_stream(request):
             activities.append({
                 'type': 'spider',
                 'icon': '🕷️',
-                'title': f"Data from {sd.spider_name}: {sd.title[:40] if sd.title else 'New data'}",
+                'title': f"Data from {sd.spider_name}: {sd.data_type}",
                 'source': 'Market Intelligence',
                 'timestamp': sd.created_at.isoformat(),
             })
