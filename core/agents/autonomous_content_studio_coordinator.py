@@ -600,6 +600,23 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
             description=angle
         )
 
+        # [SESSION 475] Add provenance tracking
+        try:
+            from core.services.provenance_tracker import create_content_episode_provenance
+            create_content_episode_provenance(
+                episode_id=str(episode.id),
+                channel_name=channel.name,
+                content_type=channel.content_type,
+                trigger_source='content_studio_coordinator',
+                metadata={
+                    'topic': topic,
+                    'debate_id': str(debate_id) if debate_id else None,
+                    'agent': 'AutonomousContentStudioCoordinator'
+                }
+            )
+        except Exception as prov_e:
+            logger.warning(f"Failed to create episode provenance: {prov_e}")
+
         # Link debate if provided
         if debate_id:
             try:

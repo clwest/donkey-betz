@@ -802,6 +802,28 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+
+    # =========================================================================
+    # Session 475: ROI Metrics & Intelligence Briefs
+    # =========================================================================
+
+    # Daily ROI aggregation - aggregate metrics from yesterday
+    'roi-metrics-daily-aggregation': {
+        'task': 'roi_metrics.aggregate_daily',
+        'schedule': crontab(minute=0, hour=2),  # Daily at 2:00 AM
+        'options': {
+            'expires': 86400,  # 24 hours
+        }
+    },
+
+    # Weekly intelligence brief generation - every Monday
+    'roi-metrics-weekly-brief': {
+        'task': 'roi_metrics.generate_weekly_brief',
+        'schedule': crontab(minute=0, hour=7, day_of_week='monday'),  # Monday 7:00 AM
+        'options': {
+            'expires': 604800,  # 1 week
+        }
+    },
 }
 
 # Spider-specific task routing configuration

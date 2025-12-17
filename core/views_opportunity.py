@@ -151,6 +151,15 @@ def opportunity_detail(request, opportunity_id):
 
         opportunity = Opportunity.objects.get(id=opportunity_id)
 
+        # [SESSION 475] Record view event for ROI tracking
+        try:
+            from core.tasks import record_opportunity_view
+            user_id = request.user.id if request.user.is_authenticated else None
+            source = opportunity.spider_source or opportunity.source_type
+            record_opportunity_view.delay(str(opportunity.id), user_id, source)
+        except Exception as roi_e:
+            logger.debug(f"ROI view tracking skipped: {roi_e}")
+
         # Get score details if available
         score_details = None
         try:
@@ -376,6 +385,15 @@ def opportunity_act(request, opportunity_id):
         from core.models_unified_system import Opportunity, OpportunityAction
 
         opportunity = Opportunity.objects.get(id=opportunity_id)
+
+        # [SESSION 475] Record click event for ROI tracking
+        try:
+            from core.tasks import record_opportunity_click
+            user_id = request.user.id if request.user.is_authenticated else None
+            source = opportunity.spider_source or opportunity.source_type
+            record_opportunity_click.delay(str(opportunity.id), user_id, source)
+        except Exception as roi_e:
+            logger.debug(f"ROI click tracking skipped: {roi_e}")
 
         # Parse request body
         try:
@@ -1433,6 +1451,16 @@ def opportunity_task_apply(request, task_id):
 
         task.mark_applied(notes=notes)
 
+        # [SESSION 475] Record application event for ROI tracking
+        try:
+            from core.tasks import record_opportunity_application
+            source = task.source_spider or task.source_platform or 'unknown'
+            # Link to opportunity if available
+            opp_id = str(task.opportunity.id) if hasattr(task, 'opportunity') and task.opportunity else str(task.id)
+            record_opportunity_application.delay(opp_id, request.user.id, source)
+        except Exception as roi_e:
+            logger.debug(f"ROI application tracking skipped: {roi_e}")
+
         return JsonResponse({
             'success': True,
             'message': f'Task "{task.title}" marked as applied',
@@ -1495,6 +1523,17 @@ def opportunity_task_won(request, task_id):
                 pass
 
         task.mark_won(actual_amount=actual_amount, notes=notes)
+
+        # [SESSION 475] Record revenue event for ROI tracking
+        try:
+            from core.tasks import record_revenue_event
+            source = task.source_spider or task.source_platform or 'unknown'
+            revenue_amount = float(actual_amount or task.opportunity.potential_revenue or 0)
+            opp_id = str(task.opportunity.id) if task.opportunity else str(task.id)
+            record_revenue_event.delay(opp_id, revenue_amount, request.user.id, source)
+            logger.info(f"💰 [SESSION 475] Revenue recorded: ${revenue_amount} from {task.title}")
+        except Exception as roi_e:
+            logger.warning(f"ROI revenue tracking skipped: {roi_e}")
 
         return JsonResponse({
             'success': True,

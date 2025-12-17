@@ -12223,6 +12223,23 @@ Create 1 episode following the channel's style and targeting the audience.
 
         results['episode_id'] = str(episode.id)
 
+        # [SESSION 475] Add provenance tracking
+        try:
+            from core.services.provenance_tracker import create_content_episode_provenance
+            create_content_episode_provenance(
+                episode_id=str(episode.id),
+                channel_name=channel.name,
+                content_type=channel.content_type,
+                trigger_source='generate_content_for_channel_task',
+                metadata={
+                    'topic': winning_topic,
+                    'debate_id': str(recent_debate.id),
+                    'task': 'generate_content_for_channel'
+                }
+            )
+        except Exception as prov_e:
+            logger.warning(f"Failed to create episode provenance: {prov_e}")
+
         logger.info(f"🎥 [SESSION 466] Episode created: {episode.title}")
 
         # Step 4: Update channel stats and schedule next content (Property #5: Self-Renewal)
@@ -13811,3 +13828,290 @@ def unified_pipeline_health_check():
     )
 
     return health
+
+
+# =============================================================================
+# SESSION 475: ROI Metrics Aggregation Tasks
+# =============================================================================
+
+@shared_task(
+    name='roi_metrics.aggregate_daily',
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300
+)
+def aggregate_roi_metrics_daily(self):
+    """
+    [SESSION 475] Aggregate ROI metrics daily.
+
+    Runs every day at 2:00 AM to aggregate the previous day's metrics.
+    Creates ROIMetric records for:
+    - Overall metrics
+    - Per spider source
+    - Per opportunity category
+    """
+    logger.info("📊 [SESSION 475] Starting daily ROI metrics aggregation...")
+
+    try:
+        from core.services.roi_tracker import get_roi_tracker
+        from django.utils import timezone
+        from datetime import timedelta
+
+        tracker = get_roi_tracker()
+        yesterday = timezone.now() - timedelta(days=1)
+
+        results = {
+            'success': True,
+            'aggregations': [],
+            'errors': []
+        }
+
+        # Aggregate overall daily metrics
+        try:
+            tracker.aggregate_roi_metrics(
+                period_type='daily',
+                dimension='overall',
+                target_date=yesterday
+            )
+            results['aggregations'].append('daily_overall')
+        except Exception as e:
+            results['errors'].append(f"daily_overall: {e}")
+
+        # Aggregate by spider source
+        try:
+            tracker.aggregate_roi_metrics(
+                period_type='daily',
+                dimension='spider_source',
+                target_date=yesterday
+            )
+            results['aggregations'].append('daily_spider_source')
+        except Exception as e:
+            results['errors'].append(f"daily_spider_source: {e}")
+
+        # Aggregate by opportunity category
+        try:
+            tracker.aggregate_roi_metrics(
+                period_type='daily',
+                dimension='opportunity_category',
+                target_date=yesterday
+            )
+            results['aggregations'].append('daily_opportunity_category')
+        except Exception as e:
+            results['errors'].append(f"daily_opportunity_category: {e}")
+
+        # Weekly aggregation on Sundays
+        if yesterday.weekday() == 6:  # Sunday
+            try:
+                tracker.aggregate_roi_metrics(
+                    period_type='weekly',
+                    dimension='overall',
+                    target_date=yesterday
+                )
+                results['aggregations'].append('weekly_overall')
+            except Exception as e:
+                results['errors'].append(f"weekly_overall: {e}")
+
+        if results['errors']:
+            results['success'] = False
+
+        logger.info(
+            f"📊 [SESSION 475] ROI aggregation complete: "
+            f"{len(results['aggregations'])} aggregations, {len(results['errors'])} errors"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 475] ROI aggregation failed: {e}")
+        raise self.retry(exc=e)
+
+
+@shared_task(
+    name='roi_metrics.generate_weekly_brief',
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300
+)
+def generate_weekly_intelligence_brief(self):
+    """
+    [SESSION 475] Generate weekly intelligence brief.
+
+    Runs every Monday at 7:00 AM to generate the previous week's brief.
+    Creates a WeeklyIntelligenceBrief with:
+    - Revenue summary
+    - Top performing spider sources
+    - Key insights and recommendations
+    - Executive summary
+    """
+    logger.info("📋 [SESSION 475] Starting weekly intelligence brief generation...")
+
+    try:
+        from core.services.roi_tracker import get_roi_tracker
+        from django.utils import timezone
+        from datetime import timedelta
+
+        tracker = get_roi_tracker()
+
+        # Calculate last week's start (previous Monday)
+        now = timezone.now()
+        days_since_monday = now.weekday()
+        last_monday = now - timedelta(days=days_since_monday + 7)
+
+        # Generate the brief
+        brief_data = tracker.generate_weekly_brief(week_start=last_monday)
+
+        if brief_data.get('brief_id'):
+            logger.info(
+                f"📋 [SESSION 475] Weekly brief generated: {brief_data['brief_id']} "
+                f"(Revenue: ${brief_data.get('total_revenue', 0)}, "
+                f"Conversions: {brief_data.get('total_conversions', 0)})"
+            )
+
+            # Send to Discord if available
+            try:
+                from core.services.discord_notifications import send_to_channel
+
+                summary = brief_data.get('executive_summary', 'No summary available')
+                revenue = brief_data.get('total_revenue', 0)
+                conversions = brief_data.get('total_conversions', 0)
+
+                message = (
+                    f"📋 **Weekly Intelligence Brief**\n"
+                    f"Week of {last_monday.strftime('%B %d, %Y')}\n\n"
+                    f"💰 **Revenue:** ${revenue:,.2f}\n"
+                    f"🎯 **Conversions:** {conversions}\n\n"
+                    f"📊 **Summary:**\n{summary[:500]}..."
+                )
+
+                send_to_channel('system-status', message)
+
+            except Exception as discord_e:
+                logger.warning(f"Could not send brief to Discord: {discord_e}")
+
+        return brief_data
+
+    except Exception as e:
+        logger.error(f"📋 [SESSION 475] Weekly brief generation failed: {e}")
+        raise self.retry(exc=e)
+
+
+@shared_task(name='roi_metrics.record_opportunity_view')
+def record_opportunity_view(opportunity_id: str, user_id: int = None, source: str = None):
+    """
+    [SESSION 475] Record when a user views an opportunity.
+
+    This is the entry point to the conversion funnel.
+    Called from opportunity views/APIs.
+    """
+    try:
+        from core.services.roi_tracker import record_view
+
+        result = record_view(
+            opportunity_id=opportunity_id,
+            user_id=user_id,
+            source=source
+        )
+
+        if result.success:
+            logger.debug(f"👁️ Recorded view: {opportunity_id} (source: {source})")
+
+        return {'success': result.success, 'event_id': result.event_id}
+
+    except Exception as e:
+        logger.error(f"Failed to record opportunity view: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='roi_metrics.record_opportunity_click')
+def record_opportunity_click(
+    opportunity_id: str,
+    user_id: int = None,
+    source: str = None,
+    previous_event_id: str = None
+):
+    """
+    [SESSION 475] Record when a user clicks on an opportunity.
+    """
+    try:
+        from core.services.roi_tracker import record_click
+
+        result = record_click(
+            opportunity_id=opportunity_id,
+            user_id=user_id,
+            source=source,
+            previous_event_id=previous_event_id
+        )
+
+        if result.success:
+            logger.debug(f"👆 Recorded click: {opportunity_id}")
+
+        return {'success': result.success, 'event_id': result.event_id}
+
+    except Exception as e:
+        logger.error(f"Failed to record opportunity click: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='roi_metrics.record_opportunity_application')
+def record_opportunity_application(
+    opportunity_id: str,
+    user_id: int = None,
+    source: str = None,
+    previous_event_id: str = None
+):
+    """
+    [SESSION 475] Record when a user applies to an opportunity.
+    """
+    try:
+        from core.services.roi_tracker import record_application
+
+        result = record_application(
+            opportunity_id=opportunity_id,
+            user_id=user_id,
+            source=source,
+            previous_event_id=previous_event_id
+        )
+
+        if result.success:
+            logger.info(f"📝 Recorded application: {opportunity_id}")
+
+        return {'success': result.success, 'event_id': result.event_id}
+
+    except Exception as e:
+        logger.error(f"Failed to record opportunity application: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(name='roi_metrics.record_revenue')
+def record_revenue_event(
+    opportunity_id: str,
+    value: float,
+    user_id: int = None,
+    source: str = None,
+    previous_event_id: str = None
+):
+    """
+    [SESSION 475] Record revenue from an opportunity.
+
+    This is the final step in the conversion funnel.
+    """
+    try:
+        from core.services.roi_tracker import record_revenue
+        from decimal import Decimal
+
+        result = record_revenue(
+            opportunity_id=opportunity_id,
+            value=Decimal(str(value)),
+            user_id=user_id,
+            source=source,
+            previous_event_id=previous_event_id
+        )
+
+        if result.success:
+            logger.info(f"💰 Recorded revenue: ${value} from {opportunity_id}")
+
+        return {'success': result.success, 'event_id': result.event_id}
+
+    except Exception as e:
+        logger.error(f"Failed to record revenue: {e}")
+        return {'success': False, 'error': str(e)}

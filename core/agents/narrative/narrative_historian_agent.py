@@ -380,6 +380,19 @@ class NarrativeHistorianAgent(BaseAgent):
             strength=Decimal('0.6') if sentiment == 'supports' else Decimal('0.4')
         )
 
+        # [SESSION 475] Add provenance tracking
+        try:
+            from core.services.provenance_tracker import create_narrative_evidence_provenance
+            create_narrative_evidence_provenance(
+                evidence_id=str(evidence.id),
+                spider_data_provenance_id=None,  # Link to spider data if available
+                narrative_id=str(narrative.id),
+                evidence_strength=sentiment,
+                metadata={'source_url': source_url, 'agent': 'NarrativeHistorianAgent'}
+            )
+        except Exception as prov_e:
+            logger.warning(f"Failed to create evidence provenance: {prov_e}")
+
         # Update narrative stats
         narrative.mention_count += 1
         narrative.last_mention = timezone.now()
