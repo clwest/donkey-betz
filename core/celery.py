@@ -603,6 +603,37 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
+    'track-prediction-outcomes': {
+        'task': 'learning_loop.track_prediction_outcomes',
+        'schedule': crontab(hour=18, minute=0),  # 6 PM daily (after market close)
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    'calculate-agent-accuracy': {
+        'task': 'learning_loop.calculate_agent_accuracy',
+        'schedule': crontab(day_of_week=0, hour=20, minute=0),  # Sunday 8 PM (weekly)
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Session 466: Autonomous Content Studio (Tier 1 Autonomous Situation)
+    # Property #5: Self-Renewal - system runs forever without intervention
+    'autonomous-content-studio-loop': {
+        'task': 'autonomous_studio.run_main_loop',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+    'track-content-performance-daily': {
+        'task': 'autonomous_studio.track_performance',
+        'schedule': crontab(hour=20, minute=0),  # Daily at 8 PM
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration

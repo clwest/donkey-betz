@@ -496,6 +496,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
         await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
         await self.add_cog(SeriesCommands(self))  # Session 445: AI Series Workflow
+        await self.add_cog(StudioCommands(self))  # Session 466: Autonomous Content Studio
         await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
@@ -2271,6 +2272,254 @@ class ContentCommands(commands.Cog):
             logger.error(f"/track command error: {e}")
             await interaction.followup.send(
                 f"Error loading applications: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    # =========================================================================
+    # Session 464: Learning Loop Commands (Market Intelligence Desk Feedback)
+    # =========================================================================
+
+    @app_commands.command(name="brief-feedback", description="Rate the latest Market Intelligence Brief")
+    @app_commands.describe(
+        rating="How helpful was the brief? (helpful or not-helpful)",
+        comment="Optional comment about the brief (max 500 chars)"
+    )
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="👍 Helpful", value="helpful"),
+        app_commands.Choice(name="👎 Not Helpful", value="not-helpful"),
+    ])
+    async def brief_feedback(self, interaction: discord.Interaction, rating: str, comment: str = None):
+        """Provide feedback on the latest Market Intelligence Brief."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account.",
+                    ephemeral=True
+                )
+                return
+
+            @sync_to_async
+            def record_brief_feedback(web_user, is_helpful, feedback_comment):
+                from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
+                from django.utils import timezone
+
+                # Get the most recent brief
+                latest_brief = MarketIntelligenceBrief.objects.order_by('-brief_date').first()
+                if not latest_brief:
+                    return None, "No Market Intelligence Briefs available yet. The first brief will be generated at 8 AM on weekdays."
+
+                # Check if user already provided feedback for this brief
+                existing = UserBriefFeedback.objects.filter(
+                    user=web_user,
+                    brief=latest_brief
+                ).first()
+
+                if existing:
+                    # Update existing feedback
+                    existing.was_helpful = is_helpful
+                    existing.helpfulness_score = 5 if is_helpful else 1
+                    if feedback_comment:
+                        existing.comment = feedback_comment[:500]
+                    existing.save()
+                else:
+                    # Create new feedback
+                    existing = UserBriefFeedback.objects.create(
+                        user=web_user,
+                        brief=latest_brief,
+                        was_helpful=is_helpful,
+                        helpfulness_score=5 if is_helpful else 1,
+                        comment=feedback_comment[:500] if feedback_comment else '',
+                    )
+
+                return {
+                    'brief_date': latest_brief.brief_date.strftime('%Y-%m-%d'),
+                    'total_stocks': latest_brief.total_stocks_analyzed,
+                    'debate_count': latest_brief.debate_zone_count,
+                }, None
+
+            result, error = await record_brief_feedback(user, rating == "helpful", comment)
+
+            if error:
+                await interaction.followup.send(
+                    f"❌ {error}",
+                    ephemeral=True
+                )
+                return
+
+            embed = discord.Embed(
+                title="✅ Feedback Recorded!",
+                description=f"Thank you for rating the Market Intelligence Brief from **{result['brief_date']}**",
+                color=discord.Color.green() if rating == "helpful" else discord.Color.orange(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="📊 Your Rating",
+                value=f"{'👍 Helpful' if rating == 'helpful' else '👎 Not Helpful'}",
+                inline=True
+            )
+
+            embed.add_field(
+                name="📈 Brief Summary",
+                value=f"**{result['total_stocks']}** stocks analyzed\n**{result['debate_count']}** in debate zone",
+                inline=True
+            )
+
+            if comment:
+                embed.add_field(
+                    name="💬 Your Comment",
+                    value=comment[:200] + ("..." if len(comment) > 200 else ""),
+                    inline=False
+                )
+
+            embed.set_footer(text="Your feedback helps the AI learn and improve future briefs")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/brief-feedback command error: {e}")
+            await interaction.followup.send(
+                f"Error recording feedback: {str(e)[:200]}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="action", description="Record your trading action on a stock from the brief")
+    @app_commands.describe(
+        action="What action did you take?",
+        ticker="Stock ticker (e.g., AAPL, MSFT)",
+        reason="Why did you take this action? (optional)"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="📈 Buy - Following bull case", value="buy"),
+        app_commands.Choice(name="📉 Sell - Following bear warning", value="sell"),
+        app_commands.Choice(name="⏸️  Hold - Staying neutral", value="hold"),
+        app_commands.Choice(name="🔍 Research - Investigating debate zone", value="research"),
+        app_commands.Choice(name="❌ Ignore - Not interested", value="ignore"),
+    ])
+    async def action(self, interaction: discord.Interaction, action: str, ticker: str, reason: str = None):
+        """Record your trading action on a stock."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    "❌ You need to link your Discord account first!\n\n"
+                    "Use `/link` to connect your AI Studio account.",
+                    ephemeral=True
+                )
+                return
+
+            # Normalize ticker
+            ticker = ticker.upper().strip()
+
+            @sync_to_async
+            def record_action_db(web_user, stock_ticker, user_action, action_reason):
+                from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
+                from django.utils import timezone
+
+                # Get the most recent brief
+                latest_brief = MarketIntelligenceBrief.objects.order_by('-brief_date').first()
+                if not latest_brief:
+                    return None, "No Market Intelligence Briefs available yet."
+
+                # Get or create feedback for this brief
+                feedback, created = UserBriefFeedback.objects.get_or_create(
+                    user=web_user,
+                    brief=latest_brief,
+                    defaults={'was_helpful': True}  # Assume taking action means it was helpful
+                )
+
+                # Record the action
+                feedback.record_action(
+                    ticker=stock_ticker,
+                    action=user_action,
+                    reason=action_reason or user_action
+                )
+
+                return {
+                    'brief_date': latest_brief.brief_date.strftime('%Y-%m-%d'),
+                    'total_actions': len(feedback.actions_taken),
+                    'acted_on_brief': feedback.acted_on_brief,
+                }, None
+
+            result, error = await record_action_db(user, ticker, action, reason)
+
+            if error:
+                await interaction.followup.send(
+                    f"❌ {error}",
+                    ephemeral=True
+                )
+                return
+
+            # Choose emoji based on action
+            action_emojis = {
+                'buy': '📈',
+                'sell': '📉',
+                'hold': '⏸️',
+                'research': '🔍',
+                'ignore': '❌',
+            }
+            action_emoji = action_emojis.get(action, '📊')
+
+            # Choose color based on action
+            action_colors = {
+                'buy': discord.Color.green(),
+                'sell': discord.Color.red(),
+                'hold': discord.Color.blue(),
+                'research': discord.Color.gold(),
+                'ignore': discord.Color.light_grey(),
+            }
+            action_color = action_colors.get(action, discord.Color.blue())
+
+            embed = discord.Embed(
+                title=f"{action_emoji} Action Recorded!",
+                description=f"Your **{action.upper()}** action on **${ticker}** has been recorded",
+                color=action_color,
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="📊 Stock",
+                value=f"**${ticker}**",
+                inline=True
+            )
+
+            embed.add_field(
+                name="🎯 Action",
+                value=f"{action_emoji} **{action.upper()}**",
+                inline=True
+            )
+
+            embed.add_field(
+                name="📅 Brief Date",
+                value=result['brief_date'],
+                inline=True
+            )
+
+            if reason:
+                embed.add_field(
+                    name="💭 Your Reasoning",
+                    value=reason[:200] + ("..." if len(reason) > 200 else ""),
+                    inline=False
+                )
+
+            embed.add_field(
+                name="📈 Total Actions",
+                value=f"You've taken **{result['total_actions']}** actions on this brief",
+                inline=False
+            )
+
+            embed.set_footer(text="Your actions help the AI learn which recommendations you follow")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"/action command error: {e}")
+            await interaction.followup.send(
+                f"Error recording action: {str(e)[:200]}",
                 ephemeral=True
             )
 
@@ -5196,6 +5445,559 @@ class SeriesCommands(commands.Cog):
             )
 
 
+class StudioCommands(commands.Cog):
+    """
+    Session 466: Autonomous Content Studio Commands.
+
+    Commands for controlling the autonomous content studio (Tier 1 Autonomous Situation).
+
+    The studio runs forever, creating content for channels based on agent debates.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    async def _get_linked_user(self, discord_id):
+        """Get the linked Django user for this Discord ID."""
+        @sync_to_async
+        def get_user():
+            from core.models import DiscordUser
+            try:
+                discord_user = DiscordUser.objects.get(discord_id=discord_id)
+                return discord_user.user
+            except DiscordUser.DoesNotExist:
+                return None
+
+        return await get_user()
+
+    @app_commands.command(name="studio-create", description="Create a new autonomous content channel")
+    @app_commands.describe(
+        name="Channel name (e.g., 'AI Weekly News')",
+        domain="Topic domain (e.g., 'AI/ML news and tutorials')",
+        frequency="How often to publish (daily/weekly/monthly)",
+        audience="Target audience description",
+        style="Content style (educational/entertainment/news)"
+    )
+    async def studio_create(
+        self,
+        interaction: discord.Interaction,
+        name: str,
+        domain: str,
+        frequency: str,
+        audience: str,
+        style: str
+    ):
+        """Create a new autonomous content channel."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Validate frequency
+            valid_frequencies = ['daily', 'weekly', 'monthly']
+            if frequency.lower() not in valid_frequencies:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Frequency",
+                        description=f"Frequency must be one of: {', '.join(valid_frequencies)}",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def create_channel():
+                from core.models_autonomous_studio import ContentChannel
+                from django.utils import timezone
+                from datetime import timedelta
+
+                # Map frequency to enum
+                freq_map = {
+                    'daily': 'daily',
+                    'weekly': 'weekly',
+                    'monthly': 'monthly'
+                }
+
+                # Calculate first content due date
+                now = timezone.now()
+                if frequency.lower() == 'daily':
+                    next_due = now + timedelta(days=1)
+                elif frequency.lower() == 'weekly':
+                    next_due = now + timedelta(weeks=1)
+                else:  # monthly
+                    next_due = now + timedelta(days=30)
+
+                channel = ContentChannel.objects.create(
+                    name=name,
+                    topic_domain=domain,
+                    content_frequency=freq_map[frequency.lower()],
+                    target_audience=audience,
+                    content_style=style,
+                    next_content_due=next_due,
+                    is_active=True
+                )
+                return channel
+
+            channel = await create_channel()
+
+            embed = discord.Embed(
+                title="🎬 Autonomous Channel Created!",
+                description=f"Your content studio is now active and will run autonomously.",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="Channel Name", value=name, inline=False)
+            embed.add_field(name="Domain", value=domain, inline=False)
+            embed.add_field(name="Publishing Frequency", value=frequency.title(), inline=True)
+            embed.add_field(name="Target Audience", value=audience, inline=True)
+            embed.add_field(name="Content Style", value=style.title(), inline=True)
+            embed.add_field(
+                name="Channel ID",
+                value=f"`{str(channel.id)[:8]}...`",
+                inline=False
+            )
+            embed.add_field(
+                name="Next Content Due",
+                value=f"<t:{int(channel.next_content_due.timestamp())}:R>",
+                inline=False
+            )
+            embed.set_footer(text="The studio will automatically create content when due. Use /studio-status to monitor progress.")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio create error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to create channel: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-list", description="List all your autonomous content channels")
+    async def studio_list(self, interaction: discord.Interaction):
+        """List all autonomous content channels."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_channels():
+                from core.models_autonomous_studio import ContentChannel
+                return list(ContentChannel.objects.filter(is_active=True).values(
+                    'id', 'name', 'topic_domain', 'content_frequency', 'total_episodes_created',
+                    'total_views', 'avg_retention_rate', 'confidence_multiplier', 'next_content_due'
+                ).order_by('-created_at')[:10])
+
+            channels = await get_channels()
+
+            if not channels:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="No Channels Found",
+                        description="You haven't created any channels yet.\nUse `/studio-create` to start your first autonomous channel!",
+                        color=discord.Color.blue()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="🎬 Your Autonomous Content Channels",
+                description=f"Showing {len(channels)} active channels",
+                color=discord.Color.purple()
+            )
+
+            for c in channels:
+                freq_emoji = {
+                    'daily': '📅',
+                    'weekly': '📆',
+                    'monthly': '🗓️'
+                }.get(c['content_frequency'], '❓')
+
+                embed.add_field(
+                    name=f"{freq_emoji} {c['name'][:40]}",
+                    value=(
+                        f"ID: `{str(c['id'])[:8]}...`\n"
+                        f"Episodes: {c['total_episodes_created']} | Views: {c['total_views']}\n"
+                        f"Retention: {c['avg_retention_rate']:.1f}% | Confidence: {c['confidence_multiplier']:.2f}x\n"
+                        f"Next: <t:{int(c['next_content_due'].timestamp())}:R>"
+                    ),
+                    inline=False
+                )
+
+            embed.set_footer(text="Use /studio-status <id> for detailed analytics")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio list error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to list channels: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-status", description="Check detailed status of a content channel")
+    @app_commands.describe(channel_id="Channel ID (first 8 characters)")
+    async def studio_status(self, interaction: discord.Interaction, channel_id: str):
+        """Check detailed status of a content channel."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_channel_status():
+                from core.models_autonomous_studio import ContentChannel, ChannelEpisode, TopicPerformance
+                from django.db.models import Avg
+
+                # Find channel by partial ID
+                channels = ContentChannel.objects.filter(id__startswith=channel_id)
+                if not channels.exists():
+                    return None
+
+                channel = channels.first()
+
+                # Get recent episodes
+                recent_episodes = list(ChannelEpisode.objects.filter(
+                    channel=channel
+                ).order_by('-published_at')[:5].values(
+                    'title', 'topic', 'views', 'retention_rate', 'performance_score', 'published_at'
+                ))
+
+                # Get top topics
+                top_topics = list(TopicPerformance.objects.filter(
+                    channel=channel
+                ).order_by('-avg_performance_score')[:3].values(
+                    'topic', 'episode_count', 'avg_views', 'avg_retention', 'confidence_score'
+                ))
+
+                return {
+                    'channel': channel,
+                    'recent_episodes': recent_episodes,
+                    'top_topics': top_topics
+                }
+
+            data = await get_channel_status()
+
+            if not data:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Channel Not Found",
+                        description=f"No channel found with ID starting with `{channel_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            channel = data['channel']
+
+            embed = discord.Embed(
+                title=f"📊 {channel.name}",
+                description=f"**Domain:** {channel.topic_domain}\n**Status:** {'🟢 Active' if channel.is_active else '🔴 Paused'}",
+                color=discord.Color.blue()
+            )
+
+            # Performance stats
+            embed.add_field(
+                name="📈 Performance",
+                value=(
+                    f"**Total Episodes:** {channel.total_episodes_created}\n"
+                    f"**Total Views:** {channel.total_views:,}\n"
+                    f"**Avg Retention:** {channel.avg_retention_rate:.1f}%\n"
+                    f"**Confidence:** {channel.confidence_multiplier:.2f}x"
+                ),
+                inline=True
+            )
+
+            # Schedule info
+            embed.add_field(
+                name="⏰ Schedule",
+                value=(
+                    f"**Frequency:** {channel.get_content_frequency_display()}\n"
+                    f"**Last Published:** <t:{int(channel.last_content_created.timestamp())}:R>\n"
+                    f"**Next Due:** <t:{int(channel.next_content_due.timestamp())}:R>"
+                ) if channel.last_content_created else (
+                    f"**Frequency:** {channel.get_content_frequency_display()}\n"
+                    f"**Next Due:** <t:{int(channel.next_content_due.timestamp())}:R>"
+                ),
+                inline=True
+            )
+
+            # Recent episodes
+            if data['recent_episodes']:
+                episodes_text = "\n".join([
+                    f"• **{ep['topic'][:30]}** - {ep['views']} views, {ep['retention_rate']:.0f}% retention"
+                    for ep in data['recent_episodes'][:3]
+                ])
+                embed.add_field(
+                    name="📺 Recent Episodes",
+                    value=episodes_text,
+                    inline=False
+                )
+
+            # Top performing topics
+            if data['top_topics']:
+                topics_text = "\n".join([
+                    f"• **{tp['topic'][:30]}** - {tp['episode_count']} eps, {tp['avg_views']:.0f} avg views, {tp['confidence_score']:.2f} confidence"
+                    for tp in data['top_topics']
+                ])
+                embed.add_field(
+                    name="🏆 Top Topics",
+                    value=topics_text,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Channel ID: {str(channel.id)}")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio status error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get channel status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-pause", description="Pause autonomous content generation for a channel")
+    @app_commands.describe(channel_id="Channel ID (first 8 characters)")
+    async def studio_pause(self, interaction: discord.Interaction, channel_id: str):
+        """Pause autonomous content generation for a channel."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def pause_channel():
+                from core.models_autonomous_studio import ContentChannel
+
+                channels = ContentChannel.objects.filter(id__startswith=channel_id, is_active=True)
+                if not channels.exists():
+                    return None
+
+                channel = channels.first()
+                channel.is_active = False
+                channel.save()
+                return channel
+
+            channel = await pause_channel()
+
+            if not channel:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Channel Not Found",
+                        description=f"No active channel found with ID starting with `{channel_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="⏸️ Channel Paused",
+                description=f"**{channel.name}** has been paused. No new content will be generated automatically.",
+                color=discord.Color.orange()
+            )
+            embed.add_field(
+                name="To Resume",
+                value="Use `/studio-resume` when you want to reactivate autonomous generation",
+                inline=False
+            )
+            embed.set_footer(text=f"Channel ID: {str(channel.id)}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio pause error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to pause channel: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-resume", description="Resume autonomous content generation for a channel")
+    @app_commands.describe(channel_id="Channel ID (first 8 characters)")
+    async def studio_resume(self, interaction: discord.Interaction, channel_id: str):
+        """Resume autonomous content generation for a channel."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def resume_channel():
+                from core.models_autonomous_studio import ContentChannel
+
+                channels = ContentChannel.objects.filter(id__startswith=channel_id, is_active=False)
+                if not channels.exists():
+                    return None
+
+                channel = channels.first()
+                channel.is_active = True
+                channel.save()
+                return channel
+
+            channel = await resume_channel()
+
+            if not channel:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Channel Not Found",
+                        description=f"No paused channel found with ID starting with `{channel_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            embed = discord.Embed(
+                title="▶️ Channel Resumed",
+                description=f"**{channel.name}** is now active! Autonomous content generation will continue.",
+                color=discord.Color.green()
+            )
+            embed.add_field(
+                name="Next Content Due",
+                value=f"<t:{int(channel.next_content_due.timestamp())}:R>",
+                inline=False
+            )
+            embed.set_footer(text=f"Channel ID: {str(channel.id)}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio resume error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to resume channel: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="studio-performance", description="View detailed analytics for a content channel")
+    @app_commands.describe(channel_id="Channel ID (first 8 characters)")
+    async def studio_performance(self, interaction: discord.Interaction, channel_id: str):
+        """View detailed analytics for a content channel."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_performance_data():
+                from core.models_autonomous_studio import ContentChannel, ChannelEpisode, TopicPerformance, ContentDebate
+                from django.db.models import Avg, Max, Min
+
+                channels = ContentChannel.objects.filter(id__startswith=channel_id)
+                if not channels.exists():
+                    return None
+
+                channel = channels.first()
+
+                # Calculate aggregate stats
+                episodes = ChannelEpisode.objects.filter(channel=channel)
+                episode_stats = episodes.aggregate(
+                    total_views=sum(ep.views for ep in episodes),
+                    avg_views=Avg('views'),
+                    avg_retention=Avg('retention_rate'),
+                    avg_score=Avg('performance_score'),
+                    best_score=Max('performance_score'),
+                    worst_score=Min('performance_score')
+                )
+
+                # Get debate history
+                debates = ContentDebate.objects.filter(channel=channel).count()
+
+                # Get topic performance breakdown
+                topics = list(TopicPerformance.objects.filter(
+                    channel=channel
+                ).order_by('-avg_performance_score').values(
+                    'topic', 'episode_count', 'avg_views', 'avg_retention', 'avg_performance_score', 'confidence_score'
+                )[:5])
+
+                return {
+                    'channel': channel,
+                    'episode_stats': episode_stats,
+                    'total_debates': debates,
+                    'topics': topics
+                }
+
+            data = await get_performance_data()
+
+            if not data:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Channel Not Found",
+                        description=f"No channel found with ID starting with `{channel_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            channel = data['channel']
+            stats = data['episode_stats']
+
+            embed = discord.Embed(
+                title=f"📊 Performance Analytics: {channel.name}",
+                description=f"**{channel.total_episodes_created}** episodes • **{data['total_debates']}** agent debates",
+                color=discord.Color.gold()
+            )
+
+            # Overall metrics
+            embed.add_field(
+                name="📈 Overall Metrics",
+                value=(
+                    f"**Total Views:** {stats['total_views']:,}\n"
+                    f"**Avg Views/Episode:** {stats['avg_views']:.0f}\n"
+                    f"**Avg Retention:** {stats['avg_retention']:.1f}%\n"
+                    f"**Avg Score:** {stats['avg_score']:.1f}/100"
+                ),
+                inline=True
+            )
+
+            # Learning metrics
+            embed.add_field(
+                name="🎯 Learning Metrics",
+                value=(
+                    f"**Confidence Multiplier:** {channel.confidence_multiplier:.2f}x\n"
+                    f"**Best Episode:** {stats['best_score']:.1f}/100\n"
+                    f"**Worst Episode:** {stats['worst_score']:.1f}/100\n"
+                    f"**Score Range:** {stats['best_score'] - stats['worst_score']:.1f}"
+                ),
+                inline=True
+            )
+
+            # Top performing topics
+            if data['topics']:
+                topics_text = "\n".join([
+                    f"**{i+1}. {tp['topic'][:25]}**\n"
+                    f"  {tp['episode_count']} eps • {tp['avg_views']:.0f} views • {tp['avg_retention']:.0f}% retention"
+                    for i, tp in enumerate(data['topics'])
+                ])
+                embed.add_field(
+                    name="🏆 Top 5 Topics",
+                    value=topics_text,
+                    inline=False
+                )
+
+            embed.set_footer(text=f"Channel ID: {str(channel.id)}")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Studio performance error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get performance data: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
 class PipelineLearningCommands(commands.Cog):
     """
     Session 449: Pipeline Learning Commands.
@@ -7860,6 +8662,247 @@ class HelpCommands(commands.Cog):
         embed.set_footer(text="Session 434 | Discord-First Platform Phase 5 - Full Agent Access")
 
         await interaction.response.send_message(embed=embed)
+
+    # =============================================================================
+    # Session 463: Learning Loop Feedback Commands
+    # =============================================================================
+
+    @app_commands.command(name="brief-feedback", description="Rate today's Market Intelligence Brief")
+    @app_commands.describe(
+        rating="How helpful was today's brief? (helpful/not-helpful)",
+        comment="Optional: Tell us why"
+    )
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="📈 Helpful", value="helpful"),
+        app_commands.Choice(name="📉 Not Helpful", value="not-helpful"),
+    ])
+    async def brief_feedback_command(
+        self,
+        interaction: discord.Interaction,
+        rating: app_commands.Choice[str],
+        comment: Optional[str] = None
+    ):
+        """Submit feedback on today's Market Intelligence Brief."""
+        await interaction.response.defer()
+
+        try:
+            # Get linked user
+            from core.models import DiscordUser
+            discord_user = await sync_to_async(DiscordUser.objects.filter(
+                discord_user_id=str(interaction.user.id)
+            ).select_related('user').first)()
+
+            if not discord_user or not discord_user.user:
+                await interaction.followup.send(
+                    "❌ Please link your Discord account first with `/link`",
+                    ephemeral=True
+                )
+                return
+
+            # Get today's brief
+            from datetime import date
+            from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
+
+            today = date.today()
+            brief = await sync_to_async(MarketIntelligenceBrief.objects.filter(
+                brief_date=today
+            ).first)()
+
+            if not brief:
+                await interaction.followup.send(
+                    f"❌ No Market Intelligence Brief found for {today.strftime('%B %d, %Y')}.\n"
+                    f"The brief is generated at 8 AM on weekdays.",
+                    ephemeral=True
+                )
+                return
+
+            # Create or update feedback
+            was_helpful = (rating.value == "helpful")
+            feedback, created = await sync_to_async(UserBriefFeedback.objects.update_or_create)(
+                user=discord_user.user,
+                brief=brief,
+                defaults={
+                    'was_helpful': was_helpful,
+                    'helpfulness_score': 5 if was_helpful else 1,
+                    'comment': comment or '',
+                }
+            )
+
+            # Send confirmation
+            embed = discord.Embed(
+                title="📊 Feedback Recorded",
+                description=f"Thanks for rating today's Market Intelligence Brief!",
+                color=discord.Color.green() if was_helpful else discord.Color.orange(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="Your Rating",
+                value="📈 Helpful" if was_helpful else "📉 Not Helpful",
+                inline=True
+            )
+
+            if comment:
+                embed.add_field(
+                    name="Your Comment",
+                    value=comment[:500],
+                    inline=False
+                )
+
+            embed.add_field(
+                name="📚 Learning Loop",
+                value=(
+                    "Your feedback helps the system learn which market analyses "
+                    "are most valuable. Bull and Bear agents adjust their strategies "
+                    "based on what users find helpful!"
+                ),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 463: Learning Loop")
+
+            await interaction.followup.send(embed=embed)
+
+            logger.info(
+                f"[SESSION 463] Brief feedback from {discord_user.user.username}: "
+                f"{rating.value} for {today}"
+            )
+
+        except Exception as e:
+            logger.error(f"[SESSION 463] Brief feedback failed: {e}")
+            await interaction.followup.send(
+                f"❌ Failed to record feedback: {str(e)}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="action", description="Record a stock action (buy/sell/hold/ignore)")
+    @app_commands.describe(
+        ticker="Stock ticker symbol (e.g., AAPL)",
+        action="What action are you taking?",
+        reason="Why? (bull_case/bear_warning/debate_zone/other)"
+    )
+    @app_commands.choices(
+        action=[
+            app_commands.Choice(name="📈 Buy", value="buy"),
+            app_commands.Choice(name="📉 Sell", value="sell"),
+            app_commands.Choice(name="🤝 Hold", value="hold"),
+            app_commands.Choice(name="👀 Ignore", value="ignore"),
+        ],
+        reason=[
+            app_commands.Choice(name="🐂 Bull Case", value="bull_case"),
+            app_commands.Choice(name="🐻 Bear Warning", value="bear_warning"),
+            app_commands.Choice(name="⚔️ Debate Zone", value="debate_zone"),
+            app_commands.Choice(name="📊 Other", value="other"),
+        ]
+    )
+    async def action_command(
+        self,
+        interaction: discord.Interaction,
+        ticker: str,
+        action: app_commands.Choice[str],
+        reason: Optional[app_commands.Choice[str]] = None
+    ):
+        """Record an investment action for learning loop tracking."""
+        await interaction.response.defer()
+
+        try:
+            # Get linked user
+            from core.models import DiscordUser
+            discord_user = await sync_to_async(DiscordUser.objects.filter(
+                discord_user_id=str(interaction.user.id)
+            ).select_related('user').first)()
+
+            if not discord_user or not discord_user.user:
+                await interaction.followup.send(
+                    "❌ Please link your Discord account first with `/link`",
+                    ephemeral=True
+                )
+                return
+
+            # Get today's brief
+            from datetime import date
+            from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
+
+            today = date.today()
+            brief = await sync_to_async(MarketIntelligenceBrief.objects.filter(
+                brief_date=today
+            ).first)()
+
+            if not brief:
+                await interaction.followup.send(
+                    f"❌ No Market Intelligence Brief found for {today.strftime('%B %d, %Y')}.",
+                    ephemeral=True
+                )
+                return
+
+            # Get or create feedback entry for today
+            feedback, created = await sync_to_async(UserBriefFeedback.objects.get_or_create)(
+                user=discord_user.user,
+                brief=brief,
+                defaults={'was_helpful': None}
+            )
+
+            # Record the action
+            ticker_upper = ticker.upper()
+            reason_value = reason.value if reason else "other"
+
+            await sync_to_async(feedback.record_action)(
+                ticker=ticker_upper,
+                action=action.value,
+                reason=reason_value
+            )
+
+            # Send confirmation
+            action_emoji = {
+                "buy": "📈",
+                "sell": "📉",
+                "hold": "🤝",
+                "ignore": "👀"
+            }.get(action.value, "📊")
+
+            reason_text = {
+                "bull_case": "🐂 Bull Case",
+                "bear_warning": "🐻 Bear Warning",
+                "debate_zone": "⚔️ Debate Zone",
+                "other": "📊 Other Analysis"
+            }.get(reason_value, "📊 Other")
+
+            embed = discord.Embed(
+                title=f"{action_emoji} Action Recorded",
+                description=f"Tracked your {action.value} decision for {ticker_upper}",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(name="Ticker", value=ticker_upper, inline=True)
+            embed.add_field(name="Action", value=f"{action_emoji} {action.value.title()}", inline=True)
+            embed.add_field(name="Reason", value=reason_text, inline=True)
+
+            embed.add_field(
+                name="📚 Learning Impact",
+                value=(
+                    f"Your action helps the system learn! We'll track whether "
+                    f"following the {reason_text.lower()} was profitable and use "
+                    f"that to improve future predictions."
+                ),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 463: Learning Loop")
+
+            await interaction.followup.send(embed=embed)
+
+            logger.info(
+                f"[SESSION 463] Action recorded: {discord_user.user.username} "
+                f"{action.value} {ticker_upper} (reason: {reason_value})"
+            )
+
+        except Exception as e:
+            logger.error(f"[SESSION 463] Action recording failed: {e}")
+            await interaction.followup.send(
+                f"❌ Failed to record action: {str(e)}",
+                ephemeral=True
+            )
 
 
 # =============================================================================

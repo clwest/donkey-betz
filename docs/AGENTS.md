@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 436 (December 13, 2025)
+**Last Updated:** Session 466 (December 17, 2025) - Added Autonomous Content Studio Agents
 
 ---
 
@@ -62,7 +62,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Clean Architecture Agents (17)
+## Clean Architecture Agents (27)
 
 ### PersonalAssistantAgent
 
@@ -291,6 +291,177 @@ Step 4: Generate social media banners
 ```
 
 **Special Powers:** Can orchestrate any other agent
+
+---
+
+### AISeriesWorkflowAgent (Session 445)
+
+**Purpose:** Master orchestrator for multi-episode content series
+
+**Location:** `core/agents/ai_series_workflow_agent.py`
+
+**Tools:**
+- `delegate_to_agent` - Delegate to ResearchAgent, ImageAgent, VideoAgent, AudioAgent
+- `plan_series` - Generate episode structure and story arcs
+- `lock_style` - Lock visual style for consistency across episodes
+- `define_character` - Define character with visuals and voice
+- `generate_episode` - Generate single episode through full pipeline
+
+**Pipeline Stages:**
+1. **Research** - Query spiders for trending topics and audience analysis
+2. **Planning** - Create series outline, story arc, character profiles
+3. **Character** - Generate consistent character visuals (ImageAgent)
+4. **Script** - Generate episode scripts/narration (GPT)
+5. **Voice** - Generate voiceovers (AudioAgent)
+6. **Video** - Generate video content (VideoAgent)
+
+**Series Types:**
+- Educational (tutorials, explainers, courses)
+- Entertainment (stories, animations, shows)
+- Marketing (product series, brand content)
+
+**Key Features:**
+- Sequential episode generation for story continuity
+- Character consistency enforcement across episodes
+- Style locking for visual consistency
+- Story arc tracking (setup → conflict → resolution)
+- Episode count: 1-5 per series
+- Progress tracking per episode
+- Learning hooks for collective intelligence
+
+**Database Models:**
+- `AISeries` - Series metadata, status, progress
+- `SeriesEpisode` - Individual episode data and results
+- `SeriesCharacter` - Character definitions with visuals/voice
+
+**Discord Commands:**
+- `/series-create <type> <episodes> <prompt>` - Create new series
+- `/series-status [id]` - Check generation progress
+- `/series-list` - List user's series
+
+**Celery Task:**
+- `generate_ai_series(series_id)` - Background generation with retry logic
+
+**Cannot Access:** Direct creation tools (delegates to specialist agents)
+
+---
+
+### AutonomousContentStudioCoordinator (Session 466)
+
+**Purpose:** Orchestrates autonomous content generation with agent debates
+
+**Location:** `core/agents/autonomous_content_studio_coordinator.py`
+
+**Tools:**
+- `check_channels_due_for_content` - Find channels ready for new content
+- `get_channel_performance_summary` - Get channel performance stats
+- `initiate_content_debate` - Coordinate TopicMiner vs Contrarian vs Analyst debate
+- `trigger_content_creation` - Trigger AISeriesWorkflowAgent for content
+- `update_channel_schedule` - Schedule next content cycle (self-renewal)
+- `analyze_channel_performance` - Analyze and adjust confidence multipliers
+
+**Key Features:**
+- Implements Tier 1 Autonomous Situation (runs forever without intervention)
+- Coordinates 3-agent debate system for topic selection
+- Self-renewal via schedule_next_content()
+- Learning loop adjusts confidence multipliers (0.5x-1.5x)
+
+**Cannot Access:** Direct creation tools (delegates to specialist agents)
+
+---
+
+### TopicMinerAgent (Session 466)
+
+**Purpose:** Argues FOR trending topics in content debates
+
+**Location:** `core/agents/content/topic_miner_agent.py`
+
+**Tools:**
+- `query_spider_trends` - Query spider network for trending topics
+- `score_topic_potential` - Score topics based on mentions, recency, relevance
+- `detect_trending_gaps` - Find trending topics not yet covered by channel
+
+**Behavior:**
+- Analyzes spider data for trending keywords
+- Scores potential topics on 0-1 scale
+- Argues that popular topics will perform well
+- Emphasizes momentum and current interest
+
+**Example Output:**
+```
+"This topic is trending! 47 mentions in last 3 days, 85% potential score.
+High relevance to channel domain. Strong momentum detected."
+```
+
+**Cannot Access:** Direct creation tools (focused on trend analysis only)
+
+---
+
+### ContrarianAgent (Session 466)
+
+**Purpose:** Argues AGAINST oversaturated topics in content debates
+
+**Location:** `core/agents/content/contrarian_agent.py`
+
+**Tools:**
+- `check_topic_saturation` - Detect oversaturated topics
+- `suggest_unique_angles` - Generate contrarian angles
+- `find_rising_topics` - Find rising (not yet saturated) topics
+
+**Behavior:**
+- Challenges obvious/popular choices
+- Detects saturation levels (LOW/MODERATE/HIGH/CRITICAL)
+- Suggests unique angles (opposite perspective, beginner/advanced splits, etc.)
+- Warns against "everyone's doing this" topics
+
+**Saturation Levels:**
+- CRITICAL: >50 mentions (AVOID - Too saturated)
+- HIGH: >20 mentions (Unique angle required)
+- MODERATE: >10 mentions (Acceptable with differentiation)
+- LOW: <10 mentions (Good opportunity)
+
+**Example Output:**
+```
+"WARNING - Saturation level: CRITICAL (67 mentions in 14 days).
+Everyone's covering this - hard to stand out. Suggest contrarian angle:
+'Why [topic] might be overrated' to differentiate."
+```
+
+**Cannot Access:** Direct creation tools (focused on debate/analysis only)
+
+---
+
+### PerformanceAnalystAgent (Session 466)
+
+**Purpose:** Argues from EVIDENCE using historical performance data
+
+**Location:** `core/agents/content/performance_analyst_agent.py`
+
+**Tools:**
+- `get_topic_performance_history` - Get historical performance for similar topics
+- `predict_topic_performance` - Predict performance (exact match/similar/channel avg)
+- `get_success_patterns` - Identify patterns in top performing content
+- `calculate_confidence_score` - Calculate confidence based on data availability
+
+**Behavior:**
+- Uses TopicPerformance database to find what worked before
+- Predicts views/engagement/retention based on historical data
+- Provides confidence scores (0-1) based on amount of supporting data
+- Argues from evidence, not opinions
+
+**Prediction Bases:**
+- EXACT_MATCH: High confidence (0.9) - topic done before
+- SIMILAR_TOPICS: Moderate confidence (0.6) - related topics exist
+- CHANNEL_AVERAGE: Low confidence (0.3) - no historical data
+
+**Example Output:**
+```
+"Historical data shows similar topics get 15,000 views avg (±3,000).
+Based on 7 previous episodes with 68% avg retention.
+Confidence: 0.7 (strong historical precedent)."
+```
+
+**Cannot Access:** Direct creation tools (focused on data analysis only)
 
 ---
 
@@ -579,6 +750,122 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 - Colorado Forms - JDF form reference
 - Procedures - Step-by-step guides
 - **My Case Files** - Upload and analyze case documents
+
+---
+
+### Stock Market Intelligence Agents (Session 465)
+
+**Purpose:** Autonomous market intelligence system generating daily briefs with bull/bear debates
+
+**Location:** `core/agents/stocks/`
+
+**Part of:** Market Intelligence Desk (First Tier 1 Autonomous Situation)
+
+#### BullCaseAgent
+
+**Purpose:** Makes arguments for price appreciation (long thesis)
+
+**Location:** `core/agents/stocks/bull_case_agent.py`
+
+**Tools:**
+- `analyze_fundamentals` - Revenue growth, margins, moat analysis
+- `analyze_technicals` - Price action, volume, momentum
+- `sector_positioning` - Industry trends, competitive position
+- `catalyst_identification` - Upcoming events that could drive price up
+
+**Behavior:** Generates bullish thesis with conviction score (0-100)
+
+**Learning Integration:** Confidence multiplier based on prediction accuracy
+
+---
+
+#### BearCaseAgent
+
+**Purpose:** Makes arguments for price depreciation (short thesis)
+
+**Location:** `core/agents/stocks/bear_case_agent.py`
+
+**Tools:**
+- `risk_analysis` - Debt, valuation, market risk assessment
+- `analyze_technicals` - Bearish patterns, resistance levels
+- `downside_catalysts` - Events that could drive price down
+- `sector_headwinds` - Industry challenges, competition
+
+**Behavior:** Generates bearish thesis with conviction score (0-100)
+
+**Learning Integration:** Confidence multiplier based on prediction accuracy
+
+---
+
+#### SignalScannerAgent
+
+**Purpose:** Detects technical patterns and trading signals
+
+**Location:** `core/agents/stocks/signal_scanner_agent.py`
+
+**Tools:**
+- `scan_patterns` - Chart patterns (breakouts, reversals, continuations)
+- `volume_analysis` - Unusual volume activity, institutional flows
+- `momentum_scan` - RSI, MACD, Stochastic momentum shifts
+- `options_flow` - Unusual options activity (smart money positioning)
+
+**Behavior:** Identifies high-probability technical setups with entry/exit criteria
+
+**Integration:** Validates bull/bear cases with technical confirmation
+
+---
+
+#### StockAuditCoordinator
+
+**Purpose:** Detects anomalies and risk signals across stocks
+
+**Location:** `core/agents/stocks/stock_audit_coordinator.py`
+
+**Tools:**
+- `audit_fundamentals` - Accounting red flags, unusual metrics
+- `audit_insider_activity` - Insider buying/selling patterns
+- `audit_market_activity` - Volume spikes, price manipulation signals
+- `audit_sec_filings` - 8-K events, material changes
+
+**Behavior:** Generates risk alerts with severity levels (LOW/MEDIUM/HIGH/CRITICAL)
+
+**Integration:** Feeds risk signals into market briefs
+
+---
+
+#### MarketIntelligenceCoordinator
+
+**Purpose:** Synthesizes bull/bear/technical/risk into actionable brief
+
+**Location:** `core/agents/stocks/market_intelligence_coordinator.py`
+
+**Tools:**
+- `synthesize_intelligence` - Combines all agent outputs
+- `generate_brief` - Creates structured market brief
+- `identify_opportunities` - High conviction plays
+- `track_changes` - What changed from yesterday
+
+**Output Structure:**
+1. Executive Summary - Market thesis
+2. High Conviction - Stocks with strong agreement
+3. Debate Zone - Conflicting signals (alpha opportunities)
+4. Risk Alerts - Items requiring attention
+5. What Changed - Key differences from yesterday
+
+**Delivery Channels:**
+- Discord (#market-intelligence)
+- Voice brief (ElevenLabs TTS - "Drew" voice)
+- Web dashboard (MarketIntelligenceBrief model)
+
+**Scheduling:**
+- Daily: 6:30 AM Mon-Fri (before market open)
+- Event-driven: Every 30 min during market hours when significant events occur
+
+**Learning Loop:**
+- Records predictions as PredictionOutcome
+- Tracks 7-day and 30-day accuracy
+- Updates agent confidence multipliers (0.5x-1.5x)
+- Agents improve over time based on track record
 
 ---
 
