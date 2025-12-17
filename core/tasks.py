@@ -11445,7 +11445,7 @@ def run_autonomous_content_studio():
         dict: Summary of channels processed
     """
     from django.utils import timezone
-    from core.models_autonomous_studio import ContentChannel
+    from core.models_autonomous_studio import ContentChannel, ChannelStatus
 
     logger.info("🎬 [SESSION 466] Starting autonomous content studio main loop...")
 
@@ -11459,7 +11459,7 @@ def run_autonomous_content_studio():
 
     try:
         # Get all active channels
-        all_channels = ContentChannel.objects.filter(is_active=True)
+        all_channels = ContentChannel.objects.filter(status=ChannelStatus.ACTIVE)
         results['total_channels'] = all_channels.count()
 
         logger.info(f"🎬 [SESSION 466] Found {results['total_channels']} active channels")
