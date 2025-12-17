@@ -20,6 +20,9 @@ from .models_pipeline_feedback import *
 # Import narrative drift models (Session 471)
 from .models_narrative_drift import *
 
+# Import autonomous alert models (Session 477)
+from .models_autonomous_alerts import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

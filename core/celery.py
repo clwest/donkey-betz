@@ -824,6 +824,34 @@ app.conf.beat_schedule = {
             'expires': 604800,  # 1 week
         }
     },
+
+    # =========================================================================
+    # Session 477: Tier 1 Autonomous Situations - Real-Time Alerts
+    # Blockchain Security Monitoring + Stock Market Intelligence
+    # These send REAL alerts to Discord channels!
+    # =========================================================================
+
+    # Blockchain Security Monitor - every 2 hours
+    # Analyzes etherscan/coingecko data for whale movements, price manipulation, unusual volume
+    # Sends alerts to #blockchain-alerts Discord channel
+    'autonomous-blockchain-security-monitor': {
+        'task': 'autonomous.blockchain_security_monitor',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours at :00
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
+
+    # Stock Market Intelligence - every 4 hours
+    # Analyzes yahoo_finance/finnhub/sec_edgar data with Bull vs Bear debate
+    # Sends alerts to #stock-alerts Discord channel
+    'autonomous-stock-market-intelligence': {
+        'task': 'autonomous.stock_market_intelligence',
+        'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration
