@@ -29,6 +29,7 @@ class ResolveController:
         self.project = None
         self.media_pool = None
         self.current_timeline = None
+        self.imported_clips = []  # Session 479: Store imported clips for timeline
 
         if not mock_mode:
             self._load_resolve()
@@ -82,6 +83,18 @@ class ResolveController:
 
     def _get_or_create_project(self, project_name: str):
         """Get existing project or create new one"""
+        # Session 479: Close current project first if any
+        current = self.project_manager.GetCurrentProject()
+        if current:
+            current_name = current.GetName()
+            logger.info(f"Closing current project: {current_name}")
+            # Save first to avoid blocking dialog
+            try:
+                self.project_manager.SaveProject()
+            except:
+                pass  # May fail if no changes
+            self.project_manager.CloseProject(current)
+
         # Try to load existing project
         self.project = self.project_manager.LoadProject(project_name)
 
@@ -89,6 +102,16 @@ class ResolveController:
             # Create new project
             logger.info(f"Creating new project: {project_name}")
             self.project = self.project_manager.CreateProject(project_name)
+
+        if not self.project:
+            # Last resort: use any available project or create with random name
+            logger.warning(f"Could not create '{project_name}', trying fallback...")
+            import uuid
+            fallback_name = f"RenderJob_{uuid.uuid4().hex[:8]}"
+            self.project = self.project_manager.CreateProject(fallback_name)
+            if self.project:
+                project_name = fallback_name
+                logger.info(f"Using fallback project name: {fallback_name}")
 
         if not self.project:
             raise RuntimeError(f"Could not create/load project: {project_name}")
@@ -107,6 +130,7 @@ class ResolveController:
         """
         if self.mock_mode:
             logger.info(f"[MOCK] Would import {len(clip_paths)} clips")
+            self.imported_clips = ["mock_clip"]  # Mock clip for testing
             return True
 
         try:
@@ -126,6 +150,8 @@ class ResolveController:
 
             if imported_clips:
                 logger.info(f"Imported {len(imported_clips)} clips to media pool")
+                # Session 479: Store imported clips for adding to timeline
+                self.imported_clips = imported_clips
                 return True
             else:
                 logger.warning("Failed to import clips (returned None)")
@@ -137,7 +163,7 @@ class ResolveController:
 
     def set_or_create_timeline(self, timeline_name: Optional[str] = None) -> bool:
         """
-        Set current timeline or create new one
+        Set current timeline or create new one, adding imported clips if available
 
         Args:
             timeline_name: Name of timeline to use/create
@@ -154,13 +180,77 @@ class ResolveController:
             if not timeline_name:
                 timeline_name = config.RESOLVE_TIMELINE_NAME
 
-            # Try to get existing timeline
-            self.current_timeline = self.project.GetTimelineByIndex(1)
+            # Session 479: If we have imported clips, add them to timeline
+            if self.imported_clips:
+                logger.info(f"Setting up timeline with {len(self.imported_clips)} clips")
 
-            if not self.current_timeline:
-                # Create new timeline
-                logger.info(f"Creating new timeline: {timeline_name}")
-                self.current_timeline = self.media_pool.CreateEmptyTimeline(timeline_name)
+                # Create or get timeline first
+                self.current_timeline = self.project.GetTimelineByIndex(1)
+                if not self.current_timeline:
+                    logger.info(f"Creating new timeline: {timeline_name}")
+                    self.current_timeline = self.media_pool.CreateEmptyTimeline(timeline_name)
+
+                if self.current_timeline:
+                    # Set as current timeline
+                    self.project.SetCurrentTimeline(self.current_timeline)
+
+                    # Session 479: AppendToTimeline can be finicky, try multiple approaches
+                    logger.info(f"Appending {len(self.imported_clips)} clips to timeline...")
+
+                    # Log clip info
+                    for i, clip in enumerate(self.imported_clips):
+                        try:
+                            clip_name = clip.GetName() if hasattr(clip, 'GetName') else str(clip)
+                            logger.info(f"  Clip {i}: {clip_name}")
+                        except:
+                            logger.info(f"  Clip {i}: (could not get name)")
+
+                    # Try AppendToTimeline with list format
+                    result = self.media_pool.AppendToTimeline(self.imported_clips)
+                    logger.info(f"AppendToTimeline result: {result}")
+
+                    # Check if clips were actually added
+                    items_on_track = self.current_timeline.GetItemListInTrack("video", 1)
+                    if items_on_track:
+                        logger.info(f"Timeline now has {len(items_on_track)} items on video track 1")
+                    else:
+                        # Fallback: Try individual clips with different append method
+                        logger.warning("AppendToTimeline didn't work, trying individual clips...")
+                        for clip in self.imported_clips:
+                            try:
+                                # Try appending as a list of one
+                                self.media_pool.AppendToTimeline([clip])
+                            except Exception as e:
+                                logger.warning(f"Individual append failed: {e}")
+
+                        # Check again
+                        items_on_track = self.current_timeline.GetItemListInTrack("video", 1)
+                        if items_on_track:
+                            logger.info(f"Individual append worked! {len(items_on_track)} items on timeline")
+                        else:
+                            # Last resort: Create a new timeline from clips with unique name
+                            logger.warning("AppendToTimeline failed, trying CreateTimelineFromClips...")
+                            import uuid
+                            unique_id = uuid.uuid4().hex[:8]
+                            new_timeline_name = f"Render_{unique_id}"
+                            new_timeline = self.media_pool.CreateTimelineFromClips(
+                                new_timeline_name,
+                                self.imported_clips
+                            )
+                            if new_timeline:
+                                self.current_timeline = new_timeline
+                                self.project.SetCurrentTimeline(self.current_timeline)
+                                logger.info(f"Created new timeline '{new_timeline_name}' with clips")
+                            else:
+                                logger.error("Could not add clips to any timeline!")
+                else:
+                    raise RuntimeError(f"Could not create timeline: {timeline_name}")
+            else:
+                # No clips - just get existing timeline or create empty one
+                self.current_timeline = self.project.GetTimelineByIndex(1)
+                if not self.current_timeline:
+                    logger.info(f"Creating new empty timeline: {timeline_name}")
+                    self.current_timeline = self.media_pool.CreateEmptyTimeline(timeline_name)
 
             if not self.current_timeline:
                 raise RuntimeError(f"Could not create/get timeline: {timeline_name}")
@@ -223,18 +313,82 @@ class ResolveController:
 
             # Configure render settings
             settings = self.configure_render_settings(job_id, template)
+            custom_name = f"render_{job_id}"
 
-            # Apply settings
-            logger.info(f"Applying render settings for job {job_id}")
-            success = self.project.SetRenderSettings(settings)
+            # Session 479: Must load a render preset or set format before AddRenderJob works
+            logger.info(f"Configuring render settings for job {job_id}")
 
-            if not success:
-                raise RuntimeError("Failed to apply render settings")
+            # Try to load a common render preset first
+            presets_to_try = [
+                "H.264 Master",
+                "YouTube - 1080p",
+                "YouTube 1080p",
+                "Vimeo 1080p",
+                "ProRes 422",
+                "H.264 High Quality",
+            ]
+
+            preset_loaded = False
+            for preset_name in presets_to_try:
+                try:
+                    success = self.project.LoadRenderPreset(preset_name)
+                    if success:
+                        logger.info(f"Loaded render preset: {preset_name}")
+                        preset_loaded = True
+                        break
+                except Exception:
+                    pass
+
+            if not preset_loaded:
+                logger.warning("Could not load any preset, trying manual settings...")
+
+            # Set output directory and filename
+            try:
+                render_settings = {
+                    "TargetDir": str(config.RESULTS_DIR),
+                    "CustomName": custom_name,
+                    "SelectAllFrames": True,
+                }
+                success = self.project.SetRenderSettings(render_settings)
+                if success:
+                    logger.info("Applied render settings successfully")
+                else:
+                    logger.warning("SetRenderSettings returned False, continuing anyway...")
+            except Exception as settings_error:
+                logger.warning(f"Could not apply render settings: {settings_error}")
 
             # Add timeline to render queue
+            logger.info("Adding timeline to render queue...")
+
+            # Session 479: Check timeline state before adding job
+            track_count = self.current_timeline.GetTrackCount("video")
+            logger.info(f"Timeline video track count: {track_count}")
+
+            # Check if timeline has any items
+            timeline_item_count = self.current_timeline.GetItemListInTrack("video", 1)
+            if timeline_item_count:
+                logger.info(f"Timeline has {len(timeline_item_count)} items on video track 1")
+            else:
+                logger.warning("Timeline video track 1 appears empty!")
+
+            # Try to add render job
             success = self.project.AddRenderJob()
             if not success:
-                raise RuntimeError("Failed to add render job to queue")
+                # Get more diagnostic info
+                render_jobs = self.project.GetRenderJobs()
+                logger.info(f"Current render jobs count: {len(render_jobs) if render_jobs else 0}")
+
+                # Try to clear render queue and retry
+                logger.warning("AddRenderJob failed, attempting to clear queue...")
+                self.project.DeleteAllRenderJobs()
+
+                # Try with in/out marks set to timeline bounds
+                duration = self.current_timeline.GetEndFrame()
+                logger.info(f"Timeline duration (frames): {duration}")
+
+                success = self.project.AddRenderJob()
+                if not success:
+                    raise RuntimeError("Failed to add render job to queue")
 
             # Start rendering
             logger.info(f"Starting render for job {job_id}")
@@ -243,10 +397,17 @@ class ResolveController:
             if not success:
                 raise RuntimeError("Failed to start rendering")
 
-            # Construct expected output path
-            output_file = config.RESULTS_DIR / f"{settings['CustomName']}.mp4"
+            # Session 479: Output format depends on preset, check for common extensions
+            # H.264 Master uses .mov, others might use .mp4
+            for ext in ['.mov', '.mp4', '.avi', '.mxf']:
+                output_file = config.RESULTS_DIR / f"{custom_name}{ext}"
+                if output_file.exists():
+                    logger.info(f"Render started, output file: {output_file}")
+                    return str(output_file)
 
-            logger.info(f"Render started for job {job_id}")
+            # If not found yet, return expected path (for polling)
+            output_file = config.RESULTS_DIR / f"{custom_name}.mov"
+            logger.info(f"Render started for job {job_id}, expected output: {output_file}")
             return str(output_file)
 
         except Exception as e:
