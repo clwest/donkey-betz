@@ -778,51 +778,111 @@ If asked to do something outside your scope, politely explain you can only handl
         """
         Resolve video IDs to file paths.
 
-        Handles both sequential numbers and UUIDs.
+        Supports multiple ID formats:
+        1. User-friendly sequential number (#1, #2, 1, 2)
+        2. UUID (with or without .mp4 extension)
+        3. Filename from rescued_videos directory
         """
         from django.conf import settings
         from pathlib import Path
+        import re
 
         paths = []
+        media_root = Path(settings.MEDIA_ROOT)
+        rescued_dir = Path(settings.BASE_DIR) / 'media' / 'rescued_videos'
 
         try:
             from content.models import VideoHistory
 
-            for video_id in video_ids:
-                try:
-                    # Try UUID first
-                    video = VideoHistory.objects.get(id=video_id)
-                except (VideoHistory.DoesNotExist, ValueError):
-                    # Try sequential number
+            for raw_id in video_ids:
+                video_path = None
+                video_id = raw_id.strip()
+
+                # Strip # prefix and file extensions
+                video_id = video_id.lstrip('#')
+                video_id = re.sub(r'\.(mp4|mov|avi|mkv|webm)$', '', video_id, flags=re.IGNORECASE)
+
+                # Strategy 1: Check rescued_videos directory by filename
+                rescued_path = rescued_dir / f"{video_id}.mp4"
+                if rescued_path.exists():
+                    paths.append(str(rescued_path))
+                    logger.info(f"Resolved '{raw_id}' to rescued video: {rescued_path}")
+                    continue
+
+                # Strategy 2: Try as user-friendly sequential number
+                if video_id.isdigit():
                     try:
+                        idx = int(video_id) - 1  # 1-indexed for users
                         user_videos = VideoHistory.objects.filter(
-                            user=self.user
-                        ).order_by('created_at')
-                        idx = int(video_id) - 1
+                            status='completed'
+                        ).order_by('-created_at')  # Most recent first
                         if 0 <= idx < user_videos.count():
                             video = user_videos[idx]
-                        else:
-                            logger.warning(f"Video not found: {video_id}")
-                            continue
+                            video_path = self._get_video_file_path(video, media_root)
+                            if video_path:
+                                paths.append(video_path)
+                                logger.info(f"Resolved #{video_id} to video: {video_path}")
+                                continue
                     except (ValueError, IndexError):
-                        logger.warning(f"Invalid video ID: {video_id}")
-                        continue
+                        pass
 
-                # Get file path
-                if video.video_file:
-                    video_path = Path(settings.MEDIA_ROOT) / str(video.video_file)
-                    if video_path.exists():
-                        paths.append(str(video_path))
-                    else:
-                        logger.warning(f"Video file not found: {video_path}")
-                elif video.video_url:
-                    # Remote URL - would need to download
-                    logger.warning(f"Remote video URLs not yet supported: {video.video_url}")
+                # Strategy 3: Try as UUID
+                try:
+                    video = VideoHistory.objects.get(id=video_id)
+                    video_path = self._get_video_file_path(video, media_root)
+                    if video_path:
+                        paths.append(video_path)
+                        logger.info(f"Resolved UUID '{video_id}' to: {video_path}")
+                        continue
+                except (VideoHistory.DoesNotExist, ValueError):
+                    pass
+
+                # Strategy 4: Search by partial UUID match
+                try:
+                    videos = VideoHistory.objects.filter(id__startswith=video_id)
+                    if videos.exists():
+                        video = videos.first()
+                        video_path = self._get_video_file_path(video, media_root)
+                        if video_path:
+                            paths.append(video_path)
+                            logger.info(f"Resolved partial UUID '{video_id}' to: {video_path}")
+                            continue
+                except Exception:
+                    pass
+
+                logger.warning(f"Could not resolve video ID: {raw_id}")
 
         except Exception as e:
             logger.error(f"Failed to resolve video paths: {e}")
 
         return paths
+
+    def _get_video_file_path(self, video, media_root: 'Path') -> Optional[str]:
+        """Extract actual file path from VideoHistory record."""
+        from pathlib import Path
+
+        # Try video_file first
+        if video.video_file:
+            video_path = media_root / str(video.video_file)
+            if video_path.exists():
+                return str(video_path)
+
+        # Try video_url (local /media/ paths)
+        if hasattr(video, 'video_url') and video.video_url:
+            url = video.video_url
+            # Handle local media URLs
+            if url.startswith('/media/'):
+                relative_path = url[7:]  # Remove '/media/'
+                video_path = media_root / relative_path
+                if video_path.exists():
+                    return str(video_path)
+            # Handle full local paths
+            elif url.startswith('/'):
+                video_path = Path(url)
+                if video_path.exists():
+                    return str(video_path)
+
+        return None
 
 
 # Factory function for backwards compatibility

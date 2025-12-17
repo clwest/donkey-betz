@@ -10404,6 +10404,117 @@ class ResolveCommands(commands.Cog):
                 )
             )
 
+    @app_commands.command(name="videos-list", description="List available videos for rendering")
+    @app_commands.describe(
+        limit="Number of videos to show (default 10)"
+    )
+    async def videos_list_command(
+        self,
+        interaction: discord.Interaction,
+        limit: int = 10
+    ):
+        """List available videos with user-friendly IDs for rendering."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_videos():
+                from content.models import VideoHistory
+                from pathlib import Path
+                from django.conf import settings
+
+                results = []
+                media_root = Path(settings.MEDIA_ROOT)
+                rescued_dir = Path(settings.BASE_DIR) / 'media' / 'rescued_videos'
+
+                # Get rescued videos (most reliable for Resolve)
+                if rescued_dir.exists():
+                    rescued_files = sorted(rescued_dir.glob('*.mp4'))[:limit]
+                    for i, f in enumerate(rescued_files, 1):
+                        size_mb = f.stat().st_size / 1024 / 1024
+                        results.append({
+                            'id': f"R{i}",
+                            'name': f.stem[:20],
+                            'size': f"{size_mb:.1f}MB",
+                            'type': 'rescued',
+                            'full_id': f.stem
+                        })
+
+                # Get database videos
+                videos = VideoHistory.objects.filter(status='completed').order_by('-created_at')[:limit]
+                for i, v in enumerate(videos, 1):
+                    # Check if file exists
+                    has_file = False
+                    if v.video_file:
+                        path = media_root / str(v.video_file)
+                        has_file = path.exists()
+                    elif v.video_url and v.video_url.startswith('/media/'):
+                        path = media_root / v.video_url[7:]
+                        has_file = path.exists()
+
+                    results.append({
+                        'id': f"#{i}",
+                        'name': str(v.id)[:8],
+                        'size': '---' if not has_file else 'OK',
+                        'type': 'db',
+                        'full_id': str(v.id)
+                    })
+
+                return results
+
+            videos = await get_videos()
+
+            embed = discord.Embed(
+                title="📹 Available Videos for Rendering",
+                description=f"Use these IDs with `/resolve-render`",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            # Rescued videos section
+            rescued = [v for v in videos if v['type'] == 'rescued']
+            if rescued:
+                rescued_text = "\n".join([
+                    f"`{v['id']}` | {v['name']} | {v['size']}"
+                    for v in rescued[:8]
+                ])
+                embed.add_field(
+                    name="🎬 Rescued Videos (Best for Resolve)",
+                    value=rescued_text or "None",
+                    inline=False
+                )
+                embed.add_field(
+                    name="💡 Usage",
+                    value=f"Use the full UUID: `/resolve-render video_ids:{rescued[0]['full_id']}`",
+                    inline=False
+                )
+
+            # Database videos section
+            db_videos = [v for v in videos if v['type'] == 'db']
+            if db_videos:
+                db_text = "\n".join([
+                    f"`{v['id']}` | {v['name']}... | {v['size']}"
+                    for v in db_videos[:5]
+                ])
+                embed.add_field(
+                    name="📦 Database Videos",
+                    value=db_text or "None",
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 479 | Use R1, R2... for rescued videos")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/videos-list error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to list videos: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
 
 # =============================================================================
 # Situation Commands - Session 480: Discord Commands for All Situations
