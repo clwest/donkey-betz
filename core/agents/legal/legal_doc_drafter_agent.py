@@ -980,6 +980,82 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
 
+    def _get_fresh_legal_spider_intelligence(self, task: str, hours: int = 168, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Session 461: Get fresh legal spider intelligence for document drafting.
+
+        Queries legal-specific spiders for recent case law, legal news, and
+        procedural updates that may be relevant to the user's task.
+
+        Legal Spiders:
+        - courtlistener: Case law and court opinions
+        - legal_news: Legal news and updates
+        - findlaw: Legal resources and articles
+        - lii: Cornell Legal Information Institute
+        - colorado_family_law: Colorado-specific family law resources
+        - justia_family_law: Family law case summaries
+
+        Args:
+            task: The user's legal task/question
+            hours: How far back to look (default 7 days for legal data)
+            limit: Maximum items to return
+
+        Returns:
+            List of relevant legal intelligence dicts
+        """
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(hours=hours)
+
+            # Legal spider sources
+            legal_sources = [
+                'courtlistener', 'legal_news', 'findlaw', 'lii',
+                'colorado_family_law', 'justia_family_law'
+            ]
+
+            # Query SpiderData for legal content
+            query = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+                spider_name__in=legal_sources
+            )
+
+            # Order by recency and get results
+            # Note: SpiderData uses JSON fields so we filter by spider_name (legal spiders)
+            # then do keyword relevance scoring in Python
+            results = query.order_by('-created_at')[:limit]
+
+            intelligence = []
+            for item in results:
+                # SpiderData stores data in raw_data or processed_data JSON fields
+                raw_data = item.raw_data or {}
+                processed_data = item.processed_data or {}
+
+                # Extract title and content from the data
+                title = raw_data.get('title') or processed_data.get('title') or 'Untitled'
+                content = raw_data.get('description') or raw_data.get('content') or \
+                          processed_data.get('summary') or ''
+                url = item.source_url or raw_data.get('url') or raw_data.get('link') or ''
+
+                intelligence.append({
+                    'title': title[:100] if title else 'Untitled',
+                    'content': content[:500] if content else '',
+                    'source': item.spider_name,
+                    'url': url,
+                    'created_at': item.created_at.isoformat() if item.created_at else None,
+                })
+
+            if intelligence:
+                logger.info(f"📚 Retrieved {len(intelligence)} legal intelligence items for task")
+
+            return intelligence
+
+        except Exception as e:
+            logger.warning(f"Error getting legal spider intelligence: {e}")
+            return []
+
     def _ensure_agent_registered(self):
         """
         Session 405: Ensure LegalDocDrafterAgent is registered in the Agent database.
@@ -1212,6 +1288,21 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             "- Forms: JDF (Judicial Department Forms) series",
             "",
         ]
+
+        # Session 461: Inject fresh legal spider intelligence
+        legal_intelligence = self._get_fresh_legal_spider_intelligence(task)
+        if legal_intelligence:
+            prompt_parts.append("=== RECENT LEGAL INTELLIGENCE ===")
+            prompt_parts.append("The following recent legal news and case law may be relevant:")
+            for item in legal_intelligence[:5]:
+                source = item.get('source', 'Unknown')
+                title = item.get('title', '')[:80]
+                content = item.get('content', '')[:200]
+                prompt_parts.append(f"- [{source}] {title}")
+                if content:
+                    prompt_parts.append(f"  {content}...")
+            prompt_parts.append("=== END LEGAL INTELLIGENCE ===")
+            prompt_parts.append("")
 
         # Add any case context if provided
         if context.get('case_number'):
