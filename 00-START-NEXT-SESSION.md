@@ -1,8 +1,9 @@
-# Session 475 - Start Here
+# Session 476 - Start Here
 
-**Previous Sessions:** 471-474 (Narrative Drift + Provenance + Integration + **Unified Pipeline**)
+**Previous Sessions:** 471-475 (Narrative Drift + Provenance + Integration + Unified Pipeline + **ROI Integration**)
 **Handoff Docs:**
-- `docs/handoffs/SESSION_474_UNIFIED_INTELLIGENCE_PIPELINE.md` (NEW!)
+- `docs/handoffs/SESSION_475_ROI_PIPELINE_INTEGRATION.md` (NEW!)
+- `docs/handoffs/SESSION_474_UNIFIED_INTELLIGENCE_PIPELINE.md`
 - `docs/handoffs/SESSION_473_NARRATIVE_CONTENT_INTEGRATION.md`
 - `docs/handoffs/SESSION_472_PROVENANCE_COMPLIANCE.md`
 - `docs/handoffs/SESSION_471_NARRATIVE_DRIFT_DETECTOR.md`
@@ -10,102 +11,121 @@
 
 ---
 
-## Session 474 Achievement: ALL THREE SYSTEMS CONNECTED!
+## Session 475 Achievements: ROI PIPELINE FULLY INTEGRATED!
 
-Built the **Unified Intelligence Pipeline** that connects ALL THREE Tier 1 Autonomous Situations:
+Fixed critical issues and connected ROI tracking throughout the system:
+
+| Fix/Feature | Status |
+|-------------|--------|
+| Removed duplicate model conflict (`models_learning_loop.py`) | COMPLETE |
+| ROI tracking hooks in opportunity endpoints | COMPLETE |
+| Provenance hooks in data creation points | COMPLETE |
+| 6 new Celery tasks for ROI automation | COMPLETE |
+| Beat schedules for daily/weekly ROI | COMPLETE |
+
+### New Automated Tasks
+
+```
+roi-metrics-daily-aggregation: Daily at 2:00 AM
+roi-metrics-weekly-brief: Monday 7:00 AM
+```
+
+---
+
+## Complete Data Flow (NOW CONNECTED!)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Spider Network → ML Score → Narrative Check → Content Gen → Track │
+│                    FULLY CONNECTED PIPELINE                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  67 Spiders → SpiderData → Opportunity → Scoring                    │
+│       ↓                                                              │
+│  NarrativeEvidence → NarrativeShift → ChannelEpisode                │
+│       ↓                                                              │
+│  ROI TRACKING: View → Click → Apply → Revenue                       │
+│       ↓                                                              │
+│  PROVENANCE: Full lineage with hash chains                          │
+│                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
-```
-
-| Component | Status |
-|-----------|--------|
-| `run_unified_intelligence_pipeline` task | COMPLETE |
-| `unified_pipeline_health_check` task | COMPLETE |
-| Narrative provenance functions | COMPLETE |
-| Content provenance functions | COMPLETE |
-| Celery beat schedules | COMPLETE |
-
-### Pipeline Test Results
-```
-Success: True
-Health Score: 100.0%
-Errors: 0
-Phases: spider_data, ml_scoring, narrative_drift, content_generation, provenance, revenue_tracking
 ```
 
 ---
 
 ## Tier 1 Autonomous Situations Status
 
-| Situation | Status | Integration |
-|-----------|--------|-------------|
-| Autonomous Content Studio | COMPLETE | Receives narrative shifts |
-| Narrative Drift Detector | COMPLETE | Sends to Content Studio |
-| Market Intelligence Desk | Phase 5/6 | Connected to pipeline |
+| Situation | Status | ROI Tracking |
+|-----------|--------|--------------|
+| Autonomous Content Studio | COMPLETE | ✅ Episode provenance |
+| Narrative Drift Detector | COMPLETE | ✅ Evidence/Shift provenance |
+| Market Intelligence Desk | COMPLETE | ✅ ROI conversion funnel |
 
-**All 3 systems now run as ONE unified pipeline!**
+**All 3 systems now track complete data lineage!**
 
 ---
 
 ## Current System State
 
-### Unified Pipeline Schedules
-```
-unified-pipeline-complete-cycle: Every 12 hours at :00
-unified-pipeline-health-check: Every 2 hours at :15
-narrative-drift-cycle: Every 6 hours at :00
-narrative-shifts-to-content: Every 6 hours at :30
-```
-
 ### System Metrics
 ```
-Spiders: 67 (534 records in 24h)
+SpiderData: 18,964 records
 Narratives: 30 (across 8 domains)
-Evidence Records: 305+
-Content Channels: 3
+Evidence: 730 records
+Shifts: 1
+Channels: 3
 Episodes: 3
+ConversionEvents: 6
 Agents: 53
 ```
 
-### Provenance Chain
+### All Autonomous Schedules
 ```
-SpiderData → Opportunity → Score → Validation → Outcome
-     ↓
-NarrativeEvidence → NarrativeShift → ContentEpisode
+# Unified Pipeline
+unified-pipeline-complete-cycle: Every 12 hours at :00
+unified-pipeline-health-check: Every 2 hours at :15
+
+# ROI Automation (NEW!)
+roi-metrics-daily-aggregation: Daily at 2:00 AM
+roi-metrics-weekly-brief: Monday 7:00 AM
+
+# Narrative Drift
+narrative-drift-cycle: Every 6 hours at :00
+narrative-shifts-to-content: Every 6 hours at :30
+
+# Content Studio
+run-autonomous-content-studio: Every 4 hours
+track-content-performance: Daily at 8 PM
 ```
 
 ---
 
-## Session 475 Options
+## Session 476 Options
 
-### Option A: Market Intelligence Phase 6 (ROI Metrics)
-Complete the final phase with revenue attribution:
-- ConversionEvent model (view → click → apply → convert → revenue)
-- Attribution path tracking
-- Revenue by spider source reports
-- Weekly intelligence briefs
+### Option A: Stress Test (Recommended First!)
+Let the system run autonomously for 24 hours:
+- Monitor all 3 autonomous situations
+- Watch provenance records accumulate
+- Verify ROI tracking captures events
+- Check for any errors in logs
 
-### Option B: Enhance Content Quality
-- Add AI-generated images to shift reports
-- Create video summaries using AISeriesWorkflowAgent
-- Add Discord notifications for new episodes
-
-### Option C: Real-Time Dashboard
-Build a unified dashboard showing:
+### Option B: Dashboard Visualization
+Build a real-time dashboard showing:
 - All three autonomous situations status
 - Live provenance chain visualization
-- Revenue attribution flow
-- System health metrics
+- ROI funnel metrics
+- System health
 
-### Option D: Stress Test (24-hour autonomous run)
-Let the system run and monitor:
-- All three autonomous situations
-- Content generation
-- Provenance chain integrity
-- System reliability metrics
+### Option C: AI-Generated Images for Content
+Add visual content to shift reports:
+- Generate images for narrative shifts
+- Add thumbnails to episodes
+- Create visual timeline of shifts
+
+### Option D: Blockchain Audit Activation
+Convert the existing Blockchain Audit agents into a 4th Tier 1 Autonomous Situation:
+- Add models for persistent context
+- Add Celery tasks for autonomy
+- Connect to unified pipeline
 
 ---
 
@@ -113,70 +133,56 @@ Let the system run and monitor:
 
 ```bash
 make start       # Start Daphne web server
-make celery      # Start Celery worker + beat
+make celery      # Start Celery worker + beat (RESTART FOR NEW SCHEDULES!)
 make discord-bot # Start Discord bot (separate terminal)
 ```
-
----
-
-## Key Files
-
-### Session 474: Unified Pipeline
-- `core/tasks.py` (lines 13460-13815) - Unified pipeline tasks
-- `core/celery.py` (lines 783-804) - Beat schedules
-- `core/services/provenance_tracker.py` (lines 785-860) - Narrative/content provenance
-
-### Session 473: Integration
-- `core/tasks.py` (lines 13188-13457) - Narrative → Content tasks
-
-### Session 472: Provenance
-- `core/services/provenance_tracker.py` - ProvenanceTracker service
-- `core/views_provenance.py` - 11 API endpoints
-
-### Session 471: Narrative Drift
-- `core/models_narrative_drift.py` - Database models
-- `core/agents/narrative/` - 4 agents (Historian, TrendBreak, Cultural, Coordinator)
 
 ---
 
 ## Quick Test Commands
 
 ```bash
-# Test Unified Pipeline Health Check
+# Run ROI aggregation manually
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.tasks import aggregate_roi_metrics_daily
+result = aggregate_roi_metrics_daily()
+print(f'Result: {result}')
+"
+
+# Check provenance records
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.models_unified_system import DataProvenance
+from django.db.models import Count
+types = DataProvenance.objects.values('entity_type').annotate(count=Count('id'))
+for t in types:
+    print(f\"{t['entity_type']}: {t['count']}\")
+"
+
+# Run unified pipeline health check
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
 from core.tasks import unified_pipeline_health_check
 result = unified_pipeline_health_check()
 print(f'Health: {result.get(\"health_percentage\")}%')
-for system, status in result.get('systems', {}).items():
-    print(f'  {system}: healthy={status.get(\"healthy\")}')
-"
-
-# Run Full Pipeline
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.tasks import run_unified_intelligence_pipeline
-result = run_unified_intelligence_pipeline()
-print(f'Success: {result.get(\"success\")}')
-print(f'Health Score: {result.get(\"health_score\")}%')
-"
-
-# Check All System Counts
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.models_unified_system import SpiderData, Opportunity, DataProvenance
-from core.models_narrative_drift import Narrative, NarrativeEvidence, NarrativeShift
-from core.models_autonomous_studio import ContentChannel, ChannelEpisode
-print(f'SpiderData: {SpiderData.objects.count()}')
-print(f'Opportunities: {Opportunity.objects.count()}')
-print(f'Narratives: {Narrative.objects.count()}')
-print(f'Evidence: {NarrativeEvidence.objects.count()}')
-print(f'Shifts: {NarrativeShift.objects.count()}')
-print(f'Channels: {ContentChannel.objects.count()}')
-print(f'Episodes: {ChannelEpisode.objects.count()}')
-print(f'Provenance: {DataProvenance.objects.count()}')
 "
 ```
+
+---
+
+## Key Files
+
+### Session 475: ROI Integration
+- `core/tasks.py` (lines 13815-14100) - ROI tasks
+- `core/celery.py` (lines 806-827) - ROI beat schedules
+- `core/views_opportunity.py` - ROI tracking hooks
+
+### Session 474: Unified Pipeline
+- `core/tasks.py` (lines 13460-13815) - Unified pipeline tasks
+
+### Provenance
+- `core/services/provenance_tracker.py` - All provenance functions
 
 ---
 
@@ -192,16 +198,14 @@ print(f'Provenance: {DataProvenance.objects.count()}')
 
 ---
 
-**Session 474 Complete - Unified Intelligence Pipeline connects ALL THREE Tier 1 Autonomous Situations!**
+**Session 475 Complete - ROI Pipeline Fully Integrated!**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    UNIFIED INTELLIGENCE SYSTEM                       │
+│                AUTONOMOUS INTELLIGENCE SYSTEM                        │
 │                                                                      │
-│  67 Spiders → ML Score → 30 Narratives → Content Studio → Revenue  │
-│       ↓           ↓            ↓              ↓            ↓         │
-│   SpiderData → Opportunity → Evidence → Shift → Episode → Track    │
+│  Spider → Score → Narrative → Content → ROI → Provenance            │
 │                                                                      │
-│              FULL PROVENANCE CHAIN WITH INTEGRITY                   │
+│              ALL SYSTEMS CONNECTED AND TRACKING!                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```

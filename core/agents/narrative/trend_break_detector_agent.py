@@ -533,6 +533,23 @@ class TrendBreakDetectorAgent(BaseAgent):
             importance=Decimal(str(importance))
         )
 
+        # [SESSION 475] Add provenance tracking
+        try:
+            from core.services.provenance_tracker import create_narrative_shift_provenance
+            create_narrative_shift_provenance(
+                shift_id=str(shift.id),
+                domain=shift.domain,
+                confidence=float(confidence),
+                importance=float(importance),
+                metadata={
+                    'old_narrative': old_narrative.title,
+                    'new_narrative': new_narrative.title if new_narrative else None,
+                    'agent': 'TrendBreakDetectorAgent'
+                }
+            )
+        except Exception as prov_e:
+            logger.warning(f"Failed to create shift provenance: {prov_e}")
+
         return {
             'shift_id': str(shift.id),
             'old_narrative': old_narrative.title,
