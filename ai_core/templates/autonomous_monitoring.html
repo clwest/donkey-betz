@@ -1,0 +1,502 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Intelligence Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+        .health-pulse { animation: pulse-glow 2s ease-in-out infinite; }
+        .card { transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .activity-item { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .status-dot { animation: blink 1.5s ease-in-out infinite; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                    Autonomous Intelligence Monitor
+                </h1>
+                <span class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
+                    STRESS TEST ACTIVE
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div id="health-badge" class="flex items-center space-x-2 px-4 py-2 bg-gray-700 rounded-lg">
+                    <div class="w-3 h-3 rounded-full bg-green-500 status-dot"></div>
+                    <span class="font-mono text-lg" id="health-percent">---%</span>
+                </div>
+                <div class="text-sm text-gray-400">
+                    Last updated: <span id="last-update">--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6">
+        <!-- Top Stats Row -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400 text-sm">Active Schedules</span>
+                    <span class="text-2xl">⏰</span>
+                </div>
+                <div class="text-3xl font-bold text-white mt-2" id="schedules-count">--</div>
+                <div class="text-sm text-green-400 mt-1">All Running</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400 text-sm">Spider Data (24h)</span>
+                    <span class="text-2xl">🕷️</span>
+                </div>
+                <div class="text-3xl font-bold text-white mt-2" id="spider-count">--</div>
+                <div class="text-sm text-blue-400 mt-1" id="spider-total">Total: --</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400 text-sm">Evidence (24h)</span>
+                    <span class="text-2xl">📊</span>
+                </div>
+                <div class="text-3xl font-bold text-white mt-2" id="evidence-count">--</div>
+                <div class="text-sm text-purple-400 mt-1" id="shifts-count">Shifts: --</div>
+            </div>
+            <div class="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400 text-sm">Revenue (24h)</span>
+                    <span class="text-2xl">💰</span>
+                </div>
+                <div class="text-3xl font-bold text-green-400 mt-2" id="revenue-24h">$--</div>
+                <div class="text-sm text-gray-400 mt-1" id="revenue-week">Week: $--</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left Column: Autonomous Situations -->
+            <div class="col-span-2 space-y-6">
+                <!-- Tier 1 Autonomous Situations -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                        <h2 class="text-lg font-semibold">Tier 1 Autonomous Situations</h2>
+                        <span class="text-sm text-gray-400">Real-time status</span>
+                    </div>
+                    <div class="p-6 grid grid-cols-3 gap-4">
+                        <!-- Content Studio -->
+                        <div class="bg-gray-900 rounded-lg p-4" id="content-studio-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-lg">📺</span>
+                                <div class="w-2 h-2 rounded-full bg-green-500" id="cs-status"></div>
+                            </div>
+                            <h3 class="font-medium text-white">Content Studio</h3>
+                            <div class="mt-2 space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Channels</span>
+                                    <span class="text-white" id="cs-channels">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Episodes (24h)</span>
+                                    <span class="text-white" id="cs-episodes">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Debates (24h)</span>
+                                    <span class="text-white" id="cs-debates">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Narrative Drift -->
+                        <div class="bg-gray-900 rounded-lg p-4" id="narrative-drift-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-lg">📈</span>
+                                <div class="w-2 h-2 rounded-full bg-green-500" id="nd-status"></div>
+                            </div>
+                            <h3 class="font-medium text-white">Narrative Drift</h3>
+                            <div class="mt-2 space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Narratives</span>
+                                    <span class="text-white" id="nd-narratives">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Evidence (24h)</span>
+                                    <span class="text-white" id="nd-evidence">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Shifts (24h)</span>
+                                    <span class="text-white" id="nd-shifts">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Market Intelligence -->
+                        <div class="bg-gray-900 rounded-lg p-4" id="market-intel-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-lg">🎯</span>
+                                <div class="w-2 h-2 rounded-full bg-green-500" id="mi-status"></div>
+                            </div>
+                            <h3 class="font-medium text-white">Market Intelligence</h3>
+                            <div class="mt-2 space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Spider Data</span>
+                                    <span class="text-white" id="mi-spider">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Opportunities</span>
+                                    <span class="text-white" id="mi-opps">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Avg Score</span>
+                                    <span class="text-white" id="mi-score">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROI Funnel -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h2 class="text-lg font-semibold">ROI Conversion Funnel (24h)</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between">
+                            <div class="text-center flex-1">
+                                <div class="text-3xl font-bold text-blue-400" id="funnel-views">--</div>
+                                <div class="text-sm text-gray-400 mt-1">Views</div>
+                            </div>
+                            <div class="text-gray-600 text-2xl">→</div>
+                            <div class="text-center flex-1">
+                                <div class="text-3xl font-bold text-yellow-400" id="funnel-clicks">--</div>
+                                <div class="text-sm text-gray-400 mt-1">Clicks</div>
+                            </div>
+                            <div class="text-gray-600 text-2xl">→</div>
+                            <div class="text-center flex-1">
+                                <div class="text-3xl font-bold text-orange-400" id="funnel-apps">--</div>
+                                <div class="text-sm text-gray-400 mt-1">Applications</div>
+                            </div>
+                            <div class="text-gray-600 text-2xl">→</div>
+                            <div class="text-center flex-1">
+                                <div class="text-3xl font-bold text-green-400" id="funnel-revenue">--</div>
+                                <div class="text-sm text-gray-400 mt-1">Revenue</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Provenance Chain -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                        <h2 class="text-lg font-semibold">Data Provenance Chain</h2>
+                        <span class="text-sm text-gray-400" id="prov-total">-- total records</span>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-4 gap-4 mb-4" id="provenance-types">
+                            <!-- Populated by JS -->
+                        </div>
+                        <div class="border-t border-gray-700 pt-4">
+                            <div class="text-sm text-gray-400 mb-2">Recent Records (24h)</div>
+                            <div class="space-y-2" id="provenance-recent">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Activity Stream & Schedules -->
+            <div class="space-y-6">
+                <!-- Activity Stream -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                        <h2 class="text-lg font-semibold">Live Activity Stream</h2>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 rounded-full bg-green-500 status-dot"></div>
+                            <span class="text-sm text-gray-400">Live</span>
+                        </div>
+                    </div>
+                    <div class="p-4 max-h-96 overflow-y-auto" id="activity-stream">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Celery Schedules -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h2 class="text-lg font-semibold">Active Schedules</h2>
+                    </div>
+                    <div class="p-4 max-h-80 overflow-y-auto" id="schedules-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- System Health Details -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden card">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h2 class="text-lg font-semibold">System Health</h2>
+                    </div>
+                    <div class="p-4 space-y-3" id="health-details">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Auto-refresh interval (10 seconds)
+        const REFRESH_INTERVAL = 10000;
+
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+
+        // Fetch and update health
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/api/monitoring/health/');
+                const data = await res.json();
+                if (data.success) {
+                    const health = data.data;
+                    document.getElementById('health-percent').textContent = `${health.health_percentage}%`;
+
+                    // Update health badge color
+                    const badge = document.getElementById('health-badge');
+                    const dot = badge.querySelector('.status-dot');
+                    if (health.health_percentage >= 100) {
+                        dot.className = 'w-3 h-3 rounded-full bg-green-500 status-dot';
+                        badge.classList.add('health-pulse');
+                    } else if (health.health_percentage >= 75) {
+                        dot.className = 'w-3 h-3 rounded-full bg-yellow-500 status-dot';
+                        badge.classList.remove('health-pulse');
+                    } else {
+                        dot.className = 'w-3 h-3 rounded-full bg-red-500 status-dot';
+                        badge.classList.remove('health-pulse');
+                    }
+
+                    // Update health details
+                    const healthDetails = document.getElementById('health-details');
+                    healthDetails.innerHTML = Object.entries(health.systems || {}).map(([name, sys]) => `
+                        <div class="flex items-center justify-between p-2 bg-gray-900 rounded-lg">
+                            <span class="text-sm">${name.replace(/_/g, ' ')}</span>
+                            <div class="w-3 h-3 rounded-full ${sys.healthy ? 'bg-green-500' : 'bg-red-500'}"></div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Health fetch error:', e);
+            }
+        }
+
+        // Fetch Content Studio status
+        async function fetchContentStudio() {
+            try {
+                const res = await fetch('/api/monitoring/content-studio/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    document.getElementById('cs-channels').textContent = d.active_channels || 0;
+                    document.getElementById('cs-episodes').textContent = d.episodes_24h || 0;
+                    document.getElementById('cs-debates').textContent = d.debates_24h || 0;
+                }
+            } catch (e) {
+                console.error('Content Studio fetch error:', e);
+            }
+        }
+
+        // Fetch Narrative Drift status
+        async function fetchNarrativeDrift() {
+            try {
+                const res = await fetch('/api/monitoring/narrative-drift/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    document.getElementById('nd-narratives').textContent = d.total_narratives || 0;
+                    document.getElementById('nd-evidence').textContent = d.evidence_24h || 0;
+                    document.getElementById('nd-shifts').textContent = d.shifts_24h || 0;
+                    document.getElementById('evidence-count').textContent = d.evidence_24h || 0;
+                    document.getElementById('shifts-count').textContent = `Shifts: ${d.shifts_24h || 0}`;
+                }
+            } catch (e) {
+                console.error('Narrative Drift fetch error:', e);
+            }
+        }
+
+        // Fetch Market Intelligence status
+        async function fetchMarketIntelligence() {
+            try {
+                const res = await fetch('/api/monitoring/market-intelligence/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    document.getElementById('mi-spider').textContent = d.spider_data_24h || 0;
+                    document.getElementById('mi-opps').textContent = d.opportunities_24h || 0;
+                    document.getElementById('mi-score').textContent = d.avg_score || '--';
+                    document.getElementById('spider-count').textContent = d.spider_data_24h || 0;
+                    document.getElementById('spider-total').textContent = `Total: ${(d.spider_data_total || 0).toLocaleString()}`;
+                }
+            } catch (e) {
+                console.error('Market Intelligence fetch error:', e);
+            }
+        }
+
+        // Fetch ROI metrics
+        async function fetchROI() {
+            try {
+                const res = await fetch('/api/monitoring/roi/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    const funnel = d.funnel || {};
+                    document.getElementById('funnel-views').textContent = funnel.view || 0;
+                    document.getElementById('funnel-clicks').textContent = funnel.click || 0;
+                    document.getElementById('funnel-apps').textContent = funnel.application || 0;
+                    document.getElementById('funnel-revenue').textContent = funnel.revenue || 0;
+                    document.getElementById('revenue-24h').textContent = `$${(d.revenue_24h || 0).toLocaleString()}`;
+                    document.getElementById('revenue-week').textContent = `Week: $${(d.revenue_week || 0).toLocaleString()}`;
+                }
+            } catch (e) {
+                console.error('ROI fetch error:', e);
+            }
+        }
+
+        // Fetch Provenance data
+        async function fetchProvenance() {
+            try {
+                const res = await fetch('/api/monitoring/provenance/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    document.getElementById('prov-total').textContent = `${d.total_records || 0} total records`;
+
+                    // Update types
+                    const typesHtml = (d.by_type || []).map(t => `
+                        <div class="bg-gray-900 rounded-lg p-3 text-center">
+                            <div class="text-xl font-bold text-white">${t.count}</div>
+                            <div class="text-xs text-gray-400">${t.entity_type}</div>
+                        </div>
+                    `).join('');
+                    document.getElementById('provenance-types').innerHTML = typesHtml || '<div class="text-gray-500 col-span-4 text-center">No provenance records yet</div>';
+
+                    // Update recent records
+                    const recentHtml = (d.recent_records || []).slice(0, 5).map(r => `
+                        <div class="flex items-center justify-between text-sm p-2 bg-gray-900 rounded">
+                            <span class="text-gray-300">${r.entity_type}</span>
+                            <span class="text-gray-500 font-mono text-xs">${r.hash || 'No hash'}</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('provenance-recent').innerHTML = recentHtml || '<div class="text-gray-500 text-center">No recent records</div>';
+                }
+            } catch (e) {
+                console.error('Provenance fetch error:', e);
+            }
+        }
+
+        // Fetch Activity Stream
+        async function fetchActivity() {
+            try {
+                const res = await fetch('/api/monitoring/activity/');
+                const data = await res.json();
+                if (data.success) {
+                    const activities = data.data.activities || [];
+                    const html = activities.map(a => `
+                        <div class="activity-item flex items-start space-x-3 p-2 hover:bg-gray-700 rounded-lg">
+                            <span class="text-xl">${a.icon}</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-white truncate">${a.title}</p>
+                                <p class="text-xs text-gray-500">${a.source} • ${new Date(a.timestamp).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    document.getElementById('activity-stream').innerHTML = html || '<div class="text-gray-500 text-center p-4">No recent activity</div>';
+                }
+            } catch (e) {
+                console.error('Activity fetch error:', e);
+            }
+        }
+
+        // Fetch Schedules
+        async function fetchSchedules() {
+            try {
+                const res = await fetch('/api/monitoring/schedules/');
+                const data = await res.json();
+                if (data.success) {
+                    const d = data.data;
+                    document.getElementById('schedules-count').textContent = d.total || 0;
+
+                    const categories = d.categories || {};
+                    const categoryIcons = {
+                        'content_studio': '📺',
+                        'narrative_drift': '📈',
+                        'market_intelligence': '🎯',
+                        'unified_pipeline': '🔗',
+                        'roi_metrics': '💰',
+                        'ml_scoring': '🤖',
+                        'agents': '🤝',
+                        'other': '⚙️'
+                    };
+
+                    let html = '';
+                    for (const [cat, schedules] of Object.entries(categories)) {
+                        if (schedules.length === 0) continue;
+                        html += `
+                            <div class="mb-3">
+                                <div class="text-sm font-medium text-gray-300 mb-2">
+                                    ${categoryIcons[cat] || '⚙️'} ${cat.replace(/_/g, ' ')} (${schedules.length})
+                                </div>
+                                ${schedules.map(s => `
+                                    <div class="text-xs text-gray-500 pl-4 py-1 border-l border-gray-700">
+                                        ${s.name}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                    document.getElementById('schedules-list').innerHTML = html || '<div class="text-gray-500">No schedules</div>';
+                }
+            } catch (e) {
+                console.error('Schedules fetch error:', e);
+            }
+        }
+
+        // Refresh all data
+        async function refreshAll() {
+            updateTimestamp();
+            await Promise.all([
+                fetchHealth(),
+                fetchContentStudio(),
+                fetchNarrativeDrift(),
+                fetchMarketIntelligence(),
+                fetchROI(),
+                fetchProvenance(),
+                fetchActivity(),
+                fetchSchedules()
+            ]);
+        }
+
+        // Initial load
+        refreshAll();
+
+        // Auto-refresh
+        setInterval(refreshAll, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
