@@ -995,6 +995,82 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.check_market_events_and_rerun',
         'schedule': crontab(minute='*/30', hour='9-16', day_of_week='1-5'),  # Every 30 min during market hours (9 AM - 4 PM Mon-Fri)
     },
+    # =========================================================================
+    # Session 466: Autonomous Content Studio (Tier 1 Autonomous Situation #1)
+    # =========================================================================
+    'autonomous-content-studio-loop': {
+        'task': 'autonomous_studio.run_main_loop',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+    },
+    'track-content-performance-daily': {
+        'task': 'autonomous_studio.track_performance',
+        'schedule': crontab(hour=20, minute=0),  # Daily at 8 PM
+    },
+    # =========================================================================
+    # Session 470: ML Scoring Engine (Market Intelligence Architecture)
+    # =========================================================================
+    'ml-scoring-weekly-retrain': {
+        'task': 'core.tasks.train_ml_scoring_model',
+        'schedule': crontab(day_of_week=0, hour=3, minute=30),  # Sunday 3:30 AM
+    },
+    'ml-scoring-evaluate-performance': {
+        'task': 'core.tasks.evaluate_ml_model_performance',
+        'schedule': crontab(hour=6, minute=30),  # Daily at 6:30 AM
+    },
+    'process-realtime-scoring-queue': {
+        'task': 'core.tasks.process_realtime_scoring_queue',
+        'schedule': 30.0,  # Every 30 seconds
+    },
+    'process-batch-scoring-queue': {
+        'task': 'core.tasks.process_batch_scoring_queue',
+        'schedule': crontab(minute=0),  # Every hour at :00
+    },
+    # =========================================================================
+    # Session 471: Narrative Drift Detector (Tier 1 Autonomous Situation #2)
+    # =========================================================================
+    'narrative-drift-detector-cycle': {
+        'task': 'narrative_drift.run_detector_cycle',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+    },
+    'narrative-process-spider-data': {
+        'task': 'narrative_drift.process_spider_data',
+        'schedule': crontab(minute=30),  # Every hour at :30
+    },
+    'narrative-update-statuses': {
+        'task': 'narrative_drift.update_narrative_statuses',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours at :00
+    },
+    'narrative-daily-digest': {
+        'task': 'narrative_drift.send_daily_digest',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
+    },
+    # Session 473: Process narrative shifts for content creation
+    'narrative-shifts-to-content': {
+        'task': 'narrative_drift.process_shifts_for_content',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+    },
+    # =========================================================================
+    # Session 474: Unified Intelligence Pipeline
+    # =========================================================================
+    'unified-pipeline-complete-cycle': {
+        'task': 'unified_pipeline.run_complete_cycle',
+        'schedule': crontab(minute=0, hour='*/12'),  # Every 12 hours at :00
+    },
+    'unified-pipeline-health-check': {
+        'task': 'unified_pipeline.health_check',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+    },
+    # =========================================================================
+    # Session 475: ROI Metrics & Intelligence Briefs
+    # =========================================================================
+    'roi-metrics-daily-aggregation': {
+        'task': 'roi_metrics.aggregate_daily',
+        'schedule': crontab(minute=0, hour=2),  # Daily at 2:00 AM
+    },
+    'roi-metrics-weekly-brief': {
+        'task': 'roi_metrics.generate_weekly_brief',
+        'schedule': crontab(minute=0, hour=7, day_of_week='monday'),  # Monday 7:00 AM
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)

@@ -13774,7 +13774,7 @@ def unified_pipeline_health_check():
         from core.models_narrative_drift import Narrative, NarrativeEvidence
 
         narrative_count = Narrative.objects.count()
-        evidence_count = NarrativeEvidence.objects.filter(detected_at__gte=cutoff).count()
+        evidence_count = NarrativeEvidence.objects.filter(created_at__gte=cutoff).count()
 
         health['systems']['narrative_drift'] = {
             'healthy': narrative_count > 0,
