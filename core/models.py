@@ -23,6 +23,9 @@ from .models_narrative_drift import *
 # Import autonomous alert models (Session 477)
 from .models_autonomous_alerts import *
 
+# Import situation trigger models (Session 477 - Event-Driven)
+from .models_situation_triggers import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
