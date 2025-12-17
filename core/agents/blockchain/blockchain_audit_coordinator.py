@@ -421,14 +421,107 @@ You have access to:
             max_completion_tokens=5000
         )
 
+        report_content = response.choices[0].message.content
+
+        # Session 461: Auto-consult Elon Musk for high-risk blockchain findings
+        advisor_consultation = self._request_blockchain_advisor_consultation(section_data)
+
         return {
             "success": True,
             "report_type": report_type,
             "time_range_hours": time_range_hours,
             "sections_included": sections,
-            "report": response.choices[0].message.content,
+            "report": report_content,
+            "advisor_consultation": advisor_consultation,  # Session 461
             "generated_at": datetime.now().isoformat()
         }
+
+    def _request_blockchain_advisor_consultation(self, section_data: Dict) -> Optional[Dict]:
+        """
+        Session 461: Auto-consult crypto advisor for high-risk blockchain findings.
+
+        When generating security reports with CRITICAL or HIGH alerts,
+        automatically request consultation from Elon Musk advisor for
+        crypto market perspective.
+
+        Returns:
+            Advisor consultation result or None if no high-risk alerts
+        """
+        try:
+            # Check for high-risk alerts
+            alerts = section_data.get('alerts', [])
+            high_risk = [a for a in alerts if isinstance(a, dict) and a.get('severity') in ['CRITICAL', 'HIGH']]
+
+            if not high_risk:
+                return None
+
+            from advisors.registry import get_advisor_registry
+            from advisors.llm_advisor_system import get_llm_advisor_system
+
+            registry = get_advisor_registry()
+            llm_system = get_llm_advisor_system()
+
+            # Get Elon Musk advisor for crypto perspective
+            advisor = registry.get_advisor('elon_musk_advisor')
+            if not advisor:
+                logger.warning("Elon Musk advisor not found in registry")
+                return None
+
+            # Build consultation question
+            alert_summary = "\n".join([
+                f"- [{a.get('severity', 'UNKNOWN')}] {a.get('type', 'Alert')}: {a.get('message', 'No message')[:100]}"
+                for a in high_risk[:5]
+            ])
+
+            question = f"""
+Blockchain Security Alert Analysis:
+
+{len(high_risk)} high-severity alerts detected:
+{alert_summary}
+
+Given your experience with cryptocurrency markets and blockchain technology:
+1. What's your read on these alerts?
+2. Could this indicate broader market implications?
+3. What would you advise investors/users to watch for?
+"""
+
+            response = llm_system.consult(
+                advisor_id='elon_musk_advisor',
+                question=question,
+                context={
+                    'alert_count': len(high_risk),
+                    'alert_type': 'blockchain_security',
+                }
+            )
+
+            consultation = {
+                'advisor': 'Elon Musk (AI)',
+                'alert_count': len(high_risk),
+                'question_summary': f"{len(high_risk)} high-severity blockchain alerts",
+                'response': response.get('response', 'No response'),
+                'confidence': response.get('confidence', 0.7),
+                'timestamp': datetime.now().isoformat(),
+                'alert_type': 'blockchain_security',  # Session 461: For learning tracking
+                'severity': 'CRITICAL' if any(a.get('severity') == 'CRITICAL' for a in high_risk) else 'HIGH',
+                'token': 'BLOCKCHAIN',  # Generic token for blockchain alerts
+            }
+
+            # Session 461: Track consultation for learning
+            try:
+                from core.learning_bridges.advisor_feedback_bridge import track_audit_advisor_consultation
+                track_audit_advisor_consultation(consultation)
+            except Exception as track_err:
+                logger.warning(f"Could not track consultation for learning: {track_err}")
+
+            logger.info(f"🔗 Elon Musk consultation complete for {len(high_risk)} blockchain alerts")
+            return consultation
+
+        except ImportError as e:
+            logger.warning(f"Advisor system not available: {e}")
+        except Exception as e:
+            logger.error(f"Blockchain advisor consultation error: {e}")
+
+        return None
 
     def _get_system_status(
         self,

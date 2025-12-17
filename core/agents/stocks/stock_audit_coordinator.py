@@ -90,6 +90,9 @@ Always prioritize:
             # Generate unified alerts
             unified_alerts = self._generate_unified_alerts(correlated)
 
+            # Session 461: Auto-consult Warren Buffett for high-risk findings
+            advisor_consultations = self._request_advisor_consultations(unified_alerts)
+
             # Send to Discord if configured
             discord_sent = self._send_to_discord(unified_alerts)
 
@@ -105,6 +108,7 @@ Always prioritize:
                     'anomaly_results': anomaly_results,
                     'correlated_findings': correlated,
                     'unified_alerts': unified_alerts,
+                    'advisor_consultations': advisor_consultations,  # Session 461
                     'discord_sent': discord_sent,
                     'summary': self._generate_summary(unified_alerts),
                 },
@@ -323,6 +327,113 @@ Always prioritize:
         except Exception as e:
             logger.error(f"Discord notification error: {e}")
             return 0
+
+    def _request_advisor_consultations(self, alerts: List[Dict]) -> List[Dict]:
+        """
+        Session 461: Auto-consult Warren Buffett for high-risk stock findings.
+
+        When CRITICAL or HIGH severity alerts are detected, automatically
+        request consultation from the Warren Buffett advisor to get
+        value investing perspective on the situation.
+
+        Args:
+            alerts: List of unified alerts with severity ratings
+
+        Returns:
+            List of advisor consultation results
+        """
+        consultations = []
+
+        # Filter for high-risk alerts
+        high_risk_alerts = [a for a in alerts if a.get('severity') in ['CRITICAL', 'HIGH']]
+
+        if not high_risk_alerts:
+            return consultations
+
+        try:
+            from advisors.registry import get_advisor_registry
+            from advisors.llm_advisor_system import get_llm_advisor_system
+
+            registry = get_advisor_registry()
+            llm_system = get_llm_advisor_system()
+
+            # Get Warren Buffett advisor
+            buffett = registry.get_advisor('warren_buffett_advisor')
+            if not buffett:
+                logger.warning("Warren Buffett advisor not found in registry")
+                return consultations
+
+            for alert in high_risk_alerts[:3]:  # Limit to 3 consultations per cycle
+                ticker = alert.get('ticker', 'UNKNOWN')
+                severity = alert.get('severity', 'HIGH')
+                message = alert.get('message', '')
+                details = alert.get('details', [])
+
+                # Build consultation question
+                question = f"""
+Stock Alert Analysis Request:
+
+Ticker: {ticker}
+Severity: {severity}
+Alert: {message}
+
+Details:
+{chr(10).join('- ' + str(d) for d in details[:5])}
+
+As a value investor, what's your perspective on this situation?
+Should an investor be concerned? What would you recommend?
+"""
+
+                try:
+                    # Get LLM-powered consultation
+                    response = llm_system.consult(
+                        advisor_id='warren_buffett_advisor',
+                        question=question,
+                        context={
+                            'ticker': ticker,
+                            'severity': severity,
+                            'alert_type': 'stock_audit',
+                            'is_correlated': alert.get('is_correlated', False),
+                        }
+                    )
+
+                    consultation = {
+                        'ticker': ticker,
+                        'severity': severity,
+                        'advisor': 'Warren Buffett (AI)',
+                        'question': question[:200] + '...',
+                        'response': response.get('response', 'No response'),
+                        'confidence': response.get('confidence', 0.7),
+                        'timestamp': datetime.now().isoformat(),
+                        'alert_type': 'stock_audit',  # Session 461: For learning tracking
+                    }
+
+                    # Add advisor perspective to the alert
+                    alert['advisor_perspective'] = consultation
+
+                    consultations.append(consultation)
+
+                    # Session 461: Track consultation for learning
+                    try:
+                        from core.learning_bridges.advisor_feedback_bridge import track_audit_advisor_consultation
+                        track_audit_advisor_consultation(consultation)
+                    except Exception as track_err:
+                        logger.warning(f"Could not track consultation for learning: {track_err}")
+
+                    logger.info(f"📊 Warren Buffett consultation complete for {ticker}")
+
+                except Exception as e:
+                    logger.error(f"Advisor consultation error for {ticker}: {e}")
+
+            if consultations:
+                logger.info(f"✅ Completed {len(consultations)} advisor consultations for high-risk alerts")
+
+        except ImportError as e:
+            logger.warning(f"Advisor system not available: {e}")
+        except Exception as e:
+            logger.error(f"Advisor consultation system error: {e}")
+
+        return consultations
 
     def _generate_summary(self, alerts: List[Dict]) -> Dict[str, Any]:
         """Generate a summary of the audit."""

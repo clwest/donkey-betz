@@ -353,13 +353,42 @@ python manage.py validate_section --section=images
    - Injects fresh legal intelligence into `_build_legal_prompt()`
    - Legal documents now have access to recent case law and legal news
 
-### Phase 3: Advisor Intelligence (Next Week)
+### Phase 3: Advisor Intelligence - COMPLETED Session 461
 
-| Task | Effort | Impact |
-|------|--------|--------|
-| Auto-consultation for high-risk findings | 4 hours | Smarter alerts |
-| Advisor spider data access | 3 hours | Domain expertise |
-| Advisor learning from outcomes | 4 hours | Improving advice |
+| Task | Effort | Impact | Status |
+|------|--------|--------|--------|
+| Auto-consultation for high-risk findings | 4 hours | Smarter alerts | **DONE** |
+| Advisor spider data access | 3 hours | Domain expertise | **DONE** |
+| Advisor learning from outcomes | 4 hours | Improving advice | **DONE** |
+
+**Session 461 Implementation Notes:**
+
+1. **Auto-Consultation for High-Risk Findings**:
+   - StockAuditCoordinator: Added `_request_advisor_consultations()` method
+     - Auto-consults Warren Buffett for CRITICAL/HIGH severity stock alerts
+     - Limited to 3 consultations per cycle to control costs
+     - Adds `advisor_perspective` to alert data
+   - BlockchainAuditCoordinator: Added `_request_blockchain_advisor_consultation()` method
+     - Auto-consults Elon Musk for high-risk blockchain security alerts
+     - Returns consultation in security report
+
+2. **Advisor Spider Data Access** (llm_advisor_system.py):
+   - Created ADVISOR_DOMAIN_SPIDERS mapping (13 domains → spider lists)
+   - Added `_get_domain_spider_intelligence()` method to LLMAdvisor class
+   - Modified `_build_advisor_prompt()` to inject fresh spider intelligence
+   - Each advisor now receives data from their domain:
+     - Warren Buffett: financial spiders (yahoo_finance, financial_news, etc.)
+     - Cathie Wood: tech + financial spiders (techcrunch, the_verge, yahoo_finance)
+     - Elon Musk: crypto + tech spiders (coindesk, etherscan_api, techcrunch)
+
+3. **Advisor Learning from Consultation Outcomes** (advisor_feedback_bridge.py):
+   - Created `AutoConsultationLearningLoop` class
+   - `track_auto_consultation()`: Records each auto-consultation with severity, type, response
+   - `record_outcome()`: Records whether advisor predictions were correct
+   - `get_advisor_accuracy_stats()`: Returns advisor accuracy metrics
+   - Created `track_audit_advisor_consultation()` convenience function
+   - Both audit coordinators now track their consultations for learning
+   - Uses system user for anonymous consultation tracking
 
 ### Phase 4: Cross-Domain Correlation (Future)
 
@@ -379,9 +408,9 @@ python manage.py validate_section --section=images
 |--------|---------|--------|-------|
 | Agent utilization | ~70% | 95% | Session 461: +8 agents routed |
 | Spider data freshness | 75% | 90% | |
-| Learning bridge activation | ~60% | 80% | Session 461: +2 bridges activated |
+| Learning bridge activation | ~70% | 80% | Session 461: +2 bridges + auto-consultation learning |
 | Mythology coverage | 85% | 95% | |
-| Advisor utilization | 25% | 60% | |
+| Advisor utilization | ~50% | 60% | Session 461: Auto-consultations now trigger for audits |
 
 ### Measurement Commands
 
@@ -403,26 +432,35 @@ python manage.py shell -c "from mythology.models import MythologyEvent; print(f'
 
 ## Quick Reference: What to Build Next
 
+**✅ COMPLETED (Session 461):**
+- Agent routing patterns added
+- HallucinationPublisher wired to BaseAgent
+- PersonalizationBridge activated
+- ApplicationOutcomeBridge extended
+- Legal spiders wired to LegalDocDrafterAgent
+- Advisor auto-consultation for Stock/Blockchain audits
+- Advisor spider data access
+- Advisor consultation outcome learning
+
 ### If You Have 2 Hours
-1. Add missing agent routing patterns to `core/agent_router.py`
-2. Wire HallucinationPublisher to BaseAgent
+1. Create `/validate` Discord command
+2. Add Discord alerts for critical mythology events
 
 ### If You Have 4 Hours
 1. Everything above, plus:
-2. Create `/validate` Discord command
-3. Add Discord alerts for critical mythology events
+2. Create auto-verification Celery task
+3. Add `/learning-status` Discord command
 
 ### If You Have 8 Hours
 1. Everything above, plus:
-2. Activate PersonalizationBridge
-3. Wire legal spiders to LegalDocDrafterAgent
-4. Create auto-verification Celery task
+2. Implement stock/crypto correlation detection
+3. Create prophecy generation system
 
 ### If You Have A Full Day
 1. Everything above, plus:
-2. Implement advisor auto-consultation for Stock/Blockchain audit
-3. Activate ApplicationOutcomeBridge
-4. Create cross-domain correlation service
+2. Create cross-domain correlation service
+3. Multi-source opportunity scoring
+4. Create AudioValidationAgent and KnowledgeValidationAgent
 
 ---
 
