@@ -81,8 +81,9 @@ docs/
 3. Natural language video matching not implemented
 
 ## 🚀 Next Steps
-
+See `/docs/plans/SYSTEM_OPERATING_CONTEXT.md and /docs/plans/CLAUDE_CONTEXT_SYSTEM_PACK.md` from new context plans.
 See `../00-START-NEXT-SESSION.md` for current priorities!
+
 
 ---
 
