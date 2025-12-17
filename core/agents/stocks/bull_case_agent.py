@@ -1,0 +1,485 @@
+"""
+Bull Case Agent
+===============
+
+Session 462: Argues the optimistic case for stocks.
+Part of the Market Intelligence Desk autonomous situation.
+
+Key capabilities:
+- Identifies positive catalysts
+- Arguments for price appreciation
+- Growth opportunity analysis
+- Bullish technical patterns
+"""
+
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+
+from core.agents.base_agent import BaseAgent, AgentResult
+
+logger = logging.getLogger(__name__)
+
+
+class BullCaseAgent(BaseAgent):
+    """
+    Argues the bull case - why stocks should go UP.
+
+    This agent deliberately takes an optimistic stance to create
+    internal disagreement with the BearCaseAgent. The tension
+    between bull and bear cases creates alpha.
+
+    Tools:
+    - identify_catalysts: Find positive drivers
+    - analyze_growth: Project growth opportunities
+    - technical_bullish: Bullish chart patterns
+    - sentiment_analysis: Positive sentiment signals
+    """
+
+    name = "BullCaseAgent"
+
+    system_prompt = """You are a professional bull case analyst. Your job is to:
+1. Identify and articulate the STRONGEST arguments for why stocks will appreciate
+2. Find positive catalysts that other analysts might miss
+3. Identify growth opportunities and market tailwinds
+4. Spot bullish technical patterns and momentum
+5. Counter bear arguments with optimistic but realistic perspectives
+
+Your stance is deliberately OPTIMISTIC to create productive tension with the bear case.
+
+When building bull cases:
+- Focus on fundamental strengths (revenue growth, margins, competitive moats)
+- Identify macro tailwinds (industry growth, regulatory changes, tech trends)
+- Recognize undervaluation vs peers or historical multiples
+- Spot positive inflection points (new products, market expansion, leadership changes)
+- Find bullish technical signals (breakouts, golden crosses, volume increases)
+
+Rate conviction:
+- HIGH: Multiple strong catalysts, clear path to 20%+ upside
+- MEDIUM: Solid fundamentals, modest upside (10-20%)
+- LOW: Speculative, relies on optimistic assumptions
+
+Always acknowledge risks but emphasize potential rewards."""
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "identify_catalysts",
+                "description": "Identify positive catalysts that could drive stock appreciation",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "timeframe": {
+                            "type": "string",
+                            "enum": ["short_term", "medium_term", "long_term"],
+                            "description": "Time horizon for catalyst impact"
+                        },
+                        "catalyst_types": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Types of catalysts to search for (earnings, product, macro, technical)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_growth",
+                "description": "Analyze growth opportunities and market expansion potential",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "growth_vectors": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Growth drivers to analyze (TAM expansion, new markets, pricing power)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "technical_bullish",
+                "description": "Identify bullish technical patterns and momentum signals",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "patterns": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Patterns to look for (breakout, golden_cross, higher_highs, accumulation)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "sentiment_analysis",
+                "description": "Analyze positive sentiment signals from news, social media, institutional activity",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "description": "Stock ticker symbol"},
+                        "sources": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Sentiment sources (news, twitter, reddit, institutional_filings)"
+                        }
+                    },
+                    "required": ["ticker"]
+                }
+            }
+        }
+    ]
+
+    def execute(self, task: str, context: Dict[str, Any] = None,
+                scifi_context: Dict[str, Any] = None,
+                spider_context: Dict[str, Any] = None) -> AgentResult:
+        """
+        Build the bull case for specified stocks.
+
+        Args:
+            task: Bull case analysis task
+            context: Stock tickers, market data, bear arguments to counter
+            scifi_context: Mood, memory, etc.
+            spider_context: News, social sentiment, market data
+
+        Returns:
+            AgentResult with bull case arguments and conviction rating
+        """
+        start_time = datetime.now()
+        context = context or {}
+
+        logger.info(f"BullCaseAgent executing: {task[:100]}...")
+
+        try:
+            # Get tickers to analyze (from context or spider data)
+            tickers = context.get('tickers', self._extract_tickers_from_spider_data(spider_context))
+
+            if not tickers:
+                return AgentResult(
+                    success=False,
+                    error="No tickers provided for bull case analysis",
+                    agent_name=self.name
+                )
+
+            # Build bull cases for each ticker
+            bull_cases = []
+            for ticker in tickers[:10]:  # Limit to 10 tickers per cycle
+                case = self._build_bull_case(ticker, context, spider_context)
+                if case:
+                    bull_cases.append(case)
+
+            # Generate summary
+            summary = self._generate_summary(bull_cases)
+
+            execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+
+            return AgentResult(
+                success=True,
+                message=f"Bull case analysis complete for {len(bull_cases)} stocks",
+                data={
+                    'bull_cases': bull_cases,
+                    'summary': summary,
+                    'conviction_distribution': self._get_conviction_distribution(bull_cases),
+                    'top_opportunities': self._get_top_opportunities(bull_cases),
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time
+            )
+
+        except Exception as e:
+            logger.error(f"BullCaseAgent error: {e}")
+            return AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name
+            )
+
+    def _extract_tickers_from_spider_data(self, spider_context: Dict) -> List[str]:
+        """Extract stock tickers from spider intelligence."""
+        # This would parse spider data for mentioned tickers
+        # For now, return a default watchlist
+        return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META']
+
+    def _build_bull_case(self, ticker: str, context: Dict, spider_context: Dict) -> Optional[Dict]:
+        """Build bull case for a single stock using real market data + GPT analysis."""
+        try:
+            # Get real market data from MarketDataService
+            from core.services.market_data_service import get_market_data_service
+            market_service = get_market_data_service()
+
+            # Fetch enriched stock data
+            stock_data = market_service.get_stock_details(ticker)
+
+            if stock_data.get('error'):
+                logger.warning(f"Could not fetch data for {ticker}: {stock_data['error']}")
+                return None
+
+            # Extract enriched analysis
+            analysis = stock_data.get('analysis', {})
+            momentum = analysis.get('momentum', 'NEUTRAL')
+            volatility = analysis.get('volatility', 'UNKNOWN')
+            volume_analysis = analysis.get('volume_analysis', {})
+            price_position = analysis.get('price_position', {})
+            trading_signal = analysis.get('trading_signal', 'HOLD')
+
+            # Call GPT to generate intelligent bull case analysis
+            gpt_analysis = self._get_gpt_bull_analysis(ticker, stock_data, analysis)
+
+            # Determine conviction based on GPT analysis + market signals
+            conviction = gpt_analysis.get('conviction',
+                self._determine_bull_conviction(momentum, trading_signal, price_position, volume_analysis)
+            )
+
+            # Build the complete bull case combining GPT analysis + market data
+            bull_case = {
+                'ticker': ticker,
+                'timestamp': datetime.now().isoformat(),
+                'conviction': conviction,
+                'target_upside': gpt_analysis.get('target_upside', self._calculate_upside_target(momentum, price_position)),
+                'current_price': stock_data.get('current_price', 0),
+                'change_percent': stock_data.get('change_percent', 0),
+                'arguments': gpt_analysis.get('arguments', self._generate_bull_arguments(ticker, stock_data, momentum, price_position)),
+                'catalysts': gpt_analysis.get('catalysts', self._identify_bull_catalysts(stock_data, momentum, volume_analysis)),
+                'growth_drivers': gpt_analysis.get('growth_drivers', self._identify_growth_drivers(stock_data)),
+                'technical_signals': [momentum, trading_signal],
+                'risks_acknowledged': gpt_analysis.get('risks', self._acknowledge_risks(volatility, price_position)),
+                'market_data': {
+                    'momentum': momentum,
+                    'volatility': volatility,
+                    'volume_level': volume_analysis.get('level'),
+                    'price_position_pct': price_position.get('position_pct'),
+                },
+                'gpt_powered': gpt_analysis.get('gpt_powered', False)
+            }
+
+            logger.info(f"📈 Built bull case for {ticker}: {conviction} conviction, {bull_case['target_upside']} upside (GPT: {bull_case['gpt_powered']})")
+
+            return bull_case
+
+        except Exception as e:
+            logger.error(f"Error building bull case for {ticker}: {e}")
+            return None
+
+    def _get_gpt_bull_analysis(self, ticker: str, stock_data: Dict, analysis: Dict) -> Dict:
+        """Call GPT to generate intelligent bull case analysis."""
+        try:
+            from openai import OpenAI
+            import os
+            import json
+
+            client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+            # Build context prompt with market data
+            prompt = f"""Analyze {ticker} from a BULLISH perspective. You are looking for reasons why this stock will APPRECIATE.
+
+**Current Market Data:**
+- Price: ${stock_data.get('current_price', 0):.2f}
+- Change Today: {stock_data.get('change_percent', 0):+.2f}%
+- Volume: {stock_data.get('volume', 0):,}
+- 52-Week High: ${analysis.get('price_position', {}).get('fifty_two_week_high', 0):.2f}
+- 52-Week Low: ${analysis.get('price_position', {}).get('fifty_two_week_low', 0):.2f}
+- Price Position: {analysis.get('price_position', {}).get('position_pct', 0):.1f}% of 52-week range
+- Momentum: {analysis.get('momentum', 'UNKNOWN')}
+- Volatility: {analysis.get('volatility', 'UNKNOWN')}
+- Volume Level: {analysis.get('volume_analysis', {}).get('level', 'UNKNOWN')}
+- Trading Signal: {analysis.get('trading_signal', 'HOLD')}
+
+**Your Task:**
+Build the STRONGEST possible bull case. Focus on:
+1. **Positive catalysts** - What could drive price appreciation?
+2. **Growth opportunities** - Market expansion, new products, competitive advantages
+3. **Technical bullish signals** - Breakouts, momentum, volume patterns
+4. **Undervaluation** - Is price attractive vs fundamentals or peers?
+
+**Rate your conviction:**
+- HIGH: Multiple strong catalysts, clear path to 20%+ upside
+- MEDIUM: Solid fundamentals, modest upside (10-20%)
+- LOW: Speculative, relies on optimistic assumptions
+
+**Output Format (JSON):**
+{{
+    "conviction": "HIGH|MEDIUM|LOW",
+    "target_upside": "percentage or range (e.g., '25%+', '15-20%')",
+    "arguments": ["argument 1", "argument 2", "argument 3"],
+    "catalysts": ["catalyst 1", "catalyst 2"],
+    "growth_drivers": ["driver 1", "driver 2"],
+    "risks": ["acknowledged risk 1", "acknowledged risk 2"]
+}}
+
+Be specific and data-driven. Use the market data provided."""
+
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=2000
+            )
+
+            # Parse GPT response
+            content = response.choices[0].message.content
+
+            # Try to parse as JSON
+            try:
+                result = json.loads(content)
+                result['gpt_powered'] = True
+                return result
+            except json.JSONDecodeError:
+                # If not JSON, extract what we can
+                logger.warning(f"GPT response not JSON for {ticker}, using fallback parsing")
+                return {'gpt_powered': False}
+
+        except Exception as e:
+            logger.error(f"GPT bull analysis error for {ticker}: {e}")
+            return {'gpt_powered': False}
+
+    def _determine_bull_conviction(self, momentum: str, trading_signal: str,
+                                   price_position: Dict, volume_analysis: Dict) -> str:
+        """Determine conviction level based on bullish indicators."""
+        # High conviction: Strong bullish momentum + buy signal + unusual volume
+        if momentum in ['STRONG_BULLISH', 'BULLISH']:
+            if trading_signal in ['STRONG_BUY', 'BUY']:
+                if volume_analysis.get('unusual', False):
+                    return 'HIGH'
+                return 'MEDIUM'
+
+        # Medium conviction: Some bullish signals
+        if momentum in ['BULLISH', 'SLIGHTLY_BULLISH'] or trading_signal == 'BUY':
+            return 'MEDIUM'
+
+        # Low conviction: Weak or mixed signals
+        return 'LOW'
+
+    def _generate_bull_arguments(self, ticker: str, stock_data: Dict,
+                                 momentum: str, price_position: Dict) -> List[str]:
+        """Generate bull arguments based on market data."""
+        arguments = []
+
+        change_pct = stock_data.get('change_percent', 0)
+
+        # Price momentum arguments
+        if momentum in ['STRONG_BULLISH', 'BULLISH']:
+            arguments.append(f"Strong price momentum: {momentum.lower().replace('_', ' ')}")
+
+        if change_pct > 0:
+            arguments.append(f"Positive price action: +{change_pct:.2f}% today")
+
+        # Price position arguments
+        position_pct = price_position.get('position_pct')
+        if position_pct is not None:
+            if position_pct < 30:
+                arguments.append(f"Trading near 52-week low ({position_pct:.1f}% of range) - potential recovery play")
+            elif position_pct > 70 and position_pct < 90:
+                arguments.append(f"Strong technical position ({position_pct:.1f}% of 52-week range)")
+
+        # Volume arguments
+        volume = stock_data.get('volume', 0)
+        if volume > 50_000_000:
+            arguments.append(f"High trading volume ({volume:,}) indicates strong interest")
+
+        return arguments
+
+    def _identify_bull_catalysts(self, stock_data: Dict, momentum: str,
+                                 volume_analysis: Dict) -> List[str]:
+        """Identify potential catalysts for upside."""
+        catalysts = []
+
+        # Unusual volume = potential catalyst
+        if volume_analysis.get('unusual', False):
+            catalysts.append("Unusual volume spike suggests news or institutional interest")
+
+        # Strong momentum = potential trend
+        if momentum == 'STRONG_BULLISH':
+            catalysts.append("Strong bullish momentum may attract momentum traders")
+
+        # Near 52-week high = breakout potential
+        price_pos = stock_data.get('analysis', {}).get('price_position', {})
+        if price_pos.get('near_high', False):
+            catalysts.append("Near 52-week high - potential breakout catalyst")
+
+        return catalysts
+
+    def _identify_growth_drivers(self, stock_data: Dict) -> List[str]:
+        """Identify growth drivers from market data."""
+        drivers = []
+
+        # Sector trends as growth drivers
+        sector = stock_data.get('sector', 'N/A')
+        if sector != 'N/A':
+            drivers.append(f"Sector exposure: {sector}")
+
+        return drivers
+
+    def _calculate_upside_target(self, momentum: str, price_position: Dict) -> str:
+        """Calculate target upside percentage."""
+        # Strong momentum = higher target
+        if momentum == 'STRONG_BULLISH':
+            return '25%+'
+        elif momentum == 'BULLISH':
+            return '15-20%'
+        elif momentum == 'SLIGHTLY_BULLISH':
+            return '10-15%'
+
+        # Near 52-week low = recovery potential
+        position_pct = price_position.get('position_pct')
+        if position_pct and position_pct < 20:
+            return '20%+ (recovery play)'
+
+        return '10%'
+
+    def _acknowledge_risks(self, volatility: str, price_position: Dict) -> List[str]:
+        """Acknowledge risks to maintain credibility."""
+        risks = []
+
+        if volatility in ['HIGH', 'EXTREME']:
+            risks.append(f"{volatility.lower()} volatility increases downside risk")
+
+        if price_position.get('near_high', False):
+            risks.append("Near 52-week high - limited upside room, potential pullback")
+
+        return risks
+
+    def _generate_summary(self, bull_cases: List[Dict]) -> Dict[str, Any]:
+        """Generate summary of all bull cases."""
+        return {
+            'total_analyzed': len(bull_cases),
+            'high_conviction': len([c for c in bull_cases if c.get('conviction') == 'HIGH']),
+            'medium_conviction': len([c for c in bull_cases if c.get('conviction') == 'MEDIUM']),
+            'low_conviction': len([c for c in bull_cases if c.get('conviction') == 'LOW']),
+            'strongest_tickers': [c['ticker'] for c in bull_cases if c.get('conviction') == 'HIGH'][:5],
+        }
+
+    def _get_conviction_distribution(self, bull_cases: List[Dict]) -> Dict[str, int]:
+        """Get distribution of conviction levels."""
+        return {
+            'HIGH': len([c for c in bull_cases if c.get('conviction') == 'HIGH']),
+            'MEDIUM': len([c for c in bull_cases if c.get('conviction') == 'MEDIUM']),
+            'LOW': len([c for c in bull_cases if c.get('conviction') == 'LOW']),
+        }
+
+    def _get_top_opportunities(self, bull_cases: List[Dict], limit: int = 5) -> List[Dict]:
+        """Get top bull opportunities sorted by conviction and upside."""
+        # Sort by conviction (HIGH > MEDIUM > LOW) and upside
+        conviction_order = {'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}
+        sorted_cases = sorted(
+            bull_cases,
+            key=lambda x: conviction_order.get(x.get('conviction', 'LOW'), 0),
+            reverse=True
+        )
+        return sorted_cases[:limit]

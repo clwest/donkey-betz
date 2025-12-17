@@ -15502,3 +15502,260 @@ Stance: {self.recommended_stance}
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }
+
+
+# ==========================================
+# Market Intelligence System Models
+# Session 462: The Market Intelligence Desk
+# ==========================================
+
+class MarketIntelligenceBrief(models.Model):
+    """
+    Daily Market Intelligence Brief - First Tier 1 Autonomous Situation Output
+
+    Stores the synthesized output from Bull vs Bear debates, including:
+    - High conviction opportunities (both agree)
+    - Debate zone stocks (strong disagreement - most interesting!)
+    - Risk alerts from audit system
+    - Change tracking vs previous day
+    - Confidence distribution
+
+    This enables:
+    1. Historical tracking of market intelligence
+    2. Day-over-day change analysis
+    3. Learning from prediction accuracy
+    4. Autonomous situation persistence
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Brief metadata
+    brief_date = models.DateField(
+        unique=True,
+        help_text="Date this brief covers (one brief per day)"
+    )
+    brief_type = models.CharField(
+        max_length=50,
+        default='daily_market_intelligence_brief',
+        help_text="Type of brief (daily/weekly/special)"
+    )
+
+    # Executive summary (concise text overview)
+    executive_summary = models.TextField(
+        help_text="Concise executive summary of market conditions"
+    )
+
+    # Analysis results (structured JSON data)
+    high_conviction_opportunities = models.JSONField(
+        default=list,
+        help_text="Stocks where bull and bear both agree (high confidence)"
+    )
+    debate_zone = models.JSONField(
+        default=list,
+        help_text="Stocks with strong disagreement - MOST INTERESTING for alpha"
+    )
+    bullish_opportunities = models.JSONField(
+        default=list,
+        help_text="Stocks where bull case dominates"
+    )
+    bearish_warnings = models.JSONField(
+        default=list,
+        help_text="Stocks where bear case dominates"
+    )
+    risk_alerts = models.JSONField(
+        default=list,
+        help_text="Risk signals from Stock Audit system"
+    )
+
+    # Change tracking
+    changes_from_yesterday = models.JSONField(
+        default=dict,
+        help_text="What changed vs yesterday's brief"
+    )
+    is_first_brief = models.BooleanField(
+        default=False,
+        help_text="True if this is the first brief (no baseline for comparison)"
+    )
+
+    # Metrics
+    total_stocks_analyzed = models.IntegerField(
+        default=0,
+        help_text="Total unique stocks analyzed in this brief"
+    )
+    confidence_distribution = models.JSONField(
+        default=dict,
+        help_text="Distribution of confidence levels (HIGH/UNCERTAIN/LOW counts)"
+    )
+    debate_zone_count = models.IntegerField(
+        default=0,
+        help_text="Number of stocks in debate zone (disagreement metric)"
+    )
+
+    # Delivery status
+    discord_sent = models.BooleanField(
+        default=False,
+        help_text="Whether brief was delivered to Discord"
+    )
+    discord_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When brief was sent to Discord"
+    )
+    voice_delivered = models.BooleanField(
+        default=False,
+        help_text="Whether brief was delivered via voice"
+    )
+
+    # Autonomous situation health metrics
+    situation_health = models.CharField(
+        max_length=20,
+        default='OPERATIONAL',
+        choices=[
+            ('OPERATIONAL', 'Operational'),
+            ('DEGRADED', 'Degraded'),
+            ('FAILED', 'Failed'),
+        ],
+        help_text="Health status of the autonomous situation"
+    )
+    gpt_success_rate = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Percentage of stocks that got GPT analysis (vs fallback)"
+    )
+
+    # Learning integration (for outcome tracking)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='market_intelligence_briefs',
+        help_text="User this brief was generated for (if personalized)"
+    )
+
+    # Timestamps
+    generated_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this brief was generated"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last update to this brief"
+    )
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Market Intelligence Brief"
+        verbose_name_plural = "Market Intelligence Briefs"
+        ordering = ['-brief_date']
+        indexes = [
+            models.Index(fields=['-brief_date']),
+            models.Index(fields=['situation_health']),
+            models.Index(fields=['user', '-brief_date']),
+        ]
+
+    def __str__(self):
+        return f"Market Intelligence Brief - {self.brief_date}"
+
+    def get_previous_brief(self):
+        """Get the previous day's brief for change tracking."""
+        from datetime import timedelta
+        previous_date = self.brief_date - timedelta(days=1)
+        try:
+            return MarketIntelligenceBrief.objects.get(brief_date=previous_date)
+        except MarketIntelligenceBrief.DoesNotExist:
+            return None
+
+    def calculate_changes(self):
+        """Calculate changes from previous brief and update changes_from_yesterday field."""
+        previous = self.get_previous_brief()
+
+        if not previous:
+            self.is_first_brief = True
+            self.changes_from_yesterday = {
+                'is_first_run': True,
+                'message': 'First Market Intelligence Brief - no baseline for comparison',
+                'changes': [],
+            }
+            return self.changes_from_yesterday
+
+        changes = {
+            'is_first_run': False,
+            'changes': [],
+            'new_opportunities': [],
+            'disappeared_opportunities': [],
+            'conviction_changes': [],
+            'new_risks': [],
+        }
+
+        # Compare debate zone sizes
+        prev_debate_count = previous.debate_zone_count
+        curr_debate_count = self.debate_zone_count
+        if curr_debate_count != prev_debate_count:
+            changes['changes'].append({
+                'type': 'debate_zone_size',
+                'previous': prev_debate_count,
+                'current': curr_debate_count,
+                'message': f"Debate zone changed from {prev_debate_count} to {curr_debate_count} stocks"
+            })
+
+        # Track stocks that entered/exited debate zone
+        prev_debate_tickers = set(item.get('ticker') for item in previous.debate_zone)
+        curr_debate_tickers = set(item.get('ticker') for item in self.debate_zone)
+
+        new_debates = curr_debate_tickers - prev_debate_tickers
+        resolved_debates = prev_debate_tickers - curr_debate_tickers
+
+        if new_debates:
+            changes['changes'].append({
+                'type': 'new_debates',
+                'tickers': list(new_debates),
+                'message': f"New debates: {', '.join(new_debates)}"
+            })
+
+        if resolved_debates:
+            changes['changes'].append({
+                'type': 'resolved_debates',
+                'tickers': list(resolved_debates),
+                'message': f"Resolved debates: {', '.join(resolved_debates)}"
+            })
+
+        # Compare confidence distributions
+        prev_dist = previous.confidence_distribution
+        curr_dist = self.confidence_distribution
+        if prev_dist != curr_dist:
+            changes['changes'].append({
+                'type': 'confidence_shift',
+                'previous': prev_dist,
+                'current': curr_dist,
+                'message': 'Confidence distribution shifted'
+            })
+
+        changes['message'] = f"Tracking {len(changes['changes'])} changes from {previous.brief_date}"
+        self.changes_from_yesterday = changes
+        return changes
+
+    def to_dict(self):
+        """Return brief as dictionary for API responses."""
+        return {
+            'id': str(self.id),
+            'brief_date': self.brief_date.isoformat(),
+            'brief_type': self.brief_type,
+            'executive_summary': self.executive_summary,
+            'high_conviction': self.high_conviction_opportunities,
+            'debate_zone': self.debate_zone,
+            'debate_zone_count': self.debate_zone_count,
+            'bullish_opportunities': self.bullish_opportunities,
+            'bearish_warnings': self.bearish_warnings,
+            'risk_alerts': self.risk_alerts,
+            'changes_from_yesterday': self.changes_from_yesterday,
+            'is_first_brief': self.is_first_brief,
+            'total_stocks_analyzed': self.total_stocks_analyzed,
+            'confidence_distribution': self.confidence_distribution,
+            'situation_health': self.situation_health,
+            'gpt_success_rate': self.gpt_success_rate,
+            'discord_sent': self.discord_sent,
+            'discord_sent_at': self.discord_sent_at.isoformat() if self.discord_sent_at else None,
+            'voice_delivered': self.voice_delivered,
+            'generated_at': self.generated_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+        }
