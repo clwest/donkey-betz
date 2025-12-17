@@ -504,6 +504,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
         await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
         await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
+        await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
 
         # Sync slash commands with Discord
         try:
@@ -10039,13 +10040,17 @@ class ResolveCommands(commands.Cog):
                 agent = get_resolve_agent(user)
 
                 # Start render via agent
+                # Session 479: Pass all required execute() parameters
                 result = agent.execute(
                     task=f"Render videos {ids} with template {template} and color grade {selected_grade}",
                     context={
                         'video_ids': ids,
                         'template': template,
                         'color_grade': selected_grade,
-                        'spider_trends': spider_trends,
+                    },
+                    scifi_context={},  # Not using sci-fi features for Resolve
+                    spider_context={
+                        'creative_trends': spider_trends
                     }
                 )
 
@@ -10151,12 +10156,16 @@ class ResolveCommands(commands.Cog):
                 agent = get_resolve_agent(user)
 
                 # Apply grade via agent
+                # Session 479: Pass all required execute() parameters
                 result = agent.execute(
                     task=f"Apply color grade {selected_grade} to video {video_id}",
                     context={
                         'video_id': video_id,
                         'color_grade': selected_grade,
-                        'spider_trends': spider_trends,
+                    },
+                    scifi_context={},  # Not using sci-fi features for Resolve
+                    spider_context={
+                        'creative_trends': spider_trends
                     }
                 )
 
@@ -10397,6 +10406,766 @@ class ResolveCommands(commands.Cog):
                 embed=discord.Embed(
                     title="❌ Error",
                     description=f"Failed to get trending grades: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# =============================================================================
+# Situation Commands - Session 480: Discord Commands for All Situations
+# =============================================================================
+
+class SituationCommands(commands.Cog):
+    """
+    Session 480: Commands for all 19 Autonomous Situations.
+
+    Commands:
+    - /situation-list - List all 19 situations with status
+    - /situation-status <name> - Check specific situation details
+    - /situation-run <name> - Manually trigger a situation
+    - /situation-alerts <name> - Configure alert thresholds
+    """
+
+    # Mapping of situation keys to metadata
+    SITUATIONS = {
+        # Original 5 (Sessions 466-477)
+        'content_studio': {
+            'name': 'Autonomous Content Studio',
+            'domain': 'Content',
+            'schedule': 'Every 4h',
+            'task': 'run_autonomous_content_studio',
+            'session_type': None,  # Uses ContentChannel model
+            'description': 'Auto-generates content for channels based on 3-agent debates',
+        },
+        'narrative_drift': {
+            'name': 'Narrative Drift Detector',
+            'domain': 'Content',
+            'schedule': 'Every 4h',
+            'task': 'run_narrative_drift_cycle',
+            'session_type': None,
+            'description': 'Monitors brand consistency and alerts on narrative drift',
+        },
+        'market_intelligence': {
+            'name': 'Market Intelligence Desk',
+            'domain': 'Financial',
+            'schedule': 'Daily',
+            'task': 'run_market_intelligence_desk',
+            'session_type': None,
+            'description': 'Comprehensive daily market analysis with agent debates',
+        },
+        'blockchain_security': {
+            'name': 'Blockchain Security Alerts',
+            'domain': 'Financial',
+            'schedule': 'Every 2h + Events',
+            'task': 'run_blockchain_security_monitor',
+            'session_type': None,
+            'description': 'Monitors blockchain security events and vulnerabilities',
+        },
+        'stock_market': {
+            'name': 'Stock Market Intelligence',
+            'domain': 'Financial',
+            'schedule': 'Every 4h + Events',
+            'task': 'run_stock_market_intelligence',
+            'session_type': None,
+            'description': 'Bull vs Bear analysis with signal scanning',
+        },
+        # Session 479: 14 New Situations
+        'design_trends': {
+            'name': 'Design Trends Monitor',
+            'domain': 'Creative',
+            'schedule': 'Every 6h',
+            'task': 'run_design_trends_monitor',
+            'session_type': 'design_trends',
+            'description': 'Tracks design trends from Dribbble, Behance, Awwwards',
+        },
+        'viral_prediction': {
+            'name': 'Viral Content Predictor',
+            'domain': 'Creative',
+            'schedule': 'Every 4h',
+            'task': 'run_viral_content_predictor',
+            'session_type': 'viral_prediction',
+            'description': 'Scores content by viral potential using social signals',
+        },
+        'thumbnail_optimization': {
+            'name': 'Thumbnail A/B Optimizer',
+            'domain': 'Creative',
+            'schedule': 'Every 6h',
+            'task': 'run_thumbnail_optimizer',
+            'session_type': 'thumbnail_optimization',
+            'description': 'Analyzes images and creates optimization suggestions based on trends',
+        },
+        'job_matching': {
+            'name': 'Job Match Intelligence',
+            'domain': 'Income',
+            'schedule': 'Every 2h',
+            'task': 'run_job_match_intelligence',
+            'session_type': 'job_matching',
+            'description': 'Monitors jobs and scores matches to your profile',
+        },
+        'freelance_scout': {
+            'name': 'Freelance Opportunity Scout',
+            'domain': 'Income',
+            'schedule': 'Every 4h',
+            'task': 'run_freelance_opportunity_scout',
+            'session_type': 'freelance_scout',
+            'description': 'Scans job boards for freelance/contract opportunities',
+        },
+        'side_hustle': {
+            'name': 'Side Hustle Detector',
+            'domain': 'Income',
+            'schedule': 'Every 8h',
+            'task': 'run_side_hustle_detector',
+            'session_type': 'side_hustle',
+            'description': 'Finds trending micro-opportunities on Reddit, ProductHunt',
+        },
+        'sec_filing': {
+            'name': 'SEC Filing Analyzer',
+            'domain': 'Financial',
+            'schedule': 'Every 8h',
+            'task': 'run_sec_filing_analyzer',
+            'session_type': 'sec_filing',
+            'description': 'Analyzes SEC filings (10-K, 10-Q, 8-K, 13F) for major companies',
+        },
+        'crypto_sentiment': {
+            'name': 'Crypto Sentiment Monitor',
+            'domain': 'Financial',
+            'schedule': 'Every 2h',
+            'task': 'run_crypto_sentiment_monitor',
+            'session_type': 'crypto_sentiment',
+            'description': 'Tracks crypto social sentiment from Reddit, Bluesky',
+        },
+        'earnings_prediction': {
+            'name': 'Earnings Surprise Predictor',
+            'domain': 'Financial',
+            'schedule': 'Twice daily',
+            'task': 'run_earnings_predictor',
+            'session_type': 'earnings_prediction',
+            'description': 'Analyzes pre-earnings sentiment for surprise predictions',
+        },
+        'tech_stack': {
+            'name': 'Tech Stack Evolution Tracker',
+            'domain': 'Research',
+            'schedule': 'Every 6h',
+            'task': 'run_tech_stack_tracker',
+            'session_type': 'tech_stack',
+            'description': 'Monitors rising/falling technologies on GitHub, HackerNews',
+        },
+        'ai_model': {
+            'name': 'AI Model Release Monitor',
+            'domain': 'Research',
+            'schedule': 'Every 4h',
+            'task': 'run_ai_model_monitor',
+            'session_type': 'ai_model',
+            'description': 'Alerts on new AI model releases from HuggingFace, GitHub',
+        },
+        'skill_gap': {
+            'name': 'Course & Skill Gap Analyzer',
+            'domain': 'Research',
+            'schedule': 'Twice daily',
+            'task': 'run_skill_gap_analyzer',
+            'session_type': 'skill_gap',
+            'description': 'Matches trending tech skills to available courses',
+        },
+        'case_law': {
+            'name': 'Case Law Monitor',
+            'domain': 'Legal',
+            'schedule': 'Every 6h',
+            'task': 'run_case_law_monitor',
+            'session_type': 'case_law',
+            'description': 'Tracks relevant case decisions from CourtListener, FindLaw',
+        },
+        'regulatory': {
+            'name': 'Regulatory Change Detector',
+            'domain': 'Legal',
+            'schedule': 'Every 8h',
+            'task': 'run_regulatory_change_detector',
+            'session_type': 'regulatory',
+            'description': 'Monitors regulatory changes from government sources',
+        },
+    }
+
+    # Domain colors for embeds
+    DOMAIN_COLORS = {
+        'Content': discord.Color.purple(),
+        'Creative': discord.Color.pink(),
+        'Income': discord.Color.green(),
+        'Financial': discord.Color.gold(),
+        'Research': discord.Color.blue(),
+        'Legal': discord.Color.dark_grey(),
+    }
+
+    # Domain emojis
+    DOMAIN_EMOJIS = {
+        'Content': '🎬',
+        'Creative': '🎨',
+        'Income': '💰',
+        'Financial': '📈',
+        'Research': '🔬',
+        'Legal': '⚖️',
+    }
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="situation-list", description="List all 19 autonomous situations")
+    @app_commands.describe(
+        domain="Filter by domain (Content, Creative, Income, Financial, Research, Legal)"
+    )
+    async def situation_list(
+        self,
+        interaction: discord.Interaction,
+        domain: Optional[str] = None
+    ):
+        """List all autonomous situations with their status."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_situation_stats():
+                from core.models_autonomous_situations import AutonomousSituationSession
+                from django.db.models import Count, Max
+                from django.utils import timezone
+                from datetime import timedelta
+
+                # Get session counts and last run times for each situation type
+                stats = {}
+                for session_type in AutonomousSituationSession.objects.values_list(
+                    'situation_type', flat=True
+                ).distinct():
+                    sessions = AutonomousSituationSession.objects.filter(situation_type=session_type)
+                    last_session = sessions.order_by('-started_at').first()
+                    stats[session_type] = {
+                        'total_sessions': sessions.count(),
+                        'last_run': last_session.started_at if last_session else None,
+                        'last_status': last_session.status if last_session else None,
+                    }
+                return stats
+
+            stats = await get_situation_stats()
+
+            # Filter by domain if specified
+            situations = self.SITUATIONS
+            if domain:
+                domain_lower = domain.lower()
+                situations = {
+                    k: v for k, v in situations.items()
+                    if v['domain'].lower() == domain_lower
+                }
+
+            if not situations:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="No Situations Found",
+                        description=f"No situations found for domain: {domain}",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Group by domain
+            by_domain = {}
+            for key, info in situations.items():
+                d = info['domain']
+                if d not in by_domain:
+                    by_domain[d] = []
+                by_domain[d].append((key, info))
+
+            embed = discord.Embed(
+                title="🤖 19 Autonomous Situations",
+                description="All Tier 1 Autonomous Situations running 24/7",
+                color=discord.Color.purple()
+            )
+
+            for domain_name, items in sorted(by_domain.items()):
+                emoji = self.DOMAIN_EMOJIS.get(domain_name, '📊')
+
+                lines = []
+                for key, info in items:
+                    # Check if automated or manual
+                    if info['task']:
+                        status_emoji = '🟢'
+                    else:
+                        status_emoji = '🔵'  # Manual
+
+                    # Get session stats if available
+                    session_type = info.get('session_type')
+                    if session_type and session_type in stats:
+                        s = stats[session_type]
+                        runs = s['total_sessions']
+                        last_status = '✅' if s['last_status'] == 'completed' else '❌' if s['last_status'] == 'failed' else '⏳'
+                        lines.append(f"{status_emoji} **{info['name']}** ({info['schedule']}) - {runs} runs {last_status}")
+                    else:
+                        lines.append(f"{status_emoji} **{info['name']}** ({info['schedule']})")
+
+                embed.add_field(
+                    name=f"{emoji} {domain_name}",
+                    value="\n".join(lines),
+                    inline=False
+                )
+
+            embed.set_footer(text="🟢 Automated | 🔵 Manual | Use /situation-status <key> for details")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/situation-list error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to list situations: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="situation-status", description="Check detailed status of a specific situation")
+    @app_commands.describe(
+        situation="Situation key (e.g., 'design_trends', 'job_matching')"
+    )
+    @app_commands.choices(situation=[
+        app_commands.Choice(name="Content Studio", value="content_studio"),
+        app_commands.Choice(name="Narrative Drift", value="narrative_drift"),
+        app_commands.Choice(name="Market Intelligence", value="market_intelligence"),
+        app_commands.Choice(name="Blockchain Security", value="blockchain_security"),
+        app_commands.Choice(name="Stock Market", value="stock_market"),
+        app_commands.Choice(name="Design Trends", value="design_trends"),
+        app_commands.Choice(name="Viral Prediction", value="viral_prediction"),
+        app_commands.Choice(name="Thumbnail Optimizer", value="thumbnail_optimization"),
+        app_commands.Choice(name="Job Matching", value="job_matching"),
+        app_commands.Choice(name="Freelance Scout", value="freelance_scout"),
+        app_commands.Choice(name="Side Hustle", value="side_hustle"),
+        app_commands.Choice(name="SEC Filing", value="sec_filing"),
+        app_commands.Choice(name="Crypto Sentiment", value="crypto_sentiment"),
+        app_commands.Choice(name="Earnings Predictor", value="earnings_prediction"),
+        app_commands.Choice(name="Tech Stack", value="tech_stack"),
+        app_commands.Choice(name="AI Model", value="ai_model"),
+        app_commands.Choice(name="Skill Gap", value="skill_gap"),
+        app_commands.Choice(name="Case Law", value="case_law"),
+        app_commands.Choice(name="Regulatory", value="regulatory"),
+    ])
+    async def situation_status(
+        self,
+        interaction: discord.Interaction,
+        situation: str
+    ):
+        """Get detailed status of a specific autonomous situation."""
+        await interaction.response.defer()
+
+        try:
+            if situation not in self.SITUATIONS:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Unknown Situation",
+                        description=f"Unknown situation: `{situation}`\nUse `/situation-list` to see all situations.",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            info = self.SITUATIONS[situation]
+
+            @sync_to_async
+            def get_detailed_stats():
+                from django.utils import timezone
+                from datetime import timedelta
+
+                result = {
+                    'sessions': [],
+                    'total_sessions': 0,
+                    'total_items_processed': 0,
+                    'total_alerts': 0,
+                    'avg_duration': 0,
+                    'recent_data': [],
+                }
+
+                session_type = info.get('session_type')
+                if session_type:
+                    from core.models_autonomous_situations import AutonomousSituationSession
+
+                    sessions = AutonomousSituationSession.objects.filter(
+                        situation_type=session_type
+                    ).order_by('-started_at')[:10]
+
+                    result['sessions'] = list(sessions.values(
+                        'started_at', 'completed_at', 'status', 'items_processed',
+                        'items_created', 'alerts_generated', 'duration_seconds'
+                    ))
+
+                    all_sessions = AutonomousSituationSession.objects.filter(situation_type=session_type)
+                    result['total_sessions'] = all_sessions.count()
+                    result['total_items_processed'] = sum(s.items_processed for s in all_sessions)
+                    result['total_alerts'] = sum(s.alerts_generated for s in all_sessions)
+
+                    durations = [s.duration_seconds for s in all_sessions if s.duration_seconds]
+                    if durations:
+                        result['avg_duration'] = sum(durations) / len(durations)
+
+                # Get domain-specific recent data
+                if situation == 'design_trends':
+                    from core.models_autonomous_situations import DesignTrend
+                    result['recent_data'] = list(DesignTrend.objects.order_by('-created_at')[:5].values(
+                        'name', 'category', 'popularity_score', 'created_at'
+                    ))
+                elif situation == 'job_matching':
+                    from core.models_autonomous_situations import JobMatch
+                    result['recent_data'] = list(JobMatch.objects.order_by('-created_at')[:5].values(
+                        'job_title', 'company', 'match_score', 'created_at'
+                    ))
+                elif situation == 'crypto_sentiment':
+                    from core.models_autonomous_situations import CryptoSentiment
+                    result['recent_data'] = list(CryptoSentiment.objects.order_by('-created_at')[:5].values(
+                        'coin_symbol', 'sentiment_score', 'volume_24h', 'created_at'
+                    ))
+                elif situation == 'tech_stack':
+                    from core.models_autonomous_situations import TechStackTrend
+                    result['recent_data'] = list(TechStackTrend.objects.order_by('-created_at')[:5].values(
+                        'technology_name', 'category', 'momentum_score', 'created_at'
+                    ))
+                elif situation == 'ai_model':
+                    from core.models_autonomous_situations import AIModelRelease
+                    result['recent_data'] = list(AIModelRelease.objects.order_by('-created_at')[:5].values(
+                        'model_name', 'provider', 'significance_score', 'created_at'
+                    ))
+                elif situation == 'case_law':
+                    from core.models_autonomous_situations import CaseLawUpdate
+                    result['recent_data'] = list(CaseLawUpdate.objects.order_by('-created_at')[:5].values(
+                        'case_name', 'court', 'relevance_score', 'created_at'
+                    ))
+
+                return result
+
+            stats = await get_detailed_stats()
+
+            domain = info['domain']
+            color = self.DOMAIN_COLORS.get(domain, discord.Color.blue())
+            emoji = self.DOMAIN_EMOJIS.get(domain, '📊')
+
+            embed = discord.Embed(
+                title=f"{emoji} {info['name']}",
+                description=info['description'],
+                color=color
+            )
+
+            # Status info
+            is_automated = info['task'] is not None
+            status_text = "🟢 Automated" if is_automated else "🔵 Manual"
+            embed.add_field(
+                name="Status",
+                value=f"{status_text}\n**Schedule:** {info['schedule']}\n**Domain:** {domain}",
+                inline=True
+            )
+
+            # Stats
+            embed.add_field(
+                name="Statistics",
+                value=(
+                    f"**Total Sessions:** {stats['total_sessions']}\n"
+                    f"**Items Processed:** {stats['total_items_processed']:,}\n"
+                    f"**Alerts Generated:** {stats['total_alerts']}\n"
+                    f"**Avg Duration:** {stats['avg_duration']:.1f}s"
+                ),
+                inline=True
+            )
+
+            # Recent sessions
+            if stats['sessions']:
+                session_lines = []
+                for s in stats['sessions'][:5]:
+                    status_icon = '✅' if s['status'] == 'completed' else '❌' if s['status'] == 'failed' else '⏳'
+                    ts = int(s['started_at'].timestamp()) if s['started_at'] else 0
+                    session_lines.append(f"{status_icon} <t:{ts}:R> - {s['items_processed']} items")
+
+                embed.add_field(
+                    name="Recent Sessions",
+                    value="\n".join(session_lines) or "No sessions yet",
+                    inline=False
+                )
+
+            # Recent data (domain-specific)
+            if stats['recent_data']:
+                data_lines = []
+                for item in stats['recent_data'][:3]:
+                    if situation == 'design_trends':
+                        data_lines.append(f"• **{item['name']}** ({item['category']}) - Score: {item['popularity_score']:.1f}")
+                    elif situation == 'job_matching':
+                        data_lines.append(f"• **{item['job_title']}** @ {item['company']} - {item['match_score']:.0f}% match")
+                    elif situation == 'crypto_sentiment':
+                        data_lines.append(f"• **{item['coin_symbol']}** - Sentiment: {item['sentiment_score']:.1f}")
+                    elif situation == 'tech_stack':
+                        data_lines.append(f"• **{item['technology_name']}** - Momentum: {item['momentum_score']:.1f}")
+                    elif situation == 'ai_model':
+                        data_lines.append(f"• **{item['model_name']}** by {item['provider']}")
+                    elif situation == 'case_law':
+                        data_lines.append(f"• **{item['case_name'][:40]}** ({item['court']})")
+
+                if data_lines:
+                    embed.add_field(
+                        name="Recent Data",
+                        value="\n".join(data_lines),
+                        inline=False
+                    )
+
+            embed.set_footer(text=f"Use /situation-run {situation} to trigger manually")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/situation-status error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="situation-run", description="Manually trigger an autonomous situation")
+    @app_commands.describe(
+        situation="Situation key to run"
+    )
+    @app_commands.choices(situation=[
+        app_commands.Choice(name="Design Trends", value="design_trends"),
+        app_commands.Choice(name="Viral Prediction", value="viral_prediction"),
+        app_commands.Choice(name="Thumbnail Optimizer", value="thumbnail_optimization"),
+        app_commands.Choice(name="Job Matching", value="job_matching"),
+        app_commands.Choice(name="Freelance Scout", value="freelance_scout"),
+        app_commands.Choice(name="Side Hustle", value="side_hustle"),
+        app_commands.Choice(name="SEC Filing", value="sec_filing"),
+        app_commands.Choice(name="Crypto Sentiment", value="crypto_sentiment"),
+        app_commands.Choice(name="Earnings Predictor", value="earnings_prediction"),
+        app_commands.Choice(name="Tech Stack", value="tech_stack"),
+        app_commands.Choice(name="AI Model", value="ai_model"),
+        app_commands.Choice(name="Skill Gap", value="skill_gap"),
+        app_commands.Choice(name="Case Law", value="case_law"),
+        app_commands.Choice(name="Regulatory", value="regulatory"),
+        app_commands.Choice(name="Content Studio", value="content_studio"),
+        app_commands.Choice(name="Market Intelligence", value="market_intelligence"),
+        app_commands.Choice(name="Blockchain Security", value="blockchain_security"),
+        app_commands.Choice(name="Stock Market", value="stock_market"),
+    ])
+    async def situation_run(
+        self,
+        interaction: discord.Interaction,
+        situation: str
+    ):
+        """Manually trigger an autonomous situation."""
+        await interaction.response.defer()
+
+        try:
+            if situation not in self.SITUATIONS:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Unknown Situation",
+                        description=f"Unknown situation: `{situation}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            info = self.SITUATIONS[situation]
+            task_name = info.get('task')
+
+            if not task_name:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Manual Situation",
+                        description=f"**{info['name']}** is a manual situation and cannot be triggered via command.\n\nThis situation requires manual data input or specific trigger events.",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Send initial response
+            domain = info['domain']
+            emoji = self.DOMAIN_EMOJIS.get(domain, '📊')
+
+            embed = discord.Embed(
+                title=f"{emoji} Running {info['name']}...",
+                description="Triggering autonomous situation. This may take a moment...",
+                color=discord.Color.blue()
+            )
+            await interaction.followup.send(embed=embed)
+
+            # Run the task
+            @sync_to_async
+            def run_task():
+                from core import tasks
+                task_func = getattr(tasks, task_name, None)
+                if task_func:
+                    # Call the task directly (not delay) for immediate feedback
+                    return task_func()
+                return {'status': 'error', 'message': f'Task {task_name} not found'}
+
+            result = await run_task()
+
+            # Format result
+            if isinstance(result, dict):
+                status = result.get('status', 'unknown')
+                if status == 'completed':
+                    color = discord.Color.green()
+                    title = f"✅ {info['name']} Complete"
+                elif status == 'error':
+                    color = discord.Color.red()
+                    title = f"❌ {info['name']} Failed"
+                else:
+                    color = discord.Color.orange()
+                    title = f"⚠️ {info['name']} - {status}"
+
+                result_embed = discord.Embed(
+                    title=title,
+                    color=color
+                )
+
+                # Add result fields
+                for key, value in result.items():
+                    if key != 'status' and value is not None:
+                        # Format the key
+                        display_key = key.replace('_', ' ').title()
+                        result_embed.add_field(name=display_key, value=str(value)[:100], inline=True)
+            else:
+                result_embed = discord.Embed(
+                    title=f"✅ {info['name']} Complete",
+                    description=str(result)[:500] if result else "Task completed",
+                    color=discord.Color.green()
+                )
+
+            result_embed.set_footer(text=f"Use /situation-status {situation} for detailed stats")
+
+            # Edit the original message
+            await interaction.edit_original_response(embed=result_embed)
+
+        except Exception as e:
+            logger.error(f"/situation-run error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to run situation: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="situation-alerts", description="Configure alerts for an autonomous situation")
+    @app_commands.describe(
+        situation="Situation to configure",
+        action="Enable, disable, or check alert status",
+        threshold="Alert threshold (0.0-1.0)"
+    )
+    @app_commands.choices(
+        situation=[
+            app_commands.Choice(name="Design Trends", value="design_trends"),
+            app_commands.Choice(name="Viral Prediction", value="viral_prediction"),
+            app_commands.Choice(name="Thumbnail Optimizer", value="thumbnail_optimization"),
+            app_commands.Choice(name="Job Matching", value="job_matching"),
+            app_commands.Choice(name="Freelance Scout", value="freelance_scout"),
+            app_commands.Choice(name="Side Hustle", value="side_hustle"),
+            app_commands.Choice(name="SEC Filing", value="sec_filing"),
+            app_commands.Choice(name="Crypto Sentiment", value="crypto_sentiment"),
+            app_commands.Choice(name="Earnings Predictor", value="earnings_prediction"),
+            app_commands.Choice(name="Tech Stack", value="tech_stack"),
+            app_commands.Choice(name="AI Model", value="ai_model"),
+            app_commands.Choice(name="Skill Gap", value="skill_gap"),
+            app_commands.Choice(name="Case Law", value="case_law"),
+            app_commands.Choice(name="Regulatory", value="regulatory"),
+        ],
+        action=[
+            app_commands.Choice(name="Check Status", value="status"),
+            app_commands.Choice(name="Enable Alerts", value="enable"),
+            app_commands.Choice(name="Disable Alerts", value="disable"),
+        ]
+    )
+    async def situation_alerts(
+        self,
+        interaction: discord.Interaction,
+        situation: str,
+        action: str = "status",
+        threshold: Optional[float] = None
+    ):
+        """Configure alert settings for an autonomous situation."""
+        await interaction.response.defer()
+
+        try:
+            if situation not in self.SITUATIONS:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Unknown Situation",
+                        description=f"Unknown situation: `{situation}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            info = self.SITUATIONS[situation]
+
+            @sync_to_async
+            def manage_alert_config():
+                from core.models_autonomous_situations import AutonomousSituationSession
+                from core.models import DiscordUser
+
+                # Get or create alert config for this user/situation
+                discord_id = str(interaction.user.id)
+
+                # For now, we'll use a simple approach with Redis or a model
+                # This is a placeholder that can be extended
+                from django.core.cache import cache
+
+                config_key = f"situation_alert:{discord_id}:{situation}"
+                current_config = cache.get(config_key, {
+                    'enabled': False,
+                    'threshold': 0.7,
+                })
+
+                if action == 'enable':
+                    current_config['enabled'] = True
+                    if threshold is not None:
+                        current_config['threshold'] = max(0.0, min(1.0, threshold))
+                    cache.set(config_key, current_config, timeout=None)
+                    return {'action': 'enabled', 'config': current_config}
+
+                elif action == 'disable':
+                    current_config['enabled'] = False
+                    cache.set(config_key, current_config, timeout=None)
+                    return {'action': 'disabled', 'config': current_config}
+
+                else:  # status
+                    return {'action': 'status', 'config': current_config}
+
+            result = await manage_alert_config()
+
+            domain = info['domain']
+            emoji = self.DOMAIN_EMOJIS.get(domain, '📊')
+            config = result['config']
+
+            if result['action'] == 'enabled':
+                embed = discord.Embed(
+                    title=f"🔔 Alerts Enabled",
+                    description=f"Alerts enabled for **{info['name']}**",
+                    color=discord.Color.green()
+                )
+            elif result['action'] == 'disabled':
+                embed = discord.Embed(
+                    title=f"🔕 Alerts Disabled",
+                    description=f"Alerts disabled for **{info['name']}**",
+                    color=discord.Color.grey()
+                )
+            else:
+                status_emoji = "🔔" if config['enabled'] else "🔕"
+                embed = discord.Embed(
+                    title=f"{emoji} {info['name']} Alert Config",
+                    description=f"{status_emoji} Alerts: **{'Enabled' if config['enabled'] else 'Disabled'}**",
+                    color=discord.Color.blue()
+                )
+
+            embed.add_field(name="Threshold", value=f"{config['threshold']:.1%}", inline=True)
+            embed.add_field(name="Schedule", value=info['schedule'], inline=True)
+            embed.set_footer(text=f"Use /situation-alerts {situation} enable/disable to change")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/situation-alerts error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to configure alerts: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )
