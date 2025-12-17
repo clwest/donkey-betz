@@ -2963,6 +2963,19 @@ urlpatterns += [
     path('api/mi/briefs/', weekly_briefs_list, name='mi-briefs-list'),
     path('api/mi/briefs/generate/', generate_weekly_brief, name='mi-briefs-generate'),
     path('api/mi/briefs/<uuid:brief_id>/', weekly_brief_detail, name='mi-brief-detail'),
+
+    # =========================================================================
+    # Session 476: Autonomous Monitoring Dashboard
+    # =========================================================================
+    path('monitoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['autonomous_monitoring_dashboard']).autonomous_monitoring_dashboard(r), name='autonomous-monitoring'),
+    path('api/monitoring/health/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_unified_health']).api_unified_health(r), name='monitoring-health'),
+    path('api/monitoring/content-studio/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_content_studio_status']).api_content_studio_status(r), name='monitoring-content-studio'),
+    path('api/monitoring/narrative-drift/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_narrative_drift_status']).api_narrative_drift_status(r), name='monitoring-narrative-drift'),
+    path('api/monitoring/market-intelligence/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_market_intelligence_status']).api_market_intelligence_status(r), name='monitoring-market-intelligence'),
+    path('api/monitoring/roi/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_roi_metrics']).api_roi_metrics(r), name='monitoring-roi'),
+    path('api/monitoring/provenance/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_provenance_chain']).api_provenance_chain(r), name='monitoring-provenance'),
+    path('api/monitoring/activity/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_activity_stream']).api_activity_stream(r), name='monitoring-activity'),
+    path('api/monitoring/schedules/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_celery_schedules']).api_celery_schedules(r), name='monitoring-schedules'),
 ]
 
 # Serve media files in development

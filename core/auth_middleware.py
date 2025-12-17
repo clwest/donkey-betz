@@ -74,6 +74,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/income/',  # Session 388: Income Action Pipeline - supports session auth
         '/api/discord/verify-link-code/',  # Session 430: Discord bot link verification (uses bot_secret)
         '/api/voice-marketplace/',  # Session 440: Voice Marketplace - browse is public
+        '/api/monitoring/',  # Session 476: Autonomous Monitoring Dashboard - public for stress test visibility
         '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
     ]
