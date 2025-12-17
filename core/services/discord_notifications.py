@@ -22,8 +22,9 @@ Usage:
 import os
 import logging
 import requests
+from datetime import datetime
 from django.conf import settings
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,18 @@ class DiscordNotificationService:
     API_BASE = "https://discord.com/api/v10"
 
     def __init__(self):
-        self.bot_token = os.environ.get('DISCORD_BOT_TOKEN', '')
+        # Try to get token from Django settings first, then fall back to os.environ
+        try:
+            self.bot_token = getattr(settings, 'DISCORD_BOT_TOKEN', None) or os.environ.get('DISCORD_BOT_TOKEN', '')
+        except:
+            self.bot_token = os.environ.get('DISCORD_BOT_TOKEN', '')
+
         self.enabled = bool(self.bot_token)
 
         if not self.enabled:
             logger.warning("Discord notifications disabled - DISCORD_BOT_TOKEN not set")
+        else:
+            logger.info(f"Discord notifications ENABLED - bot token found ({self.bot_token[:20]}...)")
 
     def _get_headers(self) -> dict:
         """Get authorization headers for Discord API."""
@@ -1372,7 +1380,7 @@ class DiscordNotificationService:
             "footer": {
                 "text": "AI Studio Market Intelligence Desk | Autonomous Situation #1"
             },
-            "timestamp": datetime.datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat()
         }
 
         # Add "What Changed" if available

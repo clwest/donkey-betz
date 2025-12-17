@@ -432,6 +432,10 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             'total_stocks_analyzed': self._count_total_stocks(synthesis),
             'generation_time': datetime.now().isoformat(),
             'gpt_success_rate': gpt_success_rate,
+
+            # Session 463: Internal analyses for learning loop
+            '_internal_bull_analyses': bull_results.get('bull_cases', []),
+            '_internal_bear_analyses': bear_results.get('bear_cases', []),
         }
 
         return brief
@@ -550,8 +554,116 @@ Focus on the Debate Zone - genuine uncertainty creates opportunity."""
             change_count = len(changes.get('changes', []))
             logger.info(f"💾 Brief {action} for {today} - {total_stocks} stocks, {gpt_success_rate:.1f}% GPT success, {change_count} changes detected")
 
+            # Session 463: Record predictions for learning loop
+            self._record_predictions_for_learning(brief_obj, brief)
+
         except Exception as e:
             logger.error(f"Failed to save brief: {e}")
+
+    def _record_predictions_for_learning(self, brief_obj, brief: Dict) -> None:
+        """
+        Record all predictions as PredictionOutcome records for learning loop tracking.
+
+        This enables the system to:
+        1. Track prediction accuracy over time
+        2. Learn which market conditions lead to accurate predictions
+        3. Adjust confidence scores based on track record
+        """
+        from core.models_unified_system import PredictionOutcome
+        from core.services.market_data_service import MarketDataService
+
+        try:
+            market_service = MarketDataService()
+            today = date.today()
+
+            # Get all bull/bear analyses from context
+            bull_analyses = brief.get('_internal_bull_analyses', [])
+            bear_analyses = brief.get('_internal_bear_analyses', [])
+
+            # Track which stocks are in debate zone
+            debate_zone_tickers = {d.get('ticker') for d in brief.get('debate_zone', [])}
+
+            # Record bull predictions
+            for analysis in bull_analyses:
+                ticker = analysis.get('ticker')
+                if not ticker:
+                    continue
+
+                # Get current price
+                stock_data = market_service.get_stock_details(ticker)
+                if not stock_data or 'current_price' not in stock_data:
+                    continue
+
+                current_price = float(stock_data['current_price'])
+
+                # Parse predicted move from target
+                target_str = analysis.get('target', '+0%')
+                try:
+                    predicted_move = float(target_str.replace('%', '').replace('+', ''))
+                except:
+                    predicted_move = 0.0
+
+                # Find opposing bear conviction
+                bear_analysis = next((b for b in bear_analyses if b.get('ticker') == ticker), None)
+                opposite_conviction = bear_analysis.get('conviction', 'LOW') if bear_analysis else 'LOW'
+
+                # Create prediction record
+                PredictionOutcome.objects.create(
+                    brief=brief_obj,
+                    ticker=ticker,
+                    prediction_type='BULL',
+                    conviction_level=analysis.get('conviction', 'LOW'),
+                    predicted_move=predicted_move,
+                    price_at_prediction=current_price,
+                    prediction_date=today,
+                    was_in_debate_zone=(ticker in debate_zone_tickers),
+                    opposite_conviction=opposite_conviction,
+                    market_regime=stock_data.get('market_regime'),
+                    volatility_level=stock_data.get('volatility'),
+                )
+
+            # Record bear predictions
+            for analysis in bear_analyses:
+                ticker = analysis.get('ticker')
+                if not ticker:
+                    continue
+
+                stock_data = market_service.get_stock_details(ticker)
+                if not stock_data or 'current_price' not in stock_data:
+                    continue
+
+                current_price = float(stock_data['current_price'])
+
+                # Parse predicted move (should be negative for bear)
+                target_str = analysis.get('target', '-0%')
+                try:
+                    predicted_move = float(target_str.replace('%', '').replace('+', ''))
+                except:
+                    predicted_move = 0.0
+
+                # Find opposing bull conviction
+                bull_analysis = next((b for b in bull_analyses if b.get('ticker') == ticker), None)
+                opposite_conviction = bull_analysis.get('conviction', 'LOW') if bull_analysis else 'LOW'
+
+                PredictionOutcome.objects.create(
+                    brief=brief_obj,
+                    ticker=ticker,
+                    prediction_type='BEAR',
+                    conviction_level=analysis.get('conviction', 'LOW'),
+                    predicted_move=predicted_move,
+                    price_at_prediction=current_price,
+                    prediction_date=today,
+                    was_in_debate_zone=(ticker in debate_zone_tickers),
+                    opposite_conviction=opposite_conviction,
+                    market_regime=stock_data.get('market_regime'),
+                    volatility_level=stock_data.get('volatility'),
+                )
+
+            prediction_count = len(bull_analyses) + len(bear_analyses)
+            logger.info(f"📊 Recorded {prediction_count} predictions for learning loop tracking")
+
+        except Exception as e:
+            logger.error(f"Failed to record predictions for learning: {e}")
 
     def _get_situation_metrics(self, brief: Dict) -> Dict[str, Any]:
         """Get metrics for the autonomous situation itself."""
