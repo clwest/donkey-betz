@@ -18592,3 +18592,190 @@ class WeeklyIntelligenceBrief(models.Model):
 
     def __str__(self):
         return f"Week of {self.week_start} - ${self.total_revenue}"
+
+
+# ============================================================================
+# DAVINCI RESOLVE INTEGRATION MODELS
+# Session 478: Full Utilization of $300 DaVinci Resolve Investment
+# ============================================================================
+
+class ResolveRenderJob(models.Model):
+    """
+    Tracks DaVinci Resolve render jobs and their outcomes for learning.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    This model:
+    1. Tracks render jobs sent to resolve_node
+    2. Stores spider trends that influenced color grade selection
+    3. Records user feedback for the learning loop
+    4. Enables performance-based grade recommendations
+
+    The learning loop uses this data to improve automatic color grade
+    selection over time based on user ratings and usage patterns.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='resolve_render_jobs'
+    )
+
+    # === Job Identification ===
+    resolve_job_id = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Job ID from resolve_node server"
+    )
+
+    # === Job Status ===
+    STATUS_CHOICES = [
+        ('queued', 'Queued'),
+        ('rendering', 'Rendering'),
+        ('done', 'Done'),
+        ('error', 'Error'),
+        ('uploading', 'Uploading'),
+        ('uploaded', 'Uploaded'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='queued'
+    )
+
+    # === Input Configuration ===
+    source_video_ids = models.JSONField(
+        default=list,
+        help_text="List of source video IDs that were rendered"
+    )
+
+    TEMPLATE_CHOICES = [
+        ('default_mp4', 'Default MP4 (1080p H.264)'),
+        ('high_quality', 'High Quality (Multi-pass)'),
+    ]
+    template = models.CharField(
+        max_length=50,
+        choices=TEMPLATE_CHOICES,
+        default='default_mp4'
+    )
+
+    color_grade = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Color grade preset applied (e.g., cinematic_warm, cyberpunk_neon)"
+    )
+
+    # === Spider Context (what trends influenced this render) ===
+    spider_trends_used = models.JSONField(
+        default=dict,
+        help_text="Spider creative trends at time of render (for learning)"
+    )
+
+    auto_grade_selected = models.BooleanField(
+        default=False,
+        help_text="Was the color grade automatically selected based on trends?"
+    )
+
+    # === Output Information ===
+    output_url = models.URLField(
+        blank=True,
+        help_text="URL to download the rendered video"
+    )
+
+    output_file_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Local file path of rendered video"
+    )
+
+    file_size_mb = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Output file size in megabytes"
+    )
+
+    render_duration_seconds = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="How long the render took"
+    )
+
+    # === Error Information ===
+    error_message = models.TextField(
+        blank=True,
+        help_text="Error message if status is 'error'"
+    )
+
+    # === Learning Loop - Outcome Tracking ===
+    user_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="User rating 1-5 (for learning which grades work best)"
+    )
+
+    user_feedback = models.TextField(
+        blank=True,
+        help_text="Optional user feedback on the render quality"
+    )
+
+    was_used = models.BooleanField(
+        default=False,
+        help_text="Did the user actually use/publish this output?"
+    )
+
+    revenue_generated = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Revenue attributed to this render (for ROI tracking)"
+    )
+
+    # === Timestamps ===
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Resolve Render Job"
+        verbose_name_plural = "Resolve Render Jobs"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['color_grade', 'user_rating']),
+            models.Index(fields=['auto_grade_selected']),
+        ]
+
+    def __str__(self):
+        return f"Resolve Job {self.resolve_job_id[:8]} - {self.status} ({self.color_grade or 'no grade'})"
+
+    @property
+    def is_complete(self) -> bool:
+        """Check if job is complete."""
+        return self.status in ['done', 'uploaded']
+
+    @property
+    def has_feedback(self) -> bool:
+        """Check if user has provided feedback."""
+        return self.user_rating is not None
+
+    def get_outcome_score(self) -> float:
+        """
+        Calculate outcome score for learning loop.
+
+        Score = (rating/5) * usage_factor * revenue_factor
+
+        Returns:
+            Float between 0.0 and 1.0+ (can exceed 1.0 with revenue)
+        """
+        if not self.user_rating:
+            return 0.0
+
+        base_score = self.user_rating / 5.0
+        usage_factor = 1.5 if self.was_used else 1.0
+        revenue_factor = 1.0 + (float(self.revenue_generated or 0) / 100)
+
+        return base_score * usage_factor * revenue_factor

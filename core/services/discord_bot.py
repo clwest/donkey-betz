@@ -502,6 +502,8 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(HelpCommands(self))
         await self.add_cog(ReactionFeedbackCog(self))  # Session 452: Auto-feedback from reactions
         await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
+        await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
+        await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
 
         # Sync slash commands with Discord
         try:
@@ -9447,6 +9449,954 @@ class NarrativeCommands(commands.Cog):
                 embed=discord.Embed(
                     title="❌ Error",
                     description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# =============================================================================
+# Session 472: ROI Metrics Commands
+# Phase 6 Market Intelligence - Revenue attribution and tracking
+# =============================================================================
+
+class ROICommands(commands.Cog):
+    """Commands for ROI metrics and revenue attribution tracking."""
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="roi-summary", description="Show ROI summary metrics")
+    @app_commands.describe(
+        period="Time period (daily, weekly, monthly)",
+        dimension="Dimension to group by (overall, spider_source)"
+    )
+    async def roi_summary_command(
+        self,
+        interaction: discord.Interaction,
+        period: str = "daily",
+        dimension: str = "overall"
+    ):
+        """Show ROI summary metrics from the tracking system."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_roi_summary():
+                from core.services.roi_tracker import get_roi_tracker
+                tracker = get_roi_tracker()
+                return tracker.get_roi_summary(
+                    period_type=period,
+                    dimension=dimension,
+                    limit=10
+                )
+
+            summary = await get_roi_summary()
+
+            embed = discord.Embed(
+                title="💰 ROI Summary",
+                description=f"**Period:** {period.title()} | **Dimension:** {dimension.title()}",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            if not summary:
+                embed.add_field(
+                    name="📊 No Data",
+                    value="No ROI metrics found. Record some conversion events first!",
+                    inline=False
+                )
+            else:
+                for i, item in enumerate(summary[:5]):
+                    period_start = item.get('period_start', '')[:10]
+                    revenue = item.get('total_revenue', '0')
+                    conversions = item.get('conversions', 0)
+                    ctr = item.get('ctr', 'N/A')
+                    cr = item.get('conversion_rate', 'N/A')
+
+                    embed.add_field(
+                        name=f"📅 {period_start}",
+                        value=(
+                            f"**Revenue:** ${revenue}\n"
+                            f"**Conversions:** {conversions}\n"
+                            f"**CTR:** {ctr}\n"
+                            f"**CR:** {cr}"
+                        ),
+                        inline=True
+                    )
+
+            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/roi-summary error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get ROI summary: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="roi-dashboard", description="Show ROI dashboard overview")
+    async def roi_dashboard_command(self, interaction: discord.Interaction):
+        """Show ROI dashboard with today, week, month, and all-time metrics."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_dashboard():
+                from core.models_unified_system import (
+                    ConversionEvent, AttributionPath, WeeklyIntelligenceBrief
+                )
+                from django.db.models import Sum, Count
+                from django.utils import timezone
+                from datetime import timedelta
+
+                now = timezone.now()
+                today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                week_start = today_start - timedelta(days=today_start.weekday())
+                month_start = today_start.replace(day=1)
+
+                # Today
+                today_events = ConversionEvent.objects.filter(event_timestamp__gte=today_start)
+                today_revenue = today_events.filter(event_type='revenue').aggregate(
+                    total=Sum('value'))['total'] or 0
+                today_conversions = today_events.filter(event_type='convert').count()
+
+                # This week
+                week_events = ConversionEvent.objects.filter(event_timestamp__gte=week_start)
+                week_revenue = week_events.filter(event_type='revenue').aggregate(
+                    total=Sum('value'))['total'] or 0
+                week_conversions = week_events.filter(event_type='convert').count()
+
+                # This month
+                month_events = ConversionEvent.objects.filter(event_timestamp__gte=month_start)
+                month_revenue = month_events.filter(event_type='revenue').aggregate(
+                    total=Sum('value'))['total'] or 0
+                month_conversions = month_events.filter(event_type='convert').count()
+
+                # All time
+                total_events = ConversionEvent.objects.count()
+                total_revenue = ConversionEvent.objects.filter(
+                    event_type='revenue').aggregate(total=Sum('value'))['total'] or 0
+                total_conversions = ConversionEvent.objects.filter(
+                    event_type='convert').count()
+
+                # Latest brief
+                latest_brief = WeeklyIntelligenceBrief.objects.filter(
+                    status='complete').first()
+
+                return {
+                    'today': {'revenue': today_revenue, 'conversions': today_conversions},
+                    'week': {'revenue': week_revenue, 'conversions': week_conversions},
+                    'month': {'revenue': month_revenue, 'conversions': month_conversions},
+                    'all_time': {
+                        'events': total_events,
+                        'revenue': total_revenue,
+                        'conversions': total_conversions,
+                        'paths': AttributionPath.objects.count()
+                    },
+                    'latest_brief': latest_brief.executive_summary if latest_brief else None
+                }
+
+            dashboard = await get_dashboard()
+
+            embed = discord.Embed(
+                title="📊 ROI Dashboard",
+                description="Revenue and conversion tracking overview",
+                color=discord.Color.gold(),
+                timestamp=datetime.now()
+            )
+
+            # Today
+            today = dashboard['today']
+            embed.add_field(
+                name="📅 Today",
+                value=(
+                    f"**Revenue:** ${today['revenue']}\n"
+                    f"**Conversions:** {today['conversions']}"
+                ),
+                inline=True
+            )
+
+            # This Week
+            week = dashboard['week']
+            embed.add_field(
+                name="📆 This Week",
+                value=(
+                    f"**Revenue:** ${week['revenue']}\n"
+                    f"**Conversions:** {week['conversions']}"
+                ),
+                inline=True
+            )
+
+            # This Month
+            month = dashboard['month']
+            embed.add_field(
+                name="🗓️ This Month",
+                value=(
+                    f"**Revenue:** ${month['revenue']}\n"
+                    f"**Conversions:** {month['conversions']}"
+                ),
+                inline=True
+            )
+
+            # All Time
+            all_time = dashboard['all_time']
+            embed.add_field(
+                name="📈 All Time",
+                value=(
+                    f"**Total Events:** {all_time['events']}\n"
+                    f"**Total Revenue:** ${all_time['revenue']}\n"
+                    f"**Total Conversions:** {all_time['conversions']}\n"
+                    f"**Attribution Paths:** {all_time['paths']}"
+                ),
+                inline=False
+            )
+
+            # Latest Brief
+            if dashboard['latest_brief']:
+                embed.add_field(
+                    name="📋 Latest Brief",
+                    value=dashboard['latest_brief'][:200] + "..." if len(dashboard['latest_brief']) > 200 else dashboard['latest_brief'],
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/roi-dashboard error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get dashboard: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="roi-brief", description="Generate or view weekly intelligence brief")
+    @app_commands.describe(
+        action="Action to take (generate, view)"
+    )
+    async def roi_brief_command(
+        self,
+        interaction: discord.Interaction,
+        action: str = "view"
+    ):
+        """Generate or view weekly intelligence brief."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            if action.lower() == "generate":
+                @sync_to_async
+                def generate_brief():
+                    from core.services.roi_tracker import get_roi_tracker
+                    tracker = get_roi_tracker()
+                    return tracker.generate_weekly_brief()
+
+                brief = await generate_brief()
+
+                embed = discord.Embed(
+                    title="📊 Weekly Intelligence Brief Generated",
+                    description=brief.get('executive_summary', 'No summary available'),
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+
+                embed.add_field(
+                    name="📅 Period",
+                    value=f"{brief.get('week_start', 'N/A')} to {brief.get('week_end', 'N/A')}",
+                    inline=True
+                )
+                embed.add_field(
+                    name="💰 Revenue",
+                    value=f"${brief.get('total_revenue', 0)}",
+                    inline=True
+                )
+                embed.add_field(
+                    name="🎯 Conversions",
+                    value=str(brief.get('total_conversions', 0)),
+                    inline=True
+                )
+
+                # Revenue change
+                change = brief.get('revenue_change_pct')
+                if change:
+                    direction = "📈" if float(change) > 0 else "📉"
+                    embed.add_field(
+                        name=f"{direction} vs Last Week",
+                        value=f"{change}%",
+                        inline=True
+                    )
+
+                # Key insights
+                insights = brief.get('key_insights', [])
+                if insights:
+                    embed.add_field(
+                        name="💡 Key Insights",
+                        value="\n".join([f"• {i}" for i in insights[:3]]),
+                        inline=False
+                    )
+
+                # Recommendations
+                recommendations = brief.get('recommendations', [])
+                if recommendations:
+                    embed.add_field(
+                        name="🎯 Recommendations",
+                        value="\n".join([f"• {r}" for r in recommendations[:3]]),
+                        inline=False
+                    )
+
+            else:  # view
+                @sync_to_async
+                def get_latest_brief():
+                    from core.models_unified_system import WeeklyIntelligenceBrief
+                    return WeeklyIntelligenceBrief.objects.filter(
+                        status='complete'
+                    ).order_by('-week_start').first()
+
+                brief = await get_latest_brief()
+
+                if not brief:
+                    await interaction.edit_original_response(
+                        embed=discord.Embed(
+                            title="📋 No Brief Available",
+                            description="No weekly briefs have been generated yet. Use `/roi-brief generate` to create one.",
+                            color=discord.Color.yellow()
+                        )
+                    )
+                    return
+
+                embed = discord.Embed(
+                    title="📊 Weekly Intelligence Brief",
+                    description=brief.executive_summary or "No summary available",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+
+                embed.add_field(
+                    name="📅 Period",
+                    value=f"{brief.week_start} to {brief.week_end}",
+                    inline=True
+                )
+                embed.add_field(
+                    name="💰 Revenue",
+                    value=f"${brief.total_revenue}",
+                    inline=True
+                )
+                embed.add_field(
+                    name="🎯 Conversions",
+                    value=str(brief.total_conversions),
+                    inline=True
+                )
+
+                # Revenue change
+                if brief.revenue_change_pct:
+                    direction = "📈" if brief.revenue_change_pct > 0 else "📉"
+                    embed.add_field(
+                        name=f"{direction} vs Last Week",
+                        value=f"{brief.revenue_change_pct}%",
+                        inline=True
+                    )
+
+                # Key insights
+                if brief.key_insights:
+                    embed.add_field(
+                        name="💡 Key Insights",
+                        value="\n".join([f"• {i}" for i in brief.key_insights[:3]]),
+                        inline=False
+                    )
+
+                # Recommendations
+                if brief.recommendations:
+                    embed.add_field(
+                        name="🎯 Recommendations",
+                        value="\n".join([f"• {r}" for r in brief.recommendations[:3]]),
+                        inline=False
+                    )
+
+            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/roi-brief error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get brief: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="roi-funnel", description="Show conversion funnel metrics")
+    @app_commands.describe(
+        source="Filter by attribution source (spider name)"
+    )
+    async def roi_funnel_command(
+        self,
+        interaction: discord.Interaction,
+        source: str = None
+    ):
+        """Show conversion funnel with drop-off rates."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_funnel():
+                from core.services.roi_tracker import get_roi_tracker
+                tracker = get_roi_tracker()
+                return tracker.get_funnel_metrics(source=source)
+
+            funnel = await get_funnel()
+
+            embed = discord.Embed(
+                title="🔻 Conversion Funnel",
+                description=f"Funnel analysis" + (f" for **{source}**" if source else " (all sources)"),
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            # Funnel visualization
+            stage_emojis = {
+                'view': '👁️',
+                'click': '👆',
+                'apply': '📝',
+                'submit': '📤',
+                'interview': '🗣️',
+                'offer': '📋',
+                'convert': '✅',
+                'revenue': '💰'
+            }
+
+            funnel_stages = funnel.get('funnel', [])
+            for stage in funnel_stages:
+                stage_name = stage['stage']
+                count = stage['count']
+                cr = stage.get('conversion_rate')
+                drop = stage.get('drop_off')
+
+                emoji = stage_emojis.get(stage_name, '📊')
+
+                value_parts = [f"**Count:** {count}"]
+                if cr is not None:
+                    value_parts.append(f"**CR:** {cr}%")
+                if drop is not None and drop > 0:
+                    value_parts.append(f"**Drop-off:** {drop}")
+
+                embed.add_field(
+                    name=f"{emoji} {stage_name.title()}",
+                    value="\n".join(value_parts),
+                    inline=True
+                )
+
+            # Overall stats
+            overall_cr = funnel.get('overall_conversion_rate')
+            total_events = funnel.get('total_events', 0)
+
+            embed.add_field(
+                name="📈 Overall",
+                value=(
+                    f"**Total Events:** {total_events}\n"
+                    f"**Overall CR:** {overall_cr}%" if overall_cr else "N/A"
+                ),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/roi-funnel error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get funnel: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="roi-attribution", description="Show revenue attribution by source")
+    async def roi_attribution_command(self, interaction: discord.Interaction):
+        """Show revenue attribution grouped by source."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_attribution():
+                from core.services.roi_tracker import get_roi_tracker
+                tracker = get_roi_tracker()
+                return tracker.get_attribution_by_source()
+
+            attribution = await get_attribution()
+
+            embed = discord.Embed(
+                title="🎯 Revenue Attribution by Source",
+                description="Top performing sources based on attributed revenue",
+                color=discord.Color.teal(),
+                timestamp=datetime.now()
+            )
+
+            if not attribution:
+                embed.add_field(
+                    name="📊 No Attribution Data",
+                    value="No attribution paths have been created yet. Record some revenue events!",
+                    inline=False
+                )
+            else:
+                for i, item in enumerate(attribution[:10]):
+                    source = item.get('source', 'Unknown')
+                    revenue = item.get('total_revenue', '0')
+                    conversions = item.get('conversions', 0)
+                    avg_path = item.get('avg_path_length', 0)
+                    avg_hours = item.get('avg_hours_to_convert', 0)
+
+                    medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else "📊"
+
+                    embed.add_field(
+                        name=f"{medal} {source}",
+                        value=(
+                            f"**Revenue:** ${revenue}\n"
+                            f"**Conversions:** {conversions}\n"
+                            f"**Avg Path:** {avg_path} steps\n"
+                            f"**Avg Time:** {avg_hours}h"
+                        ),
+                        inline=True
+                    )
+
+            embed.set_footer(text="Session 472 | Market Intelligence Phase 6")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/roi-attribution error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get attribution: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# =============================================================================
+# Resolve Commands - Session 478: DaVinci Resolve Full Utilization
+# =============================================================================
+
+class ResolveCommands(commands.Cog):
+    """Commands for DaVinci Resolve professional rendering with trend-driven color grading."""
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    @app_commands.command(name="resolve-render", description="Start a professional DaVinci Resolve render")
+    @app_commands.describe(
+        video_ids="Comma-separated video IDs to render",
+        template="Render template (default_mp4, prores_4444, dnxhr_hq)",
+        grade="Color grade preset or 'auto' for trend-based selection"
+    )
+    async def resolve_render_command(
+        self,
+        interaction: discord.Interaction,
+        video_ids: str,
+        template: str = "default_mp4",
+        grade: str = "auto"
+    ):
+        """Start a professional render job using DaVinci Resolve."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def start_render():
+                from core.agents.resolve_agent import get_resolve_agent
+                from core.models_unified_system import ResolveRenderJob
+                from resolve_node.color_grades import get_all_presets, match_grade_to_trends
+
+                # Get linked user
+                from content.models import DiscordLink
+                link = DiscordLink.objects.filter(
+                    discord_id=str(interaction.user.id),
+                    is_verified=True
+                ).first()
+                user = link.user if link else None
+
+                # Parse video IDs
+                ids = [v.strip() for v in video_ids.split(',') if v.strip()]
+
+                # Get spider trends for auto-grading
+                spider_trends = {}
+                selected_grade = grade
+                if grade.lower() == 'auto':
+                    try:
+                        from core.services.spider_intelligence import SpiderIntelligenceService
+                        spider_service = SpiderIntelligenceService()
+                        spider_trends = spider_service.get_creative_trends(hours=48)
+                        selected_grade = match_grade_to_trends(spider_trends)
+                    except Exception as e:
+                        logger.warning(f"Could not get spider trends: {e}")
+                        selected_grade = 'natural_vibrant'
+
+                # Get resolve agent
+                agent = get_resolve_agent(user)
+
+                # Start render via agent
+                result = agent.execute(
+                    task=f"Render videos {ids} with template {template} and color grade {selected_grade}",
+                    context={
+                        'video_ids': ids,
+                        'template': template,
+                        'color_grade': selected_grade,
+                        'spider_trends': spider_trends,
+                    }
+                )
+
+                return {
+                    'success': result.success,
+                    'video_ids': ids,
+                    'template': template,
+                    'grade': selected_grade,
+                    'auto_selected': grade.lower() == 'auto',
+                    'job_id': result.data.get('job_id') if result.data else None,
+                    'message': result.message or result.error,
+                }
+
+            result = await start_render()
+
+            if result['success']:
+                embed = discord.Embed(
+                    title="🎬 Resolve Render Started",
+                    description=f"Professional render job queued for {len(result['video_ids'])} video(s)",
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="📹 Videos", value=", ".join(result['video_ids'][:5]), inline=True)
+                embed.add_field(name="📦 Template", value=result['template'], inline=True)
+                embed.add_field(
+                    name="🎨 Color Grade",
+                    value=f"{result['grade']} {'(auto-selected)' if result['auto_selected'] else ''}",
+                    inline=True
+                )
+                if result.get('job_id'):
+                    embed.add_field(name="🔑 Job ID", value=result['job_id'], inline=False)
+                embed.set_footer(text="Session 478 | DaVinci Resolve Integration")
+            else:
+                embed = discord.Embed(
+                    title="❌ Render Failed",
+                    description=result.get('message', 'Unknown error'),
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/resolve-render error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to start render: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="color-grade", description="Apply color grading to a video")
+    @app_commands.describe(
+        video_id="Video ID to color grade",
+        grade="Color grade preset or 'trending' for auto-selection"
+    )
+    async def color_grade_command(
+        self,
+        interaction: discord.Interaction,
+        video_id: str,
+        grade: str = "trending"
+    ):
+        """Apply a color grade preset to a video."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def apply_grade():
+                from core.agents.resolve_agent import get_resolve_agent
+                from resolve_node.color_grades import get_all_presets, match_grade_to_trends, describe_preset
+
+                # Get linked user
+                from content.models import DiscordLink
+                link = DiscordLink.objects.filter(
+                    discord_id=str(interaction.user.id),
+                    is_verified=True
+                ).first()
+                user = link.user if link else None
+
+                # Determine grade
+                selected_grade = grade
+                spider_trends = {}
+                if grade.lower() == 'trending':
+                    try:
+                        from core.services.spider_intelligence import SpiderIntelligenceService
+                        spider_service = SpiderIntelligenceService()
+                        spider_trends = spider_service.get_creative_trends(hours=48)
+                        selected_grade = match_grade_to_trends(spider_trends)
+                    except Exception as e:
+                        logger.warning(f"Could not get spider trends: {e}")
+                        selected_grade = 'natural_vibrant'
+
+                # Validate grade exists
+                available = get_all_presets()
+                if selected_grade not in available:
+                    return {
+                        'success': False,
+                        'error': f"Unknown grade '{selected_grade}'. Available: {', '.join(available)}"
+                    }
+
+                # Get resolve agent
+                agent = get_resolve_agent(user)
+
+                # Apply grade via agent
+                result = agent.execute(
+                    task=f"Apply color grade {selected_grade} to video {video_id}",
+                    context={
+                        'video_id': video_id,
+                        'color_grade': selected_grade,
+                        'spider_trends': spider_trends,
+                    }
+                )
+
+                return {
+                    'success': result.success,
+                    'video_id': video_id,
+                    'grade': selected_grade,
+                    'description': describe_preset(selected_grade),
+                    'auto_selected': grade.lower() == 'trending',
+                    'message': result.message or result.error,
+                }
+
+            result = await apply_grade()
+
+            if result['success']:
+                embed = discord.Embed(
+                    title="🎨 Color Grade Applied",
+                    description=result.get('description', 'Grade applied successfully'),
+                    color=discord.Color.purple(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="📹 Video", value=result['video_id'], inline=True)
+                embed.add_field(
+                    name="🎨 Grade",
+                    value=f"{result['grade']} {'(trending)' if result['auto_selected'] else ''}",
+                    inline=True
+                )
+                embed.set_footer(text="Session 478 | DaVinci Resolve Integration")
+            else:
+                embed = discord.Embed(
+                    title="❌ Grading Failed",
+                    description=result.get('error') or result.get('message', 'Unknown error'),
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/color-grade error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to apply grade: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="render-status", description="Check render job status")
+    @app_commands.describe(
+        job_id="Resolve render job ID"
+    )
+    async def render_status_command(
+        self,
+        interaction: discord.Interaction,
+        job_id: str
+    ):
+        """Check the status of a render job."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_status():
+                from core.models_unified_system import ResolveRenderJob
+
+                try:
+                    job = ResolveRenderJob.objects.get(resolve_job_id=job_id)
+                    return {
+                        'found': True,
+                        'status': job.status,
+                        'template': job.template,
+                        'color_grade': job.color_grade,
+                        'auto_grade': job.auto_grade_selected,
+                        'output_url': job.output_url,
+                        'file_size_mb': job.file_size_mb,
+                        'render_duration': job.render_duration_seconds,
+                        'error_message': job.error_message,
+                        'created_at': job.created_at.isoformat() if job.created_at else None,
+                        'completed_at': job.completed_at.isoformat() if job.completed_at else None,
+                    }
+                except ResolveRenderJob.DoesNotExist:
+                    return {'found': False}
+
+            result = await get_status()
+
+            if not result['found']:
+                embed = discord.Embed(
+                    title="❓ Job Not Found",
+                    description=f"No render job found with ID: {job_id}",
+                    color=discord.Color.yellow(),
+                    timestamp=datetime.now()
+                )
+            else:
+                # Status-based color
+                status_colors = {
+                    'queued': discord.Color.blue(),
+                    'rendering': discord.Color.orange(),
+                    'done': discord.Color.green(),
+                    'error': discord.Color.red(),
+                }
+                status_icons = {
+                    'queued': '⏳',
+                    'rendering': '🔄',
+                    'done': '✅',
+                    'error': '❌',
+                }
+
+                status = result['status']
+                embed = discord.Embed(
+                    title=f"{status_icons.get(status, '❓')} Render Job Status",
+                    description=f"**Job ID:** {job_id}",
+                    color=status_colors.get(status, discord.Color.grey()),
+                    timestamp=datetime.now()
+                )
+
+                embed.add_field(name="📊 Status", value=status.upper(), inline=True)
+                embed.add_field(name="📦 Template", value=result['template'], inline=True)
+                embed.add_field(
+                    name="🎨 Grade",
+                    value=f"{result['color_grade']} {'(auto)' if result['auto_grade'] else ''}",
+                    inline=True
+                )
+
+                if result['output_url']:
+                    embed.add_field(name="📥 Output", value=result['output_url'][:100], inline=False)
+                if result['file_size_mb']:
+                    embed.add_field(name="📁 Size", value=f"{result['file_size_mb']:.1f} MB", inline=True)
+                if result['render_duration']:
+                    embed.add_field(name="⏱️ Duration", value=f"{result['render_duration']}s", inline=True)
+                if result['error_message']:
+                    embed.add_field(name="⚠️ Error", value=result['error_message'][:200], inline=False)
+
+                embed.set_footer(text="Session 478 | DaVinci Resolve Integration")
+
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/render-status error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="trending-grades", description="Show color grades matching current spider trends")
+    async def trending_grades_command(self, interaction: discord.Interaction):
+        """Show which color grades match current spider trends."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_trending():
+                from resolve_node.color_grades import (
+                    get_all_presets, get_preset, match_grade_to_trends
+                )
+                from core.services.spider_intelligence import SpiderIntelligenceService
+
+                spider_service = SpiderIntelligenceService()
+                trends = spider_service.get_creative_trends(hours=48)
+
+                best_grade = match_grade_to_trends(trends)
+                best_preset = get_preset(best_grade)
+
+                # Get trending styles/colors
+                trending_styles = []
+                trending_colors = []
+
+                if 'trending_styles' in trends:
+                    for item in trends['trending_styles'][:5]:
+                        if isinstance(item, dict):
+                            trending_styles.append(item.get('style', str(item)))
+                        else:
+                            trending_styles.append(str(item))
+
+                if 'trending_colors' in trends:
+                    for item in trends['trending_colors'][:5]:
+                        if isinstance(item, dict):
+                            trending_colors.append(item.get('palette', str(item)))
+                        else:
+                            trending_colors.append(str(item))
+
+                return {
+                    'best_grade': best_grade,
+                    'description': best_preset.get('description', '') if best_preset else '',
+                    'use_case': best_preset.get('use_case', '') if best_preset else '',
+                    'trending_styles': trending_styles,
+                    'trending_colors': trending_colors,
+                    'all_grades': get_all_presets(),
+                }
+
+            result = await get_trending()
+
+            embed = discord.Embed(
+                title="🎨 Trending Color Grades",
+                description="Color grades matching current spider network trends",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(
+                name="🏆 Best Match",
+                value=f"**{result['best_grade']}**\n{result['description']}",
+                inline=False
+            )
+            embed.add_field(
+                name="🎯 Use Case",
+                value=result['use_case'] or "General purpose",
+                inline=False
+            )
+
+            if result['trending_styles']:
+                embed.add_field(
+                    name="📈 Trending Styles",
+                    value=", ".join(result['trending_styles']),
+                    inline=True
+                )
+            if result['trending_colors']:
+                embed.add_field(
+                    name="🎨 Trending Colors",
+                    value=", ".join(result['trending_colors']),
+                    inline=True
+                )
+
+            embed.add_field(
+                name="📋 All Available Grades",
+                value=", ".join(result['all_grades'][:10]),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 478 | DaVinci Resolve Integration")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/trending-grades error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to get trending grades: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )

@@ -225,6 +225,9 @@ from core.agents.content import (
     PerformanceAnalystAgent,
 )
 
+# Rendering Agents (Session 478: DaVinci Resolve Integration)
+from core.agents.resolve_agent import ResolveAgent, get_resolve_agent
+
 # Blockchain Audit Agents (Session 461)
 from core.agents.blockchain import (
     SmartContractAuditorAgent,
@@ -335,6 +338,10 @@ __all__ = [
     'TopicMinerAgent',
     'ContrarianAgent',
     'PerformanceAnalystAgent',
+
+    # Rendering Agents (1) - Session 478
+    'ResolveAgent',
+    'get_resolve_agent',
 
     # Blockchain Audit Agents (5) - Session 461
     'SmartContractAuditorAgent',

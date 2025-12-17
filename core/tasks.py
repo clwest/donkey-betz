@@ -14520,3 +14520,613 @@ def run_stock_market_intelligence():
             pass
 
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 477 (Part 2): EVENT-DRIVEN SITUATION TRIGGERS
+# =============================================================================
+# These tasks process trigger events and generate immediate alerts
+# instead of waiting for scheduled runs.
+
+@shared_task(name='triggers.process_trigger_events')
+def process_trigger_events(event_ids: list):
+    """
+    Process trigger events and generate immediate alerts.
+
+    This task is called when SpiderData arrives and matches a trigger.
+    It runs immediately (with 2s delay) instead of waiting for scheduled runs.
+
+    Args:
+        event_ids: List of TriggerEvent UUIDs to process
+    """
+    from django.utils import timezone
+    from decimal import Decimal
+
+    logger.info(f"⚡ Processing {len(event_ids)} trigger events...")
+
+    try:
+        from core.models_situation_triggers import TriggerEvent
+        from core.models_autonomous_alerts import (
+            BlockchainSecurityAlert, StockMarketAlert
+        )
+        from core.services.discord_notifications import DiscordNotificationService
+
+        discord = DiscordNotificationService()
+        alerts_generated = 0
+        discord_sent = 0
+
+        for event_id in event_ids:
+            try:
+                event = TriggerEvent.objects.select_related('trigger').get(id=event_id)
+
+                if event.status != 'pending':
+                    continue
+
+                event.status = 'processing'
+                event.save(update_fields=['status'])
+
+                trigger = event.trigger
+
+                # Generate alert based on situation type
+                if trigger.situation_type in ['blockchain', 'both']:
+                    alert = _create_blockchain_alert_from_trigger(event)
+                    if alert:
+                        event.alert_generated = True
+                        event.alert_id = alert.id
+                        event.alert_type = 'blockchain'
+                        alerts_generated += 1
+
+                        # Send to Discord immediately
+                        success = discord.send_blockchain_alert(alert)
+                        if success:
+                            alert.discord_sent = True
+                            alert.discord_sent_at = timezone.now()
+                            alert.save(update_fields=['discord_sent', 'discord_sent_at'])
+                            event.discord_sent = True
+                            event.discord_sent_at = timezone.now()
+                            discord_sent += 1
+
+                elif trigger.situation_type == 'stock_market':
+                    alert = _create_stock_alert_from_trigger(event)
+                    if alert:
+                        event.alert_generated = True
+                        event.alert_id = alert.id
+                        event.alert_type = 'stock'
+                        alerts_generated += 1
+
+                        # Send to Discord immediately
+                        success = discord.send_stock_alert(alert)
+                        if success:
+                            alert.discord_sent = True
+                            alert.discord_sent_at = timezone.now()
+                            alert.save(update_fields=['discord_sent', 'discord_sent_at'])
+                            event.discord_sent = True
+                            event.discord_sent_at = timezone.now()
+                            discord_sent += 1
+
+                # Mark event as completed
+                event.status = 'completed'
+                event.processed_at = timezone.now()
+                event.save()
+
+                # Update trigger stats
+                trigger.total_alerts_generated += 1
+                trigger.save(update_fields=['total_alerts_generated'])
+
+            except TriggerEvent.DoesNotExist:
+                logger.warning(f"TriggerEvent {event_id} not found")
+            except Exception as e:
+                logger.error(f"Error processing trigger event {event_id}: {e}")
+                try:
+                    event.status = 'failed'
+                    event.error_message = str(e)
+                    event.save(update_fields=['status', 'error_message'])
+                except:
+                    pass
+
+        logger.info(
+            f"✅ Trigger events processed: {len(event_ids)} events, "
+            f"{alerts_generated} alerts, {discord_sent} Discord notifications"
+        )
+
+        return {
+            'success': True,
+            'events_processed': len(event_ids),
+            'alerts_generated': alerts_generated,
+            'discord_sent': discord_sent
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to process trigger events: {e}")
+        import traceback
+        traceback.print_exc()
+        return {'success': False, 'error': str(e)}
+
+
+def _create_blockchain_alert_from_trigger(event) -> 'BlockchainSecurityAlert':
+    """Create a BlockchainSecurityAlert from a TriggerEvent."""
+    from core.models_autonomous_alerts import BlockchainSecurityAlert
+    from decimal import Decimal
+
+    trigger = event.trigger
+    raw_data = event.raw_data_snapshot or {}
+
+    # Map trigger type to alert type
+    alert_type_map = {
+        'whale_movement': 'whale_movement',
+        'price_crash': 'price_manipulation',
+        'price_surge': 'unusual_volume',
+        'volume_spike': 'unusual_volume',
+        'exploit_keyword': 'contract_exploit',
+    }
+    alert_type = alert_type_map.get(trigger.trigger_type, 'suspicious_tx')
+
+    # Extract relevant data
+    items = raw_data.get('items', [raw_data])
+    first_item = items[0] if items else {}
+
+    # Build title from template
+    title = trigger.alert_title_template.format(
+        trigger_name=trigger.name,
+        matched_value=event.matched_value,
+        spider_name=event.spider_name
+    )
+
+    # Determine severity
+    severity = trigger.severity
+
+    # Try to extract value in USD
+    value_usd = None
+    if 'value' in first_item:
+        try:
+            eth_value = float(str(first_item['value']).replace(',', ''))
+            value_usd = Decimal(str(eth_value * 3500))  # Approx ETH price
+        except:
+            pass
+    elif 'market_cap' in first_item:
+        try:
+            value_usd = Decimal(str(first_item.get('market_cap', 0)))
+        except:
+            pass
+
+    alert = BlockchainSecurityAlert.objects.create(
+        alert_type=alert_type,
+        severity=severity,
+        chain=first_item.get('chain', 'ethereum'),
+        address=first_item.get('to', first_item.get('address', '')),
+        token_symbol=first_item.get('symbol', '').upper(),
+        title=title[:200],
+        summary=f"Event-driven alert triggered by {trigger.name}. Matched value: {event.matched_value}. Spider: {event.spider_name}.",
+        value_usd=value_usd,
+        detecting_agent=f"SituationTrigger:{trigger.name}",
+        confidence_score=Decimal('0.80'),
+        source_data={
+            'trigger_id': str(trigger.id),
+            'trigger_name': trigger.name,
+            'event_id': str(event.id),
+            'spider_name': event.spider_name,
+            'matched_field': event.matched_field,
+            'matched_value': event.matched_value,
+        },
+        recommended_action=f"Review {trigger.get_trigger_type_display()}",
+        risk_score=75 if severity == 'critical' else 60 if severity == 'high' else 40
+    )
+
+    return alert
+
+
+def _create_stock_alert_from_trigger(event) -> 'StockMarketAlert':
+    """Create a StockMarketAlert from a TriggerEvent."""
+    from core.models_autonomous_alerts import StockMarketAlert
+    from decimal import Decimal
+
+    trigger = event.trigger
+    raw_data = event.raw_data_snapshot or {}
+
+    # Map trigger type to alert type
+    alert_type_map = {
+        'stock_mover': 'momentum_shift',
+        'sec_filing': 'institutional_activity',
+        'breaking_news': 'anomaly_detected',
+        'earnings_surprise': 'earnings_alert',
+        'institutional_filing': 'institutional_activity',
+    }
+    alert_type = alert_type_map.get(trigger.trigger_type, 'anomaly_detected')
+
+    # Extract relevant data
+    items = raw_data.get('items', [raw_data])
+    first_item = items[0] if items else {}
+
+    # Build title from template
+    title = trigger.alert_title_template.format(
+        trigger_name=trigger.name,
+        matched_value=event.matched_value,
+        spider_name=event.spider_name
+    )
+
+    # Extract stock info
+    symbol = first_item.get('symbol', first_item.get('ticker', 'UNKNOWN'))
+    company_name = first_item.get('shortName', first_item.get('company', symbol))
+
+    # Extract price info
+    current_price = None
+    price_change = None
+    try:
+        if 'regularMarketPrice' in first_item:
+            current_price = Decimal(str(first_item['regularMarketPrice']))
+        if 'regularMarketChangePercent' in first_item:
+            price_change = Decimal(str(first_item['regularMarketChangePercent']))
+    except:
+        pass
+
+    alert = StockMarketAlert.objects.create(
+        alert_type=alert_type,
+        symbol=symbol[:20],
+        company_name=company_name[:200],
+        title=title[:200],
+        summary=f"Event-driven alert triggered by {trigger.name}. Matched value: {event.matched_value}. Spider: {event.spider_name}.",
+        disagreement_level='mild',
+        confidence_score=Decimal('0.75'),
+        current_price=current_price,
+        price_change_24h=price_change,
+        source_data={
+            'trigger_id': str(trigger.id),
+            'trigger_name': trigger.name,
+            'event_id': str(event.id),
+            'spider_name': event.spider_name,
+            'matched_field': event.matched_field,
+            'matched_value': event.matched_value,
+        },
+        recommended_action='research'
+    )
+
+    return alert
+
+
+@shared_task(name='triggers.create_default_triggers')
+def create_default_triggers():
+    """
+    Create the default situation triggers.
+
+    Run this task once to populate the trigger table with
+    sensible defaults for blockchain and stock market monitoring.
+    """
+    from core.models_situation_triggers import SituationTrigger, DEFAULT_TRIGGERS
+
+    logger.info("Creating default situation triggers...")
+
+    created_count = 0
+    for trigger_data in DEFAULT_TRIGGERS:
+        # Check if trigger already exists by name
+        if not SituationTrigger.objects.filter(name=trigger_data['name']).exists():
+            SituationTrigger.objects.create(**trigger_data)
+            created_count += 1
+            logger.info(f"  Created: {trigger_data['name']}")
+        else:
+            logger.info(f"  Skipped (exists): {trigger_data['name']}")
+
+    logger.info(f"✅ Created {created_count} default triggers")
+    return {'success': True, 'created': created_count}
+
+
+# =============================================================================
+# Session 478: DaVinci Resolve Render Tasks
+# =============================================================================
+
+@shared_task(bind=True, max_retries=3)
+def start_resolve_render(self, job_id: str, video_ids: list, template: str, color_grade: str,
+                         spider_trends: dict = None, user_id: int = None):
+    """
+    Start an async render job on the DaVinci Resolve node.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    This task sends the render request to the resolve_node FastAPI server
+    and schedules status polling.
+
+    Args:
+        job_id: ResolveRenderJob UUID
+        video_ids: List of video IDs to render
+        template: Render template (default_mp4, prores_4444, dnxhr_hq)
+        color_grade: Color grade preset name
+        spider_trends: Spider trends data used for grade selection
+        user_id: Django User ID
+
+    Returns:
+        Dict with render job status
+    """
+    logger.info(f"🎬 [RESOLVE] Starting render job {job_id}")
+
+    try:
+        import requests
+        import os
+        from core.models_unified_system import ResolveRenderJob
+
+        # Update job status to rendering
+        job = ResolveRenderJob.objects.get(id=job_id)
+        job.status = 'rendering'
+        job.save()
+
+        # Get resolve node URL
+        resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+        token = os.environ.get('RENDER_NODE_TOKEN', '')
+
+        # Prepare render request
+        render_payload = {
+            'video_ids': video_ids,
+            'template': template,
+            'color_grade': color_grade,
+            'callback_url': f"{os.environ.get('BASE_URL', 'http://localhost:8000')}/api/resolve/callback/{job_id}/",
+        }
+
+        # Send to resolve node
+        headers = {'Authorization': f'Bearer {token}'} if token else {}
+        response = requests.post(
+            f'{resolve_url}/render/start',
+            json=render_payload,
+            headers=headers,
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            resolve_job_id = result.get('job_id', str(job_id)[:8])
+
+            # Update job with resolve's job ID
+            job.resolve_job_id = resolve_job_id
+            job.save()
+
+            # Schedule status polling
+            poll_resolve_job_status.apply_async(
+                args=[str(job.id)],
+                countdown=10  # Check after 10 seconds
+            )
+
+            logger.info(f"🎬 [RESOLVE] Render started: {resolve_job_id}")
+            return {
+                'status': 'started',
+                'job_id': str(job.id),
+                'resolve_job_id': resolve_job_id,
+            }
+        else:
+            error_msg = f"Resolve node error: {response.status_code} - {response.text[:200]}"
+            job.status = 'error'
+            job.error_message = error_msg
+            job.save()
+            logger.error(f"🎬 [RESOLVE] Render failed: {error_msg}")
+            return {'status': 'error', 'error': error_msg}
+
+    except requests.exceptions.ConnectionError as e:
+        # Resolve node not available - retry
+        logger.warning(f"🎬 [RESOLVE] Connection error, retrying: {e}")
+        raise self.retry(exc=e, countdown=30)
+
+    except ResolveRenderJob.DoesNotExist:
+        logger.error(f"🎬 [RESOLVE] Job not found: {job_id}")
+        return {'status': 'error', 'error': 'Job not found'}
+
+    except Exception as e:
+        logger.error(f"🎬 [RESOLVE] Unexpected error: {e}")
+        try:
+            job = ResolveRenderJob.objects.get(id=job_id)
+            job.status = 'error'
+            job.error_message = str(e)
+            job.save()
+        except:
+            pass
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=60)  # Max 60 retries = 30 minutes
+def poll_resolve_job_status(self, job_id: str):
+    """
+    Poll the DaVinci Resolve node for render job status.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    This task polls the resolve_node until the job is complete or errors.
+    On completion, it triggers the learning loop recording.
+
+    Args:
+        job_id: ResolveRenderJob UUID
+
+    Returns:
+        Dict with current job status
+    """
+    logger.info(f"🎬 [RESOLVE] Polling job status: {job_id}")
+
+    try:
+        import requests
+        import os
+        from core.models_unified_system import ResolveRenderJob
+        from django.utils import timezone
+
+        job = ResolveRenderJob.objects.get(id=job_id)
+
+        # Don't poll completed or errored jobs
+        if job.status in ['done', 'error']:
+            return {'status': job.status, 'message': 'Job already finished'}
+
+        # Get resolve node URL
+        resolve_url = os.environ.get('RESOLVE_NODE_URL', 'http://localhost:5001')
+        token = os.environ.get('RENDER_NODE_TOKEN', '')
+
+        headers = {'Authorization': f'Bearer {token}'} if token else {}
+        response = requests.get(
+            f'{resolve_url}/render/status/{job.resolve_job_id}',
+            headers=headers,
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            resolve_status = result.get('status', 'unknown')
+
+            if resolve_status == 'done':
+                # Render complete!
+                job.status = 'done'
+                job.output_url = result.get('output_url', '')
+                job.file_size_mb = result.get('file_size_mb')
+                job.render_duration_seconds = result.get('duration_seconds')
+                job.completed_at = timezone.now()
+                job.save()
+
+                # Trigger learning loop recording
+                record_resolve_outcome.delay(str(job.id))
+
+                logger.info(f"🎬 [RESOLVE] Render complete: {job_id}")
+                return {
+                    'status': 'done',
+                    'output_url': job.output_url,
+                    'file_size_mb': job.file_size_mb,
+                }
+
+            elif resolve_status == 'error':
+                job.status = 'error'
+                job.error_message = result.get('error', 'Unknown error')
+                job.completed_at = timezone.now()
+                job.save()
+
+                logger.error(f"🎬 [RESOLVE] Render error: {job.error_message}")
+                return {'status': 'error', 'error': job.error_message}
+
+            else:
+                # Still rendering - schedule next poll
+                progress = result.get('progress', 0)
+                logger.info(f"🎬 [RESOLVE] Rendering... {progress}%")
+                raise self.retry(countdown=30)  # Poll every 30 seconds
+
+        elif response.status_code == 404:
+            job.status = 'error'
+            job.error_message = 'Job not found on resolve node'
+            job.save()
+            return {'status': 'error', 'error': 'Job not found'}
+
+        else:
+            # Unexpected status - retry
+            raise self.retry(countdown=30)
+
+    except requests.exceptions.ConnectionError as e:
+        logger.warning(f"🎬 [RESOLVE] Connection error during poll: {e}")
+        raise self.retry(exc=e, countdown=60)
+
+    except ResolveRenderJob.DoesNotExist:
+        logger.error(f"🎬 [RESOLVE] Job not found in DB: {job_id}")
+        return {'status': 'error', 'error': 'Job not found'}
+
+    except self.MaxRetriesExceededError:
+        # Too many retries - mark as timed out
+        try:
+            job = ResolveRenderJob.objects.get(id=job_id)
+            job.status = 'error'
+            job.error_message = 'Render timed out after 30 minutes'
+            job.save()
+        except:
+            pass
+        logger.error(f"🎬 [RESOLVE] Render timed out: {job_id}")
+        return {'status': 'error', 'error': 'Timeout'}
+
+
+@shared_task
+def record_resolve_outcome(job_id: str):
+    """
+    Record render job outcome for the learning loop.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    This task records successful renders for the learning loop,
+    which will improve future color grade selections based on:
+    - User ratings
+    - Usage patterns (was the video used?)
+    - Revenue correlation
+
+    Args:
+        job_id: ResolveRenderJob UUID
+
+    Returns:
+        Dict with learning loop recording status
+    """
+    logger.info(f"🎬 [RESOLVE LEARNING] Recording outcome for job: {job_id}")
+
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        from resolve_node.color_grades import get_preset
+
+        job = ResolveRenderJob.objects.get(id=job_id)
+
+        if job.status != 'done':
+            logger.warning(f"🎬 [RESOLVE LEARNING] Job not done, skipping: {job.status}")
+            return {'status': 'skipped', 'reason': f'Job status is {job.status}'}
+
+        # Get preset info for logging
+        preset = get_preset(job.color_grade)
+        preset_desc = preset.get('description', '') if preset else ''
+
+        # Log the outcome (basic for now - will be enhanced with user ratings)
+        logger.info(
+            f"🎬 [RESOLVE LEARNING] Outcome recorded:\n"
+            f"  - Job: {job_id}\n"
+            f"  - Grade: {job.color_grade} ({'auto' if job.auto_grade_selected else 'manual'})\n"
+            f"  - Template: {job.template}\n"
+            f"  - File Size: {job.file_size_mb} MB\n"
+            f"  - Duration: {job.render_duration_seconds}s\n"
+            f"  - Trends Used: {bool(job.spider_trends_used)}"
+        )
+
+        return {
+            'status': 'recorded',
+            'job_id': job_id,
+            'color_grade': job.color_grade,
+            'auto_selected': job.auto_grade_selected,
+            'spider_trends_used': bool(job.spider_trends_used),
+        }
+
+    except ResolveRenderJob.DoesNotExist:
+        logger.error(f"🎬 [RESOLVE LEARNING] Job not found: {job_id}")
+        return {'status': 'error', 'error': 'Job not found'}
+
+    except Exception as e:
+        logger.error(f"🎬 [RESOLVE LEARNING] Recording failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def cleanup_old_resolve_jobs(days: int = 30):
+    """
+    Clean up old resolve render jobs from the database.
+
+    Session 478: DaVinci Resolve Full Utilization
+
+    Removes jobs older than specified days to keep the database clean.
+    Keeps jobs that have user ratings for learning purposes.
+
+    Args:
+        days: Number of days to retain jobs
+
+    Returns:
+        Dict with cleanup statistics
+    """
+    logger.info(f"🎬 [RESOLVE] Cleaning up jobs older than {days} days...")
+
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=days)
+
+        # Only delete jobs without user ratings (preserve learning data)
+        old_jobs = ResolveRenderJob.objects.filter(
+            created_at__lt=cutoff,
+            user_rating__isnull=True
+        )
+
+        count = old_jobs.count()
+        old_jobs.delete()
+
+        logger.info(f"🎬 [RESOLVE] Cleaned up {count} old jobs")
+        return {'status': 'completed', 'deleted_count': count}
+
+    except Exception as e:
+        logger.error(f"🎬 [RESOLVE] Cleanup failed: {e}")
+        return {'status': 'error', 'error': str(e)}
