@@ -33,23 +33,20 @@ DJANGO_COMPLETE_ENDPOINT = f"{DJANGO_BACKEND_URL}/api/v1/render/complete/"
 RESOLVE_PROJECT_NAME = os.getenv("RESOLVE_PROJECT_NAME", "RenderNode")
 RESOLVE_TIMELINE_NAME = os.getenv("RESOLVE_TIMELINE_NAME", "Timeline 1")
 
-# Render settings
+# Render settings - MINIMAL for maximum compatibility
+# DaVinci Resolve API is very picky - only set what's absolutely needed
 DEFAULT_RENDER_SETTINGS = {
     "SelectAllFrames": True,
     "TargetDir": str(RESULTS_DIR),
     "CustomName": "render",
+}
+
+# Extended settings (only used if explicitly requested)
+EXTENDED_RENDER_SETTINGS = {
     "ExportVideo": True,
     "ExportAudio": True,
     "FormatWidth": 1920,
     "FormatHeight": 1080,
-    "FrameRate": 24.0,
-    "VideoQuality": 0,  # 0 = Automatic, 1-5 = Quality levels
-    "AudioCodec": "aac",
-    "AudioSampleRate": 48000,
-    "VideoCodec": "h264",
-    "EncodingProfile": "Main",
-    "MultiPassEncode": False,
-    "AlphaMode": 0,  # 0 = None
 }
 
 # Job queue settings

@@ -177,10 +177,20 @@ class JobQueue:
             if not success:
                 raise RuntimeError("Render failed or timed out")
 
-            # Verify output file exists
+            # Session 479: Verify output file exists - check multiple extensions
             output_path = Path(output_file)
             if not output_path.exists():
-                raise RuntimeError(f"Output file not found: {output_file}")
+                # Try different extensions (H.264 Master uses .mov)
+                custom_name = f"render_{job.job_id}"
+                for ext in ['.mov', '.mp4', '.avi', '.mxf']:
+                    alt_path = config.RESULTS_DIR / f"{custom_name}{ext}"
+                    if alt_path.exists():
+                        output_file = str(alt_path)
+                        output_path = alt_path
+                        logger.info(f"Found output with extension {ext}: {output_file}")
+                        break
+                else:
+                    raise RuntimeError(f"Output file not found: {output_file}")
 
             # Update job with results
             job.output_file = str(output_file)
