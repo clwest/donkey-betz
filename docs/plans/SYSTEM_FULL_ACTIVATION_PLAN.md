@@ -134,9 +134,9 @@ if validated.get('mythology_corrected'):
 |--------|----------|-------|--------|-------|
 | SpiderDataBridge | `core/learning_bridges/spider_data_bridge.py` | Yes | **YES** | Feeds spider data to agents |
 | AgentExecutionBridge | `core/learning_bridges/agent_execution_bridge.py` | Yes | Partial | Not recording all executions |
-| ApplicationOutcomeBridge | `core/learning_bridges/application_outcome_bridge.py` | Yes | **NO** | No job outcomes tracked |
+| ApplicationOutcomeBridge | `core/learning_bridges/application_outcome_bridge.py` | Yes | **YES** | Session 461: Now tracks JobApplication outcomes |
 | CollaborationBridge | `core/learning_bridges/collaboration_bridge.py` | Yes | Partial | Only HiveMind triggers |
-| PersonalizationBridge | `core/learning_bridges/personalization_bridge.py` | Yes | **NO** | User preferences not captured |
+| PersonalizationBridge | `core/learning_bridges/personalization_bridge.py` | Yes | **YES** | Session 461: Now captures chat preferences |
 | RevenueAttributionBridge | `core/learning_bridges/revenue_attribution_bridge.py` | Yes | **NO** | No revenue tracking |
 | AdvisorFeedbackBridge | `core/learning_bridges/advisor_feedback_bridge.py` | Yes | Partial | Some consultations recorded |
 | SportsBettingBridge | `core/learning_bridges/sports_betting_bridge.py` | Yes | **NO** | Sports features archived |
@@ -324,13 +324,34 @@ python manage.py validate_section --section=images
    - Real-time events available at `hallucination_events` Redis channel
    - History stored in `hallucination_history` Redis key
 
-### Phase 2: Learning Loop Completion (This Week)
+### Phase 2: Learning Loop Completion - COMPLETED Session 461
 
-| Task | Effort | Impact |
-|------|--------|--------|
-| Activate PersonalizationBridge | 4 hours | User preference learning |
-| Activate ApplicationOutcomeBridge | 3 hours | Job success learning |
-| Wire legal spiders to LegalDocDrafterAgent | 2 hours | Better legal research |
+| Task | Effort | Impact | Status |
+|------|--------|--------|--------|
+| Activate PersonalizationBridge | 4 hours | User preference learning | **DONE** |
+| Activate ApplicationOutcomeBridge | 3 hours | Job success learning | **DONE** |
+| Wire legal spiders to LegalDocDrafterAgent | 2 hours | Better legal research | **DONE** |
+
+**Session 461 Implementation Notes:**
+
+1. **PersonalizationBridge Enhanced** (personalization_bridge.py):
+   - Added ConversationMemory signal handler for chat preference extraction
+   - Created PREFERENCE_PATTERNS for work_style, job_type, industry, skills, experience_level, salary
+   - Extracts preferences like "I want a remote Python job in AI" → {work_style: remote, industry: ai, skills: python}
+   - Stores in UserAgentLearning with learning_domain='chat_preferences'
+
+2. **ApplicationOutcomeBridge Extended** (application_outcome_bridge.py):
+   - Added JobApplication signal handler (was only tracking Application model)
+   - SUCCESS_STATUSES: accepted, offer_received, offer_accepted
+   - FAILURE_STATUSES: rejected
+   - Tracks: best_platforms, best_methods, success_factors, failure_factors
+   - Calculates success rates by platform and application method
+
+3. **LegalDocDrafterAgent Spider Integration** (legal_doc_drafter_agent.py):
+   - Added `_get_fresh_legal_spider_intelligence()` method
+   - Queries 6 legal spiders: courtlistener, legal_news, findlaw, lii, colorado_family_law, justia_family_law
+   - Injects fresh legal intelligence into `_build_legal_prompt()`
+   - Legal documents now have access to recent case law and legal news
 
 ### Phase 3: Advisor Intelligence (Next Week)
 
@@ -354,13 +375,13 @@ python manage.py validate_section --section=images
 
 ### Current System Health
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Agent utilization | 60% | 95% |
-| Spider data freshness | 75% | 90% |
-| Learning bridge activation | 40% | 80% |
-| Mythology coverage | 85% | 95% |
-| Advisor utilization | 25% | 60% |
+| Metric | Current | Target | Notes |
+|--------|---------|--------|-------|
+| Agent utilization | ~70% | 95% | Session 461: +8 agents routed |
+| Spider data freshness | 75% | 90% | |
+| Learning bridge activation | ~60% | 80% | Session 461: +2 bridges activated |
+| Mythology coverage | 85% | 95% | |
+| Advisor utilization | 25% | 60% | |
 
 ### Measurement Commands
 
