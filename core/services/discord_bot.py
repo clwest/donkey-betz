@@ -10011,14 +10011,11 @@ class ResolveCommands(commands.Cog):
                 from core.agents.resolve_agent import get_resolve_agent
                 from core.models_unified_system import ResolveRenderJob
                 from resolve_node.color_grades import get_all_presets, match_grade_to_trends
+                from django.contrib.auth import get_user_model
 
                 # Get linked user
-                from content.models import DiscordLink
-                link = DiscordLink.objects.filter(
-                    discord_id=str(interaction.user.id),
-                    is_verified=True
-                ).first()
-                user = link.user if link else None
+                User = get_user_model()
+                user = User.objects.filter(discord_id=str(interaction.user.id)).first()
 
                 # Parse video IDs
                 ids = [v.strip() for v in video_ids.split(',') if v.strip()]
@@ -10122,14 +10119,11 @@ class ResolveCommands(commands.Cog):
             def apply_grade():
                 from core.agents.resolve_agent import get_resolve_agent
                 from resolve_node.color_grades import get_all_presets, match_grade_to_trends, describe_preset
+                from django.contrib.auth import get_user_model
 
                 # Get linked user
-                from content.models import DiscordLink
-                link = DiscordLink.objects.filter(
-                    discord_id=str(interaction.user.id),
-                    is_verified=True
-                ).first()
-                user = link.user if link else None
+                User = get_user_model()
+                user = User.objects.filter(discord_id=str(interaction.user.id)).first()
 
                 # Determine grade
                 selected_grade = grade
