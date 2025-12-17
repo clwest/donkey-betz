@@ -417,19 +417,28 @@ def api_activity_stream(request):
     """
     Get real-time activity stream.
     Returns recent events from all autonomous systems.
+
+    Session 477: Extended time window from 1 hour to 6 hours,
+    plus fallback to show most recent items if window is empty.
     """
     try:
         from core.models_autonomous_studio import ChannelEpisode
         from core.models_narrative_drift import NarrativeEvidence, NarrativeShift
         from core.models_unified_system import SpiderData, ConversionEvent, DataProvenance
+        from core.models_situation_triggers import TriggerEvent
+        from core.models_autonomous_alerts import BlockchainSecurityAlert, StockMarketAlert
 
         now = timezone.now()
-        hour_ago = now - timedelta(hours=1)
+        # Session 477: Extended from 1 hour to 6 hours for better visibility
+        time_window = now - timedelta(hours=6)
 
         activities = []
 
-        # Recent episodes
-        for ep in ChannelEpisode.objects.filter(publish_date__gte=hour_ago).order_by('-publish_date')[:5]:
+        # Recent episodes (or most recent 3 if none in window)
+        episodes = ChannelEpisode.objects.filter(publish_date__gte=time_window).order_by('-publish_date')[:5]
+        if not episodes.exists():
+            episodes = ChannelEpisode.objects.order_by('-publish_date')[:3]
+        for ep in episodes:
             activities.append({
                 'type': 'episode',
                 'icon': '📺',
@@ -438,8 +447,11 @@ def api_activity_stream(request):
                 'timestamp': ep.publish_date.isoformat(),
             })
 
-        # Recent evidence
-        for ev in NarrativeEvidence.objects.filter(created_at__gte=hour_ago).order_by('-created_at')[:5]:
+        # Recent evidence (or most recent 3 if none in window)
+        evidence = NarrativeEvidence.objects.filter(created_at__gte=time_window).order_by('-created_at')[:5]
+        if not evidence.exists():
+            evidence = NarrativeEvidence.objects.order_by('-created_at')[:3]
+        for ev in evidence:
             activities.append({
                 'type': 'evidence',
                 'icon': '📊',
@@ -449,7 +461,7 @@ def api_activity_stream(request):
             })
 
         # Recent shifts
-        for sh in NarrativeShift.objects.filter(detected_at__gte=hour_ago).order_by('-detected_at')[:3]:
+        for sh in NarrativeShift.objects.filter(detected_at__gte=time_window).order_by('-detected_at')[:3]:
             activities.append({
                 'type': 'shift',
                 'icon': '⚡',
@@ -458,18 +470,21 @@ def api_activity_stream(request):
                 'timestamp': sh.detected_at.isoformat(),
             })
 
-        # Recent spider data
-        for sd in SpiderData.objects.filter(created_at__gte=hour_ago).order_by('-created_at')[:5]:
+        # Recent spider data (or most recent 5 if none in window)
+        spider_data = SpiderData.objects.filter(created_at__gte=time_window).order_by('-created_at')[:10]
+        if not spider_data.exists():
+            spider_data = SpiderData.objects.order_by('-created_at')[:5]
+        for sd in spider_data:
             activities.append({
                 'type': 'spider',
                 'icon': '🕷️',
-                'title': f"Data from {sd.spider_name}: {sd.data_type}",
+                'title': f"Data from {sd.spider_name}: {sd.data_type or 'data'}",
                 'source': 'Market Intelligence',
                 'timestamp': sd.created_at.isoformat(),
             })
 
         # Recent conversions
-        for ce in ConversionEvent.objects.filter(created_at__gte=hour_ago).order_by('-created_at')[:3]:
+        for ce in ConversionEvent.objects.filter(created_at__gte=time_window).order_by('-created_at')[:3]:
             activities.append({
                 'type': 'conversion',
                 'icon': '💰',
@@ -478,14 +493,45 @@ def api_activity_stream(request):
                 'timestamp': ce.created_at.isoformat(),
             })
 
+        # Session 477: Add trigger events (event-driven alerts)
+        for te in TriggerEvent.objects.filter(fired_at__gte=time_window).order_by('-fired_at')[:5]:
+            activities.append({
+                'type': 'trigger',
+                'icon': '🎯',
+                'title': f"Trigger fired: {te.trigger.name}",
+                'source': 'Event Triggers',
+                'timestamp': te.fired_at.isoformat(),
+            })
+
+        # Session 477: Add blockchain alerts
+        for ba in BlockchainSecurityAlert.objects.filter(detected_at__gte=time_window).order_by('-detected_at')[:3]:
+            activities.append({
+                'type': 'blockchain_alert',
+                'icon': '🔗',
+                'title': f"Blockchain Alert: {ba.title[:50]}",
+                'source': 'Blockchain Security',
+                'timestamp': ba.detected_at.isoformat(),
+            })
+
+        # Session 477: Add stock alerts
+        for sa in StockMarketAlert.objects.filter(detected_at__gte=time_window).order_by('-detected_at')[:3]:
+            activities.append({
+                'type': 'stock_alert',
+                'icon': '📈',
+                'title': f"Stock Alert: {sa.title[:50]}",
+                'source': 'Stock Intelligence',
+                'timestamp': sa.detected_at.isoformat(),
+            })
+
         # Sort by timestamp
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return JsonResponse({
             'success': True,
             'data': {
-                'activities': activities[:20],
+                'activities': activities[:25],  # Increased from 20 to 25
                 'count': len(activities),
+                'time_window_hours': 6,
             }
         })
     except Exception as e:
