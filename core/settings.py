@@ -334,6 +334,9 @@ EXTERNAL_API_KEYS = {
     'POLYGON_API_KEY': os.environ.get('POLYGON_API_KEY', ''),
 }
 
+# Discord Bot Configuration (Session 419+)
+DISCORD_BOT_TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '')
+
 # AI Configuration
 AI_CONFIG = {
     'DEFAULT_LLM_MODEL': 'gpt-5-mini',
