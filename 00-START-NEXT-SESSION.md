@@ -1,150 +1,121 @@
-# Start Next Session Here
+# Session 464: Learning Loop Phase 2 - Automation & Feedback
 
-**Last Session:** 462 - Market Intelligence Desk Complete
-**Date:** December 16, 2025
-**Status:** ✅ COMPLETE | All 5 Priorities Done
+**Previous Session:** 463 - Learning Loop Phase 1 (Foundation Complete ✅)
+**Status:** Ready to build automation layer
+**Branch:** `feature/session-52-ai-assistant`
+**Last Commit:** `fdc5581` - Learning Loop Phase 1 Complete
 
 ---
 
-## SESSION 462: ✅ COMPLETE - Market Intelligence Desk
+## 🎯 MISSION FOR SESSION 464
 
-### What Was Built
+Complete the **Market Intelligence Desk Learning Loop** by building the automation layer that:
+1. Tracks prediction outcomes automatically (Celery tasks)
+2. Calculates agent accuracy metrics (weekly)
+3. Enables user feedback via Discord commands
+4. Integrates confidence multipliers into predictions
 
-The **Market Intelligence Desk** - First Tier 1 Autonomous Situation featuring:
+**Goal:** Make the Market Intelligence Desk **learn and improve over time** without manual intervention.
 
-#### All Priorities Complete (1-5):
-- ✅ **Priority 1:** Real Market Data Integration (MarketDataService + Yahoo Finance)
-- ✅ **Priority 2:** GPT Tool Calls in Bull/Bear Agents (80% success rate)
-- ✅ **Priority 3:** Database Persistence (MarketIntelligenceBrief model)
-- ✅ **Priority 4:** Real Change Tracking Implementation (calculate_changes method)
-- ✅ **Priority 5:** Learning Hooks Integration (CoordinatorOutcome + AgentMemory)
+---
 
-#### Bonus: Automation & Delivery (COMPLETE):
-- ✅ **Celery Beat:** Daily execution at 8 AM Mon-Fri (before market open)
-- ✅ **Discord Delivery:** Rich embeds to #stock-alerts with debate zone, signals, changes
+## ✅ What Session 463 Accomplished
 
-#### Autonomous Situation Properties - ALL OPERATIONAL:
-1. ✅ **Persistent Context** - Database stores briefs for change tracking
-2. ✅ **Incoming Signals** - Real-time market data from Yahoo Finance
-3. ✅ **Internal Disagreement** - Bull vs Bear GPT-powered debate
-4. ✅ **Outputs with Consequences** - Daily brief with investment signals
-5. ✅ **Self-Renewal** - Saves today's output for tomorrow's analysis
+### Phase 1: Foundation (COMPLETE)
 
-### Test Results
-```
-📊 10 stocks analyzed (AAPL, MSFT, GOOGL, AMZN, NVDA, TSLA, META, SPY, QQQ, VTI)
-🤖 80% GPT success rate (8/10 stocks)
-🐂 Bull cases: 5 HIGH conviction, 2 MEDIUM, 3 LOW
-🐻 Bear cases: Mix of HIGH/MEDIUM/LOW convictions
-🎯 Debate zone tracking: OPERATIONAL
-💾 Database persistence: WORKING
-🔄 Change tracking: WORKING (4 changes detected between runs)
-🧠 Learning hooks: WORKING (CoordinatorOutcome + AgentMemory)
-⏰ Celery Beat: SCHEDULED (8 AM Mon-Fri)
-📢 Discord delivery: WORKING (rich embeds with color-coded sentiment)
-```
+**Database Models Created:**
+- ✅ `PredictionOutcome` - Tracks every bull/bear prediction vs actual outcome
+- ✅ `UserBriefFeedback` - Captures user ratings and actions
+- ✅ `AgentAccuracyMetrics` - Rolling accuracy scores with confidence multipliers
 
-### New Files Created
+**Integration:**
+- ✅ Coordinator creates prediction records automatically
+- ✅ Discord delivery working (fixed datetime import + settings)
+- ✅ Migration applied (0098_session_463_learning_loop)
 
-```
-core/services/
-└── market_data_service.py (431 lines)
+**Files Modified:**
+- `core/models_unified_system.py` (+680 lines)
+- `core/agents/stocks/market_intelligence_coordinator.py` (+100 lines)
+- `core/services/discord_notifications.py` (import fix)
+- `core/settings.py` (DISCORD_BOT_TOKEN)
 
-core/agents/stocks/
-├── bull_case_agent.py (GPT integration added)
-├── bear_case_agent.py (GPT integration added)
-└── market_intelligence_coordinator.py (database + learning hooks)
+📖 **Full Details:** `docs/handoffs/SESSION_463_LEARNING_LOOP_PHASE1.md`
 
-core/migrations/
-└── 0097_session_462_market_intelligence_brief.py
+---
 
-core/models_unified_system.py (+300 lines)
-├── MarketIntelligenceBrief model
-└── calculate_changes() method (Priority 4)
+## 🚀 SESSION 464 TASKS (2-3 Hours)
 
-test_market_intel_desk.py (119 lines)
-└── End-to-end integration test (Priorities 1-3)
+### Task 1: Add Celery Tasks (30 min)
 
-test_change_tracking.py (169 lines)
-└── Change tracking test (Priority 4)
+**File:** `core/tasks.py`
 
-test_learning_integration.py (125 lines)
-└── Learning hooks test (Priority 5)
+Add two new tasks at the end of the file:
 
-docs/handoffs/SESSION_462_MARKET_INTELLIGENCE_DESK.md (538 lines)
-└── Complete handoff documentation
+#### 1.1 Prediction Outcome Tracking Task
+```python
+@shared_task(name='learning_loop.track_prediction_outcomes')
+def track_prediction_outcomes():
+    """
+    Run daily at 6 PM (after market close)
+    - Find predictions made 7 days ago → fetch current price → calculate accuracy
+    - Find predictions made 30 days ago → fetch current price → calculate accuracy
+    """
 ```
 
-### Commits Created
-1. **f9009d2** - feat(Session 462): Market Intelligence Desk - Phase 1 Complete
-2. **f9f4172** - feat(Session 462): Priority 4 - Change Tracking Implementation
-3. **ce2ab76** - feat(Session 462): Priority 5 - Learning Hooks Integration Complete
-4. **bd6b8b0** - docs(Session 462): Update status to 100% complete - All 5 priorities done
-5. **9093dc3** - feat(Session 462): Add automation and Discord delivery
-
----
-
-## Previous Session (461): Stock & Blockchain Audit - COMPLETE
-
-Two parallel autonomous monitoring systems:
-- **Stock Audit:** 5 agents + coordinator (SEC filings, price/volume, insider trading, manipulation)
-- **Blockchain Audit:** 5 agents + coordinator + event listener (smart contracts, DeFi, rug pulls)
-- **Discord:** `#stock-agents` and `#blockchain-agents` channels
-
----
-
-## Quick Start
-
-```bash
-# Start the platform
-make start
-make celery  # REQUIRED for autonomous monitoring
-
-# Access AI Studio
-open http://localhost:8000/ai-studio/
-
-# Test Market Intelligence Desk
-.venv/bin/python test_market_intel_desk.py
+#### 1.2 Agent Accuracy Calculation Task
+```python
+@shared_task(name='learning_loop.calculate_agent_accuracy')
+def calculate_agent_accuracy():
+    """
+    Run weekly on Sundays at 8 PM
+    - Calculate BullCaseAgent and BearCaseAgent accuracy for past 30 days
+    - Update confidence multipliers
+    """
 ```
 
----
-
-## Current Platform Status
-
-| Feature | Status |
-|---------|--------|
-| AI Studio | 100% - All creation tools working |
-| Voice I/O | WORKING - PTT (F13), TTS (Alt+S) |
-| Discord Bot | 45 commands + autonomous alerts |
-| Agent Ecosystem | 32 agents + learning hooks |
-| Spider Network | 66 spiders, 6,500+ records |
-| Autonomous Loop | WORKING - Running every 15 min |
-| Stock Audit | COMPLETE - 5 agents + Discord |
-| Blockchain Audit | COMPLETE - 5 agents + Event Listener |
-| **Market Intelligence Desk** | **✅ 100% COMPLETE - All 5 priorities done!** |
+#### 1.3 Schedule Tasks in `core/celery.py`
 
 ---
 
-## Key Documentation
+### Task 2: Discord Feedback Commands (45 min)
 
-- `docs/handoffs/SESSION_462_MARKET_INTELLIGENCE_DESK_PHASE1.md` - Latest session details
-- `docs/handoffs/SESSION_461_STOCK_AUDIT_AGENTS.md` - Stock audit
-- `docs/handoffs/SESSION_461_BLOCKCHAIN_AUDIT_AGENTS.md` - Blockchain audit
-- `docs/CAPABILITIES.md` - Full feature list
-- `docs/AGENTS.md` - Agent documentation
+**File:** `core/services/discord_bot.py`
 
----
-
-## Ideas for Session 463
-
-Session 462 is 100% complete with automation! Possible next directions:
-
-1. **Voice Delivery:** Text-to-speech daily brief summary (TTS integration)
-2. **Portfolio Tracking:** Allow users to track specific stocks, get personalized briefs
-3. **Second Autonomous Situation:** Build another Tier 1 situation (ideas: News Synthesis Desk, Competitor Intelligence Desk)
-4. **ML Enhancement:** Add technical analysis indicators to bull/bear arguments
-5. **Backtesting:** Historical analysis of previous recommendations vs actual outcomes
+Add 2 new commands:
+- `/brief-feedback helpful|not-helpful [comment]`
+- `/action buy|sell|hold|ignore TICKER [reason]`
 
 ---
 
-**First Tier 1 Autonomous Situation 100% operational and running autonomously!**
+### Task 3: Integrate Confidence Multipliers (30 min)
+
+**Files:** `core/agents/stocks/bull_case_agent.py` and `bear_case_agent.py`
+
+- Add `_get_confidence_multiplier()` method
+- Modify `_determine_bull_conviction()` to use multiplier
+- Log multiplier application
+
+---
+
+### Task 4: End-to-End Testing (30 min)
+
+Test complete flow: predictions → outcomes → accuracy → multiplier → future predictions
+
+---
+
+## 📋 Definition of Done
+
+- [ ] Two Celery tasks added and scheduled
+- [ ] Two Discord commands working
+- [ ] Confidence multipliers integrated into agents
+- [ ] End-to-end test passes
+- [ ] Code committed
+- [ ] Handoff doc created: `SESSION_464_LEARNING_LOOP_COMPLETE.md`
+
+---
+
+**Session 464 Focus:** Build automation layer (Celery tasks + Discord commands + confidence integration)
+**Estimated Time:** 2-3 hours
+**Difficulty:** Medium
+
+Let's complete the learning loop! 🚀
