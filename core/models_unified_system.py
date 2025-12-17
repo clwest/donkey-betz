@@ -15687,7 +15687,7 @@ class MarketIntelligenceBrief(models.Model):
             'new_risks': [],
         }
 
-        # Compare debate zone sizes
+        # 1. Compare debate zone sizes
         prev_debate_count = previous.debate_zone_count
         curr_debate_count = self.debate_zone_count
         if curr_debate_count != prev_debate_count:
@@ -15698,7 +15698,7 @@ class MarketIntelligenceBrief(models.Model):
                 'message': f"Debate zone changed from {prev_debate_count} to {curr_debate_count} stocks"
             })
 
-        # Track stocks that entered/exited debate zone
+        # 2. Track stocks that entered/exited debate zone
         prev_debate_tickers = set(item.get('ticker') for item in previous.debate_zone)
         curr_debate_tickers = set(item.get('ticker') for item in self.debate_zone)
 
@@ -15709,28 +15709,155 @@ class MarketIntelligenceBrief(models.Model):
             changes['changes'].append({
                 'type': 'new_debates',
                 'tickers': list(new_debates),
-                'message': f"New debates: {', '.join(new_debates)}"
+                'count': len(new_debates),
+                'message': f"{len(new_debates)} stock(s) entered debate zone: {', '.join(sorted(new_debates))}"
             })
 
         if resolved_debates:
             changes['changes'].append({
                 'type': 'resolved_debates',
                 'tickers': list(resolved_debates),
-                'message': f"Resolved debates: {', '.join(resolved_debates)}"
+                'count': len(resolved_debates),
+                'message': f"{len(resolved_debates)} stock(s) left debate zone: {', '.join(sorted(resolved_debates))}"
             })
 
-        # Compare confidence distributions
+        # 3. Track new/disappeared bullish opportunities
+        prev_bullish_tickers = set(item.get('ticker') for item in previous.bullish_opportunities)
+        curr_bullish_tickers = set(item.get('ticker') for item in self.bullish_opportunities)
+
+        new_bullish = curr_bullish_tickers - prev_bullish_tickers
+        lost_bullish = prev_bullish_tickers - curr_bullish_tickers
+
+        if new_bullish:
+            changes['new_opportunities'] = [
+                {
+                    'ticker': ticker,
+                    'type': 'bullish',
+                    'message': f"{ticker} now bullish"
+                }
+                for ticker in sorted(new_bullish)
+            ]
+            changes['changes'].append({
+                'type': 'new_bullish_opportunities',
+                'tickers': list(new_bullish),
+                'count': len(new_bullish),
+                'message': f"{len(new_bullish)} new bullish opportunity(s): {', '.join(sorted(new_bullish))}"
+            })
+
+        if lost_bullish:
+            changes['disappeared_opportunities'].extend([
+                {
+                    'ticker': ticker,
+                    'type': 'bullish',
+                    'message': f"{ticker} no longer bullish"
+                }
+                for ticker in sorted(lost_bullish)
+            ])
+            changes['changes'].append({
+                'type': 'lost_bullish_opportunities',
+                'tickers': list(lost_bullish),
+                'count': len(lost_bullish),
+                'message': f"{len(lost_bullish)} stock(s) lost bullish status: {', '.join(sorted(lost_bullish))}"
+            })
+
+        # 4. Track new/disappeared bearish warnings
+        prev_bearish_tickers = set(item.get('ticker') for item in previous.bearish_warnings)
+        curr_bearish_tickers = set(item.get('ticker') for item in self.bearish_warnings)
+
+        new_bearish = curr_bearish_tickers - prev_bearish_tickers
+        lost_bearish = prev_bearish_tickers - curr_bearish_tickers
+
+        if new_bearish:
+            changes['changes'].append({
+                'type': 'new_bearish_warnings',
+                'tickers': list(new_bearish),
+                'count': len(new_bearish),
+                'message': f"{len(new_bearish)} new bearish warning(s): {', '.join(sorted(new_bearish))}"
+            })
+
+        if lost_bearish:
+            changes['changes'].append({
+                'type': 'lost_bearish_warnings',
+                'tickers': list(lost_bearish),
+                'count': len(lost_bearish),
+                'message': f"{len(lost_bearish)} stock(s) improved from bearish: {', '.join(sorted(lost_bearish))}"
+            })
+
+        # 5. Track new risk alerts
+        prev_risk_tickers = set(alert.get('ticker') for alert in previous.risk_alerts if alert.get('ticker'))
+        curr_risk_tickers = set(alert.get('ticker') for alert in self.risk_alerts if alert.get('ticker'))
+
+        new_risks = curr_risk_tickers - prev_risk_tickers
+
+        if new_risks:
+            changes['new_risks'] = [
+                {
+                    'ticker': ticker,
+                    'type': next((alert.get('type', 'unknown') for alert in self.risk_alerts if alert.get('ticker') == ticker), 'unknown'),
+                    'message': f"{ticker} flagged for risk"
+                }
+                for ticker in sorted(new_risks)
+            ]
+            changes['changes'].append({
+                'type': 'new_risk_alerts',
+                'tickers': list(new_risks),
+                'count': len(new_risks),
+                'message': f"{len(new_risks)} new risk alert(s): {', '.join(sorted(new_risks))}"
+            })
+
+        # 6. Track conviction changes for individual stocks (HIGH → UNCERTAIN, etc.)
+        # Build conviction maps from debate zone
+        prev_conviction_map = {item.get('ticker'): item.get('bull_conviction', 'UNKNOWN') for item in previous.debate_zone}
+        curr_conviction_map = {item.get('ticker'): item.get('bull_conviction', 'UNKNOWN') for item in self.debate_zone}
+
+        for ticker in curr_conviction_map:
+            if ticker in prev_conviction_map:
+                prev_conviction = prev_conviction_map[ticker]
+                curr_conviction = curr_conviction_map[ticker]
+
+                if prev_conviction != curr_conviction:
+                    changes['conviction_changes'].append({
+                        'ticker': ticker,
+                        'previous': prev_conviction,
+                        'current': curr_conviction,
+                        'message': f"{ticker} conviction changed: {prev_conviction} → {curr_conviction}"
+                    })
+                    changes['changes'].append({
+                        'type': 'conviction_change',
+                        'ticker': ticker,
+                        'previous': prev_conviction,
+                        'current': curr_conviction,
+                        'message': f"{ticker} conviction: {prev_conviction} → {curr_conviction}"
+                    })
+
+        # 7. Compare confidence distributions
         prev_dist = previous.confidence_distribution
         curr_dist = self.confidence_distribution
         if prev_dist != curr_dist:
+            # Calculate meaningful changes
+            dist_changes = []
+            for level in ['HIGH', 'UNCERTAIN', 'LOW']:
+                prev_count = prev_dist.get(level, 0)
+                curr_count = curr_dist.get(level, 0)
+                if prev_count != curr_count:
+                    diff = curr_count - prev_count
+                    sign = '+' if diff > 0 else ''
+                    dist_changes.append(f"{level}: {sign}{diff}")
+
             changes['changes'].append({
                 'type': 'confidence_shift',
                 'previous': prev_dist,
                 'current': curr_dist,
-                'message': 'Confidence distribution shifted'
+                'message': f"Confidence distribution changed ({', '.join(dist_changes)})"
             })
 
-        changes['message'] = f"Tracking {len(changes['changes'])} changes from {previous.brief_date}"
+        # Generate summary message
+        change_count = len(changes['changes'])
+        if change_count == 0:
+            changes['message'] = f"No significant changes from {previous.brief_date}"
+        else:
+            changes['message'] = f"Detected {change_count} change(s) from {previous.brief_date}"
+
         self.changes_from_yesterday = changes
         return changes
 
