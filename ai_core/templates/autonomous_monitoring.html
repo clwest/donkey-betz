@@ -368,7 +368,7 @@
                     const funnel = d.funnel || {};
                     document.getElementById('funnel-views').textContent = funnel.view || 0;
                     document.getElementById('funnel-clicks').textContent = funnel.click || 0;
-                    document.getElementById('funnel-apps').textContent = funnel.application || 0;
+                    document.getElementById('funnel-apps').textContent = funnel.apply || 0;
                     document.getElementById('funnel-revenue').textContent = funnel.revenue || 0;
                     document.getElementById('revenue-24h').textContent = `$${(d.revenue_24h || 0).toLocaleString()}`;
                     document.getElementById('revenue-week').textContent = `Week: $${(d.revenue_week || 0).toLocaleString()}`;
