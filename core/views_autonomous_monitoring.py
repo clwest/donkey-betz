@@ -300,7 +300,8 @@ def api_roi_metrics(request):
         week_ago = now - timedelta(days=7)
 
         # Conversion funnel
-        funnel_stages = ['view', 'click', 'application', 'revenue']
+        # Note: Database uses 'apply' not 'application'
+        funnel_stages = ['view', 'click', 'apply', 'revenue']
         funnel_data = {}
 
         for stage in funnel_stages:
