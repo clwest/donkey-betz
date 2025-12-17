@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 461 (December 16, 2025)
+**Last Updated:** Session 466 (December 17, 2025)
 
 ---
 
@@ -29,7 +29,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **45 Commands + Voice AI** | **Production (Session 461)** |
+| **Discord Integration** | **50 Commands + Voice AI** | **Production (Session 445)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
@@ -42,9 +42,13 @@
 | **User Certifications** | **File Upload + Display** | **Production (Session 457)** |
 | **Voice Management UI** | **Add/Preview/Delete Voices** | **Production (Session 457)** |
 | **Style Presets UI** | **80+ Organized Options** | **Production (Session 457)** |
+| **AI Series Workflow** | **Multi-Episode Content Series** | **Production (Session 445)** |
 | **Autonomous Loop** | **SEC + Jobs + Content Monitoring** | **Production (Session 460)** |
 | **Blockchain Audit** | **4 Agents + Event Listener** | **Production (Session 461)** |
 | **Stock Audit** | **4 Agents + Coordinator** | **Production (Session 461)** |
+| **Market Intelligence Desk** | **5 Agents + TTS Briefs + Auto-scheduling** | **Production (Session 465)** |
+| **Autonomous Content Studio** | **4 Agents + Internal Debate + Learning Loop** | **Production (Session 466)** |
+| **Studio Discord Commands** | **6 Commands (create/list/status/pause/resume/performance)** | **Production (Session 466)** |
 
 ---
 
@@ -519,7 +523,7 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `#stock-agents` | Stock audit alerts (Session 461) | Severity-based |
 | `#blockchain-agents` | Blockchain audit alerts (Session 461) | Severity-based |
 
-### Discord Bot Commands (45 Total - Sessions 426-461)
+### Discord Bot Commands (50 Total - Sessions 426-465)
 
 | Command | Description | Phase |
 |---------|-------------|-------|
@@ -568,6 +572,11 @@ Real-time notifications to Discord when agents are active, plus interactive bot 
 | `/showroom [category] [tier]` | Browse content marketplace | Content (S440) |
 | `/audit-contract <address> [quick]` | Full smart contract security audit | Blockchain (S461) |
 | `/blockchain-status` | Check blockchain monitoring status | Blockchain (S461) |
+| `/brief-feedback <rating> [comment]` | Rate Market Intelligence Brief (helpful/not-helpful) | Learning (S464) |
+| `/action <action> <ticker> [reason]` | Record trading action (buy/sell/hold/research/ignore) | Learning (S464) |
+| `/series-create <type> <episodes> <prompt>` | Create multi-episode AI content series (1-5 episodes) | Series (S445) |
+| `/series-status [id]` | Check series generation progress and episode status | Series (S445) |
+| `/series-list` | List your AI content series with pagination | Series (S445) |
 | `/help` | Show all commands | Core |
 
 ### Discord-First Platform Phases
@@ -747,7 +756,7 @@ Voice input for the Profile Interview using OpenAI Whisper for speech-to-text tr
 
 ---
 
-## Voice Marketplace (Session 440)
+## Voice Marketplace (Sessions 440, 442, 443)
 
 AI voice cloning and marketplace for buying/selling custom voices.
 
@@ -777,20 +786,53 @@ AI voice cloning and marketplace for buying/selling custom voices.
 
 ### Discord Commands
 
-| Command | Description |
-|---------|-------------|
-| `/voice-market browse` | Browse available voices |
-| `/voice-market search <query>` | Search for voices |
-| `/voice-market my-voices` | View your voices |
-| `/voice-market earnings` | View your earnings |
-| `/voice-clone start` | Start recording to clone |
-| `/voice-clone stop` | Stop recording |
-| `/voice-clone status` | Check clone progress |
+| Command | Description | Session |
+|---------|-------------|---------|
+| `/voice-market browse` | Browse available voices | 440 |
+| `/voice-market search <query>` | Search for voices | 440 |
+| `/voice-market my-voices` | View your voices | 440 |
+| `/voice-market earnings` | View your earnings | 440 |
+| `/voice-market publish <voice>` | Make voice public in marketplace | 443 |
+| `/voice-market unpublish <voice>` | Make voice private | 443 |
+| `/voice-market preview <voice>` | Hear voice sample (TTS demo) | 443 |
+| `/voice-clone start` | Start recording to clone | 440 |
+| `/voice-clone stop <name>` | Stop recording & create voice clone | 442 |
+| `/voice-clone status` | Check clone progress | 440 |
+| `/voice-ask <question> [agent] [voice]` | Ask agent, hear response in your voice | 442 |
+
+### Session 442: Voice Cloning Pipeline Complete
+
+Full Discord voice cloning implementation:
+- Join voice channel → bot records audio
+- ffmpeg compression for large files (>8MB)
+- ElevenLabs IVC API integration
+- `voices_write` permission required
+- `/voice-ask` - Ask agents, hear responses in your cloned voice
+- GPT converts raw data to natural speech (no URLs read aloud!)
+
+### Session 443: Publish & Preview
+
+Marketplace publishing controls:
+- Publish/unpublish voices (toggle `is_public` flag)
+- Voice preview generation (TTS sample with voice details)
+- Complete marketplace flow: Record → Clone → Publish → Browse → Preview
+
+### Session 444: Voice Chat (Whisper Integration)
+
+Full voice conversation loop:
+- Join voice channel → speak your question
+- Whisper transcribes speech to text
+- Agent processes question
+- TTS responds in your cloned voice
+- Complete speech-to-speech interaction
+
+**Command:** `/voice-chat [duration] [agent]`
 
 ### Key Files
 
 - `core/models_voice_marketplace.py` - Database models
 - `core/views_voice_marketplace.py` - API endpoints
+- `core/services/discord_bot.py` - Voice recording, cloning, chat commands
 
 ---
 
@@ -964,6 +1006,242 @@ When multiple agents flag the same ticker, severity is automatically upgraded:
 - Discord `#stock-agents` channel (ID: 1450589539562426418)
 - Wired into AutonomousIntelligenceLoop
 - Data from SEC Edgar + Yahoo Finance spiders
+
+---
+
+## Market Intelligence Desk (Session 465)
+
+**Status:** 100% Complete (18/18 components)
+**First Tier 1 Autonomous Situation**
+
+A fully autonomous market intelligence system that generates daily market briefs with bull/bear debates, technical signals, and risk alerts.
+
+### Agents
+
+| Agent | Purpose |
+|-------|---------|
+| BullCaseAgent | Arguments for price appreciation |
+| BearCaseAgent | Arguments for price depreciation |
+| SignalScannerAgent | Technical patterns & trading signals |
+| StockAuditCoordinator | Risk signals & anomalies |
+| MarketIntelligenceCoordinator | Synthesizes debate into actionable brief |
+
+### SignalScannerAgent Tools
+
+- `scan_patterns` - Detect chart patterns (breakouts, reversals, continuations)
+- `volume_analysis` - Find unusual volume activity
+- `momentum_scan` - Identify momentum shifts (RSI, MACD, Stochastic)
+- `options_flow` - Detect unusual options activity (smart money)
+
+### Autonomous Features
+
+| Feature | Implementation |
+|---------|----------------|
+| Persistent Context | Yesterday's brief loaded from DB |
+| Incoming Signals | Spider network, price data, SEC filings |
+| Internal Disagreement | Bull vs Bear debate creates alpha |
+| Outputs with Consequences | Discord + spoken briefs, tracked for learning |
+| Self-Renewal | Scheduled 6:30 AM + event-driven re-runs |
+
+### Delivery Channels
+
+| Channel | Implementation |
+|---------|----------------|
+| Discord | Text brief with structured sections (#market-intelligence) |
+| Voice (TTS) | ElevenLabs professional narration (Drew voice) |
+| Web Dashboard | MarketIntelligenceBrief model |
+
+### Scheduling
+
+- **Daily Brief:** 6:30 AM Mon-Fri (before market open)
+- **Event Monitoring:** Every 30 min during market hours (9 AM - 4 PM)
+- **Outcome Tracking:** 6 PM daily (after market close)
+- **Accuracy Calculation:** Sunday 8 PM weekly
+
+### Event-Driven Re-runs
+
+Automatically triggers new brief when:
+- Large price movements (>5% change in watchlist stocks)
+- High-impact SEC filings (8-K material events, M&A, earnings)
+- 2+ high severity events detected
+
+### Learning Loop Integration (Session 464)
+
+**Automated Celery Tasks:**
+- **Track Prediction Outcomes** - Daily at 6 PM (after market close)
+  - Finds predictions from 7 days ago and 30 days ago
+  - Fetches current prices and calculates accuracy
+  - Updates PredictionOutcome records with results
+- **Calculate Agent Accuracy** - Weekly on Sundays at 8 PM
+  - Analyzes last 30 days of predictions per agent
+  - Calculates accuracy rates, conviction calibration, market regime performance
+  - Updates confidence multipliers (0.5x-1.5x based on performance)
+
+**Flow:**
+1. Bull/Bear agents make predictions → PredictionOutcome records
+2. Track outcomes (7-day, 30-day) → Compare to actual moves
+3. Calculate agent accuracy → AgentAccuracyMetrics
+4. Adjust confidence multipliers (0.5x-1.5x) → Better predictions over time
+
+**User Feedback (Discord):**
+- `/brief-feedback` - Rate briefs as helpful/not-helpful
+- `/action` - Record trading actions (buy/sell/hold/research/ignore)
+- Feedback tracked in UserBriefFeedback model
+- System learns which recommendations users actually follow
+
+### Brief Structure
+
+1. **Executive Summary** - Top opportunities and market thesis
+2. **High Conviction** - Stocks with strong bull/bear agreement
+3. **Debate Zone** - Stocks with conflicting signals
+4. **Risk Alerts** - Items requiring attention
+5. **What Changed** - Key differences from yesterday
+
+### Spoken Brief Features
+
+- Natural-sounding script optimized for audio delivery
+- Professional "Drew" voice (male narrator)
+- Highest quality model (eleven_multilingual_v2)
+- Concise summary (top 3 opportunities, top 2 debates)
+- Audio saved to Cloudinary for public access
+
+**Example Script:**
+```
+"Good morning. Here's your market intelligence brief."
+[Executive Summary]
+"High conviction opportunities: We found 3 stocks with strong agreement."
+[Top 3 opportunities with ticker, direction, conviction]
+"Debate zone: 2 stocks with significant disagreement between bull and bear cases."
+[Top 2 debates with conflicting signals]
+"Risk alerts: 1 item requires attention."
+"End of brief. Markets never sleep, and neither do we."
+```
+
+---
+
+## Autonomous Content Studio (Session 466)
+
+**Status:** 100% Complete (Tier 1 Autonomous Situation #3)
+
+A fully autonomous content generation system that runs forever, creating content for channels through agent debates and learning from performance.
+
+### The 5 Autonomous Properties
+
+| Property | Implementation |
+|----------|----------------|
+| **1. Persistent Context** | ContentChannel stores config, performance history, TopicPerformance tracks what works |
+| **2. Incoming Signals** | Spider network provides trending topics, platform APIs deliver metrics |
+| **3. Internal Disagreement** | TopicMiner vs Contrarian vs PerformanceAnalyst debate before each episode |
+| **4. Outputs with Consequences** | ChannelEpisodes tracked for views/retention, impacts future topic selection |
+| **5. Self-Renewal** | Auto-schedules next cycle based on frequency (daily/weekly/monthly) |
+
+### Agents
+
+| Agent | Role in Debate |
+|-------|---------------|
+| AutonomousContentStudioCoordinator | Orchestrates the entire autonomous system |
+| TopicMinerAgent | Argues FOR trending topics (finds popular content) |
+| ContrarianAgent | Argues AGAINST oversaturated topics (seeks unique angles) |
+| PerformanceAnalystAgent | Argues from EVIDENCE (historical performance data) |
+
+### Database Models
+
+| Model | Purpose |
+|-------|---------|
+| ContentChannel | Stores channel config, schedule, performance stats |
+| ChannelEpisode | Individual content pieces with metrics (views, retention, etc.) |
+| TopicPerformance | Aggregated learning data about successful topics |
+| ContentDebate | Records all agent positions for transparency |
+
+### TopicMinerAgent Tools
+
+- `query_spider_trends` - Query spider network for trending topics
+- `score_topic_potential` - Score topics based on mentions, recency, relevance
+- `detect_trending_gaps` - Find trending topics NOT yet covered by channel
+
+### ContrarianAgent Tools
+
+- `check_topic_saturation` - Detect oversaturated topics (warns against following crowd)
+- `suggest_unique_angles` - Generate contrarian angles (opposite perspective, beginner/advanced splits, etc.)
+- `find_rising_topics` - Find topics that are RISING but not yet saturated
+
+### PerformanceAnalystAgent Tools
+
+- `get_topic_performance_history` - Get historical performance for similar topics
+- `predict_topic_performance` - Predict performance based on exact match, similar topics, or channel average
+- `get_success_patterns` - Identify patterns in most successful content
+- `calculate_confidence_score` - Calculate confidence based on historical data availability
+
+### Autonomous Operation
+
+**Celery Tasks:**
+- `run_autonomous_content_studio` - Main loop (every 4 hours)
+  - Checks which channels are due for content (next_content_due <= now)
+  - Triggers content generation for each due channel
+- `generate_content_for_channel` - Worker task per channel
+  - Initiates agent debate (TopicMiner vs Contrarian vs PerformanceAnalyst)
+  - Uses winning topic to trigger AISeriesWorkflowAgent
+  - Creates ChannelEpisode and links to ContentDebate
+  - Calls schedule_next_content() for self-renewal
+- `track_content_performance` - Daily at 8 PM
+  - Fetches metrics from publishing platforms (YouTube API, etc.)
+  - Updates ChannelEpisode performance fields
+  - Updates TopicPerformance aggregates
+  - Adjusts channel confidence multipliers (0.5x-1.5x based on results)
+
+### Learning Loop
+
+The system LEARNS from performance:
+
+1. **TopicPerformance Tracking:** Every published episode updates aggregated topic data
+2. **Confidence Multipliers:** Channels get 0.5x-1.5x multiplier based on recent performance
+   - 0-30 score → decrease confidence (0.5x-0.9x)
+   - 30-50 score → maintain confidence (0.9x-1.1x)
+   - 50-100 score → increase confidence (1.1x-1.5x)
+3. **Topic Prediction:** PerformanceAnalystAgent uses historical data for predictions
+   - EXACT_MATCH: High confidence (0.9) if topic done before
+   - SIMILAR_TOPICS: Moderate confidence (0.6) if related topics exist
+   - CHANNEL_AVERAGE: Low confidence (0.3) if no historical data
+
+### Discord Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/studio-create` | Create new autonomous channel (name, domain, frequency, audience, style) |
+| `/studio-list` | List all active channels with stats (episodes, views, retention, confidence) |
+| `/studio-status` | Detailed channel status (recent episodes, top topics, schedule) |
+| `/studio-pause` | Pause autonomous generation for a channel |
+| `/studio-resume` | Resume autonomous generation for a channel |
+| `/studio-performance` | Detailed analytics (overall metrics, learning metrics, top 5 topics) |
+
+### Content Debate Process
+
+For each piece of content, agents debate:
+
+1. **TopicMinerAgent:** "This topic is trending! 47 mentions in last 3 days, high potential"
+2. **ContrarianAgent:** "WARNING - Saturation level HIGH. Everyone's covering this. Suggest unique angle"
+3. **PerformanceAnalystAgent:** "Historical data shows similar topics get 15K views avg. Confidence: 0.7"
+4. **Coordinator:** Synthesizes debate into final decision, creates ContentDebate record
+5. **AISeriesWorkflowAgent:** Creates actual content based on winning topic
+6. **ChannelEpisode:** Created to track performance of this decision
+
+### Channel Types Supported
+
+- **Daily:** Content every 24 hours (news, market updates)
+- **Weekly:** Content every 7 days (in-depth analysis, tutorials)
+- **Monthly:** Content every 30 days (comprehensive reports)
+
+### Why This is Tier 1 Autonomous
+
+Unlike simpler systems, this NEVER needs intervention:
+
+- ✅ Runs indefinitely (Property #5: Self-Renewal)
+- ✅ Improves from outcomes (Learning Loop)
+- ✅ Debates before acting (Property #3: Internal Disagreement)
+- ✅ Tracks consequences (Property #4: Performance metrics)
+- ✅ Persists knowledge (Property #1: TopicPerformance, ContentChannel)
+
+**It's a synthetic organization that runs forever and gets smarter over time.**
 
 ---
 

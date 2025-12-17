@@ -35,6 +35,9 @@ from ..models_content_pipeline import *
 # Import AI series models (Session 445)
 from ..models_ai_series import *
 
+# Import autonomous content studio models (Session 466)
+from ..models_autonomous_studio import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models

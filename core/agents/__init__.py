@@ -215,6 +215,16 @@ from core.agents.devops_agent import DevOpsAgent
 # Series Workflow Agent (Session 445)
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent, get_ai_series_workflow_agent
 
+# Autonomous Content Studio Coordinator (Session 466)
+from core.agents.autonomous_content_studio_coordinator import AutonomousContentStudioCoordinator
+
+# Content Debate Agents (Session 466)
+from core.agents.content import (
+    TopicMinerAgent,
+    ContrarianAgent,
+    PerformanceAnalystAgent,
+)
+
 # Blockchain Audit Agents (Session 461)
 from core.agents.blockchain import (
     SmartContractAuditorAgent,
@@ -311,6 +321,12 @@ __all__ = [
     # Series Workflow Agent (1) - Session 445
     'AISeriesWorkflowAgent',
     'get_ai_series_workflow_agent',
+
+    # Autonomous Content Studio (4) - Session 466
+    'AutonomousContentStudioCoordinator',
+    'TopicMinerAgent',
+    'ContrarianAgent',
+    'PerformanceAnalystAgent',
 
     # Blockchain Audit Agents (5) - Session 461
     'SmartContractAuditorAgent',

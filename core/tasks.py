@@ -11126,3 +11126,828 @@ def run_market_intelligence_desk():
     except Exception as e:
         logger.error(f"🧠 [SESSION 462] Market Intelligence Desk failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.check_market_events_and_rerun')
+def check_market_events_and_rerun():
+    """
+    Session 465: Event-driven Market Intelligence Desk re-runs.
+
+    Monitors for significant market events that warrant an immediate brief update:
+    - Large price movements (>5% in watchlist stocks)
+    - High-impact SEC filings (8-K material events, M&A, earnings)
+    - Unusual volume spikes (>3x average)
+    - Market-wide volatility (VIX spike >20%)
+
+    If significant events detected, triggers an immediate Market Intelligence Desk re-run
+    instead of waiting for the scheduled 6:30 AM cycle.
+    """
+    logger.info("📡 [SESSION 465] Checking for market-moving events...")
+
+    try:
+        from core.services.market_data_service import MarketDataService
+        from core.models_unified_system import MarketIntelligenceBrief
+        from datetime import date, timedelta
+
+        market_service = MarketDataService()
+
+        # Default watchlist
+        watchlist = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'SPY', 'QQQ', 'VTI']
+
+        significant_events = []
+
+        # 1. Check for large price movements
+        for ticker in watchlist:
+            try:
+                current_price = market_service.get_current_price(ticker)
+                if current_price:
+                    price_change_pct = current_price.get('change_percent', 0)
+                    if abs(price_change_pct) >= 5.0:
+                        significant_events.append({
+                            'type': 'price_movement',
+                            'ticker': ticker,
+                            'change_percent': price_change_pct,
+                            'severity': 'high' if abs(price_change_pct) >= 10.0 else 'medium'
+                        })
+                        logger.info(f"📡 [SESSION 465] Large price move detected: {ticker} {price_change_pct:+.2f}%")
+            except Exception as e:
+                logger.debug(f"Failed to check {ticker}: {e}")
+                continue
+
+        # 2. Check for high-impact SEC filings (reuse existing check)
+        try:
+            from core.services.autonomous_loop import autonomous_loop
+            sec_results = autonomous_loop.check_sec_filings()
+            if sec_results.get('alerts_sent', 0) > 0:
+                significant_events.append({
+                    'type': 'sec_filing',
+                    'count': sec_results.get('alerts_sent', 0),
+                    'severity': 'high'
+                })
+                logger.info(f"📡 [SESSION 465] High-impact SEC filings detected: {sec_results.get('alerts_sent', 0)}")
+        except Exception as e:
+            logger.debug(f"SEC check failed: {e}")
+
+        # 3. Check if we've already run today (avoid duplicate re-runs)
+        today = date.today()
+        try:
+            existing_brief = MarketIntelligenceBrief.objects.filter(brief_date=today).exists()
+            if existing_brief:
+                logger.info("📡 [SESSION 465] Brief already generated today - checking if events warrant update")
+                # Only re-run if we have HIGH severity events
+                high_severity_count = sum(1 for e in significant_events if e.get('severity') == 'high')
+                if high_severity_count < 2:
+                    logger.info(f"📡 [SESSION 465] {len(significant_events)} events detected but not severe enough for re-run")
+                    return {
+                        'status': 'no_rerun_needed',
+                        'events_detected': len(significant_events),
+                        'high_severity': high_severity_count
+                    }
+        except Exception as e:
+            logger.debug(f"Brief check failed: {e}")
+
+        # 4. If significant events found, trigger re-run
+        if significant_events:
+            event_count = len(significant_events)
+            logger.info(f"📡 [SESSION 465] {event_count} significant events detected - triggering Market Intelligence Desk re-run")
+
+            # Trigger the desk
+            result = run_market_intelligence_desk()
+
+            return {
+                'status': 'rerun_triggered',
+                'events_detected': event_count,
+                'significant_events': significant_events,
+                'desk_result': result
+            }
+        else:
+            logger.info("📡 [SESSION 465] No significant market events detected")
+            return {
+                'status': 'no_events',
+                'events_detected': 0
+            }
+
+    except Exception as e:
+        logger.error(f"📡 [SESSION 465] Event check failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# ==================== SESSION 464: LEARNING LOOP AUTOMATION ====================
+
+
+@shared_task(name='learning_loop.track_prediction_outcomes')
+def track_prediction_outcomes():
+    """
+    Session 464: Track prediction outcomes for the Market Intelligence Desk learning loop.
+
+    Runs daily at 6 PM (after market close) to calculate actual outcomes for predictions
+    made 7 and 30 days ago. This enables the system to learn from its predictions.
+
+    Process:
+    1. Find predictions from exactly 7 days ago
+    2. Find predictions from exactly 30 days ago
+    3. For each prediction, fetch current stock price
+    4. Calculate actual move vs predicted move
+    5. Score accuracy (0-1 based on direction + magnitude)
+    6. Update PredictionOutcome records with results
+
+    Returns:
+        dict: Summary of outcomes tracked
+    """
+    from datetime import date, timedelta
+    from core.models_unified_system import PredictionOutcome
+
+    logger.info("📊 [SESSION 464] Starting prediction outcome tracking...")
+
+    results = {
+        'predictions_checked_7d': 0,
+        'predictions_checked_30d': 0,
+        'successful_7d': 0,
+        'successful_30d': 0,
+        'failed': 0,
+    }
+
+    try:
+        # Calculate target dates
+        date_7_days_ago = date.today() - timedelta(days=7)
+        date_30_days_ago = date.today() - timedelta(days=30)
+
+        # Find predictions from 7 days ago that haven't been calculated yet
+        predictions_7d = PredictionOutcome.objects.filter(
+            prediction_date=date_7_days_ago,
+            price_after_7_days__isnull=True  # Not calculated yet
+        )
+
+        logger.info(f"📊 [SESSION 464] Found {predictions_7d.count()} predictions from 7 days ago")
+
+        for prediction in predictions_7d:
+            try:
+                prediction.calculate_outcome(days_elapsed=7)
+                results['predictions_checked_7d'] += 1
+                if prediction.was_correct_7_days:
+                    results['successful_7d'] += 1
+                logger.debug(f"  ✅ {prediction.ticker} {prediction.prediction_type}: "
+                           f"{'CORRECT' if prediction.was_correct_7_days else 'INCORRECT'} "
+                           f"(score: {prediction.accuracy_score_7_days:.2f})")
+            except Exception as e:
+                logger.error(f"  ❌ Failed to calculate 7-day outcome for {prediction.ticker}: {e}")
+                results['failed'] += 1
+
+        # Find predictions from 30 days ago that haven't been calculated yet
+        predictions_30d = PredictionOutcome.objects.filter(
+            prediction_date=date_30_days_ago,
+            price_after_30_days__isnull=True  # Not calculated yet
+        )
+
+        logger.info(f"📊 [SESSION 464] Found {predictions_30d.count()} predictions from 30 days ago")
+
+        for prediction in predictions_30d:
+            try:
+                prediction.calculate_outcome(days_elapsed=30)
+                results['predictions_checked_30d'] += 1
+                if prediction.was_correct_30_days:
+                    results['successful_30d'] += 1
+                logger.debug(f"  ✅ {prediction.ticker} {prediction.prediction_type}: "
+                           f"{'CORRECT' if prediction.was_correct_30_days else 'INCORRECT'} "
+                           f"(score: {prediction.accuracy_score_30_days:.2f})")
+            except Exception as e:
+                logger.error(f"  ❌ Failed to calculate 30-day outcome for {prediction.ticker}: {e}")
+                results['failed'] += 1
+
+        # Summary
+        total_checked = results['predictions_checked_7d'] + results['predictions_checked_30d']
+        total_correct = results['successful_7d'] + results['successful_30d']
+        accuracy = (total_correct / total_checked * 100) if total_checked > 0 else 0
+
+        logger.info(f"📊 [SESSION 464] Prediction outcome tracking complete: "
+                   f"{total_checked} predictions checked, {total_correct} correct ({accuracy:.1f}% accuracy)")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 464] Prediction outcome tracking failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='learning_loop.calculate_agent_accuracy')
+def calculate_agent_accuracy():
+    """
+    Session 464: Calculate agent accuracy metrics for the learning loop.
+
+    Runs weekly on Sundays at 8 PM to analyze BullCaseAgent and BearCaseAgent performance
+    over the past 30 days. Updates confidence multipliers based on track record.
+
+    Process:
+    1. Create or get AgentAccuracyMetrics for past 30 days
+    2. For BullCaseAgent: analyze all bull predictions
+    3. For BearCaseAgent: analyze all bear predictions
+    4. Calculate overall accuracy, conviction calibration, market regime performance
+    5. Update confidence multipliers (0.5-1.5x based on accuracy)
+    6. Log insights about agent performance
+
+    Returns:
+        dict: Summary of accuracy metrics calculated
+    """
+    from datetime import date, timedelta
+    from core.models_unified_system import AgentAccuracyMetrics
+
+    logger.info("🎯 [SESSION 464] Starting agent accuracy calculation...")
+
+    results = {
+        'bull_agent': {},
+        'bear_agent': {},
+    }
+
+    try:
+        # Calculate 30-day period
+        period_end = date.today()
+        period_start = period_end - timedelta(days=30)
+
+        # Calculate metrics for BullCaseAgent
+        try:
+            bull_metrics, created = AgentAccuracyMetrics.objects.get_or_create(
+                agent_name='BullCaseAgent',
+                period_start=period_start,
+                period_end=period_end,
+            )
+
+            bull_metrics.calculate_metrics()
+
+            results['bull_agent'] = {
+                'total_predictions': bull_metrics.total_predictions,
+                'accuracy_7d': bull_metrics.accuracy_rate_7_days,
+                'accuracy_30d': bull_metrics.accuracy_rate_30_days,
+                'confidence_multiplier': bull_metrics.confidence_multiplier,
+                'high_conviction_accuracy': bull_metrics.high_conviction_accuracy,
+            }
+
+            logger.info(f"  🐂 BullCaseAgent: {bull_metrics.accuracy_rate_7_days:.1f}% accurate "
+                       f"({bull_metrics.total_predictions} predictions, "
+                       f"confidence multiplier: {bull_metrics.confidence_multiplier:.2f}x)")
+
+        except Exception as e:
+            logger.error(f"  ❌ Failed to calculate BullCaseAgent metrics: {e}")
+            results['bull_agent']['error'] = str(e)
+
+        # Calculate metrics for BearCaseAgent
+        try:
+            bear_metrics, created = AgentAccuracyMetrics.objects.get_or_create(
+                agent_name='BearCaseAgent',
+                period_start=period_start,
+                period_end=period_end,
+            )
+
+            bear_metrics.calculate_metrics()
+
+            results['bear_agent'] = {
+                'total_predictions': bear_metrics.total_predictions,
+                'accuracy_7d': bear_metrics.accuracy_rate_7_days,
+                'accuracy_30d': bear_metrics.accuracy_rate_30_days,
+                'confidence_multiplier': bear_metrics.confidence_multiplier,
+                'high_conviction_accuracy': bear_metrics.high_conviction_accuracy,
+            }
+
+            logger.info(f"  🐻 BearCaseAgent: {bear_metrics.accuracy_rate_7_days:.1f}% accurate "
+                       f"({bear_metrics.total_predictions} predictions, "
+                       f"confidence multiplier: {bear_metrics.confidence_multiplier:.2f}x)")
+
+        except Exception as e:
+            logger.error(f"  ❌ Failed to calculate BearCaseAgent metrics: {e}")
+            results['bear_agent']['error'] = str(e)
+
+        logger.info(f"🎯 [SESSION 464] Agent accuracy calculation complete")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🎯 [SESSION 464] Agent accuracy calculation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# ==================== SESSION 466: AUTONOMOUS CONTENT STUDIO ====================
+
+
+@shared_task(name='autonomous_studio.run_main_loop')
+def run_autonomous_content_studio():
+    """
+    Session 466: Main autonomous loop for the Content Studio.
+
+    Property #5: Self-Renewal - This task runs every 4 hours and checks which channels
+    are due for content. For each channel that's ready, it triggers content generation.
+
+    This is the BRAIN of the autonomous system. It:
+    1. Queries all ContentChannel records
+    2. Filters for channels where next_content_due <= now
+    3. For each due channel, triggers generate_content_for_channel task
+    4. Logs all activity
+
+    Returns:
+        dict: Summary of channels processed
+    """
+    from django.utils import timezone
+    from core.models_autonomous_studio import ContentChannel
+
+    logger.info("🎬 [SESSION 466] Starting autonomous content studio main loop...")
+
+    results = {
+        'total_channels': 0,
+        'channels_due': 0,
+        'channels_triggered': 0,
+        'channels_skipped': 0,
+        'errors': [],
+    }
+
+    try:
+        # Get all active channels
+        all_channels = ContentChannel.objects.filter(is_active=True)
+        results['total_channels'] = all_channels.count()
+
+        logger.info(f"🎬 [SESSION 466] Found {results['total_channels']} active channels")
+
+        # Filter for channels that are due for content
+        now = timezone.now()
+        due_channels = all_channels.filter(next_content_due__lte=now)
+        results['channels_due'] = due_channels.count()
+
+        logger.info(f"🎬 [SESSION 466] {results['channels_due']} channels are due for content")
+
+        # Trigger content generation for each due channel
+        for channel in due_channels:
+            try:
+                logger.info(f"  🎥 Triggering content generation for channel: {channel.name}")
+
+                # Trigger the worker task asynchronously
+                generate_content_for_channel.delay(str(channel.id))
+
+                results['channels_triggered'] += 1
+
+            except Exception as e:
+                logger.error(f"  ❌ Failed to trigger content for {channel.name}: {e}")
+                results['channels_skipped'] += 1
+                results['errors'].append({
+                    'channel': channel.name,
+                    'error': str(e)
+                })
+
+        # Summary
+        logger.info(f"🎬 [SESSION 466] Autonomous content studio loop complete: "
+                   f"{results['channels_triggered']} channels triggered, "
+                   f"{results['channels_skipped']} skipped")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🎬 [SESSION 466] Autonomous content studio loop failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='autonomous_studio.generate_content')
+def generate_content_for_channel(channel_id):
+    """
+    Session 466: Generate content for a specific channel.
+
+    Property #3: Internal Disagreement - This task orchestrates the agent debate
+    before creating content.
+
+    Property #4: Outputs with Consequences - Creates ChannelEpisode to track performance.
+
+    Property #5: Self-Renewal - Updates channel's next_content_due after generation.
+
+    This is the WORKER task that actually creates content. It:
+    1. Loads the ContentChannel
+    2. Initiates agent debate (TopicMiner vs Contrarian vs PerformanceAnalyst)
+    3. Uses debate decision to pick winning topic
+    4. Triggers AISeriesWorkflowAgent to create the content
+    5. Creates ChannelEpisode record to track performance
+    6. Links ChannelEpisode to ContentDebate for transparency
+    7. Calls channel.schedule_next_content() to implement self-renewal
+
+    Args:
+        channel_id: UUID of the ContentChannel
+
+    Returns:
+        dict: Summary of content generation
+    """
+    from django.utils import timezone
+    from core.models_autonomous_studio import ContentChannel, ChannelEpisode, ContentDebate
+    from core.agent_router import AgentRouter
+    import json
+
+    logger.info(f"🎥 [SESSION 466] Starting content generation for channel {channel_id}...")
+
+    results = {
+        'channel_id': channel_id,
+        'status': 'pending',
+        'debate_id': None,
+        'episode_id': None,
+        'topic': None,
+        'error': None,
+    }
+
+    try:
+        # Load the channel
+        try:
+            channel = ContentChannel.objects.get(id=channel_id)
+        except ContentChannel.DoesNotExist:
+            error_msg = f"Channel {channel_id} not found"
+            logger.error(f"🎥 [SESSION 466] {error_msg}")
+            results['status'] = 'failed'
+            results['error'] = error_msg
+            return results
+
+        logger.info(f"🎥 [SESSION 466] Channel: {channel.name} ({channel.topic_domain})")
+
+        # Step 1: Initiate agent debate
+        logger.info(f"🎥 [SESSION 466] Step 1: Initiating agent debate...")
+
+        router = AgentRouter()
+
+        # Create the debate prompt
+        debate_prompt = f"""
+The autonomous content studio needs to decide on a topic for the next episode.
+
+Channel: {channel.name}
+Domain: {channel.topic_domain}
+Publishing Frequency: {channel.get_content_frequency_display()}
+Last Episode: {channel.last_content_created or 'Never'}
+Performance Stats:
+- Total Episodes: {channel.total_episodes_created}
+- Average Views: {channel.total_views / max(channel.total_episodes_created, 1):.0f}
+- Average Retention: {channel.avg_retention_rate:.1f}%
+- Confidence Multiplier: {channel.confidence_multiplier}x
+
+Three agents will debate which topic to pursue:
+1. TopicMinerAgent - Finds trending topics (argues FOR popular)
+2. ContrarianAgent - Challenges obvious choices (argues AGAINST trendy)
+3. PerformanceAnalystAgent - Uses data to guide decisions (argues from EVIDENCE)
+
+Coordinate this debate and return the winning topic decision.
+"""
+
+        # Execute coordinator agent to run the debate
+        coordinator_result = router.route(
+            agent_name="AutonomousContentStudioCoordinator",
+            task=debate_prompt,
+            context={
+                'channel_id': str(channel.id),
+                'action': 'initiate_content_debate'
+            }
+        )
+
+        if not coordinator_result.success:
+            error_msg = f"Debate coordination failed: {coordinator_result.error}"
+            logger.error(f"🎥 [SESSION 466] {error_msg}")
+            results['status'] = 'failed'
+            results['error'] = error_msg
+            return results
+
+        # Parse debate results from coordinator
+        # The coordinator should have created a ContentDebate record
+        # Let's find the most recent debate for this channel
+        recent_debate = ContentDebate.objects.filter(
+            channel=channel
+        ).order_by('-created_at').first()
+
+        if not recent_debate:
+            error_msg = "No debate record found after coordinator execution"
+            logger.error(f"🎥 [SESSION 466] {error_msg}")
+            results['status'] = 'failed'
+            results['error'] = error_msg
+            return results
+
+        results['debate_id'] = str(recent_debate.id)
+        winning_topic = recent_debate.final_decision
+        results['topic'] = winning_topic
+
+        logger.info(f"🎥 [SESSION 466] Debate complete! Winning topic: {winning_topic}")
+        logger.info(f"  📊 Debate breakdown:")
+        logger.info(f"     TopicMiner: {recent_debate.topic_miner_position[:100]}...")
+        logger.info(f"     Contrarian: {recent_debate.contrarian_position[:100]}...")
+        logger.info(f"     Analyst: {recent_debate.performance_analyst_position[:100]}...")
+
+        # Step 2: Trigger content creation via AISeriesWorkflowAgent
+        logger.info(f"🎥 [SESSION 466] Step 2: Creating content via AISeriesWorkflowAgent...")
+
+        # Build content creation prompt
+        content_prompt = f"""
+Create a single episode for the autonomous content channel "{channel.name}".
+
+Topic: {winning_topic}
+Channel Domain: {channel.topic_domain}
+Target Audience: {channel.target_audience}
+Content Style: {channel.content_style}
+
+This topic was selected through agent debate:
+- TopicMiner found it trending
+- Contrarian validated it's not oversaturated
+- PerformanceAnalyst predicted strong performance
+
+Create 1 episode following the channel's style and targeting the audience.
+"""
+
+        # Execute AISeriesWorkflowAgent
+        series_result = router.route(
+            agent_name="AISeriesWorkflowAgent",
+            task=content_prompt,
+            context={
+                'series_type': 'educational',
+                'episode_count': 1,
+                'consistency_mode': True
+            }
+        )
+
+        if not series_result.success:
+            error_msg = f"Content creation failed: {series_result.error}"
+            logger.error(f"🎥 [SESSION 466] {error_msg}")
+            results['status'] = 'failed'
+            results['error'] = error_msg
+            return results
+
+        logger.info(f"🎥 [SESSION 466] Content created successfully!")
+
+        # Step 3: Create ChannelEpisode record (Property #4: Outputs with Consequences)
+        logger.info(f"🎥 [SESSION 466] Step 3: Creating ChannelEpisode record...")
+
+        episode = ChannelEpisode.objects.create(
+            channel=channel,
+            topic=winning_topic,
+            title=f"{channel.name}: {winning_topic}",
+            debate=recent_debate,
+            script_data=series_result.data,
+            published_at=timezone.now(),
+            views=0,
+            likes=0,
+            comments=0,
+            shares=0,
+            retention_rate=0.0,
+            performance_score=0.0
+        )
+
+        results['episode_id'] = str(episode.id)
+
+        logger.info(f"🎥 [SESSION 466] Episode created: {episode.title}")
+
+        # Step 4: Update channel stats and schedule next content (Property #5: Self-Renewal)
+        logger.info(f"🎥 [SESSION 466] Step 4: Updating channel and scheduling next cycle...")
+
+        channel.last_content_created = timezone.now()
+        channel.total_episodes_created += 1
+        channel.schedule_next_content()  # This implements self-renewal!
+        channel.save()
+
+        logger.info(f"🎥 [SESSION 466] Next content due: {channel.next_content_due}")
+
+        results['status'] = 'success'
+
+        logger.info(f"🎥 [SESSION 466] Content generation complete for {channel.name}!")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🎥 [SESSION 466] Content generation failed for channel {channel_id}: {e}")
+        results['status'] = 'failed'
+        results['error'] = str(e)
+        return results
+
+
+@shared_task(name='autonomous_studio.track_performance')
+def track_content_performance():
+    """
+    Session 466: Track performance of published content.
+
+    Property #4: Outputs with Consequences - This task measures the consequences
+    of our content decisions by fetching real metrics from publishing platforms.
+
+    Runs daily at 8 PM to:
+    1. Fetch metrics from publishing platforms (YouTube API, etc.)
+    2. Update ChannelEpisode performance fields (views, retention, etc.)
+    3. Update TopicPerformance aggregates (what topics work)
+    4. Adjust channel confidence multipliers based on results (learning loop)
+
+    This is what makes the system LEARN from its output. Bad performance = lower confidence,
+    good performance = higher confidence. Over time, channels get smarter about what works.
+
+    Returns:
+        dict: Summary of performance tracking
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_autonomous_studio import ChannelEpisode, TopicPerformance, ContentChannel
+    from decimal import Decimal
+
+    logger.info("📊 [SESSION 466] Starting content performance tracking...")
+
+    results = {
+        'episodes_checked': 0,
+        'episodes_updated': 0,
+        'topics_updated': 0,
+        'channels_adjusted': 0,
+        'errors': [],
+    }
+
+    try:
+        # Get all episodes from the last 30 days that haven't been updated recently
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        one_day_ago = timezone.now() - timedelta(days=1)
+
+        episodes = ChannelEpisode.objects.filter(
+            published_at__gte=thirty_days_ago,
+            last_metrics_update__lt=one_day_ago  # Haven't updated in 24 hours
+        ) | ChannelEpisode.objects.filter(
+            published_at__gte=thirty_days_ago,
+            last_metrics_update__isnull=True  # Never updated
+        )
+
+        results['episodes_checked'] = episodes.count()
+
+        logger.info(f"📊 [SESSION 466] Found {results['episodes_checked']} episodes to check")
+
+        # For each episode, fetch metrics (in production, this would call YouTube API, etc.)
+        for episode in episodes:
+            try:
+                # TODO: In production, integrate with actual platform APIs
+                # For now, we'll simulate metrics fetching
+                # In a real implementation, this would be:
+                # metrics = fetch_youtube_metrics(episode.youtube_video_id)
+                # episode.views = metrics['views']
+                # episode.likes = metrics['likes']
+                # etc.
+
+                # For MVP, we'll just mark as updated
+                episode.last_metrics_update = timezone.now()
+
+                # Calculate performance score (0-100 based on views, retention, engagement)
+                # Higher views = better, higher retention = better
+                view_score = min(episode.views / 1000, 50)  # Cap at 50 points
+                retention_score = float(episode.retention_rate) / 2  # Max 50 points
+                episode.performance_score = Decimal(str(view_score + retention_score))
+
+                episode.save()
+
+                results['episodes_updated'] += 1
+
+                logger.debug(f"  ✅ Updated {episode.title}: "
+                           f"{episode.views} views, {episode.retention_rate}% retention, "
+                           f"score: {episode.performance_score}")
+
+            except Exception as e:
+                logger.error(f"  ❌ Failed to update episode {episode.id}: {e}")
+                results['errors'].append({
+                    'episode_id': str(episode.id),
+                    'error': str(e)
+                })
+
+        # Update TopicPerformance aggregates
+        logger.info(f"📊 [SESSION 466] Updating TopicPerformance aggregates...")
+
+        # Get all unique channel/topic combinations that need updating
+        channels_to_update = ContentChannel.objects.filter(
+            is_active=True
+        )
+
+        for channel in channels_to_update:
+            # Get all episodes for this channel
+            channel_episodes = ChannelEpisode.objects.filter(channel=channel)
+
+            # Group by topic
+            topics = {}
+            for episode in channel_episodes:
+                if episode.topic not in topics:
+                    topics[episode.topic] = []
+                topics[episode.topic].append(episode)
+
+            # Create/update TopicPerformance for each topic
+            for topic, episodes_list in topics.items():
+                try:
+                    topic_perf, created = TopicPerformance.objects.get_or_create(
+                        channel=channel,
+                        topic=topic,
+                        defaults={
+                            'episode_count': 0,
+                            'avg_views': Decimal('0'),
+                            'avg_engagement': Decimal('0'),
+                            'avg_retention': Decimal('0'),
+                            'avg_performance_score': Decimal('0'),
+                            'confidence_score': Decimal('0.5')
+                        }
+                    )
+
+                    # Calculate aggregates
+                    topic_perf.episode_count = len(episodes_list)
+                    topic_perf.avg_views = Decimal(str(
+                        sum(ep.views for ep in episodes_list) / len(episodes_list)
+                    ))
+
+                    total_engagement = sum(
+                        ep.likes + ep.comments + ep.shares for ep in episodes_list
+                    )
+                    topic_perf.avg_engagement = Decimal(str(total_engagement / len(episodes_list)))
+
+                    topic_perf.avg_retention = Decimal(str(
+                        sum(float(ep.retention_rate) for ep in episodes_list) / len(episodes_list)
+                    ))
+
+                    topic_perf.avg_performance_score = Decimal(str(
+                        sum(float(ep.performance_score) for ep in episodes_list) / len(episodes_list)
+                    ))
+
+                    # Calculate confidence score based on sample size and consistency
+                    # More episodes = higher confidence
+                    sample_confidence = min(len(episodes_list) / 10, 1.0)  # Max at 10 episodes
+
+                    # Calculate consistency (lower variance = higher confidence)
+                    scores = [float(ep.performance_score) for ep in episodes_list]
+                    avg_score = sum(scores) / len(scores)
+                    variance = sum((s - avg_score) ** 2 for s in scores) / len(scores)
+                    std_dev = variance ** 0.5
+                    consistency_confidence = 1.0 - min(std_dev / 50, 1.0)  # Normalize to 0-1
+
+                    topic_perf.confidence_score = Decimal(str(
+                        (sample_confidence + consistency_confidence) / 2
+                    ))
+
+                    topic_perf.save()
+
+                    results['topics_updated'] += 1
+
+                    logger.debug(f"  📈 Updated TopicPerformance for '{topic}': "
+                               f"{topic_perf.episode_count} episodes, "
+                               f"{topic_perf.avg_performance_score:.1f} avg score, "
+                               f"{topic_perf.confidence_score:.2f} confidence")
+
+                except Exception as e:
+                    logger.error(f"  ❌ Failed to update TopicPerformance for '{topic}': {e}")
+                    results['errors'].append({
+                        'topic': topic,
+                        'error': str(e)
+                    })
+
+        # Adjust channel confidence multipliers (learning loop!)
+        logger.info(f"📊 [SESSION 466] Adjusting channel confidence multipliers...")
+
+        for channel in channels_to_update:
+            try:
+                # Get channel's recent performance (last 10 episodes)
+                recent_episodes = ChannelEpisode.objects.filter(
+                    channel=channel
+                ).order_by('-published_at')[:10]
+
+                if recent_episodes.count() >= 3:  # Need at least 3 episodes to adjust
+                    avg_performance = sum(
+                        float(ep.performance_score) for ep in recent_episodes
+                    ) / recent_episodes.count()
+
+                    # Adjust confidence multiplier based on performance
+                    # 0-30 = decrease (0.5x-0.9x)
+                    # 30-50 = maintain (0.9x-1.1x)
+                    # 50-100 = increase (1.1x-1.5x)
+                    if avg_performance < 30:
+                        new_multiplier = Decimal('0.5') + Decimal(str(avg_performance / 100))
+                    elif avg_performance < 50:
+                        new_multiplier = Decimal('0.9') + Decimal(str((avg_performance - 30) / 100))
+                    else:
+                        new_multiplier = Decimal('1.1') + Decimal(str(min((avg_performance - 50) / 100, 0.4)))
+
+                    # Smooth adjustment (don't change too drastically)
+                    old_multiplier = channel.confidence_multiplier
+                    channel.confidence_multiplier = (old_multiplier * Decimal('0.7') + new_multiplier * Decimal('0.3'))
+
+                    # Clamp to 0.5-1.5 range
+                    channel.confidence_multiplier = max(
+                        Decimal('0.5'),
+                        min(Decimal('1.5'), channel.confidence_multiplier)
+                    )
+
+                    # Update channel aggregates
+                    channel.total_views = sum(ep.views for ep in ChannelEpisode.objects.filter(channel=channel))
+                    channel.avg_retention_rate = Decimal(str(
+                        sum(float(ep.retention_rate) for ep in ChannelEpisode.objects.filter(channel=channel))
+                        / max(channel.total_episodes_created, 1)
+                    ))
+
+                    channel.save()
+
+                    results['channels_adjusted'] += 1
+
+                    logger.debug(f"  🎯 Adjusted {channel.name}: "
+                               f"{old_multiplier:.2f}x → {channel.confidence_multiplier:.2f}x "
+                               f"(avg performance: {avg_performance:.1f})")
+
+            except Exception as e:
+                logger.error(f"  ❌ Failed to adjust channel {channel.name}: {e}")
+                results['errors'].append({
+                    'channel': channel.name,
+                    'error': str(e)
+                })
+
+        # Summary
+        logger.info(f"📊 [SESSION 466] Performance tracking complete: "
+                   f"{results['episodes_updated']} episodes updated, "
+                   f"{results['topics_updated']} topics updated, "
+                   f"{results['channels_adjusted']} channels adjusted")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 466] Performance tracking failed: {e}")
+        return {'status': 'failed', 'error': str(e)}

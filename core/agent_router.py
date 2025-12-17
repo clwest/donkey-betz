@@ -151,6 +151,10 @@ from core.agents.blockchain import BlockchainAuditCoordinator
 # Session 445: Series Workflow Agent
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 
+# Session 466: Autonomous Content Studio
+from core.agents.autonomous_content_studio_coordinator import AutonomousContentStudioCoordinator
+from core.agents.content import TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
+
 logger = logging.getLogger(__name__)
 
 
@@ -237,6 +241,12 @@ class AgentRouter:
 
         # Series Workflow Agent (Session 445)
         "AISeriesWorkflowAgent": AISeriesWorkflowAgent,
+
+        # Autonomous Content Studio (Session 466)
+        "AutonomousContentStudioCoordinator": AutonomousContentStudioCoordinator,
+        "TopicMinerAgent": TopicMinerAgent,
+        "ContrarianAgent": ContrarianAgent,
+        "PerformanceAnalystAgent": PerformanceAnalystAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
