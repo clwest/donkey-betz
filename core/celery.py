@@ -595,6 +595,14 @@ app.conf.beat_schedule = {
             'expires': 1800,  # 30 minutes
         }
     },
+    # Session 462: Market Intelligence Desk - daily morning brief (Tier 1 Autonomous Situation)
+    'market-intelligence-desk': {
+        'task': 'core.tasks.run_market_intelligence_desk',
+        'schedule': crontab(minute=0, hour=8, day_of_week='1-5'),  # 8 AM daily, Mon-Fri (before market open)
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Spider-specific task routing configuration

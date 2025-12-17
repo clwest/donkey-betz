@@ -11078,3 +11078,51 @@ def run_stock_audit_cycle():
     except Exception as e:
         logger.error(f"📈 [SESSION 461] Stock audit failed: {e}")
         return {'status': 'failed', 'error': str(e)}
+
+
+@shared_task(name='core.tasks.run_market_intelligence_desk')
+def run_market_intelligence_desk():
+    """
+    Session 462: Market Intelligence Desk - First Tier 1 Autonomous Situation.
+
+    Runs the complete autonomous situation with all 5 properties:
+    1. Persistent context - Tracks market state, previous briefs
+    2. Incoming signals - Spiders, price data, news
+    3. Internal disagreement - Bull vs Bear debate
+    4. Outputs with consequences - Daily brief to Discord
+    5. Self-renewal - Schedules next cycle, learns
+
+    The situation behaves like a buy-side research desk running 24/7.
+
+    Orchestrates:
+    - BullCaseAgent: Arguments for price appreciation
+    - BearCaseAgent: Arguments for price depreciation
+    - StockAuditCoordinator: Risk signals and anomalies
+    - MarketIntelligenceCoordinator: Synthesizes debate into brief
+
+    Delivers:
+    - Discord notification with brief
+    - Executive summary with bull/bear debate
+    - What changed since yesterday
+    - Confidence scores based on agreement/disagreement
+    """
+    logger.info("🧠 [SESSION 462] Starting Market Intelligence Desk...")
+
+    try:
+        from core.agents.stocks import run_market_intelligence_desk as run_desk
+
+        result = run_desk()
+
+        if result.get('data', {}).get('brief'):
+            brief = result['data']['brief']
+            debate_count = brief.get('debate_zone_count', 0)
+            total_stocks = brief.get('total_stocks_analyzed', 0)
+            logger.info(f"🧠 [SESSION 462] Market Intelligence Desk complete: {total_stocks} stocks analyzed, {debate_count} in debate zone")
+        else:
+            logger.info(f"🧠 [SESSION 462] Market Intelligence Desk complete: {result}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"🧠 [SESSION 462] Market Intelligence Desk failed: {e}")
+        return {'status': 'failed', 'error': str(e)}

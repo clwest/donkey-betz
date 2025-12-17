@@ -1298,6 +1298,95 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
 
+    def send_market_intelligence_brief(self, brief: Dict[str, Any]) -> bool:
+        """
+        Send the daily Market Intelligence Brief to Discord (Session 462).
+
+        This is the output of the first Tier 1 Autonomous Situation.
+        The brief contains bull vs bear debate synthesis with internal disagreement.
+
+        Args:
+            brief: Market intelligence brief dict with executive_summary, debate_zone, etc.
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Extract key metrics
+        debate_count = brief.get('debate_zone_count', 0)
+        bull_count = len(brief.get('bullish_opportunities', []))
+        bear_count = len(brief.get('bearish_warnings', []))
+        total_stocks = brief.get('total_stocks_analyzed', 0)
+
+        # Determine color based on debate intensity
+        if debate_count > 3:
+            color = 0xFF00FF  # Magenta - High disagreement (interesting!)
+            emoji = "⚔️"
+        elif bull_count > bear_count:
+            color = 0x2ECC71  # Green - Bullish tilt
+            emoji = "📈"
+        elif bear_count > bull_count:
+            color = 0xFF0000  # Red - Bearish tilt
+            emoji = "📉"
+        else:
+            color = 0xFFD700  # Gold - Balanced
+            emoji = "⚖️"
+
+        # Build debate zone summary
+        debate_summary = "No major disagreements"
+        if debate_count > 0:
+            debate_tickers = [d.get('ticker', 'N/A') for d in brief.get('debate_zone', [])[:3]]
+            debate_summary = f"{', '.join(debate_tickers)}"
+            if debate_count > 3:
+                debate_summary += f" (+{debate_count - 3} more)"
+
+        # Build bullish/bearish summaries
+        bull_summary = "None"
+        if bull_count > 0:
+            bull_tickers = [d.get('ticker', 'N/A') for d in brief.get('bullish_opportunities', [])[:3]]
+            bull_summary = ", ".join(bull_tickers)
+            if bull_count > 3:
+                bull_summary += f" (+{bull_count - 3} more)"
+
+        bear_summary = "None"
+        if bear_count > 0:
+            bear_tickers = [d.get('ticker', 'N/A') for d in brief.get('bearish_warnings', [])[:3]]
+            bear_summary = ", ".join(bear_tickers)
+            if bear_count > 3:
+                bear_summary += f" (+{bear_count - 3} more)"
+
+        # Risk alerts
+        risk_count = len(brief.get('risk_alerts', []))
+        risk_summary = f"{risk_count} alerts" if risk_count > 0 else "None"
+
+        embed = {
+            "title": f"{emoji} Daily Market Intelligence Brief",
+            "description": brief.get('executive_summary', 'Market analysis complete'),
+            "color": color,
+            "fields": [
+                {"name": "⚔️ Debate Zone", "value": f"{debate_count} stocks - {debate_summary}", "inline": False},
+                {"name": "📈 Bullish", "value": f"{bull_count} opportunities - {bull_summary}", "inline": True},
+                {"name": "📉 Bearish", "value": f"{bear_count} warnings - {bear_summary}", "inline": True},
+                {"name": "🚨 Risk Alerts", "value": risk_summary, "inline": True},
+                {"name": "📊 Stocks Analyzed", "value": str(total_stocks), "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Market Intelligence Desk | Autonomous Situation #1"
+            },
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+
+        # Add "What Changed" if available
+        changes = brief.get('changes_from_yesterday', {})
+        if changes and not changes.get('is_first_run'):
+            changes_msg = changes.get('message', 'Tracking changes')
+            embed['fields'].insert(0, {
+                "name": "📝 What Changed",
+                "value": changes_msg[:1024],  # Discord field limit
+                "inline": False
+            })
+
+        return self._send_message(self.CHANNEL_STOCK_ALERTS, "", embed=embed)
+
     # ==================== Session 461: Blockchain Audit Methods ====================
 
     def send_blockchain_alert(self, alert: dict) -> bool:
