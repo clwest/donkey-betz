@@ -2831,43 +2831,90 @@ def process_etsy_distribution(distribution):
 
 
 def process_gumroad_distribution(distribution):
-    """Process distribution to Gumroad."""
+    """
+    Process distribution to Gumroad with actual file upload.
+
+    Uses GumroadPublishingService to:
+    1. Download image from ImageHistory (data URI, local path, or URL)
+    2. Upload image file to Gumroad via multipart API
+    3. Create product listing with proper metadata
+
+    Updated: Session 487 - Added actual file upload (Golden Egg strategy)
+    """
     account = distribution.platform_account
 
-    if not account.access_token:
+    if not account or not account.access_token:
         return {'success': False, 'error': 'No Gumroad access token. Please reconnect.'}
+
+    # Check if we have an image to upload
+    image = distribution.image_history
+    if not image:
+        return {'success': False, 'error': 'No image associated with this distribution'}
 
     try:
         import requests as http_requests
+        from core.services.gumroad_publishing import GumroadPublishingService
+
+        # Initialize service (uses distribution's account)
+        service = GumroadPublishingService(distribution.user)
+
+        # Download the image file
+        image_bytes, filename, mime_type = service.download_image(image)
+
+        # Build description
+        description = distribution.description
+        if not description:
+            prompt_preview = (image.prompt[:200] + '...') if len(image.prompt) > 200 else image.prompt
+            description = f"AI-generated artwork.\n\nPrompt: {prompt_preview}"
+            if image.model_used:
+                description += f"\n\nGenerated with: {image.model_used}"
+
+        # Prepare multipart upload with actual file
+        files = {
+            'preview': (filename, image_bytes, mime_type),
+            'file': (filename, image_bytes, mime_type),
+        }
 
         product_data = {
             'access_token': account.access_token,
             'name': distribution.title,
-            'description': distribution.description or distribution.title,
+            'description': description,
             'price': int(float(distribution.price or 9.99) * 100),  # Cents
         }
 
+        # Upload to Gumroad with file
         response = http_requests.post(
             'https://api.gumroad.com/v2/products',
-            data=product_data
+            data=product_data,
+            files=files,
+            timeout=60
         )
 
         if response.status_code in [200, 201]:
             result = response.json()
-            product = result.get('product', {})
-            return {
-                'success': True,
-                'status': 'live' if product.get('published') else 'draft',
-                'listing_id': product.get('id', ''),
-                'url': product.get('short_url', ''),
-            }
+            if result.get('success'):
+                product = result.get('product', {})
+                return {
+                    'success': True,
+                    'status': 'live' if product.get('published') else 'draft',
+                    'listing_id': product.get('id', ''),
+                    'url': product.get('short_url', ''),
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Gumroad API error: {result.get("message", "Unknown error")}'
+                }
         else:
             return {
                 'success': False,
-                'error': f'Gumroad API error: {response.status_code}'
+                'error': f'Gumroad API error: {response.status_code} - {response.text[:200]}'
             }
 
+    except FileNotFoundError as e:
+        return {'success': False, 'error': f'Image file not found: {e}'}
     except Exception as e:
+        logger.error(f"Gumroad distribution failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
 
 
