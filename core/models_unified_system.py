@@ -13874,16 +13874,17 @@ class ContentProvenance(models.Model):
         help_text="Type of content this provenance record covers"
     )
 
-    # Foreign keys to actual content (nullable - only one will be set)
-    image_history_id = models.PositiveBigIntegerField(
+    # Session 492: Changed from PositiveBigIntegerField to UUIDField
+    # because ImageHistory/VideoHistory/AudioHistory use UUID primary keys
+    image_history_id = models.UUIDField(
         null=True, blank=True,
         help_text="Link to ImageHistory if content_type is image"
     )
-    video_history_id = models.PositiveBigIntegerField(
+    video_history_id = models.UUIDField(
         null=True, blank=True,
         help_text="Link to VideoHistory if content_type is video"
     )
-    audio_history_id = models.PositiveBigIntegerField(
+    audio_history_id = models.UUIDField(
         null=True, blank=True,
         help_text="Link to AudioHistory if content_type is audio"
     )

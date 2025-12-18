@@ -11,8 +11,11 @@ from django.utils import timezone
 
 from .models import (
     Document, DocumentEmbedding, KnowledgeBase, ContentGeneration,
-    ContentTemplate, WorkflowExecution, ContentAnalytics
+    ContentTemplate, WorkflowExecution, ContentAnalytics, ImageHistory
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Document)
@@ -184,16 +187,16 @@ def set_document_processing_timestamp(sender, instance, **kwargs):
         try:
             old_instance = Document.objects.get(pk=instance.pk)
             # If status changed to processing, record start time
-            if (old_instance.status != 'processing' and 
+            if (old_instance.status != 'processing' and
                 instance.status == 'processing'):
                 instance.add_processing_log(
                     step='processing_started',
                     status='info',
                     details={'timestamp': timezone.now().isoformat()}
                 )
-            
+
             # If status changed to processed/failed, record completion
-            elif (old_instance.status in ['pending', 'processing'] and 
+            elif (old_instance.status in ['pending', 'processing'] and
                   instance.status in ['processed', 'failed']):
                 instance.add_processing_log(
                     step='processing_completed',
@@ -205,3 +208,86 @@ def set_document_processing_timestamp(sender, instance, **kwargs):
                 )
         except Document.DoesNotExist:
             pass
+
+
+# =============================================================================
+# SESSION 492: IMAGE PROVENANCE AUTO-CREATION
+# =============================================================================
+# Automatically create provenance records when images are generated.
+# This enables the Certificate Service to generate PDF ownership certificates.
+
+@receiver(post_save, sender=ImageHistory)
+def create_image_provenance(sender, instance, created, **kwargs):
+    """
+    Session 492: Auto-create provenance record when an image is saved.
+
+    This connects the CertificateService to the image generation flow,
+    enabling users to download PDF ownership certificates for any image.
+    """
+    if not created:
+        return  # Only process new images
+
+    # Skip if user is not set (shouldn't happen, but safety check)
+    if not instance.user:
+        logger.warning(f"ImageHistory {instance.id} has no user, skipping provenance")
+        return
+
+    try:
+        from core.services.provenance_service import ProvenanceService
+        from django.core.files.storage import default_storage
+
+        # Read image bytes from file
+        image_bytes = None
+
+        if instance.file_path:
+            # Handle data: URIs
+            if instance.file_path.startswith('data:'):
+                import base64
+                # Extract base64 data after the comma
+                if ',' in instance.file_path:
+                    base64_data = instance.file_path.split(',', 1)[1]
+                    image_bytes = base64.b64decode(base64_data)
+            # Handle regular file paths
+            elif default_storage.exists(instance.file_path):
+                with default_storage.open(instance.file_path, 'rb') as f:
+                    image_bytes = f.read()
+
+        # If no bytes, try reading from image field
+        if not image_bytes and hasattr(instance, 'image') and instance.image:
+            instance.image.seek(0)
+            image_bytes = instance.image.read()
+            instance.image.seek(0)
+
+        if not image_bytes:
+            logger.debug(f"No image bytes available for ImageHistory {instance.id}, skipping provenance")
+            return
+
+        # Build generation params from image metadata
+        generation_params = {
+            'prompt': instance.prompt or '',
+            'model': instance.model_used or 'unknown',
+            'style': instance.style or '',
+            'image_type': instance.image_type or 'generated',
+        }
+
+        # Add any additional params stored
+        if instance.parameters:
+            generation_params.update(instance.parameters)
+
+        # Create provenance
+        service = ProvenanceService()
+        result = service.create_provenance(
+            image_history=instance,
+            user=instance.user,
+            image_bytes=image_bytes,
+            generation_params=generation_params
+        )
+
+        if result.success:
+            logger.info(f"📜 [Session 492] Auto-created provenance for image {instance.id}: {result.provenance_id}")
+        else:
+            logger.warning(f"Failed to create provenance for image {instance.id}: {result.error}")
+
+    except Exception as e:
+        # Non-fatal: log but don't break image creation
+        logger.warning(f"Error creating provenance for image {instance.id}: {e}")
