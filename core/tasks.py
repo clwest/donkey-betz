@@ -16458,3 +16458,8 @@ def run_skill_gap_analyzer(self):
     except Exception as e:
         logger.error(f"📚 [SKILLS] Error: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+# Note: Style evolution tracking already scheduled via 'record-style-evolution' task
+# (core.tasks.record_all_user_style_evolution) - see Session 210
+# Session 489: Connected implicit learning to image operations instead.

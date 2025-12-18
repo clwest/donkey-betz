@@ -2300,6 +2300,8 @@ def toggle_favorite(request, image_id):
     Toggle favorite status for an image.
 
     Returns updated favorite status.
+
+    Session 489: Now tracks implicit learning signals.
     """
     try:
         from content.models import ImageHistory
@@ -2309,6 +2311,22 @@ def toggle_favorite(request, image_id):
         image.save(update_fields=['is_favorite'])
 
         logger.info(f"⭐ Toggled favorite for image {image_id}: {image.is_favorite}")
+
+        # Session 489: Track implicit learning signal
+        try:
+            from core.services.implicit_learning import get_learning_service
+            learning = get_learning_service()
+            if image.is_favorite:
+                # Favoriting = positive signal
+                learning.track_favorite(
+                    user_id=request.user.id,
+                    content_id=str(image_id),
+                    style=image.style or None,
+                    model=image.model_used or None
+                )
+            # Note: unfavoriting doesn't generate a negative signal (neutral action)
+        except Exception as learn_error:
+            logger.debug(f"Implicit learning tracking failed (non-fatal): {learn_error}")
 
         return Response({
             'success': True,
@@ -2335,11 +2353,27 @@ def delete_image(request, image_id):
     Delete an image from history.
 
     Also deletes the actual file from storage.
+
+    Session 489: Now tracks implicit learning signals (negative signal).
     """
     try:
         from content.models import ImageHistory
 
         image = ImageHistory.objects.get(id=image_id, user=request.user)
+
+        # Session 489: Track implicit learning signal BEFORE deleting
+        # (need the image data for style/model info)
+        try:
+            from core.services.implicit_learning import get_learning_service
+            learning = get_learning_service()
+            learning.track_delete(
+                user_id=request.user.id,
+                content_id=str(image_id),
+                style=image.style or None,
+                model=image.model_used or None
+            )
+        except Exception as learn_error:
+            logger.debug(f"Implicit learning tracking failed (non-fatal): {learn_error}")
 
         # Delete file from storage
         try:
@@ -2485,6 +2519,20 @@ def batch_download_images(request):
 
         # Prepare response
         zip_buffer.seek(0)
+
+        # Session 489: Track implicit learning signals for each downloaded image
+        try:
+            from core.services.implicit_learning import get_learning_service
+            learning = get_learning_service()
+            for img in images:
+                learning.track_download(
+                    user_id=request.user.id,
+                    content_id=str(img.id),
+                    style=img.style or None,
+                    model=img.model_used or None
+                )
+        except Exception as learn_error:
+            logger.debug(f"Implicit learning tracking failed (non-fatal): {learn_error}")
 
         response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
         response['Content-Disposition'] = f'attachment; filename="images_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'

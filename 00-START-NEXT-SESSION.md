@@ -1,29 +1,21 @@
-# Session 490 - Start Here
+# Session 491 - Start Here
 
-**Previous Session:** 489 (Semantic Routing + Streaming Progress Integration)
+**Previous Session:** 490 (Implicit Learning Integration)
 **Date:** December 18, 2025
 
 ---
 
-## Session 489 Achievements
+## Session 490 Achievements
 
-### 1. Semantic Routing Connected (Session 488)
+### Implicit Learning Connected
 
-Integrated semantic routing service into AgentRouter for intelligent agent selection:
+Integrated implicit learning service into image operations:
 
-- Added `route_by_query(query, context, fallback_agent)` method
-- Added `get_semantic_suggestion(query)` for debugging
-- Uses embeddings to find best matching agent
-- Confidence threshold: 0.35 (cosine similarity)
+- **toggle_favorite**: Tracks favorites (+0.80 weight)
+- **delete_image**: Tracks deletions (-0.50 weight)
+- **batch_download_images**: Tracks downloads (+0.70 weight)
 
-### 2. Streaming Progress Connected (Session 489)
-
-Wired dormant StreamingProgressService to WebSocket and BaseAgent:
-
-- **WebSocket Broadcasting:** Progress updates now broadcast to `agents_general` channel
-- **BaseAgent Integration:** All agents can now emit progress via `_create_progress_tracker()`
-- **Agent-to-Type Mapping:** Each agent maps to appropriate progress stages
-- **Null Object Pattern:** Graceful degradation when service unavailable
+All user behavior now feeds into preference learning system.
 
 ---
 
@@ -38,7 +30,7 @@ Wired dormant StreamingProgressService to WebSocket and BaseAgent:
 
 ---
 
-## Session 490 Priority: Orphaned Services
+## Session 491 Priority: Remaining Orphaned Services
 
 Continue connecting dormant services:
 
@@ -46,10 +38,9 @@ Continue connecting dormant services:
 
 | Service | File | Impact |
 |---------|------|--------|
-| Implicit Learning | `core/services/implicit_learning.py` | High |
-| Reference Resolver | `core/services/reference_resolver.py` | UX |
-| Domain Extraction | `core/services/domain_extraction_service.py` | Research |
-| Memory Embedding | `core/services/memory_embedding_service.py` | Context |
+| Reference Resolver | `core/services/reference_resolver.py` | UX (context continuity) |
+| Domain Extraction | `core/services/domain_extraction_service.py` | Research enhancement |
+| Memory Embedding | `core/services/memory_embedding_service.py` | Long-term context |
 
 ### Revenue Features
 
@@ -61,6 +52,17 @@ Continue connecting dormant services:
 
 ---
 
+## Connected Services Summary
+
+| Session | Service | Status |
+|---------|---------|--------|
+| 488 | Semantic Routing | Connected |
+| 489 | Streaming Progress | Connected |
+| 490 | Implicit Learning | Connected |
+| 491 | ? | Next |
+
+---
+
 ## Quick Start Commands
 
 ```bash
@@ -68,21 +70,11 @@ Continue connecting dormant services:
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Test semantic routing
+# Test implicit learning
 python manage.py shell -c "
-from core.agent_router import get_agent_router
-router = get_agent_router()
-result = router.get_semantic_suggestion('create a logo')
-print(f'Agent: {result[\"selected_agent\"]} (confidence: {result[\"confidence\"]:.2f})')
-"
-
-# Test streaming progress
-python manage.py shell -c "
-from core.services.streaming_progress import get_streaming_progress_service
-service = get_streaming_progress_service()
-service.register_task('test', 'image_generation', 'Test')
-service.emit_progress('test', 'analyzing', 'Testing...', 25)
-print('Progress broadcast to WebSocket!')
+from core.services.implicit_learning import get_learning_service
+learning = get_learning_service()
+print(type(learning).__name__)
 "
 
 # Access UI
@@ -96,7 +88,7 @@ open http://localhost:8000/ai-studio/
 | Metric | Value |
 |--------|-------|
 | Autonomous Situations | 15 (all working!) |
-| Services | 66 (54 connected) |
+| Services | 66 (55 connected) |
 | Spiders | 67 |
 | Spider Data Records | 20,000+ |
 | Agents | 41 |
@@ -107,22 +99,23 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
-- **Session 489 Handoff:** `docs/handoffs/SESSION_489_STREAMING_PROGRESS_INTEGRATION.md`
+- **Session 490 Handoff:** `docs/handoffs/SESSION_490_IMPLICIT_LEARNING_INTEGRATION.md`
 - **Activation Plan:** `docs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md`
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
 
 ---
 
-**Goal: Connect the remaining 12 orphaned services!**
+**Goal: Connect the remaining orphaned services!**
 
 ```
 +====================================================================+
-|              SESSION 489: STREAMING PROGRESS CONNECTED              |
+|              SESSION 490: IMPLICIT LEARNING CONNECTED               |
 |                                                                    |
-|   Semantic Routing:    AgentRouter.route_by_query() added         |
-|   Streaming Progress:  WebSocket + BaseAgent integration done     |
+|   toggle_favorite:    Tracks favorites (+0.80)                     |
+|   delete_image:       Tracks deletions (-0.50)                     |
+|   batch_download:     Tracks downloads (+0.70)                     |
 |                                                                    |
-|   Next: Implicit Learning + Reference Resolver                     |
+|   Next: Reference Resolver + Domain Extraction                     |
 +====================================================================+
 ```
