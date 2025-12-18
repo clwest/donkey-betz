@@ -5,9 +5,11 @@ Agent Router - Deterministic Routing to Specialized Agents
 Session 268: Phase 1 & 2 - Complete Agent Ecosystem
 Session 280: Phase 2 - Added Strategy and Executive Agents
 Session 280: Phase 3 - Added Analysis, Training, and Security Agents
+Session 488: Semantic Routing Integration - Use embeddings to find best agent
 
 This router provides DETERMINISTIC routing to specialized agents.
 No LLM is involved in routing decisions - it's a simple dictionary lookup.
+NEW: Semantic routing option uses embeddings for intelligent agent selection.
 
 This prevents the current problem where GPT picks the wrong tool
 (e.g., video_generation_agent for a logo request).
@@ -160,6 +162,12 @@ from core.agents.resolve_agent import ResolveAgent
 
 logger = logging.getLogger(__name__)
 
+# Session 488: Semantic routing confidence threshold
+# If semantic match confidence is above this, use semantic routing
+# Otherwise fall back to keyword matching or default agent
+# Note: Cosine similarity scores for embeddings typically range 0.3-0.6 for good matches
+SEMANTIC_CONFIDENCE_THRESHOLD = 0.35
+
 
 class AgentNotFoundError(Exception):
     """Raised when an unknown agent is requested."""
@@ -271,6 +279,7 @@ class AgentRouter:
         self.user = user
         self._scifi_service = None
         self._spider_service = None
+        self._semantic_router = None  # Session 488: Semantic routing
 
     @property
     def scifi_service(self):
@@ -287,6 +296,94 @@ class AgentRouter:
             from core.services.spider_intelligence import SpiderIntelligenceService
             self._spider_service = SpiderIntelligenceService()
         return self._spider_service
+
+    @property
+    def semantic_router(self):
+        """Session 488: Lazy-load Semantic routing service."""
+        if self._semantic_router is None:
+            from core.services.semantic_routing import get_semantic_router
+            self._semantic_router = get_semantic_router()
+        return self._semantic_router
+
+    def route_by_query(
+        self,
+        query: str,
+        context: Optional[Dict[str, Any]] = None,
+        fallback_agent: str = "PersonalAssistantAgent"
+    ) -> AgentResult:
+        """
+        Session 488: Route a query to the best agent using semantic matching.
+
+        This method uses embeddings to find the most semantically similar agent
+        for the given query. If confidence is high enough, it routes directly
+        to that agent. Otherwise, it falls back to the specified fallback agent.
+
+        Args:
+            query: The user's natural language query
+            context: Optional additional context
+            fallback_agent: Agent to use if semantic matching fails (default: PersonalAssistantAgent)
+
+        Returns:
+            AgentResult from the selected agent
+        """
+        try:
+            # Get semantic routing result
+            routing_result = self.semantic_router.route_query(query)
+
+            logger.info(
+                f"Semantic routing: {routing_result.agent_name} "
+                f"(confidence={routing_result.confidence:.2f}, method={routing_result.method})"
+            )
+
+            # Check if agent exists in our map
+            if routing_result.agent_name not in self.AGENT_MAP:
+                logger.warning(
+                    f"Semantic router suggested unknown agent: {routing_result.agent_name}, "
+                    f"falling back to {fallback_agent}"
+                )
+                return self.route(fallback_agent, query, context)
+
+            # Use semantic result if confidence is high enough
+            if routing_result.confidence >= SEMANTIC_CONFIDENCE_THRESHOLD:
+                logger.info(
+                    f"Using semantic routing: {routing_result.agent_name} "
+                    f"(confidence {routing_result.confidence:.2f} >= threshold {SEMANTIC_CONFIDENCE_THRESHOLD})"
+                )
+                return self.route(routing_result.agent_name, query, context)
+            else:
+                logger.info(
+                    f"Semantic confidence too low ({routing_result.confidence:.2f} < {SEMANTIC_CONFIDENCE_THRESHOLD}), "
+                    f"using fallback: {fallback_agent}"
+                )
+                return self.route(fallback_agent, query, context)
+
+        except Exception as e:
+            logger.error(f"Semantic routing failed: {e}, using fallback: {fallback_agent}")
+            return self.route(fallback_agent, query, context)
+
+    def get_semantic_suggestion(self, query: str) -> Dict[str, Any]:
+        """
+        Session 488: Get semantic routing suggestion without executing.
+
+        Useful for debugging or showing the user which agent would be selected.
+
+        Args:
+            query: The user's natural language query
+
+        Returns:
+            Dict with agent suggestion, confidence, and explanation
+        """
+        try:
+            return self.semantic_router.explain_routing(query)
+        except Exception as e:
+            logger.error(f"Failed to get semantic suggestion: {e}")
+            return {
+                'query': query,
+                'selected_agent': 'PersonalAssistantAgent',
+                'confidence': 0.0,
+                'method': 'error_fallback',
+                'error': str(e)
+            }
 
     def route(
         self,
