@@ -358,7 +358,8 @@ class BaseAgent(ABC, TimeTravelMixin):
                     results.append({
                         'source_agent': 'SpiderNetwork',
                         'title': sr.title[:60] if sr.title else 'Spider Intelligence',
-                        'summary': sr.content[:200] if sr.content else '',
+                        # Session 483: SemanticSearchResult has 'description', not 'content'
+                        'summary': sr.description[:200] if sr.description else '',
                         'knowledge_type': 'spider_data',
                         'confidence': sr.similarity,
                         'spider_sources': [sr.source] if sr.source else [],
