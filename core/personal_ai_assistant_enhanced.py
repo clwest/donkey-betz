@@ -70,6 +70,42 @@ except ImportError as e:
     ClassificationResult = None
     AggregatedContext = None
 
+# Session 482: Reference Resolution - Handle "it", "that", "the first one"
+try:
+    from core.services.reference_resolver import (
+        ReferenceResolver,
+        get_reference_resolver
+    )
+    REFERENCE_RESOLVER_AVAILABLE = True
+except ImportError as e:
+    REFERENCE_RESOLVER_AVAILABLE = False
+    ReferenceResolver = None
+    get_reference_resolver = lambda session_id='default': None
+
+# Session 482: Smart Suggestions - Context-aware follow-up suggestions
+try:
+    from core.services.smart_suggestions import (
+        SmartSuggestionsService,
+        get_smart_suggestions_service
+    )
+    SMART_SUGGESTIONS_AVAILABLE = True
+except ImportError as e:
+    SMART_SUGGESTIONS_AVAILABLE = False
+    SmartSuggestionsService = None
+    get_smart_suggestions_service = lambda session_id='default': None
+
+# Session 482: Task Memory - Multi-turn task tracking
+try:
+    from core.services.task_memory import (
+        TaskMemoryService,
+        get_task_memory_service
+    )
+    TASK_MEMORY_AVAILABLE = True
+except ImportError as e:
+    TASK_MEMORY_AVAILABLE = False
+    TaskMemoryService = None
+    get_task_memory_service = lambda session_id='default': None
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -109,6 +145,15 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Session 482: Proactive Intelligence - Connect 19 Autonomous Situations
         self.proactive_intelligence = get_proactive_intelligence_service(user) if PROACTIVE_INTELLIGENCE_AVAILABLE else None
         self._last_proactive_intelligence = None  # Cache last intelligence for response suggestions
+
+        # Session 482: Reference Resolution - Handle "it", "that", "the first one"
+        self.reference_resolver = get_reference_resolver(str(user.id)) if REFERENCE_RESOLVER_AVAILABLE else None
+
+        # Session 482: Smart Suggestions - Context-aware follow-up suggestions
+        self.smart_suggestions = get_smart_suggestions_service(str(user.id)) if SMART_SUGGESTIONS_AVAILABLE else None
+
+        # Session 482: Task Memory - Multi-turn task tracking
+        self.task_memory = get_task_memory_service(str(user.id)) if TASK_MEMORY_AVAILABLE else None
 
         if SUPER_PLATFORM_AVAILABLE:
             logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, Asset Tracking, AND Super Platform Integration for {user.username}")
@@ -6765,7 +6810,28 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         # Session 482: Prioritize session conversation history from frontend over database
         # This enables contextual follow-up questions like "research the first one"
+        reference_context = ""
         if conversation_history and isinstance(conversation_history, list) and len(conversation_history) > 0:
+            # Session 482: Resolve references like "the first one", "it", "that"
+            if self.reference_resolver and REFERENCE_RESOLVER_AVAILABLE:
+                try:
+                    resolved_message, resolutions = self.reference_resolver.resolve_references(
+                        message, conversation_history
+                    )
+                    if resolutions:
+                        # Build reference context for the prompt
+                        ref_lines = []
+                        for r in resolutions:
+                            if r.resolution_type == 'ordinal':
+                                ref_lines.append(f"- '{r.original}' refers to: **{r.resolved}**")
+                            elif r.resolution_type == 'pronoun':
+                                ref_lines.append(f"- '{r.original}' likely refers to: {r.resolved}")
+                        if ref_lines:
+                            reference_context = "\n\n**Reference Resolution:**\n" + "\n".join(ref_lines)
+                            logger.info(f"🔍 Session 482: Resolved {len(resolutions)} references")
+                except Exception as e:
+                    logger.warning(f"⚠️ Reference resolution failed: {e}")
+
             # Format the session history from frontend
             session_context_lines = []
             for msg in conversation_history[-10:]:  # Last 10 messages for context
@@ -6777,6 +6843,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     session_context_lines.append(f"- {role.upper()}: {truncated}")
             if session_context_lines:
                 conversation_context = "**Current Session History:**\n" + "\n".join(session_context_lines)
+                # Add reference context if we resolved any references
+                if reference_context:
+                    conversation_context += reference_context
                 logger.info(f"📝 Session 482: Using {len(conversation_history)} messages from session history")
         elif not conversation_context:
             # Fallback: Load recent conversation history from database
@@ -7766,6 +7835,52 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if context:
             full_context.update(context)
 
+        # Session 482: Task Memory - Multi-turn task tracking
+        if hasattr(self, 'task_memory') and self.task_memory and TASK_MEMORY_AVAILABLE:
+            try:
+                # Check if there's an active task
+                active_task = self.task_memory.get_active_task()
+
+                if active_task:
+                    # Inject active task context for AI to continue
+                    task_context = self.task_memory.format_for_prompt()
+                    full_context['active_task'] = self.task_memory.get_task_context()
+                    full_context['task_context_prompt'] = task_context
+                    logger.info(f"📋 TaskMemory: Continuing task '{active_task.task_type}' ({active_task.get_progress()['percentage']}% complete)")
+
+                # Check if message indicates a new multi-step task
+                elif not active_task:
+                    detected_task_type = self.task_memory.detect_task_type(message)
+                    if detected_task_type:
+                        # Create new task
+                        new_task = self.task_memory.create_task(
+                            detected_task_type,
+                            description=message[:100],
+                            initial_context={'original_request': message}
+                        )
+                        # Start first step
+                        self.task_memory.start_next_step()
+
+                        # Add to context
+                        task_context = self.task_memory.format_for_prompt()
+                        full_context['active_task'] = self.task_memory.get_task_context()
+                        full_context['task_context_prompt'] = task_context
+                        logger.info(f"📋 TaskMemory: Started new '{detected_task_type}' task with {len(new_task.steps)} steps")
+
+                # Check for task-related commands
+                message_lower = message.lower()
+                if 'what were we working on' in message_lower or 'resume task' in message_lower:
+                    resumed = self.task_memory.resume_task()
+                    if resumed:
+                        full_context['active_task'] = self.task_memory.get_task_context()
+                        logger.info(f"📋 TaskMemory: Resumed task '{resumed.task_type}'")
+                elif 'cancel task' in message_lower or 'abandon task' in message_lower:
+                    self.task_memory.abandon_task()
+                    logger.info("📋 TaskMemory: Abandoned active task")
+
+            except Exception as e:
+                logger.warning(f"⚠️ TaskMemory error: {e}")
+
         # Session 126: Store context for tool execution (so tools can access project_id)
         self._current_context = full_context
 
@@ -8090,6 +8205,38 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         # Generate personalized suggestions based on goals and current projects
         response_data['suggestions'] = self.generate_personalized_suggestions(message)
+
+        # Session 482: Smart Suggestions - Add contextual action-based suggestions
+        if hasattr(self, 'smart_suggestions') and self.smart_suggestions and SMART_SUGGESTIONS_AVAILABLE:
+            try:
+                # Detect action type from tool_calls
+                tool_calls = response_data.get('tool_calls', [])
+                response_text = response_data.get('response', '')
+
+                action_type = self.smart_suggestions.detect_action_from_response(response_text, tool_calls)
+
+                if action_type:
+                    # Record the action for future suggestions
+                    self.smart_suggestions.record_action(action_type, output=response_text)
+
+                    # Get smart suggestions based on what was just done
+                    smart_suggestions = self.smart_suggestions.get_suggestions(limit=2)
+
+                    if smart_suggestions:
+                        # Get quick action buttons for frontend
+                        quick_actions = self.smart_suggestions.get_quick_actions()
+                        response_data['quick_actions'] = quick_actions
+
+                        # Append smart suggestions text to response if not already included
+                        suggestion_text = self.smart_suggestions.format_for_response(smart_suggestions)
+                        if suggestion_text and suggestion_text not in response_data.get('response', ''):
+                            # Add as a separate field for frontend flexibility
+                            response_data['smart_suggestions'] = [s.text for s in smart_suggestions]
+                            response_data['smart_suggestions_formatted'] = suggestion_text
+
+                        logger.info(f"✨ SmartSuggestions: Added {len(smart_suggestions)} contextual suggestions for '{action_type}' action")
+            except Exception as e:
+                logger.warning(f"⚠️ SmartSuggestions error: {e}")
 
         # Enhance response with memory-based personalization
         if response_data.get('response'):
