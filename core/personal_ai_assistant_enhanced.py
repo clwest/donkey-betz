@@ -8213,7 +8213,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 tool_calls = response_data.get('tool_calls', [])
                 response_text = response_data.get('response', '')
 
+                # Session 483: Debug logging for smart suggestions
+                logger.debug(f"🔍 SmartSuggestions: Checking response ({len(response_text)} chars), tool_calls={len(tool_calls)}")
+
                 action_type = self.smart_suggestions.detect_action_from_response(response_text, tool_calls)
+
+                # Session 483: Log detection result
+                logger.info(f"🔍 SmartSuggestions: Detected action_type='{action_type}' from response")
 
                 if action_type:
                     # Record the action for future suggestions
@@ -8227,6 +8233,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         quick_actions = self.smart_suggestions.get_quick_actions()
                         response_data['quick_actions'] = quick_actions
 
+                        # Session 483: Log quick actions being added
+                        logger.info(f"✨ SmartSuggestions: Adding {len(quick_actions)} quick_actions: {[qa.get('label', '')[:30] for qa in quick_actions]}")
+
                         # Append smart suggestions text to response if not already included
                         suggestion_text = self.smart_suggestions.format_for_response(smart_suggestions)
                         if suggestion_text and suggestion_text not in response_data.get('response', ''):
@@ -8235,8 +8244,21 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             response_data['smart_suggestions_formatted'] = suggestion_text
 
                         logger.info(f"✨ SmartSuggestions: Added {len(smart_suggestions)} contextual suggestions for '{action_type}' action")
+                    else:
+                        # Session 483: Log when action_type detected but no suggestions returned
+                        logger.info(f"⚠️ SmartSuggestions: No suggestions returned for action_type='{action_type}'")
             except Exception as e:
                 logger.warning(f"⚠️ SmartSuggestions error: {e}")
+
+        # Session 486: Add reference context for frontend indicator
+        if self.reference_resolver and REFERENCE_RESOLVER_AVAILABLE:
+            try:
+                context_summary = self.reference_resolver.get_context_summary()
+                response_data['reference_context'] = context_summary
+                if context_summary.get('last_topic') or context_summary.get('items'):
+                    logger.info(f"🎯 Session 486: Reference context: {context_summary.get('last_topic') or 'items tracked'}")
+            except Exception as e:
+                logger.warning(f"⚠️ Reference context error: {e}")
 
         # Enhance response with memory-based personalization
         if response_data.get('response'):
