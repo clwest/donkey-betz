@@ -486,6 +486,14 @@ Available agents:
         start_time = time.time()
         tool_calls_made = []
 
+        # Session 483: Debug logging for spider context flow
+        logger.info(f"🕷️ [Session 483] PersonalAssistant.execute() - spider_context keys: {list(spider_context.keys()) if spider_context else 'None'}")
+        if spider_context:
+            trends = spider_context.get('relevant_trends', [])
+            logger.info(f"🕷️ [Session 483] spider_context has {len(trends)} relevant_trends")
+            if trends:
+                logger.info(f"🕷️ [Session 483] First trend: {trends[0] if trends else 'None'}")
+
         with self.time_travel_session("personal_assistant", task, input_data=context):
             try:
                 if not self._validate_task(task):
@@ -509,6 +517,8 @@ Available agents:
                     # Answer directly without delegation
                     # Session 454: Pass question_type to enable enhanced handling
                     # Session 454: Track routing analytics
+                    # Session 483: Debug logging
+                    logger.info(f"🕷️ [Session 483] Detected question_type='{question_type}' for task: {task[:60]}")
                     record_routing_decision(
                         task=task,
                         selected_agent='PersonalAssistantAgent',
@@ -977,11 +987,19 @@ Available agents:
 
             if question_type == 'trend_question':
                 try:
+                    logger.info(f"🕷️ [Session 483] Fetching fresh trends for trend_question")
                     fresh_trends = self._fetch_fresh_trends_for_question(task)
                     if fresh_trends:
                         enhanced_spider_context['relevant_trends'] = fresh_trends.get('trends', [])
                         enhanced_spider_context['trend_articles'] = fresh_trends.get('articles', [])
-                        logger.info(f"Injected {len(fresh_trends.get('trends', []))} fresh trends for question")
+                        logger.info(f"🕷️ [Session 483] Injected {len(fresh_trends.get('trends', []))} trends, {len(fresh_trends.get('articles', []))} articles")
+                        # Log sample trend/article for debugging
+                        if fresh_trends.get('trends'):
+                            logger.info(f"🕷️ [Session 483] Sample trend: {fresh_trends['trends'][0]}")
+                        if fresh_trends.get('articles'):
+                            logger.info(f"🕷️ [Session 483] Sample article: {fresh_trends['articles'][0].get('title', 'N/A')[:60]}")
+                    else:
+                        logger.warning(f"🕷️ [Session 483] _fetch_fresh_trends_for_question returned empty/None")
                 except Exception as e:
                     logger.warning(f"Failed to fetch fresh trends: {e}")
 
@@ -989,9 +1007,12 @@ Available agents:
             prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, enhanced_spider_context)
 
             # Session 454: Enhanced instruction for trend questions
+            # Session 483: Debug - check if trend_articles is being added
+            logger.info(f"🕷️ [Session 483] trend_articles in context: {len(enhanced_spider_context.get('trend_articles', []))}")
             if question_type == 'trend_question' and enhanced_spider_context.get('trend_articles'):
                 articles = enhanced_spider_context['trend_articles'][:10]
                 prompt += "\n\n## Recent Articles for Context"
+                logger.info(f"🕷️ [Session 483] Adding {len(articles)} articles to prompt")
                 for article in articles:
                     title = article.get('title', '')[:80]
                     source = article.get('source', 'unknown')
@@ -999,6 +1020,23 @@ Available agents:
                     prompt += f"\n- [{source}] {title}"
                     if url:
                         prompt += f" ({url})"
+                logger.info(f"🕷️ [Session 483] First article added: {articles[0].get('title', 'N/A')[:60]}")
+
+                # Session 483: Update attribution with spider sources from articles
+                article_sources = list(set(
+                    article.get('source', '') for article in articles if article.get('source')
+                ))
+                if article_sources:
+                    # Merge with existing spider_sources
+                    all_sources = list(set(attribution.spider_sources + article_sources))
+                    attribution = KnowledgeAttribution(
+                        spider_sources=all_sources[:10],  # Top 10 sources
+                        knowledge_items=attribution.knowledge_items,
+                        confidence_score=attribution.confidence_score,
+                        data_freshness_hours=min(attribution.data_freshness_hours or 24.0, 1.0),  # Fresh data
+                        total_sources=len(all_sources)
+                    )
+                    logger.info(f"🕷️ [Session 483] Updated attribution with {len(article_sources)} spider sources: {article_sources[:5]}")
 
             # Append instruction to answer directly
             prompt += "\n\nAnswer this question directly without delegating to an agent."
@@ -1079,15 +1117,26 @@ Available agents:
             trends = service.get_trending_topics(hours=72, limit=10)
 
             # Get recent articles with optional topic filter
-            articles = service.get_tech_trends(
+            # Session 483: get_tech_trends returns a dict with 'discussions' key, not a list
+            logger.info(f"🕷️ [Session 483] Calling get_tech_trends with topic_filter='{topic_filter}'")
+            tech_data = service.get_tech_trends(
                 hours=72,
                 limit=15,
                 topic_filter=topic_filter
             )
+            # Extract discussions (articles) from the dict
+            articles = []
+            if isinstance(tech_data, dict):
+                articles = tech_data.get('discussions', [])
+                # Also include projects if no discussions
+                if not articles:
+                    articles = tech_data.get('projects', [])
+            elif isinstance(tech_data, list):
+                articles = tech_data
 
             return {
                 'trends': trends if isinstance(trends, list) else [],
-                'articles': articles if isinstance(articles, list) else [],
+                'articles': articles,
                 'topic_filter': topic_filter
             }
 
