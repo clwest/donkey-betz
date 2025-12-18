@@ -972,6 +972,10 @@ Try:
                     'market_data': context.spider_data.get('market', {}),
                     'creative_trends': context.spider_data.get('creative', {}),
                 }
+                # Session 483: Debug logging
+                logger.info(f"🕷️ [Session 483] Coordinator built spider_context with {len(spider_context.get('relevant_trends', []))} relevant_trends")
+            else:
+                logger.info(f"🕷️ [Session 483] Coordinator: context.spider_data is empty/None")
 
             # Get sci-fi context
             scifi_context = {}

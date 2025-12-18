@@ -126,6 +126,10 @@ class ContextAggregator:
             context.spider_data = spider_data
             context.spider_fetch_time = timezone.now()
             context.sources_used.append('spider_intelligence')
+            # Session 483: Debug logging
+            logger.info(f"🕷️ [Session 483] ContextAggregator got spider_data with {len(spider_data.get('trends', []))} trends")
+            if spider_data.get('trends'):
+                logger.info(f"🕷️ [Session 483] First trend: {spider_data['trends'][0]}")
 
         # Get memory data if needed
         if classification.requires_memory:
