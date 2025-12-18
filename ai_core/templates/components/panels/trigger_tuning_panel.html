@@ -207,9 +207,10 @@
 </div>
 
 <script>
-let allTriggers = [];
-let currentFilter = 'all';
-let searchQuery = '';
+// Trigger tuning panel state (prefixed to avoid conflicts with other panels)
+let triggerTuningAllTriggers = [];
+let triggerTuningCurrentFilter = 'all';
+let triggerTuningSearchQuery = '';
 
 async function loadTriggerTuning() {
     try {
@@ -218,7 +219,7 @@ async function loadTriggerTuning() {
         const data = await response.json();
 
         if (data.success) {
-            allTriggers = data.triggers;
+            triggerTuningAllTriggers = data.triggers;
             updateTriggerStats(data);
             renderTriggerList(data.triggers);
         }
@@ -250,8 +251,8 @@ function renderTriggerList(triggers) {
     // Apply filters
     let filtered = triggers.filter(t => {
         // Search filter
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
+        if (triggerTuningSearchQuery) {
+            const q = triggerTuningSearchQuery.toLowerCase();
             if (!t.name.toLowerCase().includes(q) &&
                 !t.description.toLowerCase().includes(q) &&
                 !t.trigger_type.toLowerCase().includes(q)) {
@@ -260,12 +261,12 @@ function renderTriggerList(triggers) {
         }
 
         // Category filter
-        if (currentFilter === 'all') return true;
-        if (currentFilter === 'active') return t.is_active;
-        if (currentFilter === 'inactive') return !t.is_active;
-        if (currentFilter === 'cooldown') return t.is_on_cooldown;
-        if (['critical', 'high', 'medium', 'low'].includes(currentFilter)) {
-            return t.severity === currentFilter;
+        if (triggerTuningCurrentFilter === 'all') return true;
+        if (triggerTuningCurrentFilter === 'active') return t.is_active;
+        if (triggerTuningCurrentFilter === 'inactive') return !t.is_active;
+        if (triggerTuningCurrentFilter === 'cooldown') return t.is_on_cooldown;
+        if (['critical', 'high', 'medium', 'low'].includes(triggerTuningCurrentFilter)) {
+            return t.severity === triggerTuningCurrentFilter;
         }
         return true;
     });
@@ -399,11 +400,11 @@ async function toggleTriggerActive(triggerId, isActive) {
         if (data.success) {
             showToast(data.message, 'success');
             // Update local state
-            const trigger = allTriggers.find(t => t.id === triggerId);
+            const trigger = triggerTuningAllTriggers.find(t => t.id === triggerId);
             if (trigger) {
                 trigger.is_active = data.trigger.is_active;
             }
-            renderTriggerList(allTriggers);
+            renderTriggerList(triggerTuningAllTriggers);
         }
     } catch (error) {
         console.error('Error toggling trigger:', error);
@@ -424,7 +425,7 @@ async function updateTriggerField(triggerId, field, value) {
         if (data.success) {
             showToast(`Updated ${field}`, 'success');
             // Update local state
-            const trigger = allTriggers.find(t => t.id === triggerId);
+            const trigger = triggerTuningAllTriggers.find(t => t.id === triggerId);
             if (trigger) {
                 trigger[field] = value;
             }
@@ -446,12 +447,12 @@ async function resetTriggerCooldown(triggerId) {
         if (data.success) {
             showToast('Cooldown reset', 'success');
             // Update local state
-            const trigger = allTriggers.find(t => t.id === triggerId);
+            const trigger = triggerTuningAllTriggers.find(t => t.id === triggerId);
             if (trigger) {
                 trigger.is_on_cooldown = false;
                 trigger.last_triggered_at = null;
             }
-            renderTriggerList(allTriggers);
+            renderTriggerList(triggerTuningAllTriggers);
         }
     } catch (error) {
         console.error('Error resetting cooldown:', error);
@@ -572,18 +573,18 @@ async function showTriggerDetail(triggerId) {
 }
 
 function filterTriggers(filter, btn) {
-    currentFilter = filter;
+    triggerTuningCurrentFilter = filter;
 
     // Update button states
     document.querySelectorAll('.trigger-filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
-    renderTriggerList(allTriggers);
+    renderTriggerList(triggerTuningAllTriggers);
 }
 
 function searchTriggers(query) {
-    searchQuery = query;
-    renderTriggerList(allTriggers);
+    triggerTuningSearchQuery = query;
+    renderTriggerList(triggerTuningAllTriggers);
 }
 
 function refreshTriggerList() {
@@ -598,4 +599,8 @@ function showToast(message, type = 'info') {
         console.log(`[${type}] ${message}`);
     }
 }
+
+// Expose functions globally for cross-panel access
+window.loadTriggerTuning = loadTriggerTuning;
+window.refreshTriggerList = refreshTriggerList;
 </script>
