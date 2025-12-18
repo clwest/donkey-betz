@@ -153,7 +153,7 @@ class SituationTrigger(models.Model):
 
     # Situation and type
     situation_type = models.CharField(
-        max_length=20,
+        max_length=30,  # Session 484: Increased from 20 to fit 'thumbnail_optimization' (22 chars)
         choices=SituationType.choices,
         default=SituationType.BLOCKCHAIN,
         db_index=True
