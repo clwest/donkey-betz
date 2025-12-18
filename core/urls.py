@@ -826,7 +826,7 @@ from core.views_personal_assistant import (
     voice_interview_response, transcribe_only  # Session 456: Voice interview
 )
 from core.views_personal_assistant_dev import chat_with_assistant_dev, get_assistant_context_dev
-from core.views_assistant_bypass import assistant_chat_bypass
+from core.views_assistant_bypass import assistant_chat_bypass, get_task_progress
 from core.views_assistant_minimal import chat_minimal_dev, context_minimal_dev
 from core.simple_ping import ping_dev
 # Import Unified Assistant
@@ -1819,6 +1819,7 @@ urlpatterns = [
     path('api/assistant/preferences/', get_user_preferences_api, name='user-preferences'),  # Session 59: Phase B.4
     path('api/assistant/context/', get_assistant_context, name='personal-assistant-context'),
     path('api/assistant/learning/', get_learning_summary, name='personal-assistant-learning'),
+    path('api/assistant/task-progress/', get_task_progress, name='assistant-task-progress'),  # Session 486: Task Progress
 
     # Development assistant endpoints (no auth required)
     path('api/assistant/dev/chat/', chat_with_assistant_dev, name='personal-assistant-chat-dev'),

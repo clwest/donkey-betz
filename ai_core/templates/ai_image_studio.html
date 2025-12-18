@@ -49,6 +49,136 @@
         #pref-research-tab.active { background: #3b82f6 !important; border-color: #3b82f6 !important; }
         #pref-agents-tab.active { background: #a855f7 !important; border-color: #a855f7 !important; }
 
+        /* ============================================= */
+        /* Session 486: Frontend Intelligence Styles    */
+        /* ============================================= */
+
+        /* Feature 1: Smart Suggestion Buttons */
+        .smart-suggestions-container {
+            margin-top: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.1));
+            border-radius: 12px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .smart-suggestions-label {
+            font-size: 11px;
+            color: #c4b5fd;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .smart-suggestion-btn {
+            background: rgba(139, 92, 246, 0.2) !important;
+            border: 1px solid rgba(139, 92, 246, 0.4) !important;
+            color: #e9d5ff !important;
+            font-size: 12px !important;
+            padding: 6px 12px !important;
+            border-radius: 20px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer;
+        }
+
+        .smart-suggestion-btn:hover {
+            background: rgba(139, 92, 246, 0.4) !important;
+            border-color: rgba(139, 92, 246, 0.6) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Feature 2: Enhanced Agent Activity */
+        .agent-activity-container {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(34, 197, 94, 0.15));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        /* Feature 3: Task Progress Sidebar */
+        .task-step {
+            display: flex;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .task-step:last-child {
+            border-bottom: none;
+        }
+
+        .task-step-indicator {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .task-step-indicator.pending {
+            background: rgba(100, 116, 139, 0.3);
+            color: #94a3b8;
+            border: 2px solid rgba(100, 116, 139, 0.5);
+        }
+
+        .task-step-indicator.in_progress {
+            background: rgba(139, 92, 246, 0.3);
+            color: #c4b5fd;
+            border: 2px solid rgba(139, 92, 246, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+
+        .task-step-indicator.completed {
+            background: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            border: 2px solid rgba(34, 197, 94, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+        }
+
+        .task-step-content {
+            flex: 1;
+        }
+
+        .task-step-name {
+            font-size: 12px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .task-step-description {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        /* Feature 4: Reference Context Indicator */
+        .reference-context-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reference-context-pill:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+
         body {
             background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
             color: var(--text-primary);
@@ -1936,15 +2066,33 @@
                                             Tip: Click 🎤 to use voice commands!
                                         </small>
                                     </div>
-                                    <!-- Session 189: Workflow Status Indicator -->
+                                    <!-- Session 486: Enhanced Agent Activity Indicator -->
                                     <div id="workflowStatusContainer" class="mt-2" style="display: none;">
-                                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3);">
-                                            <div class="spinner-border spinner-border-sm text-success" role="status" style="width: 16px; height: 16px;">
-                                                <span class="visually-hidden">Working...</span>
+                                        <div class="agent-activity-container">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="spinner-grow spinner-grow-sm" style="width: 12px; height: 12px; color: #a78bfa;"></div>
+                                                    <span id="agentNameIndicator" style="font-size: 12px; color: #c4b5fd; font-weight: 600;">🤖 AI Assistant</span>
+                                                </div>
+                                                <span id="agentActivityPercent" style="font-size: 11px; color: #86efac; font-weight: 700;"></span>
                                             </div>
-                                            <small id="workflowStatusText" style="color: #4ade80; font-weight: 500;">
-                                                🤖 Analyzing your request...
-                                            </small>
+                                            <div class="progress mb-2" style="height: 4px; background: rgba(139, 92, 246, 0.2);">
+                                                <div id="agentActivityProgress" class="progress-bar" style="width: 0%; background: linear-gradient(90deg, #8b5cf6, #22c55e); transition: width 0.3s ease;"></div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span id="agentActivityStageIcon" style="font-size: 14px;">⚡</span>
+                                                <small id="workflowStatusText" style="color: #e9d5ff; font-weight: 500;">
+                                                    Processing...
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Session 486: Reference Context Indicator -->
+                                    <div id="referenceContextIndicator" class="mt-2" style="display: none;">
+                                        <div class="reference-context-pill" onclick="showReferenceDetails()">
+                                            <span style="font-size: 12px;">🎯</span>
+                                            <span id="referenceContextText" style="font-size: 11px; color: #c4b5fd;"></span>
+                                            <span style="font-size: 10px; color: #a78bfa;">ⓘ</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1955,6 +2103,30 @@
                     <!-- Right Panel (3 cols) - Style Preferences & Project Context -->
                     <!-- Session 272: Reduced from 4 to 3 cols to give more space to chat -->
                     <div class="col-lg-3">
+                        <!-- Session 486: Task Progress Sidebar -->
+                        <div class="card mb-3" id="taskProgressCard" style="display: none; background: rgba(139, 92, 246, 0.1); border: 2px solid rgba(139, 92, 246, 0.4);">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid rgba(139, 92, 246, 0.3); cursor: pointer;" onclick="toggleTaskProgress()">
+                                <h6 class="mb-0" style="color: #c4b5fd;">
+                                    📋 Task Progress
+                                </h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="taskProgressPercent" style="font-size: 11px; color: #86efac; font-weight: 700;"></span>
+                                    <span id="taskProgressToggle" style="color: #c4b5fd;">▼</span>
+                                </div>
+                            </div>
+                            <div class="card-body py-2" id="taskProgressBody">
+                                <div id="taskInfo" class="mb-2">
+                                    <div id="taskTitle" style="font-size: 12px; color: #e9d5ff; font-weight: 600; margin-bottom: 8px;"></div>
+                                    <div class="progress mb-2" style="height: 6px; background: rgba(139, 92, 246, 0.2);">
+                                        <div id="taskProgressBar" class="progress-bar" style="width: 0%; background: linear-gradient(90deg, #8b5cf6, #22c55e); transition: width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                                <div id="taskStepsContainer" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Steps will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Session 455: Cross-Platform Sessions Card -->
                         <div class="card mb-3" id="crossPlatformSessionsCard" style="background: rgba(6, 182, 212, 0.1); border: 2px solid rgba(6, 182, 212, 0.4);">
                             <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid rgba(6, 182, 212, 0.3); cursor: pointer;" onclick="toggleSessionsPanel()">
@@ -17872,6 +18044,16 @@
             toggle.textContent = sessionsPanelVisible ? '▼' : '▶';
         }
 
+        // Session 486: Toggle task progress card
+        let taskProgressPanelVisible = true;
+        function toggleTaskProgress() {
+            const body = document.getElementById('taskProgressBody');
+            const toggle = document.getElementById('taskProgressToggle');
+            taskProgressPanelVisible = !taskProgressPanelVisible;
+            if (body) body.style.display = taskProgressPanelVisible ? 'block' : 'none';
+            if (toggle) toggle.textContent = taskProgressPanelVisible ? '▼' : '▶';
+        }
+
         async function loadCrossplatformSessions() {
             const loading = document.getElementById('sessionsLoading');
             const dataDiv = document.getElementById('sessionsData');
@@ -27714,38 +27896,246 @@
                 }
             }
 
-            // Session 189: Update workflow status indicator
-            // Session 201: Format markdown in status messages
+            // Session 486: Enhanced Agent Activity Indicator
+            // Maps agent types to display names with emojis
+            getAgentDisplayName(agentType) {
+                const names = {
+                    'image_generation': '🎨 Image Generator',
+                    'video_generation': '🎬 Video Producer',
+                    'audio_generation': '🎵 Audio Creator',
+                    'research': '🔍 Research Agent',
+                    'competitor_analysis': '📊 Market Analyst',
+                    'customer_research': '👥 Customer Researcher',
+                    'brand_strategy': '🏷️ Brand Strategist',
+                    'marketing_strategy': '📈 Marketing Strategist',
+                    'legal_analysis': '⚖️ Legal Analyst',
+                    'workflow': '🔄 Workflow Orchestrator',
+                    'cto': '👔 CTO Agent',
+                    'coo': '🏢 COO Agent',
+                    'creative_director': '🎭 Creative Director'
+                };
+                return names[agentType] || '🤖 AI Assistant';
+            }
+
+            // Session 486: Get stage icon for activity indicator
+            getStageIcon(stage) {
+                const icons = {
+                    'analyzing': '🔍',
+                    'searching': '🌐',
+                    'generating': '✨',
+                    'processing': '⚙️',
+                    'rendering': '🎬',
+                    'finalizing': '📦',
+                    'complete': '✅',
+                    'error': '❌'
+                };
+                return icons[stage] || '⚡';
+            }
+
+            // Session 486: Estimate progress from stage name
+            estimateProgress(stage) {
+                const progressMap = {
+                    'analyzing': 15,
+                    'searching': 30,
+                    'preparing': 40,
+                    'generating': 60,
+                    'processing': 75,
+                    'rendering': 85,
+                    'finalizing': 95,
+                    'complete': 100
+                };
+                return progressMap[stage] || 50;
+            }
+
+            // Session 189/486: Update workflow status indicator with enhanced display
             updateWorkflowStatus(status, isComplete = false) {
                 const container = document.getElementById('workflowStatusContainer');
                 const statusText = document.getElementById('workflowStatusText');
+                const agentName = document.getElementById('agentNameIndicator');
+                const progressBar = document.getElementById('agentActivityProgress');
+                const percentText = document.getElementById('agentActivityPercent');
+                const stageIcon = document.getElementById('agentActivityStageIcon');
 
                 if (!container || !statusText) return;
 
                 // Session 201: Format any markdown in status
                 const formattedStatus = formatMarkdown(status);
 
+                // Session 486: Detect agent type and stage from status message
+                let detectedAgent = null;
+                let detectedStage = 'processing';
+
+                const statusLower = status.toLowerCase();
+                if (statusLower.includes('research') || statusLower.includes('search')) {
+                    detectedAgent = 'research';
+                    detectedStage = statusLower.includes('found') ? 'processing' : 'searching';
+                } else if (statusLower.includes('image') || statusLower.includes('generat')) {
+                    detectedAgent = 'image_generation';
+                    detectedStage = 'generating';
+                } else if (statusLower.includes('video')) {
+                    detectedAgent = 'video_generation';
+                    detectedStage = 'rendering';
+                } else if (statusLower.includes('audio') || statusLower.includes('voice')) {
+                    detectedAgent = 'audio_generation';
+                    detectedStage = 'generating';
+                } else if (statusLower.includes('analyz')) {
+                    detectedStage = 'analyzing';
+                } else if (statusLower.includes('complet') || statusLower.includes('done') || statusLower.includes('finished')) {
+                    detectedStage = 'complete';
+                }
+
+                const progress = isComplete ? 100 : this.estimateProgress(detectedStage);
+
                 if (isComplete) {
                     // Hide the status after completion
                     setTimeout(() => {
                         container.style.display = 'none';
+                        if (progressBar) progressBar.style.width = '0%';
                     }, 2000);
                     statusText.innerHTML = formattedStatus;
-                    // Change to success styling
-                    container.querySelector('.spinner-border')?.classList.add('d-none');
+                    if (stageIcon) stageIcon.textContent = '✅';
+                    if (progressBar) progressBar.style.width = '100%';
+                    if (percentText) percentText.textContent = '100%';
                 } else {
                     // Show and update status
                     container.style.display = 'block';
                     statusText.innerHTML = formattedStatus;
-                    container.querySelector('.spinner-border')?.classList.remove('d-none');
+                    if (agentName) agentName.textContent = this.getAgentDisplayName(detectedAgent);
+                    if (stageIcon) stageIcon.textContent = this.getStageIcon(detectedStage);
+                    if (progressBar) progressBar.style.width = `${progress}%`;
+                    if (percentText) percentText.textContent = progress > 0 ? `${progress}%` : '';
                 }
             }
 
             // Session 189: Hide workflow status
             hideWorkflowStatus() {
                 const container = document.getElementById('workflowStatusContainer');
+                const progressBar = document.getElementById('agentActivityProgress');
                 if (container) {
                     container.style.display = 'none';
+                }
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                }
+            }
+
+            // Session 486: Update reference context indicator
+            updateReferenceContext(contextData) {
+                const indicator = document.getElementById('referenceContextIndicator');
+                const textEl = document.getElementById('referenceContextText');
+
+                if (!indicator || !textEl) return;
+
+                if (!contextData || (!contextData.last_topic && (!contextData.items || contextData.items.length === 0))) {
+                    indicator.style.display = 'none';
+                    return;
+                }
+
+                indicator.style.display = 'block';
+
+                let contextText = '';
+                if (contextData.last_topic) {
+                    contextText = `"it/that" → ${contextData.last_topic}`;
+                } else if (contextData.items && contextData.items.length > 0) {
+                    contextText = `${contextData.items.length} item${contextData.items.length > 1 ? 's' : ''} tracked`;
+                }
+
+                textEl.textContent = contextText;
+                this.currentReferenceContext = contextData;
+            }
+
+            // Session 486: Update task progress sidebar
+            updateTaskProgress(taskData) {
+                const card = document.getElementById('taskProgressCard');
+                const title = document.getElementById('taskTitle');
+                const progressBar = document.getElementById('taskProgressBar');
+                const progressPercent = document.getElementById('taskProgressPercent');
+                const stepsContainer = document.getElementById('taskStepsContainer');
+
+                if (!card) return;
+
+                // Hide if no active task
+                if (!taskData || taskData.status !== 'active') {
+                    card.style.display = 'none';
+                    return;
+                }
+
+                // Show card with task info
+                card.style.display = 'block';
+
+                if (title) {
+                    title.textContent = taskData.description || 'Multi-step Task';
+                }
+
+                // Update progress
+                const progress = taskData.progress || { percentage: 0, completed: 0, total: 0 };
+                if (progressBar) {
+                    progressBar.style.width = `${progress.percentage}%`;
+                }
+                if (progressPercent) {
+                    progressPercent.textContent = `${progress.percentage}%`;
+                }
+
+                // Render steps
+                if (stepsContainer && taskData.steps) {
+                    stepsContainer.innerHTML = taskData.steps.map((step, index) => {
+                        const statusIcon = step.status === 'completed' ? '✅' :
+                                          step.status === 'in_progress' ? '⏳' :
+                                          step.status === 'skipped' ? '⏭️' : '⬜';
+                        const statusClass = step.status === 'completed' ? 'completed' :
+                                           step.status === 'in_progress' ? 'in_progress' : 'pending';
+                        const isActive = step.status === 'in_progress';
+
+                        return `
+                            <div class="task-step ${statusClass}" style="${isActive ? 'background: rgba(139, 92, 246, 0.2);' : ''}">
+                                <div class="task-step-indicator ${statusClass}">${statusIcon}</div>
+                                <div class="task-step-content">
+                                    <div class="task-step-name" style="color: ${isActive ? '#e9d5ff' : '#a78bfa'};">${step.name}</div>
+                                    <div class="task-step-description">${step.description || ''}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Store current task
+                this.currentTask = taskData;
+            }
+
+            // Session 486: Hide task progress
+            hideTaskProgress() {
+                const card = document.getElementById('taskProgressCard');
+                if (card) {
+                    card.style.display = 'none';
+                }
+                this.currentTask = null;
+            }
+
+            // Session 486: Toggle task progress card body
+            toggleTaskProgress() {
+                const body = document.getElementById('taskProgressBody');
+                const toggle = document.getElementById('taskProgressToggle');
+                if (body && toggle) {
+                    const isHidden = body.style.display === 'none';
+                    body.style.display = isHidden ? 'block' : 'none';
+                    toggle.textContent = isHidden ? '▼' : '▶';
+                }
+            }
+
+            // Session 486: Fetch task progress from API
+            async fetchTaskProgress() {
+                try {
+                    const response = await authenticatedFetch('/api/assistant/task-progress/');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.task) {
+                            this.updateTaskProgress(data.task);
+                        } else {
+                            this.hideTaskProgress();
+                        }
+                    }
+                } catch (error) {
+                    console.log('Task progress fetch error:', error);
                 }
             }
 
@@ -28420,6 +28810,11 @@
                             quick_actions: response.quick_actions || [],
                             smart_suggestions: response.smart_suggestions || []
                         });
+
+                        // Session 486: Update reference context indicator
+                        if (response.reference_context) {
+                            this.updateReferenceContext(response.reference_context);
+                        }
 
                         // Session 192: Check if we have tool_calls to execute (from workflow interception)
                         if (response.tool_calls && response.tool_calls.length > 0) {
@@ -29179,28 +29574,41 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         });
                     }
 
-                    // Session 483: Smart Suggestions - Quick action buttons for follow-up
-                    console.log('🔍 Session 483 Debug: addMessage metadata.quick_actions:', metadata.quick_actions);
+                    // Session 486: Smart Suggestions - Prominent container with contextual follow-ups
+                    let smartSuggestionsHtml = '';
                     if (metadata.quick_actions && metadata.quick_actions.length > 0) {
-                        console.log('✅ Session 483: Adding quick action buttons:', metadata.quick_actions.length);
-                        metadata.quick_actions.forEach((action, index) => {
+                        console.log('✅ Session 486: Adding smart suggestion buttons:', metadata.quick_actions.length);
+                        const suggestionButtons = metadata.quick_actions.map(action => {
                             const actionIcon = action.type === 'create' ? '✨' :
                                               action.type === 'modify' ? '🔧' :
                                               action.type === 'research' ? '🔍' :
                                               action.type === 'export' ? '💾' : '➡️';
-                            buttons.push(`
-                                <button class="btn btn-sm btn-outline-info quick-action-btn"
+                            return `
+                                <button class="btn smart-suggestion-btn quick-action-btn"
                                         data-action="${action.action}"
                                         data-type="${action.type}"
-                                        style="font-size: 11px; padding: 2px 8px;"
                                         title="${action.label}">
                                     ${actionIcon} ${action.label}
                                 </button>
-                            `);
-                        });
+                            `;
+                        }).join('');
+
+                        smartSuggestionsHtml = `
+                            <div class="smart-suggestions-container">
+                                <div class="smart-suggestions-label">
+                                    <span>💡</span><span>What would you like to do next?</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${suggestionButtons}
+                                </div>
+                            </div>
+                        `;
                     }
 
-                    actionButtons = `<div class="mt-2 d-flex gap-1 flex-wrap">${buttons.join('')}</div>`;
+                    // Combine regular action buttons and smart suggestions
+                    actionButtons = buttons.length > 0
+                        ? `<div class="mt-2 d-flex gap-1 flex-wrap">${buttons.join('')}</div>${smartSuggestionsHtml}`
+                        : smartSuggestionsHtml;
                 }
 
                 // Session 100: Apply beautiful styling for decision-related content

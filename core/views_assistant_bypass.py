@@ -100,6 +100,14 @@ def assistant_chat_bypass(request):
 
         response_data = assistant.process_message(message, context)
 
+        # Session 483: Debug logging for quick_actions
+        if isinstance(response_data, dict):
+            logger.info(f"🔍 Session 483 Debug: response_data keys: {list(response_data.keys())}")
+            if 'quick_actions' in response_data:
+                logger.info(f"✅ Session 483: quick_actions present: {len(response_data['quick_actions'])} items")
+            else:
+                logger.info(f"⚠️ Session 483: quick_actions NOT in response_data")
+
         # Session 184: Handle different response types
         # process_message can return a string OR a dict with tool_calls
         if isinstance(response_data, str):
@@ -174,4 +182,85 @@ def assistant_chat_bypass(request):
         return HttpResponse(
             json.dumps(fallback),
             content_type='application/json'
+        )
+
+
+# Session 486: Task progress API endpoint
+# Global task service instances per user (session-based tracking)
+_user_task_services = {}
+
+
+def _get_task_service(user_id):
+    """Get or create TaskMemoryService for user."""
+    if user_id not in _user_task_services:
+        from core.services.task_memory import TaskMemoryService
+        _user_task_services[user_id] = TaskMemoryService()
+    return _user_task_services[user_id]
+
+
+@never_cache
+def get_task_progress(request):
+    """
+    Get current task progress for the user.
+
+    Returns the active task (if any) with its steps and progress.
+    """
+    try:
+        if not request.user.is_authenticated:
+            return HttpResponse(
+                json.dumps({'error': 'Authentication required', 'task': None}),
+                content_type='application/json',
+                status=401
+            )
+
+        try:
+            # Get user's task service
+            task_service = _get_task_service(request.user.id)
+            active_task = task_service.get_active_task()
+
+            if active_task:
+                # Convert task to JSON-serializable dict
+                progress = active_task.get_progress()
+                task_data = {
+                    'task_id': active_task.task_id,
+                    'task_type': active_task.task_type,
+                    'description': active_task.description,
+                    'status': active_task.status.value,
+                    'steps': [
+                        {
+                            'name': step.name,
+                            'description': step.description,
+                            'status': step.status
+                        }
+                        for step in active_task.steps
+                    ],
+                    'progress': {
+                        'percentage': progress['percentage'],
+                        'completed': progress['completed'],
+                        'total': progress['total']
+                    }
+                }
+                return HttpResponse(
+                    json.dumps({'task': task_data, 'success': True}),
+                    content_type='application/json'
+                )
+            else:
+                return HttpResponse(
+                    json.dumps({'task': None, 'success': True}),
+                    content_type='application/json'
+                )
+
+        except ImportError:
+            logger.warning("TaskMemoryService not available")
+            return HttpResponse(
+                json.dumps({'task': None, 'success': True, 'note': 'Task tracking not available'}),
+                content_type='application/json'
+            )
+
+    except Exception as e:
+        logger.error(f"Error getting task progress: {e}")
+        return HttpResponse(
+            json.dumps({'task': None, 'error': str(e)}),
+            content_type='application/json',
+            status=500
         )
