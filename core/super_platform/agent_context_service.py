@@ -285,14 +285,16 @@ class AgentContextService:
                 context.market_data = market if market else {}
 
                 # Get tech trends
+                # Session 483: get_tech_trends() returns dict with 'discussions' key
                 tech = self.spider_service.get_tech_trends()
-                if tech and isinstance(tech, list):
-                    context.news.extend(tech[:3])
-                elif tech and isinstance(tech, dict):
-                    # Handle dict response (e.g., {'trends': [...]})
-                    tech_list = tech.get('trends', tech.get('items', []))
+                if tech and isinstance(tech, dict):
+                    # Primary key is 'discussions', fallback to 'projects'
+                    tech_list = tech.get('discussions', tech.get('projects', []))
                     if isinstance(tech_list, list):
                         context.news.extend(tech_list[:3])
+                elif tech and isinstance(tech, list):
+                    # Legacy fallback if it returns a list
+                    context.news.extend(tech[:3])
 
                 context.sources_used.append('research_enrichment')
 
