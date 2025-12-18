@@ -3698,30 +3698,46 @@ class SpiderExecutionLog(models.Model):
             status='running'
         )
 
-    def complete_success(self, items_collected: int, duration: float = None):
+    def complete_success(self, items_collected: int, duration_seconds: float = None):
         """Mark execution as successful."""
         from django.utils import timezone
         self.status = 'success' if items_collected > 0 else 'partial'
         self.items_collected = items_collected
         self.completed_at = timezone.now()
-        if duration:
-            self.duration_seconds = duration
+        if duration_seconds is not None:
+            self.duration_seconds = duration_seconds
         elif self.started_at:
             self.duration_seconds = (self.completed_at - self.started_at).total_seconds()
         self.save()
 
-    def complete_error(self, error: Exception, duration: float = None):
-        """Mark execution as failed with error details."""
-        import traceback
+    def complete_error(self, error_message: str = None, error_type: str = None,
+                       error_traceback: str = None, duration_seconds: float = None,
+                       error: Exception = None):
+        """
+        Mark execution as failed with error details.
+        Can accept either an Exception object or separate error details.
+        """
+        import traceback as tb
         from django.utils import timezone
 
         self.status = 'error'
-        self.error_message = str(error)[:2000]
-        self.error_type = type(error).__name__
-        self.error_traceback = traceback.format_exc()[:10000]
+
+        # Accept either Exception object or explicit parameters
+        if error is not None:
+            self.error_message = str(error)[:2000]
+            self.error_type = type(error).__name__
+            self.error_traceback = tb.format_exc()[:10000]
+        else:
+            if error_message:
+                self.error_message = error_message[:2000]
+            if error_type:
+                self.error_type = error_type[:200]
+            if error_traceback:
+                self.error_traceback = error_traceback[:10000]
+
         self.completed_at = timezone.now()
-        if duration:
-            self.duration_seconds = duration
+        if duration_seconds is not None:
+            self.duration_seconds = duration_seconds
         elif self.started_at:
             self.duration_seconds = (self.completed_at - self.started_at).total_seconds()
         self.save()

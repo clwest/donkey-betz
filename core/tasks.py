@@ -125,14 +125,17 @@ def run_autonomy_cycle(user_id: int = None):
         return {'error': str(e)}
 
 
-@shared_task
-def run_spider_by_category(category: str):
+@shared_task(bind=True)
+def run_spider_by_category(self, category: str):
     """
     Run spiders for a specific category.
 
     Session 265 Phase 6: Used by autonomy engine for spider dispatch.
+    Session 484: Added SpiderExecutionLog for tracking.
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
+    from core.models_unified_system import SpiderExecutionLog
+    import traceback
 
     try:
         registry = SpiderRegistry()
@@ -140,17 +143,39 @@ def run_spider_by_category(category: str):
 
         results = []
         for spider_name in spiders[:3]:  # Limit to 3 spiders per category
+            # Session 484: Create execution log
+            execution_log = SpiderExecutionLog.start_execution(
+                spider_name=spider_name,
+                category=category,
+                triggered_by='on_demand',
+                celery_task_id=self.request.id if self.request else None
+            )
+            spider_start_time = time.time()
+
             try:
                 spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
                     spider = spider_class()
                     data = spider.fetch()
+                    item_count = len(data) if data else 0
                     results.append({
                         'spider': spider_name,
-                        'items': len(data) if data else 0,
+                        'items': item_count,
                     })
+                    # Session 484: Mark success
+                    execution_log.complete_success(
+                        items_collected=item_count,
+                        duration_seconds=time.time() - spider_start_time
+                    )
             except Exception as spider_error:
                 logger.debug(f"Spider {spider_name} failed: {spider_error}")
+                # Session 484: Mark error
+                execution_log.complete_error(
+                    error_message=str(spider_error),
+                    error_type=type(spider_error).__name__,
+                    error_traceback=traceback.format_exc(),
+                    duration_seconds=time.time() - spider_start_time
+                )
 
         logger.info(f"Ran {len(results)} spiders for category {category}")
         return {'category': category, 'results': results}
@@ -158,6 +183,120 @@ def run_spider_by_category(category: str):
     except Exception as e:
         logger.error(f"Spider dispatch failed for {category}: {e}")
         return {'error': str(e)}
+
+
+@shared_task(bind=True)
+def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
+    """
+    Session 484: Execute a single spider with full execution logging.
+    Used by manual UI runs and retry operations.
+    """
+    from ai_core.spiders.spider_registry import SpiderRegistry
+    from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
+    from core.models_unified_system import SpiderData, SpiderExecutionLog
+    from django.utils import timezone
+    import traceback
+
+    spider_start_time = time.time()
+    execution_log = None
+    source_urls = []
+
+    try:
+        # Get or create execution log
+        if execution_log_id:
+            try:
+                execution_log = SpiderExecutionLog.objects.get(id=execution_log_id)
+                execution_log.celery_task_id = self.request.id if self.request else None
+                execution_log.save()
+            except SpiderExecutionLog.DoesNotExist:
+                pass
+
+        if not execution_log:
+            # Find most recent running log for this spider
+            execution_log = SpiderExecutionLog.objects.filter(
+                spider_name=spider_name,
+                status='running',
+                celery_task_id__isnull=True
+            ).order_by('-started_at').first()
+
+            if execution_log:
+                execution_log.celery_task_id = self.request.id if self.request else None
+                execution_log.save()
+
+        logger.info(f"🕷️ Executing single spider: {spider_name}")
+
+        # Get spider info
+        registry = SpiderRegistry()
+        spider_config = registry.list_spiders().get(spider_name, {})
+        config = spider_config.get('config', {})
+        category = config.get('category', spider_config.get('category', 'general'))
+
+        # Execute spider
+        if spider_name in SPIDER_TARGET_URLS:
+            source_urls = SPIDER_TARGET_URLS.get(spider_name, [])
+            data = collect_spider_data_sync(spider_name)
+            item_count = data.get('item_count', 0)
+        else:
+            spider_class = registry.get_spider_class(spider_name)
+            if spider_class:
+                spider = spider_class()
+                if hasattr(spider, 'fetch'):
+                    data = spider.fetch()
+                elif hasattr(spider, 'scrape'):
+                    import asyncio
+                    data = asyncio.run(spider.scrape())
+                else:
+                    data = {'items': [], 'message': 'Spider has no fetch/scrape method'}
+                item_count = len(data) if isinstance(data, list) else len(data.get('items', []))
+            else:
+                data = {'items': [], 'error': f'Spider class not found: {spider_name}'}
+                item_count = 0
+
+        # Save data to SpiderData
+        spider_data = SpiderData.objects.create(
+            spider_name=spider_name,
+            data_type=category,
+            raw_data=data if isinstance(data, dict) else {'data': str(data)},
+            source_url=source_urls[0] if source_urls else 'manual',
+            relevance_score=70 if item_count > 0 else 30
+        )
+
+        logger.info(f"✅ Spider {spider_name} completed: {item_count} items")
+
+        # Update execution log
+        if execution_log:
+            execution_log.source_urls_attempted = source_urls if source_urls else ['manual']
+            execution_log.complete_success(
+                items_collected=item_count,
+                duration_seconds=time.time() - spider_start_time
+            )
+
+        return {
+            'spider': spider_name,
+            'success': True,
+            'item_count': item_count,
+            'data_id': str(spider_data.id),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Spider {spider_name} failed: {e}")
+
+        # Update execution log with error
+        if execution_log:
+            execution_log.source_urls_attempted = source_urls if source_urls else []
+            execution_log.complete_error(
+                error_message=str(e),
+                error_type=type(e).__name__,
+                error_traceback=traceback.format_exc(),
+                duration_seconds=time.time() - spider_start_time
+            )
+
+        return {
+            'spider': spider_name,
+            'success': False,
+            'error': str(e),
+        }
+
 
 @shared_task(bind=True, max_retries=3)
 def isolate_documents_batch(self, batch_size: int = 50, max_batches: int = None):
@@ -525,19 +664,21 @@ def process_spider_data_automatic():
     return results
 
 
-@shared_task
-def run_spider_network():
+@shared_task(bind=True)
+def run_spider_network(self):
     """
     Session 207/221: Run all active spiders and collect REAL data.
     Runs every 30 minutes via Celery Beat.
 
     Session 221 Enhancement: Uses real_data_collector for actual web scraping.
     Session 423: Added Discord notifications for spider activity.
+    Session 484: Added SpiderExecutionLog for error tracking and diagnostics.
     """
     from ai_core.spiders.spider_registry import SpiderRegistry
     from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
-    from core.models_unified_system import SpiderData
+    from core.models_unified_system import SpiderData, SpiderExecutionLog
     from django.utils import timezone
+    import traceback
 
     logger.info("🕷️ Starting spider network execution with REAL data collection...")
 
@@ -557,11 +698,24 @@ def run_spider_network():
     }
 
     for spider_name, spider_config in all_spiders.items():
+        # Session 484: Create execution log entry
+        config = spider_config.get('config', {})
+        category = config.get('category', spider_config.get('category', 'general'))
+        execution_log = SpiderExecutionLog.start_execution(
+            spider_name=spider_name,
+            category=category,
+            triggered_by='scheduled',
+            celery_task_id=self.request.id if self.request else None
+        )
+        spider_start_time = time.time()
+        source_urls = []
+
         try:
             logger.info(f"🕷️ Running spider: {spider_name}")
 
             # Session 221: Use real data collector for spiders with configured URLs
             if spider_name in SPIDER_TARGET_URLS:
+                source_urls = SPIDER_TARGET_URLS.get(spider_name, [])
                 # Fetch REAL data from the web
                 data = collect_spider_data_sync(spider_name)
                 item_count = data.get('item_count', 0)
@@ -647,6 +801,13 @@ def run_spider_network():
             except Exception as redis_error:
                 logger.debug(f"Redis publish failed (non-critical): {redis_error}")
 
+            # Session 484: Mark execution as successful
+            execution_log.source_urls_attempted = source_urls if source_urls else [SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal']
+            execution_log.complete_success(
+                items_collected=item_count,
+                duration_seconds=time.time() - spider_start_time
+            )
+
         except Exception as e:
             logger.error(f"❌ Spider {spider_name} failed: {e}")
             results['errors'] += 1
@@ -655,6 +816,15 @@ def run_spider_network():
                 'success': False,
                 'error': str(e)
             })
+
+            # Session 484: Mark execution as failed with full error details
+            execution_log.source_urls_attempted = source_urls if source_urls else []
+            execution_log.complete_error(
+                error_message=str(e),
+                error_type=type(e).__name__,
+                error_traceback=traceback.format_exc(),
+                duration_seconds=time.time() - spider_start_time
+            )
 
             # Session 423: Send error notification to Discord
             try:
