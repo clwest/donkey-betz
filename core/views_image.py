@@ -38,6 +38,8 @@ from core.decorators import rate_limit
 from core.validators import validate_prompt, sanitize_prompt, validate_uuid, validate_numeric_range
 # Phase 2 P1: Safe error handling
 from core.responses import safe_error_message, handle_exception
+# Session 487: Creator watermark integration
+from core.services.watermark_integration import watermark_image_bytes, save_watermarked_image
 
 logger = logging.getLogger(__name__)
 
@@ -687,7 +689,13 @@ def gallery_generate(request):
                         base64_match = re.search(r'base64,(.+)', image_url)
                         if base64_match:
                             image_data = base64.b64decode(base64_match.group(1))
-                            file_path = default_storage.save(filename, ContentFile(image_data))
+                            # Session 487: Apply creator watermark before saving
+                            file_path = save_watermarked_image(
+                                image_bytes=image_data,
+                                filename=filename,
+                                user=user,
+                                generation_params={'prompt': prompt, 'model': quality, 'style': style}
+                            )
                             url = default_storage.url(file_path)
                         else:
                             continue
@@ -695,7 +703,13 @@ def gallery_generate(request):
                         # Regular HTTP/HTTPS URL - download it
                         response = requests.get(image_url, timeout=30)
                         if response.status_code == 200:
-                            file_path = default_storage.save(filename, ContentFile(response.content))
+                            # Session 487: Apply creator watermark before saving
+                            file_path = save_watermarked_image(
+                                image_bytes=response.content,
+                                filename=filename,
+                                user=user,
+                                generation_params={'prompt': prompt, 'model': quality, 'style': style}
+                            )
                             url = default_storage.url(file_path)
                         else:
                             continue
@@ -1195,8 +1209,13 @@ def remove_background(request):
             filename = f'background_removed_{uuid.uuid4().hex[:8]}.png'
             filepath = os.path.join('generated_images', filename)
 
-            # Save to media directory
-            saved_path = default_storage.save(filepath, ContentFile(response.content))
+            # Session 487: Apply creator watermark before saving
+            saved_path = save_watermarked_image(
+                image_bytes=response.content,
+                filename=filepath,
+                user=request.user,
+                generation_params={'operation': 'remove_background'}
+            )
             image_url = default_storage.url(saved_path)
 
             logger.info(f"✅ Background removed successfully - saved to {saved_path}")
@@ -1300,8 +1319,13 @@ def recolor_image(request):
             filename = f'recolored_{uuid.uuid4().hex[:8]}.png'
             filepath = os.path.join('generated_images', filename)
 
-            # Save to media directory
-            saved_path = default_storage.save(filepath, ContentFile(response.content))
+            # Session 487: Apply creator watermark before saving
+            saved_path = save_watermarked_image(
+                image_bytes=response.content,
+                filename=filepath,
+                user=request.user,
+                generation_params={'operation': 'recolor', 'object': prompt, 'color': color}
+            )
             image_url = default_storage.url(saved_path)
 
             logger.info(f"✅ Recolor complete: {prompt} → {color} - saved to {saved_path}")
@@ -1480,7 +1504,13 @@ def upscale_image(request):
                         # Got the image!
                         filename = f'upscaled_{method}_{uuid.uuid4().hex[:8]}.png'
                         filepath = os.path.join('generated_images', filename)
-                        saved_path = default_storage.save(filepath, ContentFile(result_response.content))
+                        # Session 487: Apply creator watermark before saving
+                        saved_path = save_watermarked_image(
+                            image_bytes=result_response.content,
+                            filename=filepath,
+                            user=request.user,
+                            generation_params={'operation': 'upscale', 'method': 'creative'}
+                        )
                         image_url = default_storage.url(saved_path)
 
                         logger.info(f"✅ Creative upscale complete after {(attempt+1)*2}s - saved to {saved_path}")
@@ -1521,8 +1551,13 @@ def upscale_image(request):
                 filename = f'upscaled_{method}_{uuid.uuid4().hex[:8]}.png'
                 filepath = os.path.join('generated_images', filename)
 
-                # Save to media directory
-                saved_path = default_storage.save(filepath, ContentFile(response.content))
+                # Session 487: Apply creator watermark before saving
+                saved_path = save_watermarked_image(
+                    image_bytes=response.content,
+                    filename=filepath,
+                    user=request.user,
+                    generation_params={'operation': 'upscale', 'method': method}
+                )
                 image_url = default_storage.url(saved_path)
 
                 logger.info(f"✅ Upscale complete: {method} method - saved to {saved_path}")

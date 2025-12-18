@@ -1,84 +1,82 @@
 # Session 488 - Start Here
 
-**Previous Session:** 487 (Gumroad Auto-Publishing - Golden Egg Strategy)
-**Handoff Doc:** `docs/handoffs/SESSION_487_GUMROAD_AUTO_PUBLISHING.md`
+**Previous Session:** 487 (Watermark Integration + Dormant Features Audit)
 **Date:** December 18, 2025
 
 ---
 
-## Session 487 Achievement: Gumroad Auto-Publishing COMPLETE!
+## CRITICAL: Session 487 Discovery - Dormant Features Audit
 
-Implemented end-to-end pipeline to publish AI-generated images to Gumroad for real sales:
+We discovered significant untapped value in the codebase:
 
-### New Components
-- **GumroadPublishingService** - Core service for file download + Gumroad API upload
-- **Discord Commands** - `/publish-gumroad` and `/gumroad-status`
-- **API Endpoints** - Web publish + webhook handler
-- **Celery Task** - Updated with actual file upload
+| Category | Built | Connected | Utilization |
+|----------|-------|-----------|-------------|
+| Services | 66 | 52 | 79% |
+| Models | 172 | 143 | 83% |
+| Celery Tasks | 152 | 72 | **47%** |
+| **Autonomous Situations** | **18** | **1** | **6%** |
+| Management Commands | 35 | ~5 | 14% |
 
-### How It Works
-1. User generates image in AI Studio
-2. User types `/publish-gumroad 320 9.99 "My Art"`
-3. Service downloads image (data URI, local path, or URL)
-4. Service uploads to Gumroad with multipart file
-5. ContentDistribution record tracks the listing
-6. Webhook receives sale notifications and updates revenue
+### The Big Miss: 17 of 18 Autonomous Situations are NOT RUNNING!
 
----
+Built to run 24/7 but never scheduled in Celery Beat:
+- Content Studio - Auto-generates trending content
+- Job Matcher - Auto-matches jobs to user profile
+- Freelance Scout - Auto-finds freelance opportunities
+- Blockchain Auditor - Auto-audits smart contracts
+- SEC Filing Monitor - Auto-tracks SEC filings
+- And 12 more...
 
-## Gap Analysis Status (Updated Session 487)
-
-| Option | Status | Gap |
-|--------|--------|-----|
-| 1. Autonomous Dashboard | **COMPLETE** | 0% |
-| 2. Monetization | **In Progress** | 20% |
-| 3. Frontend Intelligence | **COMPLETE** | 0% |
-| 4. Agent Observatory | Pending | 20% |
-| 5. Trigger Tuning | **COMPLETE** | 0% |
-| 6. Spider Health | **COMPLETE** | 0% |
-
-**Progress: 4 of 6 options complete! (67%)**
-
-**See:** `docs/plan/00-GAP-ANALYSIS.md` for full details
+**Full Activation Plan:** `docs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md`
 
 ---
 
-## Session 488 Options
+## Session 487 Achievements
 
-### Option A: Test & Expand Gumroad Publishing (RECOMMENDED)
-- Test real Gumroad upload with connected account
-- Add bulk publishing (multiple images at once)
-- Add auto-publish trigger after image generation
+### 1. Watermark Integration (COMPLETE)
+Every AI-generated image now automatically embeds invisible creator attribution:
+- LSB steganography with magic bytes `DKAI`
+- Creator ID, provenance ID, timestamp embedded
+- Ownership verification working
+- Files: `core/services/watermark_integration.py`, `core/views_image.py`
 
-### Option B: Complete Monetization (20% remaining)
-- Subscription tiers page UI
-- Feature gating implementation
-- Upgrade prompts in UI
-
-### Option C: Agent Observatory Polish (20% gap)
-- Time Travel Debugger UI (API exists, no frontend)
-- Relationship graph enhancements
-- Hive Mind replay step-by-step
-
-### Option D: Other Platform Publishing
-- Etsy auto-publishing with file upload
-- Shutterstock contributor submission
-- Multi-platform batch publish
+### 2. Dormant Features Audit (COMPLETE)
+Comprehensive audit of all built-but-disconnected features.
 
 ---
 
-## System Status
+## Session 488 Priority: ACTIVATE DORMANT FEATURES
 
-| Metric | Value |
-|--------|-------|
-| Autonomous Situations | **19** |
-| Event-Driven Triggers | **35+** |
-| Spiders | **67** |
-| Spider Data Records | **19,600+** |
-| Embedding Coverage | **88.6%** |
-| Agents | **41** |
-| Advisors | **25** |
-| Discord Commands | **37** |
+### Phase 1: Enable Autonomous Situations (30 min)
+Add to `core/celery.py` beat_schedule - see activation plan for exact code.
+
+### Phase 2: Connect High-Impact Services (1-2 hours each)
+1. **Semantic Routing** - Replace keyword routing with embeddings
+2. **Streaming Progress** - Show "Generating..." instead of spinner
+3. **Implicit Learning** - Track downloads, shares, time spent
+4. **A/B Testing** - Data-driven prompt/model optimization
+
+### Phase 3: Revenue Features (1 hour)
+1. **Gumroad Publishing** - Add UI button (API ready from Session 487)
+2. **Certificate Service** - "Download Certificate" option
+3. **Marketplace Discovery** - "Where to sell" suggestions
+
+---
+
+## Quick Reference: Top 10 Features to Connect
+
+| Feature | File | Impact | Effort |
+|---------|------|--------|--------|
+| Autonomous Situations | `core/celery.py` | CRITICAL | Low |
+| Semantic Routing | `core/services/semantic_routing.py` | High | Medium |
+| Streaming Progress | `core/services/streaming_progress.py` | High UX | Medium |
+| Implicit Learning | `core/services/implicit_learning.py` | High | Medium |
+| A/B Testing | `core/views_ab_testing.py` | High | Medium |
+| Gumroad Publishing | `core/services/gumroad_publishing.py` | Revenue | Low |
+| Certificate Service | `core/services/certificate_service.py` | Trust | Low |
+| Memory Embedding | `core/services/memory_embedding_service.py` | AI Quality | Medium |
+| Domain Extraction | `core/services/domain_extraction_service.py` | Research | Medium |
+| Reference Resolver | `core/services/reference_resolver.py` | UX | Low |
 
 ---
 
@@ -89,50 +87,53 @@ Implemented end-to-end pipeline to publish AI-generated images to Gumroad for re
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
+# Verify watermark integration
+python -c "from core.services.watermark_integration import watermark_image_bytes; print('OK')"
+
+# Check Celery scheduled tasks
+celery -A core inspect scheduled
+
 # Access UI
 open http://localhost:8000/ai-studio/
-
-# Test new features:
-# 1. In Discord: /gumroad-status → Check connection
-# 2. In Discord: /gallery → View your images with IDs
-# 3. In Discord: /publish-gumroad <id> [price] [title] → Publish!
 ```
 
 ---
 
-## Key Files from Session 487
+## System Status
 
-### New Files
-- `core/services/gumroad_publishing.py` - Core publishing service
-
-### Modified Files
-- `core/services/discord_bot.py` - GumroadCommands cog
-- `core/tasks.py` - Updated process_gumroad_distribution()
-- `core/urls.py` - New URL routes
-- `core/views_platform_integrations.py` - Publish + webhook endpoints
-
-### Commits
-```
-4be7c50 feat(Session 487): Gumroad Auto-Publishing - Golden Egg Strategy
-```
+| Metric | Value |
+|--------|-------|
+| Autonomous Situations | 19 (only 1 running!) |
+| Services | 66 (52 connected) |
+| Spiders | 67 |
+| Spider Data Records | 19,600+ |
+| Agents | 41 |
+| Advisors | 25 |
+| Discord Commands | 37 |
 
 ---
 
-**Session 487 Complete - GUMROAD AUTO-PUBLISHING OPERATIONAL!**
+## Key Documentation
+
+- **Activation Plan:** `docs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md`
+- **Architecture:** `docs/ARCHITECTURE.md`
+- **Capabilities:** `docs/CAPABILITIES.md`
+- **Gap Analysis:** `docs/plan/00-GAP-ANALYSIS.md`
+
+---
+
+**Goal: Get to 100% feature utilization!**
 
 ```
-+-------------------------------------------------------------------------+
-|                    GOLDEN EGG STRATEGY                                   |
-|                                                                          |
-|   🥚 Generate AI Image                                                   |
-|       ↓                                                                 |
-|   🚀 /publish-gumroad 320 9.99                                          |
-|       ↓                                                                 |
-|   💰 Live on Gumroad for Sale!                                          |
-|       ↓                                                                 |
-|   🔔 Webhook notifies on purchase                                       |
-|       ↓                                                                 |
-|   📊 Revenue tracked in ContentDistribution                             |
-|                                                                          |
-+-------------------------------------------------------------------------+
+╔════════════════════════════════════════════════════════════════════╗
+║                    DORMANT FEATURES ACTIVATION                      ║
+║                                                                     ║
+║   Currently:  47% Celery tasks scheduled                           ║
+║               6% Autonomous Situations running                      ║
+║               79% Services connected                                ║
+║                                                                     ║
+║   Goal:       100% utilization of everything we built!             ║
+║                                                                     ║
+║   Estimated:  4-6 hours of focused work                            ║
+╚════════════════════════════════════════════════════════════════════╝
 ```
