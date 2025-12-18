@@ -1,27 +1,31 @@
-# Session 494 - Start Here
+# Session 495 - Start Here
 
-**Previous Session:** 493 (Marketplace Discovery Integration)
+**Previous Session:** 494 (Agent Conversations Fix)
 **Date:** December 18, 2025
 
 ---
 
-## Session 493 Achievements
+## Session 494 Achievements
 
-### Marketplace Discovery Service Connected
+### Agent Conversations Display Fixed
 
-Connected the MarketplaceDiscoveryService to the Certificate Modal:
+Fixed the Agents/Social sub-tab showing stale conversations (4+ days old):
 
-1. **UI Enhancement**: Added "Marketplace Recommendations" section to Certificate Modal
-2. **Platform Suggestions**: Shows top platforms with match percentages (Instagram, DeviantArt, etc.)
-3. **Hashtag Generation**: Click-to-copy optimized hashtags
-4. **Bug Fixes**: Fixed spider data extraction in MarketplaceDiscoveryService
+**Bug:** Agent Conversations showed records from 4.9 days ago despite 457 fresh records existing
+**Root Cause:** API fetched HiveMindSession records first, filling all slots with old data before checking AgentConversation
 
-**Before:** Service existed but no frontend integration
-**After:** Users see platform recommendations when viewing any certificate
+**Fix Applied:**
+1. Fetch `limit` records from BOTH HiveMindSession and AgentConversation
+2. Combine all records together
+3. Sort by date (newest first)
+4. Take top `limit` from combined set
+
+**Before:** All 5 conversations from Dec 13 (4.9 days ago)
+**After:** Top 5 from today (Dec 18, just minutes old)
 
 ---
 
-## All 66 Services Now Connected!
+## All 66 Services Connected (Session 493)
 
 | Session | Service | Status |
 |---------|---------|--------|
@@ -36,15 +40,15 @@ Connected the MarketplaceDiscoveryService to the Certificate Modal:
 | 491 | Agent Intelligence Context | Fixed |
 | 491 | Gumroad Frontend UI | Connected |
 | 492 | Certificate Service | Connected |
-| **493** | **Marketplace Discovery** | **Connected** |
+| 493 | Marketplace Discovery | Connected |
 
 **Services: 66 total, 66 connected (100%!)**
 
 ---
 
-## Session 494 Priorities
+## Session 495 Priorities
 
-With all 66 services connected, potential next steps:
+With all 66 services connected and Agent Conversations fixed, potential next steps:
 
 ### Enhancement Options
 
@@ -70,13 +74,11 @@ With all 66 services connected, potential next steps:
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Test Marketplace Discovery (in browser)
+# Verify Agent Conversations fix (in browser)
 # 1. Open http://localhost:8000/ai-studio/
-# 2. Generate any image
-# 3. Go to Gallery tab
-# 4. Click on an image
-# 5. Click "View Certificate"
-# 6. See "Where to Share This Content" section
+# 2. Go to Agents tab
+# 3. Click Social sub-tab
+# 4. Agent Conversations should show recent (today) entries
 
 # Access UI
 open http://localhost:8000/ai-studio/
@@ -100,23 +102,23 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
+- **Session 494 Fix:** `core/views_agent_learning.py` (lines 442-575)
 - **Session 493 Handoff:** `docs/handoffs/SESSION_493_MARKETPLACE_DISCOVERY_INTEGRATION.md`
-- **Session 492 Handoff:** `docs/handoffs/SESSION_492_CERTIFICATE_SERVICE_INTEGRATION.md`
 
 ---
 
-**All 66 services connected! What's next?**
+**Agent Conversations now show fresh data!**
 
 ```
 +====================================================================+
-|             SESSION 493: MARKETPLACE DISCOVERY CONNECTED            |
+|              SESSION 494: AGENT CONVERSATIONS FIXED                 |
 |                                                                    |
-|   1. Added UI to Certificate Modal                                 |
-|   2. Platform suggestions with match percentages                   |
-|   3. Click-to-copy hashtag recommendations                         |
-|   4. Fixed spider data extraction bugs                             |
+|   Bug: Showed 4+ day old records instead of fresh ones             |
+|   Fix: Fetch from both sources, combine, sort by date              |
+|                                                                    |
+|   Before: All conversations from Dec 13 (4.9 days ago)             |
+|   After: Top conversations from today (minutes old!)               |
 |                                                                    |
 |   Services: 66/66 connected (100%!)                                |
-|   All dormant services now active!                                 |
 +====================================================================+
 ```
