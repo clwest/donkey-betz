@@ -9250,6 +9250,42 @@ def organize_memories_into_rooms(agent_id: str):
 
 
 # =============================================================================
+# Session 490: Memory Embedding Backfill Task
+# =============================================================================
+
+@shared_task(bind=True, name='core.tasks.backfill_memory_embeddings')
+def backfill_memory_embeddings(self, batch_size: int = 50):
+    """
+    Session 490: Backfill embeddings for memories that don't have them.
+
+    Runs periodically to ensure all memories have embeddings for semantic search.
+    """
+    logger.info(f"🧠 [MEMORY BACKFILL] Starting backfill (batch_size={batch_size})")
+
+    try:
+        from core.services.memory_embedding_service import get_memory_embedding_service
+
+        service = get_memory_embedding_service()
+        stats = service.backfill_embeddings(batch_size=batch_size)
+
+        logger.info(
+            f"🧠 [MEMORY BACKFILL] Completed: "
+            f"{stats['succeeded']}/{stats['processed']} succeeded"
+        )
+
+        return {
+            'status': 'completed',
+            'processed': stats['processed'],
+            'succeeded': stats['succeeded'],
+            'failed': stats['failed']
+        }
+
+    except Exception as e:
+        logger.error(f"🧠 [MEMORY BACKFILL] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+# =============================================================================
 # Session 252: Agent Mood System Tasks
 # =============================================================================
 

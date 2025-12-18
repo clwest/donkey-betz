@@ -1,6 +1,6 @@
 # Session 491 - Start Here
 
-**Previous Session:** 490 (Implicit Learning + Reference Resolver + Domain Extraction)
+**Previous Session:** 490 (Implicit Learning + Reference Resolver + Domain Extraction + Memory Embedding)
 **Date:** December 18, 2025
 
 ---
@@ -8,28 +8,28 @@
 ## Session 490 Achievements
 
 ### 1. Implicit Learning Connected
-
 Integrated implicit learning service into image operations:
-
 - **toggle_favorite**: Tracks favorites (+0.80 weight)
 - **delete_image**: Tracks deletions (-0.50 weight)
 - **batch_download_images**: Tracks downloads (+0.70 weight)
 
 ### 2. Reference Resolver Connected
-
 Integrated reference resolver into PersonalAssistantConsumer:
-
 - **Ordinals**: "the second one" resolves to item #2 from lists
 - **Repeat**: "do it again" repeats last action
 - **Pronouns**: "it", "that" resolve to last topic
 
 ### 3. Domain Extraction Connected
-
 Integrated domain extraction into business research agents:
-
 - **CompetitorAnalysisAgent**: Extracts domain from task for targeted queries
 - **CustomerResearchAgent**: Same integration
 - **13 domains supported**: fitness, saas, fintech, ai_ml, etc.
+
+### 4. Memory Embedding Connected
+Integrated semantic memory into agent prompt building:
+- **BaseAgent._build_prompt()**: Injects relevant memories as context
+- **Backfill task**: Ensures all memories have embeddings (every 30 min)
+- **213 memories**: All with embeddings (100% coverage)
 
 ---
 
@@ -42,6 +42,7 @@ Integrated domain extraction into business research agents:
 | 490 | Implicit Learning | Connected |
 | 490 | Reference Resolver | Connected |
 | 490 | Domain Extraction | Connected |
+| 490 | Memory Embedding | Connected |
 | 491 | ? | Next |
 
 ---
@@ -52,7 +53,8 @@ Integrated domain extraction into business research agents:
 
 | Service | File | Impact |
 |---------|------|--------|
-| Memory Embedding | `core/services/memory_embedding_service.py` | Context |
+| Agent Intelligence Context | `core/services/agent_intelligence_context.py` | Richer agent context |
+| Classification Integration | `core/services/classification_integration.py` | Better routing |
 
 ### Revenue Features
 
@@ -71,13 +73,14 @@ Integrated domain extraction into business research agents:
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Test domain extraction
+# Test memory embedding
 python manage.py shell -c "
-from core.services.domain_extraction_service import get_domain_extraction_service
-service = get_domain_extraction_service()
-result = service.extract_domains('AI fitness coaching app', use_gpt=False)
-print(f'Domain: {result.primary_domain}')
-print(f'Tags: {result.domain_tags[:5]}')
+from core.services.memory_embedding_service import get_memory_embedding_service
+from core.models_unified_system import Agent, AgentMemory
+service = get_memory_embedding_service()
+print(f'Service: {service.__class__.__name__}')
+print(f'Memories: {AgentMemory.objects.count()}')
+print(f'With embeddings: {AgentMemory.objects.exclude(embedding__isnull=True).count()}')
 "
 
 # Access UI
@@ -91,7 +94,7 @@ open http://localhost:8000/ai-studio/
 | Metric | Value |
 |--------|-------|
 | Autonomous Situations | 15 |
-| Services | 66 (57 connected) |
+| Services | 66 (61 connected) |
 | Spiders | 67 |
 | Spider Data Records | 20,000+ |
 | Agents | 41 |
@@ -106,6 +109,7 @@ open http://localhost:8000/ai-studio/
   - `docs/handoffs/SESSION_490_IMPLICIT_LEARNING_INTEGRATION.md`
   - `docs/handoffs/SESSION_490_REFERENCE_RESOLVER_INTEGRATION.md`
   - `docs/handoffs/SESSION_490_DOMAIN_EXTRACTION_INTEGRATION.md`
+  - `docs/handoffs/SESSION_490_MEMORY_EMBEDDING_INTEGRATION.md`
 - **Activation Plan:** `docs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md`
 
 ---
@@ -114,12 +118,13 @@ open http://localhost:8000/ai-studio/
 
 ```
 +====================================================================+
-|              SESSION 490: THREE SERVICES CONNECTED                  |
+|              SESSION 490: FOUR SERVICES CONNECTED                   |
 |                                                                    |
 |   Implicit Learning:   toggle_favorite, delete, download           |
 |   Reference Resolver:  "the second one", "do it again"             |
 |   Domain Extraction:   13 domains for targeted research            |
+|   Memory Embedding:    Semantic memory in agent prompts            |
 |                                                                    |
-|   Next: Memory Embedding Service                                   |
+|   Next: Agent Intelligence Context                                 |
 +====================================================================+
 ```

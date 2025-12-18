@@ -753,6 +753,22 @@ class BaseAgent(ABC, TimeTravelMixin):
                     color_names = [c.get('palette', '') for c in colors[:3]]
                     parts.append(f"Trending palettes: {', '.join(color_names)}")
 
+        # Session 490: Add relevant memories from semantic memory service
+        try:
+            if self.memory_service and self.agent_model:
+                memory_context = self.memory_service.get_memory_context(
+                    agent=self.agent_model,
+                    query=task,
+                    max_memories=3,
+                    max_chars=800
+                )
+                if memory_context:
+                    parts.append(f"\n\n## Relevant Memories")
+                    parts.append(memory_context)
+                    logger.debug(f"🧠 [Session 490] Injected {len(memory_context)} chars of memory context")
+        except Exception as e:
+            logger.debug(f"Memory context injection failed (non-fatal): {e}")
+
         # Add the task
         parts.append(f"\n\n## Task")
         parts.append(task)

@@ -173,6 +173,14 @@ app.conf.beat_schedule = {
             'expires': 600,  # Expire after 10 minutes
         }
     },
+    # Session 490: Memory Embedding Backfill
+    'backfill-memory-embeddings': {
+        'task': 'core.tasks.backfill_memory_embeddings',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # Expire after 30 minutes
+        }
+    },
     # Session 210: Style Evolution Tracking
     'record-style-evolution': {
         'task': 'core.tasks.record_all_user_style_evolution',
@@ -850,6 +858,151 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
         'options': {
             'expires': 14400,  # 4 hours
+        }
+    },
+
+    # =========================================================================
+    # Session 487: ENABLING ALL 14 DORMANT AUTONOMOUS SITUATIONS
+    # These were built but never scheduled - now activating them!
+    # =========================================================================
+
+    # Situation #6: Trend-Driven Design System
+    # Monitors Dribbble, Behance, Awwwards for design trends
+    'autonomous-design-trends-monitor': {
+        'task': 'core.tasks.run_design_trends_monitor',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+
+    # Situation #7: Viral Content Predictor
+    # Analyzes Reddit, HackerNews, Bluesky for viral potential
+    'autonomous-viral-content-predictor': {
+        'task': 'core.tasks.run_viral_content_predictor',
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+
+    # Situation #8: Thumbnail A/B Optimizer
+    # Tests thumbnail variations for performance
+    'autonomous-thumbnail-optimizer': {
+        'task': 'core.tasks.run_thumbnail_optimizer',
+        'schedule': crontab(minute=30, hour='*/8'),  # Every 8 hours at :30
+        'options': {
+            'expires': 28800,  # 8 hours
+        }
+    },
+
+    # Situation #9: Job Match Intelligence
+    # Monitors RemoteOK, WeWorkRemotely, Adzuna for job matches
+    'autonomous-job-match-intelligence': {
+        'task': 'core.tasks.run_job_match_intelligence',
+        'schedule': crontab(minute=0, hour='8,12,18'),  # 3x daily at 8 AM, 12 PM, 6 PM
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+
+    # Situation #10: Freelance Opportunity Scout
+    # Scans job boards for freelance/contract opportunities
+    'autonomous-freelance-scout': {
+        'task': 'core.tasks.run_freelance_opportunity_scout',
+        'schedule': crontab(minute=30, hour='9,15,21'),  # 3x daily at 9:30 AM, 3:30 PM, 9:30 PM
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+
+    # Situation #11: Side Hustle Detector
+    # Finds trending micro-opportunities from Reddit, ProductHunt, Kickstarter
+    'autonomous-side-hustle-detector': {
+        'task': 'core.tasks.run_side_hustle_detector',
+        'schedule': crontab(minute=45, hour='*/12'),  # Every 12 hours at :45
+        'options': {
+            'expires': 43200,  # 12 hours
+        }
+    },
+
+    # Situation #12: SEC Filing Analyzer
+    # Analyzes SEC filings (13F, 10-K, 10-Q, 8-K) for investment signals
+    'autonomous-sec-filing-analyzer': {
+        'task': 'core.tasks.run_sec_filing_analyzer',
+        'schedule': crontab(minute=0, hour='7,12,17', day_of_week='1-5'),  # 3x daily on weekdays
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
+
+    # Situation #13: Crypto Sentiment Monitor
+    # Tracks crypto social sentiment from CoinGecko, Reddit, Bluesky
+    'autonomous-crypto-sentiment-monitor': {
+        'task': 'core.tasks.run_crypto_sentiment_monitor',
+        'schedule': crontab(minute=0, hour='*/3'),  # Every 3 hours
+        'options': {
+            'expires': 10800,  # 3 hours
+        }
+    },
+
+    # Situation #14: Earnings Surprise Predictor
+    # Predicts earnings surprises from financial data
+    'autonomous-earnings-predictor': {
+        'task': 'core.tasks.run_earnings_surprise_predictor',
+        'schedule': crontab(minute=30, hour='6', day_of_week='1-5'),  # Daily at 6:30 AM on weekdays
+        'options': {
+            'expires': 86400,  # 24 hours
+        }
+    },
+
+    # Situation #15: Tech Stack Evolution Tracker
+    # Monitors rising/falling tech from GitHub, HackerNews, Dev.to
+    'autonomous-tech-stack-tracker': {
+        'task': 'core.tasks.run_tech_stack_tracker',
+        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours
+        'options': {
+            'expires': 28800,  # 8 hours
+        }
+    },
+
+    # Situation #16: AI Model Release Monitor
+    # Tracks new AI models from HuggingFace, GitHub, HackerNews
+    'autonomous-ai-model-monitor': {
+        'task': 'core.tasks.run_ai_model_monitor',
+        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+        'options': {
+            'expires': 21600,  # 6 hours
+        }
+    },
+
+    # Situation #17: Course & Skill Gap Analyzer
+    # Analyzes skill gaps and recommends courses
+    'autonomous-skill-gap-analyzer': {
+        'task': 'core.tasks.run_skill_gap_analyzer',
+        'schedule': crontab(minute=0, hour='7', day_of_week='monday'),  # Weekly on Monday at 7 AM
+        'options': {
+            'expires': 604800,  # 1 week
+        }
+    },
+
+    # Situation #18: Case Law Monitor
+    # Tracks relevant case decisions from CourtListener, FindLaw, Justia
+    'autonomous-case-law-monitor': {
+        'task': 'core.tasks.run_case_law_monitor',
+        'schedule': crontab(minute=30, hour='8'),  # Daily at 8:30 AM
+        'options': {
+            'expires': 86400,  # 24 hours
+        }
+    },
+
+    # Situation #19: Regulatory Change Detector
+    # Monitors regulatory news from government, legal news sources
+    'autonomous-regulatory-detector': {
+        'task': 'core.tasks.run_regulatory_change_detector',
+        'schedule': crontab(minute=0, hour='9', day_of_week='1-5'),  # Daily at 9 AM on weekdays
+        'options': {
+            'expires': 86400,  # 24 hours
         }
     },
 }
