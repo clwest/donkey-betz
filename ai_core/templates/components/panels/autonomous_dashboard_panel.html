@@ -1,0 +1,646 @@
+<!-- ============================================================ -->
+<!-- Session 484: AUTONOMOUS SYSTEMS DASHBOARD -->
+<!-- Visibility into 19 autonomous situations running 24/7 -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="autonomous" role="tabpanel">
+    <div class="container-fluid p-4">
+        <!-- Header with Stats -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1" style="color: #f9a8d4; text-shadow: 0 0 15px rgba(236, 72, 153, 0.5);">
+                    <i class="fas fa-robot me-2"></i>Autonomous Systems Dashboard
+                </h4>
+                <p class="text-muted mb-0">Monitoring 19 autonomous situations running 24/7</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-info" onclick="refreshAutonomousDashboard()" title="Refresh Dashboard">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Stats Row -->
+        <div class="row mb-4" id="autonomousStatsRow">
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #a78bfa;" id="statTotalSituations">19</h2>
+                        <small class="text-muted">Situations</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #34d399;" id="statRuns24h">0</h2>
+                        <small class="text-muted">Runs (24h)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #f472b6;" id="statSuccessRate">0%</h2>
+                        <small class="text-muted">Success Rate</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #fbbf24;" id="statActiveTriggers">0</h2>
+                        <small class="text-muted">Active Triggers</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #60a5fa;" id="statTriggerFires24h">0</h2>
+                        <small class="text-muted">Fires (24h)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h2 class="mb-0" style="color: #f87171;" id="statFailed24h">0</h2>
+                        <small class="text-muted">Failed (24h)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Situations by Domain (Left Column - 8 cols) -->
+            <div class="col-lg-8">
+                <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(236, 72, 153, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                        <h5 class="mb-0" style="color: #f9a8d4;">
+                            <i class="fas fa-layer-group me-2"></i>Situations by Domain
+                        </h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary active" onclick="setSituationView('grid')" id="viewGridBtn">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="setSituationView('list')" id="viewListBtn">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                        <div id="situationsByDomain">
+                            <!-- Populated by JavaScript -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-pink" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mt-2">Loading situations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trigger Activity Feed (Right Column - 4 cols) -->
+            <div class="col-lg-4">
+                <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(245, 158, 11, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+                        <h5 class="mb-0" style="color: #fbbf24;">
+                            <i class="fas fa-bolt me-2"></i>Trigger Activity
+                        </h5>
+                        <select class="form-select form-select-sm" style="width: auto; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24;" id="triggerTimeRange" onchange="loadTriggerEvents()">
+                            <option value="24">Last 24h</option>
+                            <option value="48">Last 48h</option>
+                            <option value="168">Last 7d</option>
+                        </select>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                        <div id="triggerActivityFeed">
+                            <!-- Populated by JavaScript -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mt-2">Loading triggers...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Critical Events -->
+                <div class="card" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(239, 68, 68, 0.3);">
+                    <div class="card-header" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                        <h5 class="mb-0" style="color: #f87171;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Critical Events (24h)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="criticalEventsList">
+                            <!-- Populated by JavaScript -->
+                            <div class="text-center py-3 text-muted">
+                                <small>No critical events</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Situation Detail Modal -->
+<div class="modal fade" id="situationDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(236, 72, 153, 0.4);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                <h5 class="modal-title" id="situationDetailTitle" style="color: #f9a8d4;">
+                    <i class="fas fa-cog me-2"></i>Situation Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="situationDetailBody">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(236, 72, 153, 0.3);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="btnRunSituationNow" onclick="runSituationNow()">
+                    <i class="fas fa-play me-1"></i>Run Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// Session 484: Autonomous Dashboard JavaScript
+// ============================================================
+
+let currentSituationType = null;
+let autonomousDashboardLoaded = false;
+let situationView = 'grid';
+
+// Domain color mapping
+const domainColors = {
+    'content': { bg: 'rgba(139, 92, 246, 0.15)', border: 'rgba(139, 92, 246, 0.4)', text: '#a78bfa' },
+    'creative': { bg: 'rgba(236, 72, 153, 0.15)', border: 'rgba(236, 72, 153, 0.4)', text: '#f472b6' },
+    'income': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#34d399' },
+    'financial': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fbbf24' },
+    'research': { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#60a5fa' },
+    'legal': { bg: 'rgba(107, 114, 128, 0.15)', border: 'rgba(107, 114, 128, 0.4)', text: '#9ca3af' }
+};
+
+// Severity colors
+const severityColors = {
+    'critical': '#ef4444',
+    'high': '#f97316',
+    'medium': '#eab308',
+    'low': '#22c55e'
+};
+
+// Load dashboard when tab is shown
+document.getElementById('autonomous-tab')?.addEventListener('shown.bs.tab', function() {
+    if (!autonomousDashboardLoaded) {
+        loadAutonomousDashboard();
+        autonomousDashboardLoaded = true;
+    }
+});
+
+function loadAutonomousDashboard() {
+    loadAnalyticsSummary();
+    loadSituations();
+    loadTriggerEvents();
+}
+
+function refreshAutonomousDashboard() {
+    autonomousDashboardLoaded = false;
+    loadAutonomousDashboard();
+}
+
+async function loadAnalyticsSummary() {
+    try {
+        const response = await authenticatedFetch('/api/autonomous/analytics/summary/');
+        const data = await response.json();
+
+        if (data.success) {
+            const s = data.summary;
+            document.getElementById('statTotalSituations').textContent = s.total_situations;
+            document.getElementById('statRuns24h').textContent = s.runs_24h;
+            document.getElementById('statSuccessRate').textContent = s.success_rate + '%';
+            document.getElementById('statActiveTriggers').textContent = s.active_triggers;
+            document.getElementById('statTriggerFires24h').textContent = s.trigger_fires_24h;
+            document.getElementById('statFailed24h').textContent = s.failed_24h;
+
+            // Update critical events
+            renderCriticalEvents(data.critical_events || []);
+        }
+    } catch (error) {
+        console.error('Error loading analytics summary:', error);
+    }
+}
+
+async function loadSituations() {
+    try {
+        const response = await authenticatedFetch('/api/autonomous/situations/');
+        const data = await response.json();
+
+        if (data.success) {
+            renderSituationsByDomain(data.by_domain, data.situations);
+        }
+    } catch (error) {
+        console.error('Error loading situations:', error);
+        document.getElementById('situationsByDomain').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>Failed to load situations
+            </div>
+        `;
+    }
+}
+
+function renderSituationsByDomain(byDomain, situations) {
+    const container = document.getElementById('situationsByDomain');
+
+    if (!byDomain || Object.keys(byDomain).length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">No situations found</div>';
+        return;
+    }
+
+    let html = '';
+
+    // Sort domains by name
+    const domainOrder = ['content', 'creative', 'income', 'financial', 'research', 'legal'];
+    const sortedDomains = Object.keys(byDomain).sort((a, b) => {
+        return domainOrder.indexOf(a) - domainOrder.indexOf(b);
+    });
+
+    for (const domain of sortedDomains) {
+        const domainData = byDomain[domain];
+        const colors = domainColors[domain] || domainColors.legal;
+
+        html += `
+            <div class="mb-4">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge me-2" style="background: ${colors.bg}; color: ${colors.text}; border: 1px solid ${colors.border}; padding: 6px 12px;">
+                        ${domainData.name}
+                    </span>
+                    <small class="text-muted">${domainData.active_count}/${domainData.situations.length} active | ${domainData.total_runs_24h} runs (24h)</small>
+                </div>
+                <div class="${situationView === 'grid' ? 'row g-2' : ''}">
+        `;
+
+        for (const sit of domainData.situations) {
+            if (situationView === 'grid') {
+                html += renderSituationCard(sit, colors);
+            } else {
+                html += renderSituationListItem(sit, colors);
+            }
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function renderSituationCard(sit, colors) {
+    const statusIcon = getStatusIcon(sit.status);
+    const statusColor = getStatusColor(sit.status);
+
+    return `
+        <div class="col-md-4 col-lg-3">
+            <div class="card h-100 situation-card" style="background: ${colors.bg}; border: 1px solid ${colors.border}; cursor: pointer;" onclick="showSituationDetail('${sit.type}')">
+                <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0" style="color: ${colors.text}; font-size: 0.85rem;">${sit.name}</h6>
+                        <span style="color: ${statusColor};" title="${sit.status}">${statusIcon}</span>
+                    </div>
+                    <div class="d-flex justify-content-between" style="font-size: 0.7rem;">
+                        <span class="text-muted">${sit.runs_24h} runs</span>
+                        <span class="text-muted">${sit.success_rate}%</span>
+                    </div>
+                    <div style="font-size: 0.65rem; color: #9ca3af;">
+                        ${sit.last_run ? 'Last: ' + formatTimeAgo(sit.last_run) : 'Never run'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSituationListItem(sit, colors) {
+    const statusIcon = getStatusIcon(sit.status);
+    const statusColor = getStatusColor(sit.status);
+
+    return `
+        <div class="d-flex align-items-center p-2 mb-1 rounded situation-list-item" style="background: ${colors.bg}; border: 1px solid ${colors.border}; cursor: pointer;" onclick="showSituationDetail('${sit.type}')">
+            <span style="color: ${statusColor}; width: 20px;">${statusIcon}</span>
+            <div class="flex-grow-1 ms-2">
+                <span style="color: ${colors.text};">${sit.name}</span>
+            </div>
+            <div class="text-end" style="font-size: 0.75rem;">
+                <span class="text-muted me-3">${sit.runs_24h} runs</span>
+                <span class="text-muted me-3">${sit.success_rate}%</span>
+                <span class="text-muted">${sit.last_run ? formatTimeAgo(sit.last_run) : 'Never'}</span>
+            </div>
+        </div>
+    `;
+}
+
+function getStatusIcon(status) {
+    switch(status) {
+        case 'active': return '<i class="fas fa-circle"></i>';
+        case 'running': return '<i class="fas fa-spinner fa-spin"></i>';
+        case 'error': return '<i class="fas fa-exclamation-circle"></i>';
+        case 'inactive': return '<i class="far fa-circle"></i>';
+        default: return '<i class="fas fa-question-circle"></i>';
+    }
+}
+
+function getStatusColor(status) {
+    switch(status) {
+        case 'active': return '#22c55e';
+        case 'running': return '#3b82f6';
+        case 'error': return '#ef4444';
+        case 'inactive': return '#6b7280';
+        default: return '#9ca3af';
+    }
+}
+
+async function loadTriggerEvents() {
+    const hours = document.getElementById('triggerTimeRange').value;
+
+    try {
+        const response = await authenticatedFetch(`/api/autonomous/trigger-events/?hours=${hours}&limit=50`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderTriggerEvents(data.events);
+        }
+    } catch (error) {
+        console.error('Error loading trigger events:', error);
+        document.getElementById('triggerActivityFeed').innerHTML = `
+            <div class="p-3 text-center text-muted">Failed to load trigger events</div>
+        `;
+    }
+}
+
+function renderTriggerEvents(events) {
+    const container = document.getElementById('triggerActivityFeed');
+
+    if (!events || events.length === 0) {
+        container.innerHTML = '<div class="p-3 text-center text-muted"><small>No trigger events in this period</small></div>';
+        return;
+    }
+
+    let html = '<div class="list-group list-group-flush">';
+
+    for (const event of events) {
+        const sevColor = severityColors[event.severity] || severityColors.low;
+
+        html += `
+            <div class="list-group-item px-3 py-2" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex align-items-center">
+                    <span class="badge me-2" style="background: ${sevColor}22; color: ${sevColor}; border: 1px solid ${sevColor}; font-size: 0.6rem; text-transform: uppercase;">
+                        ${event.severity}
+                    </span>
+                    <span class="text-light flex-grow-1" style="font-size: 0.8rem;">${event.trigger_name}</span>
+                </div>
+                <div class="d-flex justify-content-between mt-1" style="font-size: 0.7rem;">
+                    <span class="text-muted">${event.spider_name}</span>
+                    <span class="text-muted">${formatTimeAgo(event.fired_at)}</span>
+                </div>
+                <div class="text-muted mt-1" style="font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${escapeHtml(event.matched_value?.substring(0, 50) || '')}${event.matched_value?.length > 50 ? '...' : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderCriticalEvents(events) {
+    const container = document.getElementById('criticalEventsList');
+
+    if (!events || events.length === 0) {
+        container.innerHTML = '<div class="p-3 text-center text-muted"><small>No critical events</small></div>';
+        return;
+    }
+
+    let html = '<div class="list-group list-group-flush">';
+
+    for (const event of events) {
+        html += `
+            <div class="list-group-item px-3 py-2" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.2);">
+                <div class="d-flex justify-content-between">
+                    <span style="color: #f87171; font-size: 0.8rem;">${event.trigger_name}</span>
+                    <span class="text-muted" style="font-size: 0.7rem;">${formatTimeAgo(event.fired_at)}</span>
+                </div>
+                <div class="text-muted mt-1" style="font-size: 0.65rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${escapeHtml(event.matched_value?.substring(0, 60) || '')}
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function showSituationDetail(situationType) {
+    currentSituationType = situationType;
+
+    try {
+        const response = await authenticatedFetch(`/api/autonomous/situations/${situationType}/`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderSituationDetailModal(data.situation);
+            new bootstrap.Modal(document.getElementById('situationDetailModal')).show();
+        }
+    } catch (error) {
+        console.error('Error loading situation detail:', error);
+        showToast('Failed to load situation details', 'error');
+    }
+}
+
+function renderSituationDetailModal(sit) {
+    const colors = domainColors[sit.domain] || domainColors.legal;
+
+    document.getElementById('situationDetailTitle').innerHTML = `
+        <i class="fas fa-cog me-2"></i>${sit.name}
+        <span class="badge ms-2" style="background: ${colors.bg}; color: ${colors.text}; border: 1px solid ${colors.border};">
+            ${sit.domain}
+        </span>
+    `;
+
+    let triggersHtml = '';
+    if (sit.triggers && sit.triggers.length > 0) {
+        for (const t of sit.triggers) {
+            const sevColor = severityColors[t.severity] || severityColors.low;
+            triggersHtml += `
+                <div class="d-flex align-items-center justify-content-between p-2 mb-1 rounded" style="background: rgba(255,255,255,0.05);">
+                    <div>
+                        <span class="badge me-2" style="background: ${sevColor}22; color: ${sevColor}; border: 1px solid ${sevColor}; font-size: 0.6rem;">
+                            ${t.severity}
+                        </span>
+                        <span class="text-light">${t.name}</span>
+                        ${t.is_on_cooldown ? '<span class="badge bg-warning text-dark ms-2">Cooldown</span>' : ''}
+                    </div>
+                    <div class="text-muted" style="font-size: 0.75rem;">
+                        ${t.total_fires} fires
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        triggersHtml = '<div class="text-muted text-center py-2">No triggers configured</div>';
+    }
+
+    let sessionsHtml = '';
+    if (sit.recent_sessions && sit.recent_sessions.length > 0) {
+        for (const s of sit.recent_sessions.slice(0, 5)) {
+            const statusIcon = s.status === 'completed' ? '✅' : s.status === 'failed' ? '❌' : '🔄';
+            sessionsHtml += `
+                <div class="d-flex align-items-center justify-content-between p-2 mb-1 rounded" style="background: rgba(255,255,255,0.05);">
+                    <div>
+                        <span class="me-2">${statusIcon}</span>
+                        <span class="text-muted">${formatTimeAgo(s.started_at)}</span>
+                    </div>
+                    <div style="font-size: 0.75rem;">
+                        <span class="text-muted">${s.items_processed} processed</span>
+                        <span class="text-muted ms-2">${s.items_created} created</span>
+                        ${s.duration_seconds ? `<span class="text-muted ms-2">${s.duration_seconds.toFixed(1)}s</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        sessionsHtml = '<div class="text-muted text-center py-2">No recent sessions</div>';
+    }
+
+    document.getElementById('situationDetailBody').innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p class="text-muted mb-2">${sit.description}</p>
+                <div class="mb-2">
+                    <strong style="color: ${colors.text};">Schedule:</strong>
+                    <span class="text-light">${sit.schedule}</span>
+                </div>
+                <div class="mb-2">
+                    <strong style="color: ${colors.text};">Status:</strong>
+                    <span style="color: ${getStatusColor(sit.status)};">${sit.status}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="mb-0" style="color: #34d399;">${sit.runs_24h}</h4>
+                        <small class="text-muted">Runs (24h)</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="mb-0" style="color: #60a5fa;">${sit.runs_7d}</h4>
+                        <small class="text-muted">Runs (7d)</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="mb-0" style="color: #f472b6;">${sit.success_rate}%</h4>
+                        <small class="text-muted">Success</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <h6 style="color: ${colors.text};">
+                <i class="fas fa-bolt me-2"></i>Triggers (${sit.triggers?.length || 0})
+            </h6>
+            <div style="max-height: 200px; overflow-y: auto;">
+                ${triggersHtml}
+            </div>
+        </div>
+
+        <div>
+            <h6 style="color: ${colors.text};">
+                <i class="fas fa-history me-2"></i>Recent Sessions
+            </h6>
+            <div style="max-height: 200px; overflow-y: auto;">
+                ${sessionsHtml}
+            </div>
+        </div>
+    `;
+}
+
+async function runSituationNow() {
+    if (!currentSituationType) return;
+
+    const btn = document.getElementById('btnRunSituationNow');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Running...';
+    btn.disabled = true;
+
+    try {
+        const response = await authenticatedFetch(`/api/autonomous/situations/${currentSituationType}/run-now/`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showToast(`Triggered ${currentSituationType} to run`, 'success');
+        } else {
+            showToast(data.error || 'Failed to trigger situation', 'error');
+        }
+    } catch (error) {
+        console.error('Error triggering situation:', error);
+        showToast('Failed to trigger situation', 'error');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+
+function setSituationView(view) {
+    situationView = view;
+    document.getElementById('viewGridBtn').classList.toggle('active', view === 'grid');
+    document.getElementById('viewListBtn').classList.toggle('active', view === 'list');
+    loadSituations();
+}
+
+function formatTimeAgo(dateStr) {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Style for hover effects
+const style = document.createElement('style');
+style.textContent = `
+    .situation-card:hover, .situation-list-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+        transition: all 0.2s ease;
+    }
+`;
+document.head.appendChild(style);
+</script>
