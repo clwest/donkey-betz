@@ -440,7 +440,14 @@ def get_agent_conversations(request):
         today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # =====================================================================
-        # FIRST: Get HiveMindSession records (newer, preferred)
+        # Session 494 FIX: Fetch from BOTH sources, then combine and sort
+        # Previous bug: HiveMindSession was fetched first up to limit,
+        # leaving no slots for newer AgentConversation records.
+        # Now we fetch `limit` from each source, combine, sort, and take top `limit`.
+        # =====================================================================
+
+        # =====================================================================
+        # PART 1: Get HiveMindSession records
         # =====================================================================
         hivemind_qs = HiveMindSession.objects.filter(
             session_mode='conversation'
@@ -516,57 +523,56 @@ def get_agent_conversations(request):
             })
 
         # =====================================================================
-        # SECOND: Add legacy AgentConversation records if we need more
+        # PART 2: Get AgentConversation records (always fetch, not just remaining)
+        # Session 494: Always fetch from both sources to ensure newest are shown
         # =====================================================================
-        remaining_slots = limit - len(conversations_data)
-        if remaining_slots > 0:
-            legacy_qs = AgentConversation.objects.select_related('initiator').prefetch_related(
-                'participants', 'messages__agent'
-            ).order_by('-started_at')
+        legacy_qs = AgentConversation.objects.select_related('initiator').prefetch_related(
+            'participants', 'messages__agent'
+        ).order_by('-started_at')
 
-            if status_filter:
-                legacy_qs = legacy_qs.filter(status=status_filter)
+        if status_filter:
+            legacy_qs = legacy_qs.filter(status=status_filter)
 
-            if today_only:
-                legacy_qs = legacy_qs.filter(started_at__gte=today_start)
+        if today_only:
+            legacy_qs = legacy_qs.filter(started_at__gte=today_start)
 
-            for conv in legacy_qs[:remaining_slots]:
-                messages_data = []
-                # Session 435: Return ALL messages, not just first 10
-                for msg in conv.messages.all().order_by('sequence_number'):
-                    messages_data.append({
-                        'id': str(msg.id),
-                        'agent': msg.agent.name,
-                        'agent_emoji': _get_agent_emoji(msg.agent.specialization),
-                        'content': msg.content,
-                        'type': msg.message_type,
-                        'sequence': msg.sequence_number,
-                        'relevance': msg.relevance_score,
-                        'created_at': msg.created_at.isoformat()
-                    })
-
-                conversations_data.append({
-                    'id': str(conv.id),
-                    'topic': conv.topic,
-                    'type': conv.conversation_type,
-                    'type_display': conv.get_conversation_type_display(),
-                    'trigger': conv.trigger_type,
-                    'status': conv.status,
-                    'initiator': conv.initiator.name,
-                    'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
-                    'participants': [
-                        {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
-                        for p in conv.participants.all()
-                    ],
-                    'message_count': conv.message_count,
-                    'quality_score': conv.quality_score,
-                    'conclusion': conv.conclusion,
-                    'insights': conv.insights_generated,
-                    'started_at': conv.started_at.isoformat(),
-                    'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
-                    'messages': messages_data,
-                    'source': 'legacy'  # Mark source for UI
+        for conv in legacy_qs[:limit]:
+            messages_data = []
+            # Session 435: Return ALL messages, not just first 10
+            for msg in conv.messages.all().order_by('sequence_number'):
+                messages_data.append({
+                    'id': str(msg.id),
+                    'agent': msg.agent.name,
+                    'agent_emoji': _get_agent_emoji(msg.agent.specialization),
+                    'content': msg.content,
+                    'type': msg.message_type,
+                    'sequence': msg.sequence_number,
+                    'relevance': msg.relevance_score,
+                    'created_at': msg.created_at.isoformat()
                 })
+
+            conversations_data.append({
+                'id': str(conv.id),
+                'topic': conv.topic,
+                'type': conv.conversation_type,
+                'type_display': conv.get_conversation_type_display(),
+                'trigger': conv.trigger_type,
+                'status': conv.status,
+                'initiator': conv.initiator.name,
+                'initiator_emoji': _get_agent_emoji(conv.initiator.specialization),
+                'participants': [
+                    {'name': p.name, 'emoji': _get_agent_emoji(p.specialization)}
+                    for p in conv.participants.all()
+                ],
+                'message_count': conv.message_count,
+                'quality_score': conv.quality_score,
+                'conclusion': conv.conclusion,
+                'insights': conv.insights_generated,
+                'started_at': conv.started_at.isoformat(),
+                'ended_at': conv.ended_at.isoformat() if conv.ended_at else None,
+                'messages': messages_data,
+                'source': 'legacy'  # Mark source for UI
+            })
 
         # Sort combined results by started_at (newest first)
         conversations_data.sort(
