@@ -17651,6 +17651,8 @@
                             </button>
                             <a href="${img.url}" download="${escapedFilename}" class="btn btn-action-download" title="Download">📥</a>
                             <button class="btn btn-action-delete" onclick="deleteImage('${img.id}', this)" title="Delete">🗑️</button>
+                            <!-- Session 491: Gumroad Publishing Button -->
+                            <button class="btn btn-action-sell" onclick="publishToGumroad('${img.id}')" title="Sell on Gumroad" style="background: linear-gradient(135deg, #ff90e8, #ff6b6b); border: none; color: white;">💰</button>
                         </div>
                         <!-- Session 169: Style Memory Rating Buttons -->
                         <div class="d-flex justify-content-center align-items-center mt-2 rating-buttons" style="gap: 8px; padding: 6px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
@@ -19934,6 +19936,65 @@
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('Error deleting image');
+            }
+        }
+
+        // Session 491: Publish image to Gumroad for sale
+        async function publishToGumroad(imageId) {
+            // Show publish modal with pricing options
+            const price = prompt('💰 Set your price (USD):', '9.99');
+            if (price === null) return; // Cancelled
+
+            const priceNum = parseFloat(price);
+            if (isNaN(priceNum) || priceNum < 1 || priceNum > 1000) {
+                alert('Please enter a valid price between $1 and $1000');
+                return;
+            }
+
+            const title = prompt('📝 Product title (optional):', '');
+
+            try {
+                // Show loading state
+                const notification = document.createElement('div');
+                notification.id = 'gumroad-publishing';
+                notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #ff90e8, #ff6b6b); color: white; padding: 16px 24px; border-radius: 12px; z-index: 9999; font-weight: 600; box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);';
+                notification.innerHTML = '💰 Publishing to Gumroad...';
+                document.body.appendChild(notification);
+
+                const response = await authenticatedFetch('/api/distribution/gumroad/publish/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_id: imageId,
+                        price: priceNum,
+                        title: title || undefined
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove loading notification
+                notification.remove();
+
+                if (data.success) {
+                    // Success notification
+                    const successNotif = document.createElement('div');
+                    successNotif.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 16px 24px; border-radius: 12px; z-index: 9999; font-weight: 600; box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);';
+                    successNotif.innerHTML = `
+                        ✅ Published to Gumroad!<br>
+                        <small style="opacity: 0.9;">Price: $${priceNum.toFixed(2)}</small><br>
+                        ${data.listing_url ? `<a href="${data.listing_url}" target="_blank" style="color: white; text-decoration: underline;">View on Gumroad →</a>` : ''}
+                    `;
+                    document.body.appendChild(successNotif);
+                    setTimeout(() => successNotif.remove(), 8000);
+                } else {
+                    alert('❌ Failed to publish: ' + (data.error || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Gumroad publish error:', error);
+                document.getElementById('gumroad-publishing')?.remove();
+                alert('❌ Error publishing to Gumroad: ' + error.message);
             }
         }
 
