@@ -146,6 +146,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._memory_service = None
         self._agent_model = None  # Cached Agent model instance
         self._mythology_enforcer = None  # Session 354: Mythology validation
+        self._progress_service = None  # Session 489: Streaming progress
 
     # ==================== Lazy-Loaded Services ====================
 
@@ -220,6 +221,21 @@ class BaseAgent(ABC, TimeTravelMixin):
                 logger.warning("MythologyEnforcer not available")
         return self._mythology_enforcer
 
+    @property
+    def progress_service(self):
+        """
+        Session 489: Lazy-load StreamingProgressService for real-time updates.
+
+        Provides WebSocket-enabled progress tracking during agent execution.
+        """
+        if self._progress_service is None:
+            try:
+                from core.services.streaming_progress import get_streaming_progress_service
+                self._progress_service = get_streaming_progress_service()
+            except ImportError:
+                logger.warning("StreamingProgressService not available")
+        return self._progress_service
+
     # ==================== Abstract Methods ====================
 
     @abstractmethod
@@ -246,6 +262,80 @@ class BaseAgent(ABC, TimeTravelMixin):
             AgentResult with success status, data, and metadata
         """
         pass
+
+    # ==================== Progress Tracking (Session 489) ====================
+
+    def _get_progress_type(self) -> str:
+        """
+        Session 489: Get the progress stage type for this agent.
+
+        Returns:
+            Progress type key (e.g., 'image_generation', 'research')
+        """
+        try:
+            from core.services.streaming_progress import get_progress_type_for_agent
+            return get_progress_type_for_agent(self.name)
+        except ImportError:
+            return 'default'
+
+    def _create_progress_tracker(self, task_id: str, description: str = ''):
+        """
+        Session 489: Create a progress tracker for this agent's execution.
+
+        Usage in execute():
+            with self._create_progress_tracker(task_id, task) as tracker:
+                tracker.advance()  # Move to next stage
+                # ... do work ...
+                tracker.update("Custom message", 75)
+                # ... more work ...
+
+        Args:
+            task_id: Unique task identifier (e.g., UUID)
+            description: Human-readable task description
+
+        Returns:
+            ProgressTracker context manager or None if service unavailable
+        """
+        if not self.progress_service:
+            return _NullProgressTracker()
+
+        try:
+            from core.services.streaming_progress import ProgressTracker
+            return ProgressTracker(
+                task_id=task_id,
+                agent_type=self._get_progress_type(),
+                description=description,
+                service=self.progress_service
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create progress tracker: {e}")
+            return _NullProgressTracker()
+
+    def _emit_progress(
+        self,
+        task_id: str,
+        stage: str,
+        message: str,
+        percentage: int
+    ) -> None:
+        """
+        Session 489: Emit a progress update for a task.
+
+        This is a simpler alternative to the context manager for
+        cases where you want manual control over progress updates.
+
+        Args:
+            task_id: Task identifier
+            stage: Current stage name
+            message: Human-readable message
+            percentage: Progress percentage (0-100)
+        """
+        if self.progress_service:
+            try:
+                self.progress_service.emit_progress(task_id, stage, message, percentage)
+            except Exception as e:
+                logger.debug(f"Progress emit failed: {e}")
+
 
     def _get_fresh_spider_intelligence(self, categories: List[str] = None, hours: int = 24, limit: int = 5) -> List[Dict[str, Any]]:
         """
@@ -1374,6 +1464,30 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
 
     def __repr__(self) -> str:
         return f"<{self.name}>"
+
+
+class _NullProgressTracker:
+    """
+    Session 489: Null object pattern for when progress service is unavailable.
+
+    Allows agents to use progress tracking code without checking for None.
+    This is returned by BaseAgent._create_progress_tracker() when the
+    StreamingProgressService is not available.
+    """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    def advance(self, custom_message: str = None) -> None:
+        """No-op advance to next stage."""
+        pass
+
+    def update(self, message: str, percentage: int) -> None:
+        """No-op progress update."""
+        pass
 
 
 # Import models at module level for F expression

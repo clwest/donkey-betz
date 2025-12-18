@@ -1,8 +1,9 @@
 """
 Streaming Progress Service - Session 482
+Session 489: WebSocket Integration
 
 Provides real-time progress updates for agent execution, enabling:
-- WebSocket-based progress streaming
+- WebSocket-based progress streaming (Session 489: now connected!)
 - SSE (Server-Sent Events) support
 - Polling fallback for progress status
 - Stage-by-stage execution tracking
@@ -24,6 +25,36 @@ import threading
 from queue import Queue
 
 logger = logging.getLogger(__name__)
+
+# Session 489: Map agent names to progress types
+AGENT_TO_PROGRESS_TYPE = {
+    # Creation agents
+    'ImageAgent': 'image_generation',
+    'VideoAgent': 'video_generation',
+    'AudioAgent': 'audio_generation',
+    'ThreeDAgent': 'image_generation',  # Similar stages
+    # Editing agents
+    'ImageEditingAgent': 'image_generation',
+    'VideoEditingAgent': 'video_generation',
+    # Research agents
+    'ResearchAgent': 'research',
+    'CompetitorAnalysisAgent': 'competitor_analysis',
+    'CustomerResearchAgent': 'research',
+    # Strategy agents
+    'ContentStrategyAgent': 'brand_strategy',
+    'BrandIdentityAgent': 'brand_strategy',
+    'SEOOptimizerAgent': 'research',
+    'SocialMediaAgent': 'brand_strategy',
+    # Executive agents
+    'CTOAgent': 'research',
+    'COOAgent': 'research',
+    'CreativeDirectorAgent': 'brand_strategy',
+    'MeetingCoordinatorAgent': 'research',
+    # Workflow
+    'WorkflowAgent': 'workflow',
+    'AISeriesWorkflowAgent': 'workflow',
+    # Default for others
+}
 
 
 class ProgressStage(Enum):
@@ -136,6 +167,7 @@ class StreamingProgressService:
     - Emit progress updates (WebSocket/SSE ready)
     - Subscribe to progress events
     - Automatic stage progression
+    - Session 489: WebSocket channel layer broadcasting
     """
 
     def __init__(self):
@@ -143,6 +175,49 @@ class StreamingProgressService:
         self.subscribers: Dict[str, List[Callable]] = {}
         self._update_queue: Queue = Queue()
         self._lock = threading.Lock()
+        self._channel_layer = None  # Session 489: Lazy-loaded channel layer
+        self._websocket_enabled = True  # Session 489: Can disable if needed
+
+    @property
+    def channel_layer(self):
+        """Session 489: Lazy-load Django Channels layer for WebSocket broadcasting."""
+        if self._channel_layer is None:
+            try:
+                from channels.layers import get_channel_layer
+                self._channel_layer = get_channel_layer()
+            except ImportError:
+                logger.warning("Django Channels not available - WebSocket broadcasting disabled")
+                self._websocket_enabled = False
+        return self._channel_layer
+
+    def _broadcast_to_websocket(self, event_type: str, data: Dict[str, Any]) -> None:
+        """
+        Session 489: Broadcast progress update to WebSocket clients.
+
+        Sends to the 'agents_general' group that AgentProgressConsumer joins.
+
+        Args:
+            event_type: Type of event (agent_progress, agent_completed, agent_failed)
+            data: Event data to broadcast
+        """
+        if not self._websocket_enabled or not self.channel_layer:
+            return
+
+        try:
+            import asyncio
+            from asgiref.sync import async_to_sync
+
+            # Broadcast to the agents_general group
+            async_to_sync(self.channel_layer.group_send)(
+                'agents_general',
+                {
+                    'type': event_type.replace('_', '.'),  # agent_progress -> agent.progress
+                    'data': data
+                }
+            )
+            logger.debug(f"📡 Broadcast {event_type} to WebSocket: {data.get('task_id', 'unknown')}")
+        except Exception as e:
+            logger.warning(f"WebSocket broadcast failed: {e}")
 
     def register_task(
         self,
@@ -227,6 +302,9 @@ class StreamingProgressService:
         # Notify subscribers
         self._notify_subscribers(task_id, update)
 
+        # Session 489: Broadcast to WebSocket clients
+        self._broadcast_to_websocket('agent_progress', update.to_dict())
+
         logger.debug(f"📊 Progress: {task_id} - {stage} ({percentage}%): {message}")
 
         return update
@@ -285,13 +363,24 @@ class StreamingProgressService:
             self.tasks[task_id]['result'] = result
             self.tasks[task_id]['completed_at'] = datetime.now()
 
-        return self.emit_progress(
+        update = self.emit_progress(
             task_id,
             'complete',
             message,
             100,
             metadata={'result': str(result)[:200] if result else None}
         )
+
+        # Session 489: Broadcast completion to WebSocket
+        if update:
+            self._broadcast_to_websocket('agent_completed', {
+                'task_id': task_id,
+                'message': message,
+                'result': str(result)[:200] if result else None,
+                'timestamp': datetime.now().isoformat()
+            })
+
+        return update
 
     def fail_task(
         self,
@@ -317,13 +406,24 @@ class StreamingProgressService:
             self.tasks[task_id]['error'] = error
             self.tasks[task_id]['failed_at'] = datetime.now()
 
-        return self.emit_progress(
+        update = self.emit_progress(
             task_id,
             'error',
             f"Error: {error}",
             self.tasks.get(task_id, {}).get('percentage', 0),
             metadata={'error': error, 'details': details}
         )
+
+        # Session 489: Broadcast failure to WebSocket
+        if update:
+            self._broadcast_to_websocket('agent_failed', {
+                'task_id': task_id,
+                'error': error,
+                'details': details,
+                'timestamp': datetime.now().isoformat()
+            })
+
+        return update
 
     def get_progress(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get current progress for a task."""
@@ -483,3 +583,18 @@ def create_progress_tracker(
 ) -> ProgressTracker:
     """Create a new progress tracker for a task."""
     return ProgressTracker(task_id, agent_type, description)
+
+
+def get_progress_type_for_agent(agent_name: str) -> str:
+    """
+    Session 489: Get the progress stage type for an agent.
+
+    Maps agent names to appropriate progress stage configurations.
+
+    Args:
+        agent_name: Name of the agent (e.g., 'ImageAgent')
+
+    Returns:
+        Progress type key for AGENT_STAGES
+    """
+    return AGENT_TO_PROGRESS_TYPE.get(agent_name, 'default')
