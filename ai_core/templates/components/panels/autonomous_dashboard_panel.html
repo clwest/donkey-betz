@@ -19,6 +19,25 @@
             </div>
         </div>
 
+        <!-- Sub-Tab Navigation -->
+        <ul class="nav nav-pills mb-4" id="autonomousSubTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="auto-overview-tab" data-bs-toggle="pill" data-bs-target="#auto-overview"
+                        type="button" role="tab" onclick="showAutoSubTab('overview')" style="color: #f9a8d4;">
+                    <i class="fas fa-tachometer-alt me-1"></i>Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="auto-triggers-tab" data-bs-toggle="pill" data-bs-target="#auto-triggers"
+                        type="button" role="tab" onclick="showAutoSubTab('triggers')" style="color: #a78bfa;">
+                    <i class="fas fa-sliders-h me-1"></i>Trigger Tuning
+                </button>
+            </li>
+        </ul>
+
+        <!-- Overview Content (default visible) -->
+        <div id="autonomousOverviewContent">
+
         <!-- Summary Stats Row -->
         <div class="row mb-4" id="autonomousStatsRow">
             <div class="col-md-2">
@@ -147,6 +166,12 @@
                 </div>
             </div>
         </div>
+        </div>
+        <!-- END autonomousOverviewContent -->
+
+        <!-- Trigger Tuning Content (hidden by default) -->
+        {% include "components/panels/trigger_tuning_panel.html" %}
+
     </div>
 </div>
 
@@ -217,6 +242,28 @@ function loadAutonomousDashboard() {
 function refreshAutonomousDashboard() {
     autonomousDashboardLoaded = false;
     loadAutonomousDashboard();
+}
+
+// Sub-tab switching
+let triggerTuningLoaded = false;
+
+function showAutoSubTab(tab) {
+    const overviewContent = document.getElementById('autonomousOverviewContent');
+    const triggerContent = document.getElementById('triggerTuningContainer');
+
+    if (tab === 'overview') {
+        overviewContent.style.display = 'block';
+        triggerContent.style.display = 'none';
+    } else if (tab === 'triggers') {
+        overviewContent.style.display = 'none';
+        triggerContent.style.display = 'block';
+
+        // Load triggers on first view
+        if (!triggerTuningLoaded) {
+            loadTriggerTuning();
+            triggerTuningLoaded = true;
+        }
+    }
 }
 
 async function loadAnalyticsSummary() {
