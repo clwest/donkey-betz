@@ -565,14 +565,21 @@ class MarketplaceDiscoveryService:
         try:
             if self.spider_service:
                 # Try to get recent spider data
+                # Session 493: Fixed to extract topics from raw_data items
                 from core.models_unified_system import SpiderData
-                recent = SpiderData.objects.order_by('-collected_at')[:100]
+                recent = SpiderData.objects.order_by('-created_at')[:50]
 
                 topics = set()
                 for data in recent:
-                    if data.title:
-                        keywords = self._extract_keywords(data.title)
-                        topics.update(keywords[:3])
+                    # Extract from raw_data.items if available
+                    if data.raw_data and isinstance(data.raw_data, dict):
+                        items = data.raw_data.get('items', [])
+                        for item in items[:5]:  # Top 5 items per record
+                            if isinstance(item, dict):
+                                title = item.get('title', item.get('name', ''))
+                                if title:
+                                    keywords = self._extract_keywords(title)
+                                    topics.update(keywords[:2])
 
                 return list(topics)[:20]
         except Exception as e:
