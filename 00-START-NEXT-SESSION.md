@@ -1,39 +1,25 @@
-# Session 491 - Start Here
+# Session 492 - Start Here
 
-**Previous Session:** 490 (Implicit Learning + Reference Resolver + Domain Extraction + Memory Embedding)
+**Previous Session:** 491 (Agent Intelligence Context Fix)
 **Date:** December 18, 2025
 
 ---
 
-## Session 490 Achievements
+## Session 491 Achievements
 
-### 1. Implicit Learning Connected
-Integrated implicit learning service into image operations:
-- **toggle_favorite**: Tracks favorites (+0.80 weight)
-- **delete_image**: Tracks deletions (-0.50 weight)
-- **batch_download_images**: Tracks downloads (+0.70 weight)
+### Agent Intelligence Context Fixed
+Fixed critical bug in `AgentIntelligenceContextService`:
 
-### 2. Reference Resolver Connected
-Integrated reference resolver into PersonalAssistantConsumer:
-- **Ordinals**: "the second one" resolves to item #2 from lists
-- **Repeat**: "do it again" repeats last action
-- **Pronouns**: "it", "that" resolve to last topic
+- **Bug:** `spider_category` ForeignKey was filtered as CharField
+- **Error:** "Field 'id' expected a number but got 'tech'"
+- **Fix:** Changed to `spider_category__slug__in=categories`
+- **Result:** Knowledge items now retrieved (5 items vs 0 before)
 
-### 3. Domain Extraction Connected
-Integrated domain extraction into business research agents:
-- **CompetitorAnalysisAgent**: Extracts domain from task for targeted queries
-- **CustomerResearchAgent**: Same integration
-- **13 domains supported**: fitness, saas, fintech, ai_ml, etc.
-
-### 4. Memory Embedding Connected
-Integrated semantic memory into agent prompt building:
-- **BaseAgent._build_prompt()**: Injects relevant memories as context
-- **Backfill task**: Ensures all memories have embeddings (every 30 min)
-- **213 memories**: All with embeddings (100% coverage)
+The service was already integrated into CompetitorAnalysisAgent and CustomerResearchAgent - the bug was just preventing it from working.
 
 ---
 
-## Connected Services Summary
+## Connected Services Summary (Sessions 488-491)
 
 | Session | Service | Status |
 |---------|---------|--------|
@@ -43,17 +29,17 @@ Integrated semantic memory into agent prompt building:
 | 490 | Reference Resolver | Connected |
 | 490 | Domain Extraction | Connected |
 | 490 | Memory Embedding | Connected |
-| 491 | ? | Next |
+| 491 | Agent Intelligence Context | Fixed |
+| 492 | ? | Next |
 
 ---
 
-## Session 491 Priority: Remaining Orphaned Services
+## Session 492 Priority: Remaining Services
 
 ### High Impact (Remaining)
 
 | Service | File | Impact |
 |---------|------|--------|
-| Agent Intelligence Context | `core/services/agent_intelligence_context.py` | Richer agent context |
 | Classification Integration | `core/services/classification_integration.py` | Better routing |
 
 ### Revenue Features
@@ -73,14 +59,13 @@ Integrated semantic memory into agent prompt building:
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Test memory embedding
+# Test agent intelligence context
 python manage.py shell -c "
-from core.services.memory_embedding_service import get_memory_embedding_service
-from core.models_unified_system import Agent, AgentMemory
-service = get_memory_embedding_service()
-print(f'Service: {service.__class__.__name__}')
-print(f'Memories: {AgentMemory.objects.count()}')
-print(f'With embeddings: {AgentMemory.objects.exclude(embedding__isnull=True).count()}')
+from core.services.agent_intelligence_context import get_agent_intelligence_context
+service = get_agent_intelligence_context()
+context = service.get_context_for_research('AI content creation', domain='ai_ml')
+print(f'Knowledge: {context.total_knowledge_items}')
+print(f'Policies: {context.total_policies}')
 "
 
 # Access UI
@@ -94,7 +79,7 @@ open http://localhost:8000/ai-studio/
 | Metric | Value |
 |--------|-------|
 | Autonomous Situations | 15 |
-| Services | 66 (61 connected) |
+| Services | 66 (62 connected) |
 | Spiders | 67 |
 | Spider Data Records | 20,000+ |
 | Agents | 41 |
@@ -105,6 +90,7 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
+- **Session 491 Handoff:** `docs/handoffs/SESSION_491_AGENT_INTELLIGENCE_CONTEXT_FIX.md`
 - **Session 490 Handoffs:**
   - `docs/handoffs/SESSION_490_IMPLICIT_LEARNING_INTEGRATION.md`
   - `docs/handoffs/SESSION_490_REFERENCE_RESOLVER_INTEGRATION.md`
@@ -118,13 +104,12 @@ open http://localhost:8000/ai-studio/
 
 ```
 +====================================================================+
-|              SESSION 490: FOUR SERVICES CONNECTED                   |
+|              SESSION 491: AGENT INTELLIGENCE CONTEXT FIXED          |
 |                                                                    |
-|   Implicit Learning:   toggle_favorite, delete, download           |
-|   Reference Resolver:  "the second one", "do it again"             |
-|   Domain Extraction:   13 domains for targeted research            |
-|   Memory Embedding:    Semantic memory in agent prompts            |
+|   Bug: spider_category FK filtered as CharField                    |
+|   Fix: Use spider_category__slug__in for FK relationship           |
+|   Result: 5 knowledge items now injected (was 0)                   |
 |                                                                    |
-|   Next: Agent Intelligence Context                                 |
+|   Next: Classification Integration Service                         |
 +====================================================================+
 ```
