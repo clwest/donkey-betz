@@ -243,7 +243,8 @@ class AgentIntelligenceContextService:
             for word in topic_words:
                 search_conditions |= Q(title__icontains=word) | Q(summary__icontains=word)
 
-            query = base_query.filter(search_conditions).select_related('agent').order_by('-confidence_score', '-last_updated_at')
+            # Session 491: Include spider_category in select_related to avoid N+1 queries
+            query = base_query.filter(search_conditions).select_related('agent', 'spider_category').order_by('-confidence_score', '-last_updated_at')
 
             # Filter by spider_category if domain provided
             if domain:
@@ -259,7 +260,9 @@ class AgentIntelligenceContextService:
                 }
                 categories = domain_to_categories.get(domain, [])
                 if categories:
-                    query = query.filter(spider_category__in=categories)
+                    # Session 491: Fix FK filter - spider_category is a ForeignKey, not a CharField
+                    # Filter by slug field through the FK relationship
+                    query = query.filter(spider_category__slug__in=categories)
 
             results = []
             for knowledge in query[:limit]:
@@ -272,7 +275,8 @@ class AgentIntelligenceContextService:
                     'title': clean_title,
                     'description': knowledge.summary[:300] if knowledge.summary else '',
                     'source_agent': knowledge.agent.name if knowledge.agent else 'Unknown',
-                    'domain': knowledge.spider_category or '',
+                    # Session 491: spider_category is a FK - access .name or .slug for display
+                    'domain': knowledge.spider_category.name if knowledge.spider_category else '',
                     'tags': knowledge.source_spider_names or [],
                     'effectiveness_score': knowledge.confidence_score,
                     'knowledge_type': knowledge.knowledge_type,
