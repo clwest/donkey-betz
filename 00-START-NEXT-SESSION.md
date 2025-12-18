@@ -2,6 +2,7 @@
 
 **Previous Session:** 494 (Agent Conversations Fix)
 **Date:** December 18, 2025
+**Focus:** AI Assistant - Formatting & TTS Improvements
 
 ---
 
@@ -12,76 +13,101 @@
 Fixed the Agents/Social sub-tab showing stale conversations (4+ days old):
 
 **Bug:** Agent Conversations showed records from 4.9 days ago despite 457 fresh records existing
-**Root Cause:** API fetched HiveMindSession records first, filling all slots with old data before checking AgentConversation
+**Root Cause:** API fetched HiveMindSession records first, filling all slots with old data
 
-**Fix Applied:**
-1. Fetch `limit` records from BOTH HiveMindSession and AgentConversation
-2. Combine all records together
-3. Sort by date (newest first)
-4. Take top `limit` from combined set
-
-**Before:** All 5 conversations from Dec 13 (4.9 days ago)
-**After:** Top 5 from today (Dec 18, just minutes old)
+**Fix Applied:** Fetch from BOTH sources, combine, sort by date, take top results
 
 ---
 
-## All 66 Services Connected (Session 493)
+## Session 495 Priority: AI Assistant Polish
 
-| Session | Service | Status |
-|---------|---------|--------|
-| 349 | Classification Integration | Connected |
-| 487 | Gumroad Publishing (Backend) | Connected |
-| 488 | Semantic Routing | Connected |
-| 489 | Streaming Progress | Connected |
-| 490 | Implicit Learning | Connected |
-| 490 | Reference Resolver | Connected |
-| 490 | Domain Extraction | Connected |
-| 490 | Memory Embedding | Connected |
-| 491 | Agent Intelligence Context | Fixed |
-| 491 | Gumroad Frontend UI | Connected |
-| 492 | Certificate Service | Connected |
-| 493 | Marketplace Discovery | Connected |
+### Known Issues to Address
 
-**Services: 66 total, 66 connected (100%!)**
+| Issue | Description | Priority |
+|-------|-------------|----------|
+| TTS Behavior | "Speak" button doing unexpected things | HIGH |
+| Formatting | Response display issues in chat | HIGH |
+
+### TTS Issues Reported
+
+The Text-to-Speech "Speak" button may be:
+- Reading wrong/summarized content
+- Cutting off unexpectedly
+- Not playing chunks sequentially
+- Behaving unpredictably
+
+### Formatting Issues
+
+Response formatting in the chat may have:
+- Markdown not rendering correctly
+- Code blocks display issues
+- List formatting problems
+- Agent response structure issues
 
 ---
 
-## Session 495 Priorities
+## Uncommitted Changes to Review
 
-With all 66 services connected and Agent Conversations fixed, potential next steps:
+There are pending changes from Session 483 that should be committed first:
 
-### Enhancement Options
+```bash
+# See pending changes
+git status
 
-| Feature | Description | Impact |
-|---------|-------------|--------|
-| Resolve Learning | Verify DaVinci Resolve learning loop | Production quality |
-| Proactive Intelligence | Enhance smart suggestions | User experience |
-| Service Health Dashboard | Unified monitoring | Observability |
-
-### Other Ideas
-
-- Review any remaining gaps in dormant features
-- Optimize service performance
-- Add more platform integrations (TikTok, LinkedIn)
-- Enhance hashtag generation with platform-specific limits
+# Files with changes:
+# - core/services/tts_optimizer.py (NEW)
+# - core/prompts/registry.py
+# - core/services/proactive_intelligence.py
+# - core/services/smart_suggestions.py
+```
 
 ---
 
 ## Quick Start Commands
 
 ```bash
-# Start services
+# 1. Start services
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Verify Agent Conversations fix (in browser)
-# 1. Open http://localhost:8000/ai-studio/
-# 2. Go to Agents tab
-# 3. Click Social sub-tab
-# 4. Agent Conversations should show recent (today) entries
+# 2. Review pending changes
+git diff core/prompts/registry.py
+git diff core/services/proactive_intelligence.py
 
-# Access UI
+# 3. Test TTS
+# Open http://localhost:8000/ai-studio/
+# Ask a question, wait for response, click "Speak" button
+# Note any issues
+
+# 4. Access UI
 open http://localhost:8000/ai-studio/
+```
+
+---
+
+## Key Files for This Session
+
+| File | Purpose |
+|------|---------|
+| `core/services/tts_optimizer.py` | TTS text processing (summarization, chunking) |
+| `core/views_audio.py` | `speak_text()` API endpoint (lines 289-449) |
+| `ai_image_studio.html` | Frontend speak button + chat formatting |
+| `core/prompts/registry.py` | AI Assistant system prompts |
+
+---
+
+## TTS Architecture (Session 483)
+
+```
+User clicks "Speak"
+    → speak_text() API
+        → TTSTextOptimizer.optimize()
+            → If short: use directly
+            → If medium: GPT summarizes
+            → If long: summarize + chunk
+        → ElevenLabs API
+    → Audio returned as base64
+    → Browser plays audio
 ```
 
 ---
@@ -102,23 +128,22 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
-- **Session 494 Fix:** `core/views_agent_learning.py` (lines 442-575)
-- **Session 493 Handoff:** `docs/handoffs/SESSION_493_MARKETPLACE_DISCOVERY_INTEGRATION.md`
+- **Session 495 Handoff:** `docs/handoffs/SESSION_495_AI_ASSISTANT_FOCUS.md`
+- **Session 494 Handoff:** `docs/handoffs/SESSION_494_AGENT_CONVERSATIONS_FIX.md`
 
 ---
 
-**Agent Conversations now show fresh data!**
+**Focus: Polish the AI Assistant (TTS + Formatting)**
 
 ```
 +====================================================================+
-|              SESSION 494: AGENT CONVERSATIONS FIXED                 |
+|              SESSION 495: AI ASSISTANT FOCUS                        |
 |                                                                    |
-|   Bug: Showed 4+ day old records instead of fresh ones             |
-|   Fix: Fetch from both sources, combine, sort by date              |
-|                                                                    |
-|   Before: All conversations from Dec 13 (4.9 days ago)             |
-|   After: Top conversations from today (minutes old!)               |
+|   1. Fix TTS "Speak" button behavior                               |
+|   2. Improve response formatting in chat                           |
+|   3. Review and commit pending Session 483 changes                 |
 |                                                                    |
 |   Services: 66/66 connected (100%!)                                |
+|   Agent Conversations: Fixed!                                      |
 +====================================================================+
 ```
