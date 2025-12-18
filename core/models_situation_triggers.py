@@ -19,19 +19,62 @@ from datetime import timedelta
 
 class TriggerType(models.TextChoices):
     """Types of situation triggers."""
-    # Blockchain triggers
+    # =========================================================================
+    # BLOCKCHAIN/CRYPTO TRIGGERS (Financial Domain)
+    # =========================================================================
     WHALE_MOVEMENT = 'whale_movement', 'Whale Movement (Large Transfer)'
     PRICE_CRASH = 'price_crash', 'Price Crash (Significant Drop)'
     PRICE_SURGE = 'price_surge', 'Price Surge (Significant Rise)'
     VOLUME_SPIKE = 'volume_spike', 'Volume Spike (Unusual Activity)'
     EXPLOIT_KEYWORD = 'exploit_keyword', 'Exploit/Hack Keyword Detected'
+    CRYPTO_SENTIMENT = 'crypto_sentiment', 'Crypto Sentiment Shift'
 
-    # Stock market triggers
+    # =========================================================================
+    # STOCK MARKET TRIGGERS (Financial Domain)
+    # =========================================================================
     STOCK_MOVER = 'stock_mover', 'Stock Mover (Price Change)'
     SEC_FILING = 'sec_filing', 'SEC Filing Detected'
     BREAKING_NEWS = 'breaking_news', 'Breaking News (Market Keywords)'
     EARNINGS_SURPRISE = 'earnings_surprise', 'Earnings Surprise'
     INSTITUTIONAL_FILING = 'institutional_filing', 'Institutional Filing (13F/13D)'
+    MARKET_INTELLIGENCE = 'market_intelligence', 'Market Intelligence Signal'
+
+    # =========================================================================
+    # CONTENT TRIGGERS (Content Domain)
+    # =========================================================================
+    CONTENT_TREND = 'content_trend', 'Content Trend Detected'
+    NARRATIVE_DRIFT = 'narrative_drift', 'Narrative Drift Detected'
+    VIRAL_CONTENT = 'viral_content', 'Viral Content Signal'
+
+    # =========================================================================
+    # CREATIVE TRIGGERS (Creative Domain)
+    # =========================================================================
+    DESIGN_TREND = 'design_trend', 'Design Trend Detected'
+    VISUAL_TREND = 'visual_trend', 'Visual/Thumbnail Trend'
+    CREATIVE_OPPORTUNITY = 'creative_opportunity', 'Creative Opportunity'
+
+    # =========================================================================
+    # INCOME TRIGGERS (Income Domain)
+    # =========================================================================
+    JOB_MATCH = 'job_match', 'Job Match Found'
+    FREELANCE_OPPORTUNITY = 'freelance_opportunity', 'Freelance Opportunity'
+    SIDE_HUSTLE = 'side_hustle', 'Side Hustle Opportunity'
+    HIGH_PAYING_GIG = 'high_paying_gig', 'High-Paying Gig Detected'
+
+    # =========================================================================
+    # RESEARCH TRIGGERS (Research Domain)
+    # =========================================================================
+    TECH_STACK_CHANGE = 'tech_stack_change', 'Tech Stack Change'
+    AI_MODEL_RELEASE = 'ai_model_release', 'AI Model Release'
+    SKILL_GAP = 'skill_gap', 'Skill Gap Opportunity'
+    TECH_BREAKTHROUGH = 'tech_breakthrough', 'Tech Breakthrough'
+
+    # =========================================================================
+    # LEGAL TRIGGERS (Legal Domain)
+    # =========================================================================
+    CASE_LAW_UPDATE = 'case_law_update', 'Case Law Update'
+    REGULATORY_CHANGE = 'regulatory_change', 'Regulatory Change'
+    LEGAL_PRECEDENT = 'legal_precedent', 'Legal Precedent Set'
 
 
 class TriggerOperator(models.TextChoices):
@@ -48,9 +91,39 @@ class TriggerOperator(models.TextChoices):
 
 class SituationType(models.TextChoices):
     """Which autonomous situation this trigger belongs to."""
+    # Financial Domain
     BLOCKCHAIN = 'blockchain', 'Blockchain Security'
     STOCK_MARKET = 'stock_market', 'Stock Market Intelligence'
-    BOTH = 'both', 'Both Systems'
+    MARKET_INTELLIGENCE = 'market_intelligence', 'Market Intelligence Desk'
+    SEC_FILING = 'sec_filing', 'SEC Filing Analyzer'
+    CRYPTO_SENTIMENT = 'crypto_sentiment', 'Crypto Sentiment Monitor'
+    EARNINGS_PREDICTION = 'earnings_prediction', 'Earnings Surprise Predictor'
+
+    # Content Domain
+    CONTENT_STUDIO = 'content_studio', 'Autonomous Content Studio'
+    NARRATIVE_DRIFT = 'narrative_drift', 'Narrative Drift Detector'
+
+    # Creative Domain
+    DESIGN_TRENDS = 'design_trends', 'Design Trends Monitor'
+    VIRAL_PREDICTION = 'viral_prediction', 'Viral Content Predictor'
+    THUMBNAIL_OPTIMIZATION = 'thumbnail_optimization', 'Thumbnail A/B Optimizer'
+
+    # Income Domain
+    JOB_MATCHING = 'job_matching', 'Job Match Intelligence'
+    FREELANCE_SCOUT = 'freelance_scout', 'Freelance Opportunity Scout'
+    SIDE_HUSTLE = 'side_hustle', 'Side Hustle Detector'
+
+    # Research Domain
+    TECH_STACK = 'tech_stack', 'Tech Stack Evolution Tracker'
+    AI_MODEL = 'ai_model', 'AI Model Release Monitor'
+    SKILL_GAP = 'skill_gap', 'Course & Skill Gap Analyzer'
+
+    # Legal Domain
+    CASE_LAW = 'case_law', 'Case Law Monitor'
+    REGULATORY = 'regulatory', 'Regulatory Change Detector'
+
+    # Legacy (for backwards compatibility)
+    BOTH = 'both', 'Multiple Systems'
 
 
 class SituationTrigger(models.Model):
@@ -550,5 +623,351 @@ DEFAULT_TRIGGERS = [
         'alert_title_template': 'Fed Alert: {matched_value}',
         'cooldown_minutes': 60,
         'priority': 90,
+    },
+
+    # =========================================================================
+    # CONTENT TRIGGERS (Content Domain)
+    # =========================================================================
+    {
+        'name': 'Trending Content Topic',
+        'description': 'Alert when viral or trending content topics are detected',
+        'situation_type': 'content_studio',
+        'trigger_type': 'content_trend',
+        'target_spiders': ['reddit', 'hackernews', 'techcrunch', 'youtube_trending'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'viral|trending|million views|breaking|exclusive|leaked',
+        'severity': 'medium',
+        'alert_title_template': 'Content Trend: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 70,
+    },
+    {
+        'name': 'High Engagement Signal',
+        'description': 'Alert when content shows high engagement metrics',
+        'situation_type': 'content_studio',
+        'trigger_type': 'viral_content',
+        'target_spiders': ['reddit', 'hackernews'],
+        'target_field': 'score',
+        'operator': 'gt',
+        'threshold_value': '500',
+        'severity': 'medium',
+        'alert_title_template': 'High Engagement: {matched_value} points',
+        'cooldown_minutes': 60,
+        'priority': 75,
+    },
+    {
+        'name': 'Narrative Shift Detection',
+        'description': 'Alert when significant narrative shifts are detected in news',
+        'situation_type': 'narrative_drift',
+        'trigger_type': 'narrative_drift',
+        'target_spiders': ['google_news', 'techcrunch', 'reddit', 'hackernews'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'pivot|shift|change|new direction|announces|reveals|confirms',
+        'severity': 'medium',
+        'alert_title_template': 'Narrative Shift: {matched_value}',
+        'cooldown_minutes': 180,
+        'priority': 65,
+    },
+
+    # =========================================================================
+    # CREATIVE TRIGGERS (Creative Domain)
+    # =========================================================================
+    {
+        'name': 'Design Trend Alert',
+        'description': 'Alert when new design trends are detected on creative platforms',
+        'situation_type': 'design_trends',
+        'trigger_type': 'design_trend',
+        'target_spiders': ['dribbble', 'behance', 'unsplash'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': '2024|2025|trend|minimal|gradient|3d|ai generated|neon|glassmorphism|neumorphism',
+        'severity': 'low',
+        'alert_title_template': 'Design Trend: {matched_value}',
+        'cooldown_minutes': 240,
+        'priority': 50,
+    },
+    {
+        'name': 'Viral Visual Content',
+        'description': 'Alert when visual content shows viral potential',
+        'situation_type': 'viral_prediction',
+        'trigger_type': 'viral_content',
+        'target_spiders': ['dribbble', 'behance', 'unsplash', 'reddit'],
+        'target_field': 'likes',
+        'operator': 'gt',
+        'threshold_value': '1000',
+        'severity': 'medium',
+        'alert_title_template': 'Viral Visual: {matched_value} likes',
+        'cooldown_minutes': 120,
+        'priority': 60,
+    },
+    {
+        'name': 'Thumbnail Style Trend',
+        'description': 'Alert when new thumbnail styles gain traction',
+        'situation_type': 'thumbnail_optimization',
+        'trigger_type': 'visual_trend',
+        'target_spiders': ['youtube_trending', 'dribbble'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'thumbnail|click|ctr|convert|attention|hook',
+        'severity': 'low',
+        'alert_title_template': 'Thumbnail Trend: {matched_value}',
+        'cooldown_minutes': 360,
+        'priority': 45,
+    },
+
+    # =========================================================================
+    # INCOME TRIGGERS (Income Domain)
+    # =========================================================================
+    {
+        'name': 'High-Paying Remote Job',
+        'description': 'Alert when high-paying remote jobs are posted',
+        'situation_type': 'job_matching',
+        'trigger_type': 'job_match',
+        'target_spiders': ['remoteok', 'weworkremotely', 'adzuna'],
+        'target_field': 'salary',
+        'operator': 'gt',
+        'threshold_value': '150000',
+        'severity': 'high',
+        'alert_title_template': 'High-Paying Job: ${matched_value}',
+        'cooldown_minutes': 30,
+        'priority': 85,
+    },
+    {
+        'name': 'Senior/Lead Position',
+        'description': 'Alert when senior or lead positions are posted',
+        'situation_type': 'job_matching',
+        'trigger_type': 'job_match',
+        'target_spiders': ['remoteok', 'weworkremotely', 'adzuna'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'senior|lead|principal|staff|architect|director|head of',
+        'severity': 'medium',
+        'alert_title_template': 'Senior Role: {matched_value}',
+        'cooldown_minutes': 60,
+        'priority': 75,
+    },
+    {
+        'name': 'Freelance Opportunity',
+        'description': 'Alert when freelance/contract opportunities are posted',
+        'situation_type': 'freelance_scout',
+        'trigger_type': 'freelance_opportunity',
+        'target_spiders': ['remoteok', 'weworkremotely', 'adzuna'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'freelance|contract|consultant|part-time|remote',
+        'severity': 'medium',
+        'alert_title_template': 'Freelance: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 70,
+    },
+    {
+        'name': 'High-Rate Freelance Gig',
+        'description': 'Alert when high-rate freelance gigs are detected',
+        'situation_type': 'freelance_scout',
+        'trigger_type': 'high_paying_gig',
+        'target_spiders': ['remoteok', 'weworkremotely', 'adzuna'],
+        'target_field': 'salary',
+        'operator': 'gt',
+        'threshold_value': '100',  # Hourly rate
+        'severity': 'high',
+        'alert_title_template': 'High-Rate Gig: ${matched_value}/hr',
+        'cooldown_minutes': 60,
+        'priority': 80,
+    },
+    {
+        'name': 'Side Hustle Opportunity',
+        'description': 'Alert when side hustle opportunities are detected',
+        'situation_type': 'side_hustle',
+        'trigger_type': 'side_hustle',
+        'target_spiders': ['reddit', 'hackernews', 'indiegogo', 'kickstarter'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'passive income|side hustle|make money|earn|revenue|monetize|saas|startup',
+        'severity': 'low',
+        'alert_title_template': 'Side Hustle: {matched_value}',
+        'cooldown_minutes': 240,
+        'priority': 55,
+    },
+
+    # =========================================================================
+    # RESEARCH TRIGGERS (Research Domain)
+    # =========================================================================
+    {
+        'name': 'New Tech Stack Trend',
+        'description': 'Alert when new technology trends are discussed',
+        'situation_type': 'tech_stack',
+        'trigger_type': 'tech_stack_change',
+        'target_spiders': ['hackernews', 'techcrunch', 'devto', 'reddit'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'rust|go|kubernetes|docker|terraform|react|vue|svelte|nextjs|bun|deno',
+        'severity': 'low',
+        'alert_title_template': 'Tech Trend: {matched_value}',
+        'cooldown_minutes': 360,
+        'priority': 50,
+    },
+    {
+        'name': 'Framework/Library Release',
+        'description': 'Alert when major framework releases are announced',
+        'situation_type': 'tech_stack',
+        'trigger_type': 'tech_stack_change',
+        'target_spiders': ['hackernews', 'devto', 'reddit'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'release|v2|v3|stable|launch|announces|introduced|available',
+        'severity': 'medium',
+        'alert_title_template': 'Release: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 65,
+    },
+    {
+        'name': 'AI Model Release',
+        'description': 'Alert when new AI models are released',
+        'situation_type': 'ai_model',
+        'trigger_type': 'ai_model_release',
+        'target_spiders': ['hackernews', 'techcrunch', 'reddit', 'devto'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'gpt-5|claude|gemini|llama|mistral|ai model|language model|llm|diffusion|stable diffusion|midjourney|dall-e|openai|anthropic',
+        'severity': 'high',
+        'alert_title_template': 'AI Model: {matched_value}',
+        'cooldown_minutes': 60,
+        'priority': 85,
+    },
+    {
+        'name': 'AI Breakthrough',
+        'description': 'Alert when AI breakthroughs are announced',
+        'situation_type': 'ai_model',
+        'trigger_type': 'tech_breakthrough',
+        'target_spiders': ['hackernews', 'techcrunch', 'mit_tech_review'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'breakthrough|revolutionary|groundbreaking|state-of-the-art|beats|outperforms|achieves',
+        'severity': 'high',
+        'alert_title_template': 'AI Breakthrough: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 80,
+    },
+    {
+        'name': 'In-Demand Skill',
+        'description': 'Alert when job postings mention in-demand skills',
+        'situation_type': 'skill_gap',
+        'trigger_type': 'skill_gap',
+        'target_spiders': ['remoteok', 'weworkremotely', 'adzuna', 'coursera'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'ai|ml|machine learning|deep learning|python|rust|kubernetes|aws|cloud|devops',
+        'severity': 'low',
+        'alert_title_template': 'Skill Demand: {matched_value}',
+        'cooldown_minutes': 480,
+        'priority': 40,
+    },
+
+    # =========================================================================
+    # LEGAL TRIGGERS (Legal Domain)
+    # =========================================================================
+    {
+        'name': 'Case Law Update',
+        'description': 'Alert when significant case law updates are detected',
+        'situation_type': 'case_law',
+        'trigger_type': 'case_law_update',
+        'target_spiders': ['google_news', 'reuters_rss'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'court|ruling|verdict|decision|appeal|supreme court|lawsuit|settlement|judgment',
+        'severity': 'medium',
+        'alert_title_template': 'Case Law: {matched_value}',
+        'cooldown_minutes': 240,
+        'priority': 60,
+    },
+    {
+        'name': 'Tech Industry Legal',
+        'description': 'Alert when tech-related legal news is detected',
+        'situation_type': 'case_law',
+        'trigger_type': 'legal_precedent',
+        'target_spiders': ['techcrunch', 'hackernews', 'google_news'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'antitrust|patent|copyright|privacy|gdpr|ftc|doj|sec|regulation|compliance',
+        'severity': 'medium',
+        'alert_title_template': 'Tech Legal: {matched_value}',
+        'cooldown_minutes': 180,
+        'priority': 65,
+    },
+    {
+        'name': 'Regulatory Change',
+        'description': 'Alert when regulatory changes are announced',
+        'situation_type': 'regulatory',
+        'trigger_type': 'regulatory_change',
+        'target_spiders': ['google_news', 'reuters_rss', 'business_news'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'regulation|regulatory|law|legislation|bill|act|policy|mandate|requirement|compliance',
+        'severity': 'medium',
+        'alert_title_template': 'Regulatory: {matched_value}',
+        'cooldown_minutes': 240,
+        'priority': 60,
+    },
+    {
+        'name': 'Crypto Regulation',
+        'description': 'Alert when crypto-related regulatory news is detected',
+        'situation_type': 'regulatory',
+        'trigger_type': 'regulatory_change',
+        'target_spiders': ['google_news', 'techcrunch', 'reddit'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'crypto regulation|sec crypto|bitcoin regulation|stablecoin|cbdc|digital currency law',
+        'severity': 'high',
+        'alert_title_template': 'Crypto Regulation: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 75,
+    },
+
+    # =========================================================================
+    # MARKET INTELLIGENCE & EARNINGS TRIGGERS
+    # =========================================================================
+    {
+        'name': 'Market Intelligence Signal',
+        'description': 'Alert when market-moving news is detected',
+        'situation_type': 'market_intelligence',
+        'trigger_type': 'market_intelligence',
+        'target_spiders': ['business_news', 'reuters_rss', 'yahoo_finance'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'market|dow|nasdaq|s&p|trading|investors|wall street|stocks',
+        'severity': 'medium',
+        'alert_title_template': 'Market: {matched_value}',
+        'cooldown_minutes': 60,
+        'priority': 70,
+    },
+    {
+        'name': 'Earnings Report',
+        'description': 'Alert when earnings reports are released',
+        'situation_type': 'earnings_prediction',
+        'trigger_type': 'earnings_surprise',
+        'target_spiders': ['business_news', 'yahoo_finance', 'sec_edgar'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'earnings|quarterly|q1|q2|q3|q4|revenue|profit|eps|beat|miss|guidance',
+        'severity': 'high',
+        'alert_title_template': 'Earnings: {matched_value}',
+        'cooldown_minutes': 30,
+        'priority': 85,
+    },
+    {
+        'name': 'Crypto Sentiment Shift',
+        'description': 'Alert when crypto sentiment shifts significantly',
+        'situation_type': 'crypto_sentiment',
+        'trigger_type': 'crypto_sentiment',
+        'target_spiders': ['reddit', 'hackernews', 'coingecko'],
+        'target_field': 'title',
+        'operator': 'contains',
+        'threshold_value': 'bitcoin|ethereum|btc|eth|crypto|defi|nft|bull|bear|moon|dump',
+        'severity': 'medium',
+        'alert_title_template': 'Crypto Sentiment: {matched_value}',
+        'cooldown_minutes': 120,
+        'priority': 65,
     },
 ]

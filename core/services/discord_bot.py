@@ -10628,30 +10628,36 @@ class SituationCommands(commands.Cog):
     """
 
     # Mapping of situation keys to metadata
+    # Session 481: ALL 19 situations now have event-driven triggers!
     SITUATIONS = {
-        # Original 5 (Sessions 466-477)
+        # =========================================================================
+        # CONTENT DOMAIN
+        # =========================================================================
         'content_studio': {
             'name': 'Autonomous Content Studio',
             'domain': 'Content',
-            'schedule': 'Every 4h',
+            'schedule': 'Every 4h + Events',
             'task': 'run_autonomous_content_studio',
-            'session_type': None,  # Uses ContentChannel model
+            'session_type': 'content_studio',
             'description': 'Auto-generates content for channels based on 3-agent debates',
         },
         'narrative_drift': {
             'name': 'Narrative Drift Detector',
             'domain': 'Content',
-            'schedule': 'Every 4h',
+            'schedule': 'Every 4h + Events',
             'task': 'run_narrative_drift_cycle',
-            'session_type': None,
+            'session_type': 'narrative_drift',
             'description': 'Monitors brand consistency and alerts on narrative drift',
         },
+        # =========================================================================
+        # FINANCIAL DOMAIN
+        # =========================================================================
         'market_intelligence': {
             'name': 'Market Intelligence Desk',
             'domain': 'Financial',
-            'schedule': 'Daily',
+            'schedule': 'Daily + Events',
             'task': 'run_market_intelligence_desk',
-            'session_type': None,
+            'session_type': 'market_intelligence',
             'description': 'Comprehensive daily market analysis with agent debates',
         },
         'blockchain_security': {
@@ -10659,7 +10665,7 @@ class SituationCommands(commands.Cog):
             'domain': 'Financial',
             'schedule': 'Every 2h + Events',
             'task': 'run_blockchain_security_monitor',
-            'session_type': None,
+            'session_type': 'blockchain',
             'description': 'Monitors blockchain security events and vulnerabilities',
         },
         'stock_market': {
@@ -10667,70 +10673,21 @@ class SituationCommands(commands.Cog):
             'domain': 'Financial',
             'schedule': 'Every 4h + Events',
             'task': 'run_stock_market_intelligence',
-            'session_type': None,
+            'session_type': 'stock_market',
             'description': 'Bull vs Bear analysis with signal scanning',
-        },
-        # Session 479: 14 New Situations
-        'design_trends': {
-            'name': 'Design Trends Monitor',
-            'domain': 'Creative',
-            'schedule': 'Every 6h',
-            'task': 'run_design_trends_monitor',
-            'session_type': 'design_trends',
-            'description': 'Tracks design trends from Dribbble, Behance, Awwwards',
-        },
-        'viral_prediction': {
-            'name': 'Viral Content Predictor',
-            'domain': 'Creative',
-            'schedule': 'Every 4h',
-            'task': 'run_viral_content_predictor',
-            'session_type': 'viral_prediction',
-            'description': 'Scores content by viral potential using social signals',
-        },
-        'thumbnail_optimization': {
-            'name': 'Thumbnail A/B Optimizer',
-            'domain': 'Creative',
-            'schedule': 'Every 6h',
-            'task': 'run_thumbnail_optimizer',
-            'session_type': 'thumbnail_optimization',
-            'description': 'Analyzes images and creates optimization suggestions based on trends',
-        },
-        'job_matching': {
-            'name': 'Job Match Intelligence',
-            'domain': 'Income',
-            'schedule': 'Every 2h',
-            'task': 'run_job_match_intelligence',
-            'session_type': 'job_matching',
-            'description': 'Monitors jobs and scores matches to your profile',
-        },
-        'freelance_scout': {
-            'name': 'Freelance Opportunity Scout',
-            'domain': 'Income',
-            'schedule': 'Every 4h',
-            'task': 'run_freelance_opportunity_scout',
-            'session_type': 'freelance_scout',
-            'description': 'Scans job boards for freelance/contract opportunities',
-        },
-        'side_hustle': {
-            'name': 'Side Hustle Detector',
-            'domain': 'Income',
-            'schedule': 'Every 8h',
-            'task': 'run_side_hustle_detector',
-            'session_type': 'side_hustle',
-            'description': 'Finds trending micro-opportunities on Reddit, ProductHunt',
         },
         'sec_filing': {
             'name': 'SEC Filing Analyzer',
             'domain': 'Financial',
-            'schedule': 'Every 8h',
+            'schedule': 'Every 2h + Events',
             'task': 'run_sec_filing_analyzer',
             'session_type': 'sec_filing',
-            'description': 'Analyzes SEC filings (10-K, 10-Q, 8-K, 13F) for major companies',
+            'description': 'Analyzes SEC filings (10-K, 10-Q, 8-K, 13F) - triggers on new filings',
         },
         'crypto_sentiment': {
             'name': 'Crypto Sentiment Monitor',
             'domain': 'Financial',
-            'schedule': 'Every 2h',
+            'schedule': 'Every 2h + Events',
             'task': 'run_crypto_sentiment_monitor',
             'session_type': 'crypto_sentiment',
             'description': 'Tracks crypto social sentiment from Reddit, Bluesky',
@@ -10738,15 +10695,72 @@ class SituationCommands(commands.Cog):
         'earnings_prediction': {
             'name': 'Earnings Surprise Predictor',
             'domain': 'Financial',
-            'schedule': 'Twice daily',
+            'schedule': 'Twice daily + Events',
             'task': 'run_earnings_predictor',
             'session_type': 'earnings_prediction',
             'description': 'Analyzes pre-earnings sentiment for surprise predictions',
         },
+        # =========================================================================
+        # CREATIVE DOMAIN
+        # =========================================================================
+        'design_trends': {
+            'name': 'Design Trends Monitor',
+            'domain': 'Creative',
+            'schedule': 'Every 6h + Events',
+            'task': 'run_design_trends_monitor',
+            'session_type': 'design_trends',
+            'description': 'Tracks design trends from Dribbble, Behance, Awwwards',
+        },
+        'viral_prediction': {
+            'name': 'Viral Content Predictor',
+            'domain': 'Creative',
+            'schedule': 'Every 4h + Events',
+            'task': 'run_viral_content_predictor',
+            'session_type': 'viral_prediction',
+            'description': 'Scores content by viral potential using social signals',
+        },
+        'thumbnail_optimization': {
+            'name': 'Thumbnail A/B Optimizer',
+            'domain': 'Creative',
+            'schedule': 'Every 6h + Events',
+            'task': 'run_thumbnail_optimizer',
+            'session_type': 'thumbnail_optimization',
+            'description': 'Analyzes images and creates optimization suggestions based on trends',
+        },
+        # =========================================================================
+        # INCOME DOMAIN
+        # =========================================================================
+        'job_matching': {
+            'name': 'Job Match Intelligence',
+            'domain': 'Income',
+            'schedule': 'Every 2h + Events',
+            'task': 'run_job_match_intelligence',
+            'session_type': 'job_matching',
+            'description': 'Monitors jobs and scores matches to your profile',
+        },
+        'freelance_scout': {
+            'name': 'Freelance Opportunity Scout',
+            'domain': 'Income',
+            'schedule': 'Every 4h + Events',
+            'task': 'run_freelance_opportunity_scout',
+            'session_type': 'freelance_scout',
+            'description': 'Scans job boards for freelance/contract opportunities',
+        },
+        'side_hustle': {
+            'name': 'Side Hustle Detector',
+            'domain': 'Income',
+            'schedule': 'Every 8h + Events',
+            'task': 'run_side_hustle_detector',
+            'session_type': 'side_hustle',
+            'description': 'Finds trending micro-opportunities on Reddit, ProductHunt',
+        },
+        # =========================================================================
+        # RESEARCH DOMAIN
+        # =========================================================================
         'tech_stack': {
             'name': 'Tech Stack Evolution Tracker',
             'domain': 'Research',
-            'schedule': 'Every 6h',
+            'schedule': 'Every 6h + Events',
             'task': 'run_tech_stack_tracker',
             'session_type': 'tech_stack',
             'description': 'Monitors rising/falling technologies on GitHub, HackerNews',
@@ -10754,7 +10768,7 @@ class SituationCommands(commands.Cog):
         'ai_model': {
             'name': 'AI Model Release Monitor',
             'domain': 'Research',
-            'schedule': 'Every 4h',
+            'schedule': 'Every 4h + Events',
             'task': 'run_ai_model_monitor',
             'session_type': 'ai_model',
             'description': 'Alerts on new AI model releases from HuggingFace, GitHub',
@@ -10762,15 +10776,18 @@ class SituationCommands(commands.Cog):
         'skill_gap': {
             'name': 'Course & Skill Gap Analyzer',
             'domain': 'Research',
-            'schedule': 'Twice daily',
+            'schedule': 'Twice daily + Events',
             'task': 'run_skill_gap_analyzer',
             'session_type': 'skill_gap',
             'description': 'Matches trending tech skills to available courses',
         },
+        # =========================================================================
+        # LEGAL DOMAIN
+        # =========================================================================
         'case_law': {
             'name': 'Case Law Monitor',
             'domain': 'Legal',
-            'schedule': 'Every 6h',
+            'schedule': 'Every 6h + Events',
             'task': 'run_case_law_monitor',
             'session_type': 'case_law',
             'description': 'Tracks relevant case decisions from CourtListener, FindLaw',
@@ -10778,7 +10795,7 @@ class SituationCommands(commands.Cog):
         'regulatory': {
             'name': 'Regulatory Change Detector',
             'domain': 'Legal',
-            'schedule': 'Every 8h',
+            'schedule': 'Every 8h + Events',
             'task': 'run_regulatory_change_detector',
             'session_type': 'regulatory',
             'description': 'Monitors regulatory changes from government sources',

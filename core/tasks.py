@@ -14604,6 +14604,53 @@ def process_trigger_events(event_ids: list):
                             event.discord_sent_at = timezone.now()
                             discord_sent += 1
 
+                # Session 481: Event-driven task execution for ALL 19 situations
+                # Map situation types to their corresponding tasks
+                SITUATION_TASK_MAP = {
+                    # Financial Domain
+                    'blockchain': 'run_blockchain_security_alerts',
+                    'stock_market': 'run_stock_market_intelligence',
+                    'market_intelligence': 'run_market_intelligence_desk',
+                    'sec_filing': 'run_sec_filing_analyzer',
+                    'crypto_sentiment': 'run_crypto_sentiment_monitor',
+                    'earnings_prediction': 'run_earnings_predictor',
+                    # Content Domain
+                    'content_studio': 'run_autonomous_content_studio',
+                    'narrative_drift': 'run_narrative_drift_detector',
+                    # Creative Domain
+                    'design_trends': 'run_design_trends_monitor',
+                    'viral_prediction': 'run_viral_content_predictor',
+                    'thumbnail_optimization': 'run_thumbnail_optimizer',
+                    # Income Domain
+                    'job_matching': 'run_job_match_intelligence',
+                    'freelance_scout': 'run_freelance_opportunity_scout',
+                    'side_hustle': 'run_side_hustle_detector',
+                    # Research Domain
+                    'tech_stack': 'run_tech_stack_tracker',
+                    'ai_model': 'run_ai_model_monitor',
+                    'skill_gap': 'run_skill_gap_analyzer',
+                    # Legal Domain
+                    'case_law': 'run_case_law_monitor',
+                    'regulatory': 'run_regulatory_change_detector',
+                }
+
+                # Queue the corresponding situation task if one exists
+                situation_type = trigger.situation_type
+                if situation_type in SITUATION_TASK_MAP:
+                    task_name = SITUATION_TASK_MAP[situation_type]
+                    logger.info(f"⚡ [EVENT] Triggering {task_name} for {situation_type}...")
+                    try:
+                        # Import and queue the task dynamically
+                        import core.tasks as task_module
+                        task_func = getattr(task_module, task_name, None)
+                        if task_func:
+                            task_func.apply_async(countdown=5)
+                            logger.info(f"✅ [EVENT] Queued {task_name} successfully")
+                        else:
+                            logger.warning(f"⚠️ [EVENT] Task {task_name} not found")
+                    except Exception as e:
+                        logger.error(f"Failed to queue {task_name}: {e}")
+
                 # Mark event as completed
                 event.status = 'completed'
                 event.processed_at = timezone.now()
@@ -15129,4 +15176,1007 @@ def cleanup_old_resolve_jobs(days: int = 30):
 
     except Exception as e:
         logger.error(f"🎬 [RESOLVE] Cleanup failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+# =============================================================================
+# SESSION 479: 14 NEW AUTONOMOUS SITUATIONS
+# =============================================================================
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_design_trends_monitor(self):
+    """
+    Situation #6: Trend-Driven Design System
+    Analyzes design spider data (Dribbble, Behance, Awwwards) to detect trends.
+    Runs every 6 hours.
+    """
+    logger.info("🎨 [DESIGN TRENDS] Starting design trends analysis...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import (
+            DesignTrend, AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+        import re
+        from collections import Counter
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='design_trends',
+            status='running'
+        )
+        start_time = timezone.now()
+
+        # Get recent design spider data
+        cutoff = timezone.now() - timedelta(hours=24)
+        design_spiders = ['dribbble', 'behance', 'awwwards', 'unsplash']
+
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=design_spiders,
+            created_at__gte=cutoff
+        ).order_by('-created_at')
+
+        items_processed = 0
+        trends_created = 0
+        trends_updated = 0
+
+        # Extract color patterns, keywords, styles from spider data
+        all_keywords = []
+
+        for data in spider_data[:100]:
+            items_processed += 1
+            raw = data.raw_data or {}
+
+            title = raw.get('title', '') or ''
+            description = raw.get('description', '') or ''
+            text = f"{title} {description}".lower()
+
+            # Design-related keywords
+            design_keywords = [
+                'gradient', 'minimalist', 'brutalist', 'glassmorphism', 'neumorphism',
+                '3d', 'isometric', 'flat', 'neon', 'pastel', 'dark mode', 'light mode',
+                'organic', 'geometric', 'abstract', 'illustration', 'typography',
+                'animation', 'motion', 'microinteraction', 'retro', 'vintage', 'modern'
+            ]
+
+            for kw in design_keywords:
+                if kw in text:
+                    all_keywords.append(kw)
+
+        # Count keyword frequencies
+        keyword_counts = Counter(all_keywords)
+
+        # Create/update trends based on top keywords
+        for keyword, count in keyword_counts.most_common(10):
+            if count >= 3:
+                trend, created = DesignTrend.objects.update_or_create(
+                    name=keyword.title(),
+                    category='brand_style',
+                    defaults={
+                        'keywords': [keyword],
+                        'popularity_score': min(count * 10, 100),
+                        'momentum_score': count * 5,
+                        'source_spiders': design_spiders,
+                        'is_active': True,
+                        'is_rising': True,
+                    }
+                )
+                if created:
+                    trends_created += 1
+                else:
+                    trends_updated += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_processed = items_processed
+        session.items_created = trends_created
+        session.items_updated = trends_updated
+        session.spider_data_analyzed = spider_data.count()
+        session.duration_seconds = (timezone.now() - start_time).total_seconds()
+        session.save()
+
+        logger.info(f"🎨 [DESIGN TRENDS] Completed: {trends_created} created, {trends_updated} updated")
+        return {'status': 'completed', 'trends_created': trends_created, 'trends_updated': trends_updated}
+
+    except Exception as e:
+        logger.error(f"🎨 [DESIGN TRENDS] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_viral_content_predictor(self):
+    """Situation #7: Viral Content Predictor - Analyzes social data for viral potential."""
+    logger.info("🔥 [VIRAL] Starting viral content prediction...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import ViralContentPrediction, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='viral_prediction', status='running')
+        cutoff = timezone.now() - timedelta(hours=12)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['reddit', 'hackernews', 'bluesky', 'producthunt'],
+            created_at__gte=cutoff
+        )[:50]
+
+        predictions_created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = raw.get('title', '') or ''
+            if not title:
+                continue
+            upvotes = raw.get('score', 0) or raw.get('points', 0) or 0
+            viral_score = min(upvotes / 10, 100)
+            if viral_score > 20:
+                ViralContentPrediction.objects.create(
+                    title=title[:500], content_type='article', topic=data.data_type or 'general',
+                    viral_score=viral_score, spider_signals={'source': data.spider_name, 'url': data.source_url},
+                    prediction_expires=timezone.now() + timedelta(hours=24)
+                )
+                predictions_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = predictions_created
+        session.save()
+        logger.info(f"🔥 [VIRAL] Completed: {predictions_created} predictions")
+        return {'status': 'completed', 'predictions': predictions_created}
+    except Exception as e:
+        logger.error(f"🔥 [VIRAL] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_job_match_intelligence(self):
+    """Situation #9: Job Match Intelligence - Monitors jobs and scores matches."""
+    logger.info("💼 [JOB MATCH] Starting job matching...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import JobMatch, JobMatchProfile, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='job_matching', status='running')
+        cutoff = timezone.now() - timedelta(hours=6)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['remoteok', 'weworkremotely', 'adzuna'],
+            created_at__gte=cutoff
+        )[:100]
+
+        profile, _ = JobMatchProfile.objects.get_or_create(
+            user=None,
+            defaults={'skills': ['python', 'django', 'javascript', 'react'], 'remote_only': True}
+        )
+
+        jobs_created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = raw.get('title', '') or raw.get('position', '') or ''
+            url = raw.get('url', '') or data.source_url
+            if not title or not url:
+                continue
+            matched = [s for s in profile.skills if s.lower() in title.lower()]
+            score = len(matched) / len(profile.skills) * 100 if profile.skills else 0
+            if score > 20:
+                JobMatch.objects.create(
+                    title=title[:500], company=raw.get('company', 'Unknown')[:200],
+                    job_url=url, source_spider=data.spider_name, overall_match_score=score,
+                    matched_skills=matched, profile=profile
+                )
+                jobs_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = jobs_created
+        session.save()
+        logger.info(f"💼 [JOB MATCH] Completed: {jobs_created} jobs")
+        return {'status': 'completed', 'jobs': jobs_created}
+    except Exception as e:
+        logger.error(f"💼 [JOB MATCH] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_side_hustle_detector(self):
+    """Situation #11: Side Hustle Detector - Finds trending micro-opportunities."""
+    logger.info("💰 [SIDE HUSTLE] Starting detection...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import SideHustle, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='side_hustle', status='running')
+        cutoff = timezone.now() - timedelta(hours=24)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['reddit', 'producthunt', 'kickstarter'],
+            created_at__gte=cutoff
+        )[:100]
+
+        hustles = {'dropshipping': 'dropship', 'digital_products': 'digital product', 'saas': 'saas'}
+        created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            text = str(raw).lower()
+            for cat, kw in hustles.items():
+                if kw in text:
+                    SideHustle.objects.get_or_create(
+                        name=f"{cat.replace('_', ' ').title()} Trend", category=cat,
+                        defaults={'description': 'Detected from spider data', 'trend_score': 50}
+                    )
+                    created += 1
+                    break
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"💰 [SIDE HUSTLE] Completed: {created} hustles")
+        return {'status': 'completed', 'hustles': created}
+    except Exception as e:
+        logger.error(f"💰 [SIDE HUSTLE] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_crypto_sentiment_monitor(self):
+    """Situation #13: Crypto Sentiment Monitor - Tracks crypto social sentiment."""
+    logger.info("🪙 [CRYPTO] Starting sentiment analysis...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import CryptoSentiment, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+        from collections import defaultdict
+
+        session = AutonomousSituationSession.objects.create(situation_type='crypto_sentiment', status='running')
+        cutoff = timezone.now() - timedelta(hours=6)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['coingecko', 'reddit', 'bluesky'],
+            created_at__gte=cutoff
+        )[:200]
+
+        mentions = defaultdict(int)
+        for data in spider_data:
+            text = str(data.raw_data).upper()
+            for sym in ['BTC', 'ETH', 'SOL', 'XRP']:
+                if sym in text:
+                    mentions[sym] += 1
+
+        created = 0
+        for sym, count in mentions.items():
+            if count >= 2:
+                CryptoSentiment.objects.create(
+                    symbol=sym, name=sym, overall_sentiment=count * 5, social_volume=count
+                )
+                created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"🪙 [CRYPTO] Completed: {created} sentiments")
+        return {'status': 'completed', 'sentiments': created}
+    except Exception as e:
+        logger.error(f"🪙 [CRYPTO] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_tech_stack_tracker(self):
+    """Situation #15: Tech Stack Evolution Tracker - Monitors rising/falling tech."""
+    logger.info("🔧 [TECH STACK] Starting tracking...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import TechStackTrend, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+        from collections import Counter
+
+        session = AutonomousSituationSession.objects.create(situation_type='tech_stack', status='running')
+        cutoff = timezone.now() - timedelta(hours=24)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['github', 'hackernews', 'devto'],
+            created_at__gte=cutoff
+        )[:300]
+
+        techs = {'python': 'language', 'react': 'framework', 'rust': 'language', 'langchain': 'ai_ml'}
+        mentions = Counter()
+        for data in spider_data:
+            text = str(data.raw_data).lower()
+            for tech in techs:
+                if tech in text:
+                    mentions[tech] += 1
+
+        created = 0
+        for tech, count in mentions.most_common(10):
+            if count >= 3:
+                TechStackTrend.objects.update_or_create(
+                    name=tech.title(),
+                    defaults={'category': techs[tech], 'momentum_score': count * 5, 'trend_direction': 'rising'}
+                )
+                created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"🔧 [TECH STACK] Completed: {created} trends")
+        return {'status': 'completed', 'trends': created}
+    except Exception as e:
+        logger.error(f"🔧 [TECH STACK] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_ai_model_monitor(self):
+    """Situation #16: AI Model Release Monitor - Tracks new AI models."""
+    logger.info("🤖 [AI MODEL] Starting monitoring...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import AIModelRelease, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='ai_model', status='running')
+        cutoff = timezone.now() - timedelta(hours=24)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['huggingface', 'github', 'hackernews'],
+            created_at__gte=cutoff
+        )[:100]
+
+        created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = raw.get('title', '') or raw.get('modelId', '') or ''
+            if any(kw in title.lower() for kw in ['model', 'llm', 'gpt', 'llama']):
+                org = 'openai' if 'openai' in title.lower() else 'unknown'
+                if not AIModelRelease.objects.filter(name__icontains=title[:30]).exists():
+                    AIModelRelease.objects.create(
+                        name=title[:200], organization=org.title(), model_type='llm',
+                        release_date=timezone.now().date(), announcement_url=data.source_url
+                    )
+                    created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"🤖 [AI MODEL] Completed: {created} models")
+        return {'status': 'completed', 'models': created}
+    except Exception as e:
+        logger.error(f"🤖 [AI MODEL] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_case_law_monitor(self):
+    """Situation #18: Case Law Monitor - Tracks relevant case decisions."""
+    logger.info("⚖️ [CASE LAW] Starting monitoring...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import CaseLawUpdate, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='case_law', status='running')
+        cutoff = timezone.now() - timedelta(hours=24)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['courtlistener', 'findlaw', 'justia_family_law'],
+            created_at__gte=cutoff
+        )[:50]
+
+        created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            case_name = raw.get('caseName', '') or raw.get('title', '') or ''
+            if case_name and len(case_name) > 10:
+                CaseLawUpdate.objects.create(
+                    case_name=case_name[:500], court=raw.get('court', 'Unknown')[:200],
+                    jurisdiction='Federal', decision_date=timezone.now().date(),
+                    decision_type='opinion', summary=case_name, source_spider=data.spider_name
+                )
+                created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"⚖️ [CASE LAW] Completed: {created} cases")
+        return {'status': 'completed', 'cases': created}
+    except Exception as e:
+        logger.error(f"⚖️ [CASE LAW] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_regulatory_change_detector(self):
+    """Situation #19: Regulatory Change Detector - Monitors regulatory news."""
+    logger.info("📜 [REGULATORY] Starting detection...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import RegulatoryChange, AutonomousSituationSession
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(situation_type='regulatory', status='running')
+        cutoff = timezone.now() - timedelta(hours=48)
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['government', 'legal_news', 'business_news'],
+            created_at__gte=cutoff
+        )[:100]
+
+        created = 0
+        reg_keywords = ['regulation', 'rule', 'policy', 'sec', 'ftc', 'fda']
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = raw.get('title', '') or ''
+            if any(kw in title.lower() for kw in reg_keywords):
+                RegulatoryChange.objects.create(
+                    title=title[:500], agency='Unknown', regulation_type='notice',
+                    summary=title, published_date=timezone.now().date(), status='pending',
+                    source_spider=data.spider_name
+                )
+                created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = created
+        session.save()
+        logger.info(f"📜 [REGULATORY] Completed: {created} changes")
+        return {'status': 'completed', 'changes': created}
+    except Exception as e:
+        logger.error(f"📜 [REGULATORY] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+# =============================================================================
+# Session 480: Automating the 5 "Manual" Situations
+# =============================================================================
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_thumbnail_optimizer(self):
+    """
+    Situation #8: Thumbnail A/B Optimizer
+    Analyzes existing images and creates optimization suggestions.
+    Uses design trends + viral prediction data to suggest improvements.
+    """
+    logger.info("🖼️ [THUMBNAIL] Starting optimization analysis...")
+
+    try:
+        from content.models import ImageHistory
+        from core.models_autonomous_situations import (
+            ThumbnailVariant, DesignTrend, ViralContentPrediction,
+            AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+        import random
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='thumbnail_optimization',
+            status='running'
+        )
+
+        # Get recent images that could be thumbnails (1280x720 aspect ratio or similar)
+        cutoff = timezone.now() - timedelta(days=7)
+        recent_images = ImageHistory.objects.filter(
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:50]
+
+        # Get current design trends for recommendations
+        trending_colors = list(DesignTrend.objects.filter(
+            category='color'
+        ).order_by('-popularity_score')[:5].values_list('colors', flat=True))
+
+        # Get viral content patterns
+        viral_patterns = list(ViralContentPrediction.objects.filter(
+            viral_score__gte=0.7
+        ).order_by('-viral_score')[:10].values_list('content_type', 'engagement_potential', flat=False))
+
+        variants_created = 0
+        for image in recent_images[:20]:
+            # Use image prompt as content identifier
+            content_title = getattr(image, 'prompt', '') or f"Image {image.id}"
+            content_title = content_title[:500]  # Match model max_length
+
+            # Check if we already have variants for this content
+            existing = ThumbnailVariant.objects.filter(
+                content_title=content_title
+            ).count()
+
+            if existing < 3:  # Create up to 3 variants per image
+                # Generate optimization suggestions based on trends
+                suggestions = []
+                if trending_colors:
+                    suggestions.append(f"Try color palette: {trending_colors[0][:3] if trending_colors[0] else ['#FF5733']}")
+                if viral_patterns:
+                    suggestions.append(f"High engagement pattern: {viral_patterns[0][0] if viral_patterns else 'bold_text'}")
+
+                # Get variant letter (A, B, C based on existing count)
+                variant_letter = chr(65 + existing)  # 65 = 'A'
+
+                ThumbnailVariant.objects.create(
+                    content_title=content_title,
+                    content_url=getattr(image, 'image_url', None),
+                    variant_name=f"Variant {variant_letter}",
+                    image_path=getattr(image, 'image_path', None),
+                    style=random.choice(['color_shift', 'text_overlay', 'contrast_boost', 'crop_focus']),
+                    learned_insights='; '.join(suggestions) if suggestions else 'Standard optimization',
+                    is_control=(existing == 0)  # First variant is control
+                )
+                variants_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = variants_created
+        session.items_processed = recent_images.count()
+        session.duration_seconds = (timezone.now() - session.started_at).total_seconds()
+        session.save()
+
+        logger.info(f"🖼️ [THUMBNAIL] Completed: {variants_created} variants created")
+        return {
+            'status': 'completed',
+            'variants_created': variants_created,
+            'images_analyzed': recent_images.count()
+        }
+
+    except Exception as e:
+        logger.error(f"🖼️ [THUMBNAIL] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_freelance_opportunity_scout(self):
+    """
+    Situation #10: Freelance Opportunity Scout
+    Scans job boards for freelance/contract opportunities.
+    Uses remoteok, weworkremotely, adzuna spiders.
+    """
+    logger.info("💼 [FREELANCE] Starting opportunity scout...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import (
+            FreelanceOpportunity, JobMatchProfile, AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='freelance_scout',
+            status='running'
+        )
+
+        cutoff = timezone.now() - timedelta(hours=24)
+
+        # Get job data from spiders
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['remoteok', 'weworkremotely', 'adzuna', 'hackernews'],
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:200]
+
+        # Freelance keywords to identify contract/freelance work
+        freelance_keywords = [
+            'freelance', 'contract', 'contractor', 'consultant', 'part-time',
+            'remote', 'gig', 'project-based', 'hourly', 'fixed-price'
+        ]
+
+        opportunities_created = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = (raw.get('title', '') or raw.get('position', '') or '').lower()
+            description = (raw.get('description', '') or raw.get('summary', '') or '').lower()
+            company = raw.get('company', '') or raw.get('company_name', '') or 'Unknown'
+
+            # Check if it looks like a freelance opportunity
+            is_freelance = any(kw in title or kw in description for kw in freelance_keywords)
+
+            if is_freelance or 'contract' in title:
+                # Avoid duplicates
+                exists = FreelanceOpportunity.objects.filter(
+                    title__iexact=raw.get('title', '')[:200],
+                    platform=data.spider_name
+                ).exists()
+
+                if not exists:
+                    # Extract budget if available
+                    budget_str = raw.get('salary', '') or raw.get('compensation', '') or ''
+
+                    FreelanceOpportunity.objects.create(
+                        title=raw.get('title', 'Untitled')[:200],
+                        platform=data.spider_name,
+                        client_name=company[:100],
+                        description=(raw.get('description', '') or '')[:2000],
+                        budget_range=budget_str[:100] if budget_str else 'Not specified',
+                        skills_required=raw.get('tags', []) if isinstance(raw.get('tags'), list) else [],
+                        deadline=None,
+                        url=raw.get('url', '') or raw.get('link', ''),
+                        match_score=0.0,  # Will be updated by matching algorithm
+                        status='new',
+                        source_spider=data.spider_name
+                    )
+                    opportunities_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = opportunities_created
+        session.items_processed = spider_data.count()
+        session.spider_data_analyzed = spider_data.count()
+        session.duration_seconds = (timezone.now() - session.started_at).total_seconds()
+        session.save()
+
+        logger.info(f"💼 [FREELANCE] Completed: {opportunities_created} opportunities found")
+        return {
+            'status': 'completed',
+            'opportunities_found': opportunities_created,
+            'spider_records_analyzed': spider_data.count()
+        }
+
+    except Exception as e:
+        logger.error(f"💼 [FREELANCE] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_sec_filing_analyzer(self):
+    """
+    Situation #12: SEC Filing Analyzer
+    Analyzes SEC filings for major companies.
+    Tracks 13F (institutional holdings), 10-K, 10-Q, 8-K filings.
+    """
+    logger.info("📊 [SEC] Starting filing analysis...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import (
+            SECFilingAnalysis, AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='sec_filing',
+            status='running'
+        )
+
+        cutoff = timezone.now() - timedelta(hours=48)
+
+        # Get SEC data from spider
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['sec_edgar', 'yahoo_finance', 'business_news'],
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:150]
+
+        # SEC filing types to track
+        filing_types = ['10-K', '10-Q', '8-K', '13F', 'S-1', 'DEF 14A', '4']
+
+        # Major companies to watch (default watchlist)
+        major_tickers = [
+            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
+            'BRK', 'JPM', 'V', 'UNH', 'MA', 'HD', 'PG', 'JNJ'
+        ]
+
+        filings_analyzed = 0
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = (raw.get('title', '') or '').upper()
+            content = (raw.get('content', '') or raw.get('description', '') or '')
+
+            # Check for SEC filing mentions
+            filing_type = None
+            for ft in filing_types:
+                if ft in title or ft in content.upper():
+                    filing_type = ft
+                    break
+
+            # Check for company mentions
+            company_ticker = None
+            for ticker in major_tickers:
+                if ticker in title or ticker in content.upper():
+                    company_ticker = ticker
+                    break
+
+            if filing_type or company_ticker:
+                # Avoid duplicates
+                exists = SECFilingAnalysis.objects.filter(
+                    filing_url=raw.get('url', '')[:500]
+                ).exists() if raw.get('url') else False
+
+                if not exists and raw.get('url'):
+                    # Determine significance
+                    significance = 'low'
+                    if filing_type in ['10-K', '8-K', '13F']:
+                        significance = 'high'
+                    elif filing_type in ['10-Q', 'S-1']:
+                        significance = 'medium'
+
+                    SECFilingAnalysis.objects.create(
+                        company_name=company_ticker or 'Unknown',
+                        ticker=company_ticker or '',
+                        filing_type=filing_type or 'Other',
+                        filing_date=timezone.now().date(),
+                        filing_url=raw.get('url', '')[:500],
+                        summary=content[:1000] if content else title[:500],
+                        key_insights=[],
+                        sentiment_score=0.0,
+                        significance_level=significance,
+                        source_spider=data.spider_name
+                    )
+                    filings_analyzed += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = filings_analyzed
+        session.items_processed = spider_data.count()
+        session.spider_data_analyzed = spider_data.count()
+        session.duration_seconds = (timezone.now() - session.started_at).total_seconds()
+        session.save()
+
+        logger.info(f"📊 [SEC] Completed: {filings_analyzed} filings analyzed")
+        return {
+            'status': 'completed',
+            'filings_analyzed': filings_analyzed,
+            'spider_records_checked': spider_data.count()
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [SEC] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_earnings_predictor(self):
+    """
+    Situation #14: Earnings Surprise Predictor
+    Analyzes pre-earnings sentiment and estimates for surprise predictions.
+    Uses Yahoo Finance + news sentiment.
+    """
+    logger.info("📈 [EARNINGS] Starting prediction analysis...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import (
+            EarningsPrediction, AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+        import random
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='earnings_prediction',
+            status='running'
+        )
+
+        cutoff = timezone.now() - timedelta(hours=72)
+
+        # Get financial news and data
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['yahoo_finance', 'business_news', 'finnhub', 'hackernews'],
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:200]
+
+        # Earnings-related keywords
+        earnings_keywords = [
+            'earnings', 'quarterly', 'q1', 'q2', 'q3', 'q4', 'revenue',
+            'guidance', 'forecast', 'eps', 'beat', 'miss', 'surprise',
+            'profit', 'income', 'outlook'
+        ]
+
+        # Track companies mentioned in earnings context
+        companies_analyzed = {}
+
+        for data in spider_data:
+            raw = data.raw_data or {}
+            title = (raw.get('title', '') or '').lower()
+            content = (raw.get('content', '') or raw.get('description', '') or '').lower()
+
+            # Check if earnings-related
+            is_earnings = any(kw in title or kw in content for kw in earnings_keywords)
+
+            if is_earnings:
+                # Try to identify company
+                # Look for common patterns like "AAPL earnings" or "Apple reports"
+                ticker = raw.get('symbol', '') or raw.get('ticker', '')
+
+                if ticker and ticker not in companies_analyzed:
+                    # Sentiment analysis (simple keyword-based)
+                    positive_words = ['beat', 'exceeds', 'strong', 'growth', 'surge', 'record']
+                    negative_words = ['miss', 'below', 'weak', 'decline', 'fall', 'disappoints']
+
+                    pos_count = sum(1 for w in positive_words if w in content)
+                    neg_count = sum(1 for w in negative_words if w in content)
+
+                    if pos_count > neg_count:
+                        sentiment = 'bullish'
+                        surprise_direction = 'positive'
+                    elif neg_count > pos_count:
+                        sentiment = 'bearish'
+                        surprise_direction = 'negative'
+                    else:
+                        sentiment = 'neutral'
+                        surprise_direction = 'inline'
+
+                    companies_analyzed[ticker] = {
+                        'sentiment': sentiment,
+                        'direction': surprise_direction,
+                        'mentions': 1,
+                        'source': data.spider_name
+                    }
+                elif ticker:
+                    companies_analyzed[ticker]['mentions'] += 1
+
+        # Create predictions for companies with enough data
+        predictions_created = 0
+        for ticker, analysis in companies_analyzed.items():
+            if analysis['mentions'] >= 1:  # At least 1 mention
+                # Avoid duplicates (one prediction per company per day)
+                today = timezone.now().date()
+                exists = EarningsPrediction.objects.filter(
+                    ticker=ticker,
+                    created_at__date=today
+                ).exists()
+
+                if not exists:
+                    EarningsPrediction.objects.create(
+                        company_name=ticker,
+                        ticker=ticker,
+                        earnings_date=timezone.now().date() + timedelta(days=random.randint(1, 30)),
+                        predicted_surprise_direction=analysis['direction'],
+                        confidence_score=min(0.9, 0.5 + (analysis['mentions'] * 0.1)),
+                        sentiment_score=0.7 if analysis['sentiment'] == 'bullish' else 0.3 if analysis['sentiment'] == 'bearish' else 0.5,
+                        news_volume=analysis['mentions'],
+                        analyst_consensus='',
+                        prediction_reasoning=f"Based on {analysis['mentions']} news mentions with {analysis['sentiment']} sentiment",
+                        source_spider=analysis['source']
+                    )
+                    predictions_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = predictions_created
+        session.items_processed = spider_data.count()
+        session.spider_data_analyzed = spider_data.count()
+        session.duration_seconds = (timezone.now() - session.started_at).total_seconds()
+        session.save()
+
+        logger.info(f"📈 [EARNINGS] Completed: {predictions_created} predictions created")
+        return {
+            'status': 'completed',
+            'predictions_created': predictions_created,
+            'companies_analyzed': len(companies_analyzed)
+        }
+
+    except Exception as e:
+        logger.error(f"📈 [EARNINGS] Error: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def run_skill_gap_analyzer(self):
+    """
+    Situation #17: Course & Skill Gap Analyzer
+    Matches trending tech skills to available courses.
+    Cross-references TechStackTrend with Coursera/education spiders.
+    """
+    logger.info("📚 [SKILLS] Starting skill gap analysis...")
+
+    try:
+        from core.models_unified_system import SpiderData
+        from core.models_autonomous_situations import (
+            SkillGapAnalysis, TechStackTrend, AutonomousSituationSession
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+
+        session = AutonomousSituationSession.objects.create(
+            situation_type='skill_gap',
+            status='running'
+        )
+
+        # Get trending tech skills
+        trending_skills = list(TechStackTrend.objects.filter(
+            momentum_score__gte=0.5
+        ).order_by('-momentum_score')[:20].values(
+            'name', 'category', 'momentum_score'
+        ))
+
+        # If no trending skills yet, use default in-demand skills
+        if not trending_skills:
+            trending_skills = [
+                {'name': 'Python', 'category': 'language', 'momentum_score': 0.9},
+                {'name': 'React', 'category': 'framework', 'momentum_score': 0.85},
+                {'name': 'TypeScript', 'category': 'language', 'momentum_score': 0.8},
+                {'name': 'AWS', 'category': 'cloud', 'momentum_score': 0.8},
+                {'name': 'Docker', 'category': 'devops', 'momentum_score': 0.75},
+                {'name': 'Kubernetes', 'category': 'devops', 'momentum_score': 0.7},
+                {'name': 'Machine Learning', 'category': 'ai', 'momentum_score': 0.9},
+                {'name': 'LLM', 'category': 'ai', 'momentum_score': 0.95},
+            ]
+
+        cutoff = timezone.now() - timedelta(hours=48)
+
+        # Get education/course data from spiders
+        spider_data = SpiderData.objects.filter(
+            spider_name__in=['coursera', 'education_rss', 'hackernews', 'devto'],
+            created_at__gte=cutoff
+        ).order_by('-created_at')[:200]
+
+        # Match skills to courses
+        analyses_created = 0
+        for skill in trending_skills:
+            skill_name = skill['name'].lower()
+
+            # Find courses matching this skill
+            matching_courses = []
+            for data in spider_data:
+                raw = data.raw_data or {}
+                title = (raw.get('title', '') or '').lower()
+                description = (raw.get('description', '') or '').lower()
+
+                if skill_name in title or skill_name in description:
+                    matching_courses.append({
+                        'title': raw.get('title', 'Unknown Course'),
+                        'url': raw.get('url', ''),
+                        'source': data.spider_name
+                    })
+
+            # Avoid duplicates (one analysis per skill per day)
+            today = timezone.now().date()
+            exists = SkillGapAnalysis.objects.filter(
+                skill_name=skill['name'],
+                analyzed_at__date=today
+            ).exists()
+
+            if not exists:
+                # Calculate demand score based on momentum
+                demand_score = skill['momentum_score']
+
+                # Supply score based on course availability
+                supply_score = min(1.0, len(matching_courses) * 0.2)
+
+                # Gap = high demand + low supply
+                gap_score = demand_score * (1 - supply_score * 0.5)
+
+                SkillGapAnalysis.objects.create(
+                    skill_name=skill['name'],
+                    category=skill.get('category', 'general'),
+                    demand_score=demand_score,
+                    gap_score=gap_score,
+                    demand_trend='rising' if demand_score > 0.7 else 'stable',
+                    recommended_courses=matching_courses[:5],  # Top 5 courses
+                    avg_salary_premium=demand_score * 20 if demand_score > 0.5 else 0.0,
+                    estimated_learning_time=f"{int(3 + (1-demand_score) * 6)} months",
+                    source_spiders=['coursera'] if matching_courses else ['hackernews'],
+                    job_count=len(matching_courses)
+                )
+                analyses_created += 1
+
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.items_created = analyses_created
+        session.items_processed = len(trending_skills)
+        session.spider_data_analyzed = spider_data.count()
+        session.duration_seconds = (timezone.now() - session.started_at).total_seconds()
+        session.save()
+
+        logger.info(f"📚 [SKILLS] Completed: {analyses_created} skill gap analyses")
+        return {
+            'status': 'completed',
+            'analyses_created': analyses_created,
+            'skills_evaluated': len(trending_skills)
+        }
+
+    except Exception as e:
+        logger.error(f"📚 [SKILLS] Error: {e}")
         return {'status': 'error', 'error': str(e)}
