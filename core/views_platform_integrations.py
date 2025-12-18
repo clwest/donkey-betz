@@ -969,6 +969,176 @@ def gumroad_create_product(request):
         return api_error(f"Failed to create product: {str(e)}")
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def gumroad_publish_image(request):
+    """
+    POST /api/distribution/gumroad/publish/
+
+    Publish an AI-generated image to Gumroad with actual file upload.
+
+    Session 487: Golden Egg Strategy - This endpoint uses GumroadPublishingService
+    to download the image and upload it to Gumroad with multipart file handling.
+
+    Request body:
+    {
+        "image_id": 123,  // ImageHistory ID or sequential_number
+        "title": "Custom Title",  // Optional
+        "price": 9.99,  // Optional, defaults to 9.99
+        "description": "Custom description"  // Optional
+    }
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status_code=401)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return api_error("Invalid JSON")
+
+    image_id = data.get('image_id')
+    if not image_id:
+        return api_error("Missing required field: image_id")
+
+    try:
+        from core.services.gumroad_publishing import GumroadPublishingService
+        from content.models import ImageHistory
+
+        # Find the image - try sequential_number first, then primary key
+        image = ImageHistory.objects.filter(
+            user=request.user,
+            sequential_number=image_id
+        ).first()
+
+        if not image:
+            try:
+                image = ImageHistory.objects.get(id=image_id, user=request.user)
+            except (ImageHistory.DoesNotExist, ValueError):
+                return api_error(f"Image #{image_id} not found in your gallery")
+
+        # Initialize publishing service
+        service = GumroadPublishingService(request.user)
+
+        if not service.account:
+            return api_error(
+                "No Gumroad account connected. Please connect your Gumroad account in the Distribution tab.",
+                status_code=400
+            )
+
+        # Publish to Gumroad with actual file upload
+        distribution = service.publish_image(
+            image_id=image.id,
+            title=data.get('title'),
+            price=Decimal(str(data.get('price', 9.99))),
+            description=data.get('description')
+        )
+
+        return api_success({
+            'success': True,
+            'distribution_id': str(distribution.id),
+            'product_url': distribution.platform_listing_url,
+            'product_id': distribution.platform_listing_id,
+            'title': distribution.title,
+            'price': str(distribution.price),
+            'message': 'Image published to Gumroad successfully!'
+        })
+
+    except ValueError as e:
+        return api_error(str(e))
+    except Exception as e:
+        logger.exception(f"Gumroad publish error: {e}")
+        return api_error(f"Failed to publish: {str(e)}")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def gumroad_webhook(request):
+    """
+    POST /api/distribution/gumroad/webhook/
+
+    Webhook endpoint for Gumroad sale notifications.
+
+    Session 487: Receives sale events from Gumroad and updates
+    ContentDistribution records with sales/revenue data.
+
+    Gumroad sends form data (not JSON) with fields:
+    - product_id: The Gumroad product ID
+    - price: Price in cents
+    - email: Buyer's email
+    - full_name: Buyer's name
+    - purchaser_id: Gumroad user ID
+    - sale_id: Unique sale ID
+    - seller_id: Your Gumroad ID
+    - etc.
+
+    Note: Configure this webhook URL in Gumroad dashboard:
+    https://app.gumroad.com/settings/advanced
+    """
+    try:
+        # Gumroad sends form data, not JSON
+        data = request.POST.dict()
+
+        if not data:
+            # Try JSON body as fallback
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'status': 'error', 'message': 'No data received'}, status=400)
+
+        product_id = data.get('product_id')
+        price_cents = int(data.get('price', 0))
+        sale_id = data.get('sale_id')
+
+        if not product_id:
+            return JsonResponse({'status': 'error', 'message': 'Missing product_id'}, status=400)
+
+        # Find the distribution by Gumroad product ID
+        distribution = ContentDistribution.objects.filter(
+            platform='gumroad',
+            platform_listing_id=product_id
+        ).first()
+
+        if distribution:
+            # Update sales count and revenue
+            distribution.sales = (distribution.sales or 0) + 1
+            distribution.revenue = (distribution.revenue or Decimal('0')) + (Decimal(price_cents) / 100)
+            distribution.save()
+
+            logger.info(
+                f"Gumroad sale recorded: Product {product_id}, "
+                f"Sale {sale_id}, ${price_cents/100:.2f}, "
+                f"Total sales: {distribution.sales}"
+            )
+
+            # Also update the UserPlatformAccount totals
+            if distribution.platform_account:
+                distribution.platform_account.total_sales = (distribution.platform_account.total_sales or 0) + 1
+                distribution.platform_account.total_revenue = (
+                    (distribution.platform_account.total_revenue or Decimal('0')) +
+                    (Decimal(price_cents) / 100)
+                )
+                distribution.platform_account.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Sale recorded',
+                'distribution_id': str(distribution.id),
+                'total_sales': distribution.sales,
+                'total_revenue': str(distribution.revenue)
+            })
+        else:
+            # Log unknown product (might be a product created outside our system)
+            logger.warning(f"Gumroad webhook received for unknown product: {product_id}")
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Product not tracked in system'
+            })
+
+    except Exception as e:
+        logger.exception(f"Gumroad webhook error: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 # =============================================================================
 # Revenue Sync Endpoints
 # =============================================================================

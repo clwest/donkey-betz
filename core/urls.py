@@ -530,6 +530,8 @@ from core.views_platform_integrations import (
     # Gumroad
     gumroad_get_products,
     gumroad_create_product,
+    gumroad_publish_image,  # Session 487: Golden Egg - actual file upload
+    gumroad_webhook,  # Session 487: Sale notifications
     # Revenue sync
     sync_platform_revenue,
 )
@@ -1413,6 +1415,8 @@ urlpatterns = [
     # Gumroad API
     path('api/distribution/gumroad/products/', gumroad_get_products, name='gumroad-products'),
     path('api/distribution/gumroad/products/create/', gumroad_create_product, name='gumroad-create-product'),
+    path('api/distribution/gumroad/publish/', gumroad_publish_image, name='gumroad-publish-image'),  # Session 487
+    path('api/distribution/gumroad/webhook/', gumroad_webhook, name='gumroad-webhook'),  # Session 487
     # Revenue sync
     path('api/distribution/<str:platform>/sync-revenue/', sync_platform_revenue, name='sync-platform-revenue'),
 

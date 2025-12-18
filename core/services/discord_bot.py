@@ -505,6 +505,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
         await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
         await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
+        await self.add_cog(GumroadCommands(self))  # Session 487: Gumroad Publishing (Golden Egg)
 
         # Sync slash commands with Discord
         try:
@@ -6120,6 +6121,223 @@ class StudioCommands(commands.Cog):
                     color=discord.Color.red()
                 )
             )
+
+
+class GumroadCommands(commands.Cog):
+    """
+    Session 487: Gumroad Publishing Commands.
+
+    Commands for publishing AI-generated content directly to Gumroad for sale:
+    - /publish-gumroad - Publish an image from your gallery to Gumroad
+    """
+
+    def __init__(self, bot: DonkeyBetzBot):
+        self.bot = bot
+
+    async def _get_linked_user(self, discord_id: str):
+        """Get the linked web user for a Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+        return await get_user()
+
+    @app_commands.command(name="publish-gumroad", description="Publish an image to Gumroad for sale")
+    @app_commands.describe(
+        image_id="Image ID from /gallery (e.g., 320)",
+        price="Price in USD (default: 9.99)",
+        title="Custom title (optional, uses prompt if not provided)"
+    )
+    async def publish_gumroad(
+        self,
+        interaction: discord.Interaction,
+        image_id: int,
+        price: float = 9.99,
+        title: str = None
+    ):
+        """Publish an AI-generated image to Gumroad marketplace."""
+        await interaction.response.defer()
+
+        try:
+            # Get linked user
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            if not user:
+                embed = discord.Embed(
+                    title="Not Linked",
+                    description="Link your Discord account first with `/link <code>` from the web app.",
+                    color=discord.Color.orange()
+                )
+                await interaction.followup.send(embed=embed)
+                return
+
+            @sync_to_async
+            def publish_to_gumroad(web_user, img_id, pub_price, pub_title):
+                from content.models import ImageHistory
+                from core.services.gumroad_publishing import GumroadPublishingService
+                from decimal import Decimal
+
+                # Get image by sequential_number
+                image = ImageHistory.objects.filter(
+                    user=web_user,
+                    sequential_number=img_id
+                ).first()
+
+                if not image:
+                    # Try by primary key ID as fallback
+                    try:
+                        image = ImageHistory.objects.get(id=img_id, user=web_user)
+                    except (ImageHistory.DoesNotExist, ValueError):
+                        return {'success': False, 'error': f'Image #{img_id} not found in your gallery'}
+
+                # Initialize publishing service
+                service = GumroadPublishingService(web_user)
+
+                if not service.account:
+                    return {
+                        'success': False,
+                        'error': 'No Gumroad account connected. Please connect your Gumroad account in the web app (Distribution tab).'
+                    }
+
+                # Publish to Gumroad
+                try:
+                    distribution = service.publish_image(
+                        image_id=image.id,
+                        title=pub_title,
+                        price=Decimal(str(pub_price))
+                    )
+
+                    return {
+                        'success': True,
+                        'title': distribution.title,
+                        'price': str(distribution.price),
+                        'url': distribution.platform_listing_url,
+                        'listing_id': distribution.platform_listing_id,
+                        'prompt': (image.prompt[:150] + '...') if len(image.prompt) > 150 else image.prompt,
+                        'image_id': image.sequential_number or image.id
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            result = await publish_to_gumroad(user, image_id, price, title)
+
+            if result['success']:
+                embed = discord.Embed(
+                    title="Published to Gumroad!",
+                    description=f"Your artwork is now for sale!",
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Title", value=result['title'], inline=False)
+                embed.add_field(name="Price", value=f"${result['price']}", inline=True)
+                embed.add_field(name="Image #", value=f"#{result['image_id']}", inline=True)
+                embed.add_field(name="Gumroad URL", value=result['url'], inline=False)
+                embed.add_field(name="Prompt", value=f"```{result['prompt']}```", inline=False)
+                embed.set_footer(text="Session 487 | Golden Egg Strategy")
+            else:
+                embed = discord.Embed(
+                    title="Publishing Failed",
+                    description=f"**Error:** {result['error']}",
+                    color=discord.Color.red(),
+                    timestamp=datetime.now()
+                )
+                embed.set_footer(text="Check your Gumroad connection in AI Studio")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Gumroad publish error: {e}", exc_info=True)
+            embed = discord.Embed(
+                title="Error",
+                description=f"An error occurred: {str(e)[:200]}",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed)
+
+    @app_commands.command(name="gumroad-status", description="Check your Gumroad connection status")
+    async def gumroad_status(self, interaction: discord.Interaction):
+        """Check if Gumroad account is connected."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+
+            if not user:
+                embed = discord.Embed(
+                    title="Not Linked",
+                    description="Link your Discord account first with `/link <code>`.",
+                    color=discord.Color.orange()
+                )
+                await interaction.followup.send(embed=embed)
+                return
+
+            @sync_to_async
+            def check_gumroad_account(web_user):
+                from content.models import UserPlatformAccount, ContentDistribution
+
+                account = UserPlatformAccount.objects.filter(
+                    user=web_user,
+                    platform='gumroad',
+                    is_active=True
+                ).first()
+
+                if not account:
+                    return {'connected': False}
+
+                # Count distributions
+                distribution_count = ContentDistribution.objects.filter(
+                    user=web_user,
+                    platform='gumroad'
+                ).count()
+
+                return {
+                    'connected': True,
+                    'has_token': bool(account.access_token),
+                    'distribution_count': distribution_count,
+                    'connected_at': account.created_at.strftime('%Y-%m-%d') if account.created_at else 'Unknown'
+                }
+
+            result = await check_gumroad_account(user)
+
+            if result['connected']:
+                embed = discord.Embed(
+                    title="Gumroad Connected",
+                    description="Your Gumroad account is ready for publishing!",
+                    color=discord.Color.green(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(name="Access Token", value="Active" if result['has_token'] else "Missing", inline=True)
+                embed.add_field(name="Products Published", value=str(result['distribution_count']), inline=True)
+                embed.add_field(name="Connected Since", value=result['connected_at'], inline=True)
+                embed.add_field(
+                    name="Next Step",
+                    value="Use `/publish-gumroad <image_id>` to publish from your gallery!",
+                    inline=False
+                )
+            else:
+                embed = discord.Embed(
+                    title="Gumroad Not Connected",
+                    description="Connect your Gumroad account to start selling!",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.now()
+                )
+                embed.add_field(
+                    name="How to Connect",
+                    value="1. Go to AI Studio (web app)\n2. Click Distribution tab\n3. Click 'Connect Gumroad'\n4. Authorize the app",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Gumroad status error: {e}", exc_info=True)
+            embed = discord.Embed(
+                title="Error",
+                description=f"Failed to check status: {str(e)[:200]}",
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed)
 
 
 class PipelineLearningCommands(commands.Cog):
