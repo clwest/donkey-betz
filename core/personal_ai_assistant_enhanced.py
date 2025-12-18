@@ -46,6 +46,18 @@ try:
     SUPER_PLATFORM_AVAILABLE = True
 except ImportError as e:
     SUPER_PLATFORM_AVAILABLE = False
+
+# Session 482: Proactive Intelligence Integration - Connect 19 Autonomous Situations
+try:
+    from core.services.proactive_intelligence import (
+        ProactiveIntelligenceService,
+        get_proactive_intelligence_service
+    )
+    PROACTIVE_INTELLIGENCE_AVAILABLE = True
+except ImportError as e:
+    PROACTIVE_INTELLIGENCE_AVAILABLE = False
+    ProactiveIntelligenceService = None
+    get_proactive_intelligence_service = lambda user=None: None
     # Provide fallback classes for graceful degradation
     class QueryClassifier:
         def classify(self, query):
@@ -93,6 +105,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         self._scifi_service = None  # Lazy loaded
         self._learning_companion_service = None  # Lazy loaded - Session 266
         self._last_classification = None  # Store for learning loop
+
+        # Session 482: Proactive Intelligence - Connect 19 Autonomous Situations
+        self.proactive_intelligence = get_proactive_intelligence_service(user) if PROACTIVE_INTELLIGENCE_AVAILABLE else None
+        self._last_proactive_intelligence = None  # Cache last intelligence for response suggestions
 
         if SUPER_PLATFORM_AVAILABLE:
             logger.info(f"✅ Enhanced AI Assistant initialized with REAL AI, Unified Memory, Agent/Advisor Communication, Asset Tracking, AND Super Platform Integration for {user.username}")
@@ -6851,6 +6867,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if spider_intelligence_section:
             system_prompt = system_prompt + spider_intelligence_section
 
+        # Session 482: Inject Proactive Intelligence from 19 Autonomous Situations
+        proactive_intelligence_section = self._build_proactive_intelligence_section(message, context)
+        if proactive_intelligence_section:
+            system_prompt = system_prompt + proactive_intelligence_section
+
         # Call the LLM Enforcer for real AI response with tool calling support
         try:
             logger.debug(f"Starting LLM call for message: {message[:50]}...")
@@ -7068,6 +7089,57 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.warning(f"⚠️ LLM not available (likely no API keys configured): {e}")
             logger.info("📋 Using intelligent fallback response with conversation context")
             return self._generate_intelligent_fallback(message, context)
+
+    def _build_proactive_intelligence_section(self, message: str, context: Dict[str, Any]) -> str:
+        """
+        Session 482: Build proactive intelligence section from 19 Autonomous Situations.
+
+        This injects alerts, opportunities, and suggestions from the autonomous
+        situation network into the GPT prompt, enabling proactive assistance.
+
+        The 19 Situations by Domain:
+        - Content: Content Studio, Narrative Drift
+        - Creative: Design Trends, Viral Predictor, Thumbnails
+        - Income: Job Match, Freelance Scout, Side Hustles
+        - Financial: Market Intelligence, SEC Filing, Earnings, Crypto, Blockchain
+        - Research: Tech Stack, AI Models, Skill Gaps
+        - Legal: Case Law, Regulatory
+
+        Args:
+            message: User's current message
+            context: Conversation context
+
+        Returns:
+            Formatted string section to append to system prompt
+        """
+        if not self.proactive_intelligence or not PROACTIVE_INTELLIGENCE_AVAILABLE:
+            return ""
+
+        try:
+            # Get relevant intelligence based on message context
+            intelligence = self.proactive_intelligence.get_relevant_intelligence(
+                message=message,
+                context=context,
+                max_alerts=3,
+                hours_lookback=24
+            )
+
+            # Cache for potential use in response suggestions
+            self._last_proactive_intelligence = intelligence
+
+            # Format for prompt injection
+            formatted = self.proactive_intelligence.format_for_prompt(intelligence)
+
+            if formatted:
+                logger.info(f"📡 Session 482: Injected proactive intelligence "
+                           f"({len(intelligence.get('alerts', []))} alerts, "
+                           f"{len(intelligence.get('suggestions', []))} suggestions)")
+
+            return formatted
+
+        except Exception as e:
+            logger.warning(f"⚠️ Proactive intelligence injection failed: {e}")
+            return ""
 
     def _build_spider_intelligence_section(self, aggregated_context, classification) -> str:
         """
@@ -8514,8 +8586,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Combine message and response for comprehensive context
             combined_text = f"User: {message}\nAssistant: {response}"
 
-            # Use memory manager to create embedding
-            self.memory_manager.store_memory(
+            # Use wrapper method to create embedding (properly formats arguments)
+            self.store_memory(
                 'conversation',
                 combined_text,
                 metadata={
