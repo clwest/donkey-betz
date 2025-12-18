@@ -3688,13 +3688,13 @@ class SpiderExecutionLog(models.Model):
 
     @classmethod
     def start_execution(cls, spider_name: str, category: str = 'general',
-                        triggered_by: str = 'scheduled', celery_task_id: str = ''):
+                        triggered_by: str = 'scheduled', celery_task_id: str = None):
         """Create a new execution log entry when spider starts."""
         return cls.objects.create(
             spider_name=spider_name,
             category=category,
             triggered_by=triggered_by,
-            celery_task_id=celery_task_id,
+            celery_task_id=celery_task_id or '',  # Convert None to empty string
             status='running'
         )
 
