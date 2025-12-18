@@ -15445,6 +15445,29 @@ def run_design_trends_monitor(self):
             items_processed += 1
             raw = data.raw_data or {}
 
+            # Session 488: Fix - spider data stores items in 'items' array
+            items = raw.get('items', [])
+            if items:
+                # Extract text from all items in this spider data record
+                for item in items[:20]:  # Limit per record
+                    title = item.get('title', '') or ''
+                    description = item.get('description', '') or ''
+                    text = f"{title} {description}".lower()
+
+                    # Design-related keywords (moved inside loop)
+                    design_keywords = [
+                        'gradient', 'minimalist', 'brutalist', 'glassmorphism', 'neumorphism',
+                        '3d', 'isometric', 'flat', 'neon', 'pastel', 'dark mode', 'light mode',
+                        'organic', 'geometric', 'abstract', 'illustration', 'typography',
+                        'animation', 'motion', 'microinteraction', 'retro', 'vintage', 'modern'
+                    ]
+
+                    for kw in design_keywords:
+                        if kw in text:
+                            all_keywords.append(kw)
+                continue  # Skip the old extraction below
+
+            # Fallback for legacy data format (title at root level)
             title = raw.get('title', '') or ''
             description = raw.get('description', '') or ''
             text = f"{title} {description}".lower()
@@ -15522,6 +15545,26 @@ def run_viral_content_predictor(self):
         predictions_created = 0
         for data in spider_data:
             raw = data.raw_data or {}
+
+            # Session 488: Fix - spider data stores items in 'items' array
+            items = raw.get('items', [])
+            if items:
+                for item in items[:10]:  # Limit per record
+                    title = item.get('title', '') or ''
+                    if not title:
+                        continue
+                    upvotes = item.get('score', 0) or item.get('points', 0) or item.get('ups', 0) or 0
+                    viral_score = min(upvotes / 10, 100)
+                    if viral_score > 20:
+                        ViralContentPrediction.objects.create(
+                            title=title[:500], content_type='article', topic=data.data_type or 'general',
+                            viral_score=viral_score, spider_signals={'source': data.spider_name, 'url': data.source_url},
+                            prediction_expires=timezone.now() + timedelta(hours=24)
+                        )
+                        predictions_created += 1
+                continue  # Skip legacy format below
+
+            # Legacy format fallback
             title = raw.get('title', '') or ''
             if not title:
                 continue
@@ -15704,9 +15747,27 @@ def run_tech_stack_tracker(self):
             created_at__gte=cutoff
         )[:300]
 
-        techs = {'python': 'language', 'react': 'framework', 'rust': 'language', 'langchain': 'ai_ml'}
+        techs = {'python': 'language', 'react': 'framework', 'rust': 'language', 'langchain': 'ai_ml',
+                 'typescript': 'language', 'go': 'language', 'kubernetes': 'devops', 'docker': 'devops',
+                 'nextjs': 'framework', 'svelte': 'framework', 'vue': 'framework', 'tailwind': 'framework',
+                 'openai': 'ai_ml', 'anthropic': 'ai_ml', 'llama': 'ai_ml', 'huggingface': 'ai_ml'}
         mentions = Counter()
         for data in spider_data:
+            raw = data.raw_data or {}
+
+            # Session 488: Fix - spider data stores items in 'items' array
+            items = raw.get('items', [])
+            if items:
+                for item in items[:20]:
+                    title = item.get('title', '') or ''
+                    description = item.get('description', '') or ''
+                    text = f'{title} {description}'.lower()
+                    for tech in techs:
+                        if tech in text:
+                            mentions[tech] += 1
+                continue  # Skip legacy format below
+
+            # Legacy format fallback
             text = str(data.raw_data).lower()
             for tech in techs:
                 if tech in text:
