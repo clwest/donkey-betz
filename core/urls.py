@@ -624,6 +624,17 @@ from core.views_ab_testing import (
     update_goal_progress,
 )
 
+# Session 484: Import Autonomous Dashboard views
+from core.views_autonomous_dashboard import (
+    list_situations,
+    situation_detail,
+    toggle_situation,
+    run_situation_now,
+    list_triggers,
+    list_trigger_events,
+    analytics_summary as autonomous_analytics_summary,
+)
+
 # Session 213: Import workflow API views
 from core.views_workflow import (
     workflows_list_create,
@@ -2621,6 +2632,16 @@ urlpatterns = [
     path('api/time-capsules/ready-to-reveal/', ReadyToRevealView.as_view(), name='time-capsules-ready'),
     path('api/time-capsules/generate/', GenerateTimeCapsuleView.as_view(), name='time-capsules-generate'),
     path('api/time-capsules/expire-old/', ExpireOldCapsulesView.as_view(), name='time-capsules-expire'),
+
+    # Session 484: Autonomous Systems Dashboard API
+    # Visibility into the 19 autonomous situations running 24/7
+    path('api/autonomous/situations/', list_situations, name='autonomous-situations'),
+    path('api/autonomous/situations/<str:situation_type>/', situation_detail, name='autonomous-situation-detail'),
+    path('api/autonomous/situations/<str:situation_type>/toggle/', toggle_situation, name='autonomous-situation-toggle'),
+    path('api/autonomous/situations/<str:situation_type>/run-now/', run_situation_now, name='autonomous-situation-run-now'),
+    path('api/autonomous/triggers/', list_triggers, name='autonomous-triggers'),
+    path('api/autonomous/trigger-events/', list_trigger_events, name='autonomous-trigger-events'),
+    path('api/autonomous/analytics/summary/', autonomous_analytics_summary, name='autonomous-analytics-summary'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
