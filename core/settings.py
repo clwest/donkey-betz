@@ -1071,6 +1071,71 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'roi_metrics.generate_weekly_brief',
         'schedule': crontab(minute=0, hour=7, day_of_week='monday'),  # Monday 7:00 AM
     },
+    # =========================================================================
+    # Session 479: 14 New Autonomous Situations
+    # =========================================================================
+    # Creative & Content
+    'design-trends-monitor': {
+        'task': 'core.tasks.run_design_trends_monitor',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+    },
+    'viral-content-predictor': {
+        'task': 'core.tasks.run_viral_content_predictor',
+        'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
+    },
+    # Income & Opportunities
+    'job-match-intelligence': {
+        'task': 'core.tasks.run_job_match_intelligence',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+    },
+    'side-hustle-detector': {
+        'task': 'core.tasks.run_side_hustle_detector',
+        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours
+    },
+    # Financial Intelligence
+    'crypto-sentiment-monitor': {
+        'task': 'core.tasks.run_crypto_sentiment_monitor',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+    },
+    # Research & Learning
+    'tech-stack-tracker': {
+        'task': 'core.tasks.run_tech_stack_tracker',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+    },
+    'ai-model-monitor': {
+        'task': 'core.tasks.run_ai_model_monitor',
+        'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
+    },
+    # Legal Intelligence
+    'case-law-monitor': {
+        'task': 'core.tasks.run_case_law_monitor',
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+    },
+    'regulatory-change-detector': {
+        'task': 'core.tasks.run_regulatory_change_detector',
+        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours
+    },
+    # Session 480: Automating the 5 "Manual" Situations
+    'thumbnail-optimizer': {
+        'task': 'core.tasks.run_thumbnail_optimizer',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+    },
+    'freelance-opportunity-scout': {
+        'task': 'core.tasks.run_freelance_opportunity_scout',
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+    },
+    'sec-filing-analyzer': {
+        'task': 'core.tasks.run_sec_filing_analyzer',
+        'schedule': crontab(minute=45, hour='*/2'),  # Every 2 hours at :45 (+ event-driven via triggers)
+    },
+    'earnings-predictor': {
+        'task': 'core.tasks.run_earnings_predictor',
+        'schedule': crontab(minute=0, hour='8,16'),  # Twice daily at 8am and 4pm
+    },
+    'skill-gap-analyzer': {
+        'task': 'core.tasks.run_skill_gap_analyzer',
+        'schedule': crontab(minute=0, hour='6,18'),  # Twice daily at 6am and 6pm
+    },
 }
 
 # ffmpeg Timeout Configuration (in seconds)
