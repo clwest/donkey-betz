@@ -8841,3 +8841,228 @@ def add_voiceover_view(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'error_message': str(e)}, status=500)
+
+
+# ============================================================================
+# Session 479: DaVinci Resolve Renders Gallery API
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_resolve_renders(request):
+    """
+    Get user's DaVinci Resolve render jobs for the gallery.
+
+    Session 479: Display professional Resolve renders in the web gallery.
+
+    Query parameters:
+        - limit: Number of results (default: 20)
+        - offset: Pagination offset (default: 0)
+        - status: Filter by status (default: 'done')
+        - grade: Filter by color grade
+
+    Returns:
+        List of completed Resolve render jobs with download URLs
+    """
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        from pathlib import Path
+
+        # Get query parameters
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        status_filter = request.GET.get('status', 'done')
+        grade_filter = request.GET.get('grade')
+
+        # Build query
+        queryset = ResolveRenderJob.objects.filter(user=request.user)
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if grade_filter:
+            queryset = queryset.filter(color_grade=grade_filter)
+
+        # Order by newest first
+        queryset = queryset.order_by('-created_at')
+
+        # Get total count
+        total_count = queryset.count()
+
+        # Apply pagination
+        renders = queryset[offset:offset + limit]
+
+        # Format response
+        render_list = []
+        for render in renders:
+            # Build download URL
+            download_url = None
+            if render.output_file_path:
+                # Check if file exists
+                file_path = Path(render.output_file_path)
+                if file_path.exists():
+                    # Build relative URL for download
+                    download_url = f'/api/resolve-renders/{render.id}/download/'
+
+            render_list.append({
+                'id': str(render.id),
+                'job_id': render.resolve_job_id,
+                'status': render.status,
+                'color_grade': render.color_grade or 'natural_vibrant',
+                'auto_grade': render.auto_grade_selected,
+                'template': render.template,
+                'source_video_ids': render.source_video_ids,
+                'file_size_mb': render.file_size_mb,
+                'render_duration_seconds': render.render_duration_seconds,
+                'download_url': download_url,
+                'output_url': render.output_url,
+                'created_at': render.created_at.isoformat(),
+                'user_rating': render.user_rating,
+                'was_used': render.was_used,
+                'thumbnail_url': None,  # Could generate from video in future
+                'spider_trends': render.spider_trends_used or {},
+            })
+
+        return JsonResponse({
+            'success': True,
+            'renders': render_list,
+            'total_count': total_count,
+            'has_more': (offset + limit) < total_count
+        })
+
+    except Exception as e:
+        logger.error(f"Get resolve renders error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_resolve_render(request, render_id):
+    """
+    Download a completed DaVinci Resolve render.
+
+    Session 479: Stream the rendered video file to the browser.
+    """
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        from django.http import FileResponse
+        from pathlib import Path
+        import mimetypes
+
+        # Get the render job
+        render = ResolveRenderJob.objects.get(id=render_id, user=request.user)
+
+        if render.status != 'done':
+            return JsonResponse({
+                'success': False,
+                'error': f'Render is not complete (status: {render.status})'
+            }, status=400)
+
+        if not render.output_file_path:
+            return JsonResponse({
+                'success': False,
+                'error': 'No output file available'
+            }, status=404)
+
+        file_path = Path(render.output_file_path)
+        if not file_path.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Output file not found on disk'
+            }, status=404)
+
+        # Determine content type
+        content_type, _ = mimetypes.guess_type(str(file_path))
+        if not content_type:
+            content_type = 'video/mp4'
+
+        # Build filename
+        filename = f"resolve_{render.resolve_job_id}_{render.color_grade or 'render'}{file_path.suffix}"
+
+        # Stream the file
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type=content_type,
+            as_attachment=True,
+            filename=filename
+        )
+
+        # Track download
+        render.was_used = True
+        render.save(update_fields=['was_used'])
+
+        return response
+
+    except ResolveRenderJob.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Render not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Download resolve render error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rate_resolve_render(request, render_id):
+    """
+    Rate a DaVinci Resolve render for the learning loop.
+
+    Session 479: User feedback improves automatic grade selection.
+
+    Body:
+        - rating: 1-5 star rating
+        - feedback: Optional text feedback
+    """
+    try:
+        from core.models_unified_system import ResolveRenderJob
+        import json
+
+        # Get the render job
+        render = ResolveRenderJob.objects.get(id=render_id, user=request.user)
+
+        # Parse request
+        data = json.loads(request.body) if request.body else {}
+        rating = data.get('rating')
+        feedback = data.get('feedback', '')
+
+        if rating is not None:
+            if not isinstance(rating, int) or rating < 1 or rating > 5:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Rating must be an integer between 1 and 5'
+                }, status=400)
+            render.user_rating = rating
+
+        if feedback:
+            render.user_feedback = feedback
+
+        render.save(update_fields=['user_rating', 'user_feedback'])
+
+        logger.info(f"⭐ Resolve render {render_id} rated: {rating}/5")
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Rating saved: {rating}/5',
+            'render_id': str(render.id)
+        })
+
+    except ResolveRenderJob.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Render not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Rate resolve render error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

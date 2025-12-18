@@ -5411,6 +5411,44 @@
                                 Load More Videos
                             </button>
                         </div>
+
+                        <!-- Session 479: DaVinci Resolve Professional Renders Section -->
+                        <div class="mt-5 pt-4 border-top border-secondary">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">
+                                    <span style="background: linear-gradient(135deg, #ff6b35, #f7931e); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎬 DaVinci Resolve Renders</span>
+                                    <small class="text-muted ms-2" style="-webkit-text-fill-color: #6c757d;">(Professional)</small>
+                                </h5>
+                                <button class="btn btn-sm btn-outline-warning" onclick="loadResolveRenders()">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                            <p class="text-muted small mb-3">Professional renders from DaVinci Resolve Studio with automatic color grading based on trending styles.</p>
+
+                            <!-- Resolve Renders Grid -->
+                            <div id="resolveRendersGrid" class="row g-3">
+                                <div class="col-12 text-center text-muted py-4">
+                                    <p>Loading professional renders...</p>
+                                </div>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div id="resolveRendersEmpty" class="text-center py-4" style="display: none;">
+                                <i class="bi bi-camera-reels" style="font-size: 3rem; color: #ff6b35;"></i>
+                                <h6 class="mt-3">No Professional Renders Yet</h6>
+                                <p class="text-muted small">Use Discord commands to create professional renders:</p>
+                                <code class="d-block mb-2">/videos-list</code>
+                                <code class="d-block mb-2">/resolve-render video_ids:R1</code>
+                            </div>
+
+                            <!-- Load More -->
+                            <div id="resolveRendersLoadMore" class="text-center mt-3" style="display: none;">
+                                <button class="btn btn-sm btn-outline-warning" onclick="loadMoreResolveRenders()">
+                                    Load More Renders
+                                </button>
+                            </div>
+                        </div>
+                        <!-- END DaVinci Resolve Section -->
                     </div>
                 </div>
             </div>
@@ -25178,6 +25216,206 @@
                 alert('Failed to download video. Please try again.');
             }
         }
+
+        // ============================================================================
+        // Session 479: DaVinci Resolve Renders Gallery Functions
+        // ============================================================================
+        let resolveRendersOffset = 0;
+        const resolveRendersLimit = 6;
+
+        async function loadResolveRenders() {
+            console.log('🎬 Loading DaVinci Resolve renders...');
+            resolveRendersOffset = 0;
+
+            const params = new URLSearchParams({
+                limit: resolveRendersLimit,
+                offset: resolveRendersOffset,
+                status: 'done'
+            });
+
+            try {
+                const response = await authenticatedFetch(`/api/resolve-renders/?${params}`);
+                const data = await response.json();
+                console.log('🎬 Resolve renders response:', data);
+
+                const grid = document.getElementById('resolveRendersGrid');
+                const loadMoreBtn = document.getElementById('resolveRendersLoadMore');
+                const emptyState = document.getElementById('resolveRendersEmpty');
+
+                if (data.success && data.renders && data.renders.length > 0) {
+                    console.log('🎬 Found', data.renders.length, 'renders');
+                    grid.innerHTML = '';
+                    grid.style.display = 'flex';
+                    emptyState.style.display = 'none';
+
+                    data.renders.forEach(render => {
+                        const card = createResolveRenderCard(render);
+                        grid.appendChild(card);
+                    });
+
+                    // Show load more if there are more
+                    loadMoreBtn.style.display = data.has_more ? 'block' : 'none';
+                } else {
+                    console.log('🎬 No renders found');
+                    grid.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    loadMoreBtn.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('❌ Error loading Resolve renders:', error);
+                document.getElementById('resolveRendersGrid').innerHTML = `
+                    <div class="col-12 text-center text-danger py-3">
+                        <p>Error loading renders: ${error.message}</p>
+                    </div>`;
+            }
+        }
+
+        async function loadMoreResolveRenders() {
+            resolveRendersOffset += resolveRendersLimit;
+
+            const params = new URLSearchParams({
+                limit: resolveRendersLimit,
+                offset: resolveRendersOffset,
+                status: 'done'
+            });
+
+            try {
+                const response = await authenticatedFetch(`/api/resolve-renders/?${params}`);
+                const data = await response.json();
+
+                if (data.success && data.renders && data.renders.length > 0) {
+                    const grid = document.getElementById('resolveRendersGrid');
+
+                    data.renders.forEach(render => {
+                        const card = createResolveRenderCard(render);
+                        grid.appendChild(card);
+                    });
+
+                    // Hide load more if no more
+                    if (!data.has_more) {
+                        document.getElementById('resolveRendersLoadMore').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error loading more Resolve renders:', error);
+            }
+        }
+
+        function createResolveRenderCard(render) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 col-lg-3';
+
+            // Color grade display names
+            const gradeNames = {
+                'cinematic_warm': '🎬 Cinematic Warm',
+                'cinematic_cool': '❄️ Cinematic Cool',
+                'cyberpunk_neon': '🌆 Cyberpunk Neon',
+                'vintage_film': '📽️ Vintage Film',
+                'nordic_cool': '🌲 Nordic Cool',
+                'sunset_golden': '🌅 Sunset Golden',
+                'moody_dark': '🌑 Moody Dark',
+                'natural_vibrant': '🌿 Natural Vibrant',
+                'pastel_soft': '🎀 Pastel Soft',
+                'broadcast_standard': '📺 Broadcast',
+                'corporate_clean': '💼 Corporate'
+            };
+
+            const gradeName = gradeNames[render.color_grade] || render.color_grade;
+            const fileSize = render.file_size_mb ? `${render.file_size_mb.toFixed(1)} MB` : 'N/A';
+            const createdAt = new Date(render.created_at).toLocaleDateString();
+            const autoGradeBadge = render.auto_grade ? '<span class="badge bg-info ms-1" title="Auto-selected based on trends">AI</span>' : '';
+
+            // Rating stars
+            let ratingHtml = '';
+            if (render.user_rating) {
+                ratingHtml = '⭐'.repeat(render.user_rating) + '☆'.repeat(5 - render.user_rating);
+            } else {
+                ratingHtml = `<button class="btn btn-xs btn-outline-warning" onclick="rateResolveRender('${render.id}')">Rate</button>`;
+            }
+
+            col.innerHTML = `
+                <div class="card h-100" style="background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #ff6b35;">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge" style="background: linear-gradient(135deg, #ff6b35, #f7931e);">
+                                ${gradeName}${autoGradeBadge}
+                            </span>
+                            <small class="text-muted">${createdAt}</small>
+                        </div>
+
+                        <div class="text-center my-3" style="min-height: 60px;">
+                            <i class="bi bi-film" style="font-size: 2.5rem; color: #ff6b35;"></i>
+                            <p class="small text-muted mt-1 mb-0">Job: ${render.job_id.substring(0, 8)}...</p>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">${fileSize}</small>
+                            <small>${ratingHtml}</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            ${render.download_url ? `
+                                <a href="${render.download_url}" class="btn btn-sm btn-warning" download>
+                                    ⬇️ Download
+                                </a>
+                            ` : `
+                                <button class="btn btn-sm btn-secondary" disabled>
+                                    File Not Available
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return col;
+        }
+
+        async function rateResolveRender(renderId) {
+            const rating = prompt('Rate this render (1-5 stars):', '5');
+            if (!rating) return;
+
+            const ratingNum = parseInt(rating);
+            if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+                alert('Please enter a number between 1 and 5');
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/resolve-renders/${renderId}/rate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rating: ratingNum })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Thanks! Rating saved: ${'⭐'.repeat(ratingNum)}`);
+                    loadResolveRenders();
+                } else {
+                    alert('Error saving rating: ' + data.error);
+                }
+            } catch (error) {
+                console.error('❌ Error rating render:', error);
+                alert('Failed to save rating');
+            }
+        }
+
+        // Load Resolve renders when video gallery tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoGalleryTab = document.getElementById('video-gallery-pill');
+            if (videoGalleryTab) {
+                videoGalleryTab.addEventListener('shown.bs.tab', function() {
+                    loadResolveRenders();
+                });
+            }
+        });
+
+        // ============================================================================
+        // END Session 479: DaVinci Resolve Renders
+        // ============================================================================
 
         // Session 66 Part 2: Extend video functionality
         async function extendVideo(videoId, videoUrl) {

@@ -960,7 +960,11 @@ from core.views_video import (
     color_grade_professional,
     # Session 171: ElevenLabs Audio Integration
     generate_voice_view,
-    add_voiceover_view
+    add_voiceover_view,
+    # Session 479: DaVinci Resolve Gallery
+    get_resolve_renders,
+    download_resolve_render,
+    rate_resolve_render
 )
 # Session 66 Part 2: DaVinci Resolve video editing
 # Session 72: Added text overlay and color grading endpoints
@@ -2091,7 +2095,12 @@ urlpatterns = [
     path('api/v1/video/history/<str:video_id>/view/', increment_video_view, name='increment-video-view'),
     path('api/v1/video/history/<str:video_id>/download/', increment_video_download, name='increment-video-download'),
     path('api/v1/video/history/<str:video_id>/', delete_video, name='delete-video'),
-    
+
+    # Session 479: DaVinci Resolve Renders Gallery
+    path('api/resolve-renders/', get_resolve_renders, name='resolve-renders-list'),
+    path('api/resolve-renders/<uuid:render_id>/download/', download_resolve_render, name='resolve-render-download'),
+    path('api/resolve-renders/<uuid:render_id>/rate/', rate_resolve_render, name='resolve-render-rate'),
+
     # Audio Generation endpoints (Session 48: Phase 3)
     path('api/v1/audio/text-to-speech/', lambda r: __import__('core.views_audio', fromlist=['text_to_speech']).text_to_speech(r), name='audio-text-to-speech'),
     path('api/v1/audio/text-to-sound/', lambda r: __import__('core.views_audio', fromlist=['text_to_sound']).text_to_sound(r), name='audio-text-to-sound'),
