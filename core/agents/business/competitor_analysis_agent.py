@@ -525,6 +525,26 @@ For absurd ideas, suggest what realistic version might work."""
                 # Session 302: Enhance task with project context if available
                 task = self._enhance_task_with_project(task, project_context)
 
+                # Session 490: If no project domain targeting, extract domains from task directly
+                # This enables domain-aware spider queries even without a project
+                if not project_context.get('domain_targeting'):
+                    try:
+                        from core.services.domain_extraction_service import get_domain_extraction_service
+                        domain_service = get_domain_extraction_service()
+                        # Use fast keyword extraction (no GPT call)
+                        domain_result = domain_service.extract_domains(task, use_gpt=False)
+                        project_context['domain_targeting'] = domain_result.to_dict()
+                        project_context['primary_domain'] = domain_result.primary_domain
+                        project_context['domain_tags'] = domain_result.domain_tags
+                        project_context['spider_queries'] = domain_result.spider_queries
+                        project_context['domain_subreddits'] = domain_result.subreddits
+                        logger.info(
+                            f"🎯 [Session 490] Extracted domain from task: {domain_result.primary_domain}, "
+                            f"tags: {domain_result.domain_tags[:5]}, confidence: {domain_result.confidence:.2f}"
+                        )
+                    except Exception as e:
+                        logger.debug(f"Domain extraction failed (non-fatal): {e}")
+
                 # Session 303: Store current task for tool access
                 self._current_task = task
 

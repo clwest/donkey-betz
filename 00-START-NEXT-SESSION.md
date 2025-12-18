@@ -1,6 +1,6 @@
 # Session 491 - Start Here
 
-**Previous Session:** 490 (Implicit Learning + Reference Resolver)
+**Previous Session:** 490 (Implicit Learning + Reference Resolver + Domain Extraction)
 **Date:** December 18, 2025
 
 ---
@@ -21,7 +21,15 @@ Integrated reference resolver into PersonalAssistantConsumer:
 
 - **Ordinals**: "the second one" resolves to item #2 from lists
 - **Repeat**: "do it again" repeats last action
-- **Pronouns**: "it", "that" resolve to last topic (context-aware)
+- **Pronouns**: "it", "that" resolve to last topic
+
+### 3. Domain Extraction Connected
+
+Integrated domain extraction into business research agents:
+
+- **CompetitorAnalysisAgent**: Extracts domain from task for targeted queries
+- **CustomerResearchAgent**: Same integration
+- **13 domains supported**: fitness, saas, fintech, ai_ml, etc.
 
 ---
 
@@ -33,6 +41,7 @@ Integrated reference resolver into PersonalAssistantConsumer:
 | 489 | Streaming Progress | Connected |
 | 490 | Implicit Learning | Connected |
 | 490 | Reference Resolver | Connected |
+| 490 | Domain Extraction | Connected |
 | 491 | ? | Next |
 
 ---
@@ -43,7 +52,6 @@ Integrated reference resolver into PersonalAssistantConsumer:
 
 | Service | File | Impact |
 |---------|------|--------|
-| Domain Extraction | `core/services/domain_extraction_service.py` | Research |
 | Memory Embedding | `core/services/memory_embedding_service.py` | Context |
 
 ### Revenue Features
@@ -63,15 +71,13 @@ Integrated reference resolver into PersonalAssistantConsumer:
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# Test reference resolver
+# Test domain extraction
 python manage.py shell -c "
-from core.services.reference_resolver import get_reference_resolver
-resolver = get_reference_resolver('test')
-resolver.extract_entities_from_history([
-    {'role': 'assistant', 'content': '1. Item A\n2. Item B\n3. Item C'}
-])
-msg, res = resolver.resolve_references('the second one', [])
-print(f'Resolved: {res[0].resolved if res else None}')
+from core.services.domain_extraction_service import get_domain_extraction_service
+service = get_domain_extraction_service()
+result = service.extract_domains('AI fitness coaching app', use_gpt=False)
+print(f'Domain: {result.primary_domain}')
+print(f'Tags: {result.domain_tags[:5]}')
 "
 
 # Access UI
@@ -85,7 +91,7 @@ open http://localhost:8000/ai-studio/
 | Metric | Value |
 |--------|-------|
 | Autonomous Situations | 15 |
-| Services | 66 (56 connected) |
+| Services | 66 (57 connected) |
 | Spiders | 67 |
 | Spider Data Records | 20,000+ |
 | Agents | 41 |
@@ -99,6 +105,7 @@ open http://localhost:8000/ai-studio/
 - **Session 490 Handoffs:**
   - `docs/handoffs/SESSION_490_IMPLICIT_LEARNING_INTEGRATION.md`
   - `docs/handoffs/SESSION_490_REFERENCE_RESOLVER_INTEGRATION.md`
+  - `docs/handoffs/SESSION_490_DOMAIN_EXTRACTION_INTEGRATION.md`
 - **Activation Plan:** `docs/SESSION_487_DORMANT_FEATURES_ACTIVATION_PLAN.md`
 
 ---
@@ -107,11 +114,12 @@ open http://localhost:8000/ai-studio/
 
 ```
 +====================================================================+
-|              SESSION 490: TWO SERVICES CONNECTED                    |
+|              SESSION 490: THREE SERVICES CONNECTED                  |
 |                                                                    |
 |   Implicit Learning:   toggle_favorite, delete, download           |
 |   Reference Resolver:  "the second one", "do it again"             |
+|   Domain Extraction:   13 domains for targeted research            |
 |                                                                    |
-|   Next: Domain Extraction + Memory Embedding                       |
+|   Next: Memory Embedding Service                                   |
 +====================================================================+
 ```
