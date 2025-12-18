@@ -3614,6 +3614,159 @@ class SpiderAnalytics(models.Model):
         }
 
 
+# Session 484: Spider Execution Log for Error Diagnostics
+class SpiderExecutionLog(models.Model):
+    """
+    Track individual spider execution runs with full error details.
+
+    Session 484: Created for Spider Health Dashboard error diagnostics.
+    Enables viewing stack traces, retry functionality, and execution history.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Spider identification
+    spider_name = models.CharField(max_length=100, db_index=True)
+    category = models.CharField(max_length=50, default='general')
+
+    # Execution details
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('success', 'Success'),
+        ('partial', 'Partial Success'),
+        ('error', 'Error'),
+        ('timeout', 'Timeout'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+
+    TRIGGER_CHOICES = [
+        ('scheduled', 'Scheduled (Celery Beat)'),
+        ('manual', 'Manual (UI)'),
+        ('on_demand', 'On Demand (API)'),
+        ('retry', 'Retry'),
+        ('trigger', 'Event Trigger'),
+    ]
+    triggered_by = models.CharField(max_length=20, choices=TRIGGER_CHOICES, default='scheduled')
+
+    # Results
+    items_collected = models.IntegerField(default=0)
+    duration_seconds = models.FloatField(null=True, blank=True)
+
+    # Error details (the key part for diagnostics)
+    error_message = models.TextField(blank=True)
+    error_traceback = models.TextField(blank=True, help_text="Full stack trace for debugging")
+    error_type = models.CharField(max_length=200, blank=True, help_text="Exception class name")
+
+    # Metadata
+    celery_task_id = models.CharField(max_length=100, blank=True, db_index=True)
+    source_urls_attempted = models.JSONField(default=list, help_text="URLs spider tried to fetch")
+    response_codes = models.JSONField(default=dict, help_text="HTTP response codes received")
+
+    # Retry tracking
+    retry_count = models.IntegerField(default=0)
+    parent_execution = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='retries', help_text="Original execution if this is a retry"
+    )
+
+    # Timestamps
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-started_at']
+        verbose_name = 'Spider Execution Log'
+        verbose_name_plural = 'Spider Execution Logs'
+        indexes = [
+            models.Index(fields=['spider_name', '-started_at']),
+            models.Index(fields=['status', '-started_at']),
+            models.Index(fields=['-started_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.spider_name} - {self.status} ({self.started_at.strftime('%Y-%m-%d %H:%M')})"
+
+    @classmethod
+    def start_execution(cls, spider_name: str, category: str = 'general',
+                        triggered_by: str = 'scheduled', celery_task_id: str = ''):
+        """Create a new execution log entry when spider starts."""
+        return cls.objects.create(
+            spider_name=spider_name,
+            category=category,
+            triggered_by=triggered_by,
+            celery_task_id=celery_task_id,
+            status='running'
+        )
+
+    def complete_success(self, items_collected: int, duration: float = None):
+        """Mark execution as successful."""
+        from django.utils import timezone
+        self.status = 'success' if items_collected > 0 else 'partial'
+        self.items_collected = items_collected
+        self.completed_at = timezone.now()
+        if duration:
+            self.duration_seconds = duration
+        elif self.started_at:
+            self.duration_seconds = (self.completed_at - self.started_at).total_seconds()
+        self.save()
+
+    def complete_error(self, error: Exception, duration: float = None):
+        """Mark execution as failed with error details."""
+        import traceback
+        from django.utils import timezone
+
+        self.status = 'error'
+        self.error_message = str(error)[:2000]
+        self.error_type = type(error).__name__
+        self.error_traceback = traceback.format_exc()[:10000]
+        self.completed_at = timezone.now()
+        if duration:
+            self.duration_seconds = duration
+        elif self.started_at:
+            self.duration_seconds = (self.completed_at - self.started_at).total_seconds()
+        self.save()
+
+    @classmethod
+    def get_recent_errors(cls, hours: int = 24, limit: int = 50):
+        """Get recent error executions for diagnostics."""
+        from django.utils import timezone
+        since = timezone.now() - timezone.timedelta(hours=hours)
+        return cls.objects.filter(
+            status='error',
+            started_at__gte=since
+        ).order_by('-started_at')[:limit]
+
+    @classmethod
+    def get_spider_health(cls, spider_name: str, days: int = 7):
+        """Get health summary for a specific spider."""
+        from django.utils import timezone
+        from django.db.models import Count, Avg
+
+        since = timezone.now() - timezone.timedelta(days=days)
+        executions = cls.objects.filter(
+            spider_name=spider_name,
+            started_at__gte=since
+        )
+
+        total = executions.count()
+        success = executions.filter(status__in=['success', 'partial']).count()
+        errors = executions.filter(status='error').count()
+        avg_duration = executions.filter(
+            duration_seconds__isnull=False
+        ).aggregate(avg=Avg('duration_seconds'))['avg']
+
+        return {
+            'spider_name': spider_name,
+            'period_days': days,
+            'total_executions': total,
+            'successful': success,
+            'errors': errors,
+            'success_rate': (success / total * 100) if total > 0 else 0,
+            'avg_duration_seconds': round(avg_duration or 0, 2),
+            'last_error': executions.filter(status='error').first(),
+        }
+
+
 class TrendSnapshot(models.Model):
     """
     Store trending topic snapshots over time.

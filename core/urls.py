@@ -127,7 +127,14 @@ from core.views_spider_dashboard import (
     spider_network_data,
     spider_activity_feed,
     spider_data_stats,
-    execute_spider
+    execute_spider,
+    # Session 484: Spider Health Dashboard
+    spider_execution_logs,
+    spider_error_detail,
+    retry_spider_execution,
+    spider_embedding_coverage,
+    run_spider_manual,
+    spider_health_summary,
 )
 
 # Session 388: Income Action Pipeline - Spider to Income Bridge
@@ -2415,6 +2422,14 @@ urlpatterns = [
     path('api/spider-dashboard/activity/', spider_activity_feed, name='spider-dashboard-activity'),
     path('api/spider-dashboard/data/', spider_data_stats, name='spider-dashboard-stats'),
     path('api/spider-dashboard/execute/', execute_spider, name='spider-dashboard-execute'),
+
+    # Session 484: Spider Health Dashboard - Error Diagnostics & Controls
+    path('api/spider-health/summary/', spider_health_summary, name='spider-health-summary'),
+    path('api/spider-health/executions/', spider_execution_logs, name='spider-health-executions'),
+    path('api/spider-health/executions/<uuid:execution_id>/', spider_error_detail, name='spider-health-error-detail'),
+    path('api/spider-health/executions/<uuid:execution_id>/retry/', retry_spider_execution, name='spider-health-retry'),
+    path('api/spider-health/embedding-coverage/', spider_embedding_coverage, name='spider-health-embedding-coverage'),
+    path('api/spider-health/run/<str:spider_name>/', run_spider_manual, name='spider-health-run'),
 
     # Session 208: Spider Intelligence API - Agents query spider data
     path('api/spider-intelligence/trends/', trending_topics, name='spider-intelligence-trends'),

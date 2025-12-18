@@ -1,0 +1,508 @@
+<!-- ============================================================ -->
+<!-- Session 484: SPIDER OPERATIONS PANEL -->
+<!-- Error diagnostics, embedding coverage, manual controls -->
+<!-- ============================================================ -->
+
+<style>
+.spider-ops-card {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+.spider-error-row {
+    padding: 12px;
+    border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.spider-error-row:hover {
+    background: rgba(249, 115, 22, 0.1);
+}
+.spider-error-row:last-child {
+    border-bottom: none;
+}
+.status-badge-success { background: rgba(16, 185, 129, 0.3); color: #34d399; }
+.status-badge-error { background: rgba(239, 68, 68, 0.3); color: #f87171; }
+.status-badge-partial { background: rgba(245, 158, 11, 0.3); color: #fbbf24; }
+.status-badge-running { background: rgba(59, 130, 246, 0.3); color: #60a5fa; }
+.coverage-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.coverage-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+.coverage-good { background: linear-gradient(90deg, #22c55e, #34d399); }
+.coverage-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.coverage-bad { background: linear-gradient(90deg, #ef4444, #f87171); }
+.spider-run-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(249, 115, 22, 0.4);
+    background: rgba(249, 115, 22, 0.15);
+    color: #fbbf24;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+.spider-run-btn:hover {
+    background: rgba(249, 115, 22, 0.3);
+}
+.spider-run-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.error-traceback {
+    background: #0d0d0d;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 4px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #f87171;
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+}
+</style>
+
+<div id="spiderOperationsContainer" style="display: none;">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-1" style="color: #fbbf24;">
+                <i class="fas fa-heartbeat me-2"></i>Spider Operations
+            </h5>
+            <p class="text-muted mb-0 small">Error diagnostics, embedding coverage, and manual controls</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-warning" onclick="refreshSpiderOps()" title="Refresh">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #34d399;" id="spiderOpsExecs24h">0</h3>
+                    <small class="text-muted">Executions (24h)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #f87171;" id="spiderOpsErrors24h">0</h3>
+                    <small class="text-muted">Errors (24h)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #60a5fa;" id="spiderOpsSuccessRate">0%</h3>
+                    <small class="text-muted">Success Rate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #a78bfa;" id="spiderOpsData24h">0</h3>
+                    <small class="text-muted">Data (24h)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #fbbf24;" id="spiderOpsData7d">0</h3>
+                    <small class="text-muted">Data (7d)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                <div class="card-body text-center py-3">
+                    <h3 class="mb-0" style="color: #f472b6;" id="spiderOpsEmbedding">0%</h3>
+                    <small class="text-muted">Embedding Coverage</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Error Logs (Left) -->
+        <div class="col-lg-7">
+            <div class="card spider-ops-card" style="max-height: 600px;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                    <h6 class="mb-0" style="color: #f87171;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Recent Execution Logs
+                    </h6>
+                    <select class="form-select form-select-sm" style="width: auto; background: rgba(30, 41, 59, 0.8); border-color: rgba(239, 68, 68, 0.4); color: #f87171;" id="spiderLogStatusFilter" onchange="loadSpiderExecutionLogs()">
+                        <option value="">All Statuses</option>
+                        <option value="error">Errors Only</option>
+                        <option value="success">Success Only</option>
+                        <option value="partial">Partial Only</option>
+                    </select>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;" id="spiderExecutionLogsContainer">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-warning" role="status"></div>
+                        <p class="text-muted mt-2">Loading execution logs...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Embedding Coverage (Right) -->
+        <div class="col-lg-5">
+            <div class="card spider-ops-card" style="max-height: 600px;">
+                <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                    <h6 class="mb-0" style="color: #a78bfa;">
+                        <i class="fas fa-database me-2"></i>Embedding Coverage
+                    </h6>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;" id="spiderEmbeddingContainer">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2">Loading coverage data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Detail Modal -->
+<div class="modal fade" id="spiderErrorDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(239, 68, 68, 0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                <h5 class="modal-title" style="color: #f87171;">
+                    <i class="fas fa-bug me-2"></i><span id="errorModalSpiderName">Error Details</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="errorModalBody">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(239, 68, 68, 0.3);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="btnRetrySpider" onclick="retryCurrentError()">
+                    <i class="fas fa-redo me-1"></i>Retry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Spider Operations panel state
+let spiderOpsCurrentErrorId = null;
+
+async function loadSpiderOperations() {
+    await Promise.all([
+        loadSpiderHealthSummary(),
+        loadSpiderExecutionLogs(),
+        loadSpiderEmbeddingCoverage()
+    ]);
+}
+
+async function loadSpiderHealthSummary() {
+    try {
+        const response = await authenticatedFetch('/api/spider-health/summary/');
+        if (!response.ok) throw new Error('Failed to fetch health summary');
+        const data = await response.json();
+
+        if (data.success) {
+            const s = data.summary;
+            document.getElementById('spiderOpsExecs24h').textContent = s.executions_24h;
+            document.getElementById('spiderOpsErrors24h').textContent = s.errors_24h;
+            document.getElementById('spiderOpsSuccessRate').textContent = s.success_rate_24h + '%';
+            document.getElementById('spiderOpsData24h').textContent = s.data_collected_24h;
+            document.getElementById('spiderOpsData7d').textContent = s.data_collected_7d;
+            document.getElementById('spiderOpsEmbedding').textContent = s.embedding_coverage + '%';
+        }
+    } catch (error) {
+        console.error('Error loading health summary:', error);
+    }
+}
+
+async function loadSpiderExecutionLogs() {
+    const statusFilter = document.getElementById('spiderLogStatusFilter').value;
+    const container = document.getElementById('spiderExecutionLogsContainer');
+
+    try {
+        let url = '/api/spider-health/executions/?hours=48&limit=50';
+        if (statusFilter) url += `&status=${statusFilter}`;
+
+        const response = await authenticatedFetch(url);
+        if (!response.ok) throw new Error('Failed to fetch logs');
+        const data = await response.json();
+
+        if (data.success && data.logs.length > 0) {
+            container.innerHTML = data.logs.map(log => `
+                <div class="spider-error-row" onclick="showSpiderErrorDetail('${log.id}')">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge status-badge-${log.status} me-2">${log.status}</span>
+                            <strong style="color: #fbbf24;">${log.spider_name}</strong>
+                            ${log.retry_count > 0 ? `<span class="badge bg-secondary ms-1">retry #${log.retry_count}</span>` : ''}
+                        </div>
+                        <small class="text-muted">${formatSpiderTimeAgo(log.started_at)}</small>
+                    </div>
+                    ${log.error_message ? `
+                        <div class="text-muted small mt-1" style="color: #f87171 !important;">
+                            <i class="fas fa-exclamation-circle me-1"></i>${escapeSpiderHtml(log.error_message.substring(0, 100))}${log.error_message.length > 100 ? '...' : ''}
+                        </div>
+                    ` : ''}
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">
+                            <i class="fas fa-cube me-1"></i>${log.items_collected} items
+                            ${log.duration_seconds ? ` | ${log.duration_seconds.toFixed(1)}s` : ''}
+                        </small>
+                        <small class="text-muted">${log.triggered_by}</small>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-check-circle fa-3x mb-3" style="color: #34d399;"></i>
+                    <p>No execution logs in the last 48 hours</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        container.innerHTML = `<div class="alert alert-danger m-3">Failed to load logs: ${error.message}</div>`;
+    }
+}
+
+async function loadSpiderEmbeddingCoverage() {
+    const container = document.getElementById('spiderEmbeddingContainer');
+
+    try {
+        const response = await authenticatedFetch('/api/spider-health/embedding-coverage/');
+        if (!response.ok) throw new Error('Failed to fetch coverage');
+        const data = await response.json();
+
+        if (data.success) {
+            let html = `
+                <div class="p-3 mb-2" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-light">Overall Coverage</span>
+                        <strong style="color: #a78bfa;">${data.overall.coverage_percent}%</strong>
+                    </div>
+                    <div class="coverage-bar">
+                        <div class="coverage-fill ${data.overall.coverage_percent >= 80 ? 'coverage-good' : data.overall.coverage_percent >= 50 ? 'coverage-warning' : 'coverage-bad'}"
+                             style="width: ${data.overall.coverage_percent}%;"></div>
+                    </div>
+                    <small class="text-muted">${data.overall.embedded_records.toLocaleString()} / ${data.overall.total_records.toLocaleString()} records embedded</small>
+                </div>
+            `;
+
+            html += data.spiders.slice(0, 20).map(spider => {
+                const coverageClass = spider.coverage_percent >= 80 ? 'coverage-good' : spider.coverage_percent >= 50 ? 'coverage-warning' : 'coverage-bad';
+                return `
+                    <div class="p-2 border-bottom" style="border-color: rgba(139, 92, 246, 0.2) !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-light" style="font-size: 0.85rem;">${spider.spider_name}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                ${spider.needs_attention ? '<i class="fas fa-exclamation-triangle text-warning" title="Needs attention"></i>' : ''}
+                                <span style="color: #a78bfa; font-size: 0.8rem;">${spider.coverage_percent}%</span>
+                                <button class="spider-run-btn" onclick="event.stopPropagation(); runSpiderNow('${spider.spider_name}')" title="Run now">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="coverage-bar" style="height: 4px;">
+                            <div class="coverage-fill ${coverageClass}" style="width: ${spider.coverage_percent}%;"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            ${spider.embedded_records}/${spider.total_records} embedded | ${spider.recent_records} recent (7d)
+                        </small>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+    } catch (error) {
+        console.error('Error loading coverage:', error);
+        container.innerHTML = `<div class="alert alert-danger m-3">Failed to load coverage: ${error.message}</div>`;
+    }
+}
+
+async function showSpiderErrorDetail(executionId) {
+    spiderOpsCurrentErrorId = executionId;
+
+    try {
+        const response = await authenticatedFetch(`/api/spider-health/executions/${executionId}/`);
+        if (!response.ok) throw new Error('Failed to fetch error details');
+        const data = await response.json();
+
+        if (data.success) {
+            const e = data.execution;
+            document.getElementById('errorModalSpiderName').textContent = `${e.spider_name} - ${e.status}`;
+
+            // Show/hide retry button based on status
+            document.getElementById('btnRetrySpider').style.display = e.status === 'error' ? 'inline-block' : 'none';
+
+            document.getElementById('errorModalBody').innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong class="text-muted">Status:</strong> <span class="badge status-badge-${e.status}">${e.status}</span></p>
+                        <p class="mb-2"><strong class="text-muted">Triggered By:</strong> ${e.triggered_by}</p>
+                        <p class="mb-2"><strong class="text-muted">Started:</strong> ${new Date(e.started_at).toLocaleString()}</p>
+                        ${e.completed_at ? `<p class="mb-2"><strong class="text-muted">Completed:</strong> ${new Date(e.completed_at).toLocaleString()}</p>` : ''}
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong class="text-muted">Items Collected:</strong> ${e.items_collected}</p>
+                        <p class="mb-2"><strong class="text-muted">Duration:</strong> ${e.duration_seconds ? e.duration_seconds.toFixed(2) + 's' : 'N/A'}</p>
+                        ${e.celery_task_id ? `<p class="mb-2"><strong class="text-muted">Task ID:</strong> <code>${e.celery_task_id}</code></p>` : ''}
+                        ${e.retry_count > 0 ? `<p class="mb-2"><strong class="text-muted">Retry Count:</strong> ${e.retry_count}</p>` : ''}
+                    </div>
+                </div>
+
+                ${e.error_message ? `
+                    <div class="mb-3">
+                        <h6 class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error Message</h6>
+                        <div class="p-3 rounded" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <strong style="color: #f87171;">${e.error_type || 'Error'}</strong>
+                            <p class="mb-0 mt-1 text-light">${escapeSpiderHtml(e.error_message)}</p>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${e.error_traceback ? `
+                    <div class="mb-3">
+                        <h6 class="text-danger"><i class="fas fa-code me-2"></i>Stack Trace</h6>
+                        <div class="error-traceback">${escapeSpiderHtml(e.error_traceback)}</div>
+                    </div>
+                ` : ''}
+
+                ${e.source_urls_attempted && e.source_urls_attempted.length > 0 ? `
+                    <div class="mb-3">
+                        <h6 class="text-warning"><i class="fas fa-link me-2"></i>URLs Attempted</h6>
+                        <ul class="list-unstyled mb-0">
+                            ${e.source_urls_attempted.map(url => `<li class="text-muted small"><code>${escapeSpiderHtml(url)}</code></li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                ${e.retries && e.retries.length > 0 ? `
+                    <div>
+                        <h6 class="text-info"><i class="fas fa-history me-2"></i>Retry History</h6>
+                        <ul class="list-unstyled mb-0">
+                            ${e.retries.map(r => `
+                                <li class="text-muted small mb-1">
+                                    <span class="badge status-badge-${r.status}">${r.status}</span>
+                                    ${new Date(r.started_at).toLocaleString()}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            `;
+
+            new bootstrap.Modal(document.getElementById('spiderErrorDetailModal')).show();
+        }
+    } catch (error) {
+        console.error('Error loading details:', error);
+        showSpiderOpsToast('Failed to load error details', 'error');
+    }
+}
+
+async function retryCurrentError() {
+    if (!spiderOpsCurrentErrorId) return;
+
+    const btn = document.getElementById('btnRetrySpider');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Retrying...';
+    btn.disabled = true;
+
+    try {
+        const response = await authenticatedFetch(`/api/spider-health/executions/${spiderOpsCurrentErrorId}/retry/`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showSpiderOpsToast(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('spiderErrorDetailModal')).hide();
+            loadSpiderExecutionLogs();
+        } else {
+            showSpiderOpsToast(data.error || 'Failed to retry', 'error');
+        }
+    } catch (error) {
+        console.error('Error retrying:', error);
+        showSpiderOpsToast('Failed to retry spider', 'error');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+
+async function runSpiderNow(spiderName) {
+    try {
+        const response = await authenticatedFetch(`/api/spider-health/run/${spiderName}/`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showSpiderOpsToast(`Started ${spiderName}`, 'success');
+            // Refresh logs after a short delay
+            setTimeout(loadSpiderExecutionLogs, 2000);
+        } else {
+            showSpiderOpsToast(data.error || 'Failed to start spider', 'error');
+        }
+    } catch (error) {
+        console.error('Error running spider:', error);
+        showSpiderOpsToast('Failed to start spider', 'error');
+    }
+}
+
+function refreshSpiderOps() {
+    loadSpiderOperations();
+}
+
+function formatSpiderTimeAgo(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function escapeSpiderHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showSpiderOpsToast(message, type = 'info') {
+    if (typeof showNotification === 'function') {
+        showNotification(message, type);
+    } else {
+        console.log(`[${type}] ${message}`);
+    }
+}
+
+// Expose globally
+window.loadSpiderOperations = loadSpiderOperations;
+window.refreshSpiderOps = refreshSpiderOps;
+</script>

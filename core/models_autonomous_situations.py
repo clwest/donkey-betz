@@ -56,6 +56,7 @@ __all__ = [
 ]
 
 import uuid
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -263,7 +264,12 @@ class JobMatchProfile(models.Model):
     User profile for job matching.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )  # Session 484: Fixed to use AUTH_USER_MODEL instead of 'auth.User'
 
     # Skills & experience
     skills = models.JSONField(default=list)
