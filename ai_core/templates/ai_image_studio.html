@@ -3606,6 +3606,18 @@
                                                 <div id="certOriginalityVerdict" style="color: #c4b5fd; font-size: 0.9rem;"></div>
                                             </div>
                                         </div>
+
+                                        <!-- Session 493: Marketplace Recommendations -->
+                                        <div id="certMarketplaceSection" style="display: none; margin-top: 20px; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.4); border-radius: 10px; padding: 16px;">
+                                            <h6 style="color: #60a5fa; margin-bottom: 12px; font-weight: 700;">
+                                                <span style="margin-right: 6px;">📊</span> Where to Share This Content
+                                            </h6>
+                                            <div id="certPlatformGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;"></div>
+                                            <div id="certHashtagSection" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(96, 165, 250, 0.3);">
+                                                <p style="color: #93c5fd; font-size: 0.8rem; margin-bottom: 8px; font-weight: 600;">Suggested Hashtags:</p>
+                                                <div id="certHashtagList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -34160,6 +34172,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     document.getElementById('certOriginalityVerdict').textContent = certData.originality_verdict || '';
                 }
 
+                // Session 493: Fetch marketplace recommendations
+                fetchMarketplaceRecommendations(currentProvenanceId);
+
                 // Show download button
                 downloadBtn.style.display = 'inline-block';
                 downloadBtn.onclick = () => downloadProvenanceCertificate(currentProvenanceId);
@@ -34217,6 +34232,87 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Download error:', error);
                 alert('Could not download certificate: ' + error.message);
             }
+        }
+
+        // Session 493: Fetch marketplace recommendations for content
+        async function fetchMarketplaceRecommendations(provenanceId) {
+            if (!provenanceId) return;
+
+            const marketplaceSection = document.getElementById('certMarketplaceSection');
+            const platformGrid = document.getElementById('certPlatformGrid');
+            const hashtagSection = document.getElementById('certHashtagSection');
+            const hashtagList = document.getElementById('certHashtagList');
+
+            if (!marketplaceSection || !platformGrid) return;
+
+            try {
+                // Fetch platform suggestions from MarketplaceDiscoveryService
+                const response = await authenticatedFetch(`/api/provenance/marketplace/platforms/${provenanceId}/`);
+
+                if (!response.ok) {
+                    console.log('Marketplace recommendations not available');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.platforms && data.platforms.length > 0) {
+                    // Build platform cards
+                    platformGrid.innerHTML = data.platforms.slice(0, 6).map(p => `
+                        <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="color: white; font-weight: 600; font-size: 0.85rem;">${p.name || p.platform}</div>
+                            <div style="color: #60a5fa; font-size: 0.75rem;">${p.score || p.match_score || 0}% match</div>
+                        </div>
+                    `).join('');
+
+                    // Show marketplace section
+                    marketplaceSection.style.display = 'block';
+
+                    // Fetch hashtags for top platform
+                    const topPlatform = data.platforms[0]?.name || data.platforms[0]?.platform || 'instagram';
+                    fetchHashtags(provenanceId, topPlatform.toLowerCase());
+                }
+
+            } catch (error) {
+                console.log('Error fetching marketplace recommendations:', error.message);
+            }
+        }
+
+        // Session 493: Fetch hashtags for a specific platform
+        async function fetchHashtags(provenanceId, platform) {
+            const hashtagSection = document.getElementById('certHashtagSection');
+            const hashtagList = document.getElementById('certHashtagList');
+
+            if (!hashtagSection || !hashtagList) return;
+
+            try {
+                const response = await authenticatedFetch('/api/provenance/marketplace/hashtags/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provenance_id: provenanceId, platform: platform })
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+
+                if (data.success && data.hashtags && data.hashtags.length > 0) {
+                    hashtagList.innerHTML = data.hashtags.slice(0, 10).map(tag => `
+                        <span style="background: rgba(96, 165, 250, 0.3); color: #93c5fd; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;" onclick="copyHashtag('${tag}')">#${tag}</span>
+                    `).join('');
+                    hashtagSection.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.log('Error fetching hashtags:', error.message);
+            }
+        }
+
+        // Session 493: Copy hashtag to clipboard
+        function copyHashtag(tag) {
+            navigator.clipboard.writeText('#' + tag).then(() => {
+                showNotification('Copied #' + tag + ' to clipboard!', 'success');
+            });
         }
 
         // Close modal on escape key or click outside
