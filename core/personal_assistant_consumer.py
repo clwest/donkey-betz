@@ -111,15 +111,32 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         message = data.get('message', '')
         user_id = data.get('user_id')
 
-        # Add to conversation history
+        # Session 490: Resolve references in the message ("it", "the first one", etc.)
+        resolved_message, resolutions = await self._resolve_references(message)
+
+        # Use resolved message if references were found
+        effective_message = message
+        reference_context = None
+        if resolutions:
+            effective_message = resolved_message
+            reference_context = [
+                {'original': r.original, 'resolved': r.resolved, 'type': r.resolution_type}
+                for r in resolutions
+            ]
+            logger.info(f"🔍 Resolved {len(resolutions)} references: {reference_context}")
+
+        # Add to conversation history (store original message)
         self.conversation_history.append({
             'role': 'user',
             'content': message,
             'timestamp': timezone.now().isoformat()
         })
 
-        # Generate AI response based on message content
-        response = await self.generate_ai_response(message)
+        # Generate AI response based on effective message content
+        response = await self.generate_ai_response(effective_message)
+
+        # Session 490: Record action for potential "repeat" requests
+        await self._record_action(effective_message, response)
 
         # Add response to history
         self.conversation_history.append({
@@ -544,3 +561,81 @@ class PersonalAssistantConsumer(AsyncWebsocketConsumer):
         }))
 
         logger.info(f"📨 Delivered learning insights to user via Personal Assistant")
+
+    # =========================================================================
+    # SESSION 490: REFERENCE RESOLVER INTEGRATION
+    # =========================================================================
+
+    async def _resolve_references(self, message):
+        """
+        Session 490: Resolve ambiguous references in the message.
+
+        Resolves:
+        - Pronouns: "it", "that", "this" → Last mentioned entity
+        - Ordinals: "the first one", "the second one" → Items from numbered lists
+        - Repeat: "do it again" → Last action
+
+        Returns:
+            Tuple of (resolved_message, list of resolutions)
+        """
+        try:
+            from core.services.reference_resolver import get_reference_resolver
+
+            # Get session-specific resolver (use channel_name as session ID)
+            session_id = getattr(self, 'channel_name', 'default')
+            resolver = get_reference_resolver(session_id)
+
+            # Convert conversation history to format expected by resolver
+            history = [
+                {'role': msg.get('role', 'user'), 'content': msg.get('content', '')}
+                for msg in self.conversation_history
+            ]
+
+            # Resolve references
+            resolved_message, resolutions = resolver.resolve_references(message, history)
+
+            return resolved_message, resolutions
+
+        except ImportError as e:
+            logger.debug(f"Reference resolver not available: {e}")
+            return message, []
+        except Exception as e:
+            logger.warning(f"Reference resolution failed (non-fatal): {e}")
+            return message, []
+
+    async def _record_action(self, message, response):
+        """
+        Session 490: Record the action for potential "repeat" requests.
+
+        Stores the last action so users can say "do it again".
+        """
+        try:
+            from core.services.reference_resolver import get_reference_resolver
+
+            session_id = getattr(self, 'channel_name', 'default')
+            resolver = get_reference_resolver(session_id)
+
+            # Record the action
+            resolver.record_action({
+                'description': message[:100],
+                'response': response[:200] if response else None,
+                'type': self._detect_action_type(message)
+            })
+
+        except Exception as e:
+            logger.debug(f"Failed to record action (non-fatal): {e}")
+
+    def _detect_action_type(self, message):
+        """Detect the type of action from the message."""
+        message_lower = message.lower()
+
+        if any(word in message_lower for word in ['create', 'make', 'generate', 'design']):
+            return 'creation'
+        elif any(word in message_lower for word in ['search', 'find', 'look for']):
+            return 'search'
+        elif any(word in message_lower for word in ['edit', 'change', 'modify', 'upscale']):
+            return 'editing'
+        elif any(word in message_lower for word in ['apply', 'submit']):
+            return 'application'
+        else:
+            return 'general'
