@@ -761,3 +761,319 @@ def analytics_summary(request):
     except Exception as e:
         logger.exception("Error getting analytics summary")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Session 484: TRIGGER TUNING API ENDPOINTS
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def trigger_detail(request, trigger_id):
+    """
+    GET /api/autonomous/triggers/<trigger_id>/
+
+    Get detailed info for a single trigger including recent events.
+    """
+    try:
+        trigger = SituationTrigger.objects.get(id=trigger_id)
+
+        # Get recent events for this trigger
+        recent_events = TriggerEvent.objects.filter(
+            trigger=trigger
+        ).order_by('-fired_at')[:20]
+
+        events_list = [
+            {
+                'id': str(e.id),
+                'spider_name': e.spider_name,
+                'matched_value': e.matched_value[:200],
+                'status': e.status,
+                'alert_generated': e.alert_generated,
+                'discord_sent': e.discord_sent,
+                'fired_at': e.fired_at.isoformat(),
+            }
+            for e in recent_events
+        ]
+
+        # Fire frequency stats
+        now = timezone.now()
+        fires_1h = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(hours=1)
+        ).count()
+        fires_24h = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(hours=24)
+        ).count()
+        fires_7d = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(days=7)
+        ).count()
+        fires_30d = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(days=30)
+        ).count()
+
+        return JsonResponse({
+            'success': True,
+            'trigger': {
+                'id': str(trigger.id),
+                'name': trigger.name,
+                'description': trigger.description,
+                'situation_type': trigger.situation_type,
+                'situation_type_display': trigger.get_situation_type_display(),
+                'trigger_type': trigger.trigger_type,
+                'trigger_type_display': trigger.get_trigger_type_display(),
+                'target_spiders': trigger.target_spiders,
+                'target_field': trigger.target_field,
+                'operator': trigger.operator,
+                'operator_display': trigger.get_operator_display(),
+                'threshold_value': trigger.threshold_value,
+                'severity': trigger.severity,
+                'alert_title_template': trigger.alert_title_template,
+                'cooldown_minutes': trigger.cooldown_minutes,
+                'is_active': trigger.is_active,
+                'priority': trigger.priority,
+                'total_fires': trigger.total_fires,
+                'total_alerts_generated': trigger.total_alerts_generated,
+                'last_triggered_at': trigger.last_triggered_at.isoformat() if trigger.last_triggered_at else None,
+                'is_on_cooldown': trigger.is_on_cooldown(),
+                'created_at': trigger.created_at.isoformat(),
+                'updated_at': trigger.updated_at.isoformat(),
+            },
+            'recent_events': events_list,
+            'fire_stats': {
+                'fires_1h': fires_1h,
+                'fires_24h': fires_24h,
+                'fires_7d': fires_7d,
+                'fires_30d': fires_30d,
+            },
+        })
+    except SituationTrigger.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Error getting trigger detail: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_trigger(request, trigger_id):
+    """
+    POST /api/autonomous/triggers/<trigger_id>/update/
+
+    Update trigger configuration.
+    Allowed fields: threshold_value, cooldown_minutes, severity, priority,
+                   is_active, description, alert_title_template
+    """
+    try:
+        trigger = SituationTrigger.objects.get(id=trigger_id)
+
+        data = json.loads(request.body) if request.body else {}
+
+        # Allowed editable fields
+        editable_fields = [
+            'threshold_value', 'cooldown_minutes', 'severity', 'priority',
+            'is_active', 'description', 'alert_title_template'
+        ]
+
+        updated_fields = []
+
+        for field in editable_fields:
+            if field in data:
+                value = data[field]
+
+                # Validate specific fields
+                if field == 'cooldown_minutes':
+                    value = max(1, min(1440, int(value)))  # 1 min to 24 hours
+                elif field == 'priority':
+                    value = max(0, min(100, int(value)))  # 0-100
+                elif field == 'severity':
+                    if value not in ['critical', 'high', 'medium', 'low']:
+                        continue
+                elif field == 'is_active':
+                    value = bool(value)
+
+                setattr(trigger, field, value)
+                updated_fields.append(field)
+
+        if updated_fields:
+            trigger.save()
+            logger.info(f"Trigger {trigger.name} updated: {updated_fields}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Updated {len(updated_fields)} field(s)",
+            'updated_fields': updated_fields,
+            'trigger': {
+                'id': str(trigger.id),
+                'name': trigger.name,
+                'threshold_value': trigger.threshold_value,
+                'cooldown_minutes': trigger.cooldown_minutes,
+                'severity': trigger.severity,
+                'priority': trigger.priority,
+                'is_active': trigger.is_active,
+            }
+        })
+    except SituationTrigger.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.exception(f"Error updating trigger: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def toggle_trigger(request, trigger_id):
+    """
+    POST /api/autonomous/triggers/<trigger_id>/toggle/
+
+    Toggle trigger active status.
+    """
+    try:
+        trigger = SituationTrigger.objects.get(id=trigger_id)
+
+        trigger.is_active = not trigger.is_active
+        trigger.save(update_fields=['is_active', 'updated_at'])
+
+        status = 'enabled' if trigger.is_active else 'disabled'
+        logger.info(f"Trigger {trigger.name} {status}")
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Trigger {status}",
+            'trigger': {
+                'id': str(trigger.id),
+                'name': trigger.name,
+                'is_active': trigger.is_active,
+            }
+        })
+    except SituationTrigger.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Error toggling trigger: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def reset_trigger_cooldown(request, trigger_id):
+    """
+    POST /api/autonomous/triggers/<trigger_id>/reset-cooldown/
+
+    Reset the cooldown timer for a trigger.
+    """
+    try:
+        trigger = SituationTrigger.objects.get(id=trigger_id)
+
+        trigger.last_triggered_at = None
+        trigger.save(update_fields=['last_triggered_at', 'updated_at'])
+
+        logger.info(f"Trigger {trigger.name} cooldown reset")
+
+        return JsonResponse({
+            'success': True,
+            'message': "Cooldown reset",
+            'trigger': {
+                'id': str(trigger.id),
+                'name': trigger.name,
+                'is_on_cooldown': False,
+            }
+        })
+    except SituationTrigger.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Error resetting trigger cooldown: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def trigger_analytics(request, trigger_id):
+    """
+    GET /api/autonomous/triggers/<trigger_id>/analytics/
+
+    Get detailed analytics for a specific trigger.
+    """
+    try:
+        trigger = SituationTrigger.objects.get(id=trigger_id)
+        now = timezone.now()
+
+        # Hourly breakdown for last 24 hours
+        hourly_fires = []
+        for i in range(24):
+            hour_start = now - timedelta(hours=i+1)
+            hour_end = now - timedelta(hours=i)
+            count = TriggerEvent.objects.filter(
+                trigger=trigger,
+                fired_at__gte=hour_start,
+                fired_at__lt=hour_end
+            ).count()
+            hourly_fires.append({
+                'hour': hour_start.strftime('%H:%M'),
+                'count': count
+            })
+        hourly_fires.reverse()
+
+        # Daily breakdown for last 30 days
+        daily_fires = []
+        for i in range(30):
+            day_start = (now - timedelta(days=i+1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            count = TriggerEvent.objects.filter(
+                trigger=trigger,
+                fired_at__gte=day_start,
+                fired_at__lt=day_end
+            ).count()
+            daily_fires.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'count': count
+            })
+        daily_fires.reverse()
+
+        # Top matched values
+        top_values = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(days=7)
+        ).values('matched_value').annotate(
+            count=Count('id')
+        ).order_by('-count')[:10]
+
+        # Alert vs no-alert ratio
+        total_events = TriggerEvent.objects.filter(trigger=trigger).count()
+        alerts_generated = TriggerEvent.objects.filter(trigger=trigger, alert_generated=True).count()
+        discord_sent = TriggerEvent.objects.filter(trigger=trigger, discord_sent=True).count()
+
+        # Spider breakdown
+        spider_breakdown = TriggerEvent.objects.filter(
+            trigger=trigger,
+            fired_at__gte=now - timedelta(days=7)
+        ).values('spider_name').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        return JsonResponse({
+            'success': True,
+            'trigger_id': str(trigger.id),
+            'trigger_name': trigger.name,
+            'analytics': {
+                'hourly_fires': hourly_fires,
+                'daily_fires': daily_fires,
+                'top_matched_values': list(top_values),
+                'spider_breakdown': list(spider_breakdown),
+                'totals': {
+                    'total_fires': trigger.total_fires,
+                    'alerts_generated': alerts_generated,
+                    'discord_sent': discord_sent,
+                    'alert_rate': round(alerts_generated / total_events * 100, 1) if total_events > 0 else 0,
+                }
+            }
+        })
+    except SituationTrigger.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Trigger not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Error getting trigger analytics: {trigger_id}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

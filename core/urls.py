@@ -633,6 +633,12 @@ from core.views_autonomous_dashboard import (
     list_triggers,
     list_trigger_events,
     analytics_summary as autonomous_analytics_summary,
+    # Session 484: Trigger Tuning
+    trigger_detail,
+    update_trigger,
+    toggle_trigger,
+    reset_trigger_cooldown,
+    trigger_analytics,
 )
 
 # Session 213: Import workflow API views
@@ -2642,6 +2648,13 @@ urlpatterns = [
     path('api/autonomous/triggers/', list_triggers, name='autonomous-triggers'),
     path('api/autonomous/trigger-events/', list_trigger_events, name='autonomous-trigger-events'),
     path('api/autonomous/analytics/summary/', autonomous_analytics_summary, name='autonomous-analytics-summary'),
+
+    # Session 484: Trigger Tuning API
+    path('api/autonomous/triggers/<uuid:trigger_id>/', trigger_detail, name='autonomous-trigger-detail'),
+    path('api/autonomous/triggers/<uuid:trigger_id>/update/', update_trigger, name='autonomous-trigger-update'),
+    path('api/autonomous/triggers/<uuid:trigger_id>/toggle/', toggle_trigger, name='autonomous-trigger-toggle'),
+    path('api/autonomous/triggers/<uuid:trigger_id>/reset-cooldown/', reset_trigger_cooldown, name='autonomous-trigger-reset-cooldown'),
+    path('api/autonomous/triggers/<uuid:trigger_id>/analytics/', trigger_analytics, name='autonomous-trigger-analytics'),
 
     # Session 219 Phase D: Workflow Marketplace API
     path('api/marketplace/workflows/', marketplace_browse, name='marketplace-browse'),
