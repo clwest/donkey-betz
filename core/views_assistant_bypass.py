@@ -70,6 +70,7 @@ def assistant_chat_bypass(request):
 
         user = request.user
         project_id = data.get('project_id')  # Session 125: Get project context
+        conversation_history = data.get('history', [])  # Session 482: Get conversation history for context
 
         # Phase 2 P1: Validate project_id if provided
         if project_id:
@@ -89,10 +90,13 @@ def assistant_chat_bypass(request):
         from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
         assistant = EnhancedPersonalAIAssistant(user)
 
-        # Build context with project_id if provided
+        # Build context with project_id and conversation history
         context = {}
         if project_id:
             context['project_id'] = project_id
+        if conversation_history:
+            context['conversation_history'] = conversation_history
+            logger.info(f"  With conversation context: {len(conversation_history)} messages")
 
         response_data = assistant.process_message(message, context)
 

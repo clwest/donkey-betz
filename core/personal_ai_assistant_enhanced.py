@@ -6747,10 +6747,26 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         conversation_context = context.get('conversation_context', '')
         conversation_history = context.get('conversation_history', [])
 
-        # Load recent conversation history from database for context
-        recent_conversations = self._load_conversation_history(limit=5)
-        if recent_conversations and not conversation_context:
-            conversation_context = self._format_conversation_context(recent_conversations)
+        # Session 482: Prioritize session conversation history from frontend over database
+        # This enables contextual follow-up questions like "research the first one"
+        if conversation_history and isinstance(conversation_history, list) and len(conversation_history) > 0:
+            # Format the session history from frontend
+            session_context_lines = []
+            for msg in conversation_history[-10:]:  # Last 10 messages for context
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                if content:
+                    # Truncate very long messages for context
+                    truncated = content[:500] + '...' if len(content) > 500 else content
+                    session_context_lines.append(f"- {role.upper()}: {truncated}")
+            if session_context_lines:
+                conversation_context = "**Current Session History:**\n" + "\n".join(session_context_lines)
+                logger.info(f"📝 Session 482: Using {len(conversation_history)} messages from session history")
+        elif not conversation_context:
+            # Fallback: Load recent conversation history from database
+            recent_conversations = self._load_conversation_history(limit=5)
+            if recent_conversations:
+                conversation_context = self._format_conversation_context(recent_conversations)
 
         # Extract user context (it might be nested)
         user_context = context.get('user_context', {})
