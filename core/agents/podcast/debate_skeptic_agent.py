@@ -167,34 +167,86 @@ Be critical but fair - acknowledge valid points from the other side."""
         spider_context: Dict[str, Any]
     ) -> AgentResult:
         """Execute the debate skeptic task."""
-        # Simple execution - return structured skeptic result
-        tool_result = {
-            "role": "SKEPTIC",
-            "voice_id": "Clyde",
-            "position": f"Critical analysis of: {task}"
-        }
-        result = AgentResult(
-            success=True,
-            message=f"Skeptic analysis for: {task}",
-            data={"tool_results": [tool_result]},
-            tool_calls=[tool_result]
-        )
+        import time
+        start_time = time.time()
+        tool_calls_made = []
 
-        # Record learning outcome for collective intelligence
         try:
-            self._record_learning_outcome(
-                task=task,
-                result=result,
-                success=True,
-                context={
-                    'agent_type': self.__class__.__name__,
-                    'role': 'SKEPTIC',
-                }
-            )
-        except Exception as le:
-            logger.warning(f"Failed to record learning outcome: {le}")
+            # Build prompt with system prompt + task
+            prompt = self._build_prompt(task, scifi_context, spider_context)
 
-        return result
+            # Call OpenAI with tools
+            response = self._call_openai(prompt)
+
+            # Process tool calls if any
+            if response.get('tool_calls'):
+                tool_results = []
+                for tool_call in response['tool_calls']:
+                    tool_name = tool_call['name']
+                    tool_input = tool_call['arguments']
+
+                    tool_calls_made.append({"name": tool_name, "input": tool_input})
+                    result = self._handle_tool_call(tool_name, tool_input)
+                    tool_results.append(result)
+
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                result = AgentResult(
+                    success=True,
+                    message=response.get('content') or "Skeptic argument prepared",
+                    data={"tool_results": tool_results, "role": "SKEPTIC", "voice_id": "Clyde"},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time_ms,
+                    tool_calls=tool_calls_made
+                )
+            else:
+                # No tools called, return content directly
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                result = AgentResult(
+                    success=True,
+                    message=response.get('content') or 'No response',
+                    data={"role": "SKEPTIC", "voice_id": "Clyde"},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time_ms
+                )
+
+            # Record learning outcome for collective intelligence
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=True,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'role': 'SKEPTIC',
+                        'execution_time_ms': execution_time_ms,
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"DebateSkepticAgent error: {e}")
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            result = AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name,
+                execution_time_ms=execution_time_ms
+            )
+
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={'agent_type': self.__class__.__name__, 'error': str(e)}
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _handle_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Handle tool calls for skeptical analysis."""
