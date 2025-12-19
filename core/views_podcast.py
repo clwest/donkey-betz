@@ -300,7 +300,18 @@ def podcast_script(request, episode_id):
             episode = PodcastEpisode.objects.get(id=episode_id, user=request.user)
             config = episode.generation_config or {}
             format_type = config.get('format', 'debate')
-            debate_data = episode.debate or {}
+
+            # Get debate data - episode.debate is a ForeignKey to PodcastDebate model
+            debate_info = None
+            if episode.debate:
+                debate_obj = episode.debate
+                debate_info = {
+                    'research_summary': str(debate_obj.research_results) if debate_obj.research_results else '',
+                    'debate_transcript': debate_obj.debate_transcript or '',
+                    'key_insights': debate_obj.key_takeaways or [],
+                    'consensus': debate_obj.consensus or '',
+                    'winner': debate_obj.winner or '',
+                }
 
             return JsonResponse({
                 'success': True,
@@ -311,11 +322,7 @@ def podcast_script(request, episode_id):
                     'status': episode.status,
                 },
                 'script': episode.script or '',
-                'debate': {
-                    'research_summary': debate_data.get('research_summary', ''),
-                    'debate_transcript': debate_data.get('transcript', ''),
-                    'key_insights': debate_data.get('key_insights', []),
-                } if debate_data else None,
+                'debate': debate_info,
                 'word_count': len(episode.script.split()) if episode.script else 0,
             })
         except PodcastEpisode.DoesNotExist:
