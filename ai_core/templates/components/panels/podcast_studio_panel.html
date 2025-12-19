@@ -1,0 +1,462 @@
+{% comment %}
+Session 502: Podcast Studio Panel
+Create and manage AI-generated podcasts where agents research, debate, and discuss topics.
+{% endcomment %}
+
+<!-- Podcast Studio Sub-Tab Content -->
+<div class="tab-pane fade" id="auto-podcasts" role="tabpanel">
+    <div class="container-fluid">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="mb-1" style="color: #f472b6;">
+                    <i class="fas fa-podcast me-2"></i>AI Podcast Studio
+                </h5>
+                <p class="text-muted mb-0 small">Create podcasts where AI agents research, debate, and discuss any topic</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreatePodcastModal()">
+                <i class="fas fa-plus me-1"></i>Create Podcast
+            </button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row mb-4" id="podcast-stats-row">
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #f472b6;" id="stat-total-podcasts">0</h3>
+                        <small class="text-muted">Total</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #34d399;" id="stat-complete-podcasts">0</h3>
+                        <small class="text-muted">Complete</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #fbbf24;" id="stat-inprogress-podcasts">0</h3>
+                        <small class="text-muted">In Progress</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #a78bfa;" id="stat-total-words">0</h3>
+                        <small class="text-muted">Words</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #60a5fa;" id="stat-total-duration">0m</h3>
+                        <small class="text-muted">Duration</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);">
+                    <div class="card-body text-center py-3">
+                        <h3 class="mb-0" style="color: #f87171;" id="stat-failed-podcasts">0</h3>
+                        <small class="text-muted">Failed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <ul class="nav nav-pills mb-3" id="podcast-filter-tabs">
+            <li class="nav-item">
+                <button class="nav-link active" onclick="filterPodcasts('')" style="color: #f472b6;">All</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" onclick="filterPodcasts('complete')" style="color: #34d399;">Complete</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" onclick="filterPodcasts('pending,researching,debating,scripting,generating_audio')" style="color: #fbbf24;">In Progress</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" onclick="filterPodcasts('failed')" style="color: #f87171;">Failed</button>
+            </li>
+        </ul>
+
+        <!-- Podcasts List -->
+        <div id="podcasts-list-container">
+            <div class="text-center py-5" id="podcasts-loading">
+                <div class="spinner-border" style="color: #f472b6;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading podcasts...</p>
+            </div>
+            <div id="podcasts-list" style="display: none;"></div>
+            <div id="podcasts-empty" style="display: none;" class="text-center py-5">
+                <i class="fas fa-podcast fa-3x mb-3" style="color: rgba(244, 114, 182, 0.3);"></i>
+                <h5 class="text-muted">No podcasts yet</h5>
+                <p class="text-muted">Create your first AI podcast to get started!</p>
+                <button class="btn btn-primary" onclick="showCreatePodcastModal()">
+                    <i class="fas fa-plus me-1"></i>Create Podcast
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Create Podcast Modal -->
+<div class="modal fade" id="createPodcastModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(244, 114, 182, 0.3);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" style="color: #f472b6;">
+                    <i class="fas fa-podcast me-2"></i>Create AI Podcast
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Topic *</label>
+                    <input type="text" id="podcast-topic" class="form-control"
+                           placeholder="e.g., The future of AI in healthcare"
+                           style="background: rgba(255,255,255,0.05); border-color: rgba(244, 114, 182, 0.3); color: white;">
+                    <small class="text-muted">What should the AI agents discuss?</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Format</label>
+                    <select id="podcast-format" class="form-select"
+                            style="background: rgba(255,255,255,0.05); border-color: rgba(244, 114, 182, 0.3); color: white;">
+                        <option value="debate">Debate (agents argue different positions)</option>
+                        <option value="panel">Panel Discussion (collaborative exploration)</option>
+                        <option value="interview">Interview (host + expert)</option>
+                        <option value="solo">Solo (single narrator deep-dive)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Participants: <span id="participant-count-display">3</span></label>
+                    <input type="range" id="podcast-participants" class="form-range"
+                           min="2" max="5" value="3" oninput="document.getElementById('participant-count-display').textContent = this.value">
+                    <small class="text-muted">Number of AI agents in the discussion (2-5)</small>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="podcast-generate-audio">
+                    <label class="form-check-label" for="podcast-generate-audio">
+                        Generate audio (uses ElevenLabs credits)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createPodcast()">
+                    <i class="fas fa-microphone me-1"></i>Create Podcast
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Script Modal -->
+<div class="modal fade" id="viewScriptModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(244, 114, 182, 0.3);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" style="color: #f472b6;" id="script-modal-title">
+                    <i class="fas fa-scroll me-2"></i>Podcast Script
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="script-content" style="white-space: pre-wrap; font-family: monospace; font-size: 14px;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyScript()">
+                    <i class="fas fa-copy me-1"></i>Copy Script
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Podcast Studio JavaScript
+let currentPodcastFilter = '';
+
+async function loadPodcastStats() {
+    try {
+        const response = await authenticatedFetch('/api/podcasts/stats/');
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('stat-total-podcasts').textContent = data.stats.total_episodes;
+            document.getElementById('stat-complete-podcasts').textContent = data.stats.complete;
+            document.getElementById('stat-inprogress-podcasts').textContent = data.stats.in_progress;
+            document.getElementById('stat-failed-podcasts').textContent = data.stats.failed;
+            document.getElementById('stat-total-words').textContent = formatNumber(data.stats.total_words);
+            document.getElementById('stat-total-duration').textContent = formatDuration(data.stats.total_duration_seconds);
+        }
+    } catch (e) {
+        console.error('Failed to load podcast stats:', e);
+    }
+}
+
+async function loadPodcasts(status = '') {
+    const loadingEl = document.getElementById('podcasts-loading');
+    const listEl = document.getElementById('podcasts-list');
+    const emptyEl = document.getElementById('podcasts-empty');
+
+    loadingEl.style.display = 'block';
+    listEl.style.display = 'none';
+    emptyEl.style.display = 'none';
+
+    try {
+        let url = '/api/podcasts/list/';
+        if (status) url += `?status=${status}`;
+
+        const response = await authenticatedFetch(url);
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (data.success && data.episodes.length > 0) {
+            listEl.style.display = 'block';
+            listEl.innerHTML = data.episodes.map(ep => renderPodcastCard(ep)).join('');
+        } else {
+            emptyEl.style.display = 'block';
+        }
+    } catch (e) {
+        console.error('Failed to load podcasts:', e);
+        loadingEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+    }
+}
+
+function renderPodcastCard(episode) {
+    const statusColors = {
+        'pending': '#fbbf24',
+        'researching': '#60a5fa',
+        'debating': '#a78bfa',
+        'scripting': '#f472b6',
+        'generating_audio': '#34d399',
+        'complete': '#22c55e',
+        'failed': '#ef4444'
+    };
+
+    const statusColor = statusColors[episode.status] || '#888';
+    const date = new Date(episode.created_at).toLocaleDateString();
+
+    return `
+        <div class="card mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(244, 114, 182, 0.2);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1" style="color: #f472b6;">${escapeHtml(episode.topic)}</h6>
+                        <div class="d-flex gap-3 text-muted small mb-2">
+                            <span><i class="fas fa-calendar me-1"></i>${date}</span>
+                            <span><i class="fas fa-users me-1"></i>${episode.participant_count} participants</span>
+                            <span><i class="fas fa-tag me-1"></i>${episode.format_type}</span>
+                            ${episode.word_count ? `<span><i class="fas fa-file-word me-1"></i>${episode.word_count} words</span>` : ''}
+                            ${episode.duration_seconds ? `<span><i class="fas fa-clock me-1"></i>${formatDuration(episode.duration_seconds)}</span>` : ''}
+                        </div>
+                        <span class="badge" style="background: ${statusColor}20; color: ${statusColor}; border: 1px solid ${statusColor}40;">
+                            ${episode.status.replace('_', ' ')}
+                        </span>
+                        ${episode.error_message ? `<small class="d-block text-danger mt-1">${escapeHtml(episode.error_message.substring(0, 100))}</small>` : ''}
+                    </div>
+                    <div class="d-flex gap-2">
+                        ${episode.status === 'complete' ? `
+                            <button class="btn btn-sm btn-outline-info" onclick="viewPodcastScript('${episode.id}')" title="View Script">
+                                <i class="fas fa-scroll"></i>
+                            </button>
+                            ${episode.has_audio ? `
+                                <button class="btn btn-sm btn-outline-success" onclick="playPodcastAudio('${episode.audio_url}')" title="Play Audio">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            ` : ''}
+                        ` : ''}
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshPodcastStatus('${episode.id}')" title="Refresh Status">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deletePodcast('${episode.id}', '${escapeHtml(episode.topic)}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function filterPodcasts(status) {
+    currentPodcastFilter = status;
+
+    // Update active tab
+    document.querySelectorAll('#podcast-filter-tabs .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    loadPodcasts(status);
+}
+
+function showCreatePodcastModal() {
+    document.getElementById('podcast-topic').value = '';
+    document.getElementById('podcast-format').value = 'debate';
+    document.getElementById('podcast-participants').value = 3;
+    document.getElementById('participant-count-display').textContent = '3';
+    document.getElementById('podcast-generate-audio').checked = false;
+
+    new bootstrap.Modal(document.getElementById('createPodcastModal')).show();
+}
+
+async function createPodcast() {
+    const topic = document.getElementById('podcast-topic').value.trim();
+    if (!topic) {
+        showNotification('Please enter a topic', 'error');
+        return;
+    }
+
+    const format = document.getElementById('podcast-format').value;
+    const participants = parseInt(document.getElementById('podcast-participants').value);
+    const generateAudio = document.getElementById('podcast-generate-audio').checked;
+
+    try {
+        const response = await authenticatedFetch('/api/podcasts/create/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                topic: topic,
+                format_type: format,
+                participant_count: participants,
+                generate_audio: generateAudio
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('createPodcastModal')).hide();
+            showNotification(`Podcast "${topic}" queued for generation!`, 'success');
+            loadPodcastStats();
+            loadPodcasts(currentPodcastFilter);
+        } else {
+            showNotification(data.error || 'Failed to create podcast', 'error');
+        }
+    } catch (e) {
+        console.error('Failed to create podcast:', e);
+        showNotification('Failed to create podcast', 'error');
+    }
+}
+
+async function viewPodcastScript(episodeId) {
+    try {
+        const response = await authenticatedFetch(`/api/podcasts/${episodeId}/script/`);
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('script-modal-title').innerHTML =
+                `<i class="fas fa-scroll me-2"></i>${escapeHtml(data.episode.topic)}`;
+            document.getElementById('script-content').textContent = data.script || 'No script available';
+            new bootstrap.Modal(document.getElementById('viewScriptModal')).show();
+        } else {
+            showNotification(data.error || 'Failed to load script', 'error');
+        }
+    } catch (e) {
+        console.error('Failed to load script:', e);
+        showNotification('Failed to load script', 'error');
+    }
+}
+
+function copyScript() {
+    const script = document.getElementById('script-content').textContent;
+    navigator.clipboard.writeText(script).then(() => {
+        showNotification('Script copied to clipboard', 'success');
+    });
+}
+
+function playPodcastAudio(url) {
+    // Create or update audio player
+    let player = document.getElementById('podcast-audio-player');
+    if (!player) {
+        player = document.createElement('audio');
+        player.id = 'podcast-audio-player';
+        player.controls = true;
+        player.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #1a1a2e; border-radius: 8px; padding: 10px;';
+        document.body.appendChild(player);
+    }
+    player.src = url;
+    player.play();
+}
+
+async function refreshPodcastStatus(episodeId) {
+    try {
+        const response = await authenticatedFetch(`/api/podcasts/${episodeId}/status/`);
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification(`Status: ${data.episode.status}`, 'info');
+            loadPodcasts(currentPodcastFilter);
+        }
+    } catch (e) {
+        console.error('Failed to refresh status:', e);
+    }
+}
+
+async function deletePodcast(episodeId, topic) {
+    if (!confirm(`Delete podcast "${topic}"?`)) return;
+
+    try {
+        const response = await authenticatedFetch(`/api/podcasts/${episodeId}/`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Podcast deleted', 'success');
+            loadPodcastStats();
+            loadPodcasts(currentPodcastFilter);
+        } else {
+            showNotification(data.error || 'Failed to delete', 'error');
+        }
+    } catch (e) {
+        console.error('Failed to delete podcast:', e);
+        showNotification('Failed to delete podcast', 'error');
+    }
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function formatDuration(seconds) {
+    if (!seconds) return '0m';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins >= 60) {
+        const hours = Math.floor(mins / 60);
+        return `${hours}h ${mins % 60}m`;
+    }
+    return `${mins}m`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize when tab is shown
+document.getElementById('auto-podcasts-tab')?.addEventListener('shown.bs.tab', function() {
+    loadPodcastStats();
+    loadPodcasts();
+});
+</script>
