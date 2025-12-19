@@ -1246,7 +1246,8 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
         task: str,
         context: Dict[str, Any],
         spider_data_used: bool = False,
-        scifi_context_used: bool = False
+        scifi_context_used: bool = False,
+        success: bool = None
     ) -> Optional[str]:
         """
         Record execution outcome for learning, XP, and pattern detection.
@@ -1262,12 +1263,16 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
             context: Execution context
             spider_data_used: Whether spider data was used
             scifi_context_used: Whether sci-fi features were used
+            success: Override for result.success (optional, for backwards compatibility)
 
         Returns:
             Outcome ID if recorded, None otherwise
         """
         if not self.learning_loop:
             return None
+
+        # Use explicit success parameter if provided, otherwise use result.success
+        outcome_success = success if success is not None else result.success
 
         try:
             outcome_id = self.learning_loop.record_outcome(
@@ -1277,7 +1282,7 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
                 agents_used=[self.name],
                 response=result.message or '',
                 execution_time_ms=result.execution_time_ms,
-                success=result.success,
+                success=outcome_success,
                 classification_confidence=0.8,  # Default confidence
                 spider_data_used=spider_data_used,
                 scifi_context_used=scifi_context_used,
