@@ -34,7 +34,7 @@ Usage:
     router = AgentRouter(user=request.user)
     result = router.route("ImageAgent", "create a cyberpunk logo", context={})
 
-Available Agents (40 total):
+Available Agents (41 total):
 
     CREATION AGENTS (4):
         ImageAgent          - Image generation (logos, banners, illustrations)
@@ -91,6 +91,9 @@ Available Agents (40 total):
         WorkflowOrchestrationAgent  - Predefined workflow packages (16+ templates)
         OpportunityPipelineAgent    - Multi-stage opportunity execution (value multiplication)
         ContentExecutorAgent        - AI content generation for platform
+
+    CONTENT WRITING AGENTS (1) - Session 496:
+        ContentWriterAgent          - Transform research into blog posts, podcasts, articles
 
     ENTRY POINT (1):
         PersonalAssistantAgent  - Main user interaction and routing
@@ -228,6 +231,9 @@ from core.agents.content import (
 # Rendering Agents (Session 478: DaVinci Resolve Integration)
 from core.agents.resolve_agent import ResolveAgent, get_resolve_agent
 
+# Content Writer Agent (Session 496: Written content from research)
+from core.agents.content_writer_agent import ContentWriterAgent, get_content_writer_agent
+
 # Blockchain Audit Agents (Session 461)
 from core.agents.blockchain import (
     SmartContractAuditorAgent,
@@ -243,6 +249,14 @@ from core.agents.narrative import (
     TrendBreakDetectorAgent,
     CulturalImpactAgent,
     NarrativeDriftCoordinator,
+)
+
+# Podcast Studio Agents (Session 496)
+from core.agents.podcast import (
+    PodcastCoordinatorAgent,
+    DebateAdvocateAgent,
+    DebateSkepticAgent,
+    ModeratorAgent,
 )
 
 __all__ = [
@@ -343,6 +357,10 @@ __all__ = [
     'ResolveAgent',
     'get_resolve_agent',
 
+    # Content Writer Agent (1) - Session 496
+    'ContentWriterAgent',
+    'get_content_writer_agent',
+
     # Blockchain Audit Agents (5) - Session 461
     'SmartContractAuditorAgent',
     'TransactionMonitorAgent',
@@ -355,4 +373,10 @@ __all__ = [
     'TrendBreakDetectorAgent',
     'CulturalImpactAgent',
     'NarrativeDriftCoordinator',
+
+    # Podcast Studio Agents (4) - Session 496
+    'PodcastCoordinatorAgent',
+    'DebateAdvocateAgent',
+    'DebateSkepticAgent',
+    'ModeratorAgent',
 ]

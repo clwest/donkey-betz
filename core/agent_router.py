@@ -160,6 +160,17 @@ from core.agents.content import TopicMinerAgent, ContrarianAgent, PerformanceAna
 # Session 478: DaVinci Resolve Integration
 from core.agents.resolve_agent import ResolveAgent
 
+# Session 496: Content Writer Agent
+from core.agents.content_writer_agent import ContentWriterAgent
+
+# Session 496: Podcast Studio Agents
+from core.agents.podcast import (
+    PodcastCoordinatorAgent,
+    DebateAdvocateAgent,
+    DebateSkepticAgent,
+    ModeratorAgent,
+)
+
 logger = logging.getLogger(__name__)
 
 # Session 488: Semantic routing confidence threshold
@@ -204,6 +215,9 @@ class AgentRouter:
 
         # Research Agents
         "ResearchAgent": ResearchAgent,
+
+        # Writing Agents (Session 496)
+        "ContentWriterAgent": ContentWriterAgent,
 
         # Strategy Agents (Session 280)
         "ContentStrategyAgent": ContentStrategyAgent,
@@ -261,6 +275,12 @@ class AgentRouter:
 
         # Rendering Agents (Session 478)
         "ResolveAgent": ResolveAgent,
+
+        # Podcast Studio Agents (Session 496)
+        "PodcastCoordinatorAgent": PodcastCoordinatorAgent,
+        "DebateAdvocateAgent": DebateAdvocateAgent,
+        "DebateSkepticAgent": DebateSkepticAgent,
+        "ModeratorAgent": ModeratorAgent,
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
@@ -539,6 +559,170 @@ class AgentRouter:
             True if agent exists
         """
         return agent_name in self.AGENT_MAP
+
+    @staticmethod
+    def execute_tool(
+        tool_name: str,
+        arguments: Dict[str, Any],
+        user=None,
+        session=None,
+        project=None
+    ) -> Dict[str, Any]:
+        """
+        Session 495: Execute a tool by name with arguments.
+
+        This static method provides a way to execute tools through the router
+        without needing an instance. It maps GPT tool names to agents and executes them.
+
+        Args:
+            tool_name: Name of the tool to execute (e.g., 'workflow_orchestration_agent')
+            arguments: Tool arguments from GPT
+            user: Django User object
+            session: Optional session object
+            project: Optional project object
+
+        Returns:
+            Dict with execution results including 'success' key
+        """
+        # Map GPT tool names to agent names
+        TOOL_TO_AGENT_MAP = {
+            'workflow_orchestration_agent': 'WorkflowOrchestrationAgent',
+            'web_search': 'ResearchAgent',
+            'research_topic': 'ResearchAgent',
+            'research': 'ResearchAgent',
+            'character_training_agent': 'CharacterTrainingAgent',
+            'coleadership_agent': 'CoLeadershipAgent',
+            'competitor_analysis_agent': 'CompetitorAnalysisAgent',
+            'customer_research_agent': 'CustomerResearchAgent',
+            'brand_strategy_agent': 'BrandStrategyAgent',
+            # Session 496: Content Writer Agent
+            'content_writer_agent': 'ContentWriterAgent',
+        }
+
+        try:
+            # Get agent name from mapping
+            agent_name = TOOL_TO_AGENT_MAP.get(tool_name)
+            if not agent_name:
+                return {
+                    'success': False,
+                    'error': f"No agent mapping for tool: {tool_name}"
+                }
+
+            # Special handling for WorkflowOrchestrationAgent
+            if agent_name == 'WorkflowOrchestrationAgent':
+                from core.agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+
+                # Extract project_id from project object or arguments
+                project_id = None
+                if project:
+                    project_id = str(project.id)
+                elif arguments.get('project_id'):
+                    project_id = arguments['project_id']
+
+                agent = WorkflowOrchestrationAgent(user=user, project_id=project_id)
+
+                # Build context from arguments
+                context = {
+                    'workflow': arguments.get('workflow', 'research_and_create_images'),
+                    'topic': arguments.get('topic', ''),
+                    'count': arguments.get('count', 3),
+                    'style_preferences': arguments.get('style_preferences', ''),
+                    'user_message': arguments.get('user_message', ''),
+                }
+
+                # Execute the agent
+                result = agent.execute(
+                    task=arguments.get('user_message', arguments.get('topic', '')),
+                    context=context,
+                    scifi_context={},
+                    spider_context={}
+                )
+
+                # Convert AgentResult to dict
+                if result.success:
+                    return {
+                        'success': True,
+                        'message': result.message,
+                        'data': result.data,
+                        'agent_name': result.agent_name
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': result.error
+                    }
+
+            # Session 496: Special handling for ContentWriterAgent
+            if agent_name == 'ContentWriterAgent':
+                from core.agents.content_writer_agent import ContentWriterAgent
+
+                project_id = None
+                if project:
+                    project_id = str(project.id)
+                elif arguments.get('project_id'):
+                    project_id = arguments['project_id']
+
+                agent = ContentWriterAgent(user=user, project_id=project_id)
+
+                # Extract research from research_context or user message
+                research = arguments.get('research_context', '')
+                if not research and '--- RESEARCH CONTEXT ---' in arguments.get('topic', ''):
+                    # Extract from topic if it contains research
+                    parts = arguments['topic'].split('--- RESEARCH CONTEXT ---', 1)
+                    if len(parts) > 1:
+                        research = parts[1].strip()
+
+                # Build context
+                context = {
+                    'content_type': arguments.get('content_type', 'blog_post'),
+                    'research': research,
+                    'tone': arguments.get('tone', 'professional'),
+                    'target_audience': arguments.get('target_audience', 'general audience'),
+                    'word_count': arguments.get('word_count', 1500),
+                    'topic': arguments.get('topic', ''),
+                }
+
+                result = agent.execute(
+                    task=f"Write {context['content_type']} about {context['topic']}",
+                    context=context,
+                    scifi_context={},
+                    spider_context={}
+                )
+
+                if result.success:
+                    return {
+                        'success': True,
+                        'message': result.message,
+                        'data': result.data,
+                        'agent_name': result.agent_name
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': result.error
+                    }
+
+            # For other agents, use the router
+            router = AgentRouter(user=user)
+            agent_result = router.route(
+                agent_name=agent_name,
+                task=arguments.get('query', arguments.get('topic', str(arguments))),
+                context=arguments
+            )
+
+            return {
+                'success': agent_result.success,
+                'message': agent_result.message if agent_result.success else None,
+                'error': agent_result.error if not agent_result.success else None,
+                'data': agent_result.data
+            }
+
+        except Exception as e:
+            logger.error(f"execute_tool error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 # Convenience function

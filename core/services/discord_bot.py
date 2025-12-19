@@ -506,6 +506,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
         await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
         await self.add_cog(GumroadCommands(self))  # Session 487: Gumroad Publishing (Golden Egg)
+        await self.add_cog(PodcastCommands(self))  # Session 496: AI Podcast Studio
 
         # Sync slash commands with Discord
         try:
@@ -11604,6 +11605,357 @@ class SituationCommands(commands.Cog):
                 embed=discord.Embed(
                     title="Error",
                     description=f"Failed to configure alerts: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+class PodcastCommands(commands.Cog):
+    """
+    Session 496: AI Podcast Studio Commands.
+
+    Commands for creating AI-generated podcasts where agents research,
+    debate, and produce audio content with different voices.
+    """
+
+    def __init__(self, client):
+        self.client = client
+        # Podcast channel for output
+        self.PODCAST_CHANNEL_ID = 1451578444101058751
+
+    async def _get_linked_user(self, discord_id):
+        """Get the linked Django user for this Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+
+        return await get_user()
+
+    @app_commands.command(name="podcast-create", description="Create an AI podcast episode with agent debates")
+    @app_commands.describe(
+        topic="The debate topic (e.g., 'Should AI replace human jobs?')",
+        format="Podcast format (debate/roundtable/interview)",
+        participants="Number of debate participants (2-4)",
+        generate_audio="Whether to generate audio with ElevenLabs"
+    )
+    async def podcast_create(
+        self,
+        interaction: discord.Interaction,
+        topic: str,
+        format: str = "debate",
+        participants: int = 3,
+        generate_audio: bool = False
+    ):
+        """Create a new AI podcast episode."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Validate format
+            valid_formats = ['debate', 'roundtable', 'interview', 'monologue']
+            if format.lower() not in valid_formats:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Format",
+                        description=f"Format must be one of: {', '.join(valid_formats)}",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Validate participants
+            if participants < 2 or participants > 4:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Participant Count",
+                        description="Participants must be between 2 and 4",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Create the episode
+            @sync_to_async
+            def create_episode():
+                from core.models import PodcastEpisode, PodcastDebate
+                from django.utils import timezone
+
+                # Create debate first
+                debate = PodcastDebate.objects.create(
+                    topic=topic[:200],
+                    topic_question=f"Should we embrace {topic}? What are the implications?",
+                    status='pending'
+                )
+
+                # Create episode
+                episode = PodcastEpisode.objects.create(
+                    user=user,
+                    title=f"Debate: {topic[:150]}",
+                    topic=topic[:200],
+                    debate=debate,
+                    status='draft',
+                    generation_config={
+                        'format': format.lower(),
+                        'participant_count': participants,
+                        'generate_audio': generate_audio
+                    }
+                )
+
+                return episode, debate
+
+            episode, debate = await create_episode()
+
+            # Start the generation task
+            @sync_to_async
+            def queue_generation():
+                from core.tasks import generate_podcast_episode
+                generate_podcast_episode.delay(
+                    str(episode.id),
+                    topic,
+                    format.lower(),
+                    participants,
+                    generate_audio
+                )
+
+            # Queue the podcast generation task
+            await queue_generation()
+
+            embed = discord.Embed(
+                title="🎙️ Podcast Episode Created!",
+                description=f"Creating a {format} about **{topic}**",
+                color=discord.Color.purple()
+            )
+            embed.add_field(name="Episode ID", value=f"`{str(episode.id)[:8]}...`", inline=True)
+            embed.add_field(name="Format", value=format.title(), inline=True)
+            embed.add_field(name="Participants", value=str(participants), inline=True)
+            embed.add_field(name="Audio", value="Yes" if generate_audio else "Script Only", inline=True)
+            embed.add_field(
+                name="Voices",
+                value="Host: Antoni\nAdvocate: Rachel\nSkeptic: Clyde\nAnalyst: Paul",
+                inline=False
+            )
+            embed.set_footer(text="Use /podcast-status to check generation progress")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Podcast create error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to create podcast: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="podcast-list", description="List your podcast episodes")
+    async def podcast_list(self, interaction: discord.Interaction):
+        """List all podcast episodes for this user."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def get_episodes():
+                from core.models import PodcastEpisode
+                return list(PodcastEpisode.objects.filter(user=user).order_by('-created_at')[:10])
+
+            episodes = await get_episodes()
+
+            if not episodes:
+                embed = discord.Embed(
+                    title="🎙️ No Podcasts Yet",
+                    description="You haven't created any podcasts. Use `/podcast-create` to start!",
+                    color=discord.Color.blue()
+                )
+            else:
+                embed = discord.Embed(
+                    title="🎙️ Your Podcast Episodes",
+                    description=f"Showing {len(episodes)} most recent episodes",
+                    color=discord.Color.purple()
+                )
+
+                for ep in episodes:
+                    status_emoji = {
+                        'draft': '📝',
+                        'researching': '🔍',
+                        'debating': '💬',
+                        'scripting': '✍️',
+                        'recording': '🎤',
+                        'assembling': '🔧',
+                        'complete': '✅',
+                        'failed': '❌'
+                    }.get(ep.status, '❓')
+
+                    embed.add_field(
+                        name=f"{status_emoji} {ep.title[:50]}",
+                        value=f"ID: `{str(ep.id)[:8]}...` | Status: {ep.status}\nCreated: <t:{int(ep.created_at.timestamp())}:R>",
+                        inline=False
+                    )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Podcast list error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to list podcasts: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="podcast-status", description="Check status of a podcast episode")
+    @app_commands.describe(episode_id="The episode ID (first 8 characters)")
+    async def podcast_status(self, interaction: discord.Interaction, episode_id: str):
+        """Check the status of a podcast episode."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_episode():
+                from core.models import PodcastEpisode
+                # Search by prefix
+                return PodcastEpisode.objects.filter(
+                    id__startswith=episode_id
+                ).first()
+
+            episode = await get_episode()
+
+            if not episode:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Episode Not Found",
+                        description=f"No episode found with ID starting with `{episode_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            status_emoji = {
+                'draft': '📝',
+                'researching': '🔍',
+                'debating': '💬',
+                'scripting': '✍️',
+                'recording': '🎤',
+                'assembling': '🔧',
+                'complete': '✅',
+                'failed': '❌'
+            }.get(episode.status, '❓')
+
+            embed = discord.Embed(
+                title=f"{status_emoji} {episode.title}",
+                description=episode.description[:300] if episode.description else "No description",
+                color=discord.Color.green() if episode.status == 'complete' else discord.Color.blue()
+            )
+            embed.add_field(name="Status", value=episode.status.title(), inline=True)
+            embed.add_field(name="Progress", value=f"{episode.progress_percent}%", inline=True)
+            embed.add_field(name="Topic", value=episode.topic[:100], inline=False)
+
+            if episode.script:
+                embed.add_field(
+                    name="Script Preview",
+                    value=f"```{episode.script[:300]}...```",
+                    inline=False
+                )
+
+            if episode.error_message:
+                embed.add_field(name="Error", value=episode.error_message[:200], inline=False)
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Podcast status error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get status: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="podcast-script", description="View the full script of a completed podcast")
+    @app_commands.describe(episode_id="The episode ID (first 8 characters)")
+    async def podcast_script(self, interaction: discord.Interaction, episode_id: str):
+        """View the full script of a podcast episode."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_episode():
+                from core.models import PodcastEpisode
+                return PodcastEpisode.objects.filter(
+                    id__startswith=episode_id
+                ).first()
+
+            episode = await get_episode()
+
+            if not episode:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Episode Not Found",
+                        description=f"No episode found with ID starting with `{episode_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            if not episode.script:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Script Not Ready",
+                        description=f"This episode doesn't have a script yet. Status: {episode.status}",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Split script into chunks for Discord's 2000 char limit
+            script = episode.script
+            chunks = [script[i:i+1900] for i in range(0, len(script), 1900)]
+
+            embed = discord.Embed(
+                title=f"🎙️ {episode.title} - Script",
+                description=f"Full script ({len(script)} chars, {len(chunks)} parts)",
+                color=discord.Color.purple()
+            )
+            await interaction.followup.send(embed=embed)
+
+            # Send script in chunks
+            for i, chunk in enumerate(chunks[:5]):  # Limit to 5 chunks
+                await interaction.channel.send(f"**Part {i+1}:**\n```\n{chunk}\n```")
+
+            if len(chunks) > 5:
+                await interaction.channel.send(f"*... and {len(chunks) - 5} more parts*")
+
+        except Exception as e:
+            logger.error(f"Podcast script error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get script: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )

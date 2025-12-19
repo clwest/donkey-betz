@@ -494,6 +494,41 @@ DO NOT USE FOR:
 
 ALL OUTPUTS INCLUDE MANDATORY DISCLAIMERS.""",
 
+
+    # -------------------------------------------------------------------------
+    # CONTENT WRITING AGENTS (Session 496)
+    # -------------------------------------------------------------------------
+
+    "content_writer_agent": """📝 MANDATORY for all WRITTEN TEXT content! Transforms research into written content.
+
+USE THIS AGENT when user says ANY of these:
+- "write a blog post", "write a blog", "blog post based on"
+- "write a podcast script", "podcast script from"
+- "write a video script", "video script from"
+- "write an article", "article based on"
+- "write a newsletter", "newsletter from"
+- "write a social thread", "social thread from"
+- "turn this into a blog", "create a blog from this research"
+
+⚡ TRIGGER WORDS: 'write', 'blog', 'podcast script', 'video script', 'article', 'newsletter', 'social thread'
+
+Content Types:
+- blog_post: SEO-optimized blog with title, intro, sections, conclusion
+- podcast_script: Conversational script with intro, segments, outro
+- video_script: Video script with scenes, narration, b-roll suggestions
+- article: Professional article with headline, lead, body, CTA
+- social_thread: Series of connected posts for Twitter/X, LinkedIn
+- newsletter: Email newsletter with subject, preview, sections
+
+⛔ DO NOT use workflow_orchestration_agent for written content!
+⛔ DO NOT use image_generation_agent when user wants TEXT content!
+
+Examples:
+- "Write a blog post based on this research" -> content_writer_agent with content_type='blog_post'
+- "Turn this into a podcast script" -> content_writer_agent with content_type='podcast_script'
+- "Write a video script from this research" -> content_writer_agent with content_type='video_script'
+- "Create a newsletter from these findings" -> content_writer_agent with content_type='newsletter'""",
+
 }
 
 

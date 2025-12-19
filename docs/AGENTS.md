@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 466 (December 17, 2025) - Added Autonomous Content Studio Agents
+**Last Updated:** Session 496 (December 19, 2025) - Added AI Podcast Studio Agents
 
 ---
 
@@ -649,6 +649,94 @@ Confidence: 0.7 (strong historical precedent)."
 - AWS (ECS, EKS, Lambda), GCP (Cloud Run, GKE)
 
 **Cannot Access:** Code generation, image, video, audio tools
+
+---
+
+### Podcast Agents (Session 496)
+
+**Purpose:** AI Podcast Studio - Generate debate podcasts with multi-agent discussions and TTS audio
+
+**Location:** `core/agents/podcast/`
+
+#### PodcastCoordinatorAgent
+
+**File:** `core/agents/podcast/podcast_coordinator_agent.py`
+
+**Purpose:** Orchestrates podcast creation by coordinating debaters and generating scripts
+
+**Tools:**
+- `structure_debate` - Create debate structure with participants and perspectives
+- `generate_discussion_points` - Generate key discussion topics
+- `generate_podcast_script` - Generate complete script with speaker labels
+
+**Parameters:**
+```python
+{
+    "topic": "Should AI replace human jobs?",
+    "format_type": "debate",  # debate, roundtable, interview, monologue
+    "participants": 4  # 2-4 participants
+}
+```
+
+#### ModeratorAgent
+
+**File:** `core/agents/podcast/moderator_agent.py`
+
+**Purpose:** Hosts podcast debates as a warm, engaging moderator
+
+**Voice:** Antoni (warm narrator)
+
+**Tools:**
+- `create_introduction` - Generate episode intro
+- `generate_follow_up_questions` - Create probing follow-ups
+- `summarize_discussion` - Recap key points
+- `create_outro` - Generate episode closing
+
+#### DebateAdvocateAgent
+
+**File:** `core/agents/podcast/debate_advocate_agent.py`
+
+**Purpose:** Argues FOR debate topics with research and enthusiasm
+
+**Voice:** Rachel (enthusiastic, warm)
+
+**Tools:**
+- `research_positive_aspects` - Find benefits and success stories
+- `build_argument` - Build structured arguments with evidence
+- `generate_debate_statements` - Generate opening/key points/closing
+
+#### DebateSkepticAgent
+
+**File:** `core/agents/podcast/debate_skeptic_agent.py`
+
+**Purpose:** Challenges debate topics with critical analysis
+
+**Voice:** Clyde (authoritative, deep)
+
+**Tools:**
+- `research_concerns` - Find risks and problems
+- `build_critique` - Build structured critique with evidence
+- `generate_debate_statements` - Generate concerns and tough questions
+
+### Audio Generation Service
+
+**File:** `core/services/podcast_audio_service.py`
+
+**Voice Mapping:**
+| Speaker | Voice ID | Name |
+|---------|----------|------|
+| HOST/MODERATOR | ErXwobaYiN019PkySvjV | Antoni |
+| ADVOCATE | 21m00Tcm4TlvDq8ikWAM | Rachel |
+| SKEPTIC | 2EiwWnXFnvU5JabPnv8n | Clyde |
+| ANALYST | 5Q0t7uMcjvnagumLfvZi | Paul |
+
+**Functions:**
+- `parse_podcast_script()` - Parse script into speaker segments
+- `generate_segment_audio()` - Generate TTS via ElevenLabs
+- `concatenate_audio_segments()` - Combine audio with pydub
+- `generate_podcast_audio()` - Main orchestrator with progress
+
+**Cannot Access:** Image, video, editing tools
 
 ---
 

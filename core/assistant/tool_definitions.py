@@ -60,6 +60,7 @@ def get_tool_definitions() -> List[Dict]:
         _get_content_strategy_agent_definition(),     # Session 337: Content strategy research
         _get_marketing_strategy_agent_definition(),   # Session 337: Marketing strategy research
         _get_legal_doc_drafter_agent_definition(),    # Session 403: Pro Se Legal Assistant
+        _get_content_writer_agent_definition(),       # Session 496: Written content from research
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -856,5 +857,51 @@ def _get_legal_doc_drafter_agent_definition() -> Dict:
                 }
             },
             "required": ["query"]
+        }
+    }
+
+
+def _get_content_writer_agent_definition() -> Dict:
+    """
+    Session 496: Content Writer Agent for transforming research into written content.
+    Generates blog posts, podcast scripts, video scripts, articles, newsletters, social threads.
+    """
+    return {
+        "type": "function",
+        "name": "content_writer_agent",
+        "description": get_tool_description("content_writer_agent"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "What to write. Include the topic and any specific requirements. Example: 'Write a blog post about AI startup trends targeting tech entrepreneurs'"
+                },
+                "content_type": {
+                    "type": "string",
+                    "enum": ["blog_post", "podcast_script", "video_script", "article", "social_thread", "newsletter"],
+                    "description": "Type of content to generate: 'blog_post' (SEO blog), 'podcast_script' (audio script), 'video_script' (video narration), 'article' (professional article), 'social_thread' (Twitter/LinkedIn posts), 'newsletter' (email newsletter)"
+                },
+                "research_context": {
+                    "type": "string",
+                    "description": "The research content to transform into written content. Pass any prior research, spider data, or context that should inform the writing."
+                },
+                "tone": {
+                    "type": "string",
+                    "enum": ["professional", "conversational", "educational", "entertaining", "persuasive", "technical"],
+                    "default": "professional",
+                    "description": "Writing tone: professional, conversational, educational, entertaining, persuasive, or technical"
+                },
+                "target_audience": {
+                    "type": "string",
+                    "description": "Who is the target audience? Example: 'tech entrepreneurs', 'beginner developers', 'marketing professionals'"
+                },
+                "word_count": {
+                    "type": "integer",
+                    "default": 1500,
+                    "description": "Approximate word count for the content (default: 1500)"
+                }
+            },
+            "required": ["task", "content_type"]
         }
     }

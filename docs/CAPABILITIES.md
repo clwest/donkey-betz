@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 481 (December 17, 2025)
+**Last Updated:** Session 496 (December 19, 2025)
 
 ---
 
@@ -11,6 +11,7 @@
 | Image Generation Features | 13 | Production |
 | Video Generation Features | 5 | Production |
 | Audio Generation Features | 2 | Production |
+| **AI Podcast Studio** | **4 Agents + TTS Audio** | **Production (Session 496)** |
 | Video Editing Operations | 14 | Production |
 | 3D Generation | Complete | Production |
 | Character Training | 3 | Production |
@@ -141,6 +142,57 @@
 ### Voice Options
 - 10+ built-in voices
 - Custom voice training (coming)
+
+---
+
+## AI Podcast Studio (Session 496)
+
+**Full podcast generation with multi-agent debates and TTS audio.**
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| Script Generation | Multi-speaker debate scripts with GPT |
+| Voice Synthesis | ElevenLabs TTS for all speakers |
+| Audio Concatenation | Seamless podcast assembly with pydub |
+| Progress Tracking | Real-time status updates |
+
+### Podcast Agents (4)
+
+| Agent | Role | Voice |
+|-------|------|-------|
+| PodcastCoordinatorAgent | Orchestrates debates, generates scripts | - |
+| ModeratorAgent | Hosts discussions, asks follow-ups | Antoni |
+| DebateAdvocateAgent | Argues FOR topics with evidence | Rachel |
+| DebateSkepticAgent | Challenges topics with critical analysis | Clyde |
+
+### Voice Mapping
+
+| Speaker | Voice | Style |
+|---------|-------|-------|
+| HOST / MODERATOR | Antoni | Warm, professional |
+| ADVOCATE | Rachel | Enthusiastic, persuasive |
+| SKEPTIC | Clyde | Authoritative, probing |
+| ANALYST | Paul | Calm, data-driven |
+
+### Discord Commands
+
+| Command | Description |
+|---------|-------------|
+| `/podcast-create` | Create new podcast episode with optional audio |
+| `/podcast-status` | Check episode generation progress |
+| `/podcast-list` | List recent podcast episodes |
+| `/podcast-episode` | View episode script and details |
+
+### Audio Service
+
+**File:** `core/services/podcast_audio_service.py`
+
+- `parse_podcast_script()` - Parse script into speaker segments
+- `generate_segment_audio()` - Generate TTS for each segment
+- `concatenate_audio_segments()` - Combine with pauses
+- `generate_podcast_audio()` - Main orchestrator
 
 ---
 

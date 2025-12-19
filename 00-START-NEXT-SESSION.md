@@ -1,41 +1,41 @@
-# Session 496 - Start Here
+# Session 497 - Start Here
 
-**Previous Session:** 495 (SmartTrendingService & New Spiders)
-**Date:** December 18, 2025
+**Previous Session:** 496 (AI Podcast Studio - Audio Generation)
+**Date:** December 19, 2025
 **Status:** Ready for new work!
 
 ---
 
-## Session 495 Achievements (COMPLETE)
+## Session 496 Achievements (COMPLETE)
 
-### SmartTrendingService - Dynamic Topic Matching
+### AI Podcast Studio - Audio Generation
 
-Built a 580-line service that intelligently matches ANY trending query to relevant spiders:
+Added full audio generation to the AI Podcast Studio:
 
-| Feature | Description |
-|---------|-------------|
-| 36 Categories | ai_ml, startups, fintech, defense_tech, healthtech, cybersecurity, etc. |
-| 500+ Keywords | Comprehensive mapping for accurate topic detection |
-| 1-Hour Cache | Performance optimization |
-| Multi-Format | Handles title/summary, items array, name field |
+| Component | Description |
+|-----------|-------------|
+| `podcast_audio_service.py` | 250-line service for TTS audio generation |
+| Script Parser | Parses debate scripts into speaker segments |
+| ElevenLabs TTS | Generates audio for each speaker segment |
+| Audio Concatenation | Combines segments with pydub (500ms pauses) |
+| Celery Integration | Audio generation in `generate_podcast_episode` task |
 
-### 5 New Spiders Added
+### Voice Mapping
 
-| Spider | Source | Category |
-|--------|--------|----------|
-| crunchbase | Crunchbase | startups |
-| venturebeat | VentureBeat | tech, ai_ml |
-| defenseone | Defense One | defense_tech |
-| mobihealthnews | MobiHealthNews | healthtech |
-| securityweek | Security Week | cybersecurity |
+| Speaker | Voice | Style |
+|---------|-------|-------|
+| HOST / MODERATOR | Antoni | Warm, professional |
+| ADVOCATE | Rachel | Enthusiastic, persuasive |
+| SKEPTIC | Clyde | Authoritative, probing |
+| ANALYST | Paul | Calm, data-driven |
 
-### Bug Fix: BaseAgent Format Mismatch
+### Test Results
 
-**Problem:** `'str' object has no attribute 'get'` error causing `success: false`
-
-**Root Cause:** SmartTrendingService returns trends as strings, BaseAgent expected dicts.
-
-**Fix:** Updated `_build_prompt()` and `_build_prompt_with_attribution()` to handle both formats.
+- **Episode:** "Should AI replace some human jobs"
+- **Segments:** 28 parsed and recorded
+- **Duration:** 590 seconds (~9.8 minutes)
+- **File Size:** 14MB MP3
+- **Location:** `media/podcasts/episodes/podcast_85ba63c5_13a34c.mp3`
 
 ---
 
@@ -49,13 +49,11 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Test SmartTrendingService
-# Ask any of these:
-# - "What's trending in startups?"
-# - "What's trending in AI?"
-# - "What's trending in cybersecurity?"
-# - "What's trending in defense tech?"
-# - "What's trending in healthtech?"
+# 3. Play podcast audio
+open http://localhost:8000/media/podcasts/episodes/podcast_85ba63c5_13a34c.mp3
+
+# 4. Create new podcast via Discord
+/podcast-create topic:"Your topic here" generate_audio:true
 ```
 
 ---
@@ -64,54 +62,65 @@ open http://localhost:8000/ai-studio/
 
 | Metric | Value |
 |--------|-------|
-| Spiders | 72 (up from 67!) |
+| Spiders | 72 |
 | Spider Data Records | 20,712 |
-| Records with Embeddings | 18,243 (88.1%) |
-| Agents | 41 |
+| Agents | 45 (4 new podcast agents) |
 | Advisors | 25 |
-| Categories | 36 |
+| Podcast Episodes | 4 (1 with audio) |
+
+---
+
+## Key Files (Session 496)
+
+| File | Purpose |
+|------|---------|
+| `core/services/podcast_audio_service.py` | Audio generation service |
+| `core/agents/podcast/` | 4 podcast agents |
+| `core/tasks.py` | Updated Celery task |
+| `docs/handoffs/SESSION_496_PODCAST_AUDIO_GENERATION.md` | Handoff doc |
 
 ---
 
 ## Key Documentation
 
-- **Session 495 Handoff:** `docs/handoffs/SESSION_495_SMART_TRENDING_SERVICE.md`
-- **Architecture:** `docs/ARCHITECTURE.md`
+- **Session 496 Handoff:** `docs/handoffs/SESSION_496_PODCAST_AUDIO_GENERATION.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
-- **Spiders:** `docs/SPIDERS.md`
+- **Agents:** `docs/AGENTS.md`
+- **Architecture:** `docs/ARCHITECTURE.md`
 
 ---
 
 ## What's Working Great
 
-- SmartTrendingService dynamic topic matching for ANY query
-- 5 new spiders covering startups, defense, health, security
-- TechCrunch spider enhanced with new category keywords
-- BaseAgent handles both string and dict trend formats
-- All API endpoints returning `success: true`
+- AI Podcast Studio end-to-end: script generation + audio synthesis
+- 4-voice podcasts with distinct personalities
+- ElevenLabs TTS integration (Antoni, Rachel, Clyde, Paul)
+- Audio file storage and URL generation
+- Progress tracking during generation
 
 ---
 
-## Potential Next Tasks (Session 496+)
+## Potential Next Tasks (Session 497+)
 
-1. Add more spiders for underrepresented categories (education, legal, government)
-2. Implement semantic search fallback when keyword matching fails
-3. Add trend velocity detection (what's rising vs declining)
-4. Consider ML-based topic classification for better accuracy
-5. Frontend polish and UX improvements
+1. **Discord audio posting** - Post audio file to Discord channel when complete
+2. **Playback UI** - Add audio player to AI Studio web interface
+3. **Episode download** - Download button for podcast MP3
+4. **Transcript sync** - Highlight transcript as audio plays
+5. **Background music** - Add intro/outro music to podcasts
+6. **Parallel generation** - Speed up by generating segments in parallel
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 496: READY FOR NEW WORK                        |
+|              SESSION 497: READY FOR NEW WORK                        |
 |                                                                    |
-|   Session 495 COMPLETE:                                            |
-|   - SmartTrendingService (580 lines, 36 categories)                |
-|   - 5 new spiders (crunchbase, venturebeat, defenseone, etc.)      |
-|   - BaseAgent bug fix (string/dict format handling)                |
-|   - 72 total spiders now!                                          |
+|   Session 496 COMPLETE:                                            |
+|   - Podcast audio generation (ElevenLabs TTS)                      |
+|   - 4-voice debates: Antoni, Rachel, Clyde, Paul                   |
+|   - 9.8 minute test podcast generated successfully!                |
+|   - Audio service: parse, generate, concatenate, save              |
 |                                                                    |
-|   Ask: "What's trending in [any topic]?"                           |
+|   Try: /podcast-create topic:"AI in healthcare" generate_audio:true|
 +====================================================================+
 ```

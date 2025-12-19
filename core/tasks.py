@@ -16499,3 +16499,185 @@ def run_skill_gap_analyzer(self):
 # Note: Style evolution tracking already scheduled via 'record-style-evolution' task
 # (core.tasks.record_all_user_style_evolution) - see Session 210
 # Session 489: Connected implicit learning to image operations instead.
+
+
+# ==================== SESSION 496: AI PODCAST STUDIO ====================
+
+@shared_task(bind=True)
+def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str, participants: int, generate_audio: bool):
+    """
+    Session 496: Generate a podcast episode using the PodcastCoordinatorAgent.
+
+    This task:
+    1. Loads the episode record
+    2. Runs the PodcastCoordinatorAgent to generate debate and script
+    3. Updates the episode with the generated content
+    4. Optionally triggers audio generation
+
+    Args:
+        episode_id: UUID of the PodcastEpisode
+        topic: The debate topic
+        format_type: 'debate', 'roundtable', 'interview', 'monologue'
+        participants: Number of debate participants (2-4)
+        generate_audio: Whether to generate TTS audio
+    """
+    import json
+    from django.utils import timezone
+
+    logger.info(f"🎙️ [PODCAST] Starting generation for episode {episode_id}: {topic}")
+
+    try:
+        from core.models import PodcastEpisode, PodcastDebate
+        from core.agents.podcast import PodcastCoordinatorAgent
+
+        # Get the episode
+        try:
+            episode = PodcastEpisode.objects.get(id=episode_id)
+        except PodcastEpisode.DoesNotExist:
+            logger.error(f"🎙️ [PODCAST] Episode {episode_id} not found")
+            return {'status': 'error', 'error': 'Episode not found'}
+
+        # Update status
+        episode.status = 'researching'
+        episode.progress_percent = 10
+        episode.save()
+
+        # Create the coordinator agent
+        coordinator = PodcastCoordinatorAgent()
+
+        # Build the task prompt
+        task_prompt = f"""Create a {format_type} podcast episode about: "{topic}"
+
+Generate a complete podcast script with:
+1. A balanced debate question
+2. {participants} participants with distinct perspectives
+3. Opening statements from each participant
+4. A moderated discussion with follow-ups
+5. Summary of agreements and disagreements
+6. Closing statements
+
+Use the generate_podcast_script tool to create the full script with speaker labels."""
+
+        # Run the synchronous execute method
+        logger.info(f"🎙️ [PODCAST] Executing coordinator agent...")
+        episode.status = 'debating'
+        episode.progress_percent = 30
+        episode.save()
+
+        result = coordinator.execute(
+            task=task_prompt,
+            context={
+                'topic': topic,
+                'format_type': format_type,
+                'participants': participants,
+                'generate_audio': generate_audio
+            },
+            scifi_context={},
+            spider_context={}
+        )
+
+        if result.success:
+            logger.info(f"🎙️ [PODCAST] Agent execution successful")
+            episode.status = 'scripting'
+            episode.progress_percent = 60
+            episode.save()
+
+            # Extract script from tool results
+            script_text = result.message
+            script_segments = []
+
+            # Process tool results to build the script
+            for tool_result in result.tool_calls:
+                if isinstance(tool_result, dict):
+                    # Check for podcast script content
+                    if 'segments' in tool_result:
+                        script_segments = tool_result.get('segments', [])
+                    if 'script' in tool_result:
+                        script_text = tool_result.get('script', script_text)
+                    # Check for debate structure
+                    if 'debate_question' in tool_result:
+                        script_text = f"Topic: {tool_result.get('topic', topic)}\n"
+                        script_text += f"Question: {tool_result.get('debate_question', '')}\n\n"
+                        if 'participants' in tool_result:
+                            script_text += "Participants:\n"
+                            for p in tool_result.get('participants', []):
+                                if isinstance(p, dict):
+                                    script_text += f"- {p.get('perspective', 'Unknown')}: {p.get('voice_id', 'Unknown voice')}\n"
+                        script_text += f"\n{result.message}"
+
+            # Update episode with generated script
+            episode.script = script_text
+            episode.script_segments = script_segments
+            episode.save()
+
+            logger.info(f"🎙️ [PODCAST] Script generated: {len(script_text)} chars")
+
+            # Generate audio if requested
+            audio_result = None
+            if generate_audio:
+                logger.info(f"🎙️ [PODCAST] Starting audio generation...")
+                episode.status = 'recording'
+                episode.progress_percent = 70
+                episode.save()
+
+                from core.services.podcast_audio_service import generate_podcast_audio
+
+                def progress_callback(percent, message):
+                    # Map 0-100 to 70-100
+                    mapped_percent = 70 + int(percent * 0.3)
+                    episode.progress_percent = mapped_percent
+                    episode.save(update_fields=['progress_percent'])
+                    logger.info(f"🎙️ [PODCAST] Audio: {percent}% - {message}")
+
+                audio_result = generate_podcast_audio(
+                    episode_id=episode_id,
+                    progress_callback=progress_callback
+                )
+
+                if audio_result['success']:
+                    logger.info(f"🎙️ [PODCAST] Audio generated: {audio_result['duration_seconds']:.1f}s")
+                else:
+                    logger.warning(f"🎙️ [PODCAST] Audio generation failed: {audio_result.get('error')}")
+                    # Continue - script generation was successful
+
+            # Mark complete
+            episode.status = 'complete'
+            episode.progress_percent = 100
+            episode.save()
+
+            logger.info(f"🎙️ [PODCAST] Successfully generated episode {episode_id}")
+
+            result_data = {
+                'status': 'completed',
+                'episode_id': episode_id,
+                'script_length': len(script_text),
+                'segment_count': len(script_segments)
+            }
+
+            if audio_result and audio_result.get('success'):
+                result_data['audio_url'] = audio_result.get('audio_url')
+                result_data['audio_duration'] = audio_result.get('duration_seconds')
+
+            return result_data
+        else:
+            episode.status = 'failed'
+            episode.error_message = result.message or 'Agent execution failed'
+            episode.save()
+            logger.error(f"🎙️ [PODCAST] Agent execution failed: {result.message}")
+            return {'status': 'error', 'error': result.message}
+
+    except Exception as e:
+        logger.error(f"🎙️ [PODCAST] Generation failed: {e}", exc_info=True)
+
+        # Try to update the episode status
+        try:
+            from core.models import PodcastEpisode
+            episode = PodcastEpisode.objects.get(id=episode_id)
+            episode.status = 'failed'
+            episode.error_message = str(e)[:500]
+            episode.save()
+        except Exception:
+            pass
+
+        return {'status': 'error', 'error': str(e)}
+
