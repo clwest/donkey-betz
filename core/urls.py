@@ -29,6 +29,16 @@ def legacy_portfolio_image_redirect(request, path):
 # Import advisor API views (Session 25)
 from core.views_advisor_api import advisor_consult, advisor_list, advisor_detail
 
+# Import podcast API views (Session 502)
+from core.views_podcast import (
+    podcast_list as podcast_list_view,
+    podcast_create as podcast_create_view,
+    podcast_status as podcast_status_view,
+    podcast_script as podcast_script_view,
+    podcast_delete as podcast_delete_view,
+    podcast_stats as podcast_stats_view,
+)
+
 # Import intelligence API views (Session 25)
 from core.views_intelligence_api import (
     intelligence_activity_feed, spider_network_status, intelligence_data_quality
@@ -2297,7 +2307,15 @@ urlpatterns = [
     path('api/v1/gallery/toggle-favorite/', unified_toggle_favorite, name='unified-toggle-favorite'),
     path('api/v1/content/library/', content_library, name='content-library'),
     path('api/v1/podcasts/', podcasts_list, name='podcasts-list'),
-    
+
+    # Session 502: Podcast Studio APIs (real data, replaces mock)
+    path('api/podcasts/list/', podcast_list_view, name='podcast-list-real'),
+    path('api/podcasts/create/', podcast_create_view, name='podcast-create'),
+    path('api/podcasts/stats/', podcast_stats_view, name='podcast-stats'),
+    path('api/podcasts/<uuid:episode_id>/status/', podcast_status_view, name='podcast-status'),
+    path('api/podcasts/<uuid:episode_id>/script/', podcast_script_view, name='podcast-script'),
+    path('api/podcasts/<uuid:episode_id>/', podcast_delete_view, name='podcast-delete'),
+
     # Agent Orchestration APIs (from DBAO tools-manifest)
     path('api/v1/agents/list/', list_agents, name='agents-list'),
     path('api/v1/agents/by-specialization/', get_agents_by_specialization, name='agents-by-specialization'),
