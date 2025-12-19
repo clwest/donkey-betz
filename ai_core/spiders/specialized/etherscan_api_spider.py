@@ -229,20 +229,24 @@ class EtherscanAPISpider(BaseIntelligenceSpider):
             # Generate insights
             insights = self._generate_insights(raw_data)
 
+            # Session 503: Fixed to match base IntelligenceData signature
             return IntelligenceData(
-                source=self.spider_id,
+                spider_id=self.spider_id,
+                source_url="https://etherscan.io",
+                data_type='blockchain',
                 content={
                     'transactions': large_transfers,
                     'whale_alerts': whale_alerts,
                     'recent_blocks': raw_data.get('recent_blocks', []),
                     'summary': summary,
-                    'insights': insights
+                    'insights': insights,
+                    'title': f"Ethereum Network Activity: {summary}",
                 },
-                category='blockchain',
-                relevance_score=self._calculate_relevance(raw_data),
-                freshness=1.0,
-                title=f"Ethereum Network Activity: {summary}",
-                url="https://etherscan.io",
+                metadata={
+                    'relevance_score': self._calculate_relevance(raw_data),
+                    'freshness': 1.0,
+                },
+                quality_score=self._calculate_relevance(raw_data) / 100.0,  # Convert to 0-1 scale
                 timestamp=datetime.now(timezone.utc)
             )
 

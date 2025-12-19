@@ -53,15 +53,20 @@ class KaggleSpider(BaseIntelligenceSpider):
     def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
         super().__init__(spider_id, targets, subscribers, redis_config)
         self.kaggle_username = os.getenv('KAGGLE_USERNAME', '')
-        # Support both KAGGLE_API_KEY (standard) and KAGGLE_KEY (legacy)
-        self.kaggle_key = os.getenv('KAGGLE_API_KEY', os.getenv('KAGGLE_KEY', ''))
+        # Session 503: Support KAGGLE_API_TOKEN (official), KAGGLE_API_KEY, and KAGGLE_KEY (legacy)
+        self.kaggle_key = os.getenv('KAGGLE_API_TOKEN', os.getenv('KAGGLE_API_KEY', os.getenv('KAGGLE_KEY', '')))
 
     def _get_auth_header(self) -> Dict[str, str]:
-        """Generate Basic Auth header for Kaggle API"""
-        if self.kaggle_username and self.kaggle_key:
-            credentials = f"{self.kaggle_username}:{self.kaggle_key}"
-            encoded = base64.b64encode(credentials.encode()).decode()
-            return {'Authorization': f'Basic {encoded}'}
+        """Generate auth header for Kaggle API"""
+        if self.kaggle_key:
+            # Session 503: New KGAT_* tokens use Bearer auth, old tokens use Basic auth
+            if self.kaggle_key.startswith('KGAT_'):
+                return {'Authorization': f'Bearer {self.kaggle_key}'}
+            elif self.kaggle_username:
+                # Legacy Basic auth for old-style keys
+                credentials = f"{self.kaggle_username}:{self.kaggle_key}"
+                encoded = base64.b64encode(credentials.encode()).decode()
+                return {'Authorization': f'Basic {encoded}'}
         return {}
 
     async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:

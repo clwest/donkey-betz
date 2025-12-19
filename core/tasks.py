@@ -155,9 +155,38 @@ def run_spider_by_category(self, category: str):
             try:
                 spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
-                    spider = spider_class()
-                    data = spider.fetch()
-                    item_count = len(data) if data else 0
+                    # Session 503: Try both constructor patterns
+                    try:
+                        spider = spider_class()
+                    except TypeError:
+                        spider = spider_class(
+                            spider_id=spider_name,
+                            targets=[],
+                            subscribers=[],
+                            redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
+                        )
+
+                    # Session 503: Support multiple method patterns
+                    if hasattr(spider, 'fetch'):
+                        data = spider.fetch()
+                    elif hasattr(spider, 'fetch_data'):
+                        import asyncio
+                        from ai_core.spiders.base_spider import SpiderTarget
+
+                        async def run_fetch():
+                            target = SpiderTarget(url='internal://spider-execution')
+                            raw = await spider.fetch_data(target)
+                            if raw and hasattr(spider, 'process_data'):
+                                result = await spider.process_data(raw, target)
+                                if result:
+                                    return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
+                            return raw if raw else {'items': []}
+
+                        data = asyncio.run(run_fetch())
+                    else:
+                        data = {'items': []}
+
+                    item_count = len(data) if isinstance(data, list) else len(data.get('items', []) if isinstance(data, dict) else [])
                     results.append({
                         'spider': spider_name,
                         'items': item_count,
@@ -239,14 +268,40 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
         else:
             spider_class = registry.get_spider_class(spider_name)
             if spider_class:
-                spider = spider_class()
+                # Session 503: Try both constructor patterns
+                try:
+                    spider = spider_class()
+                except TypeError:
+                    # Spider requires full constructor args
+                    spider = spider_class(
+                        spider_id=spider_name,
+                        targets=[],
+                        subscribers=[],
+                        redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
+                    )
+
                 if hasattr(spider, 'fetch'):
                     data = spider.fetch()
                 elif hasattr(spider, 'scrape'):
                     import asyncio
                     data = asyncio.run(spider.scrape())
+                elif hasattr(spider, 'fetch_data'):
+                    # Session 503: Support for spiders using fetch_data(target) pattern
+                    import asyncio
+                    from ai_core.spiders.base_spider import SpiderTarget
+
+                    async def run_fetch():
+                        target = SpiderTarget(url='internal://spider-execution')
+                        raw = await spider.fetch_data(target)
+                        if raw and hasattr(spider, 'process_data'):
+                            result = await spider.process_data(raw, target)
+                            if result:
+                                return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
+                        return raw if raw else {'items': []}
+
+                    data = asyncio.run(run_fetch())
                 else:
-                    data = {'items': [], 'message': 'Spider has no fetch/scrape method'}
+                    data = {'items': [], 'message': 'Spider has no fetch/scrape/fetch_data method'}
                 item_count = len(data) if isinstance(data, list) else len(data.get('items', []))
             else:
                 data = {'items': [], 'error': f'Spider class not found: {spider_name}'}
@@ -731,13 +786,35 @@ def run_spider_network(self):
                             subscribers=[],
                             redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
                         )
-                        # Try spider methods
+                        # Try spider methods - Session 503: Added fetch_data support
                         if hasattr(spider, 'scrape'):
                             import asyncio
                             data = asyncio.run(spider.scrape())
                         elif hasattr(spider, 'collect_data'):
                             import asyncio
                             data = asyncio.run(spider.collect_data())
+                        elif hasattr(spider, 'fetch_data'):
+                            # Session 503: Support for spiders using fetch_data(target) pattern
+                            import asyncio
+                            from ai_core.spiders.base_spider import SpiderTarget
+
+                            async def run_fetch_data():
+                                # Create a dummy target - the spider will use its own logic
+                                target = SpiderTarget(url='internal://spider-execution')
+                                raw_data = await spider.fetch_data(target)
+                                if raw_data and hasattr(spider, 'process_data'):
+                                    result = await spider.process_data(raw_data, target)
+                                    if result:
+                                        return {
+                                            'source': spider_name,
+                                            'items': [result.content] if hasattr(result, 'content') else [],
+                                            'raw_data': raw_data,
+                                            'category': spider_config.get('category', 'general'),
+                                            'timestamp': timezone.now().isoformat()
+                                        }
+                                return raw_data if raw_data else {'items': []}
+
+                            data = asyncio.run(run_fetch_data())
                         else:
                             data = {
                                 'source': spider_name,
