@@ -171,12 +171,28 @@ CRITICAL: Use research tools to find real evidence. Never fabricate statistics o
             "voice_id": "Rachel",
             "position": f"Strong support for: {task}"
         }
-        return AgentResult(
+        result = AgentResult(
             success=True,
             message=f"Advocate analysis for: {task}",
             data={"tool_results": [tool_result]},
             tool_calls=[tool_result]
         )
+
+        # Record learning outcome for collective intelligence
+        try:
+            self._record_learning_outcome(
+                task=task,
+                result=result,
+                success=True,
+                context={
+                    'agent_type': self.__class__.__name__,
+                    'role': 'ADVOCATE',
+                }
+            )
+        except Exception as le:
+            logger.warning(f"Failed to record learning outcome: {le}")
+
+        return result
 
     def _handle_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Handle tool calls for debate advocacy."""

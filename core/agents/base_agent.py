@@ -608,23 +608,47 @@ class BaseAgent(ABC, TimeTravelMixin):
                     sources_str = ', '.join(spider_sources[:3])
                     parts.append(f"   (from: {sources_str})")
 
-        # Add mood modifier if available
+        # Add mood modifier if available - Session 497: Now affects behavior
         if scifi_context:
             mood = scifi_context.get('mood')
             if mood:
                 mood_type = mood.get('mood_type', 'focused')
                 style_mod = mood.get('style_modifier', 'balanced')
-                parts.append(f"\n\n## Current Mood")
+                confidence_mod = mood.get('confidence_modifier', 1.0)
+
+                parts.append(f"\n\n## Current Mood & Behavioral Guidance")
                 parts.append(f"State: {mood_type}")
                 parts.append(f"Style tendency: {style_mod}")
 
-            # Add evolution context
+                # Session 497: Apply behavioral constraints based on confidence modifier
+                if confidence_mod >= 1.3:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are highly confident. Make bold recommendations. Be decisive and assertive.")
+                elif confidence_mod >= 1.1:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are confident. Provide clear recommendations with conviction.")
+                elif confidence_mod <= 0.8:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are in a cautious state. Prefer safe, proven approaches.")
+                elif confidence_mod <= 0.9:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are focused. Be direct and efficient.")
+
+            # Add evolution context - Session 497: Authority now affects behavior
             evolution = scifi_context.get('evolution')
             if evolution:
                 level = evolution.get('level', 1)
                 title_evo = evolution.get('title', 'Apprentice')
-                parts.append(f"\n\n## Experience Level")
-                parts.append(f"Level {level} - {title_evo}")
+                authority = evolution.get('authority_level', 'junior')
+
+                parts.append(f"\n\n## Experience Level & Authority")
+                parts.append(f"Level {level} - {title_evo} ({authority})")
+
+                # Session 497: Apply authority-based behavioral guidance
+                if authority == 'master' or level >= 31:
+                    parts.append("**AUTHORITY DIRECTIVE:** Lead with authority. Be definitive in your assessments.")
+                elif authority == 'expert' or level >= 16:
+                    parts.append("**AUTHORITY DIRECTIVE:** Provide authoritative guidance with confidence.")
+                elif authority == 'senior' or level >= 6:
+                    parts.append("**AUTHORITY DIRECTIVE:** Provide balanced recommendations based on experience.")
+                else:
+                    parts.append("**AUTHORITY DIRECTIVE:** Be thorough. Consider multiple perspectives.")
 
         # Add spider context (trends, market data)
         if spider_context:
@@ -702,23 +726,68 @@ class BaseAgent(ABC, TimeTravelMixin):
         except Exception as e:
             logger.debug(f"Could not get policy context for {self.name}: {e}")
 
-        # Add mood modifier if available
+        # Add mood modifier if available - Session 497: Now affects behavior
         if scifi_context:
             mood = scifi_context.get('mood')
             if mood:
                 mood_type = mood.get('mood_type', 'focused')
                 style_mod = mood.get('style_modifier', 'balanced')
-                parts.append(f"\n\n## Current Mood")
+                confidence_mod = mood.get('confidence_modifier', 1.0)
+                description = mood.get('description', '')
+
+                parts.append(f"\n\n## Current Mood & Behavioral Guidance")
                 parts.append(f"State: {mood_type}")
                 parts.append(f"Style tendency: {style_mod}")
 
-            # Add evolution context
+                # Session 497: Apply behavioral constraints based on confidence modifier
+                if confidence_mod >= 1.3:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are highly confident. Make bold recommendations. Be decisive and assertive in your responses. Don't hedge or qualify unnecessarily.")
+                elif confidence_mod >= 1.1:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are confident. Provide clear recommendations with conviction. Balance assertiveness with appropriate caveats.")
+                elif confidence_mod <= 0.8:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are in a cautious state. Prefer safe, proven approaches. Acknowledge uncertainty where it exists. Suggest alternatives.")
+                elif confidence_mod <= 0.9:
+                    parts.append("**BEHAVIORAL DIRECTIVE:** You are in a focused, efficient state. Be direct and avoid over-elaboration. Get to the point quickly.")
+
+            # Add evolution context - Session 497: Authority now affects behavior
             evolution = scifi_context.get('evolution')
             if evolution:
                 level = evolution.get('level', 1)
                 title = evolution.get('title', 'Apprentice')
-                parts.append(f"\n\n## Experience Level")
-                parts.append(f"Level {level} - {title}")
+                authority = evolution.get('authority_level', 'junior')
+                confidence_boost = evolution.get('confidence_boost', 1.0)
+
+                parts.append(f"\n\n## Experience Level & Authority")
+                parts.append(f"Level {level} - {title} ({authority})")
+
+                # Session 497: Apply authority-based behavioral guidance
+                if authority == 'master' or level >= 31:
+                    parts.append("**AUTHORITY DIRECTIVE:** As a master-level agent, you have extensive experience. Lead with authority. Your recommendations carry significant weight. Be definitive in your assessments.")
+                elif authority == 'expert' or level >= 16:
+                    parts.append("**AUTHORITY DIRECTIVE:** As an expert-level agent, provide authoritative guidance. You can make strong recommendations based on your experience. Be confident but open to edge cases.")
+                elif authority == 'senior' or level >= 6:
+                    parts.append("**AUTHORITY DIRECTIVE:** As a senior-level agent, provide balanced recommendations. You have solid experience but remain open to learning.")
+                else:
+                    parts.append("**AUTHORITY DIRECTIVE:** As a developing agent, be thorough in your analysis. Consider multiple perspectives before making recommendations.")
+
+            # Session 497: Add synergy-based collaboration guidance
+            relationships = scifi_context.get('relationships')
+            if relationships:
+                allies = relationships.get('allies', [])
+                team_synergy = relationships.get('team_synergy', 1.0)
+                collab_bonus = relationships.get('collaboration_bonus', {})
+
+                if allies:
+                    parts.append(f"\n\n## Collaboration Synergies")
+                    parts.append(f"Works well with: {', '.join(allies[:5])}")
+
+                    # Session 497: Apply synergy-based behavioral guidance
+                    if team_synergy >= 1.5:
+                        parts.append("**SYNERGY DIRECTIVE:** You have strong team synergy. Actively build on and enhance collaborators' ideas. Seek integration opportunities. Your combined output should exceed individual contributions.")
+                    elif team_synergy >= 1.2:
+                        parts.append("**SYNERGY DIRECTIVE:** You have good team synergy. Coordinate with allies and complement their work. Look for synthesis opportunities.")
+                    elif team_synergy < 1.0:
+                        parts.append("**SYNERGY DIRECTIVE:** Team dynamics are neutral. Focus on your individual contribution. Be clear and explicit in handoffs.")
 
             # Add learned patterns from memory
             memory = scifi_context.get('memory')

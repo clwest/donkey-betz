@@ -184,32 +184,85 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
                     result = self._execute_tool(tool_name, tool_input)
                     tool_results.append(result)
 
-                # Return with tool results
-                return AgentResult(
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                result = AgentResult(
                     success=True,
                     message=response.get('message') or "Topic mining complete",
                     data={"tool_results": tool_results},
                     agent_name=self.name,
-                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=execution_time_ms,
                     tool_calls=tool_calls_made
                 )
+
+                # Record learning outcome for collective intelligence
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=True,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'execution_time_ms': execution_time_ms,
+                            'tools_used': [tc['name'] for tc in tool_calls_made],
+                            'trends_found': len(tool_results),
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to record learning outcome: {e}")
+
+                return result
             else:
                 # No tools called, return message
-                return AgentResult(
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                result = AgentResult(
                     success=True,
                     message=response.get('message', 'No response'),
                     agent_name=self.name,
-                    execution_time_ms=int((time.time() - start_time) * 1000)
+                    execution_time_ms=execution_time_ms
                 )
+
+                # Record learning outcome
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=True,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'execution_time_ms': execution_time_ms,
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to record learning outcome: {e}")
+
+                return result
 
         except Exception as e:
             logger.error(f"TopicMinerAgent execution error: {e}")
-            return AgentResult(
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            result = AgentResult(
                 success=False,
                 error=str(e),
                 agent_name=self.name,
-                execution_time_ms=int((time.time() - start_time) * 1000)
+                execution_time_ms=execution_time_ms
             )
+
+            # Record failed learning outcome
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'execution_time_ms': execution_time_ms,
+                        'error': str(e),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a tool and return results"""

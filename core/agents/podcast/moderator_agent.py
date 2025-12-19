@@ -196,12 +196,28 @@ CRITICAL: Stay neutral. Your job is to facilitate, not to take sides."""
             "voice_id": "Antoni",
             "segment": "moderation"
         }
-        return AgentResult(
+        result = AgentResult(
             success=True,
             message=f"Host moderation for: {task}",
             data={"tool_results": [tool_result]},
             tool_calls=[tool_result]
         )
+
+        # Record learning outcome for collective intelligence
+        try:
+            self._record_learning_outcome(
+                task=task,
+                result=result,
+                success=True,
+                context={
+                    'agent_type': self.__class__.__name__,
+                    'role': 'HOST',
+                }
+            )
+        except Exception as le:
+            logger.warning(f"Failed to record learning outcome: {le}")
+
+        return result
 
     def _handle_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Handle tool calls for moderation."""

@@ -192,24 +192,76 @@ Always provide:
         Returns:
             AgentResult with detected signals and strength ratings
         """
+        import time
+        start_time = time.time()
+
         logger.info(f"📡 [SESSION 465] SignalScannerAgent executing: {task[:100]}")
 
-        # Build system context
-        scan_context = self._build_scan_context(context)
+        try:
+            # Build system context
+            scan_context = self._build_scan_context(context)
 
-        # Build prompt
-        prompt = self._build_prompt(task, additional_context=scan_context)
+            # Build prompt
+            prompt = self._build_prompt(task, additional_context=scan_context)
 
-        # Call GPT with tools
-        result = self._call_gpt(prompt, self.tools)
+            # Call GPT with tools
+            gpt_result = self._call_gpt(prompt, self.tools)
 
-        logger.info(f"📡 [SESSION 465] SignalScannerAgent found {len(result.get('signals', []))} signals")
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            signals_found = len(gpt_result.get('signals', []))
 
-        return AgentResult(
-            success=True,
-            data=result,
-            message=f"Scanned and found {len(result.get('signals', []))} technical signals"
-        )
+            logger.info(f"📡 [SESSION 465] SignalScannerAgent found {signals_found} signals")
+
+            result = AgentResult(
+                success=True,
+                data=gpt_result,
+                message=f"Scanned and found {signals_found} technical signals",
+                agent_name=self.name,
+                execution_time_ms=execution_time_ms
+            )
+
+            # Record learning outcome for collective intelligence
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=True,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'execution_time_ms': execution_time_ms,
+                        'signals_found': signals_found,
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"SignalScannerAgent error: {e}")
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            result = AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name,
+                execution_time_ms=execution_time_ms
+            )
+
+            # Record failed learning outcome
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'error': str(e),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _build_scan_context(self, context: Optional[Dict[str, Any]]) -> str:
         """Build context string for signal scanning."""

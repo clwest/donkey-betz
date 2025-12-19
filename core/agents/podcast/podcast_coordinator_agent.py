@@ -228,6 +228,21 @@ Create a structured podcast debate with:
             return await self._execute_with_gpt(enhanced_task)
 
         result = loop.run_until_complete(_run())
+
+        # Record learning outcome for collective intelligence
+        try:
+            self._record_learning_outcome(
+                task=task,
+                result=result,
+                success=result.success if hasattr(result, 'success') else True,
+                context={
+                    'agent_type': self.__class__.__name__,
+                    'execution_time_ms': result.execution_time_ms if hasattr(result, 'execution_time_ms') else 0,
+                }
+            )
+        except Exception as le:
+            logger.warning(f"Failed to record learning outcome: {le}")
+
         return result
 
     async def _execute_with_gpt(self, task: str) -> AgentResult:

@@ -252,14 +252,32 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                     tool_results.append(result)
 
                 # Return with tool results
-                return AgentResult(
+                execution_time = int((time.time() - start_time) * 1000)
+                result = AgentResult(
                     success=True,
                     message=response.get('message') or "Coordination complete",
                     data={"tool_results": tool_results},
                     agent_name=self.name,
-                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=execution_time,
                     tool_calls=tool_calls_made
                 )
+
+                # Record learning outcome for collective intelligence
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=True,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'execution_time_ms': execution_time,
+                            'tools_used': [tc['name'] for tc in tool_calls_made],
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
+
+                return result
             else:
                 # No tools called, return message
                 return AgentResult(

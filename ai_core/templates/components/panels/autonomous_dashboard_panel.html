@@ -39,6 +39,20 @@
                     <i class="fas fa-spider me-1"></i>Spider Operations
                 </button>
             </li>
+            <!-- Session 497: Narrative Drift Tab -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="auto-narrative-tab" data-bs-toggle="pill" data-bs-target="#auto-narrative"
+                        type="button" role="tab" onclick="showAutoSubTab('narrative')" style="color: #60a5fa;">
+                    <i class="fas fa-wave-square me-1"></i>Narrative Drift
+                </button>
+            </li>
+            <!-- Session 497: ML Scoring Tab -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="auto-ml-tab" data-bs-toggle="pill" data-bs-target="#auto-ml"
+                        type="button" role="tab" onclick="showAutoSubTab('ml')" style="color: #fbbf24;">
+                    <i class="fas fa-brain me-1"></i>ML Scoring
+                </button>
+            </li>
         </ul>
 
         <!-- Overview Content (default visible) -->
@@ -181,6 +195,205 @@
         <!-- Spider Operations Content (hidden by default) -->
         {% include "components/panels/spider_operations_panel.html" %}
 
+        <!-- Session 497: Narrative Drift Content (hidden by default) -->
+        <div id="narrativeDriftContainer" style="display: none;">
+            <div class="row mb-4">
+                <!-- Stats Cards -->
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #60a5fa;" id="narrativeTotalCount">0</h2>
+                            <small class="text-muted">Narratives</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #34d399;" id="narrativeActiveCount">0</h2>
+                            <small class="text-muted">Active</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #f472b6;" id="narrativeEvidence24h">0</h2>
+                            <small class="text-muted">Evidence (24h)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #fbbf24;" id="narrativeShifts24h">0</h2>
+                            <small class="text-muted">Shifts (24h)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #f87171;" id="narrativeAlerts">0</h2>
+                            <small class="text-muted">Active Alerts</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #a78bfa;" id="narrativeDomains">0</h2>
+                            <small class="text-muted">Domains</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Recent Shifts -->
+                <div class="col-lg-6">
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div class="card-header" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(59, 130, 246, 0.3);">
+                            <h5 class="mb-0" style="color: #60a5fa;">
+                                <i class="fas fa-exchange-alt me-2"></i>Recent Narrative Shifts
+                            </h5>
+                        </div>
+                        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                            <div id="narrativeShiftsList">
+                                <div class="text-center py-4 text-muted">Loading shifts...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Domain Coverage -->
+                <div class="col-lg-6">
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(139, 92, 246, 0.3);">
+                        <div class="card-header" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                            <h5 class="mb-0" style="color: #a78bfa;">
+                                <i class="fas fa-layer-group me-2"></i>Domain Coverage
+                            </h5>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <div id="narrativeDomainsList">
+                                <div class="text-center py-4 text-muted">Loading domains...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session 497: ML Scoring Content (hidden by default) -->
+        <div id="mlScoringContainer" style="display: none;">
+            <div class="row mb-4">
+                <!-- Stats Cards -->
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #fbbf24;" id="mlTotalOpps">0</h2>
+                            <small class="text-muted">Opportunities</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #34d399;" id="mlOpps24h">0</h2>
+                            <small class="text-muted">Scored (24h)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #60a5fa;" id="mlAccuracy">0%</h2>
+                            <small class="text-muted">Accuracy</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #f472b6;" id="mlHighScore">0</h2>
+                            <small class="text-muted">High Score</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <h2 class="mb-0" style="color: #a78bfa;" id="mlTrainingData">0</h2>
+                            <small class="text-muted">Training Data</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card h-100" style="background: rgba(107, 114, 128, 0.15); border: 1px solid rgba(107, 114, 128, 0.4);">
+                        <div class="card-body text-center py-3">
+                            <div id="mlModelStatus" style="color: #9ca3af;">
+                                <i class="fas fa-circle-notch"></i>
+                            </div>
+                            <small class="text-muted">Model Status</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Score Distribution -->
+                <div class="col-lg-6">
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <div class="card-header" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+                            <h5 class="mb-0" style="color: #fbbf24;">
+                                <i class="fas fa-chart-bar me-2"></i>Score Distribution (7d)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="mlScoreDistribution">
+                                <div class="d-flex justify-content-around text-center">
+                                    <div class="p-3" style="flex: 1; background: rgba(239, 68, 68, 0.15); border-radius: 8px; margin: 0 5px;">
+                                        <h3 class="mb-0" style="color: #f87171;" id="mlLowCount">0</h3>
+                                        <small class="text-muted">Low (0-39)</small>
+                                    </div>
+                                    <div class="p-3" style="flex: 1; background: rgba(245, 158, 11, 0.15); border-radius: 8px; margin: 0 5px;">
+                                        <h3 class="mb-0" style="color: #fbbf24;" id="mlMediumCount">0</h3>
+                                        <small class="text-muted">Medium (40-69)</small>
+                                    </div>
+                                    <div class="p-3" style="flex: 1; background: rgba(16, 185, 129, 0.15); border-radius: 8px; margin: 0 5px;">
+                                        <h3 class="mb-0" style="color: #34d399;" id="mlHighCount">0</h3>
+                                        <small class="text-muted">High (70-100)</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Outcome Breakdown -->
+                            <h6 class="mt-4 mb-3" style="color: #fbbf24;">Outcome Breakdown</h6>
+                            <div id="mlOutcomeBreakdown">
+                                <div class="text-center py-2 text-muted">Loading outcomes...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent High-Score Opportunities -->
+                <div class="col-lg-6">
+                    <div class="card mb-4" style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <div class="card-header" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
+                            <h5 class="mb-0" style="color: #34d399;">
+                                <i class="fas fa-star me-2"></i>Top Scored Opportunities (24h)
+                            </h5>
+                        </div>
+                        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                            <div id="mlHighScoreList">
+                                <div class="text-center py-4 text-muted">Loading opportunities...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -256,16 +469,22 @@ function refreshAutonomousDashboard() {
 // Sub-tab switching
 let triggerTuningLoaded = false;
 let spiderOperationsLoaded = false;
+let narrativeDriftLoaded = false;
+let mlScoringLoaded = false;
 
 function showAutoSubTab(tab) {
     const overviewContent = document.getElementById('autonomousOverviewContent');
     const triggerContent = document.getElementById('triggerTuningContainer');
     const spiderContent = document.getElementById('spiderOperationsContainer');
+    const narrativeContent = document.getElementById('narrativeDriftContainer');
+    const mlContent = document.getElementById('mlScoringContainer');
 
     // Hide all
     overviewContent.style.display = 'none';
     if (triggerContent) triggerContent.style.display = 'none';
     if (spiderContent) spiderContent.style.display = 'none';
+    if (narrativeContent) narrativeContent.style.display = 'none';
+    if (mlContent) mlContent.style.display = 'none';
 
     if (tab === 'overview') {
         overviewContent.style.display = 'block';
@@ -284,6 +503,22 @@ function showAutoSubTab(tab) {
         if (!spiderOperationsLoaded && typeof window.loadSpiderOperations === 'function') {
             window.loadSpiderOperations();
             spiderOperationsLoaded = true;
+        }
+    } else if (tab === 'narrative') {
+        if (narrativeContent) narrativeContent.style.display = 'block';
+
+        // Session 497: Load narrative drift on first view
+        if (!narrativeDriftLoaded) {
+            loadNarrativeDrift();
+            narrativeDriftLoaded = true;
+        }
+    } else if (tab === 'ml') {
+        if (mlContent) mlContent.style.display = 'block';
+
+        // Session 497: Load ML scoring on first view
+        if (!mlScoringLoaded) {
+            loadMLScoring();
+            mlScoringLoaded = true;
         }
     }
 }
@@ -700,6 +935,220 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================================
+// Session 497: Narrative Drift Functions
+// ============================================================
+
+async function loadNarrativeDrift() {
+    try {
+        const response = await authenticatedFetch('/api/monitoring/narrative-drift/');
+        const data = await response.json();
+
+        if (data.success) {
+            const d = data.data;
+
+            // Update stats
+            document.getElementById('narrativeTotalCount').textContent = d.total_narratives || 0;
+            document.getElementById('narrativeActiveCount').textContent = d.status_breakdown?.active || 0;
+            document.getElementById('narrativeEvidence24h').textContent = d.evidence_24h || 0;
+            document.getElementById('narrativeShifts24h').textContent = d.shifts_24h || 0;
+            document.getElementById('narrativeAlerts').textContent = d.active_alerts || 0;
+            document.getElementById('narrativeDomains').textContent = d.domains?.length || 0;
+
+            // Render shifts
+            renderNarrativeShifts(d.recent_shifts || []);
+
+            // Render domains
+            renderNarrativeDomains(d.domains || []);
+        }
+    } catch (error) {
+        console.error('Error loading narrative drift:', error);
+    }
+}
+
+function renderNarrativeShifts(shifts) {
+    const container = document.getElementById('narrativeShiftsList');
+
+    if (!shifts || shifts.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-muted">No recent shifts detected</div>';
+        return;
+    }
+
+    let html = '<div class="list-group list-group-flush">';
+    for (const shift of shifts) {
+        const importanceColor = shift.importance >= 0.7 ? '#ef4444' : shift.importance >= 0.4 ? '#fbbf24' : '#34d399';
+        html += `
+            <div class="list-group-item px-3 py-2" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <span class="badge me-2" style="background: ${importanceColor}22; color: ${importanceColor}; border: 1px solid ${importanceColor};">
+                                ${(shift.importance * 100).toFixed(0)}%
+                            </span>
+                            <span class="text-light">${escapeHtml(shift.narrative)}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">${escapeHtml(shift.summary)}</small>
+                    </div>
+                    <small class="text-muted">${formatTimeAgo(shift.detected_at)}</small>
+                </div>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderNarrativeDomains(domains) {
+    const container = document.getElementById('narrativeDomainsList');
+
+    if (!domains || domains.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-muted">No domain coverage data</div>';
+        return;
+    }
+
+    const domainColors = {
+        'ai': '#a78bfa',
+        'tech': '#60a5fa',
+        'finance': '#fbbf24',
+        'crypto': '#f472b6',
+        'jobs': '#34d399',
+        'creative': '#ec4899',
+        'default': '#9ca3af'
+    };
+
+    let html = '';
+    const maxCount = Math.max(...domains.map(d => d.count));
+
+    for (const domain of domains) {
+        const color = domainColors[domain.domain?.toLowerCase()] || domainColors.default;
+        const percentage = maxCount > 0 ? (domain.count / maxCount * 100) : 0;
+
+        html += `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span style="color: ${color};">${escapeHtml(domain.domain || 'Unknown')}</span>
+                    <span class="text-muted">${domain.count} narratives</span>
+                </div>
+                <div class="progress" style="height: 6px; background: rgba(255,255,255,0.1);">
+                    <div class="progress-bar" style="width: ${percentage}%; background: ${color};"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+// ============================================================
+// Session 497: ML Scoring Functions
+// ============================================================
+
+async function loadMLScoring() {
+    try {
+        const response = await authenticatedFetch('/api/monitoring/ml-scoring/');
+        const data = await response.json();
+
+        if (data.success) {
+            const d = data.data;
+
+            // Update stats
+            document.getElementById('mlTotalOpps').textContent = d.total_opportunities || 0;
+            document.getElementById('mlOpps24h').textContent = d.opportunities_24h || 0;
+            document.getElementById('mlAccuracy').textContent = (d.outcomes?.accuracy_estimate || 0) + '%';
+            document.getElementById('mlHighScore').textContent = d.score_distribution?.high || 0;
+            document.getElementById('mlTrainingData').textContent = d.training_data_count || 0;
+
+            // Model status
+            const modelStatus = d.model_status || {};
+            const statusHtml = modelStatus.trained
+                ? `<span style="color: #34d399;"><i class="fas fa-check-circle"></i> v${modelStatus.version || '1'}</span>`
+                : d.ready_for_training
+                    ? `<span style="color: #fbbf24;"><i class="fas fa-hourglass-half"></i> Ready</span>`
+                    : `<span style="color: #9ca3af;"><i class="fas fa-clock"></i> ${d.training_data_count}/100</span>`;
+            document.getElementById('mlModelStatus').innerHTML = statusHtml;
+
+            // Score distribution
+            const dist = d.score_distribution || {};
+            document.getElementById('mlLowCount').textContent = dist.low || 0;
+            document.getElementById('mlMediumCount').textContent = dist.medium || 0;
+            document.getElementById('mlHighCount').textContent = dist.high || 0;
+
+            // Render outcomes
+            renderMLOutcomes(d.outcomes?.breakdown || {});
+
+            // Render high-score opportunities
+            renderMLHighScore(d.recent_high_score || []);
+        }
+    } catch (error) {
+        console.error('Error loading ML scoring:', error);
+    }
+}
+
+function renderMLOutcomes(breakdown) {
+    const container = document.getElementById('mlOutcomeBreakdown');
+
+    if (!breakdown || Object.keys(breakdown).length === 0) {
+        container.innerHTML = '<div class="text-center py-2 text-muted">No outcome data yet</div>';
+        return;
+    }
+
+    const outcomeColors = {
+        'success': '#34d399',
+        'partial_success': '#fbbf24',
+        'failure': '#f87171',
+        'pending': '#9ca3af',
+        'expired': '#6b7280'
+    };
+
+    let html = '<div class="d-flex flex-wrap gap-2">';
+    for (const [outcome, count] of Object.entries(breakdown)) {
+        const color = outcomeColors[outcome] || outcomeColors.pending;
+        const label = outcome.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        html += `
+            <div class="px-3 py-2 rounded" style="background: ${color}22; border: 1px solid ${color};">
+                <span style="color: ${color}; font-size: 1.1rem; font-weight: 600;">${count}</span>
+                <small class="text-muted d-block">${label}</small>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderMLHighScore(opportunities) {
+    const container = document.getElementById('mlHighScoreList');
+
+    if (!opportunities || opportunities.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-muted">No high-score opportunities in last 24h</div>';
+        return;
+    }
+
+    let html = '<div class="list-group list-group-flush">';
+    for (const opp of opportunities) {
+        const scoreColor = opp.score >= 85 ? '#34d399' : opp.score >= 75 ? '#60a5fa' : '#fbbf24';
+        html += `
+            <div class="list-group-item px-3 py-2" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <span class="badge me-2" style="background: ${scoreColor}22; color: ${scoreColor}; border: 1px solid ${scoreColor}; font-size: 0.85rem; min-width: 45px;">
+                                ${opp.score}
+                            </span>
+                            <span class="text-light">${escapeHtml(opp.title)}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-spider me-1"></i>${escapeHtml(opp.source)}
+                        </small>
+                    </div>
+                    <small class="text-muted">${formatTimeAgo(opp.created_at)}</small>
+                </div>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // Style for hover effects

@@ -1059,6 +1059,18 @@ Try:
                         'summary': agent_result.get('summary', '')
                     })
 
+                # Session 496: Handle written content from ContentWriterAgent
+                # ContentWriterAgent returns content/content_type inside agent_result
+                if agent_result.get('content') and agent_result.get('content_type'):
+                    content_data = agent_result.get('content', {})
+                    full_text = content_data.get('full_text', '') if isinstance(content_data, dict) else str(content_data)
+                    artifacts.append({
+                        'type': 'written_content',
+                        'content_type': agent_result.get('content_type'),
+                        'data': content_data,
+                        'full_text': full_text
+                    })
+
             # Session 271: Build a better response message
             response_message = result.message
             if not response_message and artifacts:

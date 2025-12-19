@@ -551,16 +551,58 @@ class SciFiIntegrationService:
         """
         Get recent dreams/creative thoughts for an agent.
 
-        DEPRECATED (Session 284): Agent Dreams feature is deprecated.
-        This method now returns an empty list. Dreams are no longer
-        fetched or included in sci-fi context.
+        Session 497: RE-ENABLED with quality filtering.
+        Dreams provide creative insights that can enhance agent responses.
+        Only high-quality, recent dreams are included.
 
-        The method signature is preserved for API compatibility.
+        Args:
+            agent_name: Name of the agent
+            limit: Maximum number of dreams to return
+
+        Returns:
+            List of dream dictionaries with content and metadata
         """
-        # Session 284: AgentDream is deprecated - return empty list
-        # Dreams added complexity without clear user value
-        logger.debug(f"Dreams feature deprecated - skipping dream fetch for {agent_name}")
-        return []
+        try:
+            from core.models_unified_system import AgentDream
+
+            # Session 497: Re-enabled with quality filtering
+            # Only get recent dreams (last 7 days) with meaningful content
+            from datetime import timedelta
+
+            cutoff = timezone.now() - timedelta(days=7)
+
+            dreams = AgentDream.objects.filter(
+                agent__name=agent_name,
+                created_at__gte=cutoff
+            ).select_related('agent').order_by('-created_at')[:limit]
+
+            # Fallback: try partial name match
+            if not dreams.exists():
+                dreams = AgentDream.objects.filter(
+                    agent__name__icontains=agent_name.replace('Agent', ''),
+                    created_at__gte=cutoff
+                ).select_related('agent').order_by('-created_at')[:limit]
+
+            result = []
+            for dream in dreams:
+                content = getattr(dream, 'content', '') or getattr(dream, 'dream_content', '')
+                # Quality filter: only include dreams with substantial content
+                if content and len(content) >= 20:
+                    result.append({
+                        'content': content[:200],
+                        'dream_type': getattr(dream, 'dream_type', 'creative'),
+                        'created_at': dream.created_at.isoformat() if hasattr(dream, 'created_at') else '',
+                        'emotional_tone': getattr(dream, 'emotional_tone', 'neutral'),
+                    })
+
+            if result:
+                logger.debug(f"Found {len(result)} quality dreams for {agent_name}")
+
+            return result
+
+        except Exception as e:
+            logger.debug(f"Could not fetch dreams for {agent_name}: {e}")
+            return []
 
     def get_collaboration_bonus(
         self,

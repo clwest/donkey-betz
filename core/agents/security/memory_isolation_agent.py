@@ -192,7 +192,7 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
 
                     execution_time = int((time.time() - start_time) * 1000)
 
-                    return AgentResult(
+                    result = AgentResult(
                         success=True,
                         message="Memory isolation operation completed",
                         data={
@@ -204,6 +204,23 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
                         decisions_made=self._tt_decision_count,
                         tool_calls=tool_calls_made
                     )
+
+                    # Record learning outcome for collective intelligence
+                    try:
+                        self._record_learning_outcome(
+                            task=task,
+                            result=result,
+                            success=True,
+                            context={
+                                'agent_type': self.__class__.__name__,
+                                'execution_time_ms': execution_time,
+                                'tools_used': [tc['tool'] for tc in tool_calls_made],
+                            }
+                        )
+                    except Exception as le:
+                        logger.warning(f"Failed to record learning outcome: {le}")
+
+                    return result
 
                 else:
                     return AgentResult(
