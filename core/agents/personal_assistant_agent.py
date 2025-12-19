@@ -443,27 +443,47 @@ STRATEGY & PLANNING:
 - CTOAgent: Technical planning, architecture decisions
 - COOAgent: Operations planning, risk analysis
 - CreativeDirectorAgent: Creative guidance, prompt enhancement
+- MeetingCoordinatorAgent: Coordinate meetings between multiple agents
 
 SPECIALIZED:
 - LegalDocDrafterAgent: Colorado family law, motion templates (NOT legal advice)
 - PodcastCoordinatorAgent: Create AI podcast debates with multiple voices
 - AISeriesWorkflowAgent: Multi-episode content series
 - ResolveAgent: DaVinci Resolve video rendering with trend-based color grading
+- AutonomousContentStudioCoordinator: Run autonomous content generation with agent debates
 
 TRAINING & SCORING:
 - CharacterTrainingAgent: LoRA character training
 - TrainedCreationAgent: Generate with trained models
 - OpportunityScoringAgent: Score business opportunities
 
+ANALYSIS & AUDIT:
+- StockAuditCoordinator: Stock market analysis and audit
+- BlockchainAuditCoordinator: Blockchain/crypto analysis and audit
+- ContentAuditAgent: Content moderation and safety audit
+
+SECURITY:
+- MemoryIsolationAgent: Memory isolation and security sandboxing
+
+CONTENT STUDIO AGENTS (internal debate team):
+- TopicMinerAgent: Find trending topics and opportunities
+- ContrarianAgent: Challenge ideas, find weaknesses
+- PerformanceAnalystAgent: Analyze historical performance data
+
+PODCAST DEBATE AGENTS (internal podcast team):
+- DebateAdvocateAgent: Argue FOR a position in debates
+- DebateSkepticAgent: Argue AGAINST a position in debates
+- ModeratorAgent: Moderate debates between agents
+
 ORCHESTRATION:
 - WorkflowAgent: Multi-step workflows combining multiple agents""",
                             "enum": [
-                                # Research & Analysis (Session 498)
+                                # Research & Analysis
                                 "ResearchAgent",
                                 "TrendAnalysisAgent",
                                 "CompetitorAnalysisAgent",
                                 "CustomerResearchAgent",
-                                # Writing agents (Session 496)
+                                # Writing agents
                                 "ContentWriterAgent",
                                 # Creation agents
                                 "ImageAgent",
@@ -473,29 +493,44 @@ ORCHESTRATION:
                                 # Editing agents
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
-                                # Development agents (Session 498 - was missing!)
+                                # Development agents
                                 "CodeGeneratorAgent",
                                 "CodeReviewAgent",
                                 "FullStackDeveloperAgent",
                                 "DevOpsAgent",
-                                # Strategy agents
+                                # Strategy & Planning agents
                                 "BrandIdentityAgent",
                                 "ContentStrategyAgent",
                                 "SEOOptimizerAgent",
                                 "SocialMediaAgent",
-                                # Executive agents
                                 "CTOAgent",
                                 "COOAgent",
                                 "CreativeDirectorAgent",
-                                # Specialized agents (Session 498)
+                                "MeetingCoordinatorAgent",
+                                # Specialized agents
                                 "LegalDocDrafterAgent",
                                 "PodcastCoordinatorAgent",
                                 "AISeriesWorkflowAgent",
                                 "ResolveAgent",
+                                "AutonomousContentStudioCoordinator",
                                 # Training & Scoring agents
                                 "CharacterTrainingAgent",
                                 "TrainedCreationAgent",
                                 "OpportunityScoringAgent",
+                                # Analysis & Audit agents (Session 499)
+                                "StockAuditCoordinator",
+                                "BlockchainAuditCoordinator",
+                                "ContentAuditAgent",
+                                # Security agents
+                                "MemoryIsolationAgent",
+                                # Content Studio internal agents (Session 499)
+                                "TopicMinerAgent",
+                                "ContrarianAgent",
+                                "PerformanceAnalystAgent",
+                                # Podcast internal agents (Session 499)
+                                "DebateAdvocateAgent",
+                                "DebateSkepticAgent",
+                                "ModeratorAgent",
                                 # Orchestration
                                 "WorkflowAgent"
                             ]
