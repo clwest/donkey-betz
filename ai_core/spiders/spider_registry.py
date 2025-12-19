@@ -39,6 +39,13 @@ from .specialized.techcrunch_spider import TechCrunchSpider
 from .specialized.axios_spider import AxiosSpider
 from .specialized.verge_spider import TheVergeSpider
 
+# Session 495: STARTUP FUNDING & SECTOR SPIDERS (5 new)
+from .specialized.crunchbase_spider import CrunchbaseSpider
+from .specialized.venturebeat_spider import VentureBeatSpider
+from .specialized.defenseone_spider import DefenseOneSpider
+from .specialized.mobihealthnews_spider import MobiHealthNewsSpider
+from .specialized.securityweek_spider import SecurityWeekSpider
+
 # Session 218: INNOVATION spiders
 from .specialized.mit_tech_review_spider import MITTechReviewSpider
 from .specialized.wired_spider import WiredSpider
@@ -385,6 +392,56 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['theverge.com/rss/']
+        })
+
+        # ============================================================
+        # SESSION 495: STARTUP FUNDING & SECTOR SPIDERS (5 new)
+        # Added to fill gaps in startup trend coverage
+        # ============================================================
+
+        # Crunchbase News - THE gold standard for startup funding data
+        self.register_spider('crunchbase', CrunchbaseSpider, {
+            'category': 'startups',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['news.crunchbase.com/feed/'],
+            'description': 'Startup funding rounds, valuations, unicorns, M&A activity'
+        })
+
+        # VentureBeat - AI and enterprise startup coverage
+        self.register_spider('venturebeat', VentureBeatSpider, {
+            'category': 'startups',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['venturebeat.com/feed/'],
+            'description': 'AI funding, enterprise tech, VC perspectives'
+        })
+
+        # Defense One - Defense tech sector (was missing from startup trends!)
+        self.register_spider('defenseone', DefenseOneSpider, {
+            'category': 'defense_tech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['defenseone.com/rss/'],
+            'description': 'Defense startups, government contracts, Pentagon, aerospace'
+        })
+
+        # MobiHealthNews - Healthtech sector (was missing from startup trends!)
+        self.register_spider('mobihealthnews', MobiHealthNewsSpider, {
+            'category': 'healthtech',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['mobihealthnews.com/feed'],
+            'description': 'Digital health, biotech, medtech, FDA, telehealth'
+        })
+
+        # SecurityWeek - Cybersecurity sector (was missing from startup trends!)
+        self.register_spider('securityweek', SecurityWeekSpider, {
+            'category': 'cybersecurity',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['securityweek.com/feed/'],
+            'description': 'Cybersecurity startups, breaches, vulnerabilities, infosec'
         })
 
         # === SESSION 218: INNOVATION SPIDERS (2) ===

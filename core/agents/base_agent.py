@@ -630,7 +630,13 @@ class BaseAgent(ABC, TimeTravelMixin):
         if spider_context:
             trends = spider_context.get('relevant_trends', [])
             if trends:
-                trend_names = [t.get('topic', '') for t in trends[:5] if t.get('topic')]
+                # Session 495: Handle both string lists (from SmartTrendingService) and dict lists (legacy)
+                trend_names = []
+                for t in trends[:5]:
+                    if isinstance(t, str):
+                        trend_names.append(t)
+                    elif isinstance(t, dict) and t.get('topic'):
+                        trend_names.append(t.get('topic'))
                 if trend_names:
                     parts.append(f"\n\n## Current Trends")
                     parts.append(f"Trending topics: {', '.join(trend_names)}")
@@ -736,7 +742,13 @@ class BaseAgent(ABC, TimeTravelMixin):
         if spider_context:
             trends = spider_context.get('relevant_trends', [])
             if trends:
-                trend_names = [t.get('topic', '') for t in trends[:5] if t.get('topic')]
+                # Session 495: Handle both string lists (from SmartTrendingService) and dict lists (legacy)
+                trend_names = []
+                for t in trends[:5]:
+                    if isinstance(t, str):
+                        trend_names.append(t)
+                    elif isinstance(t, dict) and t.get('topic'):
+                        trend_names.append(t.get('topic'))
                 if trend_names:
                     parts.append(f"\n\n## Current Trends")
                     parts.append(f"Trending topics: {', '.join(trend_names)}")

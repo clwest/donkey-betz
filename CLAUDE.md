@@ -1,10 +1,10 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 17, 2025 - Session 470 (ML Scoring Engine + Real Agent Debates)
+**Last Updated:** December 18, 2025 - Session 495 (SmartTrendingService & New Spiders)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
-**Current Focus:** ML Scoring Engine (XGBoost+SHAP) | Real Agent Debates | Autonomous Content Studio!
+**Current Focus:** SmartTrendingService | Dynamic Topic Matching | 36 Categories | Autonomous Content Studio!
 **Built-in Styles:** 80+ professional style presets
-**Spider Network:** 62 spiders | 57 working | 6,500+ data records | **Agents USE learned knowledge!**
+**Spider Network:** 72 spiders | 20,712 data records | 88.1% embeddings | **Agents USE learned knowledge!**
 **Agent Ecosystem:** 36 clean agents + learning hooks | Autonomous Content Generation | 3-Agent Debates
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 **Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
@@ -406,6 +406,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 495:** SmartTrendingService & New Spiders - Built 580-line dynamic topic matching system with 36 categories and 500+ keywords. Added 5 new spiders: crunchbase (startups), venturebeat (tech/AI), defenseone (defense tech), mobihealthnews (healthtech), securityweek (cybersecurity). Enhanced TechCrunch spider with new category keywords. Fixed critical BaseAgent bug where `'str' object has no attribute 'get'` - SmartTrendingService returns strings, BaseAgent expected dicts. Updated `_build_prompt()` and `_build_prompt_with_attribution()` to handle both formats. Total spiders: 72, spider data: 20,712 records, 88.1% with embeddings. Handoff: `docs/handoffs/SESSION_495_SMART_TRENDING_SERVICE.md`
 - **Session 478:** DaVinci Resolve Full Utilization - Transformed unused $300 DaVinci Resolve into fully integrated trend-driven rendering system. New components: ResolveAgent (~500 lines), 11 color grade presets mapped to spider trends, ResolveLearningService for outcome tracking. 4 Discord commands (`/resolve-render`, `/color-grade`, `/render-status`, `/trending-grades`). 4 Celery tasks for async rendering. System automatically selects best color grade based on current Dribbble/Behance trends + historical performance. Handoff: `docs/handoffs/SESSION_478_DAVINCI_RESOLVE_FULL_UTILIZATION.md`
 - **Session 470:** ML Scoring Engine (Phase 1) - Built XGBoost-based ML scoring with SHAP explainability for opportunity scoring. New components: `MLScoringEngine` (~500 lines), `MLModelVersion` and `ScoringExplanation` models, migration 0100, training/evaluation Celery tasks (Sunday 3:30 AM / Daily 6:30 AM). Hybrid scoring: 60% ML + 40% rule-based. 15 features extracted from SpiderData. Auto-trains when 100+ OpportunityOutcome records exist. Handoff: `docs/handoffs/SESSION_470_ML_SCORING_ENGINE.md`
 - **Session 469:** Discord Studio Fixes + Real Agent Debates - Fixed Discord bot duplicate commands (brief-feedback, action), fixed `/studio-status` field errors (published_at→created_at, is_active→status). **Implemented REAL agent debates** - TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent now actually execute during content debates (replacing placeholders). Added `/studio-episode` command to view episode scripts. Tested both channels successfully. Handoff: `docs/handoffs/SESSION_469_DISCORD_STUDIO_FIXES_AND_REAL_DEBATES.md`

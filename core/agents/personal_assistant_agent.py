@@ -987,19 +987,30 @@ Available agents:
 
             if question_type == 'trend_question':
                 try:
-                    logger.info(f"🕷️ [Session 483] Fetching fresh trends for trend_question")
+                    logger.info(f"🕷️ [Session 495] Fetching fresh trends for trend_question")
                     fresh_trends = self._fetch_fresh_trends_for_question(task)
                     if fresh_trends:
                         enhanced_spider_context['relevant_trends'] = fresh_trends.get('trends', [])
                         enhanced_spider_context['trend_articles'] = fresh_trends.get('articles', [])
-                        logger.info(f"🕷️ [Session 483] Injected {len(fresh_trends.get('trends', []))} trends, {len(fresh_trends.get('articles', []))} articles")
-                        # Log sample trend/article for debugging
+                        # Session 495: Also pass through categories and cache info
+                        enhanced_spider_context['categories'] = fresh_trends.get('categories', [])
+                        enhanced_spider_context['topic'] = fresh_trends.get('topic_filter')
+                        enhanced_spider_context['cache_hit'] = fresh_trends.get('cache_hit', False)
+
+                        logger.info(f"🕷️ [Session 495] SmartTrending injected: "
+                                   f"topic='{fresh_trends.get('topic_filter')}', "
+                                   f"categories={fresh_trends.get('categories', [])}, "
+                                   f"{len(fresh_trends.get('trends', []))} keywords, "
+                                   f"{len(fresh_trends.get('articles', []))} articles, "
+                                   f"cache_hit={fresh_trends.get('cache_hit', False)}")
+
+                        # Log sample for debugging
                         if fresh_trends.get('trends'):
-                            logger.info(f"🕷️ [Session 483] Sample trend: {fresh_trends['trends'][0]}")
+                            logger.info(f"🕷️ [Session 495] Sample keywords: {fresh_trends['trends'][:5]}")
                         if fresh_trends.get('articles'):
-                            logger.info(f"🕷️ [Session 483] Sample article: {fresh_trends['articles'][0].get('title', 'N/A')[:60]}")
+                            logger.info(f"🕷️ [Session 495] Sample article: {fresh_trends['articles'][0].get('title', 'N/A')[:60]}")
                     else:
-                        logger.warning(f"🕷️ [Session 483] _fetch_fresh_trends_for_question returned empty/None")
+                        logger.warning(f"🕷️ [Session 495] _fetch_fresh_trends_for_question returned empty/None")
                 except Exception as e:
                     logger.warning(f"Failed to fetch fresh trends: {e}")
 
@@ -1007,20 +1018,35 @@ Available agents:
             prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, enhanced_spider_context)
 
             # Session 454: Enhanced instruction for trend questions
-            # Session 483: Debug - check if trend_articles is being added
-            logger.info(f"🕷️ [Session 483] trend_articles in context: {len(enhanced_spider_context.get('trend_articles', []))}")
-            if question_type == 'trend_question' and enhanced_spider_context.get('trend_articles'):
-                articles = enhanced_spider_context['trend_articles'][:10]
-                prompt += "\n\n## Recent Articles for Context"
-                logger.info(f"🕷️ [Session 483] Adding {len(articles)} articles to prompt")
-                for article in articles:
-                    title = article.get('title', '')[:80]
-                    source = article.get('source', 'unknown')
-                    url = article.get('url', '')
-                    prompt += f"\n- [{source}] {title}"
-                    if url:
-                        prompt += f" ({url})"
-                logger.info(f"🕷️ [Session 483] First article added: {articles[0].get('title', 'N/A')[:60]}")
+            # Session 495: Now includes trending keywords + categories from SmartTrendingService
+            logger.info(f"🕷️ [Session 495] trend_articles in context: {len(enhanced_spider_context.get('trend_articles', []))}")
+            logger.info(f"🕷️ [Session 495] relevant_trends: {enhanced_spider_context.get('relevant_trends', [])[:5]}")
+
+            if question_type == 'trend_question':
+                # Session 495: Add matched categories info
+                categories = enhanced_spider_context.get('categories', [])
+                if categories:
+                    prompt += f"\n\n## Data Sources: {', '.join(categories)}"
+
+                # Session 495: Add trending keywords FIRST (gives GPT the key terms)
+                trends = enhanced_spider_context.get('relevant_trends', [])
+                if trends:
+                    prompt += f"\n\n## Trending Keywords\n{', '.join(trends[:15])}"
+                    logger.info(f"🕷️ [Session 495] Added {len(trends[:15])} trending keywords to prompt")
+
+                # Then add articles
+                articles = enhanced_spider_context.get('trend_articles', [])[:10]
+                if articles:
+                    prompt += "\n\n## Recent Articles for Context"
+                    logger.info(f"🕷️ [Session 495] Adding {len(articles)} articles to prompt")
+                    for article in articles:
+                        title = article.get('title', '')[:80]
+                        source = article.get('source', 'unknown')
+                        url = article.get('url', '')
+                        prompt += f"\n- [{source}] {title}"
+                        if url:
+                            prompt += f" ({url})"
+                    logger.info(f"🕷️ [Session 495] First article added: {articles[0].get('title', 'N/A')[:60]}")
 
                 # Session 483: Update attribution with spider sources from articles
                 article_sources = list(set(
@@ -1086,62 +1112,68 @@ Available agents:
     def _fetch_fresh_trends_for_question(self, task: str) -> Dict[str, Any]:
         """
         Session 454: Fetch fresh spider trends for trend questions.
+        Session 495: UPGRADED - Now uses SmartTrendingService for dynamic topic matching.
 
-        Extracts topic from question and queries spider intelligence.
+        Works for ANY topic without hardcoded if/elif chains!
+        Examples:
+            - "What's trending in startups?" -> Routes to startups, business spiders
+            - "What's trending in AI?" -> Routes to ai_ml, tech spiders
+            - "What's trending in healthcare?" -> Routes to healthtech spiders
+            - "What's trending in crypto?" -> Routes to financial, blockchain spiders
         """
+        try:
+            from core.services.smart_trending_service import get_smart_trending_service
+
+            service = get_smart_trending_service()
+
+            # Session 495: Dynamic topic extraction and category mapping
+            result = service.get_trending_for_query(
+                query=task,
+                hours=72,
+                article_limit=15,
+                use_cache=True
+            )
+
+            logger.info(f"🕷️ [Session 495] SmartTrending: topic='{result.get('topic')}', "
+                       f"categories={result.get('categories')}, "
+                       f"articles={len(result.get('articles', []))}, "
+                       f"cache_hit={result.get('cache_hit', False)}")
+
+            return {
+                'trends': result.get('trends', []),
+                'articles': result.get('articles', []),
+                'topic_filter': result.get('topic'),  # For compatibility
+                'categories': result.get('categories', []),  # New: matched categories
+                'cache_hit': result.get('cache_hit', False)
+            }
+
+        except Exception as e:
+            logger.warning(f"Error fetching fresh trends (falling back to legacy): {e}")
+            # Fallback to legacy method if SmartTrendingService fails
+            return self._fetch_fresh_trends_legacy(task)
+
+    def _fetch_fresh_trends_legacy(self, task: str) -> Dict[str, Any]:
+        """Legacy fallback method using SpiderIntelligenceService."""
         try:
             from core.services.spider_intelligence import SpiderIntelligenceService
 
             service = SpiderIntelligenceService()
-
-            # Extract topic filter from question
-            task_lower = task.lower()
-            topic_filter = None
-
-            # Session 272 topic filters + Session 459: Added financial/SEC topics
-            if any(kw in task_lower for kw in ['ai', 'machine learning', 'llm', 'gpt', 'neural', 'deep learning']):
-                topic_filter = 'ai'
-            elif any(kw in task_lower for kw in ['web', 'javascript', 'react', 'frontend', 'backend', 'css']):
-                topic_filter = 'web'
-            elif any(kw in task_lower for kw in ['security', 'cyber', 'hack', 'privacy', 'encrypt']):
-                topic_filter = 'security'
-            elif any(kw in task_lower for kw in ['cloud', 'aws', 'docker', 'kubernetes', 'devops']):
-                topic_filter = 'cloud'
-            elif any(kw in task_lower for kw in ['design', 'ui', 'ux', 'figma', 'typography']):
-                topic_filter = 'design'
-            # Session 459: Financial/SEC topics
-            elif any(kw in task_lower for kw in ['sec', 'filing', 'stock', 'market', 'financial', '10-k', '10k', '8-k', '8k', 'earnings', 'investor']):
-                topic_filter = 'financial'
-
-            # Get trending topics
             trends = service.get_trending_topics(hours=72, limit=10)
+            tech_data = service.get_tech_trends(hours=72, limit=15, topic_filter=None)
 
-            # Get recent articles with optional topic filter
-            # Session 483: get_tech_trends returns a dict with 'discussions' key, not a list
-            logger.info(f"🕷️ [Session 483] Calling get_tech_trends with topic_filter='{topic_filter}'")
-            tech_data = service.get_tech_trends(
-                hours=72,
-                limit=15,
-                topic_filter=topic_filter
-            )
-            # Extract discussions (articles) from the dict
             articles = []
             if isinstance(tech_data, dict):
-                articles = tech_data.get('discussions', [])
-                # Also include projects if no discussions
-                if not articles:
-                    articles = tech_data.get('projects', [])
+                articles = tech_data.get('discussions', []) or tech_data.get('projects', [])
             elif isinstance(tech_data, list):
                 articles = tech_data
 
             return {
                 'trends': trends if isinstance(trends, list) else [],
                 'articles': articles,
-                'topic_filter': topic_filter
+                'topic_filter': None
             }
-
         except Exception as e:
-            logger.warning(f"Error fetching fresh trends: {e}")
+            logger.warning(f"Legacy trend fetch also failed: {e}")
             return {'trends': [], 'articles': [], 'topic_filter': None}
 
     def _gpt_route(
