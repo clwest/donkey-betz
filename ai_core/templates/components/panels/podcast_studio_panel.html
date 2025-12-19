@@ -281,27 +281,27 @@ function renderPodcastCard(episode) {
                         </span>
                         ${episode.error_message ? `<small class="d-block text-danger mt-1">${escapeHtml(episode.error_message.substring(0, 100))}</small>` : ''}
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         ${episode.status === 'complete' ? `
                             <button class="btn btn-sm btn-outline-info" onclick="viewPodcastScript('${episode.id}')" title="View Script">
-                                <i class="fas fa-scroll"></i>
+                                <i class="fas fa-scroll me-1"></i>Script
                             </button>
                             ${episode.has_audio ? `
                                 <button class="btn btn-sm btn-outline-success" onclick="playPodcastAudio('${episode.audio_url}')" title="Play Audio">
-                                    <i class="fas fa-play"></i>
+                                    <i class="fas fa-play me-1"></i>Play
                                 </button>
                             ` : ''}
                             ${episode.platform_url ? `
                                 <a href="${episode.platform_url}" target="_blank" class="btn btn-sm btn-outline-primary" title="View on Platform">
-                                    <i class="fas fa-external-link-alt"></i>
+                                    <i class="fas fa-external-link-alt me-1"></i>Open
                                 </a>
                             ` : ''}
                         ` : ''}
                         <button class="btn btn-sm btn-outline-secondary" onclick="refreshPodcastStatus('${episode.id}')" title="Refresh Status">
-                            <i class="fas fa-sync-alt"></i>
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
                         </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deletePodcast('${episode.id}', '${escapeHtml(episode.topic)}')" title="Delete">
-                            <i class="fas fa-trash"></i>
+                            <i class="fas fa-trash me-1"></i>Delete
                         </button>
                     </div>
                 </div>
