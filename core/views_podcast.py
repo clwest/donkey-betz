@@ -14,6 +14,32 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 
 
+def _episode_to_dict(ep):
+    """Convert a PodcastEpisode to a dictionary for API response."""
+    # Extract config values (stored in generation_config JSON field)
+    config = ep.generation_config or {}
+    format_type = config.get('format', 'debate')
+    participant_count = config.get('participant_count', 3)
+
+    # Calculate word count from script if available
+    word_count = len(ep.script.split()) if ep.script else 0
+
+    return {
+        'id': str(ep.id),
+        'topic': ep.topic or ep.title or 'Untitled',
+        'format_type': format_type,
+        'status': ep.status,
+        'participant_count': participant_count,
+        'has_audio': bool(ep.audio_file or ep.audio_url),
+        'audio_url': ep.audio_file.url if ep.audio_file else ep.audio_url,
+        'duration_seconds': ep.audio_duration_seconds or 0,
+        'word_count': word_count,
+        'created_at': ep.created_at.isoformat(),
+        'completed_at': ep.published_at.isoformat() if ep.published_at else None,
+        'error_message': ep.error_message,
+    }
+
+
 @login_required
 @require_http_methods(["GET"])
 def podcast_list(request):
@@ -38,28 +64,15 @@ def podcast_list(request):
         episodes = PodcastEpisode.objects.filter(user=request.user).order_by('-created_at')
 
         if status_filter:
-            episodes = episodes.filter(status=status_filter)
+            # Support comma-separated statuses
+            statuses = [s.strip() for s in status_filter.split(',')]
+            episodes = episodes.filter(status__in=statuses)
 
         total_count = episodes.count()
         episodes = episodes[offset:offset + limit]
 
         # Format response
-        episode_list = []
-        for ep in episodes:
-            episode_list.append({
-                'id': str(ep.id),
-                'topic': ep.topic,
-                'format_type': ep.format_type,
-                'status': ep.status,
-                'participant_count': ep.participant_count,
-                'has_audio': bool(ep.audio_file),
-                'audio_url': ep.audio_file.url if ep.audio_file else None,
-                'duration_seconds': ep.duration_seconds,
-                'word_count': ep.word_count,
-                'created_at': ep.created_at.isoformat(),
-                'completed_at': ep.completed_at.isoformat() if ep.completed_at else None,
-                'error_message': ep.error_message,
-            })
+        episode_list = [_episode_to_dict(ep) for ep in episodes]
 
         # Get status counts for filters
         status_counts = {}
@@ -121,13 +134,17 @@ def podcast_create(request):
 
         generate_audio = data.get('generate_audio', False)
 
-        # Create episode record
+        # Create episode record with generation_config
         episode = PodcastEpisode.objects.create(
             user=request.user,
             topic=topic,
-            format_type=format_type,
-            participant_count=participant_count,
+            title=topic,  # Also set title
             status='pending',
+            generation_config={
+                'format': format_type,
+                'participant_count': participant_count,
+                'generate_audio': generate_audio,
+            }
         )
 
         # Queue the generation task
@@ -141,14 +158,7 @@ def podcast_create(request):
 
         return JsonResponse({
             'success': True,
-            'episode': {
-                'id': str(episode.id),
-                'topic': episode.topic,
-                'format_type': episode.format_type,
-                'status': episode.status,
-                'participant_count': episode.participant_count,
-                'created_at': episode.created_at.isoformat(),
-            },
+            'episode': _episode_to_dict(episode),
             'message': f'Podcast "{topic}" queued for generation. This may take a few minutes.',
         })
 
@@ -179,20 +189,7 @@ def podcast_status(request, episode_id):
 
         return JsonResponse({
             'success': True,
-            'episode': {
-                'id': str(episode.id),
-                'topic': episode.topic,
-                'format_type': episode.format_type,
-                'status': episode.status,
-                'participant_count': episode.participant_count,
-                'has_audio': bool(episode.audio_file),
-                'audio_url': episode.audio_file.url if episode.audio_file else None,
-                'duration_seconds': episode.duration_seconds,
-                'word_count': episode.word_count,
-                'created_at': episode.created_at.isoformat(),
-                'completed_at': episode.completed_at.isoformat() if episode.completed_at else None,
-                'error_message': episode.error_message,
-            }
+            'episode': _episode_to_dict(episode)
         })
 
     except PodcastEpisode.DoesNotExist:
@@ -215,33 +212,33 @@ def podcast_script(request, episode_id):
 
     GET /api/podcasts/<episode_id>/script/
     """
-    from core.models import PodcastEpisode, PodcastDebate
+    from core.models import PodcastEpisode
 
     try:
         episode = PodcastEpisode.objects.get(id=episode_id, user=request.user)
 
-        # Get debate content if available
-        debate = None
-        try:
-            debate = PodcastDebate.objects.filter(episode=episode).first()
-        except:
-            pass
+        # Extract config
+        config = episode.generation_config or {}
+        format_type = config.get('format', 'debate')
+
+        # Get debate content from the episode's debate field (JSON)
+        debate_data = episode.debate or {}
 
         return JsonResponse({
             'success': True,
             'episode': {
                 'id': str(episode.id),
-                'topic': episode.topic,
-                'format_type': episode.format_type,
+                'topic': episode.topic or episode.title,
+                'format_type': format_type,
                 'status': episode.status,
             },
             'script': episode.script or '',
             'debate': {
-                'research_summary': debate.research_summary if debate else '',
-                'debate_transcript': debate.debate_transcript if debate else '',
-                'key_insights': debate.key_insights if debate else [],
-            } if debate else None,
-            'word_count': episode.word_count,
+                'research_summary': debate_data.get('research_summary', ''),
+                'debate_transcript': debate_data.get('transcript', ''),
+                'key_insights': debate_data.get('key_insights', []),
+            } if debate_data else None,
+            'word_count': len(episode.script.split()) if episode.script else 0,
         })
 
     except PodcastEpisode.DoesNotExist:
@@ -268,7 +265,7 @@ def podcast_delete(request, episode_id):
 
     try:
         episode = PodcastEpisode.objects.get(id=episode_id, user=request.user)
-        topic = episode.topic
+        topic = episode.topic or episode.title
         episode.delete()
 
         return JsonResponse({
@@ -307,12 +304,17 @@ def podcast_stats(request):
         in_progress = episodes.filter(status__in=['pending', 'researching', 'debating', 'scripting', 'generating_audio']).count()
         failed = episodes.filter(status='failed').count()
 
-        # Aggregate stats
+        # Aggregate stats - use audio_duration_seconds
         stats = episodes.filter(status='complete').aggregate(
-            total_words=Sum('word_count'),
-            total_duration=Sum('duration_seconds'),
-            avg_duration=Avg('duration_seconds'),
+            total_duration=Sum('audio_duration_seconds'),
+            avg_duration=Avg('audio_duration_seconds'),
         )
+
+        # Calculate total words from scripts
+        total_words = 0
+        for ep in episodes.filter(status='complete'):
+            if ep.script:
+                total_words += len(ep.script.split())
 
         return JsonResponse({
             'success': True,
@@ -321,7 +323,7 @@ def podcast_stats(request):
                 'complete': complete,
                 'in_progress': in_progress,
                 'failed': failed,
-                'total_words': stats['total_words'] or 0,
+                'total_words': total_words,
                 'total_duration_seconds': stats['total_duration'] or 0,
                 'avg_duration_seconds': round(stats['avg_duration'] or 0, 1),
             }
