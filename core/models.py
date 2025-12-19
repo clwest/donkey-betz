@@ -29,6 +29,9 @@ from .models_situation_triggers import *
 # Import autonomous situations models (Session 479 - 14 New Situations)
 from .models_autonomous_situations import *
 
+# Import podcast studio models (Session 496 - AI Podcast with Agent Debates)
+from .models_podcast_studio import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

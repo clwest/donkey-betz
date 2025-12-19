@@ -38,6 +38,9 @@ from ..models_ai_series import *
 # Import autonomous content studio models (Session 466)
 from ..models_autonomous_studio import *
 
+# Import podcast studio models (Session 496)
+from ..models_podcast_studio import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -130,4 +133,10 @@ __all__ = [
     'SeriesType',
     'SeriesStatus',
     'EpisodeStatus',
+
+    # Podcast Studio (Session 496)
+    'PodcastShow',
+    'PodcastEpisode',
+    'PodcastDebate',
+    'PodcastParticipant',
 ]
