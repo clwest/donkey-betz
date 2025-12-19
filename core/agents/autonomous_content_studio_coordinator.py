@@ -255,7 +255,7 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 execution_time = int((time.time() - start_time) * 1000)
                 result = AgentResult(
                     success=True,
-                    message=response.get('message') or "Coordination complete",
+                    message=response.get('content') or "Coordination complete",
                     data={"tool_results": tool_results},
                     agent_name=self.name,
                     execution_time_ms=execution_time,
@@ -282,7 +282,7 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 # No tools called, return message
                 return AgentResult(
                     success=True,
-                    message=response.get('message', 'No response'),
+                    message=response.get('content') or 'No response',
                     agent_name=self.name,
                     execution_time_ms=int((time.time() - start_time) * 1000)
                 )
