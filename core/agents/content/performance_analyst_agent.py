@@ -206,7 +206,7 @@ CRITICAL: Always use tools to get real performance data. Never make up statistic
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 result = AgentResult(
                     success=True,
-                    message=response.get('message') or "Performance analysis complete",
+                    message=response.get('content') or "Performance analysis complete",
                     data={"tool_results": tool_results},
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms,
@@ -231,11 +231,11 @@ CRITICAL: Always use tools to get real performance data. Never make up statistic
 
                 return result
             else:
-                # No tools called, return message
+                # No tools called, return content
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 result = AgentResult(
                     success=True,
-                    message=response.get('message', 'No response'),
+                    message=response.get('content') or 'No response',
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms
                 )

@@ -178,7 +178,7 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 result = AgentResult(
                     success=True,
-                    message=response.get('message') or "Contrarian analysis complete",
+                    message=response.get('content') or "Contrarian analysis complete",
                     data={"tool_results": tool_results},
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms,
@@ -203,11 +203,11 @@ CRITICAL: Use tools to check actual saturation data. Don't just assume."""
 
                 return result
             else:
-                # No tools called, return message
+                # No tools called, return content
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 result = AgentResult(
                     success=True,
-                    message=response.get('message', 'No response'),
+                    message=response.get('content') or 'No response',
                     agent_name=self.name,
                     execution_time_ms=execution_time_ms
                 )
