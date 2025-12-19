@@ -251,18 +251,30 @@ function renderPodcastCard(episode) {
     const statusColor = statusColors[episode.status] || '#888';
     const date = new Date(episode.created_at).toLocaleDateString();
 
+    // Source badge - distinguish Podcast Studio vs Autonomous Content Studio
+    const sourceLabel = episode.source === 'studio' ? 'Content Studio' : 'Podcast';
+    const sourceColor = episode.source === 'studio' ? '#a78bfa' : '#f472b6';
+    const sourceIcon = episode.source === 'studio' ? 'fa-robot' : 'fa-podcast';
+
     return `
         <div class="card mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(244, 114, 182, 0.2);">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                        <h6 class="mb-1" style="color: #f472b6;">${escapeHtml(episode.topic)}</h6>
-                        <div class="d-flex gap-3 text-muted small mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h6 class="mb-0" style="color: #f472b6;">${escapeHtml(episode.topic)}</h6>
+                            <span class="badge" style="background: ${sourceColor}20; color: ${sourceColor}; border: 1px solid ${sourceColor}40; font-size: 0.65rem;">
+                                <i class="fas ${sourceIcon} me-1"></i>${sourceLabel}
+                            </span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3 text-muted small mb-2">
                             <span><i class="fas fa-calendar me-1"></i>${date}</span>
-                            <span><i class="fas fa-users me-1"></i>${episode.participant_count} participants</span>
+                            ${episode.participant_count > 0 ? `<span><i class="fas fa-users me-1"></i>${episode.participant_count} participants</span>` : ''}
                             <span><i class="fas fa-tag me-1"></i>${episode.format_type}</span>
                             ${episode.word_count ? `<span><i class="fas fa-file-word me-1"></i>${episode.word_count} words</span>` : ''}
                             ${episode.duration_seconds ? `<span><i class="fas fa-clock me-1"></i>${formatDuration(episode.duration_seconds)}</span>` : ''}
+                            ${episode.channel ? `<span><i class="fas fa-tv me-1"></i>${escapeHtml(episode.channel)}</span>` : ''}
+                            ${episode.views ? `<span><i class="fas fa-eye me-1"></i>${episode.views} views</span>` : ''}
                         </div>
                         <span class="badge" style="background: ${statusColor}20; color: ${statusColor}; border: 1px solid ${statusColor}40;">
                             ${episode.status.replace('_', ' ')}
@@ -278,6 +290,11 @@ function renderPodcastCard(episode) {
                                 <button class="btn btn-sm btn-outline-success" onclick="playPodcastAudio('${episode.audio_url}')" title="Play Audio">
                                     <i class="fas fa-play"></i>
                                 </button>
+                            ` : ''}
+                            ${episode.platform_url ? `
+                                <a href="${episode.platform_url}" target="_blank" class="btn btn-sm btn-outline-primary" title="View on Platform">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
                             ` : ''}
                         ` : ''}
                         <button class="btn btn-sm btn-outline-secondary" onclick="refreshPodcastStatus('${episode.id}')" title="Refresh Status">
