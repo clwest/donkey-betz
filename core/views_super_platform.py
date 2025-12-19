@@ -102,6 +102,12 @@ class SuperPlatformProcessView(View):
                 except Exception as e:
                     logger.warning(f"⚠️ Session 483: SmartSuggestions error in SuperPlatform: {e}")
 
+            # Session 494: Always ensure quick_actions is at least an empty array
+            if 'quick_actions' not in response_dict:
+                response_dict['quick_actions'] = []
+            if 'smart_suggestions' not in response_dict:
+                response_dict['smart_suggestions'] = []
+
             return JsonResponse(response_dict)
 
         except Exception as e:

@@ -29964,24 +29964,36 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     // Session 483: Quick Action buttons for smart follow-up suggestions
                     document.querySelectorAll(`#${messageId} .quick-action-btn`).forEach(btn => {
                         btn.addEventListener('click', async (e) => {
-                            const action = e.target.dataset.action;
-                            const actionType = e.target.dataset.type;
-                            const label = e.target.title;
+                            // Session 494 FIX: Use btn (the element with data attrs) not e.target (could be inner icon/text)
+                            const action = btn.dataset.action;
+                            const actionType = btn.dataset.type;
+                            const label = btn.title;
+
+                            console.log('🔍 Session 494 DEBUG: Quick action clicked');
+                            console.log('  - action:', action);
+                            console.log('  - actionType:', actionType);
+                            console.log('  - label:', label);
 
                             // Visual feedback
-                            const originalText = e.target.innerHTML;
-                            e.target.innerHTML = '⏳ Working...';
-                            e.target.disabled = true;
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = '⏳ Working...';
+                            btn.disabled = true;
 
                             // Session 494: Get the research context from the parent message
-                            const parentMessage = e.target.closest('.chat-message');
+                            // The message structure is: <div id="msg-xxx"><div class="d-inline-block">🤖 content + buttons</div></div>
+                            const messageContainer = btn.closest('.d-inline-block');
+                            console.log('  - messageContainer found:', !!messageContainer);
+
                             let researchContext = '';
-                            if (parentMessage) {
-                                const contentDiv = parentMessage.querySelector('.content');
-                                if (contentDiv) {
-                                    // Extract text content, limit to 3000 chars for context
-                                    researchContext = contentDiv.innerText.substring(0, 3000);
-                                }
+                            if (messageContainer) {
+                                // Clone the container and remove action buttons to get just the content
+                                const clone = messageContainer.cloneNode(true);
+                                // Remove all button containers
+                                clone.querySelectorAll('.smart-suggestions-container, .mt-2, button').forEach(el => el.remove());
+                                // Extract text content, limit to 3000 chars for context
+                                researchContext = clone.innerText.substring(0, 3000).trim();
+                                console.log('  - researchContext length:', researchContext.length);
+                                console.log('  - researchContext preview:', researchContext.substring(0, 100) + '...');
                             }
 
                             // Send the suggestion as a new message to the assistant
@@ -29990,8 +30002,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                             // Session 494: Include research context for "create content" type actions
                             let contextualMessage = suggestionMessage;
+                            console.log('  - Checking condition: actionType === "create":', actionType === 'create');
+                            console.log('  - Checking condition: researchContext truthy:', !!researchContext);
                             if (actionType === 'create' && researchContext) {
                                 contextualMessage = `${suggestionMessage}\n\n--- RESEARCH CONTEXT ---\n${researchContext}`;
+                                console.log('  ✅ Context appended! New message length:', contextualMessage.length);
+                            } else {
+                                console.log('  ❌ Context NOT appended');
                             }
 
                             try {
@@ -30009,8 +30026,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             }
 
                             // Reset button
-                            e.target.innerHTML = originalText;
-                            e.target.disabled = false;
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
                         });
                     });
                 }
