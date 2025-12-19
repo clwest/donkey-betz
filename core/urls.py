@@ -3039,6 +3039,8 @@ urlpatterns += [
     path('api/monitoring/provenance/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_provenance_chain']).api_provenance_chain(r), name='monitoring-provenance'),
     path('api/monitoring/activity/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_activity_stream']).api_activity_stream(r), name='monitoring-activity'),
     path('api/monitoring/schedules/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_celery_schedules']).api_celery_schedules(r), name='monitoring-schedules'),
+    # Session 497: ML Scoring API
+    path('api/monitoring/ml-scoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_status']).api_ml_scoring_status(r), name='monitoring-ml-scoring'),
 ]
 
 # Serve media files in development

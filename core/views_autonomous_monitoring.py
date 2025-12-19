@@ -597,3 +597,100 @@ def api_celery_schedules(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================
+# Session 497: ML Scoring Status API
+# ============================================================
+
+@require_GET
+def api_ml_scoring_status(request):
+    """
+    Get ML Scoring Engine status.
+    Returns model version, accuracy, feature importance, and recent predictions.
+    """
+    try:
+        from core.models_unified_system import SpiderData, Opportunity, OpportunityOutcome
+        from core.services.ml_scoring_engine import get_ml_scoring_engine
+
+        now = timezone.now()
+        day_ago = now - timedelta(hours=24)
+        week_ago = now - timedelta(days=7)
+
+        # Initialize scoring engine and get status
+        engine = get_ml_scoring_engine()
+        model_status = {
+            'trained': engine.is_trained,
+            'version': getattr(engine, 'model_version', 1),
+        }
+
+        # Get scoring statistics
+        total_opportunities = Opportunity.objects.count()
+        opportunities_24h = Opportunity.objects.filter(created_at__gte=day_ago).count()
+
+        # Score distribution (last 7 days)
+        recent_opportunities = Opportunity.objects.filter(
+            created_at__gte=week_ago
+        ).values('overall_score')
+
+        score_distribution = {
+            'high': 0,      # 70-100
+            'medium': 0,    # 40-69
+            'low': 0,       # 0-39
+        }
+        for opp in recent_opportunities:
+            score = opp.get('overall_score') or 0
+            if score >= 70:
+                score_distribution['high'] += 1
+            elif score >= 40:
+                score_distribution['medium'] += 1
+            else:
+                score_distribution['low'] += 1
+
+        # Get outcome statistics for model accuracy tracking
+        outcome_counts = OpportunityOutcome.objects.values('outcome').annotate(
+            count=Count('id')
+        )
+        outcome_map = {o['outcome']: o['count'] for o in outcome_counts}
+
+        total_outcomes = sum(outcome_map.values())
+        success_outcomes = outcome_map.get('success', 0) + outcome_map.get('partial_success', 0)
+        accuracy_estimate = round((success_outcomes / total_outcomes * 100), 1) if total_outcomes > 0 else 0
+
+        # Recent high-score opportunities
+        recent_high_score = Opportunity.objects.filter(
+            created_at__gte=day_ago,
+            overall_score__gte=70
+        ).select_related('spider_data').order_by('-overall_score')[:5]
+
+        high_score_data = [{
+            'id': str(opp.id),
+            'title': opp.title[:50] if opp.title else 'Untitled',
+            'score': opp.overall_score or 0,
+            'source': getattr(opp.spider_data, 'spider_name', 'Unknown') if opp.spider_data else 'Unknown',
+            'created_at': opp.created_at.isoformat(),
+        } for opp in recent_high_score]
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'model_status': model_status,
+                'total_opportunities': total_opportunities,
+                'opportunities_24h': opportunities_24h,
+                'score_distribution': score_distribution,
+                'outcomes': {
+                    'total': total_outcomes,
+                    'breakdown': outcome_map,
+                    'accuracy_estimate': accuracy_estimate,
+                },
+                'recent_high_score': high_score_data,
+                'training_data_count': total_outcomes,
+                'ready_for_training': total_outcomes >= 100,
+            }
+        })
+    except Exception as e:
+        logger.error(f"ML Scoring status error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -97,8 +97,9 @@ Always prioritize:
             discord_sent = self._send_to_discord(unified_alerts)
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
+            summary = self._generate_summary(unified_alerts)
 
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message=f"Stock audit complete. {len(unified_alerts)} alerts generated.",
                 data={
@@ -110,19 +111,54 @@ Always prioritize:
                     'unified_alerts': unified_alerts,
                     'advisor_consultations': advisor_consultations,  # Session 461
                     'discord_sent': discord_sent,
-                    'summary': self._generate_summary(unified_alerts),
+                    'summary': summary,
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time
             )
 
+            # Record learning outcome for collective intelligence
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=True,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'execution_time_ms': execution_time,
+                        'total_alerts': summary.get('total_alerts', 0),
+                        'critical_alerts': summary.get('critical', 0),
+                        'correlated_findings': summary.get('correlated_findings', 0),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
+
         except Exception as e:
             logger.error(f"StockAuditCoordinator error: {e}")
-            return AgentResult(
+            result = AgentResult(
                 success=False,
                 error=str(e),
                 agent_name=self.name
             )
+
+            # Record failed learning outcome
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'error': str(e),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _run_stock_analyst(self, context: Dict) -> Dict[str, Any]:
         """Run the StockAnalystAgent."""

@@ -360,6 +360,12 @@ For EDITING requests (upscale, remove background, trim, edit):
 - Identify the editing operation needed
 - Delegate to the appropriate editing agent
 
+For WRITING requests (write, blog post, podcast script, video script, article, newsletter):
+- IMPORTANT: Use ContentWriterAgent for ALL written text content requests
+- This includes: "write a blog post", "write a podcast script", "write an article", "create a newsletter"
+- ContentWriterAgent transforms research into professionally formatted written content
+- DO NOT use TrendAnalysisAgent or WorkflowAgent for writing requests
+
 For RESEARCH requests (search, find, trending, analyze):
 - For general trending/news: use ResearchAgent
 - For BUSINESS/MARKET/STARTUP research: use CompetitorAnalysisAgent (SWOT, competitors)
@@ -403,6 +409,7 @@ Available agents:
                         "agent_name": {
                             "type": "string",
                             "description": """Which agent to delegate to:
+- Writing: ContentWriterAgent (blog posts, podcast scripts, video scripts, articles, newsletters, social threads) - USE THIS when user says "write a blog", "write a podcast script", "write an article", etc.
 - Creation: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent
 - Editing: ImageEditingAgent, VideoEditingAgent
 - Research: ResearchAgent (web/spider search), CompetitorAnalysisAgent (market/SWOT), CustomerResearchAgent (personas)
@@ -413,6 +420,8 @@ Available agents:
 - Legal: LegalDocDrafterAgent (divorce/custody/motions)
 - Orchestration: WorkflowAgent (multi-step workflows)""",
                             "enum": [
+                                # Writing agents (Session 496)
+                                "ContentWriterAgent",
                                 # Creation agents
                                 "ImageAgent",
                                 "VideoAgent",
@@ -590,7 +599,7 @@ Available agents:
                             total_sources=attribution.total_sources + result.knowledge_attribution.total_sources
                         )
 
-                    return AgentResult(
+                    final_result = AgentResult(
                         success=result.success,
                         message=result.message,
                         data={
@@ -604,6 +613,23 @@ Available agents:
                         tool_calls=tool_calls_made,
                         knowledge_attribution=attribution  # Session 401
                     )
+
+                    # Record learning outcome for collective intelligence
+                    try:
+                        self._record_learning_outcome(
+                            task=task,
+                            result=final_result,
+                            success=result.success,
+                            context={
+                                'agent_type': self.__class__.__name__,
+                                'delegated_to': suggested_agent,
+                                'execution_time_ms': execution_time,
+                            }
+                        )
+                    except Exception as le:
+                        logger.warning(f"Failed to record learning outcome: {le}")
+
+                    return final_result
 
                 else:
                     # Couldn't determine agent - use GPT to decide
@@ -747,6 +773,27 @@ Available agents:
                 self._last_routing_method = 'workflow'  # Session 454: Track method
                 return 'WorkflowAgent'
 
+        # =========================================================================
+        # Session 496: TIER 0.5 - Writing patterns (BEFORE semantic routing!)
+        # These patterns MUST be checked before semantic routing because
+        # "Write a blog about AI trends" would otherwise match TrendAnalysisAgent
+        # =========================================================================
+        writing_patterns = [
+            'write a blog', 'blog post', 'write blog', 'create a blog',
+            'podcast script', 'write a podcast', 'podcast episode',
+            'video script', 'write a video script', 'script for video',
+            'write an article', 'create an article', 'write article',
+            'newsletter', 'write a newsletter', 'create a newsletter',
+            'social thread', 'write a thread', 'twitter thread',
+            'turn into article', 'turn this into a blog', 'convert to blog',
+            'write based on', 'write from research',
+        ]
+        for pattern in writing_patterns:
+            if pattern in task_lower:
+                self._last_routing_method = 'writing_pattern'  # Session 496: Track method
+                logger.info(f"[Session 496] Writing pattern detected: '{pattern}' -> ContentWriterAgent")
+                return 'ContentWriterAgent'
+
         # Check for multi-step patterns (research + creation = workflow)
         has_research = any(w in task_lower for w in ['research', 'analyze', 'find'])
         has_creation = any(w in task_lower for w in ['create', 'make', 'generate', 'design'])
@@ -850,6 +897,17 @@ Available agents:
         # Ordered from most specific to least specific
         # These indicate strong intent for a specific agent
         priority_checks = [
+            # Session 496: Content Writer Agent - HIGHEST PRIORITY for writing requests
+            ('ContentWriterAgent', [
+                'write a blog', 'blog post', 'write blog', 'create a blog',
+                'podcast script', 'write a podcast', 'podcast episode',
+                'video script', 'write a video script', 'script for video',
+                'write an article', 'create an article', 'write article',
+                'newsletter', 'write a newsletter', 'create a newsletter',
+                'social thread', 'write a thread', 'twitter thread',
+                'turn into article', 'turn this into a blog', 'convert to blog',
+                'write based on this research', 'write from research',
+            ]),
             # Session 403: Legal terms FIRST (before 'motion' triggers VideoAgent)
             ('LegalDocDrafterAgent', [
                 'divorce', 'custody', 'child support', 'parenting time', 'court',

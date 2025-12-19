@@ -960,6 +960,7 @@ class AutonomousSituationSession(models.Model):
         ('design_trends', 'Design Trends'),
         ('viral_prediction', 'Viral Prediction'),
         ('thumbnail_optimization', 'Thumbnail Optimization'),
+        ('content_studio', 'Content Studio'),  # Session 497
         # Income
         ('job_matching', 'Job Matching'),
         ('freelance_scout', 'Freelance Scout'),
@@ -968,13 +969,19 @@ class AutonomousSituationSession(models.Model):
         ('sec_filing', 'SEC Filing Analysis'),
         ('crypto_sentiment', 'Crypto Sentiment'),
         ('earnings_prediction', 'Earnings Prediction'),
+        ('stock_market', 'Stock Market Intelligence'),  # Session 497
+        ('blockchain', 'Blockchain Security'),  # Session 497
         # Research
         ('tech_stack', 'Tech Stack Evolution'),
         ('ai_model', 'AI Model Releases'),
         ('skill_gap', 'Skill Gap Analysis'),
+        ('market_intelligence', 'Market Intelligence Desk'),  # Session 497
+        ('narrative_drift', 'Narrative Drift Detector'),  # Session 497
         # Legal
         ('case_law', 'Case Law Monitor'),
         ('regulatory', 'Regulatory Changes'),
+        # System
+        ('trigger_processing', 'Trigger Event Processing'),  # Session 497
     ])
 
     # Session timing

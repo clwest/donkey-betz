@@ -11801,6 +11801,7 @@ def run_stock_audit_cycle():
 def run_market_intelligence_desk():
     """
     Session 462: Market Intelligence Desk - First Tier 1 Autonomous Situation.
+    Session 497: Added AutonomousSituationSession tracking.
 
     Runs the complete autonomous situation with all 5 properties:
     1. Persistent context - Tracks market state, previous briefs
@@ -11823,13 +11824,26 @@ def run_market_intelligence_desk():
     - What changed since yesterday
     - Confidence scores based on agreement/disagreement
     """
+    import time
+    from django.utils import timezone
+    from core.models_autonomous_situations import AutonomousSituationSession
+
+    start_time = time.time()
     logger.info("🧠 [SESSION 462] Starting Market Intelligence Desk...")
+
+    # Session 497: Create situation session
+    session = AutonomousSituationSession.objects.create(
+        situation_type='market_intelligence',
+        status='running'
+    )
 
     try:
         from core.agents.stocks import run_market_intelligence_desk as run_desk
 
         result = run_desk()
 
+        total_stocks = 0
+        debate_count = 0
         if result.get('data', {}).get('brief'):
             brief = result['data']['brief']
             debate_count = brief.get('debate_zone_count', 0)
@@ -11838,10 +11852,26 @@ def run_market_intelligence_desk():
         else:
             logger.info(f"🧠 [SESSION 462] Market Intelligence Desk complete: {result}")
 
+        # Session 497: Update session with success
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = total_stocks
+        session.items_created = debate_count
+        session.save()
+
         return result
 
     except Exception as e:
         logger.error(f"🧠 [SESSION 462] Market Intelligence Desk failed: {e}")
+
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
+
         return {'status': 'failed', 'error': str(e)}
 
 
@@ -12148,6 +12178,7 @@ def calculate_agent_accuracy():
 def run_autonomous_content_studio():
     """
     Session 466: Main autonomous loop for the Content Studio.
+    Session 497: Added AutonomousSituationSession tracking.
 
     Property #5: Self-Renewal - This task runs every 4 hours and checks which channels
     are due for content. For each channel that's ready, it triggers content generation.
@@ -12161,10 +12192,19 @@ def run_autonomous_content_studio():
     Returns:
         dict: Summary of channels processed
     """
+    import time
     from django.utils import timezone
     from core.models_autonomous_studio import ContentChannel, ChannelStatus
+    from core.models_autonomous_situations import AutonomousSituationSession
 
+    start_time = time.time()
     logger.info("🎬 [SESSION 466] Starting autonomous content studio main loop...")
+
+    # Session 497: Create situation session
+    session = AutonomousSituationSession.objects.create(
+        situation_type='content_studio',
+        status='running'
+    )
 
     results = {
         'total_channels': 0,
@@ -12211,10 +12251,26 @@ def run_autonomous_content_studio():
                    f"{results['channels_triggered']} channels triggered, "
                    f"{results['channels_skipped']} skipped")
 
+        # Session 497: Update session with success
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = results['total_channels']
+        session.items_created = results['channels_triggered']
+        session.save()
+
         return results
 
     except Exception as e:
         logger.error(f"🎬 [SESSION 466] Autonomous content studio loop failed: {e}")
+
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
+
         return {'status': 'failed', 'error': str(e)}
 
 
@@ -13116,6 +13172,7 @@ def run_narrative_drift_cycle():
     Run the Narrative Drift Detector autonomous cycle.
 
     Session 471: Tier 1 Autonomous Situation #2
+    Session 497: Added AutonomousSituationSession tracking.
 
     This is the main loop that:
     1. Processes new spider data for narrative signals
@@ -13132,7 +13189,18 @@ def run_narrative_drift_cycle():
 
     Schedule: Every 4 hours
     """
+    import time
+    from django.utils import timezone
+    from core.models_autonomous_situations import AutonomousSituationSession
+
+    start_time = time.time()
     logger.info("📰 [NARRATIVE] Starting narrative drift detection cycle...")
+
+    # Session 497: Create situation session
+    session = AutonomousSituationSession.objects.create(
+        situation_type='narrative_drift',
+        status='running'
+    )
 
     try:
         from core.agents.narrative import NarrativeDriftCoordinator
@@ -13140,25 +13208,45 @@ def run_narrative_drift_cycle():
         coordinator = NarrativeDriftCoordinator()
         result = coordinator.run_autonomous_cycle()
 
+        alerts_count = 0
+        steps_count = 0
         if result.get('success'):
             steps = result.get('steps', [])
+            steps_count = len(steps)
             logger.info(
-                f"📰 [NARRATIVE] Cycle complete: {len(steps)} steps executed"
+                f"📰 [NARRATIVE] Cycle complete: {steps_count} steps executed"
             )
 
             # Send to Discord if there were alerts
             for step in steps:
                 if step.get('step') == 'full_scan':
                     alerts = step.get('result', {}).get('alerts_created', [])
+                    alerts_count = len(alerts)
                     if alerts:
                         _send_narrative_alerts_to_discord(alerts)
         else:
             logger.error(f"📰 [NARRATIVE] Cycle failed: {result.get('error')}")
 
+        # Session 497: Update session with success
+        session.status = 'completed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = steps_count
+        session.alerts_generated = alerts_count
+        session.save()
+
         return result
 
     except Exception as e:
         logger.error(f"📰 [NARRATIVE] Cycle failed with exception: {e}")
+
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
+
         return {'status': 'failed', 'error': str(e)}
 
 
@@ -14399,8 +14487,17 @@ def run_blockchain_security_monitor():
     from django.utils import timezone
     from decimal import Decimal
     import json
+    import time
 
+    start_time = time.time()
     logger.info("🔗 Starting Blockchain Security Monitor cycle...")
+
+    # Session 497: Create unified situation session
+    from core.models_autonomous_situations import AutonomousSituationSession
+    situation_session = AutonomousSituationSession.objects.create(
+        situation_type='blockchain',
+        status='running'
+    )
 
     try:
         from core.models_autonomous_alerts import (
@@ -14533,6 +14630,14 @@ def run_blockchain_security_monitor():
 
         logger.info(f"✅ Blockchain Security Monitor complete: {len(alerts_generated)} alerts generated")
 
+        # Session 497: Update unified situation session with success
+        situation_session.status = 'completed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.items_processed = session.spider_data_processed
+        situation_session.alerts_generated = len(alerts_generated)
+        situation_session.save()
+
         return {
             'success': True,
             'session_id': str(session.id),
@@ -14550,6 +14655,13 @@ def run_blockchain_security_monitor():
         logger.error(f"Blockchain Security Monitor failed: {e}")
         import traceback
         traceback.print_exc()
+
+        # Session 497: Update unified situation session with failure
+        situation_session.status = 'failed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.error_message = str(e)
+        situation_session.save()
 
         # Mark session as failed if it exists
         try:
@@ -14587,8 +14699,17 @@ def run_stock_market_intelligence():
     from django.utils import timezone
     from decimal import Decimal
     import json
+    import time
 
+    start_time = time.time()
     logger.info("📈 Starting Stock Market Intelligence cycle...")
+
+    # Session 497: Create unified situation session
+    from core.models_autonomous_situations import AutonomousSituationSession
+    situation_session = AutonomousSituationSession.objects.create(
+        situation_type='stock_market',
+        status='running'
+    )
 
     try:
         from core.models_autonomous_alerts import (
@@ -14745,6 +14866,14 @@ def run_stock_market_intelligence():
 
         logger.info(f"✅ Stock Market Intelligence complete: {len(alerts_generated)} alerts generated")
 
+        # Session 497: Update unified situation session with success
+        situation_session.status = 'completed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.items_processed = session.spider_data_processed
+        situation_session.alerts_generated = len(alerts_generated)
+        situation_session.save()
+
         return {
             'success': True,
             'session_id': str(session.id),
@@ -14762,6 +14891,13 @@ def run_stock_market_intelligence():
         logger.error(f"Stock Market Intelligence failed: {e}")
         import traceback
         traceback.print_exc()
+
+        # Session 497: Update unified situation session with failure
+        situation_session.status = 'failed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.error_message = str(e)
+        situation_session.save()
 
         try:
             if 'session' in locals():
@@ -14792,10 +14928,19 @@ def process_trigger_events(event_ids: list):
     Args:
         event_ids: List of TriggerEvent UUIDs to process
     """
+    import time
     from django.utils import timezone
     from decimal import Decimal
 
+    start_time = time.time()
     logger.info(f"⚡ Processing {len(event_ids)} trigger events...")
+
+    # Session 497: Create unified situation session for trigger processing
+    from core.models_autonomous_situations import AutonomousSituationSession
+    situation_session = AutonomousSituationSession.objects.create(
+        situation_type='trigger_processing',
+        status='running'
+    )
 
     try:
         from core.models_situation_triggers import TriggerEvent
@@ -14929,6 +15074,14 @@ def process_trigger_events(event_ids: list):
             f"{alerts_generated} alerts, {discord_sent} Discord notifications"
         )
 
+        # Session 497: Update session with success
+        situation_session.status = 'completed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.items_processed = len(event_ids)
+        situation_session.alerts_generated = alerts_generated
+        situation_session.save()
+
         return {
             'success': True,
             'events_processed': len(event_ids),
@@ -14940,6 +15093,14 @@ def process_trigger_events(event_ids: list):
         logger.error(f"Failed to process trigger events: {e}")
         import traceback
         traceback.print_exc()
+
+        # Session 497: Update session with failure
+        situation_session.status = 'failed'
+        situation_session.completed_at = timezone.now()
+        situation_session.duration_seconds = time.time() - start_time
+        situation_session.error_message = str(e)
+        situation_session.save()
+
         return {'success': False, 'error': str(e)}
 
 
@@ -15722,16 +15883,21 @@ def run_side_hustle_detector(self):
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
 def run_crypto_sentiment_monitor(self):
     """Situation #13: Crypto Sentiment Monitor - Tracks crypto social sentiment."""
+    import time
+    start_time = time.time()
     logger.info("🪙 [CRYPTO] Starting sentiment analysis...")
+
+    # Session 497: Import early for error handling
+    from core.models_autonomous_situations import CryptoSentiment, AutonomousSituationSession
+    from django.utils import timezone
+
+    session = AutonomousSituationSession.objects.create(situation_type='crypto_sentiment', status='running')
 
     try:
         from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import CryptoSentiment, AutonomousSituationSession
-        from django.utils import timezone
         from datetime import timedelta
         from collections import defaultdict
 
-        session = AutonomousSituationSession.objects.create(situation_type='crypto_sentiment', status='running')
         cutoff = timezone.now() - timedelta(hours=6)
         spider_data = SpiderData.objects.filter(
             spider_name__in=['coingecko', 'reddit', 'bluesky'],
@@ -15753,13 +15919,22 @@ def run_crypto_sentiment_monitor(self):
                 )
                 created += 1
 
+        # Session 497: Add duration tracking
         session.status = 'completed'
         session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = spider_data.count()
         session.items_created = created
         session.save()
         logger.info(f"🪙 [CRYPTO] Completed: {created} sentiments")
         return {'status': 'completed', 'sentiments': created}
     except Exception as e:
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
         logger.error(f"🪙 [CRYPTO] Error: {e}")
         return {'status': 'error', 'error': str(e)}
 
@@ -15832,15 +16007,20 @@ def run_tech_stack_tracker(self):
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
 def run_ai_model_monitor(self):
     """Situation #16: AI Model Release Monitor - Tracks new AI models."""
+    import time
+    start_time = time.time()
     logger.info("🤖 [AI MODEL] Starting monitoring...")
+
+    # Session 497: Import early for error handling
+    from core.models_autonomous_situations import AIModelRelease, AutonomousSituationSession
+    from django.utils import timezone
+
+    session = AutonomousSituationSession.objects.create(situation_type='ai_model', status='running')
 
     try:
         from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import AIModelRelease, AutonomousSituationSession
-        from django.utils import timezone
         from datetime import timedelta
 
-        session = AutonomousSituationSession.objects.create(situation_type='ai_model', status='running')
         cutoff = timezone.now() - timedelta(hours=24)
         spider_data = SpiderData.objects.filter(
             spider_name__in=['huggingface', 'github', 'hackernews'],
@@ -15860,13 +16040,22 @@ def run_ai_model_monitor(self):
                     )
                     created += 1
 
+        # Session 497: Add duration tracking
         session.status = 'completed'
         session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = spider_data.count()
         session.items_created = created
         session.save()
         logger.info(f"🤖 [AI MODEL] Completed: {created} models")
         return {'status': 'completed', 'models': created}
     except Exception as e:
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
         logger.error(f"🤖 [AI MODEL] Error: {e}")
         return {'status': 'error', 'error': str(e)}
 
@@ -15874,15 +16063,20 @@ def run_ai_model_monitor(self):
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
 def run_case_law_monitor(self):
     """Situation #18: Case Law Monitor - Tracks relevant case decisions."""
+    import time
+    start_time = time.time()
     logger.info("⚖️ [CASE LAW] Starting monitoring...")
+
+    # Session 497: Import early for error handling
+    from core.models_autonomous_situations import CaseLawUpdate, AutonomousSituationSession
+    from django.utils import timezone
+
+    session = AutonomousSituationSession.objects.create(situation_type='case_law', status='running')
 
     try:
         from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import CaseLawUpdate, AutonomousSituationSession
-        from django.utils import timezone
         from datetime import timedelta
 
-        session = AutonomousSituationSession.objects.create(situation_type='case_law', status='running')
         cutoff = timezone.now() - timedelta(hours=24)
         spider_data = SpiderData.objects.filter(
             spider_name__in=['courtlistener', 'findlaw', 'justia_family_law'],
@@ -15901,13 +16095,22 @@ def run_case_law_monitor(self):
                 )
                 created += 1
 
+        # Session 497: Add duration tracking
         session.status = 'completed'
         session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.items_processed = spider_data.count()
         session.items_created = created
         session.save()
         logger.info(f"⚖️ [CASE LAW] Completed: {created} cases")
         return {'status': 'completed', 'cases': created}
     except Exception as e:
+        # Session 497: Update session with failure
+        session.status = 'failed'
+        session.completed_at = timezone.now()
+        session.duration_seconds = time.time() - start_time
+        session.error_message = str(e)
+        session.save()
         logger.error(f"⚖️ [CASE LAW] Error: {e}")
         return {'status': 'error', 'error': str(e)}
 

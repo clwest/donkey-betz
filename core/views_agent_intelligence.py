@@ -423,7 +423,7 @@ def get_capabilities(request):
 @login_required
 def get_bridge_status(request):
     """
-    Get the spider intelligence bridge status.
+    Get the spider intelligence service status.
 
     GET /api/agent-intelligence/bridge/
 
@@ -432,25 +432,36 @@ def get_bridge_status(request):
         "success": true,
         "bridge": {
             "is_running": true,
-            "messages_received": 100,
-            "messages_routed": 95,
+            "spider_count": 72,
+            "data_records": 20000,
             ...
         }
     }
+
+    NOTE: Session 497 - Deprecated spider_intelligence_bridge removed.
+    Now uses SpiderIntelligenceService instead.
     """
     try:
-        from core.services.spider_intelligence_bridge import get_spider_bridge
+        from core.services.spider_intelligence import get_spider_intelligence_service
+        from core.models_unified_system import SpiderData
 
-        bridge = get_spider_bridge()
-        stats = bridge.get_stats()
+        service = get_spider_intelligence_service()
+        spider_count = len(service.get_available_categories())
+        data_count = SpiderData.objects.count()
 
         return JsonResponse({
             'success': True,
-            'bridge': stats
+            'bridge': {
+                'is_running': True,
+                'service': 'SpiderIntelligenceService',
+                'spider_categories': spider_count,
+                'data_records': data_count,
+                'note': 'Legacy bridge deprecated - using SpiderIntelligenceService'
+            }
         })
 
     except Exception as e:
-        logger.error(f"Error getting bridge status: {e}")
+        logger.error(f"Error getting intelligence status: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -480,9 +491,14 @@ def inject_test_data(request):
         "success": true,
         "message": "Injected test data"
     }
+
+    NOTE: Session 497 - Updated to use SpiderData model directly.
     """
     try:
         import json
+        from django.utils import timezone
+        from core.models_unified_system import SpiderData
+
         body = json.loads(request.body)
 
         spider_name = body.get('spider_name', 'test_spider')
@@ -492,12 +508,22 @@ def inject_test_data(request):
             'description': 'Injected via API for testing'
         })
 
-        from core.services.spider_intelligence_bridge import inject_test_intelligence
-        inject_test_intelligence(spider_name, category, data)
+        # Create SpiderData record directly
+        spider_data = SpiderData.objects.create(
+            spider_name=spider_name,
+            category=category,
+            title=data.get('title', 'Test Data'),
+            description=data.get('description', 'Test description'),
+            source_url=data.get('url', 'https://test.local/'),
+            data=data,
+            quality_score=0.5,  # Test data gets low quality score
+            created_at=timezone.now()
+        )
 
         return JsonResponse({
             'success': True,
-            'message': f'Injected test data from {spider_name} ({category})'
+            'message': f'Injected test data from {spider_name} ({category})',
+            'id': str(spider_data.id)
         })
 
     except Exception as e:

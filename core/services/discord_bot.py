@@ -507,6 +507,9 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
         await self.add_cog(GumroadCommands(self))  # Session 487: Gumroad Publishing (Golden Egg)
         await self.add_cog(PodcastCommands(self))  # Session 496: AI Podcast Studio
+        await self.add_cog(LegalCommands(self))  # Session 497: Pro Se Legal Assistant
+        await self.add_cog(DeveloperCommands(self))  # Session 497: Code Generation/Review
+        await self.add_cog(MLScoringCommands(self))  # Session 497: ML Scoring Status
 
         # Sync slash commands with Discord
         try:
@@ -11958,6 +11961,541 @@ class PodcastCommands(commands.Cog):
                 embed=discord.Embed(
                     title="Error",
                     description=f"Failed to get script: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# ============================================================
+# Session 497: Legal Commands for Pro Se Legal Assistant
+# ============================================================
+
+class LegalCommands(commands.Cog):
+    """
+    Session 497: Pro Se Legal Assistant Discord Commands.
+
+    Provides access to legal document drafting, case management,
+    and motion analysis for Colorado family law matters.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    async def _get_linked_user(self, discord_id):
+        """Get the linked Django user for this Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+
+        return await get_user()
+
+    @app_commands.command(name="legal-draft", description="Draft a legal document template (Colorado family law)")
+    @app_commands.describe(
+        document_type="Type of document to draft",
+        description="Brief description of what you need"
+    )
+    @app_commands.choices(document_type=[
+        app_commands.Choice(name="Motion to Modify Parenting Time", value="motion_modify_parenting"),
+        app_commands.Choice(name="Motion for Continuance", value="motion_continuance"),
+        app_commands.Choice(name="Meet and Confer Email", value="conferral_email"),
+        app_commands.Choice(name="Declaration/Affidavit", value="declaration"),
+        app_commands.Choice(name="Response to Motion", value="response_motion"),
+    ])
+    async def legal_draft(
+        self,
+        interaction: discord.Interaction,
+        document_type: app_commands.Choice[str],
+        description: str
+    ):
+        """Draft a legal document template."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            # Execute the legal agent
+            @sync_to_async
+            def run_legal_agent():
+                from core.agents.legal.legal_doc_drafter_agent import LegalDocDrafterAgent
+                agent = LegalDocDrafterAgent()
+                task = f"Draft a {document_type.name} template. Context: {description}"
+                return agent.execute(task, user=user)
+
+            result = await run_legal_agent()
+
+            if result.success:
+                # Split long responses
+                content = result.content[:4000] if result.content else "Document template generated."
+
+                embed = discord.Embed(
+                    title=f"📜 {document_type.name}",
+                    description=content[:2000],
+                    color=discord.Color.blue()
+                )
+                embed.add_field(
+                    name="⚠️ Disclaimer",
+                    value="This is a template only, not legal advice. Consult an attorney.",
+                    inline=False
+                )
+                embed.set_footer(text="Pro Se Legal Assistant | Colorado Family Law")
+
+                await interaction.followup.send(embed=embed)
+
+                # Send remainder if content is long
+                if len(content) > 2000:
+                    await interaction.channel.send(f"**Continued:**\n```\n{content[2000:4000]}\n```")
+            else:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Draft Failed",
+                        description=result.error or "Unable to generate document",
+                        color=discord.Color.red()
+                    )
+                )
+
+        except Exception as e:
+            logger.error(f"Legal draft error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to draft document: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="legal-analyze", description="Analyze a denied motion and suggest fixes")
+    @app_commands.describe(
+        motion_text="Paste the text of the denied motion or order"
+    )
+    async def legal_analyze(
+        self,
+        interaction: discord.Interaction,
+        motion_text: str
+    ):
+        """Analyze a denied motion and suggest procedural fixes."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def run_analysis():
+                from core.agents.legal.legal_doc_drafter_agent import LegalDocDrafterAgent
+                agent = LegalDocDrafterAgent()
+                task = f"Analyze this denied motion and identify procedural defects. Suggest how to properly file:\n\n{motion_text}"
+                return agent.execute(task, user=user)
+
+            result = await run_analysis()
+
+            if result.success:
+                content = result.content[:4000] if result.content else "Analysis complete."
+
+                embed = discord.Embed(
+                    title="🔍 Motion Analysis",
+                    description=content[:2000],
+                    color=discord.Color.gold()
+                )
+                embed.add_field(
+                    name="⚠️ Disclaimer",
+                    value="This is procedural analysis only, not legal advice.",
+                    inline=False
+                )
+
+                await interaction.followup.send(embed=embed)
+
+                if len(content) > 2000:
+                    await interaction.channel.send(f"**Analysis Continued:**\n```\n{content[2000:4000]}\n```")
+            else:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Analysis Failed",
+                        description=result.error or "Unable to analyze motion",
+                        color=discord.Color.red()
+                    )
+                )
+
+        except Exception as e:
+            logger.error(f"Legal analyze error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Analysis failed: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="legal-case", description="Get info about your case profile")
+    async def legal_case(self, interaction: discord.Interaction):
+        """View case profile information."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def get_case_info():
+                from core.models_legal import CaseProfile
+                cases = CaseProfile.objects.filter(user=user, is_active=True)
+                return list(cases.values('id', 'case_number', 'case_type', 'county', 'created_at'))
+
+            cases = await get_case_info()
+
+            if not cases:
+                embed = discord.Embed(
+                    title="📁 No Case Profiles",
+                    description="You haven't created any case profiles yet.\n\nVisit the AI Studio Legal Assistant tab to create a case profile.",
+                    color=discord.Color.blue()
+                )
+            else:
+                embed = discord.Embed(
+                    title=f"📁 Your Case Profiles ({len(cases)})",
+                    color=discord.Color.blue()
+                )
+                for case in cases[:5]:
+                    case_type = case.get('case_type', 'Unknown').replace('_', ' ').title()
+                    embed.add_field(
+                        name=f"Case #{case.get('case_number', 'N/A')}",
+                        value=f"**Type:** {case_type}\n**County:** {case.get('county', 'N/A')}",
+                        inline=True
+                    )
+
+            embed.set_footer(text="Pro Se Legal Assistant | Colorado Family Law")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Legal case error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get case info: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# ============================================================
+# Session 497: Developer Commands for Code Generation/Review
+# ============================================================
+
+class DeveloperCommands(commands.Cog):
+    """
+    Session 497: Code Generation and Review Discord Commands.
+
+    Provides access to code generation and review agents.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    async def _get_linked_user(self, discord_id):
+        """Get the linked Django user for this Discord ID."""
+        @sync_to_async
+        def get_user():
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            return User.objects.filter(discord_id=discord_id).first()
+
+        return await get_user()
+
+    @app_commands.command(name="code-generate", description="Generate code from a specification")
+    @app_commands.describe(
+        specification="What should the code do?",
+        language="Programming language",
+        framework="Optional framework (django, react, etc.)"
+    )
+    @app_commands.choices(language=[
+        app_commands.Choice(name="Python", value="python"),
+        app_commands.Choice(name="JavaScript", value="javascript"),
+        app_commands.Choice(name="TypeScript", value="typescript"),
+        app_commands.Choice(name="HTML/CSS", value="html"),
+        app_commands.Choice(name="SQL", value="sql"),
+        app_commands.Choice(name="Bash", value="bash"),
+    ])
+    async def code_generate(
+        self,
+        interaction: discord.Interaction,
+        specification: str,
+        language: app_commands.Choice[str],
+        framework: str = None
+    ):
+        """Generate code from a specification."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def run_generator():
+                from core.agents.code_generator_agent import CodeGeneratorAgent
+                agent = CodeGeneratorAgent()
+                task = f"Generate {language.name} code for: {specification}"
+                if framework:
+                    task += f" (using {framework})"
+                return agent.execute(task, user=user)
+
+            result = await run_generator()
+
+            if result.success:
+                content = result.content[:3800] if result.content else "Code generated."
+
+                embed = discord.Embed(
+                    title=f"💻 Generated {language.name} Code",
+                    color=discord.Color.green()
+                )
+                if framework:
+                    embed.add_field(name="Framework", value=framework, inline=True)
+                embed.add_field(name="Specification", value=specification[:100], inline=False)
+
+                await interaction.followup.send(embed=embed)
+                await interaction.channel.send(f"```{language.value}\n{content}\n```")
+
+            else:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Generation Failed",
+                        description=result.error or "Unable to generate code",
+                        color=discord.Color.red()
+                    )
+                )
+
+        except Exception as e:
+            logger.error(f"Code generate error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to generate code: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="code-review", description="Review code for bugs, security, and quality")
+    @app_commands.describe(
+        code="The code to review (paste directly)",
+        language="Programming language",
+        focus="Review focus area"
+    )
+    @app_commands.choices(language=[
+        app_commands.Choice(name="Python", value="python"),
+        app_commands.Choice(name="JavaScript", value="javascript"),
+        app_commands.Choice(name="TypeScript", value="typescript"),
+        app_commands.Choice(name="SQL", value="sql"),
+        app_commands.Choice(name="Other", value="other"),
+    ])
+    @app_commands.choices(focus=[
+        app_commands.Choice(name="Comprehensive (All Areas)", value="comprehensive"),
+        app_commands.Choice(name="Security Audit", value="security"),
+        app_commands.Choice(name="Performance", value="performance"),
+        app_commands.Choice(name="Code Quality", value="quality"),
+    ])
+    async def code_review(
+        self,
+        interaction: discord.Interaction,
+        code: str,
+        language: app_commands.Choice[str],
+        focus: app_commands.Choice[str] = None
+    ):
+        """Review code for issues."""
+        await interaction.response.defer()
+
+        try:
+            user = await self._get_linked_user(str(interaction.user.id))
+            if not user:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Account Not Linked",
+                        description="Please link your Discord account first using `/link`",
+                        color=discord.Color.orange()
+                    )
+                )
+                return
+
+            @sync_to_async
+            def run_review():
+                from core.agents.code_review_agent import CodeReviewAgent
+                agent = CodeReviewAgent()
+                focus_area = focus.value if focus else "comprehensive"
+                task = f"Perform a {focus_area} review of this {language.name} code:\n\n{code}"
+                return agent.execute(task, user=user)
+
+            result = await run_review()
+
+            if result.success:
+                content = result.content[:4000] if result.content else "Review complete."
+
+                embed = discord.Embed(
+                    title=f"🔍 Code Review ({language.name})",
+                    description=content[:2000],
+                    color=discord.Color.blue()
+                )
+                if focus:
+                    embed.add_field(name="Focus", value=focus.name, inline=True)
+
+                await interaction.followup.send(embed=embed)
+
+                if len(content) > 2000:
+                    await interaction.channel.send(f"**Review Continued:**\n```\n{content[2000:4000]}\n```")
+            else:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Review Failed",
+                        description=result.error or "Unable to review code",
+                        color=discord.Color.red()
+                    )
+                )
+
+        except Exception as e:
+            logger.error(f"Code review error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to review code: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+
+# ============================================================
+# Session 497: ML Scoring Status Command
+# ============================================================
+
+class MLScoringCommands(commands.Cog):
+    """
+    Session 497: ML Scoring Status Commands.
+
+    View the status of the ML opportunity scoring engine.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    @app_commands.command(name="ml-scoring", description="View ML opportunity scoring status")
+    async def ml_scoring_status(self, interaction: discord.Interaction):
+        """Get ML scoring engine status."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_ml_status():
+                from core.services.ml_scoring_engine import get_ml_scoring_engine
+                from core.models_unified_system import Opportunity, OpportunityOutcome
+                from django.utils import timezone
+                from datetime import timedelta
+                from django.db.models import Count
+
+                engine = get_ml_scoring_engine()
+                now = timezone.now()
+                day_ago = now - timedelta(hours=24)
+                week_ago = now - timedelta(days=7)
+
+                # Get stats
+                total_opps = Opportunity.objects.count()
+                opps_24h = Opportunity.objects.filter(created_at__gte=day_ago).count()
+
+                # Score distribution
+                recent = Opportunity.objects.filter(created_at__gte=week_ago).values('overall_score')
+                high = sum(1 for o in recent if (o.get('overall_score') or 0) >= 70)
+                medium = sum(1 for o in recent if 40 <= (o.get('overall_score') or 0) < 70)
+                low = sum(1 for o in recent if (o.get('overall_score') or 0) < 40)
+
+                # Outcomes
+                outcomes = OpportunityOutcome.objects.values('outcome').annotate(count=Count('id'))
+                outcome_map = {o['outcome']: o['count'] for o in outcomes}
+                total_outcomes = sum(outcome_map.values())
+
+                return {
+                    'is_trained': engine.is_trained,
+                    'total_opps': total_opps,
+                    'opps_24h': opps_24h,
+                    'high': high,
+                    'medium': medium,
+                    'low': low,
+                    'training_data': total_outcomes,
+                    'ready': total_outcomes >= 100,
+                    'outcomes': outcome_map
+                }
+
+            data = await get_ml_status()
+
+            # Model status
+            if data['is_trained']:
+                status_emoji = "✅"
+                status_text = "Trained & Active"
+            elif data['ready']:
+                status_emoji = "🟡"
+                status_text = "Ready for Training"
+            else:
+                status_emoji = "⏳"
+                status_text = f"Collecting Data ({data['training_data']}/100)"
+
+            embed = discord.Embed(
+                title="🧠 ML Scoring Engine Status",
+                color=discord.Color.gold()
+            )
+            embed.add_field(name="Model Status", value=f"{status_emoji} {status_text}", inline=True)
+            embed.add_field(name="Training Data", value=str(data['training_data']), inline=True)
+            embed.add_field(name="Total Opportunities", value=str(data['total_opps']), inline=True)
+            embed.add_field(name="Scored (24h)", value=str(data['opps_24h']), inline=True)
+
+            # Score distribution
+            embed.add_field(
+                name="Score Distribution (7d)",
+                value=f"🟢 High (70+): {data['high']}\n🟡 Medium (40-69): {data['medium']}\n🔴 Low (<40): {data['low']}",
+                inline=False
+            )
+
+            # Outcomes
+            if data['outcomes']:
+                outcome_text = "\n".join([f"• {k.replace('_', ' ').title()}: {v}" for k, v in data['outcomes'].items()])
+                embed.add_field(name="Outcome Breakdown", value=outcome_text, inline=False)
+
+            embed.set_footer(text="XGBoost + SHAP Explainability | Hybrid ML + Rule-based Scoring")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"ML scoring status error: {e}", exc_info=True)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Error",
+                    description=f"Failed to get ML status: {str(e)[:200]}",
                     color=discord.Color.red()
                 )
             )

@@ -188,7 +188,7 @@ Always acknowledge risks but emphasize potential rewards."""
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message=f"Bull case analysis complete for {len(bull_cases)} stocks",
                 data={
@@ -201,13 +201,47 @@ Always acknowledge risks but emphasize potential rewards."""
                 execution_time_ms=execution_time
             )
 
+            # Record learning outcome for collective intelligence
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=True,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'execution_time_ms': execution_time,
+                        'stocks_analyzed': len(bull_cases),
+                        'high_conviction_count': summary.get('high_conviction', 0),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
+
         except Exception as e:
             logger.error(f"BullCaseAgent error: {e}")
-            return AgentResult(
+            result = AgentResult(
                 success=False,
                 error=str(e),
                 agent_name=self.name
             )
+
+            # Record failed learning outcome
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'error': str(e),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _extract_tickers_from_spider_data(self, spider_context: Dict) -> List[str]:
         """Extract stock tickers from spider intelligence."""

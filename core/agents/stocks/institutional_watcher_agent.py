@@ -154,7 +154,7 @@ Focus on transactions that diverge from normal patterns."""
 
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message=f"Institutional watch complete. Found {len(alerts)} alerts.",
                 data={
@@ -167,13 +167,47 @@ Focus on transactions that diverge from normal patterns."""
                 execution_time_ms=execution_time
             )
 
+            # Record learning outcome for collective intelligence
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=True,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'execution_time_ms': execution_time,
+                        'alerts_found': len(alerts),
+                        'transactions_analyzed': len(insider_data),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
+
         except Exception as e:
             logger.error(f"InstitutionalWatcherAgent error: {e}")
-            return AgentResult(
+            result = AgentResult(
                 success=False,
                 error=str(e),
                 agent_name=self.name
             )
+
+            # Record failed learning outcome
+            try:
+                self._record_learning_outcome(
+                    task=task,
+                    result=result,
+                    success=False,
+                    context={
+                        'agent_type': self.__class__.__name__,
+                        'error': str(e),
+                    }
+                )
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
     def _get_insider_data(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Fetch insider trading data from SEC filings."""

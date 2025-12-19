@@ -247,7 +247,7 @@ You have access to:
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
-                        return AgentResult(
+                        result = AgentResult(
                             success=True,
                             message=f"Blockchain audit coordination completed",
                             data={'results': all_results, 'query': task},
@@ -257,6 +257,24 @@ You have access to:
                             tool_calls=tool_calls_made,
                             knowledge_attribution=knowledge_attribution
                         )
+
+                        # Record learning outcome for collective intelligence
+                        try:
+                            self._record_learning_outcome(
+                                task=task,
+                                result=result,
+                                success=True,
+                                context={
+                                    'agent_type': self.__class__.__name__,
+                                    'execution_time_ms': execution_time,
+                                    'agents_coordinated': len(all_results),
+                                    'tools_used': [tc['tool'] for tc in tool_calls_made],
+                                }
+                            )
+                        except Exception as le:
+                            logger.warning(f"Failed to record learning outcome: {le}")
+
+                        return result
 
                 content = gpt_response.get('content', 'I coordinate blockchain security monitoring. What would you like me to analyze?')
                 return AgentResult(
@@ -268,11 +286,27 @@ You have access to:
 
             except Exception as e:
                 logger.error(f"Coordination failed: {e}")
-                return AgentResult(
+                result = AgentResult(
                     success=False,
                     error=str(e),
                     agent_name=self.name
                 )
+
+                # Record failed learning outcome
+                try:
+                    self._record_learning_outcome(
+                        task=task,
+                        result=result,
+                        success=False,
+                        context={
+                            'agent_type': self.__class__.__name__,
+                            'error': str(e),
+                        }
+                    )
+                except Exception as le:
+                    logger.warning(f"Failed to record learning outcome: {le}")
+
+                return result
 
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a specific tool call."""

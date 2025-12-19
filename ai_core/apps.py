@@ -24,11 +24,11 @@ class AICoreConfig(AppConfig):
                 self._start_spider_bridge()
 
     def _start_spider_bridge(self):
-        """Start the spider intelligence bridge for AI Content agents"""
-        try:
-            from core.services.spider_intelligence_bridge import start_spider_bridge
-            bridge = start_spider_bridge()
-            logger.info("Spider Intelligence Bridge started for AI Content agents")
-        except Exception as e:
-            # Don't fail Django startup if bridge fails
-            logger.warning(f"Could not start Spider Intelligence Bridge: {e}")
+        """Start the spider intelligence bridge for AI Content agents
+
+        NOTE: Session 497 - Deprecated spider_intelligence_bridge removed.
+        Spider data now flows through SpiderIntelligenceService and SpiderSemanticSearch.
+        This method is kept as a no-op to avoid breaking existing code.
+        """
+        # Spider bridge deprecated - spider data now uses SpiderIntelligenceService
+        logger.debug("Spider Intelligence Bridge deprecated - using SpiderIntelligenceService instead")
