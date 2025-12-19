@@ -8076,11 +8076,11 @@ Raw data to summarize:
 Spoken response:"""
 
                 try:
+                    # Session 494: Use gpt-5-mini (reasoning model)
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="gpt-5-mini",
                         messages=[{"role": "user", "content": prompt}],
-                        max_tokens=300,
-                        temperature=0.7
+                        max_completion_tokens=2000  # Reasoning model needs more tokens
                     )
                     return response.choices[0].message.content.strip()
                 except Exception as e:
@@ -8424,10 +8424,11 @@ Raw data to summarize:
 
 Conversational response:"""
 
+                # Session 494: Use gpt-5-mini (reasoning model)
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-mini",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=300
+                    max_completion_tokens=2000  # Reasoning model needs more tokens
                 )
                 return response.choices[0].message.content
 
@@ -8623,13 +8624,14 @@ Keep the response concise but insightful (max 300 words)."""
             @sync_to_async
             def get_advisor_response():
                 client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+                # Session 494: Use gpt-5-mini (reasoning model)
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": advisor_prompt},
                         {"role": "user", "content": question}
                     ],
-                    max_tokens=500
+                    max_completion_tokens=3000  # Reasoning model needs more tokens
                 )
                 return response.choices[0].message.content
 

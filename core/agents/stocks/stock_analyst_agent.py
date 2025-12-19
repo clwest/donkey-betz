@@ -276,13 +276,14 @@ Provide:
             import os
 
             client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+            # Session 494: Use gpt-5-mini (reasoning model)
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000
+                max_completion_tokens=6000  # Reasoning model needs more tokens
             )
             return response.choices[0].message.content
 

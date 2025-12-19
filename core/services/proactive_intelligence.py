@@ -303,18 +303,25 @@ class ProactiveIntelligenceService:
 
         try:
             from core.models_unified_system import SpiderData
-            # Get trending content topics
+            # Get trending content topics - use correct field names
             content_data = SpiderData.objects.filter(
-                fetched_at__gte=cutoff,
-                category__in=['tech', 'news', 'content']
-            ).order_by('-fetched_at')[:10]
+                created_at__gte=cutoff,
+                spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'reddit']
+            ).order_by('-created_at')[:10]
 
             for item in content_data[:5]:
+                # Extract title from raw_data
+                title = ''
+                if item.raw_data and 'items' in item.raw_data:
+                    items = item.raw_data.get('items', [])
+                    if items and len(items) > 0:
+                        title = items[0].get('title', '')[:100]
                 trending.append({
                     'type': 'trending_topic',
-                    'title': item.title[:100],
+                    'title': title or f'Update from {item.spider_name}',
                     'source': item.spider_name,
-                    'category': item.category
+                    'category': item.data_type,
+                    'url': item.source_url  # Session 483: Include URL
                 })
         except Exception as e:
             logger.debug(f"No content trends: {e}")
@@ -328,15 +335,22 @@ class ProactiveIntelligenceService:
         try:
             from core.models_unified_system import SpiderData
             design_data = SpiderData.objects.filter(
-                fetched_at__gte=cutoff,
-                category__in=['creative', 'design']
-            ).order_by('-fetched_at')[:5]
+                created_at__gte=cutoff,
+                spider_name__in=['behance', 'dribbble', 'awwwards', 'unsplash']
+            ).order_by('-created_at')[:5]
 
             for item in design_data:
+                # Extract title from raw_data
+                title = ''
+                if item.raw_data and 'items' in item.raw_data:
+                    items = item.raw_data.get('items', [])
+                    if items and len(items) > 0:
+                        title = items[0].get('title', '')[:100]
                 trending.append({
                     'type': 'design_trend',
-                    'title': item.title[:100],
-                    'source': item.spider_name
+                    'title': title or f'Update from {item.spider_name}',
+                    'source': item.spider_name,
+                    'url': item.source_url  # Session 483: Include URL
                 })
         except Exception as e:
             logger.debug(f"No design trends: {e}")
@@ -350,21 +364,29 @@ class ProactiveIntelligenceService:
         try:
             from core.models_unified_system import SpiderData
             tech_data = SpiderData.objects.filter(
-                fetched_at__gte=cutoff,
-                category__in=['tech', 'ai']
-            ).order_by('-fetched_at')[:10]
+                created_at__gte=cutoff,
+                spider_name__in=['techcrunch', 'hackernews', 'theverge', 'wired', 'mit_tech_review', 'arstechnica']
+            ).order_by('-created_at')[:10]
 
             # Filter for AI/ML content
             ai_keywords = ['ai', 'gpt', 'llm', 'claude', 'openai', 'anthropic', 'machine learning']
             for item in tech_data:
-                title_lower = item.title.lower()
-                if any(kw in title_lower for kw in ai_keywords):
-                    trending.append({
-                        'type': 'ai_trend',
-                        'title': item.title[:100],
-                        'source': item.spider_name,
-                        'url': item.url
-                    })
+                # Extract title from raw_data
+                title = ''
+                if item.raw_data and 'items' in item.raw_data:
+                    items = item.raw_data.get('items', [])
+                    for raw_item in items[:5]:  # Check first 5 items
+                        raw_title = raw_item.get('title', '')
+                        if any(kw in raw_title.lower() for kw in ai_keywords):
+                            title = raw_title[:100]
+                            url = raw_item.get('url', raw_item.get('link', '')) or item.source_url
+                            trending.append({
+                                'type': 'ai_trend',
+                                'title': title,
+                                'source': item.spider_name,
+                                'url': url
+                            })
+                            break
         except Exception as e:
             logger.debug(f"No tech trends: {e}")
 
@@ -377,15 +399,22 @@ class ProactiveIntelligenceService:
         try:
             from core.models_unified_system import SpiderData
             legal_data = SpiderData.objects.filter(
-                fetched_at__gte=cutoff,
-                category='legal'
-            ).order_by('-fetched_at')[:5]
+                created_at__gte=cutoff,
+                spider_name__in=['courtlistener', 'legal_news', 'findlaw', 'colorado_family_law']
+            ).order_by('-created_at')[:5]
 
             for item in legal_data:
+                # Extract title from raw_data
+                title = ''
+                if item.raw_data and 'items' in item.raw_data:
+                    items = item.raw_data.get('items', [])
+                    if items and len(items) > 0:
+                        title = items[0].get('title', '')[:100]
                 alerts.append({
                     'type': 'legal_update',
-                    'title': item.title[:100],
-                    'source': item.spider_name
+                    'title': title or f'Update from {item.spider_name}',
+                    'source': item.spider_name,
+                    'url': item.source_url
                 })
         except Exception as e:
             logger.debug(f"No legal updates: {e}")
@@ -446,33 +475,57 @@ class ProactiveIntelligenceService:
         return suggestions
 
     def format_for_prompt(self, intelligence: Dict[str, Any]) -> str:
-        """Format intelligence for injection into AI Assistant prompt."""
+        """
+        Format intelligence for injection into AI Assistant prompt.
+
+        Session 483: Enhanced to include source URLs for proper attribution.
+        """
         if not intelligence.get('alerts') and not intelligence.get('suggestions'):
             return ""
 
         lines = ["\n## Proactive Intelligence (from Autonomous Situations)\n"]
 
-        # Add alerts
+        # Add alerts with source links
         if intelligence.get('alerts'):
             lines.append("**Recent Alerts:**")
             for alert in intelligence['alerts'][:3]:
                 severity = alert.get('severity', 'info').upper()
                 title = alert.get('title', 'Alert')
-                lines.append(f"- [{severity}] {title}")
+                url = alert.get('url', '')
+                if url:
+                    lines.append(f"- [{severity}] {title} ([source]({url}))")
+                else:
+                    lines.append(f"- [{severity}] {title}")
 
-        # Add trending topics
+        # Add trending topics with source links
         if intelligence.get('trending_topics'):
-            lines.append("\n**Trending Topics:**")
-            for topic in intelligence['trending_topics'][:3]:
-                lines.append(f"- {topic.get('title', 'Topic')} (via {topic.get('source', 'unknown')})")
+            lines.append("\n**Trending Topics (with sources):**")
+            for topic in intelligence['trending_topics'][:5]:
+                title = topic.get('title', 'Topic')
+                source = topic.get('source', 'unknown')
+                url = topic.get('url', '')
+                if url:
+                    lines.append(f"- [{title}]({url}) (via {source})")
+                else:
+                    lines.append(f"- {title} (via {source})")
 
-        # Add opportunities
+        # Add opportunities with links
         if intelligence.get('opportunities'):
             lines.append("\n**Opportunities:**")
             for opp in intelligence['opportunities'][:3]:
-                lines.append(f"- {opp.get('title', 'Opportunity')} (score: {opp.get('score', 'N/A')})")
+                title = opp.get('title', 'Opportunity')
+                score = opp.get('score', 'N/A')
+                url = opp.get('url', '')
+                if url:
+                    lines.append(f"- [{title}]({url}) (score: {score})")
+                else:
+                    lines.append(f"- {title} (score: {score})")
 
-        lines.append("\n*You can proactively mention relevant intelligence if it helps the user.*\n")
+        # Session 483: Instruction for source attribution
+        lines.append("\n**IMPORTANT: When presenting trending information to the user:**")
+        lines.append("- Include clickable source links when available")
+        lines.append("- Format as: [Article Title](URL) or 'Source: Publication Name'")
+        lines.append("- Add a 'Sources:' section at the end with links\n")
 
         return "\n".join(lines)
 

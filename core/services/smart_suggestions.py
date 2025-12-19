@@ -383,7 +383,13 @@ class SmartSuggestionsService:
             return 'image_generation'
         elif 'generated video' in response_lower or 'created video' in response_lower:
             return 'video_generation'
-        elif 'research' in response_lower or 'analysis' in response_lower:
+        elif any(word in response_lower for word in ['research', 'analysis', 'competitor', 'market']):
+            return 'research'
+        # Session 483: Detect trending/briefing responses
+        elif any(word in response_lower for word in ['trending', 'trends', 'what\'s hot', 'latest', 'current']):
+            return 'research'
+        # Detect when response contains multiple bullet points (likely informational)
+        elif response_lower.count('\n-') >= 3 or response_lower.count('\n•') >= 3:
             return 'research'
 
         return None

@@ -294,28 +294,39 @@ def speak_text(request):
     Uses ElevenLabs for high-quality voice synthesis.
     Supports user's cloned voice or stock voices.
 
+    Session 483: Added smart TTS optimization with summarization and chunking.
+
     Body: {
         "text": "Text to speak",
         "voice_id": "optional - ElevenLabs voice ID",
-        "model": "eleven_flash_v2_5" (fast) or "eleven_multilingual_v2" (quality)
+        "model": "eleven_flash_v2_5" (fast) or "eleven_multilingual_v2" (quality),
+        "chunk_index": 0 (optional - for chunked playback)
     }
 
     Returns: {
         "success": true,
         "audio": "base64 encoded audio",
-        "audio_format": "audio/mpeg"
+        "audio_format": "audio/mpeg",
+        "was_summarized": false,
+        "has_more_chunks": false,
+        "chunk_index": 0,
+        "total_chunks": 1
     }
     """
     import json
     import base64
     import requests
     from django.conf import settings
+    from core.services.tts_optimizer import get_tts_optimizer, TTSStrategy
 
     try:
         data = json.loads(request.body)
         text = data.get('text', '').strip()
         voice_id = data.get('voice_id')
         model = data.get('model', 'eleven_flash_v2_5')  # Fast by default for chat
+        chunk_index = data.get('chunk_index', 0)
+        # Session 494: Allow users to skip summarization and hear full response
+        skip_summarize = data.get('skip_summarize', False)
 
         if not text:
             return JsonResponse({
@@ -323,13 +334,33 @@ def speak_text(request):
                 'error': 'Text is required'
             }, status=400)
 
-        # Limit text length to prevent abuse (ElevenLabs charges per character)
-        max_chars = 2000
-        if len(text) > max_chars:
-            text = text[:max_chars] + "..."
-            logger.warning(f"⚠️ Text truncated to {max_chars} chars for TTS")
+        # Use TTS optimizer for smart handling of long text
+        # Session 494: Pass skip_summarize to preserve full response if requested
+        optimizer = get_tts_optimizer(skip_summarize=skip_summarize)
+        optimized = optimizer.optimize_with_intro(text, add_summary_notice=not skip_summarize)
 
-        logger.info(f"🔊 [TTS] Speak request: {len(text)} chars")
+        # Determine which text to speak
+        if optimized.strategy == TTSStrategy.CHUNK and optimized.chunks:
+            # Chunked playback - get the requested chunk
+            if chunk_index >= len(optimized.chunks):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Invalid chunk index {chunk_index}, only {len(optimized.chunks)} chunks available'
+                }, status=400)
+            text_to_speak = optimized.chunks[chunk_index]
+            total_chunks = len(optimized.chunks)
+            has_more = chunk_index < total_chunks - 1
+        else:
+            # Direct or summarized - single audio
+            text_to_speak = optimized.text
+            total_chunks = 1
+            has_more = False
+            chunk_index = 0
+
+        logger.info(f"🔊 [TTS] Strategy: {optimized.strategy.value}, "
+                   f"Original: {optimized.original_length} chars, "
+                   f"Optimized: {len(text_to_speak)} chars, "
+                   f"Chunk: {chunk_index + 1}/{total_chunks}")
 
         # Get voice ID - check for user's cloned voice if not specified
         if not voice_id and request.user.is_authenticated:
@@ -367,7 +398,7 @@ def speak_text(request):
             "Content-Type": "application/json"
         }
         payload = {
-            "text": text,
+            "text": text_to_speak,  # Use optimized text, not original
             "model_id": model,
             "voice_settings": {
                 "stability": 0.5,
@@ -400,7 +431,12 @@ def speak_text(request):
         return JsonResponse({
             'success': True,
             'audio': audio_base64,
-            'audio_format': 'audio/mpeg'
+            'audio_format': 'audio/mpeg',
+            'was_summarized': optimized.was_summarized,
+            'has_more_chunks': has_more,
+            'chunk_index': chunk_index,
+            'total_chunks': total_chunks,
+            'strategy': optimized.strategy.value
         })
 
     except json.JSONDecodeError:
