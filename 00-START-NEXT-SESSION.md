@@ -24,7 +24,16 @@ Previously Discord-only, now available in web app!
 - Create podcast modal (topic, format, participants, audio option)
 - View script modal with copy functionality
 - Audio player for generated podcasts
-- Delete and refresh actions
+- Labeled action buttons: Script, Play, Open, Refresh, Delete
+
+### Unified Podcast View
+Combined both data sources into one tab:
+- **PodcastEpisode** (4 records) - From `/create-podcast`
+- **ChannelEpisode** (8 records) - From Autonomous Content Studio
+
+Source badges distinguish origin:
+- Pink "Podcast" badge for debate-style podcasts
+- Purple "Content Studio" badge for autonomous content
 
 **API Endpoints:**
 | Endpoint | Method | Description |
