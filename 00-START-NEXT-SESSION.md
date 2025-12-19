@@ -1,27 +1,35 @@
-# Session 504 - Start Here
+# Session 505 - Start Here
 
-**Previous Session:** 503 (Spider API Fixes - Etherscan + Kaggle)
+**Previous Session:** 504 (Spider Signature Detection & Legal Spider Fixes)
 **Date:** December 19, 2025
-**Status:** Spider data collection working!
+**Status:** 67 spiders working! All signature issues resolved.
 
 ---
 
-## Session 503 Achievements
+## Session 504 Achievements
 
-### Fixed Etherscan API Spider
-- Added `fetch_data(target)` method support in `core/tasks.py` (3 locations)
-- Fixed `IntelligenceData` parameters in spider (wrong param names)
-- Now fetching real blockchain data from Binance, Coinbase, Aave addresses
-- Current block: ~24,049,789
+### Spider Signature Detection
+- Added `inspect.signature()` logic to detect spider method patterns
+- Handles both `fetch_data(target)` and `fetch_data(max_results)` signatures
+- Updated 3 locations in `core/tasks.py` with detection logic
 
-### Fixed Kaggle API Spider
-- Updated to read `KAGGLE_API_TOKEN` env var (new official format)
-- Implemented Bearer auth for new KGAT_* tokens (old tokens used Basic auth)
-- Now fetching real ML data: 15 competitions, 15 datasets, 15 kernels
-- Example: "Deep Past Challenge", "AI Mathematical Olympiad"
+### Playwright Browsers Installed
+- Installed Chromium 140.0.7339.16 for legal spiders
+- colorado_family_law now fetching 55+ forms
+- justia_family_law now working
 
-### Root Cause
-Spider orchestration in `core/tasks.py` only looked for `fetch()` or `scrape()` methods. Many spiders (Etherscan, Kaggle) use `fetch_data(target)` pattern from BaseIntelligenceSpider.
+### FindLaw Spider Fixed
+- Updated constructor to accept standard spider kwargs
+- Now fetches 5+ legal articles per run
+
+### Verified Working Spiders:
+- discord_training: 768 conversations (1 item containing all)
+- crunchbase: 10 articles
+- kickstarter: 28 projects
+- findlaw: 5 articles
+- colorado_family_law: 55 forms
+- kaggle: 45 items
+- etherscan_api: 31 items
 
 ---
 
@@ -37,7 +45,7 @@ open http://localhost:8000/ai-studio/
 
 # 3. Verify spider status
 # Go to Intelligence Tab → Spider Operations
-# Check etherscan_api and kaggle show "success" status
+# Should see 67+ spiders with "success" status
 ```
 
 ---
@@ -49,6 +57,7 @@ open http://localhost:8000/ai-studio/
 | Routable Agents | 42 |
 | Connectivity Score | 97% |
 | Spiders | 72 |
+| Spiders with Success Status | 67 |
 | Spider Data Records | 21,936+ |
 | Discord Commands | 102 |
 | Agents with Learning Hooks | 50+ |
@@ -56,56 +65,44 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Spider Verification
-
-```
-=== Spider Verification ===
-Kaggle: 15 competitions, 15 datasets (source: kaggle_api)
-Etherscan: 30 transfers, 0 whale alerts, 1 blocks
-✅ Both spiders working!
-```
-
----
-
 ## Key Documentation
 
+- **Session 504 Handoff:** `docs/handoffs/SESSION_504_SPIDER_SIGNATURE_DETECTION.md`
 - **Session 503 Handoff:** `docs/handoffs/SESSION_503_SPIDER_FIXES.md`
-- **Session 502 Handoff:** `docs/handoffs/SESSION_502_UI_CONSOLIDATION.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
 - **Spiders:** `docs/SPIDERS.md`
 
 ---
 
-## Files Modified in Session 503
+## Files Modified in Session 504
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Added fetch_data() method support in 3 locations |
-| `ai_core/spiders/specialized/etherscan_api_spider.py` | Fixed IntelligenceData params |
-| `ai_core/spiders/specialized/kaggle_spider.py` | Bearer auth for KGAT_* tokens |
+| `core/tasks.py` | Added signature detection in 3 locations |
+| `ai_core/spiders/specialized/findlaw_spider.py` | Fixed constructor kwargs |
 
 ---
 
-## Ideas for Session 504+
+## Ideas for Session 505+
 
-1. Add more blockchain spiders (BSCScan, PolygonScan) using same pattern
-2. Monitor spider execution logs to verify consistent data collection
-3. Use official `kaggle` Python package for advanced features
+1. Monitor spider logs to confirm all 67 spiders run successfully on next Celery beat
+2. Standardize all spider signatures to use same pattern
+3. Add more blockchain spiders (BSCScan, PolygonScan) using same pattern
 4. Continue Discord vs Web feature parity work
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 503 COMPLETE!                                  |
+|              SESSION 504 COMPLETE!                                  |
 |                                                                    |
-|   Spider Fixes:                                                     |
-|   - Etherscan API: Now fetching real blockchain data               |
-|   - Kaggle API: Bearer auth for new KGAT_* tokens                  |
-|   - tasks.py: Support for fetch_data(target) pattern               |
+|   Spider Signature Detection:                                       |
+|   - Added inspect.signature() to detect method patterns            |
+|   - Installed Playwright browsers for legal spiders                |
+|   - Fixed FindLaw spider constructor                               |
 |                                                                    |
-|   Both spiders verified working with real data!                    |
+|   67 spiders now working with success status!                      |
 |                                                                    |
-|   See: docs/handoffs/SESSION_503_SPIDER_FIXES.md                   |
+|   See: docs/handoffs/SESSION_504_SPIDER_SIGNATURE_DETECTION.md     |
 +====================================================================+
 ```

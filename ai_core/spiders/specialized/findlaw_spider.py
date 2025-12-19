@@ -26,7 +26,17 @@ class FindLawSpider:
     name = "findlaw"
     base_url = "https://www.findlaw.com"
 
-    def __init__(self):
+    def __init__(self, spider_id: str = 'findlaw', targets: List = None,
+                 subscribers: List = None, redis_config: Dict = None, **kwargs):
+        """Initialize FindLaw spider with standard spider interface.
+
+        Args:
+            spider_id: Spider identifier (for compatibility with spider orchestration)
+            targets: List of targets (not used, for compatibility)
+            subscribers: List of subscribers (not used, for compatibility)
+            redis_config: Redis config (not used, for compatibility)
+        """
+        self.spider_id = spider_id
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',

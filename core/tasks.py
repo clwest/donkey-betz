@@ -171,13 +171,35 @@ def run_spider_by_category(self, category: str):
                         data = spider.fetch()
                     elif hasattr(spider, 'fetch_data'):
                         import asyncio
+                        import inspect
                         from ai_core.spiders.base_spider import SpiderTarget
 
                         async def run_fetch():
-                            target = SpiderTarget(url='internal://spider-execution')
-                            raw = await spider.fetch_data(target)
+                            # Session 503: Detect method signature - some spiders use fetch_data(target),
+                            # others use fetch_data(max_results=100)
+                            fetch_method = spider.fetch_data
+                            sig = inspect.signature(fetch_method)
+                            params = list(sig.parameters.keys())
+
+                            # Check first param type hint or name
+                            first_param = params[0] if params else None
+                            if first_param and first_param in ('target', 'url'):
+                                # Standard BaseIntelligenceSpider pattern
+                                target = SpiderTarget(url='internal://spider-execution')
+                                raw = await spider.fetch_data(target)
+                            else:
+                                # Legal spiders pattern: fetch_data(max_results=100)
+                                if asyncio.iscoroutinefunction(fetch_method):
+                                    raw = await spider.fetch_data()
+                                else:
+                                    raw = spider.fetch_data()
+
                             if raw and hasattr(spider, 'process_data'):
-                                result = await spider.process_data(raw, target)
+                                target = SpiderTarget(url='internal://spider-execution')
+                                if asyncio.iscoroutinefunction(spider.process_data):
+                                    result = await spider.process_data(raw, target)
+                                else:
+                                    result = spider.process_data(raw, target)
                                 if result:
                                     return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
                             return raw if raw else {'items': []}
@@ -286,15 +308,35 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
                     import asyncio
                     data = asyncio.run(spider.scrape())
                 elif hasattr(spider, 'fetch_data'):
-                    # Session 503: Support for spiders using fetch_data(target) pattern
+                    # Session 503: Support for spiders using fetch_data(target) or fetch_data(max_results) pattern
                     import asyncio
+                    import inspect
                     from ai_core.spiders.base_spider import SpiderTarget
 
                     async def run_fetch():
-                        target = SpiderTarget(url='internal://spider-execution')
-                        raw = await spider.fetch_data(target)
+                        # Detect method signature
+                        fetch_method = spider.fetch_data
+                        sig = inspect.signature(fetch_method)
+                        params = list(sig.parameters.keys())
+
+                        first_param = params[0] if params else None
+                        if first_param and first_param in ('target', 'url'):
+                            # Standard BaseIntelligenceSpider pattern
+                            target = SpiderTarget(url='internal://spider-execution')
+                            raw = await spider.fetch_data(target)
+                        else:
+                            # Legal spiders pattern: fetch_data(max_results=100)
+                            if asyncio.iscoroutinefunction(fetch_method):
+                                raw = await spider.fetch_data()
+                            else:
+                                raw = spider.fetch_data()
+
                         if raw and hasattr(spider, 'process_data'):
-                            result = await spider.process_data(raw, target)
+                            target = SpiderTarget(url='internal://spider-execution')
+                            if asyncio.iscoroutinefunction(spider.process_data):
+                                result = await spider.process_data(raw, target)
+                            else:
+                                result = spider.process_data(raw, target)
                             if result:
                                 return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
                         return raw if raw else {'items': []}
@@ -794,16 +836,37 @@ def run_spider_network(self):
                             import asyncio
                             data = asyncio.run(spider.collect_data())
                         elif hasattr(spider, 'fetch_data'):
-                            # Session 503: Support for spiders using fetch_data(target) pattern
+                            # Session 503: Support for spiders using fetch_data(target) or fetch_data(max_results)
                             import asyncio
+                            import inspect
                             from ai_core.spiders.base_spider import SpiderTarget
 
                             async def run_fetch_data():
-                                # Create a dummy target - the spider will use its own logic
-                                target = SpiderTarget(url='internal://spider-execution')
-                                raw_data = await spider.fetch_data(target)
+                                # Session 503: Detect method signature - some spiders use fetch_data(target),
+                                # others use fetch_data(max_results=100)
+                                fetch_method = spider.fetch_data
+                                sig = inspect.signature(fetch_method)
+                                params = list(sig.parameters.keys())
+
+                                # Check first param type hint or name
+                                first_param = params[0] if params else None
+                                if first_param and first_param in ('target', 'url'):
+                                    # Standard BaseIntelligenceSpider pattern
+                                    target = SpiderTarget(url='internal://spider-execution')
+                                    raw_data = await spider.fetch_data(target)
+                                else:
+                                    # Legal spiders pattern: fetch_data(max_results=100)
+                                    if asyncio.iscoroutinefunction(fetch_method):
+                                        raw_data = await spider.fetch_data()
+                                    else:
+                                        raw_data = spider.fetch_data()
+
                                 if raw_data and hasattr(spider, 'process_data'):
-                                    result = await spider.process_data(raw_data, target)
+                                    target = SpiderTarget(url='internal://spider-execution')
+                                    if asyncio.iscoroutinefunction(spider.process_data):
+                                        result = await spider.process_data(raw_data, target)
+                                    else:
+                                        result = spider.process_data(raw_data, target)
                                     if result:
                                         return {
                                             'source': spider_name,
