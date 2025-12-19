@@ -409,17 +409,60 @@ Available agents:
                         "agent_name": {
                             "type": "string",
                             "description": """Which agent to delegate to:
-- Writing: ContentWriterAgent (blog posts, podcast scripts, video scripts, articles, newsletters, social threads) - USE THIS when user says "write a blog", "write a podcast script", "write an article", etc.
-- Creation: ImageAgent, VideoAgent, AudioAgent, ThreeDAgent
-- Editing: ImageEditingAgent, VideoEditingAgent
-- Research: ResearchAgent (web/spider search), CompetitorAnalysisAgent (market/SWOT), CustomerResearchAgent (personas)
-- Strategy: BrandIdentityAgent (brand colors/style), ContentStrategyAgent (content planning), SEOOptimizerAgent (keywords/hashtags), SocialMediaAgent (platform strategy)
-- Executive: CTOAgent (technical planning), COOAgent (operations), CreativeDirectorAgent (creative guidance)
-- Analysis: TrendAnalysisAgent (market trends), OpportunityScoringAgent (opportunity scoring)
-- Training: CharacterTrainingAgent (LoRA training), TrainedCreationAgent (use trained models)
-- Legal: LegalDocDrafterAgent (divorce/custody/motions)
-- Orchestration: WorkflowAgent (multi-step workflows)""",
+
+RESEARCH & ANALYSIS (use for questions, trends, market info):
+- ResearchAgent: Web search, spider data, general research, "what's trending", model recommendations
+- TrendAnalysisAgent: Market trends, industry analysis, trend reports
+- CompetitorAnalysisAgent: Business/market research, SWOT, competitor analysis
+- CustomerResearchAgent: Customer personas, pain points, sentiment
+
+WRITING & CONTENT:
+- ContentWriterAgent: Blog posts, articles, scripts, newsletters - USE when user says "write a..."
+
+CREATION (generating new assets):
+- ImageAgent: Logos, banners, illustrations, any image generation
+- VideoAgent: Video generation, animations, text-to-video
+- AudioAgent: TTS, voiceovers, audio generation
+- ThreeDAgent: 3D model generation
+
+EDITING (modifying existing assets):
+- ImageEditingAgent: Upscale, remove background, image variations
+- VideoEditingAgent: Trim, effects, text overlays
+
+DEVELOPMENT (code, infrastructure):
+- CodeGeneratorAgent: Generate code from specifications (Python, JS, etc.)
+- CodeReviewAgent: Review code for bugs, security, best practices
+- FullStackDeveloperAgent: Build complete features (frontend + backend)
+- DevOpsAgent: CI/CD, Docker, Kubernetes, infrastructure - USE for deployment questions
+
+STRATEGY & PLANNING:
+- BrandIdentityAgent: Brand colors, style, visual identity
+- ContentStrategyAgent: Content planning, calendars
+- SEOOptimizerAgent: Keywords, hashtags, metadata
+- SocialMediaAgent: Platform-specific content strategy
+- CTOAgent: Technical planning, architecture decisions
+- COOAgent: Operations planning, risk analysis
+- CreativeDirectorAgent: Creative guidance, prompt enhancement
+
+SPECIALIZED:
+- LegalDocDrafterAgent: Colorado family law, motion templates (NOT legal advice)
+- PodcastCoordinatorAgent: Create AI podcast debates with multiple voices
+- AISeriesWorkflowAgent: Multi-episode content series
+- ResolveAgent: DaVinci Resolve video rendering with trend-based color grading
+
+TRAINING & SCORING:
+- CharacterTrainingAgent: LoRA character training
+- TrainedCreationAgent: Generate with trained models
+- OpportunityScoringAgent: Score business opportunities
+
+ORCHESTRATION:
+- WorkflowAgent: Multi-step workflows combining multiple agents""",
                             "enum": [
+                                # Research & Analysis (Session 498)
+                                "ResearchAgent",
+                                "TrendAnalysisAgent",
+                                "CompetitorAnalysisAgent",
+                                "CustomerResearchAgent",
                                 # Writing agents (Session 496)
                                 "ContentWriterAgent",
                                 # Creation agents
@@ -430,27 +473,29 @@ Available agents:
                                 # Editing agents
                                 "ImageEditingAgent",
                                 "VideoEditingAgent",
-                                # Research agents
-                                "ResearchAgent",
-                                "CompetitorAnalysisAgent",
-                                "CustomerResearchAgent",
-                                # Strategy agents (Session 411)
+                                # Development agents (Session 498 - was missing!)
+                                "CodeGeneratorAgent",
+                                "CodeReviewAgent",
+                                "FullStackDeveloperAgent",
+                                "DevOpsAgent",
+                                # Strategy agents
                                 "BrandIdentityAgent",
                                 "ContentStrategyAgent",
                                 "SEOOptimizerAgent",
                                 "SocialMediaAgent",
-                                # Executive agents (Session 411)
+                                # Executive agents
                                 "CTOAgent",
                                 "COOAgent",
                                 "CreativeDirectorAgent",
-                                # Analysis agents (Session 411)
-                                "TrendAnalysisAgent",
-                                "OpportunityScoringAgent",
-                                # Training agents (Session 411)
+                                # Specialized agents (Session 498)
+                                "LegalDocDrafterAgent",
+                                "PodcastCoordinatorAgent",
+                                "AISeriesWorkflowAgent",
+                                "ResolveAgent",
+                                # Training & Scoring agents
                                 "CharacterTrainingAgent",
                                 "TrainedCreationAgent",
-                                # Legal agent
-                                "LegalDocDrafterAgent",
+                                "OpportunityScoringAgent",
                                 # Orchestration
                                 "WorkflowAgent"
                             ]
