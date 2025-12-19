@@ -11,6 +11,7 @@
 This session focused on web app improvements:
 1. UI audit and consolidation - identified redundancies and hidden unused tabs
 2. Podcast Studio web UI - brought Discord-only feature to web
+3. Unified podcast view - combined PodcastEpisode + ChannelEpisode into one tab
 
 ---
 
@@ -49,8 +50,8 @@ Built complete web interface for Podcast Studio.
 
 ### New Files
 
-#### `core/views_podcast.py` (334 lines)
-Real API endpoints replacing mock data:
+#### `core/views_podcast.py` (~475 lines)
+Real API endpoints with unified data sources:
 ```python
 @login_required
 def podcast_list(request):      # GET /api/podcasts/list/
@@ -61,11 +62,12 @@ def podcast_delete(request):    # DELETE /api/podcasts/<id>/
 def podcast_stats(request):     # GET /api/podcasts/stats/
 ```
 
-#### `ai_core/templates/components/panels/podcast_studio_panel.html` (462 lines)
+#### `ai_core/templates/components/panels/podcast_studio_panel.html` (~480 lines)
 Full UI panel with:
 - Stats row (total, complete, in progress, words, duration, failed)
 - Filter tabs (All, Complete, In Progress, Failed)
-- Podcast list with status badges and action buttons
+- Podcast list with status badges and labeled action buttons
+- Source badges (Podcast vs Content Studio)
 - Create podcast modal (topic, format, participants, audio toggle)
 - View script modal with copy functionality
 - Audio player for generated podcasts
@@ -88,17 +90,53 @@ Added Podcasts sub-tab to Autonomous Systems Dashboard navigation.
 
 ---
 
+## Part 3: Unified Podcast View
+
+### Problem
+- PodcastEpisode table had 4 records (from `/create-podcast`)
+- ChannelEpisode table had 8 records (from Autonomous Content Studio)
+- User expected to see all content in one place
+
+### Solution
+Combined both data sources into the Podcasts tab.
+
+### Implementation
+- Query both `PodcastEpisode` and `ChannelEpisode` tables
+- Add `source` field: `'podcast'` or `'studio'`
+- ChannelEpisodes treated as `status='complete'`
+- Source badges in UI distinguish content origin
+- Support `?source=podcast` or `?source=studio` filter
+
+### UI Enhancements
+- **Source Badge**: Pink "Podcast" or Purple "Content Studio"
+- **Action Buttons with Labels**: Script, Play, Open, Refresh, Delete
+- **Channel name and views** for studio content
+- **Platform URL link** for external content
+
+---
+
 ## API Reference
 
-### List Podcasts
+### List Podcasts (Unified)
 ```
-GET /api/podcasts/list/?status=complete&limit=20&offset=0
+GET /api/podcasts/list/?status=complete&source=podcast&limit=20&offset=0
 
 Response: {
   "success": true,
-  "episodes": [...],
-  "total_count": 10,
-  "status_counts": {"pending": 1, "complete": 5, ...}
+  "episodes": [
+    {
+      "id": "...",
+      "source": "podcast",      // or "studio"
+      "topic": "AI Discussion",
+      "status": "complete",
+      "format_type": "debate",
+      "channel": "",            // for studio content
+      "views": 0,               // for studio content
+      ...
+    }
+  ],
+  "total_count": 12,
+  "status_counts": {"complete": 10, "failed": 2, ...}
 }
 ```
 
@@ -121,6 +159,7 @@ Response: {
   "success": true,
   "episode": {
     "id": "...",
+    "source": "podcast",
     "status": "researching",
     "has_audio": false,
     ...
@@ -156,6 +195,7 @@ Response: {
 | Feature | Discord | Web |
 |---------|---------|-----|
 | Podcast Studio | Yes | **Now Yes!** |
+| Content Studio | Yes | **Now Yes!** |
 | Series Creation | Yes | No |
 | ROI Dashboard | Yes | No |
 | Voice Clone | Yes | No |
@@ -167,8 +207,9 @@ Response: {
 1. Start server: `make start && make celery`
 2. Navigate to: http://localhost:8000/ai-studio/
 3. Go to: Autonomous Tab → Podcasts sub-tab
-4. Click "Create Podcast" to test creation
-5. Use filters to view different statuses
+4. Should see 12 episodes (4 Podcast + 8 Content Studio)
+5. Click "Create Podcast" to test creation
+6. Use filters to view different statuses
 
 ---
 
@@ -176,6 +217,24 @@ Response: {
 
 1. `f929247` - refactor(Session 502): UI consolidation - hide unused tabs
 2. `9889d34` - feat(Session 502): Podcast Studio web UI
+3. `417a59d` - docs(Session 502): Add handoff and update start document
+4. `1f8665b` - fix(Session 502): Podcast API uses correct model fields
+5. `9551fba` - feat(Session 502): Unified podcast view - PodcastEpisode + ChannelEpisode
+6. `410146e` - fix(Session 502): Add text labels to podcast action buttons
+
+---
+
+## Data Model Notes
+
+### PodcastEpisode (core.models)
+- Created via `/create-podcast` Discord or web UI
+- Fields: `topic`, `title`, `status`, `script`, `audio_file`, `generation_config`
+- `generation_config` JSON stores: `format`, `participant_count`, `generate_audio`
+
+### ChannelEpisode (core.models_autonomous_studio)
+- Created via Autonomous Content Studio (`/studio-create`)
+- Fields: `title`, `topic`, `description`, `channel`, `views`, `platform_url`
+- No status field - all are considered "complete"
 
 ---
 
@@ -192,10 +251,10 @@ Response: {
 
 | File | Action | Lines |
 |------|--------|-------|
-| `core/views_podcast.py` | Created | 334 |
-| `podcast_studio_panel.html` | Created | 462 |
+| `core/views_podcast.py` | Created | ~475 |
+| `podcast_studio_panel.html` | Created | ~480 |
 | `core/urls.py` | Modified | +20 |
 | `autonomous_dashboard_panel.html` | Modified | +15 |
 | `ai_image_studio.html` | Modified | +3 (hidden tabs) |
 | `docs/UI_AUDIT_SESSION_502.md` | Created | ~100 |
-| **Total** | | **~934 lines** |
+| **Total** | | **~1,100 lines** |
