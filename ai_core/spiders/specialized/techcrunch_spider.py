@@ -29,14 +29,19 @@ class TechCrunchSpider(BaseIntelligenceSpider):
     def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
         super().__init__(spider_id, targets, subscribers, redis_config)
 
+        # Session 495: Added defense_tech, healthtech, cybersecurity categories
         self.tech_categories = {
-            'ai_ml': ['ai', 'artificial intelligence', 'machine learning', 'gpt', 'llm', 'neural', 'deep learning'],
-            'startups': ['startup', 'founded', 'launch', 'seed', 'series a', 'series b', 'funding'],
+            'ai_ml': ['ai', 'artificial intelligence', 'machine learning', 'gpt', 'llm', 'neural', 'deep learning', 'generative ai', 'transformer'],
+            'startups': ['startup', 'founded', 'launch', 'seed', 'series a', 'series b', 'funding', 'unicorn', 'valuation'],
             'big_tech': ['google', 'apple', 'microsoft', 'amazon', 'meta', 'facebook', 'openai', 'anthropic'],
             'crypto_web3': ['crypto', 'blockchain', 'web3', 'nft', 'defi', 'bitcoin', 'ethereum'],
-            'fintech': ['fintech', 'payments', 'banking', 'lending', 'insurtech'],
+            'fintech': ['fintech', 'payments', 'banking', 'lending', 'insurtech', 'neobank'],
             'saas': ['saas', 'enterprise', 'b2b', 'software', 'cloud'],
-            'hardware': ['hardware', 'chip', 'semiconductor', 'device', 'gadget'],
+            'hardware': ['hardware', 'chip', 'semiconductor', 'device', 'gadget', 'robotics'],
+            'defense_tech': ['defense', 'military', 'dod', 'pentagon', 'government contract', 'aerospace', 'defense tech'],
+            'healthtech': ['healthtech', 'biotech', 'medtech', 'digital health', 'telehealth', 'fda', 'clinical trial'],
+            'cybersecurity': ['cybersecurity', 'infosec', 'security startup', 'breach', 'ransomware', 'vulnerability', 'ciso'],
+            'climate': ['climate', 'cleantech', 'sustainability', 'carbon', 'green tech', 'renewable'],
         }
 
         self.funding_keywords = {

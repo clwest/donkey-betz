@@ -1,30 +1,41 @@
-# Session 495 - Start Here
+# Session 496 - Start Here
 
-**Previous Session:** 494 (AI Assistant Complete Fixes)
+**Previous Session:** 495 (SmartTrendingService & New Spiders)
 **Date:** December 18, 2025
 **Status:** Ready for new work!
 
 ---
 
-## Session 494 Achievements (COMPLETE)
+## Session 495 Achievements (COMPLETE)
 
-### All Issues Fixed
+### SmartTrendingService - Dynamic Topic Matching
 
-| Issue | Status | Fix Applied |
-|-------|--------|-------------|
-| Agent Conversations 4+ days old | FIXED | Fetch BOTH sources, combine, sort by date |
-| TTS "That's the main overview" | FIXED | Removed hardcoded fallback, smart truncation |
-| gpt-4o-mini still in use | FIXED | Migrated 6 files to gpt-5-mini |
-| Numbered lists all showing "1." | FIXED | Use `start` attribute on `<ol>` elements |
-| No response headers | FIXED | Added mandatory formatting guidelines |
-| "Create content" no context | FIXED | Pass research context (3000 chars) |
+Built a 580-line service that intelligently matches ANY trending query to relevant spiders:
 
-### Key Changes
+| Feature | Description |
+|---------|-------------|
+| 36 Categories | ai_ml, startups, fintech, defense_tech, healthtech, cybersecurity, etc. |
+| 500+ Keywords | Comprehensive mapping for accurate topic detection |
+| 1-Hour Cache | Performance optimization |
+| Multi-Format | Handles title/summary, items array, name field |
 
-1. **TTS Optimizer** - Raised limits (4000/8000 chars), removed hardcoded phrases
-2. **Response Formatting** - AI now uses `## Headers` for topics, `-` bullets for lists
-3. **Research Context** - "Create content based on this research" now includes the research!
-4. **GPT-5-mini** - All active files migrated with correct parameters
+### 5 New Spiders Added
+
+| Spider | Source | Category |
+|--------|--------|----------|
+| crunchbase | Crunchbase | startups |
+| venturebeat | VentureBeat | tech, ai_ml |
+| defenseone | Defense One | defense_tech |
+| mobihealthnews | MobiHealthNews | healthtech |
+| securityweek | Security Week | cybersecurity |
+
+### Bug Fix: BaseAgent Format Mismatch
+
+**Problem:** `'str' object has no attribute 'get'` error causing `success: false`
+
+**Root Cause:** SmartTrendingService returns trends as strings, BaseAgent expected dicts.
+
+**Fix:** Updated `_build_prompt()` and `_build_prompt_with_attribution()` to handle both formats.
 
 ---
 
@@ -38,10 +49,13 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Test the fixes
-# - Ask "What's trending in AI?" - should have ## headers and 1,2,3 numbering
-# - Click "Speak" - should read full response without cutting off
-# - Click "Create content based on this research" - should work!
+# 3. Test SmartTrendingService
+# Ask any of these:
+# - "What's trending in startups?"
+# - "What's trending in AI?"
+# - "What's trending in cybersecurity?"
+# - "What's trending in defense tech?"
+# - "What's trending in healthtech?"
 ```
 
 ---
@@ -50,54 +64,54 @@ open http://localhost:8000/ai-studio/
 
 | Metric | Value |
 |--------|-------|
-| Autonomous Situations | 15 |
-| Services | 66 (66 connected - 100%) |
-| Spiders | 67 |
-| Spider Data Records | 20,000+ |
+| Spiders | 72 (up from 67!) |
+| Spider Data Records | 20,712 |
+| Records with Embeddings | 18,243 (88.1%) |
 | Agents | 41 |
 | Advisors | 25 |
-| Discord Commands | 37 |
+| Categories | 36 |
 
 ---
 
 ## Key Documentation
 
-- **Session 494 Handoff:** `docs/handoffs/SESSION_494_COMPLETE_AI_ASSISTANT_FIXES.md`
+- **Session 495 Handoff:** `docs/handoffs/SESSION_495_SMART_TRENDING_SERVICE.md`
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
+- **Spiders:** `docs/SPIDERS.md`
 
 ---
 
 ## What's Working Great
 
-- AI Assistant formatting with proper headers and numbering
-- TTS reads full responses correctly
-- Research context passes to content creation
-- Agent Conversations shows fresh data
-- All 66 services connected (100%)
+- SmartTrendingService dynamic topic matching for ANY query
+- 5 new spiders covering startups, defense, health, security
+- TechCrunch spider enhanced with new category keywords
+- BaseAgent handles both string and dict trend formats
+- All API endpoints returning `success: true`
 
 ---
 
-## Potential Next Tasks
+## Potential Next Tasks (Session 496+)
 
-- Test TTS with very long responses (10,000+ chars)
-- Add more style presets for different response types
-- Continue Discord bot enhancements
-- Add more autonomous situations
-- Frontend polish and UX improvements
+1. Add more spiders for underrepresented categories (education, legal, government)
+2. Implement semantic search fallback when keyword matching fails
+3. Add trend velocity detection (what's rising vs declining)
+4. Consider ML-based topic classification for better accuracy
+5. Frontend polish and UX improvements
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 495: READY FOR NEW WORK                        |
+|              SESSION 496: READY FOR NEW WORK                        |
 |                                                                    |
-|   Session 494 COMPLETE:                                            |
-|   - TTS fixed (no more "That's the main overview")                |
-|   - Formatting fixed (proper headers and numbering)                |
-|   - Research context passes to WorkflowAgent                       |
-|   - GPT-5-mini migration complete                                  |
+|   Session 495 COMPLETE:                                            |
+|   - SmartTrendingService (580 lines, 36 categories)                |
+|   - 5 new spiders (crunchbase, venturebeat, defenseone, etc.)      |
+|   - BaseAgent bug fix (string/dict format handling)                |
+|   - 72 total spiders now!                                          |
 |                                                                    |
-|   Services: 66/66 connected (100%!)                                |
+|   Ask: "What's trending in [any topic]?"                           |
 +====================================================================+
 ```
