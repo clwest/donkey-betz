@@ -178,9 +178,36 @@ URL format:
 
 ---
 
+## Discord Library Integration (Added)
+
+**Channel:** `#podcast-library` (1451601597007134821)
+
+Completed podcasts with audio automatically post to the library:
+
+```python
+from core.services.discord_notifications import discord_notify
+
+discord_notify.send_podcast(
+    episode_id=episode_id,
+    topic=topic,
+    duration_seconds=590,
+    audio_file_path=full_path,
+    segment_count=28,
+    speakers=["Antoni (Host)", "Rachel (Advocate)", "Clyde (Skeptic)", "Paul (Analyst)"],
+    audio_url=audio_url  # For files >8MB
+)
+```
+
+**Features:**
+- Files ≤8MB: Upload directly to Discord
+- Files >8MB: Post embed with download link
+- Rich embed with duration, segments, voices
+
+---
+
 ## Session 497 Recommendations
 
-1. **Discord audio posting** - Post audio file to Discord when complete
-2. **Playback UI** - Add audio player to AI Studio
-3. **Episode download** - Download button for podcast MP3
-4. **Transcript sync** - Highlight transcript as audio plays
+1. **Playback UI** - Add audio player to AI Studio web interface
+2. **Episode download** - Download button for podcast MP3
+3. **Transcript sync** - Highlight transcript as audio plays
+4. **Audio compression** - Reduce file sizes to fit Discord's 8MB limit
