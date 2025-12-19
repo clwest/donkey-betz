@@ -30,7 +30,7 @@ def agent():
             description="Test agent for unit testing",
             system_prompt="You are a test agent.",
             llm_provider="openai",
-            llm_model="gpt-4o-mini",
+            llm_model="gpt-5-mini",
             is_active=True,
         )
     return agent

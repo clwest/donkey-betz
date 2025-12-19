@@ -1,65 +1,30 @@
 # Session 495 - Start Here
 
-**Previous Session:** 494 (Agent Conversations Fix)
+**Previous Session:** 494 (AI Assistant Complete Fixes)
 **Date:** December 18, 2025
-**Focus:** AI Assistant - Formatting & TTS Improvements
+**Status:** Ready for new work!
 
 ---
 
-## Session 494 Achievements
+## Session 494 Achievements (COMPLETE)
 
-### Agent Conversations Display Fixed
+### All Issues Fixed
 
-Fixed the Agents/Social sub-tab showing stale conversations (4+ days old):
+| Issue | Status | Fix Applied |
+|-------|--------|-------------|
+| Agent Conversations 4+ days old | FIXED | Fetch BOTH sources, combine, sort by date |
+| TTS "That's the main overview" | FIXED | Removed hardcoded fallback, smart truncation |
+| gpt-4o-mini still in use | FIXED | Migrated 6 files to gpt-5-mini |
+| Numbered lists all showing "1." | FIXED | Use `start` attribute on `<ol>` elements |
+| No response headers | FIXED | Added mandatory formatting guidelines |
+| "Create content" no context | FIXED | Pass research context (3000 chars) |
 
-**Bug:** Agent Conversations showed records from 4.9 days ago despite 457 fresh records existing
-**Root Cause:** API fetched HiveMindSession records first, filling all slots with old data
+### Key Changes
 
-**Fix Applied:** Fetch from BOTH sources, combine, sort by date, take top results
-
----
-
-## Session 495 Priority: AI Assistant Polish
-
-### Known Issues to Address
-
-| Issue | Description | Priority |
-|-------|-------------|----------|
-| TTS Behavior | "Speak" button doing unexpected things | HIGH |
-| Formatting | Response display issues in chat | HIGH |
-
-### TTS Issues Reported
-
-The Text-to-Speech "Speak" button may be:
-- Reading wrong/summarized content
-- Cutting off unexpectedly
-- Not playing chunks sequentially
-- Behaving unpredictably
-
-### Formatting Issues
-
-Response formatting in the chat may have:
-- Markdown not rendering correctly
-- Code blocks display issues
-- List formatting problems
-- Agent response structure issues
-
----
-
-## Uncommitted Changes to Review
-
-There are pending changes from Session 483 that should be committed first:
-
-```bash
-# See pending changes
-git status
-
-# Files with changes:
-# - core/services/tts_optimizer.py (NEW)
-# - core/prompts/registry.py
-# - core/services/proactive_intelligence.py
-# - core/services/smart_suggestions.py
-```
+1. **TTS Optimizer** - Raised limits (4000/8000 chars), removed hardcoded phrases
+2. **Response Formatting** - AI now uses `## Headers` for topics, `-` bullets for lists
+3. **Research Context** - "Create content based on this research" now includes the research!
+4. **GPT-5-mini** - All active files migrated with correct parameters
 
 ---
 
@@ -70,44 +35,13 @@ git status
 make start       # Daphne web server
 make celery      # Celery worker + beat
 
-# 2. Review pending changes
-git diff core/prompts/registry.py
-git diff core/services/proactive_intelligence.py
-
-# 3. Test TTS
-# Open http://localhost:8000/ai-studio/
-# Ask a question, wait for response, click "Speak" button
-# Note any issues
-
-# 4. Access UI
+# 2. Access UI
 open http://localhost:8000/ai-studio/
-```
 
----
-
-## Key Files for This Session
-
-| File | Purpose |
-|------|---------|
-| `core/services/tts_optimizer.py` | TTS text processing (summarization, chunking) |
-| `core/views_audio.py` | `speak_text()` API endpoint (lines 289-449) |
-| `ai_image_studio.html` | Frontend speak button + chat formatting |
-| `core/prompts/registry.py` | AI Assistant system prompts |
-
----
-
-## TTS Architecture (Session 483)
-
-```
-User clicks "Speak"
-    → speak_text() API
-        → TTSTextOptimizer.optimize()
-            → If short: use directly
-            → If medium: GPT summarizes
-            → If long: summarize + chunk
-        → ElevenLabs API
-    → Audio returned as base64
-    → Browser plays audio
+# 3. Test the fixes
+# - Ask "What's trending in AI?" - should have ## headers and 1,2,3 numbering
+# - Click "Speak" - should read full response without cutting off
+# - Click "Create content based on this research" - should work!
 ```
 
 ---
@@ -128,22 +62,42 @@ User clicks "Speak"
 
 ## Key Documentation
 
-- **Session 495 Handoff:** `docs/handoffs/SESSION_495_AI_ASSISTANT_FOCUS.md`
-- **Session 494 Handoff:** `docs/handoffs/SESSION_494_AGENT_CONVERSATIONS_FIX.md`
+- **Session 494 Handoff:** `docs/handoffs/SESSION_494_COMPLETE_AI_ASSISTANT_FIXES.md`
+- **Architecture:** `docs/ARCHITECTURE.md`
+- **Capabilities:** `docs/CAPABILITIES.md`
 
 ---
 
-**Focus: Polish the AI Assistant (TTS + Formatting)**
+## What's Working Great
+
+- AI Assistant formatting with proper headers and numbering
+- TTS reads full responses correctly
+- Research context passes to content creation
+- Agent Conversations shows fresh data
+- All 66 services connected (100%)
+
+---
+
+## Potential Next Tasks
+
+- Test TTS with very long responses (10,000+ chars)
+- Add more style presets for different response types
+- Continue Discord bot enhancements
+- Add more autonomous situations
+- Frontend polish and UX improvements
+
+---
 
 ```
 +====================================================================+
-|              SESSION 495: AI ASSISTANT FOCUS                        |
+|              SESSION 495: READY FOR NEW WORK                        |
 |                                                                    |
-|   1. Fix TTS "Speak" button behavior                               |
-|   2. Improve response formatting in chat                           |
-|   3. Review and commit pending Session 483 changes                 |
+|   Session 494 COMPLETE:                                            |
+|   - TTS fixed (no more "That's the main overview")                |
+|   - Formatting fixed (proper headers and numbering)                |
+|   - Research context passes to WorkflowAgent                       |
+|   - GPT-5-mini migration complete                                  |
 |                                                                    |
 |   Services: 66/66 connected (100%!)                                |
-|   Agent Conversations: Fixed!                                      |
 +====================================================================+
 ```

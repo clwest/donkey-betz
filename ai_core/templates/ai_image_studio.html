@@ -15763,26 +15763,47 @@
         }
 
         // Session 201: Global markdown formatter for project descriptions and other content
+        // Session 494: Enhanced markdown formatter with proper headers and sections
         function formatMarkdown(text) {
             if (!text) return '';
 
+            // Convert markdown headers FIRST (before other processing)
+            // H1: # Header
+            text = text.replace(/^# (.+)$/gm, '<h2 style="color: #e9d5ff; margin: 20px 0 12px 0; font-size: 1.3em; font-weight: 700; border-bottom: 1px solid rgba(233, 213, 255, 0.3); padding-bottom: 8px;">$1</h2>');
+            // H2: ## Header
+            text = text.replace(/^## (.+)$/gm, '<h3 style="color: #c4b5fd; margin: 18px 0 10px 0; font-size: 1.15em; font-weight: 600;">$1</h3>');
+            // H3: ### Header
+            text = text.replace(/^### (.+)$/gm, '<h4 style="color: #a78bfa; margin: 14px 0 8px 0; font-size: 1.05em; font-weight: 600;">$1</h4>');
+
+            // Convert horizontal rules
+            text = text.replace(/^---+$/gm, '<hr style="border: none; border-top: 1px solid rgba(148, 163, 184, 0.3); margin: 16px 0;">');
+
             // Convert bold **text**
-            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #f0abfc;">$1</strong>');
 
             // Convert italic *text* (must be after bold)
             text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
 
+            // Convert inline code `code`
+            text = text.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">$1</code>');
+
             // Convert markdown links [text](url)
-            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #60a5fa;">$1</a>');
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #60a5fa; text-decoration: underline;">$1</a>');
 
-            // Convert numbered lists (1. item)
-            text = text.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 1em;">$1. $2</div>');
+            // Convert numbered lists (1. item) with better spacing
+            text = text.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin: 6px 0 6px 1.5em; padding-left: 0.5em;">$1. $2</div>');
 
-            // Convert bullet points (- item)
-            text = text.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 1em;">• $1</div>');
+            // Convert bullet points (- item or • item) with better spacing
+            text = text.replace(/^[-•]\s+(.+)$/gm, '<div style="margin: 6px 0 6px 1.5em; padding-left: 0.5em;">• $1</div>');
 
-            // Convert line breaks
+            // Convert double line breaks to paragraph spacing
+            text = text.replace(/\n\n/g, '</p><p style="margin: 12px 0;">');
+
+            // Convert single line breaks
             text = text.replace(/\n/g, '<br>');
+
+            // Wrap in paragraph tags
+            text = '<p style="margin: 0;">' + text + '</p>';
 
             return text;
         }
@@ -29314,6 +29335,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 let inList = false;
                 let listType = null; // 'bullet' or 'number'
                 let currentParagraph = '';
+                let lastNumberedItem = 0; // Session 494: Track last number to continue <ol> properly
 
                 for (let i = 0; i < lines.length; i++) {
                     let line = lines[i].trim();
@@ -29349,6 +29371,10 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     }
                     // Numbered list (1., 2., etc)
                     else if (line.match(/^\d+\.\s+/)) {
+                        // Session 494: Extract the actual number from the line
+                        const numMatch = line.match(/^(\d+)\.\s+/);
+                        const currentNum = numMatch ? parseInt(numMatch[1]) : lastNumberedItem + 1;
+
                         // Finish any current paragraph
                         if (currentParagraph) {
                             formatted += '<p style="margin: 0.75em 0;">' + currentParagraph + '</p>';
@@ -29356,11 +29382,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         }
                         if (!inList || listType !== 'number') {
                             if (inList) formatted += listType === 'bullet' ? '</ul>' : '</ol>';
-                            formatted += '<ol style="margin: 0.75em 0; padding-left: 1.5em;">';
+                            // Session 494: Use start attribute to continue numbering from where we left off
+                            formatted += `<ol style="margin: 0.75em 0; padding-left: 1.5em;" start="${currentNum}">`;
                             inList = true;
                             listType = 'number';
                         }
                         formatted += '<li style="margin: 0.25em 0;">' + line.replace(/^\d+\.\s+/, '') + '</li>';
+                        lastNumberedItem = currentNum; // Track the last number used
                     }
                     // Regular text - accumulate into paragraph
                     else {
@@ -29945,13 +29973,30 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             e.target.innerHTML = '⏳ Working...';
                             e.target.disabled = true;
 
+                            // Session 494: Get the research context from the parent message
+                            const parentMessage = e.target.closest('.chat-message');
+                            let researchContext = '';
+                            if (parentMessage) {
+                                const contentDiv = parentMessage.querySelector('.content');
+                                if (contentDiv) {
+                                    // Extract text content, limit to 3000 chars for context
+                                    researchContext = contentDiv.innerText.substring(0, 3000);
+                                }
+                            }
+
                             // Send the suggestion as a new message to the assistant
                             const suggestionMessage = label || action.replace(/_/g, ' ');
                             this.addMessage('user', suggestionMessage);
 
+                            // Session 494: Include research context for "create content" type actions
+                            let contextualMessage = suggestionMessage;
+                            if (actionType === 'create' && researchContext) {
+                                contextualMessage = `${suggestionMessage}\n\n--- RESEARCH CONTEXT ---\n${researchContext}`;
+                            }
+
                             try {
-                                // Get AI response for the follow-up action
-                                const response = await this.callAI(suggestionMessage);
+                                // Get AI response for the follow-up action (with context)
+                                const response = await this.callAI(contextualMessage);
 
                                 // Add the response
                                 this.addMessage('assistant', response.message, false, {

@@ -760,10 +760,11 @@ class DiscordVoiceService:
                         "content": msg['content']
                     })
 
+                # Session 494: Use gpt-5-mini (reasoning model)
                 response = self.openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-mini",
                     messages=messages,
-                    max_tokens=300  # Keep responses short for voice
+                    max_completion_tokens=2000  # Reasoning model needs more tokens
                 )
 
                 ai_response = response.choices[0].message.content

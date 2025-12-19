@@ -17,6 +17,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from core.super_platform import SuperPlatformCoordinator, QueryClassifier
 
+# Session 483: Smart Suggestions for follow-up actions
+try:
+    from core.services.smart_suggestions import get_smart_suggestions_service
+    SMART_SUGGESTIONS_AVAILABLE = True
+except ImportError:
+    SMART_SUGGESTIONS_AVAILABLE = False
+    get_smart_suggestions_service = lambda session_id='default': None
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,7 +71,38 @@ class SuperPlatformProcessView(View):
             coordinator = SuperPlatformCoordinator(user=user)
             result = coordinator.process(message)
 
-            return JsonResponse(result.to_dict())
+            # Convert to dict for response
+            response_dict = result.to_dict()
+
+            # Session 483: Add smart suggestions for follow-up actions
+            if SMART_SUGGESTIONS_AVAILABLE and user and user.is_authenticated:
+                try:
+                    smart_suggestions = get_smart_suggestions_service(str(user.id))
+                    response_text = response_dict.get('response', '')
+
+                    # Detect action type from response
+                    action_type = smart_suggestions.detect_action_from_response(response_text, [])
+
+                    logger.info(f"🔍 Session 483: SuperPlatform detected action_type='{action_type}'")
+
+                    if action_type:
+                        # Record the action
+                        smart_suggestions.record_action(action_type, output=response_text)
+
+                        # Get suggestions
+                        suggestions = smart_suggestions.get_suggestions(limit=3)
+
+                        if suggestions:
+                            # Get quick action buttons
+                            quick_actions = smart_suggestions.get_quick_actions()
+                            response_dict['quick_actions'] = quick_actions
+                            response_dict['smart_suggestions'] = [s.text for s in suggestions]
+
+                            logger.info(f"✨ Session 483: Added {len(quick_actions)} quick_actions to SuperPlatform response")
+                except Exception as e:
+                    logger.warning(f"⚠️ Session 483: SmartSuggestions error in SuperPlatform: {e}")
+
+            return JsonResponse(response_dict)
 
         except Exception as e:
             logger.error(f"Super Platform process error: {e}", exc_info=True)
