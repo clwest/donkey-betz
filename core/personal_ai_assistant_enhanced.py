@@ -599,10 +599,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             # Session 238: Workflow Orchestration Agent - THE FIX!
             # This was missing, causing GPT to call individual tools instead of the unified workflow
+            # Session 495: Updated to handle "create content based on this research" with pre-existing research
             {
                 "type": "function",
                 "name": "workflow_orchestration_agent",
-                "description": "⚡ MANDATORY for ANY 'research + create/generate IMAGE' requests! If user says BOTH 'research' AND 'create/generate/make IMAGES/LOGOS/THUMBNAILS', you MUST use this agent. Examples that REQUIRE this agent: 'Research trending logos and generate a logo', 'Research AI trends and create images', 'Look up design trends and make me logos'. This agent handles the ENTIRE workflow: research → executive review → image generation → PROJECT CREATION. NEVER call web_search + coleadership_agent + image_generation_agent separately - use THIS ONE agent for the complete workflow! Available workflows: 'research_and_create_logos' (for logo requests), 'research_and_create_images' (for artwork/illustrations), 'youtube_thumbnail_package', 'brand_identity_package', 'product_photography_kit', 'logo_to_video'. ⛔ DO NOT USE THIS for saving/organizing existing analysis to a project - use create_project_from_research instead!",
+                "description": "⚡ MANDATORY for ANY 'research + create/generate IMAGE' requests! If user says BOTH 'research' AND 'create/generate/make IMAGES/LOGOS/THUMBNAILS', you MUST use this agent. Examples that REQUIRE this agent: 'Research trending logos and generate a logo', 'Research AI trends and create images', 'Look up design trends and make me logos'. This agent handles the ENTIRE workflow: research → executive review → image generation → PROJECT CREATION. NEVER call web_search + coleadership_agent + image_generation_agent separately - use THIS ONE agent for the complete workflow! Available workflows: 'research_and_create_logos' (for logo requests), 'research_and_create_images' (for artwork/illustrations), 'youtube_thumbnail_package', 'brand_identity_package', 'product_photography_kit', 'logo_to_video'. ⛔ DO NOT USE THIS for saving/organizing existing analysis to a project - use create_project_from_research instead! 📊 SESSION 495: If user says 'create content based on this research' with '--- RESEARCH CONTEXT ---' in the message, EXTRACT THE TOPIC from the research (e.g., 'AI startups' from 'AI startup trends') and pass the FULL message including RESEARCH CONTEXT to user_message - the workflow will use the provided research instead of doing new research!",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -613,7 +614,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "topic": {
                             "type": "string",
-                            "description": "The research topic (e.g., 'modern AI company', 'fitness brand', 'coffee shop')"
+                            "description": "The content topic to visualize. CRITICAL: If message contains '--- RESEARCH CONTEXT ---', extract the MAIN SUBJECT from the research (e.g., 'AI startups' if research is about AI startup trends, 'cybersecurity' if about security). DO NOT extract random words like animal names from research text! Extract the PRIMARY TOPIC being discussed."
                         },
                         "count": {
                             "type": "integer",
@@ -634,7 +635,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         },
                         "user_message": {
                             "type": "string",
-                            "description": "CRITICAL: ALWAYS pass the EXACT original user message here verbatim! This ensures no style, mascot, or character info is lost. Copy-paste the user's request exactly as they typed it."
+                            "description": "CRITICAL: ALWAYS pass the EXACT original user message here verbatim INCLUDING any '--- RESEARCH CONTEXT ---' section! This ensures the workflow can use provided research and no style info is lost. Copy-paste EVERYTHING the user sent."
                         }
                     },
                     "required": ["workflow", "topic", "user_message"]
