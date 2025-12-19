@@ -44,6 +44,7 @@ class DiscordNotificationService:
     CHANNEL_MARKET_ALERTS = "1448867150948335777"  # Session 460: Market/SEC alerts (shares with opportunities)
     CHANNEL_STOCK_ALERTS = "1450589539562426418"  # Session 461: Stock audit agent alerts
     CHANNEL_BLOCKCHAIN_ALERTS = "1450589795058192465"  # Session 461: Blockchain audit agent alerts
+    CHANNEL_PODCAST_LIBRARY = "1451601597007134821"  # Session 496: Podcast library for completed episodes
 
     # Discord API base URL
     API_BASE = "https://discord.com/api/v10"
@@ -1786,6 +1787,137 @@ class DiscordNotificationService:
             })
 
         return self._send_message(self.CHANNEL_BLOCKCHAIN_ALERTS, "", embed=embed)
+
+    def _upload_file(self, channel_id: str, file_path: str, filename: str,
+                     content: str = "", embed: Optional[dict] = None) -> bool:
+        """
+        Upload a file to a Discord channel.
+
+        Args:
+            channel_id: Discord channel ID
+            file_path: Path to the file to upload
+            filename: Name for the uploaded file
+            content: Optional message content
+            embed: Optional embed object
+
+        Returns:
+            True if upload successful, False otherwise
+        """
+        if not self.enabled:
+            logger.debug(f"Discord disabled, would upload {filename} to {channel_id}")
+            return False
+
+        url = f"{self.API_BASE}/channels/{channel_id}/messages"
+
+        try:
+            with open(file_path, 'rb') as f:
+                files = {
+                    'file': (filename, f, 'audio/mpeg')
+                }
+                data = {}
+                if content:
+                    data['content'] = content[:2000]
+                if embed:
+                    import json
+                    data['payload_json'] = json.dumps({"embeds": [embed]})
+
+                # Use different headers for file upload (no Content-Type)
+                headers = {"Authorization": f"Bot {self.bot_token}"}
+
+                response = requests.post(url, headers=headers, data=data, files=files, timeout=120)
+
+                if response.status_code == 200:
+                    logger.info(f"Discord file uploaded to channel {channel_id}: {filename}")
+                    return True
+                else:
+                    logger.error(f"Discord file upload error {response.status_code}: {response.text}")
+                    return False
+
+        except FileNotFoundError:
+            logger.error(f"File not found: {file_path}")
+            return False
+        except requests.exceptions.Timeout:
+            logger.error("Discord file upload timeout")
+            return False
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Discord file upload failed: {e}")
+            return False
+
+    def send_podcast(self, episode_id: str, topic: str, duration_seconds: int,
+                     audio_file_path: str, segment_count: int = 0,
+                     speakers: List[str] = None, audio_url: str = None) -> bool:
+        """
+        Send a completed podcast episode to #podcast-library.
+
+        Args:
+            episode_id: UUID of the podcast episode
+            topic: Episode topic
+            duration_seconds: Total audio duration
+            audio_file_path: Path to the audio file
+            segment_count: Number of speaker segments
+            speakers: List of speaker names
+            audio_url: Optional URL if file is too large to upload
+
+        Returns:
+            True if posted successfully, False otherwise
+        """
+        speakers = speakers or ["Host", "Advocate", "Skeptic", "Analyst"]
+
+        # Format duration
+        minutes = duration_seconds // 60
+        seconds = duration_seconds % 60
+        duration_str = f"{minutes}:{seconds:02d}"
+
+        # Check file size - Discord limit is 8MB for non-boosted servers
+        file_size_mb = 0
+        try:
+            file_size_mb = os.path.getsize(audio_file_path) / (1024 * 1024)
+        except:
+            pass
+
+        # Create embed
+        embed = {
+            "title": f"🎙️ {topic}",
+            "description": f"A new AI podcast debate is ready to listen!",
+            "color": 0x1DB954,  # Spotify green
+            "fields": [
+                {"name": "⏱️ Duration", "value": duration_str, "inline": True},
+                {"name": "🎤 Segments", "value": str(segment_count), "inline": True},
+                {"name": "🗣️ Voices", "value": ", ".join(speakers), "inline": False}
+            ],
+            "footer": {
+                "text": f"AI Podcast Studio • Episode {episode_id[:8]}"
+            }
+        }
+
+        # If file is too large, post embed with link instead of uploading
+        if file_size_mb > 8:
+            # Add download link to embed
+            if audio_url:
+                embed["fields"].append({
+                    "name": "🔗 Listen",
+                    "value": f"[Download MP3]({audio_url}) ({file_size_mb:.1f} MB)",
+                    "inline": False
+                })
+            else:
+                embed["fields"].append({
+                    "name": "📁 File Size",
+                    "value": f"{file_size_mb:.1f} MB (too large for Discord upload)",
+                    "inline": False
+                })
+
+            logger.info(f"Podcast file too large ({file_size_mb:.1f}MB), posting embed only")
+            return self._send_message(self.CHANNEL_PODCAST_LIBRARY, "", embed=embed)
+
+        # Upload audio file with embed
+        filename = f"podcast_{episode_id[:8]}.mp3"
+        return self._upload_file(
+            self.CHANNEL_PODCAST_LIBRARY,
+            audio_file_path,
+            filename,
+            content="",
+            embed=embed
+        )
 
 
 # Singleton instance for easy imports

@@ -16636,6 +16636,38 @@ Use the generate_podcast_script tool to create the full script with speaker labe
 
                 if audio_result['success']:
                     logger.info(f"🎙️ [PODCAST] Audio generated: {audio_result['duration_seconds']:.1f}s")
+
+                    # Post to Discord podcast library
+                    try:
+                        from core.services.discord_notifications import discord_notify
+                        from django.conf import settings
+                        import os
+
+                        # Get the full file path and URL
+                        saved_path = audio_result.get('saved_path', '')
+                        audio_url = audio_result.get('audio_url', '')
+
+                        if saved_path:
+                            full_path = os.path.join(settings.MEDIA_ROOT, saved_path)
+                            if os.path.exists(full_path):
+                                # Build full URL for large files
+                                full_audio_url = f"http://localhost:8000{audio_url}" if audio_url else None
+
+                                discord_notify.send_podcast(
+                                    episode_id=episode_id,
+                                    topic=topic,
+                                    duration_seconds=int(audio_result['duration_seconds']),
+                                    audio_file_path=full_path,
+                                    segment_count=audio_result.get('segment_count', 0),
+                                    speakers=["Antoni (Host)", "Rachel (Advocate)", "Clyde (Skeptic)", "Paul (Analyst)"],
+                                    audio_url=full_audio_url
+                                )
+                                logger.info(f"🎙️ [PODCAST] Posted to Discord library")
+                            else:
+                                logger.warning(f"🎙️ [PODCAST] Audio file not found for Discord: {full_path}")
+                    except Exception as e:
+                        logger.error(f"🎙️ [PODCAST] Failed to post to Discord: {e}")
+                        # Don't fail the task for Discord errors
                 else:
                     logger.warning(f"🎙️ [PODCAST] Audio generation failed: {audio_result.get('error')}")
                     # Continue - script generation was successful

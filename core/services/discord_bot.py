@@ -11620,8 +11620,10 @@ class PodcastCommands(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        # Podcast channel for output
+        # Podcast channel for creation commands
         self.PODCAST_CHANNEL_ID = 1451578444101058751
+        # Podcast library channel for completed episodes with audio
+        self.PODCAST_LIBRARY_CHANNEL_ID = 1451601597007134821
 
     async def _get_linked_user(self, discord_id):
         """Get the linked Django user for this Discord ID."""
