@@ -790,6 +790,7 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         count: int = 3,
         style_preferences: str = '',
         user_message: str = '',
+        provided_research: str = '',
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -801,17 +802,38 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             count: Number of images to create (1-5)
             style_preferences: Optional style preferences
             user_message: Original user message (Session 239 - for style extraction)
+            provided_research: Pre-existing research to skip research step (Session 495)
             **kwargs: Additional workflow-specific parameters
 
         Returns:
             Complete result with outputs from all steps
         """
+        # =========================================================================
+        # SESSION 495: Extract research context from user_message if present
+        # When user clicks "create content based on this research", the frontend
+        # appends "--- RESEARCH CONTEXT ---" followed by the research.
+        # We need to:
+        # 1. Extract research to skip the research step
+        # 2. Use only the request part for mascot/style extraction (not the research!)
+        # =========================================================================
+        research_delimiter = '--- RESEARCH CONTEXT ---'
+        extracted_research = provided_research  # Use explicit param if provided
+        clean_user_message = user_message  # For mascot/style extraction
+
+        if research_delimiter in user_message:
+            parts = user_message.split(research_delimiter, 1)
+            clean_user_message = parts[0].strip()  # Just the request part
+            if not extracted_research and len(parts) > 1:
+                extracted_research = parts[1].strip()  # The research content
+            logger.info(f"📊 Session 495: Extracted research context ({len(extracted_research)} chars), clean request: '{clean_user_message}'")
+
         self.log_start(
             f"execute workflow: {workflow}",
             topic=topic,
             count=count,
             style_preferences=style_preferences,
-            user_message=user_message[:100] if user_message else ''
+            user_message=clean_user_message[:100] if clean_user_message else '',
+            has_provided_research=bool(extracted_research)
         )
 
         # Validate workflow exists
@@ -852,9 +874,11 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         ]
 
         # First, try to extract from user_message (most reliable source)
-        if user_message:
-            user_msg_lower = user_message.lower()
-            logger.info(f"🔍 Session 239: Extracting from original message: {user_message[:100]}...")
+        # Session 495: Use clean_user_message (without research context) to avoid
+        # extracting mascots/styles from research text
+        if clean_user_message:
+            user_msg_lower = clean_user_message.lower()
+            logger.info(f"🔍 Session 239/495: Extracting from clean message: {clean_user_message[:100]}...")
 
             for style_key, style_value in style_mapping.items():
                 if style_key in user_msg_lower:
@@ -937,7 +961,16 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             'project_created': None,
             # Session 334: Project research context as GUIDANCE (not replacement)
             'project_research_context': project_research_context,
+            # Session 495: Pre-existing research to skip research step
+            'provided_research': extracted_research,
         }
+
+        # Session 495: If we have provided research, pre-populate research results
+        # This allows us to skip the research step
+        if extracted_research:
+            logger.info(f"📊 Session 495: Using provided research ({len(extracted_research)} chars)")
+            context['research_results'] = {'provided': True, 'content': extracted_research}
+            context['research_summary'] = extracted_research[:2000]  # Use first 2000 chars as summary
 
         # Session 334: If we have project context, enhance the topic with project name
         if project_research_context.get('has_research'):
@@ -953,6 +986,20 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
             step_num = step_def['step']
             step_name = step_def['name']
             agent_name = step_def['agent']
+
+            # Session 495: Skip research step if we already have provided research
+            if step_name == 'research' and context.get('provided_research'):
+                logger.info(f"⏭️ Session 495: SKIPPING research step - using provided research ({len(context['provided_research'])} chars)")
+                step_results.append({
+                    'step': step_num,
+                    'name': step_name,
+                    'agent': agent_name,
+                    'success': True,
+                    'skipped': True,
+                    'reason': 'Using provided research context',
+                    'result': {'provided': True, 'content_length': len(context['provided_research'])}
+                })
+                continue
 
             logger.info(f"🔄 Workflow Step {step_num}/{len(steps)}: {step_name} ({agent_name})")
 
