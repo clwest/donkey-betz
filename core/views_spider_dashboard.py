@@ -132,11 +132,21 @@ def spider_activity_feed(request):
         recent_entries = SpiderData.objects.order_by('-created_at')[:20]
 
         for entry in recent_entries:
+            # Handle raw_data being either dict or list
+            details = ''
+            if entry.raw_data:
+                if isinstance(entry.raw_data, dict):
+                    details = entry.raw_data.get('summary', '') or entry.raw_data.get('title', '')
+                elif isinstance(entry.raw_data, list) and len(entry.raw_data) > 0:
+                    first_item = entry.raw_data[0]
+                    if isinstance(first_item, dict):
+                        details = first_item.get('summary', '') or first_item.get('title', '')
+
             activities.append({
                 'timestamp': entry.created_at.isoformat(),
                 'spider': _format_display_name(entry.spider_name),
                 'action': f"Collected {_format_display_name(entry.data_type)}",
-                'details': entry.raw_data.get('summary', '') if entry.raw_data else '',
+                'details': details[:200] if details else '',
                 'status': 'success'
             })
     except Exception as e:
