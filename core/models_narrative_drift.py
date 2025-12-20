@@ -316,17 +316,21 @@ class NarrativeAlert(models.Model):
             ('narrative_dying', 'Narrative Fading'),
             ('contradictions', 'Contradictions Detected'),
             ('high_importance', 'High Importance Alert'),
+            ('subscription', 'User Subscription'),  # Session 507: For /narrative-watch
         ]
     )
-    title = models.CharField(max_length=200)
-    summary = models.TextField()
+    title = models.CharField(max_length=200, blank=True, default='')
+    summary = models.TextField(blank=True, default='')
+    message = models.TextField(blank=True, default='')  # Session 507: Alternative to summary
 
     # Delivery
     sent_to_discord = models.BooleanField(default=False)
     discord_message_id = models.CharField(max_length=100, blank=True)
 
-    # User interaction
+    # User interaction - Session 507: Added user_discord_id for /narrative-watch
+    user_discord_id = models.CharField(max_length=100, blank=True, default='', db_index=True)
     read = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)  # Session 507: Alias for read
     dismissed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
