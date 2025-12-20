@@ -192,19 +192,61 @@ def api_narrative_drift_status(request):
             detected_at__gte=week_ago
         ).order_by('-detected_at')[:5]
 
-        shift_data = [{
-            'id': str(s.id),
-            'narrative': s.old_narrative.title if s.old_narrative else 'Unknown',
-            'domain': s.domain,
-            'importance': float(s.importance),
-            'detected_at': s.detected_at.isoformat(),
-            'summary': s.shift_summary[:100] if s.shift_summary else '',
-        } for s in recent_shifts]
+        # Session 509: Include verification status and unique sources in shift data
+        from urllib.parse import urlparse
+        shift_data = []
+        for s in recent_shifts:
+            # Calculate unique sources for this shift's evidence
+            unique_sources = 0
+            if s.old_narrative:
+                evidence = NarrativeEvidence.objects.filter(narrative=s.old_narrative)
+                source_domains = set()
+                for e in evidence:
+                    if e.source_url:
+                        try:
+                            parsed = urlparse(e.source_url)
+                            source_domains.add(parsed.netloc)
+                        except Exception:
+                            pass
+                unique_sources = len(source_domains)
+
+            shift_data.append({
+                'id': str(s.id),
+                'narrative': s.old_narrative.title if s.old_narrative else 'Unknown',
+                'domain': s.domain,
+                'importance': float(s.importance),
+                'confidence': float(s.confidence),
+                'verified': s.verified,
+                'unique_sources': unique_sources,
+                'detected_at': s.detected_at.isoformat(),
+                'summary': s.shift_summary[:100] if s.shift_summary else '',
+            })
 
         # Active alerts (not dismissed)
         active_alerts = NarrativeAlert.objects.filter(
             dismissed=False
         ).count()
+
+        # Session 509: Mythology validation stats
+        verified_shifts = NarrativeShift.objects.filter(verified=True).count()
+        unverified_shifts = NarrativeShift.objects.filter(verified=False).count()
+
+        # Get evidence with authoritative sources (rough count based on .gov/.edu)
+        authoritative_evidence = NarrativeEvidence.objects.filter(
+            source_url__icontains='.gov'
+        ).count() + NarrativeEvidence.objects.filter(
+            source_url__icontains='.edu'
+        ).count()
+
+        # Get mythology validator stats if available
+        mythology_stats = {}
+        try:
+            from core.agents.narrative.narrative_mythology_validator import (
+                narrative_mythology_validator
+            )
+            mythology_stats = narrative_mythology_validator.get_stats()
+        except Exception:
+            pass
 
         return JsonResponse({
             'success': True,
@@ -217,6 +259,14 @@ def api_narrative_drift_status(request):
                 'shifts_24h': shifts_24h,
                 'recent_shifts': shift_data,
                 'active_alerts': active_alerts,
+                # Session 509: Mythology validation data
+                'mythology': {
+                    'verified_shifts': verified_shifts,
+                    'unverified_shifts': unverified_shifts,
+                    'authoritative_evidence': authoritative_evidence,
+                    'total_evidence': NarrativeEvidence.objects.count(),
+                    'validator_stats': mythology_stats,
+                }
             }
         })
     except Exception as e:
