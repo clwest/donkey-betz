@@ -71,7 +71,7 @@ SPIDER_TARGET_URLS = {
     'coursera': ['https://blog.coursera.org/feed/'],
 
     # === CROWDFUNDING/STARTUPS SPIDERS ===
-    'kickstarter': ['https://www.kickstarter.com/discover/advanced.json?sort=magic&page=1'],
+    # Session 505: Removed kickstarter - proper KickstarterSpider class in spider_registry handles it
     # Session 399: Renamed from 'indiegogo' (API blocked)
     'techcrunch_startups': ['https://techcrunch.com/category/startups/feed/'],
 
@@ -273,9 +273,7 @@ SPIDER_TARGET_URLS = {
     ],
 
     # Session 399: Legal spiders
-    'findlaw': [
-        'FINDLAW_SCRAPER',  # Marker for custom handler
-    ],
+    # Session 505: Removed findlaw - proper FindLawSpider class in spider_registry handles it
     'legal_news': [
         'LEGAL_NEWS_RSS',  # SCOTUSblog + Google News Legal
     ],
@@ -2147,7 +2145,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         # Session 397: Legal spiders
         'courtlistener': _collect_courtlistener_data,
         'legal_news': _collect_legal_news_data,  # Session 399: Renamed from justia
-        'findlaw': _collect_findlaw_data,
+        # Session 505: Removed findlaw - proper FindLawSpider class in spider_registry handles it
         'lii': _collect_lii_data,
         # Session 399: Additional API spiders
         'spotify': _collect_spotify_data,

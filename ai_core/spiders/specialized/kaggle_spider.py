@@ -355,7 +355,8 @@ class KaggleSpider(BaseIntelligenceSpider):
                 metadata={
                     'source': raw_data.get('source', 'unknown'),
                     'fetched_at': raw_data.get('fetched_at'),
-                }
+                },
+                timestamp=datetime.now(timezone.utc)  # Session 505: Added required timestamp field
             )
 
         except Exception as e:

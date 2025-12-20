@@ -2952,11 +2952,19 @@ class SpiderData(models.Model):
         texts = []
         items = self.raw_data.get('items', [])
         for item in items[:20]:  # Limit to 20 items to avoid huge embeddings
-            title = item.get('title') or item.get('name') or ''
-            description = item.get('description') or item.get('summary') or ''
+            # Session 505: Added modelId and id as fallbacks for huggingface/kaggle data
+            title = item.get('title') or item.get('name') or item.get('modelId') or item.get('id') or ''
+            description = item.get('description') or item.get('summary') or item.get('pipeline_tag') or ''
             tags = item.get('tags', [])
             if isinstance(tags, list):
-                tags = ', '.join(tags[:5])
+                # Handle tags that might be dicts (e.g., kaggle tags)
+                tag_strs = []
+                for t in tags[:5]:
+                    if isinstance(t, dict):
+                        tag_strs.append(t.get('name', str(t)))
+                    else:
+                        tag_strs.append(str(t))
+                tags = ', '.join(tag_strs)
             elif not isinstance(tags, str):
                 tags = ''
 

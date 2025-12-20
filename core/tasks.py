@@ -1049,14 +1049,17 @@ def backfill_spider_embeddings(batch_size: int = 200):
 
 
 @shared_task
-def execute_single_spider(spider_name: str):
+def execute_single_spider_lightweight(spider_name: str):
     """
-    Session 207: Execute a single spider on-demand.
+    Session 207: Execute a single spider on-demand (LIGHTWEIGHT version).
     Called by the Execute button in the Spider Dashboard.
 
     Uses lightweight synchronous data collection to avoid macOS fork/async issues.
     Does NOT import SpiderRegistry to avoid aiohttp/fork segfaults.
     Session 423: Added Discord notifications for individual spider runs.
+
+    Session 505: Renamed from execute_single_spider to avoid conflict with the
+    proper spider execution task at line 239 that uses actual spider classes.
     """
     from core.models_unified_system import SpiderData
     from django.utils import timezone
