@@ -72,12 +72,34 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Ideas for Session 509+
+## Session 509 Priorities
 
-1. Run spider network sweep to verify all spiders work
-2. Add automated Discord notifications when watched narratives shift
-3. Continue Discord vs Web feature parity work
-4. Consider Huggingface sentiment model for ML-based detection
+### 1. Domain-Specific Source Weighting (HIGH PRIORITY)
+**Problem:** All narrative domains pull evidence from same general sources (Axios, Variety, etc.)
+- Climate domain has evidence from "Scary Mommy" and "Eater" - NOT climate sources!
+- Need to boost confidence for domain-appropriate sources
+
+**Implementation:** Add `DOMAIN_SOURCE_WEIGHTS` to `narrative_drift_service.py`
+- Climate → NOAA, EPA, nature.com
+- Markets → Bloomberg, SEC, WSJ
+- Health → NIH, StatNews, WebMD
+- Crypto → CoinDesk, CoinTelegraph
+
+### 2. Mythology Verification (HIGH PRIORITY)
+**Goal:** Prevent hallucinations in narrative evidence
+
+**Integration Points:**
+- Verify source URLs are real/accessible before storing evidence
+- Require 3+ corroborating sources before high-confidence shifts
+- Flag single-source shifts as "unverified"
+
+See: `docs/handoffs/SESSION_508_SPIDER_FIXES.md` for implementation patterns
+
+### 3. Other Ideas
+- Run spider network sweep to verify all spiders work
+- Add automated Discord notifications when watched narratives shift
+- Continue Discord vs Web feature parity work
+- Consider Huggingface sentiment model for ML-based detection
 
 ---
 
