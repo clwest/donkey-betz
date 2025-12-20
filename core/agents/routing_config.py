@@ -180,6 +180,38 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
     },
 
     # =========================================================================
+    # CONTENT WRITING AGENTS (Session 517)
+    # =========================================================================
+    "ContentWriterAgent": {
+        "description": "Transform research into written content: blog posts, podcast scripts, video scripts, articles, newsletters, social threads",
+        "examples": [
+            "write a blog post about remote work trends",
+            "create a podcast script from this research",
+            "write an article about AI in 2026",
+            "turn this research into a newsletter",
+            "write a video script about sustainability",
+        ],
+        "keywords": [
+            # Blog triggers
+            "write a blog", "write blog", "blog post", "write a blog post",
+            "create a blog", "blog about", "blog on",
+            # Article triggers
+            "write an article", "write article", "article about", "article on",
+            # Script triggers
+            "write a script", "podcast script", "video script", "write script",
+            # Newsletter triggers
+            "write a newsletter", "newsletter about", "newsletter on",
+            # Social media triggers
+            "social thread", "write a thread", "twitter thread",
+            # General writing triggers
+            "write about", "write content", "create content about",
+            "turn this into", "transform into", "convert to blog",
+        ],
+        "category": "content_creation",
+        "priority": 25,  # High priority - specific content type requests
+    },
+
+    # =========================================================================
     # STRATEGY AGENTS
     # =========================================================================
     "BrandIdentityAgent": {

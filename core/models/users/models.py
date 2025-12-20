@@ -758,7 +758,12 @@ class EnhancedUserProfile(models.Model):
             base_context.update({
                 'long_term_goals': self.long_term_goals[:3] if self.long_term_goals else [],
                 'current_projects': self.current_projects[:2] if self.current_projects else [],
-                'core_competencies': list(self.core_competencies.keys())[:5] if self.core_competencies else []
+                # Session 517: Handle core_competencies as either dict or list
+                'core_competencies': (
+                    list(self.core_competencies.keys())[:5] if isinstance(self.core_competencies, dict)
+                    else self.core_competencies[:5] if isinstance(self.core_competencies, list)
+                    else []
+                ) if self.core_competencies else []
             })
 
         return base_context
