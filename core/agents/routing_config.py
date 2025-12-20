@@ -387,8 +387,8 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
             "implement a sorting algorithm",
         ],
         "keywords": [
-            "write code", "generate code", "code", "function", "implement", "script",
-            "program", "algorithm", "snippet", "boilerplate"
+            "write code", "generate code", "create code", "write function", "generate function",
+            "implement", "write script", "program", "algorithm", "snippet", "boilerplate"
         ],
         "category": "development",
         "priority": 15,
@@ -418,10 +418,11 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
         ],
         "keywords": [
             "review code", "code review", "audit code", "check code", "analyze code",
-            "code quality", "security review", "code audit", "pr review"
+            "code quality", "security review", "code audit", "pr review",
+            "review the code", "security issues", "review file", "check file"
         ],
         "category": "development",
-        "priority": 15,
+        "priority": 20,  # Higher priority than CodeGeneratorAgent for review requests
     },
     "DevOpsAgent": {
         "description": "Create CI/CD pipelines, Docker configurations, Kubernetes manifests, and infrastructure automation",
