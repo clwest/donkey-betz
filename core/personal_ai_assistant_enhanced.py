@@ -7310,15 +7310,77 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 if 'tool_calls' in ai_result and ai_result['tool_calls']:
                     logger.info(f"🛠️ GPT requested {len(ai_result['tool_calls'])} tool calls")
 
+                    # Session 517: Backend-only tools should execute here, not in frontend
+                    # These tools produce content/data that should be returned directly
+                    BACKEND_EXECUTE_TOOLS = {
+                        'content_writer_agent',  # Session 517: Written content generation
+                        'competitor_analysis_agent',
+                        'customer_research_agent',
+                        'brand_strategy_agent',
+                        'content_strategy_agent',
+                        'marketing_strategy_agent',
+                    }
+
+                    # Check if any tool calls should execute in backend
+                    backend_results = []
+                    frontend_tool_calls = []
+
+                    for tc in ai_result['tool_calls']:
+                        tool_name = tc.get('function', {}).get('name', '') if 'function' in tc else tc.get('name', '')
+
+                        if tool_name in BACKEND_EXECUTE_TOOLS:
+                            logger.info(f"📝 Session 517: Executing backend tool: {tool_name}")
+                            try:
+                                result = self._execute_tool_call(tc)
+                                backend_results.append({
+                                    'name': tool_name,
+                                    'arguments': tc.get('function', {}).get('arguments', {}) if 'function' in tc else tc.get('arguments', {}),
+                                    'result': result
+                                })
+                                logger.info(f"✅ Backend tool {tool_name} executed successfully")
+                            except Exception as e:
+                                logger.error(f"❌ Backend tool {tool_name} failed: {e}")
+                                backend_results.append({
+                                    'name': tool_name,
+                                    'error': str(e)
+                                })
+                        else:
+                            frontend_tool_calls.append(tc)
+
+                    # If we executed backend tools, return their results
+                    if backend_results:
+                        # Return the first backend result as the main response
+                        first_result = backend_results[0].get('result', {})
+                        response = first_result.get('message', '') or first_result.get('response', '')
+
+                        # Session 266: Record successful outcome
+                        execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+                        agents_used = [r['name'] for r in backend_results]
+                        self._record_learning_outcome(
+                            message=message,
+                            classification=classification,
+                            response=response,
+                            success=True,
+                            agents_used=agents_used,
+                            execution_time_ms=execution_time_ms
+                        )
+
+                        # Return result with tool_calls containing results
+                        return {
+                            'text': response,
+                            'tool_calls': backend_results,
+                            **first_result  # Spread the result data (content, metadata, etc.)
+                        }
+
                     # Session 155 Fix: Return tool_calls to frontend for execution
                     # DON'T execute in backend - let frontend handle it for proper UX
                     # Session 173 FIX: LLM enforcer returns 'content' not 'response'
                     response = ai_result.get('content', '') or ai_result.get('response', '')
-                    logger.info(f"✅ Returning {len(ai_result['tool_calls'])} tool_calls to frontend for execution")
+                    logger.info(f"✅ Returning {len(frontend_tool_calls)} tool_calls to frontend for execution")
 
                     # Session 266: Record successful outcome with tool calls
                     execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
-                    agents_used = [tc['function']['name'] for tc in ai_result['tool_calls'] if 'function' in tc]
+                    agents_used = [tc['function']['name'] for tc in frontend_tool_calls if 'function' in tc]
                     self._record_learning_outcome(
                         message=message,
                         classification=classification,
@@ -7331,7 +7393,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     # Return dict with both response and tool_calls
                     return {
                         'text': response,
-                        'tool_calls': ai_result['tool_calls']
+                        'tool_calls': frontend_tool_calls
                     }
                 else:
                     # No tool calls, just return the text response
@@ -8045,7 +8107,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             'learning_style': self.enhanced_profile.learning_style or 'mixed',
             'goals': self.enhanced_profile.long_term_goals,
             'current_projects': self.enhanced_profile.current_projects,
-            'skills': {'top_skills': list(self.enhanced_profile.core_competencies.keys())[:5] if self.enhanced_profile.core_competencies else []},
+            # Session 517: Handle core_competencies as either dict or list
+            'skills': {'top_skills': (
+                list(self.enhanced_profile.core_competencies.keys())[:5] if isinstance(self.enhanced_profile.core_competencies, dict)
+                else self.enhanced_profile.core_competencies[:5] if isinstance(self.enhanced_profile.core_competencies, list)
+                else []
+            ) if self.enhanced_profile.core_competencies else []},
             'timezone': self.enhanced_profile.time_zone,
             'work_hours': self.enhanced_profile.work_schedule,
             'decision_framework': self.enhanced_profile.decision_framework,
