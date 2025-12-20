@@ -430,8 +430,8 @@ EDITING (modifying existing assets):
 - VideoEditingAgent: Trim, effects, text overlays
 
 DEVELOPMENT (code, infrastructure):
-- CodeGeneratorAgent: Generate code from specifications (Python, JS, etc.)
-- CodeReviewAgent: Review code for bugs, security, best practices
+- CodeGeneratorAgent: WRITE NEW code from specifications (Python, JS, etc.) - use when user says "generate", "create", "write" code
+- CodeReviewAgent: REVIEW EXISTING code for bugs, security, best practices - USE THIS when user says "review", "audit", "check", "analyze" code or a file
 - FullStackDeveloperAgent: Build complete features (frontend + backend)
 - DevOpsAgent: CI/CD, Docker, Kubernetes, infrastructure - USE for deployment questions
 
@@ -1134,13 +1134,16 @@ ORCHESTRATION:
                         enhanced_spider_context['categories'] = fresh_trends.get('categories', [])
                         enhanced_spider_context['topic'] = fresh_trends.get('topic_filter')
                         enhanced_spider_context['cache_hit'] = fresh_trends.get('cache_hit', False)
+                        # Session 513: Track if web search fallback was used
+                        enhanced_spider_context['used_web_search'] = fresh_trends.get('used_web_search', False)
 
                         logger.info(f"🕷️ [Session 495] SmartTrending injected: "
                                    f"topic='{fresh_trends.get('topic_filter')}', "
                                    f"categories={fresh_trends.get('categories', [])}, "
                                    f"{len(fresh_trends.get('trends', []))} keywords, "
                                    f"{len(fresh_trends.get('articles', []))} articles, "
-                                   f"cache_hit={fresh_trends.get('cache_hit', False)}")
+                                   f"cache_hit={fresh_trends.get('cache_hit', False)}, "
+                                   f"web_search={fresh_trends.get('used_web_search', False)}")
 
                         # Log sample for debugging
                         if fresh_trends.get('trends'):
@@ -1161,10 +1164,16 @@ ORCHESTRATION:
             logger.info(f"🕷️ [Session 495] relevant_trends: {enhanced_spider_context.get('relevant_trends', [])[:5]}")
 
             if question_type == 'trend_question':
-                # Session 495: Add matched categories info
-                categories = enhanced_spider_context.get('categories', [])
-                if categories:
-                    prompt += f"\n\n## Data Sources: {', '.join(categories)}"
+                # Session 513: Show data source (spider network vs web search)
+                used_web_search = enhanced_spider_context.get('used_web_search', False)
+                if used_web_search:
+                    prompt += "\n\n## Data Source: Live Web Search (DuckDuckGo)"
+                    prompt += "\nNote: Spider network didn't have data for this topic, using live web search."
+                else:
+                    # Session 495: Add matched categories info
+                    categories = enhanced_spider_context.get('categories', [])
+                    if categories:
+                        prompt += f"\n\n## Data Sources: Spider Network ({', '.join(categories)})"
 
                 # Session 495: Add trending keywords FIRST (gives GPT the key terms)
                 trends = enhanced_spider_context.get('relevant_trends', [])
@@ -1186,26 +1195,38 @@ ORCHESTRATION:
                             prompt += f" ({url})"
                     logger.info(f"🕷️ [Session 495] First article added: {articles[0].get('title', 'N/A')[:60]}")
 
-                # Session 483: Update attribution with spider sources from articles
+                # Session 483/513: Update attribution with data sources
                 article_sources = list(set(
                     article.get('source', '') for article in articles if article.get('source')
                 ))
                 if article_sources:
-                    # Merge with existing spider_sources
-                    all_sources = list(set(attribution.spider_sources + article_sources))
+                    # Session 513: Mark web search sources differently
+                    if used_web_search:
+                        # Prefix web search sources to distinguish them
+                        all_sources = ['Web Search'] + article_sources[:9]
+                    else:
+                        # Merge with existing spider_sources
+                        all_sources = list(set(attribution.spider_sources + article_sources))
+
                     attribution = KnowledgeAttribution(
                         spider_sources=all_sources[:10],  # Top 10 sources
                         knowledge_items=attribution.knowledge_items,
                         confidence_score=attribution.confidence_score,
-                        data_freshness_hours=min(attribution.data_freshness_hours or 24.0, 1.0),  # Fresh data
+                        data_freshness_hours=min(attribution.data_freshness_hours or 24.0, 0.5 if used_web_search else 1.0),  # Very fresh for web
                         total_sources=len(all_sources)
                     )
-                    logger.info(f"🕷️ [Session 483] Updated attribution with {len(article_sources)} spider sources: {article_sources[:5]}")
+                    source_type = "web search" if used_web_search else "spider"
+                    logger.info(f"🕷️ [Session 513] Updated attribution with {len(article_sources)} {source_type} sources: {article_sources[:5]}")
 
             # Append instruction to answer directly
             prompt += "\n\nAnswer this question directly without delegating to an agent."
             if question_type == 'trend_question':
-                prompt += " Use the trend data and articles provided above to give a current, relevant answer."
+                # Session 513: Different instruction based on data source
+                if enhanced_spider_context.get('used_web_search'):
+                    prompt += " Use the live web search results provided above to give a current, relevant answer. "
+                    prompt += "Cite specific articles and include URLs where relevant."
+                else:
+                    prompt += " Use the trend data and articles provided above to give a current, relevant answer."
 
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
