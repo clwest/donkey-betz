@@ -387,8 +387,17 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
             "implement a sorting algorithm",
         ],
         "keywords": [
-            "write code", "generate code", "create code", "write function", "generate function",
-            "implement", "write script", "program", "algorithm", "snippet", "boilerplate"
+            # Compound phrases
+            "write code", "generate code", "create code",
+            "write a function", "generate a function", "create a function",
+            "write function", "generate function", "create function",
+            # Language-specific
+            "python function", "javascript function", "typescript function",
+            # Action words
+            "implement", "write script", "program", "algorithm", "snippet", "boilerplate",
+            # Common patterns
+            "function that", "script that", "code that",
+            "validate", "validator", "parser", "converter",
         ],
         "category": "development",
         "priority": 15,
@@ -402,8 +411,15 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
             "build a feature end to end",
         ],
         "keywords": [
+            # Compound phrases
             "build feature", "full stack", "fullstack", "frontend and backend",
-            "complete feature", "end to end feature", "develop feature", "create app"
+            "complete feature", "end to end feature", "develop feature", "create app",
+            # Flexible patterns
+            "build a", "build system", "build an", "develop a", "develop system",
+            "help me build", "help build", "create a system", "create system",
+            # Common feature types
+            "authentication system", "notification system", "dashboard",
+            "user system", "api endpoint", "crud",
         ],
         "category": "development",
         "priority": 15,
