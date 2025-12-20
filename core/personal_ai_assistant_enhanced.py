@@ -1518,6 +1518,15 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         # Session 353: Enrich prompt with project research context if available
         enriched_prompt = prompt
         if project_id:
+            # Session 517: Validate UUID format before lookup
+            import uuid
+            try:
+                uuid.UUID(str(project_id))  # Validate UUID format
+            except (ValueError, AttributeError):
+                logger.info(f"⚠️ Invalid project_id format '{project_id}', skipping project context")
+                project_id = None  # Reset to skip project lookup
+
+        if project_id:
             try:
                 from core.models_partnership import PartnershipProject
                 project = PartnershipProject.objects.get(id=project_id)
@@ -7319,6 +7328,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         'brand_strategy_agent',
                         'content_strategy_agent',
                         'marketing_strategy_agent',
+                        'image_generation_agent',  # Session 517: Image generation for content
                     }
 
                     # Check if any tool calls should execute in backend
