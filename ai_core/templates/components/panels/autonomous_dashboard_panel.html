@@ -966,7 +966,11 @@ async function loadNarrativeDrift() {
 
             // Update stats
             document.getElementById('narrativeTotalCount').textContent = d.total_narratives || 0;
-            document.getElementById('narrativeActiveCount').textContent = d.status_breakdown?.active || 0;
+            // Session 506: Calculate "Active" as sum of emerging, dominant, and shifting statuses
+            const activeCount = (d.status_breakdown?.emerging || 0) +
+                               (d.status_breakdown?.dominant || 0) +
+                               (d.status_breakdown?.shifting || 0);
+            document.getElementById('narrativeActiveCount').textContent = activeCount;
             document.getElementById('narrativeEvidence24h').textContent = d.evidence_24h || 0;
             document.getElementById('narrativeShifts24h').textContent = d.shifts_24h || 0;
             document.getElementById('narrativeAlerts').textContent = d.active_alerts || 0;
@@ -1023,13 +1027,16 @@ function renderNarrativeDomains(domains) {
         return;
     }
 
+    // Session 506: Updated domain colors to match actual NarrativeDomain choices
     const domainColors = {
-        'ai': '#a78bfa',
+        'politics': '#ef4444',
+        'markets': '#fbbf24',
         'tech': '#60a5fa',
-        'finance': '#fbbf24',
+        'culture': '#ec4899',
+        'geopolitics': '#f97316',
         'crypto': '#f472b6',
-        'jobs': '#34d399',
-        'creative': '#ec4899',
+        'climate': '#34d399',
+        'health': '#a78bfa',
         'default': '#9ca3af'
     };
 
