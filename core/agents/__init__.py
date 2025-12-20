@@ -259,6 +259,12 @@ from core.agents.podcast import (
     ModeratorAgent,
 )
 
+# Campaign Orchestrator Agent (Session 513: Marketing Campaign Hub)
+from core.agents.campaign_orchestrator_agent import (
+    CampaignOrchestratorAgent,
+    get_campaign_orchestrator_agent,
+)
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -379,4 +385,8 @@ __all__ = [
     'DebateAdvocateAgent',
     'DebateSkepticAgent',
     'ModeratorAgent',
+
+    # Campaign Orchestrator Agent (1) - Session 513
+    'CampaignOrchestratorAgent',
+    'get_campaign_orchestrator_agent',
 ]

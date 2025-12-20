@@ -6129,6 +6129,108 @@
                     </div>
                 </div>
 
+                <!-- Session 513: Marketing Campaigns Section (The Marketing Hub) -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0" style="color: #10b981;">
+                            🚀 Marketing Campaigns
+                            <small class="text-muted fs-6">Full-service marketing packages</small>
+                        </h4>
+                        <button class="btn btn-lg" id="new-campaign-btn"
+                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                            ➕ New Campaign
+                        </button>
+                    </div>
+
+                    <!-- Campaign Cards Container -->
+                    <div id="campaigns-container" class="mb-4">
+                        <div class="row" id="campaigns-list-cards">
+                            <!-- Campaigns will be loaded here -->
+                            <div class="col-12 text-center py-4" id="campaigns-loading">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading campaigns...</p>
+                            </div>
+                            <div class="col-12 text-center py-4 d-none" id="no-campaigns">
+                                <div style="font-size: 3rem;">📦</div>
+                                <p class="text-muted mt-2">No campaigns yet. Create your first marketing campaign!</p>
+                                <p class="text-muted small">
+                                    Give us your product + target market + budget tier, and we'll create<br>
+                                    ad copies, images, videos, emails, and social posts automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Tiers Info (Collapsible) -->
+                    <div class="mb-4">
+                        <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#budget-tiers-info">
+                            💰 View Budget Tiers & Deliverables
+                        </button>
+                        <div class="collapse mt-2" id="budget-tiers-info">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 2px solid #6b7280;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title text-white">Starter</h5>
+                                            <div class="display-6 text-success mb-2">$500</div>
+                                            <ul class="list-unstyled text-muted small text-start">
+                                                <li>✓ 5 ad copy variations</li>
+                                                <li>✓ 5 images</li>
+                                                <li>✓ 7 social posts</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 2px solid #3b82f6;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title text-white">Pro</h5>
+                                            <div class="display-6 text-primary mb-2">$2,000</div>
+                                            <ul class="list-unstyled text-muted small text-start">
+                                                <li>✓ 10 ad copy variations</li>
+                                                <li>✓ 15 images</li>
+                                                <li>✓ 14 social posts</li>
+                                                <li>✓ 5-email sequence</li>
+                                                <li>✓ Banner ads</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title text-white">Enterprise</h5>
+                                            <div class="display-6 text-purple mb-2" style="color: #8b5cf6;">$5,000</div>
+                                            <ul class="list-unstyled text-muted small text-start">
+                                                <li>✓ Everything in Pro</li>
+                                                <li>✓ 30s video ad</li>
+                                                <li>✓ Professional voiceover</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card h-100" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title text-white">Premium</h5>
+                                            <div class="display-6 text-warning mb-2">$10,000</div>
+                                            <ul class="list-unstyled text-muted small text-start">
+                                                <li>✓ Everything in Enterprise</li>
+                                                <li>✓ 3 video ads</li>
+                                                <li>✓ Complete brand guide</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" style="border-color: #333;">
+
                 <!-- Create New Project Buttons (Session 62: Phase C.3) -->
                 <div class="mb-4 d-flex gap-3">
                     <button id="create-project-btn" class="btn btn-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
@@ -6552,6 +6654,187 @@
                             </div>
                             <div class="modal-footer" style="border-top: 1px solid #333;">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 513: Marketing Campaign Creation Modal -->
+                <div class="modal fade" id="campaign-create-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #10b981;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <h5 class="modal-title text-white">🚀 Create Marketing Campaign</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="campaign-create-form">
+                                    <!-- Campaign Name -->
+                                    <div class="mb-3">
+                                        <label for="campaign-name" class="form-label">Campaign Name *</label>
+                                        <input type="text" class="form-control" id="campaign-name" required
+                                               placeholder="e.g., Mike's Auto - Honda Civic Sale">
+                                    </div>
+
+                                    <!-- Client Name -->
+                                    <div class="mb-3">
+                                        <label for="campaign-client" class="form-label">Client Name</label>
+                                        <input type="text" class="form-control" id="campaign-client"
+                                               placeholder="e.g., Mike's Auto">
+                                    </div>
+
+                                    <!-- Product Info -->
+                                    <div class="mb-3">
+                                        <label for="campaign-product" class="form-label">Product/Service Name *</label>
+                                        <input type="text" class="form-control" id="campaign-product" required
+                                               placeholder="e.g., 2019 Honda Civic">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="campaign-description" class="form-label">Product Description *</label>
+                                        <textarea class="form-control" id="campaign-description" rows="3" required
+                                                  placeholder="Describe the product/service in detail. Key features, benefits, what makes it special..."></textarea>
+                                    </div>
+
+                                    <!-- Target Market -->
+                                    <div class="mb-3">
+                                        <label for="campaign-target" class="form-label">Target Market *</label>
+                                        <textarea class="form-control" id="campaign-target" rows="2" required
+                                                  placeholder="Who is your ideal customer? Demographics, interests, pain points..."></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="campaign-location" class="form-label">Target Location</label>
+                                        <input type="text" class="form-control" id="campaign-location"
+                                               placeholder="e.g., Denver, CO or Nationwide">
+                                    </div>
+
+                                    <!-- Budget Tier -->
+                                    <div class="mb-4">
+                                        <label class="form-label">Budget Tier *</label>
+                                        <div class="row g-2">
+                                            <div class="col-6 col-md-3">
+                                                <input type="radio" class="btn-check" name="budget-tier" id="tier-starter" value="starter" checked>
+                                                <label class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center p-3" for="tier-starter">
+                                                    <span class="fs-5">$500</span>
+                                                    <small>Starter</small>
+                                                </label>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <input type="radio" class="btn-check" name="budget-tier" id="tier-pro" value="pro">
+                                                <label class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center p-3" for="tier-pro">
+                                                    <span class="fs-5">$2,000</span>
+                                                    <small>Pro</small>
+                                                </label>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <input type="radio" class="btn-check" name="budget-tier" id="tier-enterprise" value="enterprise">
+                                                <label class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center p-3" for="tier-enterprise" style="border-color: #8b5cf6; color: #8b5cf6;">
+                                                    <span class="fs-5">$5,000</span>
+                                                    <small>Enterprise</small>
+                                                </label>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <input type="radio" class="btn-check" name="budget-tier" id="tier-premium" value="premium">
+                                                <label class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center p-3" for="tier-premium">
+                                                    <span class="fs-5">$10,000</span>
+                                                    <small>Premium</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Platforms -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Target Platforms</label>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-facebook" value="facebook" checked>
+                                                <label class="form-check-label" for="platform-facebook">Facebook</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-instagram" value="instagram">
+                                                <label class="form-check-label" for="platform-instagram">Instagram</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-craigslist" value="craigslist">
+                                                <label class="form-check-label" for="platform-craigslist">Craigslist</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-email" value="email" checked>
+                                                <label class="form-check-label" for="platform-email">Email</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-linkedin" value="linkedin">
+                                                <label class="form-check-label" for="platform-linkedin">LinkedIn</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="platform-twitter" value="twitter">
+                                                <label class="form-check-label" for="platform-twitter">Twitter/X</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Competitors (optional) -->
+                                    <div class="mb-3">
+                                        <label for="campaign-competitors" class="form-label">Competitors (optional)</label>
+                                        <input type="text" class="form-control" id="campaign-competitors"
+                                               placeholder="e.g., CarMax, AutoNation (comma-separated)">
+                                        <small class="text-muted">We'll analyze these during the research phase</small>
+                                    </div>
+
+                                    <!-- Brand Style (optional) -->
+                                    <div class="mb-3">
+                                        <label for="campaign-brand-style" class="form-label">Brand Style (optional)</label>
+                                        <select class="form-select" id="campaign-brand-style">
+                                            <option value="">Auto-detect from product</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="casual">Casual & Friendly</option>
+                                            <option value="luxury">Luxury & Premium</option>
+                                            <option value="playful">Playful & Fun</option>
+                                            <option value="minimalist">Minimalist & Modern</option>
+                                            <option value="bold">Bold & Energetic</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" id="create-campaign-btn"
+                                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;"
+                                        onclick="createMarketingCampaign()">
+                                    🚀 Create Campaign
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 513: Campaign Detail Modal -->
+                <div class="modal fade" id="campaign-detail-modal" tabindex="-1">
+                    <div class="modal-dialog modal-fullscreen">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #10b981;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" id="campaign-detail-title">Campaign Details</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="campaign-detail-body">
+                                <!-- Campaign details will be loaded here -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-danger" id="delete-campaign-btn" style="display: none;">
+                                    🗑️ Delete Campaign
+                                </button>
+                                <button type="button" class="btn" id="start-campaign-btn"
+                                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; display: none;">
+                                    ▶️ Start Campaign
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -47599,6 +47882,374 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             // Show notification
             showNotification(`Campaign template "${template.name}" loaded! Review and save to create project.`, 'info');
+        }
+
+        // ====================================================================
+        // SESSION 513: MARKETING CAMPAIGNS (The Marketing Hub)
+        // ====================================================================
+
+        // Marketing Campaign Management
+        let currentCampaignId = null;
+
+        // Load campaigns when Projects tab is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load campaigns when tab is shown
+            document.getElementById('projects-tab')?.addEventListener('click', loadMarketingCampaigns);
+
+            // New Campaign button
+            document.getElementById('new-campaign-btn')?.addEventListener('click', () => {
+                const modal = new bootstrap.Modal(document.getElementById('campaign-create-modal'));
+                modal.show();
+            });
+        });
+
+        // Load marketing campaigns
+        async function loadMarketingCampaigns() {
+            const container = document.getElementById('campaigns-list-cards');
+            const loading = document.getElementById('campaigns-loading');
+            const empty = document.getElementById('no-campaigns');
+
+            if (!container) return;
+
+            try {
+                loading?.classList.remove('d-none');
+                empty?.classList.add('d-none');
+
+                const response = await authenticatedFetch('/api/campaigns/');
+                const data = await response.json();
+
+                loading?.classList.add('d-none');
+
+                if (data.success && data.campaigns && data.campaigns.length > 0) {
+                    container.innerHTML = data.campaigns.map(campaign => renderCampaignCard(campaign)).join('');
+                } else {
+                    container.innerHTML = '';
+                    empty?.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error loading campaigns:', error);
+                loading?.classList.add('d-none');
+                container.innerHTML = `<div class="col-12 text-center text-danger py-4">Error loading campaigns: ${error.message}</div>`;
+            }
+        }
+
+        // Render a campaign card
+        function renderCampaignCard(campaign) {
+            const statusColors = {
+                'intake': '#6b7280',
+                'research': '#3b82f6',
+                'strategy': '#8b5cf6',
+                'creation': '#10b981',
+                'review': '#f59e0b',
+                'complete': '#22c55e',
+                'delivered': '#14b8a6',
+                'cancelled': '#ef4444'
+            };
+
+            const statusColor = statusColors[campaign.status] || '#6b7280';
+            const progressPercent = campaign.progress_percent || 0;
+
+            return `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100" style="background: #1a1a1a; border: 2px solid ${statusColor}; cursor: pointer;"
+                         onclick="viewCampaignDetails('${campaign.id}')">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title text-white mb-0">${campaign.name}</h5>
+                                <span class="badge" style="background: ${statusColor};">${campaign.status_display}</span>
+                            </div>
+                            <p class="text-muted small mb-2">${campaign.product_name}</p>
+                            <p class="text-muted small mb-3">${campaign.product_description}</p>
+
+                            <!-- Progress Bar -->
+                            <div class="progress mb-2" style="height: 8px; background: #333;">
+                                <div class="progress-bar" role="progressbar"
+                                     style="width: ${progressPercent}%; background: ${statusColor};"
+                                     aria-valuenow="${progressPercent}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <small class="text-muted">${progressPercent}% complete</small>
+
+                            <!-- Stats -->
+                            <div class="d-flex justify-content-between mt-3">
+                                <small class="text-muted">
+                                    <span class="badge bg-secondary">${campaign.budget_tier}</span>
+                                </small>
+                                <small class="text-muted">
+                                    ${campaign.total_deliverables || 0} deliverables
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Create new marketing campaign
+        async function createMarketingCampaign() {
+            const btn = document.getElementById('create-campaign-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Creating...';
+
+            try {
+                // Gather form data
+                const name = document.getElementById('campaign-name').value;
+                const clientName = document.getElementById('campaign-client').value;
+                const productName = document.getElementById('campaign-product').value;
+                const productDescription = document.getElementById('campaign-description').value;
+                const targetMarket = document.getElementById('campaign-target').value;
+                const targetLocation = document.getElementById('campaign-location').value;
+                const budgetTier = document.querySelector('input[name="budget-tier"]:checked').value;
+                const brandStyle = document.getElementById('campaign-brand-style').value;
+                const competitorsRaw = document.getElementById('campaign-competitors').value;
+
+                // Gather selected platforms
+                const platforms = [];
+                document.querySelectorAll('#campaign-create-form .form-check-input:checked').forEach(cb => {
+                    if (cb.id.startsWith('platform-')) {
+                        platforms.push(cb.value);
+                    }
+                });
+
+                // Parse competitors
+                const competitors = competitorsRaw ? competitorsRaw.split(',').map(c => c.trim()).filter(c => c) : [];
+
+                const response = await authenticatedFetch('/api/campaigns/create/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name,
+                        client_name: clientName,
+                        product_name: productName,
+                        product_description: productDescription,
+                        target_market: targetMarket,
+                        target_location: targetLocation,
+                        budget_tier: budgetTier,
+                        platforms,
+                        competitors,
+                        brand_style: brandStyle
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Campaign "${name}" created successfully!`, 'success');
+
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('campaign-create-modal'))?.hide();
+
+                    // Reset form
+                    document.getElementById('campaign-create-form').reset();
+
+                    // Reload campaigns
+                    loadMarketingCampaigns();
+
+                    // Open the campaign details
+                    setTimeout(() => viewCampaignDetails(data.campaign.id), 500);
+                } else {
+                    showToast(data.error || 'Failed to create campaign', 'danger');
+                }
+            } catch (error) {
+                console.error('Error creating campaign:', error);
+                showToast('Error creating campaign: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Create Campaign';
+            }
+        }
+
+        // View campaign details
+        async function viewCampaignDetails(campaignId) {
+            currentCampaignId = campaignId;
+
+            const modal = new bootstrap.Modal(document.getElementById('campaign-detail-modal'));
+            modal.show();
+
+            const body = document.getElementById('campaign-detail-body');
+            body.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading campaign details...</p>
+                </div>
+            `;
+
+            try {
+                const response = await authenticatedFetch(`/api/campaigns/${campaignId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderCampaignDetails(data.campaign);
+                } else {
+                    body.innerHTML = `<div class="alert alert-danger">${data.error || 'Failed to load campaign'}</div>`;
+                }
+            } catch (error) {
+                body.innerHTML = `<div class="alert alert-danger">Error loading campaign: ${error.message}</div>`;
+            }
+        }
+
+        // Render campaign details
+        function renderCampaignDetails(campaign) {
+            const body = document.getElementById('campaign-detail-body');
+            const startBtn = document.getElementById('start-campaign-btn');
+            const deleteBtn = document.getElementById('delete-campaign-btn');
+
+            // Update title
+            document.getElementById('campaign-detail-title').textContent = `🚀 ${campaign.name}`;
+
+            // Show/hide action buttons
+            if (campaign.status === 'intake') {
+                startBtn.style.display = 'inline-block';
+                startBtn.onclick = () => startCampaign(campaign.id);
+            } else {
+                startBtn.style.display = 'none';
+            }
+
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.onclick = () => deleteCampaign(campaign.id);
+
+            // Render content
+            body.innerHTML = `
+                <div class="row">
+                    <!-- Campaign Info -->
+                    <div class="col-md-4">
+                        <div class="card mb-4" style="background: #222; border: 1px solid #333;">
+                            <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <h6 class="mb-0 text-white">Campaign Info</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Status:</strong> <span class="badge bg-success">${campaign.status_display}</span></p>
+                                <p><strong>Budget Tier:</strong> ${campaign.budget_info?.name || campaign.budget_tier} ($${campaign.budget_info?.price || '?'})</p>
+                                <p><strong>Progress:</strong> ${campaign.progress_percent}%</p>
+                                <p><strong>Current Phase:</strong> ${campaign.current_phase}</p>
+                                <p><strong>Client:</strong> ${campaign.client_name || 'Not specified'}</p>
+                                <p><strong>Platforms:</strong> ${campaign.platforms?.join(', ') || 'General'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Product Info -->
+                        <div class="card mb-4" style="background: #222; border: 1px solid #333;">
+                            <div class="card-header" style="background: #333;">
+                                <h6 class="mb-0 text-white">Product/Service</h6>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="text-white">${campaign.product_name}</h6>
+                                <p class="text-muted small">${campaign.product_description_full || campaign.product_description}</p>
+                                <p><strong>Target Market:</strong></p>
+                                <p class="text-muted small">${campaign.target_market_full || campaign.target_market}</p>
+                                ${campaign.target_location ? `<p><strong>Location:</strong> ${campaign.target_location}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deliverables -->
+                    <div class="col-md-8">
+                        <div class="card mb-4" style="background: #222; border: 1px solid #333;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: #333;">
+                                <h6 class="mb-0 text-white">Deliverables (${campaign.deliverables?.length || 0})</h6>
+                            </div>
+                            <div class="card-body">
+                                ${campaign.deliverables && campaign.deliverables.length > 0 ? `
+                                    <div class="row g-3">
+                                        ${campaign.deliverables.map(d => `
+                                            <div class="col-md-6">
+                                                <div class="card" style="background: #1a1a1a; border: 1px solid #444;">
+                                                    <div class="card-body">
+                                                        <div class="d-flex justify-content-between">
+                                                            <h6 class="text-white">${d.name}</h6>
+                                                            <span class="badge ${d.status === 'complete' ? 'bg-success' : 'bg-secondary'}">${d.status}</span>
+                                                        </div>
+                                                        <small class="text-muted">${d.type_display} - ${d.platform_display}</small>
+                                                        ${d.content_text ? `<p class="small text-muted mt-2 mb-0" style="max-height: 80px; overflow: hidden;">${d.content_text.substring(0, 150)}...</p>` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <div class="text-center py-4 text-muted">
+                                        <p>No deliverables yet. ${campaign.status === 'intake' ? 'Start the campaign to generate deliverables.' : 'Deliverables are being created...'}</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Research Items -->
+                        ${campaign.research_items && campaign.research_items.length > 0 ? `
+                            <div class="card mb-4" style="background: #222; border: 1px solid #333;">
+                                <div class="card-header" style="background: #333;">
+                                    <h6 class="mb-0 text-white">Research (${campaign.research_items.length})</h6>
+                                </div>
+                                <div class="card-body">
+                                    ${campaign.research_items.map(r => `
+                                        <div class="mb-3 p-3" style="background: #1a1a1a; border-radius: 8px;">
+                                            <h6 class="text-white">${r.title}</h6>
+                                            <small class="text-muted">${r.type_display} | Source: ${r.source || 'AI Research'}</small>
+                                            <p class="small text-muted mt-2 mb-0">${r.summary || 'No summary available'}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Start campaign execution
+        async function startCampaign(campaignId) {
+            if (!confirm('Start this campaign? This will begin the research, strategy, and creation phases.')) {
+                return;
+            }
+
+            const btn = document.getElementById('start-campaign-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Starting...';
+
+            try {
+                const response = await authenticatedFetch(`/api/campaigns/${campaignId}/start/`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Campaign started! The AI is now researching, strategizing, and creating your deliverables.', 'success');
+                    viewCampaignDetails(campaignId); // Refresh details
+                } else {
+                    showToast(data.error || 'Failed to start campaign', 'danger');
+                }
+            } catch (error) {
+                showToast('Error starting campaign: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '▶️ Start Campaign';
+            }
+        }
+
+        // Delete campaign
+        async function deleteCampaign(campaignId) {
+            if (!confirm('Are you sure you want to delete this campaign? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/campaigns/${campaignId}/delete/`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Campaign deleted', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('campaign-detail-modal'))?.hide();
+                    loadMarketingCampaigns();
+                } else {
+                    showToast(data.error || 'Failed to delete campaign', 'danger');
+                }
+            } catch (error) {
+                showToast('Error deleting campaign: ' + error.message, 'danger');
+            }
         }
 
         // ====================================================================

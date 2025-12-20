@@ -171,6 +171,9 @@ from core.agents.podcast import (
     ModeratorAgent,
 )
 
+# Session 513: Campaign Orchestrator Agent
+from core.agents.campaign_orchestrator_agent import CampaignOrchestratorAgent
+
 logger = logging.getLogger(__name__)
 
 # Session 488: Semantic routing confidence threshold
@@ -284,6 +287,9 @@ class AgentRouter:
 
         # Orchestration Agents
         "WorkflowAgent": WorkflowAgent,
+
+        # Campaign Orchestrator (Session 513)
+        "CampaignOrchestratorAgent": CampaignOrchestratorAgent,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,

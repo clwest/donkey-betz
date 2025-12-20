@@ -39,6 +39,18 @@ from core.views_podcast import (
     podcast_stats as podcast_stats_view,
 )
 
+# Import campaign API views (Session 513)
+from core.views_campaign import (
+    campaign_list,
+    campaign_create,
+    campaign_detail,
+    campaign_start,
+    campaign_status,
+    campaign_deliverables,
+    campaign_delete,
+    campaign_budget_tiers,
+)
+
 # Import intelligence API views (Session 25)
 from core.views_intelligence_api import (
     intelligence_activity_feed, spider_network_status, intelligence_data_quality
@@ -2316,6 +2328,16 @@ urlpatterns = [
     path('api/podcasts/<uuid:episode_id>/script/', podcast_script_view, name='podcast-script'),
     path('api/podcasts/<uuid:episode_id>/', podcast_delete_view, name='podcast-delete'),
 
+    # Session 513: Campaign Orchestrator APIs
+    path('api/campaigns/', campaign_list, name='campaign-list'),
+    path('api/campaigns/create/', campaign_create, name='campaign-create'),
+    path('api/campaigns/budget-tiers/', campaign_budget_tiers, name='campaign-budget-tiers'),
+    path('api/campaigns/<uuid:campaign_id>/', campaign_detail, name='campaign-detail'),
+    path('api/campaigns/<uuid:campaign_id>/start/', campaign_start, name='campaign-start'),
+    path('api/campaigns/<uuid:campaign_id>/status/', campaign_status, name='campaign-status'),
+    path('api/campaigns/<uuid:campaign_id>/deliverables/', campaign_deliverables, name='campaign-deliverables'),
+    path('api/campaigns/<uuid:campaign_id>/delete/', campaign_delete, name='campaign-delete'),
+
     # Agent Orchestration APIs (from DBAO tools-manifest)
     path('api/v1/agents/list/', list_agents, name='agents-list'),
     path('api/v1/agents/by-specialization/', get_agents_by_specialization, name='agents-by-specialization'),
@@ -3059,6 +3081,9 @@ urlpatterns += [
     path('api/monitoring/schedules/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_celery_schedules']).api_celery_schedules(r), name='monitoring-schedules'),
     # Session 497: ML Scoring API
     path('api/monitoring/ml-scoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_status']).api_ml_scoring_status(r), name='monitoring-ml-scoring'),
+    # Session 511: ML Scoring Training and Explanation APIs
+    path('api/monitoring/ml-scoring/train/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_train']).api_ml_scoring_train(r), name='monitoring-ml-scoring-train'),
+    path('api/monitoring/ml-scoring/opportunity/<uuid:opportunity_id>/explanation/', lambda r, opportunity_id: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_explanation']).api_ml_scoring_explanation(r, opportunity_id), name='monitoring-ml-scoring-explanation'),
 ]
 
 # Serve media files in development
