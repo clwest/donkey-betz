@@ -2850,10 +2850,10 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 128: Delegate to specialized Video Generation Agent
             from core.agents import VideoAgent
 
-            agent = VideoAgent(
-                user=self.user,
-                project_id=str(current_project.id) if current_project else arguments.get('project_id')
-            )
+            # Session 517: BaseAgent only accepts user, not project_id
+            agent = VideoAgent(user=self.user)
+            # Store project_id as attribute if needed
+            agent.project_id = str(current_project.id) if current_project else arguments.get('project_id')
 
             # Execute agent workflow
             result = agent.execute(
@@ -7321,6 +7321,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
                     # Session 517: Backend-only tools should execute here, not in frontend
                     # These tools produce content/data that should be returned directly
+                    # NOTE: video_generation_agent excluded - it's async and needs progress tracking
                     BACKEND_EXECUTE_TOOLS = {
                         'content_writer_agent',  # Session 517: Written content generation
                         'competitor_analysis_agent',
