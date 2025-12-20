@@ -339,12 +339,25 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
                                 result = spider.process_data(raw, target)
                             if result:
                                 return {'items': [result.content] if hasattr(result, 'content') else [], 'raw_data': raw}
-                        return raw if raw else {'items': []}
+                        # Normalize return value to dict format
+                        if raw:
+                            if isinstance(raw, list):
+                                return {'items': raw, 'source': spider_name}
+                            elif isinstance(raw, dict):
+                                return raw
+                            else:
+                                return {'items': [raw], 'source': spider_name}
+                        return {'items': []}
 
                     data = asyncio.run(run_fetch())
                 else:
                     data = {'items': [], 'message': 'Spider has no fetch/scrape/fetch_data method'}
-                item_count = len(data) if isinstance(data, list) else len(data.get('items', []))
+                # Handle both list and dict formats
+                if isinstance(data, list):
+                    item_count = len(data)
+                    data = {'items': data, 'source': spider_name}
+                else:
+                    item_count = len(data.get('items', []))
             else:
                 data = {'items': [], 'error': f'Spider class not found: {spider_name}'}
                 item_count = 0
@@ -875,7 +888,15 @@ def run_spider_network(self):
                                             'category': spider_config.get('category', 'general'),
                                             'timestamp': timezone.now().isoformat()
                                         }
-                                return raw_data if raw_data else {'items': []}
+                                # Normalize return value to dict format
+                                if raw_data:
+                                    if isinstance(raw_data, list):
+                                        return {'items': raw_data, 'source': spider_name}
+                                    elif isinstance(raw_data, dict):
+                                        return raw_data
+                                    else:
+                                        return {'items': [raw_data], 'source': spider_name}
+                                return {'items': []}
 
                             data = asyncio.run(run_fetch_data())
                         else:
@@ -900,7 +921,12 @@ def run_spider_network(self):
                         'items': [],
                         'timestamp': timezone.now().isoformat()
                     }
-                item_count = len(data.get('items', []))
+                # Handle both list and dict formats
+                if isinstance(data, list):
+                    item_count = len(data)
+                    data = {'items': data, 'source': spider_name}
+                else:
+                    item_count = len(data.get('items', []))
 
             # Save to SpiderData
             config = spider_config.get('config', {})
@@ -1115,6 +1141,8 @@ def execute_single_spider_lightweight(spider_name: str):
         'justia': {'category': 'legal'},
         'findlaw': {'category': 'legal'},
         'lii': {'category': 'legal'},
+        'colorado_family_law': {'category': 'legal'},
+        'justia_family_law': {'category': 'legal'},
     }
 
     spider_config = SPIDER_CONFIGS.get(spider_name, {'category': 'general'})
@@ -1220,7 +1248,7 @@ def _collect_spider_data_sync(spider_name: str, category: str, config: Dict) -> 
         data['items'] = _collect_design_platform(spider_name)
     elif spider_name in ['udemy', 'skillshare', 'teachable']:
         data['items'] = _collect_education_platform(spider_name)
-    elif spider_name in ['courtlistener', 'justia', 'findlaw', 'lii']:
+    elif spider_name in ['courtlistener', 'justia', 'findlaw', 'lii', 'colorado_family_law', 'justia_family_law']:
         data['items'] = _collect_legal_platform(spider_name)
     elif spider_name in ['indiegogo', 'kickstarter']:
         data['items'] = _collect_crowdfunding(spider_name)
@@ -1676,6 +1704,46 @@ def _collect_legal_platform(spider_name: str) -> list:
             'source': 'Cornell Law School',
             'type': 'legal_research'
         })
+
+    elif spider_name == 'colorado_family_law':
+        # Session 507: Call the actual spider with sync wrapper
+        try:
+            from ai_core.spiders.specialized.colorado_family_law_spider import ColoradoFamilyLawSpider
+            spider = ColoradoFamilyLawSpider()
+            data = spider.fetch_data_sync(max_results=20)
+            if data:
+                items.extend(data)
+            else:
+                items.extend(spider._get_fallback_forms())
+        except Exception as e:
+            logger.warning(f"Colorado Family Law spider error: {e}")
+            items.append({
+                'message': 'Colorado Family Law spider ready',
+                'data_types': ['family_law_forms', 'jdf_forms', 'self_help'],
+                'source': 'Colorado Judicial Branch',
+                'type': 'legal_forms',
+                'error': str(e)[:100]
+            })
+
+    elif spider_name == 'justia_family_law':
+        # Session 507: Call the actual spider with sync wrapper
+        try:
+            from ai_core.spiders.specialized.justia_playwright_spider import JustiaPlaywrightSpider
+            spider = JustiaPlaywrightSpider()
+            data = spider.fetch_data_sync(max_results=20)
+            if data:
+                items.extend(data)
+            else:
+                items.extend(spider._get_fallback_data())
+        except Exception as e:
+            logger.warning(f"Justia Family Law spider error: {e}")
+            items.append({
+                'message': 'Justia Family Law spider ready',
+                'data_types': ['family_law', 'divorce', 'custody', 'child_support'],
+                'source': 'Justia',
+                'type': 'legal_research',
+                'error': str(e)[:100]
+            })
 
     return items
 
