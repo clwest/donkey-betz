@@ -513,19 +513,19 @@ class DonkeyBetzBot(commands.Bot):
 
         # Sync slash commands with Discord
         try:
-            # Donkey Betz guild ID for instant command availability
+            # Donkey Betz guild ID - commands only work in this server
+            # Session 507: We have 99 commands (under 100 limit after removing 4)
             guild = discord.Object(id=971148613109555212)
 
-            # Copy global commands to guild for instant sync
+            # First, copy all global commands to the guild
             self.tree.copy_global_to(guild=guild)
 
-            # Sync to guild first (instant)
+            # Then sync to the guild (instant, no propagation delay)
             guild_synced = await self.tree.sync(guild=guild)
-            logger.info(f"Synced {len(guild_synced)} guild slash commands to Donkey Betz (instant)")
+            logger.info(f"Synced {len(guild_synced)} slash commands to Donkey Betz guild (instant)")
 
-            # Global sync (can take up to an hour to propagate)
-            synced = await self.tree.sync()
-            logger.info(f"Synced {len(synced)} global slash commands")
+            # NOTE: Global sync disabled to avoid 100 command limit warnings
+            # All commands work only in Donkey Betz server
         except Exception as e:
             logger.error(f"Failed to sync commands: {e}")
 
@@ -2285,252 +2285,10 @@ class ContentCommands(commands.Cog):
             )
 
     # =========================================================================
-    # Session 464: Learning Loop Commands (Market Intelligence Desk Feedback)
+    # Session 507: Removed /brief-feedback and /action commands to stay under
+    # Discord's 100 command limit. These were Market Intelligence Desk feedback
+    # commands that had low usage.
     # =========================================================================
-
-    @app_commands.command(name="brief-feedback", description="Rate the latest Market Intelligence Brief")
-    @app_commands.describe(
-        rating="How helpful was the brief? (helpful or not-helpful)",
-        comment="Optional comment about the brief (max 500 chars)"
-    )
-    @app_commands.choices(rating=[
-        app_commands.Choice(name="👍 Helpful", value="helpful"),
-        app_commands.Choice(name="👎 Not Helpful", value="not-helpful"),
-    ])
-    async def brief_feedback(self, interaction: discord.Interaction, rating: str, comment: str = None):
-        """Provide feedback on the latest Market Intelligence Brief."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            user = await self._get_linked_user(str(interaction.user.id))
-            if not user:
-                await interaction.followup.send(
-                    "❌ You need to link your Discord account first!\n\n"
-                    "Use `/link` to connect your AI Studio account.",
-                    ephemeral=True
-                )
-                return
-
-            @sync_to_async
-            def record_brief_feedback(web_user, is_helpful, feedback_comment):
-                from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
-                from django.utils import timezone
-
-                # Get the most recent brief
-                latest_brief = MarketIntelligenceBrief.objects.order_by('-brief_date').first()
-                if not latest_brief:
-                    return None, "No Market Intelligence Briefs available yet. The first brief will be generated at 8 AM on weekdays."
-
-                # Check if user already provided feedback for this brief
-                existing = UserBriefFeedback.objects.filter(
-                    user=web_user,
-                    brief=latest_brief
-                ).first()
-
-                if existing:
-                    # Update existing feedback
-                    existing.was_helpful = is_helpful
-                    existing.helpfulness_score = 5 if is_helpful else 1
-                    if feedback_comment:
-                        existing.comment = feedback_comment[:500]
-                    existing.save()
-                else:
-                    # Create new feedback
-                    existing = UserBriefFeedback.objects.create(
-                        user=web_user,
-                        brief=latest_brief,
-                        was_helpful=is_helpful,
-                        helpfulness_score=5 if is_helpful else 1,
-                        comment=feedback_comment[:500] if feedback_comment else '',
-                    )
-
-                return {
-                    'brief_date': latest_brief.brief_date.strftime('%Y-%m-%d'),
-                    'total_stocks': latest_brief.total_stocks_analyzed,
-                    'debate_count': latest_brief.debate_zone_count,
-                }, None
-
-            result, error = await record_brief_feedback(user, rating == "helpful", comment)
-
-            if error:
-                await interaction.followup.send(
-                    f"❌ {error}",
-                    ephemeral=True
-                )
-                return
-
-            embed = discord.Embed(
-                title="✅ Feedback Recorded!",
-                description=f"Thank you for rating the Market Intelligence Brief from **{result['brief_date']}**",
-                color=discord.Color.green() if rating == "helpful" else discord.Color.orange(),
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="📊 Your Rating",
-                value=f"{'👍 Helpful' if rating == 'helpful' else '👎 Not Helpful'}",
-                inline=True
-            )
-
-            embed.add_field(
-                name="📈 Brief Summary",
-                value=f"**{result['total_stocks']}** stocks analyzed\n**{result['debate_count']}** in debate zone",
-                inline=True
-            )
-
-            if comment:
-                embed.add_field(
-                    name="💬 Your Comment",
-                    value=comment[:200] + ("..." if len(comment) > 200 else ""),
-                    inline=False
-                )
-
-            embed.set_footer(text="Your feedback helps the AI learn and improve future briefs")
-            await interaction.followup.send(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/brief-feedback command error: {e}")
-            await interaction.followup.send(
-                f"Error recording feedback: {str(e)[:200]}",
-                ephemeral=True
-            )
-
-    @app_commands.command(name="action", description="Record your trading action on a stock from the brief")
-    @app_commands.describe(
-        action="What action did you take?",
-        ticker="Stock ticker (e.g., AAPL, MSFT)",
-        reason="Why did you take this action? (optional)"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="📈 Buy - Following bull case", value="buy"),
-        app_commands.Choice(name="📉 Sell - Following bear warning", value="sell"),
-        app_commands.Choice(name="⏸️  Hold - Staying neutral", value="hold"),
-        app_commands.Choice(name="🔍 Research - Investigating debate zone", value="research"),
-        app_commands.Choice(name="❌ Ignore - Not interested", value="ignore"),
-    ])
-    async def action(self, interaction: discord.Interaction, action: str, ticker: str, reason: str = None):
-        """Record your trading action on a stock."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            user = await self._get_linked_user(str(interaction.user.id))
-            if not user:
-                await interaction.followup.send(
-                    "❌ You need to link your Discord account first!\n\n"
-                    "Use `/link` to connect your AI Studio account.",
-                    ephemeral=True
-                )
-                return
-
-            # Normalize ticker
-            ticker = ticker.upper().strip()
-
-            @sync_to_async
-            def record_action_db(web_user, stock_ticker, user_action, action_reason):
-                from core.models_unified_system import MarketIntelligenceBrief, UserBriefFeedback
-                from django.utils import timezone
-
-                # Get the most recent brief
-                latest_brief = MarketIntelligenceBrief.objects.order_by('-brief_date').first()
-                if not latest_brief:
-                    return None, "No Market Intelligence Briefs available yet."
-
-                # Get or create feedback for this brief
-                feedback, created = UserBriefFeedback.objects.get_or_create(
-                    user=web_user,
-                    brief=latest_brief,
-                    defaults={'was_helpful': True}  # Assume taking action means it was helpful
-                )
-
-                # Record the action
-                feedback.record_action(
-                    ticker=stock_ticker,
-                    action=user_action,
-                    reason=action_reason or user_action
-                )
-
-                return {
-                    'brief_date': latest_brief.brief_date.strftime('%Y-%m-%d'),
-                    'total_actions': len(feedback.actions_taken),
-                    'acted_on_brief': feedback.acted_on_brief,
-                }, None
-
-            result, error = await record_action_db(user, ticker, action, reason)
-
-            if error:
-                await interaction.followup.send(
-                    f"❌ {error}",
-                    ephemeral=True
-                )
-                return
-
-            # Choose emoji based on action
-            action_emojis = {
-                'buy': '📈',
-                'sell': '📉',
-                'hold': '⏸️',
-                'research': '🔍',
-                'ignore': '❌',
-            }
-            action_emoji = action_emojis.get(action, '📊')
-
-            # Choose color based on action
-            action_colors = {
-                'buy': discord.Color.green(),
-                'sell': discord.Color.red(),
-                'hold': discord.Color.blue(),
-                'research': discord.Color.gold(),
-                'ignore': discord.Color.light_grey(),
-            }
-            action_color = action_colors.get(action, discord.Color.blue())
-
-            embed = discord.Embed(
-                title=f"{action_emoji} Action Recorded!",
-                description=f"Your **{action.upper()}** action on **${ticker}** has been recorded",
-                color=action_color,
-                timestamp=datetime.now()
-            )
-
-            embed.add_field(
-                name="📊 Stock",
-                value=f"**${ticker}**",
-                inline=True
-            )
-
-            embed.add_field(
-                name="🎯 Action",
-                value=f"{action_emoji} **{action.upper()}**",
-                inline=True
-            )
-
-            embed.add_field(
-                name="📅 Brief Date",
-                value=result['brief_date'],
-                inline=True
-            )
-
-            if reason:
-                embed.add_field(
-                    name="💭 Your Reasoning",
-                    value=reason[:200] + ("..." if len(reason) > 200 else ""),
-                    inline=False
-                )
-
-            embed.add_field(
-                name="📈 Total Actions",
-                value=f"You've taken **{result['total_actions']}** actions on this brief",
-                inline=False
-            )
-
-            embed.set_footer(text="Your actions help the AI learn which recommendations you follow")
-            await interaction.followup.send(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/action command error: {e}")
-            await interaction.followup.send(
-                f"Error recording action: {str(e)[:200]}",
-                ephemeral=True
-            )
 
     # =========================================================================
     # Session 437: Phase 6 Automation Commands
@@ -3377,32 +3135,7 @@ class VoiceCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="beep", description="Test voice with a simple beep sound")
-    async def beep(self, interaction: discord.Interaction):
-        """Play a test beep to verify voice is working."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            service = self._ensure_voice_service()
-
-            if not service.is_in_voice(interaction.guild.id):
-                await interaction.followup.send(
-                    "I'm not in a voice channel! Use `/voice join` first.",
-                    ephemeral=True
-                )
-                return
-
-            session = service.get_session(interaction.guild.id)
-            success = await service.test_beep(session)
-
-            if success:
-                await interaction.followup.send("Beep test complete! Did you hear it?", ephemeral=True)
-            else:
-                await interaction.followup.send("Beep test failed.", ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/beep command error: {e}")
-            await interaction.followup.send(f"Error: {str(e)[:200]}", ephemeral=True)
+    # Session 507: Removed /beep command to stay under Discord's 100 command limit
 
     @app_commands.command(name="ask-voice", description="Ask AI and hear the response in voice channel")
     @app_commands.describe(question="Your question for the AI")
@@ -6899,58 +6632,7 @@ class ServerSetupCommands(commands.Cog):
                 ephemeral=True
             )
 
-    @app_commands.command(name="server-info", description="View your server's AI Studio configuration")
-    async def server_info(self, interaction: discord.Interaction):
-        """Show the current server's AI Studio configuration."""
-        await interaction.response.defer(ephemeral=True)
-
-        try:
-            @sync_to_async
-            def get_server():
-                from core.models.base import DiscordServer
-                return DiscordServer.objects.filter(guild_id=str(interaction.guild.id)).first()
-
-            server = await get_server()
-
-            if not server:
-                embed = discord.Embed(
-                    title="Server Not Configured",
-                    description="This server hasn't been set up with AI Studio yet.\n\nUse `/setup` to configure your server.",
-                    color=discord.Color.orange()
-                )
-            else:
-                embed = discord.Embed(
-                    title=f"AI Studio Configuration",
-                    description=f"**Server:** {server.guild_name}\n**Template:** {server.get_template_display()}\n**Setup Complete:** {'Yes' if server.is_setup_complete else 'No'}",
-                    color=discord.Color.green() if server.is_setup_complete else discord.Color.orange()
-                )
-
-                # Show channel IDs
-                channels_info = []
-                if server.gallery_channel_id:
-                    channels_info.append(f"Gallery: <#{server.gallery_channel_id}>")
-                if server.assistant_channel_id:
-                    channels_info.append(f"Assistant: <#{server.assistant_channel_id}>")
-                if server.research_channel_id:
-                    channels_info.append(f"Research: <#{server.research_channel_id}>")
-                if server.opportunities_channel_id:
-                    channels_info.append(f"Opportunities: <#{server.opportunities_channel_id}>")
-
-                if channels_info:
-                    embed.add_field(
-                        name="Configured Channels",
-                        value="\n".join(channels_info),
-                        inline=False
-                    )
-
-            await interaction.followup.send(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            logger.error(f"/server-info command error: {e}")
-            await interaction.followup.send(
-                f"Error: {str(e)[:200]}",
-                ephemeral=True
-            )
+    # Session 507: Removed /server-info command to stay under Discord's 100 command limit
 
 
 class ClientCommands(commands.Cog):

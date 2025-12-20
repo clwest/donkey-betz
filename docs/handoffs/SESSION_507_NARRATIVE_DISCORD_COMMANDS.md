@@ -139,6 +139,17 @@ choices=[
 - Source URLs truncated to 30 chars
 - Content snippets truncated to 80 chars
 
+### Discord Command Limit Fix
+Discord has a 100 command limit per guild. Adding 4 new narrative commands pushed us to 103 commands.
+
+**Removed 4 low-usage commands:**
+1. `/beep` - Voice test command
+2. `/server-info` - Server config utility
+3. `/brief-feedback` - Market Intelligence Brief rating
+4. `/action` - Trading action tracking
+
+**Result:** 99 commands (under limit), all commands syncing properly.
+
 ---
 
 ## Session 508 Ideas

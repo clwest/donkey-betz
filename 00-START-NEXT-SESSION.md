@@ -65,7 +65,7 @@ open http://localhost:8000/ai-studio/
 | Spiders | 72 |
 | Spiders with Success Status | 67+ |
 | Spider Data Records | 21,936+ |
-| Discord Commands | 106 (+4) |
+| Discord Commands | 99 |
 | Agents with Learning Hooks | 50+ |
 | Visible UI Tabs | 15 |
 | NarrativeShifts | 3 |
