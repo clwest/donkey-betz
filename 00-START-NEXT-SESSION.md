@@ -1,40 +1,23 @@
-# Session 508 - Start Here
+# Session 509 - Start Here
 
-**Previous Session:** 507 (Narrative Drift Discord Commands)
+**Previous Session:** 508 (Spider Fixes & Discord Command Limit)
 **Date:** December 19, 2025
-**Status:** Added 4 new Discord commands for comprehensive Narrative Drift monitoring.
+**Status:** Fixed spider execution errors and Discord 100 command limit.
 
 ---
 
-## Session 507 Achievements
+## Session 508 Achievements
 
-### New Narrative Drift Discord Commands (4)
-Added 4 new Discord commands for comprehensive monitoring:
+### Discord Command Limit Fix
+- Discord has 100 command limit per guild
+- Removed 4 low-usage commands: `/beep`, `/server-info`, `/brief-feedback`, `/action`
+- Now at 99 commands, syncing successfully
 
-| Command | Description |
-|---------|-------------|
-| `/narrative-evidence <id>` | View evidence collected for a specific narrative |
-| `/narrative-domains` | Overview of all domains with stats (narratives, shifts, evidence) |
-| `/narrative-watch <action> [id]` | Watch/unwatch narratives for shift alerts |
-| `/narrative-trending` | Show currently shifting narratives and high-activity items |
-
-### Database Updates
-- Added `user_discord_id` field to NarrativeAlert for tracking user watches
-- Added `message` field as alternative to summary
-- Added `is_read` field
-- Added `subscription` alert type for watch functionality
-- Migration: `0115_session_507_narrative_alert_watch_fields.py`
-
-### Total Narrative Drift Commands: 9
-1. `/narratives` - List tracked narratives
-2. `/narrative-shifts` - List recent narrative shifts
-3. `/narrative-scan` - Run a narrative drift scan
-4. `/narrative-seed` - Seed narratives for a domain
-5. `/narrative-status` - Get system status
-6. `/narrative-evidence` - View evidence for a narrative (NEW)
-7. `/narrative-domains` - Domain overview (NEW)
-8. `/narrative-watch` - Watch for alerts (NEW)
-9. `/narrative-trending` - Trending narratives (NEW)
+### Spider Execution Fixes
+- **findlaw**: Fixed 'list' object has no attribute 'get' error
+- **colorado_family_law**: Now collects 55 forms (was 0)
+- **justia_family_law**: Now collects legal articles (was 0)
+- Normalized raw_data handling in tasks.py for both list and dict returns
 
 ---
 
@@ -48,10 +31,10 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Try new Discord commands
+# 3. Test narrative commands in Discord
 # /narrative-domains - See all domain stats
-# /narrative-trending - See what's hot
-# /narrative-watch list - See your watched narratives
+# /narrative-trending - See what's shifting
+# /narrative-watch list - See watched narratives
 ```
 
 ---
@@ -63,58 +46,51 @@ open http://localhost:8000/ai-studio/
 | Routable Agents | 42 |
 | Connectivity Score | 97% |
 | Spiders | 72 |
-| Spiders with Success Status | 67+ |
-| Spider Data Records | 21,936+ |
 | Discord Commands | 99 |
-| Agents with Learning Hooks | 50+ |
-| Visible UI Tabs | 15 |
-| NarrativeShifts | 3 |
-| Narratives | 30 |
 | Narrative Discord Commands | 9 |
+| Legal Spiders | 6 |
+| Spider Errors | 0 |
 
 ---
 
 ## Key Documentation
 
+- **Session 508 Handoff:** `docs/handoffs/SESSION_508_SPIDER_FIXES.md`
 - **Session 507 Handoff:** `docs/handoffs/SESSION_507_NARRATIVE_DISCORD_COMMANDS.md`
-- **Session 506 Handoff:** `docs/handoffs/SESSION_506_NARRATIVE_DRIFT_FIX.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
 - **Spiders:** `docs/SPIDERS.md`
 
 ---
 
-## Files Modified in Session 507
+## Files Modified in Session 508
 
 | File | Changes |
 |------|---------|
-| `core/services/discord_bot.py` | Added 4 new commands: /narrative-evidence, /narrative-domains, /narrative-watch, /narrative-trending |
-| `core/models_narrative_drift.py` | Added user_discord_id, message, is_read fields + subscription alert type |
-| `core/migrations/0115_session_507_narrative_alert_watch_fields.py` | New migration for NarrativeAlert fields |
+| `core/services/discord_bot.py` | Removed 4 commands, fixed sync with copy_global_to |
+| `core/tasks.py` | Fixed list handling, added colorado_family_law & justia_family_law handlers |
+| `core/views_spider_dashboard.py` | Fixed raw_data list handling in activity feed |
 
 ---
 
-## Ideas for Session 508+
+## Ideas for Session 509+
 
-1. Consider Huggingface sentiment model for ML-based detection (optional)
-2. Add more narratives to track across different domains
+1. Run spider network sweep to verify all spiders work
+2. Add automated Discord notifications when watched narratives shift
 3. Continue Discord vs Web feature parity work
-4. Continue standardizing spider patterns across the codebase
-5. Add automated Discord notifications when watched narratives shift
+4. Consider Huggingface sentiment model for ML-based detection
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 507 COMPLETE!                                  |
+|              SESSION 508 COMPLETE!                                  |
 |                                                                    |
-|   Narrative Drift Discord Commands:                                 |
-|   - NEW: /narrative-evidence - View evidence for a narrative        |
-|   - NEW: /narrative-domains - Domain overview with stats            |
-|   - NEW: /narrative-watch - Subscribe to narrative alerts           |
-|   - NEW: /narrative-trending - Show hot/shifting narratives         |
-|   - Total: 9 Narrative Drift Discord commands                       |
-|   - Total Discord Commands: 106                                     |
+|   Discord Commands: 99 (fixed 100 limit issue)                     |
+|   Spider Fixes:                                                    |
+|   - findlaw: list handling error fixed                             |
+|   - colorado_family_law: now collects 55 forms                     |
+|   - justia_family_law: now collects articles                       |
 |                                                                    |
-|   See: docs/handoffs/SESSION_507_NARRATIVE_DISCORD_COMMANDS.md      |
+|   See: docs/handoffs/SESSION_508_SPIDER_FIXES.md                   |
 +====================================================================+
 ```
