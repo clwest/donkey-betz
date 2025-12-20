@@ -1,24 +1,23 @@
-# Session 506 - Start Here
+# Session 507 - Start Here
 
-**Previous Session:** 505 (Spider Routing Fixes)
+**Previous Session:** 506 (Narrative Drift Detection Fix)
 **Date:** December 19, 2025
-**Status:** All spider routing issues fixed. 72 spiders registered, all working correctly.
+**Status:** Narrative Drift now properly creates NarrativeShift records when shifts are detected.
 
 ---
 
-## Session 505 Achievements
+## Session 506 Achievements
 
-### Spider Routing Fixes
-- **Kaggle Spider**: Added missing `timestamp` field to IntelligenceData in `process_data()` method
-- **Duplicate Function Fix**: Renamed `execute_single_spider` at line 1052 to `execute_single_spider_lightweight` to avoid overriding the proper spider execution task
-- **Routing Conflicts**: Removed kickstarter and findlaw from `SPIDER_TARGET_URLS` and `PHASE3_API_SPIDERS` so they use proper spider classes
-- **Embedding Coverage Fix**: Updated `get_searchable_text()` to check for `modelId` and `id` fields (fixes Huggingface 0% → 5%+)
+### Narrative Drift Detection Fix
+- **Root Cause Found**: `_scan_domain()` method was detecting shifts but NEVER creating `NarrativeShift` database records
+- **Fix Applied**: Added `NarrativeShift.objects.create()` when shifts are detected
+- **Scan Window**: Increased from 6h to 12h for better detection rates
+- **Duplicate Prevention**: Added check to avoid creating same shift multiple times
 
-### Verified Working Spiders:
-- kaggle: 1 item (aggregated data)
-- kickstarter: 1 item (aggregated data)
-- findlaw: 45 items
-- colorado_family_law: 55 items
+### Verification Results
+- Before fix: 1 NarrativeShift (total ever)
+- After fix: 3 NarrativeShifts (2 new created)
+- New shifts: "Immigration is the top voter concern" (0.7 confidence), "AI art is not real art" (0.8 confidence)
 
 ---
 
@@ -32,9 +31,9 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Verify spider status
-# Go to Intelligence Tab -> Spider Operations
-# Should see 72 spiders with "success" status
+# 3. Check Narrative Drift status
+# Go to Autonomous Systems tab -> Narrative Drift sub-tab
+# Should now see NarrativeShifts being created when detected
 ```
 
 ---
@@ -51,49 +50,47 @@ open http://localhost:8000/ai-studio/
 | Discord Commands | 102 |
 | Agents with Learning Hooks | 50+ |
 | Visible UI Tabs | 15 |
+| NarrativeShifts | 3 |
+| Narratives | 30 |
 
 ---
 
 ## Key Documentation
 
+- **Session 506 Handoff:** `docs/handoffs/SESSION_506_NARRATIVE_DRIFT_FIX.md`
 - **Session 505 Handoff:** `docs/handoffs/SESSION_505_SPIDER_ROUTING_FIXES.md`
-- **Session 504 Handoff:** `docs/handoffs/SESSION_504_SPIDER_SIGNATURE_DETECTION.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
 - **Spiders:** `docs/SPIDERS.md`
 
 ---
 
-## Files Modified in Session 505
+## Files Modified in Session 506
 
 | File | Changes |
 |------|---------|
-| `ai_core/spiders/specialized/kaggle_spider.py` | Added missing `timestamp` field |
-| `core/tasks.py` | Renamed duplicate function to `execute_single_spider_lightweight` |
-| `ai_core/spiders/real_data_collector.py` | Removed kickstarter/findlaw from URL mappings |
-| `core/models_unified_system.py` | Enhanced `get_searchable_text()` for modelId/id fields |
+| `core/agents/narrative/narrative_drift_coordinator.py` | Added NarrativeShift record creation, increased scan window to 12h |
 
 ---
 
-## Ideas for Session 506+
+## Ideas for Session 507+
 
-1. Audit all spiders in `SPIDER_TARGET_URLS` to check if any others have proper classes that should be used instead
-2. Add monitoring to track spider execution success rates
-3. Continue standardizing spider patterns across the codebase
-4. Continue Discord vs Web feature parity work
+1. Improve sentiment detection in `_process_new_spider_data()` to better identify contradicting evidence
+2. Add more narrative-specific keywords for better evidence matching
+3. Continue Discord vs Web feature parity work
+4. Add monitoring to track spider execution success rates
+5. Continue standardizing spider patterns across the codebase
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 505 COMPLETE!                                  |
+|              SESSION 506 COMPLETE!                                  |
 |                                                                    |
-|   Spider Routing Fixes:                                            |
-|   - Fixed kaggle missing timestamp field                           |
-|   - Renamed duplicate execute_single_spider function               |
-|   - Removed kickstarter/findlaw routing conflicts                  |
+|   Narrative Drift Detection Fix:                                    |
+|   - Fixed: Shifts now create database records                       |
+|   - Increased scan window from 6h to 12h                            |
+|   - Verified: 2 new NarrativeShifts created                         |
 |                                                                    |
-|   All tested spiders now working correctly!                        |
-|                                                                    |
-|   See: docs/handoffs/SESSION_505_SPIDER_ROUTING_FIXES.md           |
+|   See: docs/handoffs/SESSION_506_NARRATIVE_DRIFT_FIX.md             |
 +====================================================================+
 ```
