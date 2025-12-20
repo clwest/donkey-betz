@@ -224,6 +224,15 @@ class MLScoringEngine:
 
     def _load_model(self) -> bool:
         """Load trained model from disk if available."""
+        # First check database for active model version
+        try:
+            from core.models_unified_system import MLModelVersion
+            active_model = MLModelVersion.objects.filter(is_active=True).first()
+            if active_model:
+                self.model_version = active_model.version
+        except Exception as e:
+            logger.debug(f"Could not check MLModelVersion: {e}")
+
         model_path = self.MODEL_DIR / self.MODEL_FILENAME.format(version=self.model_version)
 
         if model_path.exists():

@@ -1,73 +1,72 @@
-# Session 511 - Start Here
+# Session 513 - Start Here
 
-**Previous Session:** 510 (Mythology Validation UI)
+**Previous Session:** 512 (ML Training Data Generation & Bug Fixes)
 **Date:** December 19, 2025
-**Status:** Added mythology validation display to Narrative Drift tab.
+**Status:** ML model v2.0 trained with 150 samples. Full visualization working!
 
 ---
 
-## Session 510 Achievements
+## Session 512 Achievements
 
-### Mythology Validation UI (COMPLETE)
-Added visual display of mythology validation in Autonomous Dashboard → Narrative Drift:
+### ML Training Data Generation (COMPLETE)
 
-**New UI Elements:**
-- Mythology Validation stats bar with 4 metrics:
-  - Verified Shifts count (green badge)
-  - Unverified Shifts count (yellow badge)
-  - Authoritative Sources count (blue badge)
-  - Validation Rate percentage (purple badge)
-- Each shift now shows VERIFIED/UNVERIFIED badge
-- Source count displayed next to each shift
+Generated 150 training samples and trained the first ML model:
 
-**Files Modified:**
-- `ai_core/templates/components/panels/autonomous_dashboard_panel.html` - Added mythology stats row and updated renderNarrativeShifts()
-- `core/views_autonomous_monitoring.py` - Added unique_sources calculation to API
+**1. Training Data Pipeline**
+- Created 150 Opportunity → OpportunityTask → OpportunityOutcome records
+- Used existing SpiderData (22,216 records) as source
+- Assigned random outcomes (won/lost/partial/expired) for initial training
 
-### Session 509 Achievements (Prior)
-- Domain-Specific Source Weighting - 8 domains with preferred sources
-- Mythology Verification - NarrativeMythologyValidator class
-- Corroboration requirements (3+ sources for verified status)
+**2. Training Task Bug Fixes (4 critical bugs)**
+- Fixed field name: `actual_outcome` → `outcome`
+- Fixed relationship path: `source_data` → `task.opportunity.spider_data`
+- Fixed data format: ML engine expects `{features: [], outcome: number}`
+- Fixed metrics extraction: nested in `metrics` dict, not top-level
+
+**3. Model Persistence**
+- Added MLModelVersion database record creation after training
+- Fixed ML engine to load active version from database on startup
+- Model saved to disk + database for full persistence
+
+**4. Model v2.0 Results**
+- 150 training samples (120 train / 30 test)
+- Train R²: 0.917 (good fit on training data)
+- Test R²: -0.708 (expected with random synthetic outcomes)
+- Top features: historical_success_rate, category_creative, category_financial
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `core/tasks.py` | Fixed training data collection, added MLModelVersion creation |
+| `core/services/ml_scoring_engine.py` | Fixed model loading to check database for active version |
+
+### Note on R² Score
+The negative R² score is expected because we used random outcomes for initial training. With real user outcome data (actual applications, wins, losses), the model will learn meaningful patterns and improve significantly.
 
 ---
 
-## Session 511 Priority: ML Scoring Sub-Tab Enhancement
+## Session 513 Ideas
 
-The ML Scoring sub-tab (Autonomous → ML Scoring) needs attention. Current state:
+### 1. Spider Network Sweep
+- Verify all 72 spiders still work
+- Fix any broken data sources
+- Update API keys if needed
 
-### What Exists
-- Basic stats display (Total Opportunities, Scored 24h, Accuracy, etc.)
-- Score distribution visualization (Low/Medium/High)
-- Outcome breakdown display
-- Top scored opportunities list
-- API endpoint: `/api/monitoring/ml-scoring/`
+### 2. Narrative Drift Discord Notifications
+- Auto-notify when watched narratives shift
+- Add `/narrative-alerts` command
 
-### Enhancement Ideas
+### 3. Training Progress WebSocket
+- Real-time training progress updates
+- Show epochs, loss, accuracy during training
 
-1. **Model Training Status**
-   - Show when model was last trained
-   - Display training data count vs required (100+ for training)
-   - Add "Train Now" button to trigger manual training
+### 4. Model Rollback UI
+- Add ability to revert to previous model version
+- Compare active vs previous performance
 
-2. **Feature Importance Visualization**
-   - Show SHAP values for top features
-   - Explain what drives high scores
-
-3. **Score Explanation**
-   - For each high-score opportunity, show WHY it scored high
-   - Display contributing factors
-
-4. **Performance Trends**
-   - Chart showing accuracy over time
-   - Show prediction vs actual outcomes
-
-5. **Model Comparison**
-   - If multiple model versions exist, compare performance
-
-### Key Files
-- `core/views_autonomous_monitoring.py` - API endpoint (lines 638-728)
-- `core/services/ml_scoring_engine.py` - ML scoring logic
-- `ai_core/templates/components/panels/autonomous_dashboard_panel.html` - UI (lines 297-405)
+### 5. Real Outcome Collection
+- Connect to actual user actions (applications, results)
+- Replace synthetic training data with real outcomes
 
 ---
 
@@ -81,7 +80,7 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Go to Autonomous → ML Scoring tab
+# 3. Go to Autonomous → ML Scoring tab to see trained model
 ```
 
 ---
@@ -93,48 +92,34 @@ open http://localhost:8000/ai-studio/
 | Routable Agents | 42 |
 | Connectivity Score | 97% |
 | Spiders | 72 |
-| Discord Commands | 99 |
-| Narrative Discord Commands | 9 |
-| Legal Spiders | 6 |
-| ML Training Data | Check `/api/monitoring/ml-scoring/` |
+| Discord Commands | 99+ |
+| ML Model Version | v2.0 |
+| ML Training Samples | 150 |
 
 ---
 
 ## Key Documentation
 
+- **Session 512:** `docs/handoffs/SESSION_512_ML_TRAINING_DATA_GENERATION.md`
+- **Session 511:** `docs/handoffs/SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md`
 - **ML Scoring Engine:** `docs/handoffs/SESSION_470_ML_SCORING_ENGINE.md`
-- **Narrative Drift:** `docs/handoffs/SESSION_507_NARRATIVE_DISCORD_COMMANDS.md`
 - **Capabilities:** `docs/CAPABILITIES.md`
-
----
-
-## Files Modified in Session 510
-
-| File | Changes |
-|------|---------|
-| `ai_core/templates/components/panels/autonomous_dashboard_panel.html` | Added mythology stats row, updated shift badges |
-| `core/views_autonomous_monitoring.py` | Added unique_sources to shift data |
-
----
-
-## Other Ideas for Future Sessions
-
-- Run spider network sweep to verify all spiders work
-- Add automated Discord notifications when watched narratives shift
-- Add Discord command to show shift verification status
-- Huggingface sentiment model for ML-based narrative detection
 
 ---
 
 ```
 +====================================================================+
-|              SESSION 510 COMPLETE!                                  |
+|              SESSION 512 COMPLETE!                                  |
 |                                                                    |
-|   Mythology Validation UI:                                         |
-|   - Added stats bar (verified/unverified/authoritative/rate)       |
-|   - Shift badges show VERIFIED or UNVERIFIED                       |
-|   - Source count displayed per shift                               |
+|   ML Model v2.0 Trained:                                            |
+|   - 150 training samples generated                                  |
+|   - 4 critical training task bugs fixed                             |
+|   - MLModelVersion database persistence added                       |
+|   - Full visualization now working                                  |
 |                                                                    |
-|   Next Focus: ML Scoring Sub-Tab Enhancement                       |
+|   API: /api/monitoring/ml-scoring/                                  |
+|   UI: Autonomous → ML Scoring tab                                   |
+|                                                                    |
+|   Next Focus: Spider sweep or Narrative Discord alerts              |
 +====================================================================+
 ```
