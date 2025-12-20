@@ -65345,6 +65345,42 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             return div.innerHTML;
         }
 
+        // Session 518: Switch to Projects tab and select a specific project
+        function switchToProjectTab(projectId) {
+            console.log('📁 Session 518: Switching to project:', projectId);
+
+            // Click the Projects tab
+            const projectsTab = document.getElementById('projects-tab');
+            if (projectsTab) {
+                projectsTab.click();
+            }
+
+            // After tab switch, update the project selector
+            setTimeout(() => {
+                // Try to select the project in the dropdown
+                const tabDropdown = document.getElementById('tabActiveProjectSelect');
+                const sidebarDropdown = document.getElementById('activeProjectSelect');
+
+                if (tabDropdown) {
+                    tabDropdown.value = projectId;
+                    tabDropdown.dispatchEvent(new Event('change'));
+                } else if (sidebarDropdown) {
+                    sidebarDropdown.value = projectId;
+                    sidebarDropdown.dispatchEvent(new Event('change'));
+                }
+
+                // Also set on window.aiAssistant if available
+                if (window.aiAssistant) {
+                    window.aiAssistant.activeProjectId = projectId;
+                }
+
+                showToast('Switched to your new project! 📁', 'success');
+            }, 300);
+
+            // Prevent default link behavior
+            return false;
+        }
+
         // Initialize opportunities tab when shown
         document.getElementById('opportunities-tab')?.addEventListener('shown.bs.tab', function() {
             loadOpportunities();

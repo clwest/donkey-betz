@@ -7376,12 +7376,30 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             execution_time_ms=execution_time_ms
                         )
 
+                        # Session 518: Auto-create project from generated content
+                        project_info = None
+                        try:
+                            project_info = self._auto_create_project_from_content(
+                                backend_results=backend_results,
+                                message=message
+                            )
+                            if project_info:
+                                logger.info(f"📁 Session 518: Auto-created project: {project_info.get('project_name')} (ID: {project_info.get('project_id')})")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Session 518: Auto-project creation failed: {e}")
+
                         # Return result with tool_calls containing results
-                        return {
+                        result = {
                             'text': response,
                             'tool_calls': backend_results,
                             **first_result  # Spread the result data (content, metadata, etc.)
                         }
+
+                        # Session 518: Add project info if created
+                        if project_info:
+                            result['project_created'] = project_info
+
+                        return result
 
                     # Session 155 Fix: Return tool_calls to frontend for execution
                     # DON'T execute in backend - let frontend handle it for proper UX
@@ -7633,6 +7651,153 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return "\n".join(sections)
 
         return ""
+
+    def _auto_create_project_from_content(
+        self,
+        backend_results: List[Dict[str, Any]],
+        message: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Session 518: Auto-create a PartnershipProject from generated content.
+
+        When the assistant generates content (blog posts, images, etc.), automatically
+        organize it into a project so users can track and manage their content.
+
+        Args:
+            backend_results: List of executed tool results
+            message: Original user message (used for project naming)
+
+        Returns:
+            Dict with project_id, project_name, project_url if created, None otherwise
+        """
+        from datetime import datetime
+        from core.models_partnership import PartnershipProject
+
+        # Check if we have content that should be organized into a project
+        content_results = []
+        image_ids = []
+        content_data = None
+
+        for result in backend_results:
+            tool_name = result.get('name', '')
+            tool_result = result.get('result', {})
+
+            if tool_name == 'content_writer_agent':
+                # Session 518 FIX: ContentWriterAgent returns {data: {content_type, content: {...}}}
+                data_wrapper = tool_result.get('data', {})
+                content_data = data_wrapper.get('content', {}) if isinstance(data_wrapper, dict) else {}
+                content_type = data_wrapper.get('content_type', 'blog_post') if isinstance(data_wrapper, dict) else 'blog_post'
+
+                # Fallback to direct content if not nested
+                if not content_data:
+                    content_data = tool_result.get('content', {})
+                    content_type = content_data.get('content_type', 'blog_post') if isinstance(content_data, dict) else 'blog_post'
+
+                if content_data:
+                    content_results.append({
+                        'type': 'written_content',
+                        'content_type': content_type,
+                        'title': content_data.get('title', ''),
+                        'data': content_data
+                    })
+
+            elif tool_name == 'image_generation_agent':
+                # ImageGenerationAgent returns image IDs
+                img_id = tool_result.get('image_id')
+                if img_id:
+                    image_ids.append(img_id)
+
+        # Only create project if we have content
+        if not content_results and not image_ids:
+            return None
+
+        # Generate project name from content or message
+        project_name = None
+        project_type = 'content_creation'
+
+        if content_results:
+            first_content = content_results[0]
+            project_name = first_content.get('title', '')[:100]
+            content_type = first_content.get('content_type', 'blog_post')
+
+            # Map content type to project type
+            project_type_map = {
+                'blog_post': 'content_creation',
+                'podcast_script': 'audio_production',
+                'video_script': 'video_production',
+                'article': 'content_creation',
+                'newsletter': 'marketing',
+                'social_thread': 'marketing'
+            }
+            project_type = project_type_map.get(content_type, 'content_creation')
+
+        if not project_name:
+            # Fall back to extracting from message
+            project_name = message[:100] if len(message) <= 100 else message[:97] + '...'
+
+        # Build project metadata
+        project_metadata = {
+            'created_from': 'assistant_pipeline',
+            'original_message': message[:500],
+            'created_at': datetime.now().isoformat(),
+        }
+
+        # Add content to metadata
+        if content_results:
+            project_metadata['written_content'] = content_results
+
+        # Add image IDs to metadata
+        if image_ids:
+            project_metadata['image_ids'] = image_ids
+
+        # Build description from content
+        description = f"Auto-generated from assistant: {message[:200]}"
+        if content_results:
+            first_content_data = content_results[0].get('data', {})
+            if first_content_data.get('meta_description'):
+                description = first_content_data['meta_description']
+            elif first_content_data.get('intro'):
+                description = first_content_data['intro'][:500]
+
+        # Create the project
+        try:
+            project = PartnershipProject.objects.create(
+                user=self.user,
+                project_name=project_name,
+                project_type=project_type,
+                description=description[:1000],
+                status='in_progress',
+                ai_contribution_percent=95,
+                human_contribution_percent=5,
+                metadata=project_metadata,
+                ai_contributions=[{
+                    'agent': 'PersonalAssistant',
+                    'task': message[:200],
+                    'timestamp': datetime.now().isoformat(),
+                    'output': f'Generated {len(content_results)} content pieces, {len(image_ids)} images',
+                    'tools_used': [r.get('name') for r in backend_results]
+                }],
+                workflow_steps=[{
+                    'step': 'Content Generation',
+                    'status': 'completed',
+                    'description': f'Generated content from assistant pipeline'
+                }]
+            )
+
+            logger.info(f"📁 Created project '{project.project_name}' (ID: {project.id}) with {len(content_results)} content pieces, {len(image_ids)} images")
+
+            return {
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'project_type': project_type,
+                'project_url': f'/ai-studio/?tab=projects&project_id={project.id}'
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create project: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     def _record_learning_outcome(
         self,
@@ -7949,6 +8114,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'ai_generated': True,
                 'model': 'gpt-5-mini'
             }
+
+            # Session 518: Pass through project_created if content generated a project
+            if isinstance(ai_response, dict) and 'project_created' in ai_response:
+                response_data['project_created'] = ai_response['project_created']
+                logger.info(f"📁 Session 518: Passing project_created to frontend: {ai_response['project_created'].get('project_name')}")
+
             return response_data
 
         # No tool calls - regular text response

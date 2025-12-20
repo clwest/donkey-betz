@@ -2064,6 +2064,38 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 // Session 65: Check if AI wants to execute tools
                 if (data.tool_calls && data.tool_calls.length > 0) {
+                    // Session 518: Check if backend already executed tools (have 'result' populated)
+                    const backendExecuted = data.tool_calls.some(tc => tc.result !== undefined);
+
+                    if (backendExecuted) {
+                        // Session 518: Backend-executed tools - format results directly
+                        console.log('📝 Session 518: Backend already executed tools, formatting results');
+
+                        let resultHtml = this.formatBackendToolResults(data.tool_calls);
+
+                        // Session 518: Add project link if a project was created
+                        if (data.project_created) {
+                            const project = data.project_created;
+                            resultHtml += `\n\n<div class="project-created-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size: 24px;">📁</span>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600;">Project Created: ${project.project_name}</div>
+                                    <div style="font-size: 12px; opacity: 0.9;">Your content has been organized into a project</div>
+                                </div>
+                                <a href="${project.project_url}" onclick="switchToProjectTab('${project.project_id}')" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 500; cursor: pointer;">
+                                    View Project →
+                                </a>
+                            </div>`;
+                            console.log('📁 Session 518: Project created:', project);
+                        }
+
+                        return {
+                            message: resultHtml,
+                            tool_results: data.tool_calls,
+                            project_created: data.project_created
+                        };
+                    }
+
                     // AI wants to execute tools autonomously!
                     console.log('🔧 AI requesting tool execution:', data.tool_calls);
 
@@ -2095,8 +2127,26 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 // Normal text response
                 // Session 188 FIX: Backend returns 'response' not 'message'
                 else if (data.response || data.message) {
+                    let responseHtml = data.response || data.message;
+
+                    // Session 518: Add project link if a project was created
+                    if (data.project_created) {
+                        const project = data.project_created;
+                        responseHtml += `\n\n<div class="project-created-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 24px;">📁</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600;">Project Created: ${project.project_name}</div>
+                                <div style="font-size: 12px; opacity: 0.9;">Your content has been organized into a project</div>
+                            </div>
+                            <a href="${project.project_url}" onclick="switchToProjectTab('${project.project_id}')" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 500; cursor: pointer;">
+                                View Project →
+                            </a>
+                        </div>`;
+                    }
+
                     return {
-                        message: data.response || data.message
+                        message: responseHtml,
+                        project_created: data.project_created
                     };
                 } else if (data.error) {
                     return {
@@ -3485,6 +3535,113 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         }
                     } else {
                         message += `❌ **Error executing ${result.tool}:**\n${result.error}\n\n`;
+                    }
+                }
+
+                return message;
+            }
+
+            // Session 518: Format backend-executed tool results
+            // These tools were already executed by the backend, so we just format the results
+            formatBackendToolResults(toolResults) {
+                let message = '';
+
+                for (const result of toolResults) {
+                    const toolName = result.name || result.tool;
+                    const toolResult = result.result || {};
+                    const hasError = result.error;
+
+                    if (hasError) {
+                        message += `❌ **Error executing ${toolName}:**\n${result.error}\n\n`;
+                        continue;
+                    }
+
+                    if (toolName === 'content_writer_agent') {
+                        // ContentWriterAgent returns structured written content
+                        const content = toolResult.content || {};
+                        const contentType = content.content_type || 'blog_post';
+                        const typeLabels = {
+                            'blog_post': '📝 Blog Post',
+                            'podcast_script': '🎙️ Podcast Script',
+                            'video_script': '🎬 Video Script',
+                            'article': '📰 Article',
+                            'newsletter': '📧 Newsletter',
+                            'social_thread': '🐦 Social Thread'
+                        };
+
+                        message += `✅ **${typeLabels[contentType] || 'Content'} Created!**\n\n`;
+
+                        // Title
+                        if (content.title) {
+                            message += `## ${content.title}\n\n`;
+                        }
+
+                        // Meta description or intro
+                        if (content.meta_description) {
+                            message += `*${content.meta_description}*\n\n`;
+                        } else if (content.intro) {
+                            message += `${content.intro}\n\n`;
+                        }
+
+                        // Sections
+                        if (content.sections && content.sections.length > 0) {
+                            message += `**📚 Content Sections:**\n`;
+                            content.sections.forEach((section, idx) => {
+                                const header = section.header || section.title || `Section ${idx + 1}`;
+                                message += `\n### ${header}\n`;
+                                if (section.content) {
+                                    message += `${section.content.substring(0, 300)}${section.content.length > 300 ? '...' : ''}\n`;
+                                }
+                            });
+                            message += `\n`;
+                        }
+
+                        // Conclusion
+                        if (content.conclusion) {
+                            message += `**📌 Conclusion:**\n${content.conclusion.substring(0, 200)}${content.conclusion.length > 200 ? '...' : ''}\n\n`;
+                        }
+
+                        // Tags
+                        if (content.tags && content.tags.length > 0) {
+                            message += `**🏷️ Tags:** ${content.tags.join(', ')}\n\n`;
+                        }
+
+                        // Word count
+                        if (content.word_count) {
+                            message += `**📊 Word Count:** ${content.word_count} words\n\n`;
+                        }
+
+                    } else if (toolName === 'image_generation_agent') {
+                        // ImageGenerationAgent returns image info
+                        message += `✅ **Image Generated!**\n\n`;
+
+                        if (toolResult.image_url) {
+                            message += `![Generated Image](${toolResult.image_url})\n\n`;
+                        }
+
+                        if (toolResult.prompt) {
+                            message += `📝 **Prompt:** "${toolResult.prompt}"\n\n`;
+                        }
+
+                        if (toolResult.model) {
+                            message += `🎨 **Model:** ${toolResult.model}\n\n`;
+                        }
+
+                        if (toolResult.image_id) {
+                            message += `🔗 **Image ID:** ${toolResult.image_id}\n\n`;
+                        }
+
+                    } else {
+                        // Generic formatting for other backend tools
+                        message += `✅ **${toolName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Complete!**\n\n`;
+
+                        if (toolResult.message) {
+                            message += `${toolResult.message}\n\n`;
+                        } else if (typeof toolResult === 'string') {
+                            message += `${toolResult}\n\n`;
+                        } else {
+                            message += `✓ Operation completed successfully.\n\n`;
+                        }
                     }
                 }
 
