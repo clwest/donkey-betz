@@ -235,7 +235,7 @@ class NarrativeDriftCoordinator(BaseAgent):
     def _scan_domain(self, domain: str, cutoff: datetime) -> Dict[str, Any]:
         """Scan a single domain for narrative changes."""
         from core.models_narrative_drift import (
-            Narrative, NarrativeEvidence, NarrativeStatus
+            Narrative, NarrativeEvidence, NarrativeStatus, NarrativeShift
         )
 
         result = {
@@ -267,12 +267,48 @@ class NarrativeDriftCoordinator(BaseAgent):
 
             # Check for shift signals
             if recent_contradicts > recent_supports and recent_count >= 3:
+                confidence = 0.6 + (0.1 * min(recent_contradicts - recent_supports, 4))
+                shift_summary = f"'{narrative.title}' is receiving more contradicting than supporting evidence"
+
+                # Session 506: Check if we already detected this shift recently (avoid duplicates)
+                existing_shift = NarrativeShift.objects.filter(
+                    old_narrative=narrative,
+                    detected_at__gte=cutoff
+                ).first()
+
+                if existing_shift:
+                    # Use existing shift
+                    shift_id = str(existing_shift.id)
+                    logger.info(f"Found existing shift for {narrative.title}: {shift_id}")
+                else:
+                    # Session 506: Create actual NarrativeShift record in the database!
+                    # This was the bug - shifts were detected but never persisted
+                    shift = NarrativeShift.objects.create(
+                        old_narrative=narrative,
+                        new_narrative=None,  # Will be identified by agent analysis
+                        domain=domain,
+                        shift_summary=shift_summary,
+                        old_narrative_summary=narrative.description or narrative.title,
+                        new_narrative_summary="To be determined by analysis",
+                        confidence=Decimal(str(confidence)),
+                        importance=Decimal('0.5'),
+                        trigger_events=[f"Contradicting evidence ({recent_contradicts}) exceeds supporting ({recent_supports})"],
+                        evidence_sources=[str(e.id) for e in recent_evidence[:10]]
+                    )
+                    shift_id = str(shift.id)
+                    logger.info(f"Created new NarrativeShift for {narrative.title}: {shift_id}")
+
+                    # Update narrative status to SHIFTING
+                    narrative.status = NarrativeStatus.SHIFTING
+                    narrative.save()
+
                 result['shifts'].append({
                     'narrative_id': str(narrative.id),
+                    'shift_id': shift_id,
                     'title': narrative.title,
                     'signal': 'Contradicting evidence exceeds supporting',
-                    'confidence': 0.6 + (0.1 * min(recent_contradicts - recent_supports, 4)),
-                    'summary': f"'{narrative.title}' is receiving more contradicting than supporting evidence"
+                    'confidence': confidence,
+                    'summary': shift_summary
                 })
 
             # Check for fading narratives
@@ -642,7 +678,8 @@ class NarrativeDriftCoordinator(BaseAgent):
             })
 
             # Step 2: Run full scan
-            scan_result = self._run_full_scan({'hours_back': 6})
+            # Session 506: Increased from 6h to 12h for better shift detection
+            scan_result = self._run_full_scan({'hours_back': 12})
             cycle_result['steps'].append({
                 'step': 'full_scan',
                 'result': scan_result
