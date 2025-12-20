@@ -9678,6 +9678,469 @@ class NarrativeCommands(commands.Cog):
                 )
             )
 
+    # =========================================================================
+    # Session 507: Additional Narrative Drift Monitoring Commands
+    # =========================================================================
+
+    @app_commands.command(name="narrative-evidence", description="View evidence for a specific narrative")
+    @app_commands.describe(
+        narrative_id="The narrative ID (first 8 characters)",
+        limit="Number of evidence items to show (default: 10)"
+    )
+    async def narrative_evidence_command(
+        self,
+        interaction: discord.Interaction,
+        narrative_id: str,
+        limit: int = 10
+    ):
+        """View evidence collected for a specific narrative."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_evidence():
+                from core.models_narrative_drift import Narrative, NarrativeEvidence
+
+                # Find narrative by partial ID
+                narrative = Narrative.objects.filter(id__startswith=narrative_id).first()
+                if not narrative:
+                    return None, []
+
+                evidence = list(
+                    NarrativeEvidence.objects.filter(narrative=narrative)
+                    .order_by('-created_at')[:limit]
+                )
+                return narrative, evidence
+
+            narrative, evidence = await get_evidence()
+
+            if not narrative:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ Narrative Not Found",
+                        description=f"No narrative found with ID starting with `{narrative_id}`",
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            # Sentiment emoji mapping
+            sentiment_emoji = {
+                'supports': '✅',
+                'contradicts': '❌',
+                'neutral': '➖'
+            }
+
+            embed = discord.Embed(
+                title=f"📝 Evidence for: {narrative.title[:50]}",
+                description=(
+                    f"**Domain:** {narrative.domain} | **Status:** {narrative.status}\n"
+                    f"Showing {len(evidence)} most recent evidence items"
+                ),
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            if not evidence:
+                embed.add_field(
+                    name="No Evidence",
+                    value="No evidence has been collected for this narrative yet.",
+                    inline=False
+                )
+            else:
+                for e in evidence[:10]:
+                    emoji = sentiment_emoji.get(e.sentiment, '❓')
+                    source = e.source_url[:30] + "..." if len(e.source_url) > 30 else e.source_url
+                    embed.add_field(
+                        name=f"{emoji} {e.sentiment.title()} ({float(e.confidence) * 100:.0f}%)",
+                        value=(
+                            f"**Source:** {source}\n"
+                            f"**Snippet:** {e.content_snippet[:80]}...\n"
+                            f"**Date:** {e.created_at.strftime('%Y-%m-%d %H:%M')}"
+                        ),
+                        inline=False
+                    )
+
+            embed.set_footer(text="Session 507 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-evidence error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to fetch evidence: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-domains", description="Overview of all narrative domains")
+    async def narrative_domains_command(self, interaction: discord.Interaction):
+        """Get an overview of narratives across all domains."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_domain_stats():
+                from core.models_narrative_drift import Narrative, NarrativeShift, NarrativeEvidence, NarrativeDomain
+                from django.db.models import Count
+                from django.utils import timezone
+                from datetime import timedelta
+
+                now = timezone.now()
+                last_24h = now - timedelta(hours=24)
+                last_7d = now - timedelta(days=7)
+
+                # Get counts by domain
+                domain_stats = {}
+                for domain_choice in NarrativeDomain.choices:
+                    domain = domain_choice[0]
+                    narratives = Narrative.objects.filter(domain=domain)
+                    shifts_24h = NarrativeShift.objects.filter(domain=domain, detected_at__gte=last_24h).count()
+                    shifts_7d = NarrativeShift.objects.filter(domain=domain, detected_at__gte=last_7d).count()
+                    evidence_24h = NarrativeEvidence.objects.filter(
+                        narrative__domain=domain, created_at__gte=last_24h
+                    ).count()
+
+                    # Status breakdown
+                    active = narratives.filter(status__in=['emerging', 'dominant', 'shifting']).count()
+
+                    domain_stats[domain] = {
+                        'total': narratives.count(),
+                        'active': active,
+                        'shifts_24h': shifts_24h,
+                        'shifts_7d': shifts_7d,
+                        'evidence_24h': evidence_24h
+                    }
+
+                return domain_stats
+
+            stats = await get_domain_stats()
+
+            # Domain emoji mapping
+            domain_emoji = {
+                'politics': '🏛️',
+                'markets': '📈',
+                'tech': '💻',
+                'culture': '🎭',
+                'geopolitics': '🌍',
+                'crypto': '₿',
+                'climate': '🌱',
+                'health': '🏥'
+            }
+
+            embed = discord.Embed(
+                title="🌐 Narrative Domains Overview",
+                description="Status of tracked narratives across all domains",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            for domain, data in stats.items():
+                if data['total'] > 0:  # Only show domains with narratives
+                    emoji = domain_emoji.get(domain, '📋')
+                    shift_indicator = "🔥" if data['shifts_24h'] > 0 else ""
+                    embed.add_field(
+                        name=f"{emoji} {domain.title()} {shift_indicator}",
+                        value=(
+                            f"**Narratives:** {data['total']} ({data['active']} active)\n"
+                            f"**Shifts:** {data['shifts_24h']} (24h) / {data['shifts_7d']} (7d)\n"
+                            f"**Evidence:** {data['evidence_24h']} (24h)"
+                        ),
+                        inline=True
+                    )
+
+            # Add totals
+            total_narratives = sum(d['total'] for d in stats.values())
+            total_active = sum(d['active'] for d in stats.values())
+            total_shifts_24h = sum(d['shifts_24h'] for d in stats.values())
+            total_evidence_24h = sum(d['evidence_24h'] for d in stats.values())
+
+            embed.add_field(
+                name="📊 Totals",
+                value=(
+                    f"**Total Narratives:** {total_narratives}\n"
+                    f"**Active Narratives:** {total_active}\n"
+                    f"**Shifts (24h):** {total_shifts_24h}\n"
+                    f"**Evidence (24h):** {total_evidence_24h}"
+                ),
+                inline=False
+            )
+
+            embed.set_footer(text="Session 507 | Narrative Drift Detector | Use /narratives <domain> for details")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-domains error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to fetch domain stats: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-watch", description="Watch a narrative for shift alerts")
+    @app_commands.describe(
+        narrative_id="The narrative ID to watch (first 8 characters)",
+        action="Watch or unwatch the narrative"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="Watch", value="watch"),
+        app_commands.Choice(name="Unwatch", value="unwatch"),
+        app_commands.Choice(name="List My Watches", value="list")
+    ])
+    async def narrative_watch_command(
+        self,
+        interaction: discord.Interaction,
+        action: str = "list",
+        narrative_id: str = None
+    ):
+        """Subscribe to alerts for specific narrative shifts."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            discord_id = str(interaction.user.id)
+
+            @sync_to_async
+            def manage_watch():
+                from core.models_narrative_drift import Narrative, NarrativeAlert
+
+                if action == "list":
+                    # List user's watched narratives
+                    alerts = list(
+                        NarrativeAlert.objects.filter(
+                            user_discord_id=discord_id,
+                            is_read=False
+                        ).select_related('narrative').order_by('-created_at')[:10]
+                    )
+                    watches = list(
+                        NarrativeAlert.objects.filter(
+                            user_discord_id=discord_id
+                        ).values('narrative__title', 'narrative__id').distinct()[:10]
+                    )
+                    return {'action': 'list', 'alerts': alerts, 'watches': watches}
+
+                if not narrative_id:
+                    return {'error': 'Narrative ID is required for watch/unwatch'}
+
+                narrative = Narrative.objects.filter(id__startswith=narrative_id).first()
+                if not narrative:
+                    return {'error': f'No narrative found with ID starting with {narrative_id}'}
+
+                if action == "watch":
+                    # Create a "subscription" alert with a special type
+                    alert, created = NarrativeAlert.objects.get_or_create(
+                        narrative=narrative,
+                        user_discord_id=discord_id,
+                        alert_type='subscription',
+                        defaults={
+                            'message': f'Subscribed to watch: {narrative.title}',
+                            'is_read': True  # Mark as read since it's just a subscription marker
+                        }
+                    )
+                    return {
+                        'action': 'watch',
+                        'narrative': narrative,
+                        'created': created
+                    }
+
+                elif action == "unwatch":
+                    deleted, _ = NarrativeAlert.objects.filter(
+                        narrative=narrative,
+                        user_discord_id=discord_id,
+                        alert_type='subscription'
+                    ).delete()
+                    return {
+                        'action': 'unwatch',
+                        'narrative': narrative,
+                        'deleted': deleted > 0
+                    }
+
+            result = await manage_watch()
+
+            if 'error' in result:
+                await interaction.edit_original_response(
+                    embed=discord.Embed(
+                        title="❌ Error",
+                        description=result['error'],
+                        color=discord.Color.red()
+                    )
+                )
+                return
+
+            if result['action'] == 'list':
+                embed = discord.Embed(
+                    title="👁️ Your Narrative Watches",
+                    description="Narratives you're monitoring for shifts",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.now()
+                )
+
+                watches = result.get('watches', [])
+                if watches:
+                    watch_list = "\n".join([
+                        f"• {w['narrative__title'][:40]} (`{str(w['narrative__id'])[:8]}`)"
+                        for w in watches
+                    ])
+                    embed.add_field(name="📋 Watched Narratives", value=watch_list, inline=False)
+                else:
+                    embed.add_field(
+                        name="No Watches",
+                        value="You're not watching any narratives. Use `/narrative-watch watch <id>` to start.",
+                        inline=False
+                    )
+
+                alerts = result.get('alerts', [])
+                if alerts:
+                    alert_list = "\n".join([
+                        f"• {a.narrative.title[:30]}: {a.message[:40]}"
+                        for a in alerts[:5]
+                    ])
+                    embed.add_field(name="🔔 Recent Alerts", value=alert_list, inline=False)
+
+            elif result['action'] == 'watch':
+                narrative = result['narrative']
+                if result['created']:
+                    embed = discord.Embed(
+                        title="✅ Now Watching",
+                        description=f"You'll be notified when **{narrative.title}** shifts.",
+                        color=discord.Color.green(),
+                        timestamp=datetime.now()
+                    )
+                else:
+                    embed = discord.Embed(
+                        title="ℹ️ Already Watching",
+                        description=f"You're already watching **{narrative.title}**.",
+                        color=discord.Color.blue(),
+                        timestamp=datetime.now()
+                    )
+
+            elif result['action'] == 'unwatch':
+                narrative = result['narrative']
+                if result['deleted']:
+                    embed = discord.Embed(
+                        title="✅ Unwatched",
+                        description=f"You will no longer receive alerts for **{narrative.title}**.",
+                        color=discord.Color.orange(),
+                        timestamp=datetime.now()
+                    )
+                else:
+                    embed = discord.Embed(
+                        title="ℹ️ Not Watching",
+                        description=f"You weren't watching **{narrative.title}**.",
+                        color=discord.Color.blue(),
+                        timestamp=datetime.now()
+                    )
+
+            embed.set_footer(text="Session 507 | Narrative Drift Detector")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-watch error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to manage watch: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
+    @app_commands.command(name="narrative-trending", description="Show trending/shifting narratives")
+    async def narrative_trending_command(self, interaction: discord.Interaction):
+        """Show narratives that are currently shifting or have high activity."""
+        await interaction.response.defer(thinking=True)
+
+        try:
+            @sync_to_async
+            def get_trending():
+                from core.models_narrative_drift import Narrative, NarrativeShift, NarrativeEvidence
+                from django.utils import timezone
+                from datetime import timedelta
+
+                now = timezone.now()
+                last_24h = now - timedelta(hours=24)
+
+                # Get shifting narratives
+                shifting = list(Narrative.objects.filter(status='shifting').order_by('-updated_at')[:5])
+
+                # Get narratives with most recent evidence
+                evidence_counts = (
+                    NarrativeEvidence.objects.filter(created_at__gte=last_24h)
+                    .values('narrative__id', 'narrative__title', 'narrative__domain')
+                    .annotate(count=Count('id'))
+                    .order_by('-count')[:5]
+                )
+
+                # Get recent shifts
+                recent_shifts = list(
+                    NarrativeShift.objects.filter(detected_at__gte=last_24h)
+                    .select_related('old_narrative')
+                    .order_by('-confidence')[:5]
+                )
+
+                return {
+                    'shifting': shifting,
+                    'high_activity': list(evidence_counts),
+                    'recent_shifts': recent_shifts
+                }
+
+            data = await get_trending()
+
+            embed = discord.Embed(
+                title="🔥 Trending Narratives",
+                description="Narratives with high activity in the last 24 hours",
+                color=discord.Color.red(),
+                timestamp=datetime.now()
+            )
+
+            # Shifting narratives
+            shifting = data['shifting']
+            if shifting:
+                shift_text = "\n".join([
+                    f"🔄 **{n.title[:40]}** ({n.domain})"
+                    for n in shifting
+                ])
+                embed.add_field(name="Currently Shifting", value=shift_text, inline=False)
+
+            # High activity
+            high_activity = data['high_activity']
+            if high_activity:
+                activity_text = "\n".join([
+                    f"📊 **{h['narrative__title'][:35]}** - {h['count']} evidence items"
+                    for h in high_activity
+                ])
+                embed.add_field(name="High Evidence Activity (24h)", value=activity_text, inline=False)
+
+            # Recent shifts
+            recent_shifts = data['recent_shifts']
+            if recent_shifts:
+                shifts_text = "\n".join([
+                    f"⚡ **{s.old_narrative.title[:35]}** ({float(s.confidence) * 100:.0f}% confidence)"
+                    for s in recent_shifts
+                ])
+                embed.add_field(name="Recent Shift Detections", value=shifts_text, inline=False)
+
+            if not shifting and not high_activity and not recent_shifts:
+                embed.add_field(
+                    name="No Trending Activity",
+                    value="No significant narrative activity in the last 24 hours.",
+                    inline=False
+                )
+
+            embed.set_footer(text="Session 507 | Narrative Drift Detector | Use /narrative-scan to trigger detection")
+            await interaction.edit_original_response(embed=embed)
+
+        except Exception as e:
+            logger.error(f"/narrative-trending error: {e}")
+            await interaction.edit_original_response(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to fetch trending: {str(e)[:200]}",
+                    color=discord.Color.red()
+                )
+            )
+
 
 # =============================================================================
 # Session 472: ROI Metrics Commands
