@@ -620,6 +620,35 @@ class NarrativeDriftCoordinator(BaseAgent):
                     shift_id = str(existing_shift.id)
                     logger.info(f"Found existing shift for {narrative.title}: {shift_id}")
                 else:
+                    # Session 509: Validate shift with mythology validator before creating
+                    from core.agents.narrative.narrative_mythology_validator import (
+                        narrative_mythology_validator
+                    )
+                    from urllib.parse import urlparse
+
+                    # Count unique sources for corroboration check
+                    unique_sources = set()
+                    for e in contradict_evidence:
+                        if e.source_url:
+                            parsed = urlparse(e.source_url)
+                            unique_sources.add(parsed.netloc)
+
+                    unique_source_count = len(unique_sources)
+
+                    # Validate the shift
+                    shift_validation = narrative_mythology_validator.validate_shift(
+                        shift_data={'title': narrative.title, 'domain': domain},
+                        evidence_count=recent_contradicts,
+                        unique_source_count=unique_source_count
+                    )
+
+                    # Adjust confidence based on validation
+                    adjusted_confidence = confidence + shift_validation['confidence_adjustment']
+                    adjusted_confidence = max(0.1, min(0.95, adjusted_confidence))
+
+                    # Determine if shift is verified (enough unique sources)
+                    is_verified = shift_validation['verified']
+
                     # Session 506: Create actual NarrativeShift record in the database!
                     # This was the bug - shifts were detected but never persisted
                     shift = NarrativeShift.objects.create(
@@ -629,13 +658,29 @@ class NarrativeDriftCoordinator(BaseAgent):
                         shift_summary=shift_summary,
                         old_narrative_summary=narrative.description or narrative.title,
                         new_narrative_summary="To be determined by analysis",
-                        confidence=Decimal(str(confidence)),
+                        confidence=Decimal(str(adjusted_confidence)),
                         importance=Decimal('0.5'),
-                        trigger_events=[f"Contradicting evidence ({recent_contradicts}) exceeds supporting ({recent_supports})"],
-                        evidence_sources=[str(e.id) for e in recent_evidence[:10]]
+                        trigger_events=[
+                            f"Contradicting evidence ({recent_contradicts}) exceeds supporting ({recent_supports})",
+                            f"Unique sources: {unique_source_count}",
+                            f"Verified: {is_verified}"
+                        ],
+                        evidence_sources=[str(e.id) for e in recent_evidence[:10]],
+                        verified=is_verified  # Session 509: Set verification status
                     )
                     shift_id = str(shift.id)
-                    logger.info(f"Created new NarrativeShift for {narrative.title}: {shift_id}")
+
+                    # Log verification status
+                    if is_verified:
+                        logger.info(
+                            f"✅ Created VERIFIED NarrativeShift for {narrative.title}: "
+                            f"{shift_id} ({unique_source_count} sources)"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ Created UNVERIFIED NarrativeShift for {narrative.title}: "
+                            f"{shift_id} (only {unique_source_count} source(s))"
+                        )
 
                     # Update narrative status to SHIFTING
                     narrative.status = NarrativeStatus.SHIFTING
@@ -646,8 +691,10 @@ class NarrativeDriftCoordinator(BaseAgent):
                     'shift_id': shift_id,
                     'title': narrative.title,
                     'signal': 'Contradicting evidence exceeds supporting',
-                    'confidence': confidence,
-                    'summary': shift_summary
+                    'confidence': adjusted_confidence if 'adjusted_confidence' in dir() else confidence,
+                    'summary': shift_summary,
+                    'verified': is_verified if 'is_verified' in dir() else False,
+                    'unique_sources': unique_source_count if 'unique_source_count' in dir() else 0
                 })
 
             # Check for fading narratives
@@ -820,15 +867,53 @@ class NarrativeDriftCoordinator(BaseAgent):
                         source_url, narrative.domain
                     )
 
+                    # Session 509: Mythology validation before storing evidence
+                    from core.agents.narrative.narrative_mythology_validator import (
+                        narrative_mythology_validator
+                    )
+
+                    # Get existing evidence count for corroboration check
+                    existing_count = NarrativeEvidence.objects.filter(
+                        narrative=narrative,
+                        sentiment=sentiment
+                    ).count()
+
+                    validation = narrative_mythology_validator.validate_evidence(
+                        source_url=source_url,
+                        content=content,
+                        domain=narrative.domain,
+                        existing_evidence_count=existing_count
+                    )
+
+                    # Skip invalid evidence
+                    if not validation['valid']:
+                        logger.warning(
+                            f"🚫 Rejected evidence for {narrative.domain}: "
+                            f"{validation['warnings']}"
+                        )
+                        if 'rejected_evidence' not in results:
+                            results['rejected_evidence'] = 0
+                        results['rejected_evidence'] += 1
+                        continue
+
+                    # Apply validation multiplier to source weight
+                    combined_multiplier = source_weight * validation['confidence_multiplier']
+
                     # Apply source weight to strength (capped at 1.0)
                     base_strength = 0.5 + (confidence * 0.3)  # 0.5 to 0.8 range
-                    weighted_strength = min(1.0, base_strength * source_weight)
+                    weighted_strength = min(1.0, base_strength * combined_multiplier)
 
-                    # Log penalized sources for debugging
+                    # Log penalized or unreliable sources for debugging
                     if is_penalized:
                         logger.info(
                             f"⚠️ Penalized source for {narrative.domain}: {source_url[:50]} "
                             f"(weight: {source_weight})"
+                        )
+
+                    if validation['warnings']:
+                        logger.info(
+                            f"⚠️ Mythology warnings for {narrative.domain}: "
+                            f"{validation['warnings']}"
                         )
 
                     # Create evidence with weighted strength
@@ -845,11 +930,16 @@ class NarrativeDriftCoordinator(BaseAgent):
                     )
                     results['new_evidence_created'] += 1
 
-                    # Track preferred sources in results
-                    if is_preferred:
+                    # Track source quality in results
+                    if is_preferred or validation['is_authoritative']:
                         if 'preferred_sources' not in results:
                             results['preferred_sources'] = 0
                         results['preferred_sources'] += 1
+
+                    if validation['verified']:
+                        if 'verified_evidence' not in results:
+                            results['verified_evidence'] = 0
+                        results['verified_evidence'] += 1
 
                     # Update narrative stats
                     narrative.mention_count += 1
