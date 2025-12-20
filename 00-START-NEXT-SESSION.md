@@ -22,11 +22,21 @@ Implemented `DOMAIN_SOURCE_WEIGHTS` in `core/agents/narrative/narrative_drift_co
 | tech | techcrunch.com, wired.com | 1.2x |
 | culture | nytimes.com, theatlantic.com | 1.2x |
 
-**Key Changes:**
-- `get_source_weight()` function calculates multiplier for any URL+domain
-- Evidence `strength` field now weighted by source quality (0.5-1.0)
-- Shift detection uses weighted sums instead of raw counts
-- Penalized sources logged for debugging (e.g., ScaryMommy for climate)
+### Mythology Verification (COMPLETE)
+Created `NarrativeMythologyValidator` in `core/agents/narrative/narrative_mythology_validator.py`:
+
+**Features:**
+- URL validation (rejects invalid/malformed URLs)
+- Unreliable source detection (The Onion, Babylon Bee, etc. → rejected)
+- Authoritative source boost (NIH, CDC, .gov, .edu → +30%)
+- Mythology pattern detection (9 types of unrealistic claims → -50%)
+- Corroboration requirements (3+ sources for verified status)
+
+**Shift Verification:**
+- Counts unique source domains for each shift
+- Sets `verified=True` when 3+ unique sources
+- Adjusts confidence: -0.2 for low corroboration, +0.1 for high
+- Logs: "✅ VERIFIED" or "⚠️ UNVERIFIED" for each shift
 
 ---
 
@@ -96,23 +106,13 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 510 Priorities
+## Session 510 Ideas
 
-### 1. Mythology Verification (HIGH PRIORITY)
-**Goal:** Prevent hallucinations in narrative evidence
-
-**Integration Points:**
-- Verify source URLs are real/accessible before storing evidence
-- Require 3+ corroborating sources before high-confidence shifts
-- Flag single-source shifts as "unverified"
-
-See: `docs/handoffs/SESSION_508_SPIDER_FIXES.md` for implementation patterns
-
-### 2. Other Ideas
 - Run spider network sweep to verify all spiders work
 - Add automated Discord notifications when watched narratives shift
 - Continue Discord vs Web feature parity work
 - Consider Huggingface sentiment model for ML-based detection
+- Add Discord command to show shift verification status
 
 ---
 
