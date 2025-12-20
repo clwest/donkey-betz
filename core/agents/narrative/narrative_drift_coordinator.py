@@ -14,7 +14,8 @@ Implements the 5 Autonomous Properties:
 
 import json
 import logging
-from typing import Dict, Any, List, Optional
+import re
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
 from django.utils import timezone
 from decimal import Decimal
@@ -22,6 +23,201 @@ from decimal import Decimal
 from core.agents.base_agent import BaseAgent, AgentResult
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 506: Enhanced Sentiment Detection System
+# =============================================================================
+
+class NarrativeSentimentAnalyzer:
+    """
+    Sophisticated sentiment analyzer for narrative evidence.
+
+    Features:
+    - Domain-specific keyword dictionaries
+    - Weighted scoring (some words are stronger signals)
+    - Negation detection ("not successful" → negative)
+    - Phrase matching for complex expressions
+    """
+
+    # Base sentiment words with weights (1.0 = normal, 2.0 = strong signal)
+    POSITIVE_WORDS = {
+        # Strong positive signals (weight 2.0)
+        'breakthrough': 2.0, 'revolutionary': 2.0, 'unprecedented': 2.0,
+        'skyrocket': 2.0, 'surge': 2.0, 'soar': 2.0, 'boom': 2.0,
+        'triumph': 2.0, 'victory': 2.0, 'milestone': 2.0,
+
+        # Standard positive signals (weight 1.0)
+        'success': 1.0, 'successful': 1.0, 'succeed': 1.0,
+        'growth': 1.0, 'growing': 1.0, 'grow': 1.0,
+        'increase': 1.0, 'increasing': 1.0, 'rise': 1.0, 'rising': 1.0,
+        'improve': 1.0, 'improvement': 1.0, 'improving': 1.0,
+        'gain': 1.0, 'gains': 1.0, 'positive': 1.0,
+        'confirm': 1.0, 'confirmed': 1.0, 'validates': 1.0,
+        'prove': 1.0, 'proven': 1.0, 'evidence': 1.0,
+        'support': 1.0, 'supports': 1.0, 'backed': 1.0,
+        'achieve': 1.0, 'achievement': 1.0, 'accomplished': 1.0,
+        'benefit': 1.0, 'beneficial': 1.0, 'advantage': 1.0,
+        'progress': 1.0, 'advance': 1.0, 'advancing': 1.0,
+        'adopt': 1.0, 'adoption': 1.0, 'embrace': 1.0,
+        'optimistic': 1.0, 'optimism': 1.0, 'confidence': 1.0,
+        'bullish': 1.0, 'rally': 1.0, 'recovery': 1.0,
+        'exceed': 1.0, 'exceeds': 1.0, 'outperform': 1.0,
+        'innovation': 1.0, 'innovative': 1.0, 'transform': 1.0,
+
+        # Mild positive signals (weight 0.5)
+        'good': 0.5, 'better': 0.5, 'best': 0.5,
+        'up': 0.5, 'higher': 0.5, 'strong': 0.5,
+        'stable': 0.5, 'steady': 0.5, 'solid': 0.5,
+    }
+
+    NEGATIVE_WORDS = {
+        # Strong negative signals (weight 2.0)
+        'crash': 2.0, 'collapse': 2.0, 'catastrophe': 2.0, 'disaster': 2.0,
+        'plunge': 2.0, 'plummet': 2.0, 'tank': 2.0, 'tumble': 2.0,
+        'crisis': 2.0, 'catastrophic': 2.0, 'devastating': 2.0,
+        'debunk': 2.0, 'debunked': 2.0, 'disprove': 2.0, 'disproven': 2.0,
+        'fraud': 2.0, 'scam': 2.0, 'hoax': 2.0,
+
+        # Standard negative signals (weight 1.0)
+        'fail': 1.0, 'failure': 1.0, 'failed': 1.0, 'failing': 1.0,
+        'decline': 1.0, 'declining': 1.0, 'decrease': 1.0, 'decreasing': 1.0,
+        'drop': 1.0, 'dropping': 1.0, 'fall': 1.0, 'falling': 1.0,
+        'wrong': 1.0, 'incorrect': 1.0, 'false': 1.0, 'untrue': 1.0,
+        'reject': 1.0, 'rejected': 1.0, 'deny': 1.0, 'denied': 1.0,
+        'lose': 1.0, 'loss': 1.0, 'lost': 1.0, 'losing': 1.0,
+        'problem': 1.0, 'issue': 1.0, 'concern': 1.0, 'worried': 1.0,
+        'struggle': 1.0, 'struggling': 1.0, 'trouble': 1.0,
+        'criticize': 1.0, 'criticism': 1.0, 'critics': 1.0,
+        'doubt': 1.0, 'doubtful': 1.0, 'skeptic': 1.0, 'skeptical': 1.0,
+        'pessimistic': 1.0, 'bearish': 1.0, 'downturn': 1.0,
+        'warning': 1.0, 'warn': 1.0, 'caution': 1.0, 'risk': 1.0,
+        'threat': 1.0, 'threaten': 1.0, 'danger': 1.0, 'dangerous': 1.0,
+        'abandon': 1.0, 'abandoned': 1.0, 'halt': 1.0, 'halted': 1.0,
+        'delay': 1.0, 'delayed': 1.0, 'setback': 1.0,
+        'overrated': 1.0, 'overhyped': 1.0, 'bubble': 1.0,
+
+        # Mild negative signals (weight 0.5)
+        'bad': 0.5, 'worse': 0.5, 'worst': 0.5,
+        'down': 0.5, 'lower': 0.5, 'weak': 0.5,
+        'slow': 0.5, 'slower': 0.5, 'stall': 0.5,
+    }
+
+    # Domain-specific sentiment modifiers
+    DOMAIN_KEYWORDS = {
+        'tech': {
+            'positive': {'disrupting': 1.5, 'scaling': 1.0, 'adoption': 1.0, 'launch': 1.0, 'release': 0.5},
+            'negative': {'bug': 1.0, 'vulnerability': 1.5, 'breach': 2.0, 'outage': 1.5, 'deprecated': 1.0}
+        },
+        'markets': {
+            'positive': {'rally': 1.5, 'bull': 1.0, 'profit': 1.0, 'dividend': 0.5, 'upgrade': 1.0},
+            'negative': {'bear': 1.0, 'recession': 2.0, 'inflation': 1.0, 'layoff': 1.5, 'bankruptcy': 2.0}
+        },
+        'politics': {
+            'positive': {'bipartisan': 1.0, 'reform': 0.5, 'pass': 0.5, 'approve': 1.0, 'unity': 1.0},
+            'negative': {'scandal': 2.0, 'impeach': 2.0, 'gridlock': 1.0, 'polariz': 1.0, 'corrupt': 2.0}
+        },
+        'crypto': {
+            'positive': {'moon': 1.5, 'hodl': 0.5, 'institutional': 1.0, 'mainstream': 1.0, 'whale': 0.5},
+            'negative': {'rug': 2.0, 'hack': 2.0, 'exploit': 2.0, 'dump': 1.5, 'ponzi': 2.0}
+        },
+        'climate': {
+            'positive': {'renewable': 1.0, 'sustainable': 1.0, 'carbon neutral': 1.5, 'green': 0.5},
+            'negative': {'emission': 0.5, 'pollut': 1.0, 'warming': 0.5, 'extreme weather': 1.5}
+        },
+        'health': {
+            'positive': {'cure': 2.0, 'treatment': 1.0, 'vaccine': 1.0, 'breakthrough': 2.0, 'recovery': 1.0},
+            'negative': {'outbreak': 2.0, 'pandemic': 1.5, 'side effect': 1.0, 'death': 1.5, 'mortality': 1.5}
+        },
+    }
+
+    # Negation words that flip sentiment
+    NEGATION_WORDS = {'not', 'no', 'never', 'neither', 'nobody', 'nothing',
+                      'nowhere', 'hardly', 'barely', 'scarcely', "n't", "don't",
+                      "doesn't", "didn't", "won't", "wouldn't", "couldn't", "shouldn't"}
+
+    # Phrases that indicate contradiction to a narrative
+    CONTRADICTION_PHRASES = [
+        'actually', 'in reality', 'contrary to', 'despite claims',
+        'myth', 'misconception', 'not true', 'overstated', 'exaggerated',
+        'fails to', 'unable to', 'unlikely to', 'won\'t happen',
+        'not going to', 'overblown', 'hype', 'misleading'
+    ]
+
+    @classmethod
+    def analyze(cls, content: str, domain: str = None, narrative_title: str = None) -> Tuple[str, float]:
+        """
+        Analyze content sentiment with respect to a narrative.
+
+        Returns:
+            Tuple of (sentiment, confidence)
+            - sentiment: 'supports', 'contradicts', or 'neutral'
+            - confidence: 0.0 to 1.0
+        """
+        if not content:
+            return 'neutral', 0.0
+
+        content_lower = content.lower()
+        words = re.findall(r'\b\w+\b', content_lower)
+
+        pos_score = 0.0
+        neg_score = 0.0
+
+        # Check for negation context (within 3 words)
+        def is_negated(word_idx: int) -> bool:
+            start = max(0, word_idx - 3)
+            context = words[start:word_idx]
+            return any(neg in context for neg in cls.NEGATION_WORDS)
+
+        # Score base sentiment words
+        for i, word in enumerate(words):
+            negated = is_negated(i)
+
+            if word in cls.POSITIVE_WORDS:
+                weight = cls.POSITIVE_WORDS[word]
+                if negated:
+                    neg_score += weight  # Negated positive = negative
+                else:
+                    pos_score += weight
+
+            elif word in cls.NEGATIVE_WORDS:
+                weight = cls.NEGATIVE_WORDS[word]
+                if negated:
+                    pos_score += weight * 0.5  # Negated negative = mild positive
+                else:
+                    neg_score += weight
+
+        # Add domain-specific scoring
+        if domain and domain.lower() in cls.DOMAIN_KEYWORDS:
+            domain_words = cls.DOMAIN_KEYWORDS[domain.lower()]
+            for word in words:
+                if word in domain_words.get('positive', {}):
+                    pos_score += domain_words['positive'][word]
+                elif word in domain_words.get('negative', {}):
+                    neg_score += domain_words['negative'][word]
+
+        # Check for contradiction phrases (strong signal for 'contradicts')
+        for phrase in cls.CONTRADICTION_PHRASES:
+            if phrase in content_lower:
+                neg_score += 1.5
+
+        # Calculate final sentiment
+        total_score = pos_score + neg_score
+
+        if total_score < 1.0:
+            # Not enough signal
+            return 'neutral', 0.0
+
+        # Determine sentiment based on score ratio
+        if pos_score > neg_score * 1.3:  # Need 30% more positive to be "supports"
+            confidence = min(1.0, (pos_score - neg_score) / (total_score + 1))
+            return 'supports', confidence
+        elif neg_score > pos_score * 1.3:  # Need 30% more negative to be "contradicts"
+            confidence = min(1.0, (neg_score - pos_score) / (total_score + 1))
+            return 'contradicts', confidence
+        else:
+            # Mixed signals
+            return 'neutral', 0.0
 
 
 class NarrativeDriftCoordinator(BaseAgent):
@@ -466,18 +662,14 @@ class NarrativeDriftCoordinator(BaseAgent):
                 if matched:
                     results['matched_narratives'] += 1
 
-                    # Determine sentiment (basic heuristic - could use LLM)
-                    sentiment = 'neutral'
-                    positive_words = ['support', 'confirm', 'prove', 'success', 'growth']
-                    negative_words = ['fail', 'wrong', 'decline', 'false', 'crash']
-
-                    pos_count = sum(1 for w in positive_words if w in content)
-                    neg_count = sum(1 for w in negative_words if w in content)
-
-                    if pos_count > neg_count:
-                        sentiment = 'supports'
-                    elif neg_count > pos_count:
-                        sentiment = 'contradicts'
+                    # Session 506: Use enhanced sentiment analyzer
+                    # Features: 100+ weighted keywords, domain-specific terms,
+                    # negation detection, contradiction phrases
+                    sentiment, confidence = NarrativeSentimentAnalyzer.analyze(
+                        content=content,
+                        domain=narrative.domain,
+                        narrative_title=narrative.title
+                    )
 
                     # Create evidence
                     NarrativeEvidence.objects.create(
