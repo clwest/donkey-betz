@@ -41,15 +41,36 @@ Review approach:
 - Suggest concrete fixes, not just problems
 
 You have access to tools for:
+- read_file: Read a file from the project to review it
 - comprehensive_review: Full code review
 - security_audit: Security-focused analysis
 - performance_review: Performance analysis
 - style_check: Style and convention analysis
 - suggest_improvements: Generate improved code
 
+IMPORTANT: When asked to review a file by path, FIRST use read_file to get the contents,
+then use the appropriate review tool on the code.
+
 Be constructive and brief."""
 
     tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read a file from the project filesystem to review its contents.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file to read (can be relative like 'core/views.py' or absolute)"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+            }
+        },
         {
             "type": "function",
             "function": {
@@ -342,7 +363,9 @@ Be constructive and brief."""
     def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a specific tool call."""
 
-        if tool_name == "comprehensive_review":
+        if tool_name == "read_file":
+            return self._read_file(**arguments)
+        elif tool_name == "comprehensive_review":
             return self._comprehensive_review(**arguments)
         elif tool_name == "security_audit":
             return self._security_audit(**arguments)
@@ -354,6 +377,64 @@ Be constructive and brief."""
             return self._suggest_improvements(**arguments)
 
         return {"error": f"Unknown tool: {tool_name}"}
+
+    def _read_file(self, file_path: str) -> Dict[str, Any]:
+        """Read a file from the project filesystem."""
+        import os
+
+        # Handle relative paths - assume relative to project root
+        if not os.path.isabs(file_path):
+            # Get project root (where manage.py is)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            file_path = os.path.join(project_root, file_path)
+
+        try:
+            if not os.path.exists(file_path):
+                return {
+                    "success": False,
+                    "error": f"File not found: {file_path}"
+                }
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Detect language from extension
+            ext = os.path.splitext(file_path)[1].lower()
+            language_map = {
+                '.py': 'python',
+                '.js': 'javascript',
+                '.ts': 'typescript',
+                '.tsx': 'typescript',
+                '.jsx': 'javascript',
+                '.java': 'java',
+                '.go': 'go',
+                '.rs': 'rust',
+                '.rb': 'ruby',
+                '.php': 'php',
+                '.cs': 'csharp',
+                '.cpp': 'cpp',
+                '.c': 'c',
+                '.html': 'html',
+                '.css': 'css',
+                '.sql': 'sql',
+                '.sh': 'bash',
+            }
+            language = language_map.get(ext, 'text')
+
+            return {
+                "success": True,
+                "file_path": file_path,
+                "language": language,
+                "content": content,
+                "lines": content.count('\n') + 1,
+                "size_bytes": len(content.encode('utf-8'))
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error reading file: {str(e)}"
+            }
 
     def _comprehensive_review(
         self,
