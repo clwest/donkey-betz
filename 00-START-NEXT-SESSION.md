@@ -1,8 +1,32 @@
-# Session 509 - Start Here
+# Session 510 - Start Here
 
-**Previous Session:** 508 (Spider Fixes & Discord Command Limit)
+**Previous Session:** 509 (Domain-Specific Source Weighting)
 **Date:** December 19, 2025
-**Status:** Fixed spider execution errors and Discord 100 command limit.
+**Status:** Implemented intelligent source weighting for Narrative Drift evidence.
+
+---
+
+## Session 509 Achievements
+
+### Domain-Specific Source Weighting (COMPLETE)
+Implemented `DOMAIN_SOURCE_WEIGHTS` in `core/agents/narrative/narrative_drift_coordinator.py`:
+
+| Domain | Preferred Sources | Boost |
+|--------|-------------------|-------|
+| climate | noaa.gov, epa.gov, nature.com | 1.5x |
+| health | nih.gov, cdc.gov, statnews.com | 1.4x |
+| markets | bloomberg.com, sec.gov, wsj.com | 1.3x |
+| crypto | coindesk.com, cointelegraph.com | 1.3x |
+| politics | politico.com, congress.gov | 1.3x |
+| geopolitics | foreignaffairs.com, cfr.org | 1.3x |
+| tech | techcrunch.com, wired.com | 1.2x |
+| culture | nytimes.com, theatlantic.com | 1.2x |
+
+**Key Changes:**
+- `get_source_weight()` function calculates multiplier for any URL+domain
+- Evidence `strength` field now weighted by source quality (0.5-1.0)
+- Shift detection uses weighted sums instead of raw counts
+- Penalized sources logged for debugging (e.g., ScaryMommy for climate)
 
 ---
 
@@ -72,20 +96,9 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 509 Priorities
+## Session 510 Priorities
 
-### 1. Domain-Specific Source Weighting (HIGH PRIORITY)
-**Problem:** All narrative domains pull evidence from same general sources (Axios, Variety, etc.)
-- Climate domain has evidence from "Scary Mommy" and "Eater" - NOT climate sources!
-- Need to boost confidence for domain-appropriate sources
-
-**Implementation:** Add `DOMAIN_SOURCE_WEIGHTS` to `narrative_drift_service.py`
-- Climate → NOAA, EPA, nature.com
-- Markets → Bloomberg, SEC, WSJ
-- Health → NIH, StatNews, WebMD
-- Crypto → CoinDesk, CoinTelegraph
-
-### 2. Mythology Verification (HIGH PRIORITY)
+### 1. Mythology Verification (HIGH PRIORITY)
 **Goal:** Prevent hallucinations in narrative evidence
 
 **Integration Points:**
@@ -95,7 +108,7 @@ open http://localhost:8000/ai-studio/
 
 See: `docs/handoffs/SESSION_508_SPIDER_FIXES.md` for implementation patterns
 
-### 3. Other Ideas
+### 2. Other Ideas
 - Run spider network sweep to verify all spiders work
 - Add automated Discord notifications when watched narratives shift
 - Continue Discord vs Web feature parity work
