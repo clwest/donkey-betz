@@ -275,6 +275,10 @@ Be constructive and brief."""
 
                 if gpt_response.get('tool_calls'):
                     all_results = []
+                    file_content_for_review = None
+                    file_language = None
+                    file_path_read = None
+
                     for tool_call in gpt_response['tool_calls']:
                         tool_name = tool_call['name']
                         arguments = tool_call['arguments']
@@ -299,9 +303,75 @@ Be constructive and brief."""
                                 'data': tool_result
                             })
 
+                            # If read_file was successful, store content for chained review
+                            if tool_name == "read_file":
+                                file_content_for_review = tool_result.get('content')
+                                file_language = tool_result.get('language', 'text')
+                                file_path_read = tool_result.get('file_path')
+
                         self.mark_decision_outcome(
                             success=tool_result.get('success', False),
                             result_summary=str(tool_result)[:100]
+                        )
+
+                    # AUTO-CHAIN: If we read a file but no review tool was called, do the review
+                    if file_content_for_review and not any(
+                        tc['tool'] in ['security_audit', 'comprehensive_review', 'performance_review', 'style_check']
+                        for tc in tool_calls_made
+                    ):
+                        # Determine review type from task
+                        task_lower = task.lower()
+                        if 'security' in task_lower or 'vulnerab' in task_lower or 'audit' in task_lower:
+                            review_type = 'security_audit'
+                            review_args = {
+                                'code': file_content_for_review,
+                                'language': file_language,
+                                'framework': 'django' if file_language == 'python' else None
+                            }
+                        elif 'performance' in task_lower or 'optimize' in task_lower or 'slow' in task_lower:
+                            review_type = 'performance_review'
+                            review_args = {
+                                'code': file_content_for_review,
+                                'language': file_language
+                            }
+                        elif 'style' in task_lower or 'format' in task_lower or 'lint' in task_lower:
+                            review_type = 'style_check'
+                            review_args = {
+                                'code': file_content_for_review,
+                                'language': file_language
+                            }
+                        else:
+                            # Default to comprehensive review
+                            review_type = 'comprehensive_review'
+                            review_args = {
+                                'code': file_content_for_review,
+                                'language': file_language,
+                                'context': f"File: {file_path_read}"
+                            }
+
+                        self.record_decision(
+                            decision_type="auto_chain",
+                            action=f"Auto-chaining to {review_type}",
+                            reasoning=f"File was read, now performing {review_type}",
+                            confidence=0.9
+                        )
+
+                        review_result = self._execute_tool_call(review_type, review_args)
+                        tool_calls_made.append({
+                            'tool': review_type,
+                            'arguments': {'language': file_language},  # Don't include full code in response
+                            'result': review_result
+                        })
+
+                        if review_result.get('success'):
+                            all_results.append({
+                                'source': review_type,
+                                'data': review_result
+                            })
+
+                        self.mark_decision_outcome(
+                            success=review_result.get('success', False),
+                            result_summary=str(review_result)[:100]
                         )
 
                     execution_time = int((time.time() - start_time) * 1000)
@@ -449,10 +519,14 @@ Be constructive and brief."""
 
         client = OpenAI()
 
+        # Truncate very long files to avoid token limits
+        code, was_truncated = self._truncate_code(code, max_lines=300)
+        truncation_note = "\n\nNote: Code was truncated for analysis. Focus on visible portions." if was_truncated else ""
+
         focus_text = f"Focus especially on: {', '.join(focus_areas)}" if focus_areas else ""
         context_text = f"Context: {context}" if context else ""
 
-        prompt = f"""Perform a comprehensive code review:
+        prompt = f"""Perform a comprehensive code review:{truncation_note}
 
 ```{language}
 {code}
@@ -512,6 +586,17 @@ End with a summary score (1-10) and overall assessment."""
             "review": response.choices[0].message.content
         }
 
+    def _truncate_code(self, code: str, max_lines: int = 200) -> tuple:
+        """Truncate code if it exceeds max_lines. Returns (truncated_code, was_truncated)."""
+        lines = code.split('\n')
+        if len(lines) <= max_lines:
+            return code, False
+
+        # Keep first and last portions to preserve context
+        half = max_lines // 2
+        truncated = '\n'.join(lines[:half]) + f'\n\n... [{len(lines) - max_lines} lines truncated for brevity] ...\n\n' + '\n'.join(lines[-half:])
+        return truncated, True
+
     def _security_audit(
         self,
         code: str,
@@ -525,11 +610,15 @@ End with a summary score (1-10) and overall assessment."""
 
         client = OpenAI()
 
+        # Truncate very long files to avoid token limits
+        code, was_truncated = self._truncate_code(code, max_lines=300)
+        truncation_note = "\n\nNote: Code was truncated for analysis. Focus on visible portions." if was_truncated else ""
+
         framework_text = f"Framework: {framework}" if framework else ""
         categories = check_categories or ["injection", "auth", "crypto", "data-exposure", "misconfiguration"]
         standards = compliance_standards or ["OWASP Top 10"]
 
-        prompt = f"""Perform a security audit on this {language} code:
+        prompt = f"""Perform a security audit on this {language} code:{truncation_note}
 
 ```{language}
 {code}
@@ -557,23 +646,38 @@ Also provide:
 - Priority remediation order
 - Quick wins vs long-term fixes"""
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": "You are a security expert. Identify vulnerabilities thoroughly and provide actionable fixes."},
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=5000
-        )
+        try:
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=[
+                    {"role": "system", "content": "You are a security expert. Be concise but thorough. Identify vulnerabilities and provide actionable fixes."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=4000
+            )
 
-        return {
-            "success": True,
-            "language": language,
-            "framework": framework,
-            "audit_type": "security",
-            "categories_checked": categories,
-            "audit": response.choices[0].message.content
-        }
+            audit_content = response.choices[0].message.content
+            if not audit_content:
+                audit_content = "Security audit completed but no specific vulnerabilities were identified in the visible code sections."
+
+            return {
+                "success": True,
+                "language": language,
+                "framework": framework,
+                "audit_type": "security",
+                "categories_checked": categories,
+                "lines_analyzed": code.count('\n') + 1,
+                "was_truncated": was_truncated,
+                "audit": audit_content
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "language": language,
+                "audit_type": "security",
+                "error": f"Security audit failed: {str(e)}",
+                "audit": f"Error during audit: {str(e)}"
+            }
 
     def _performance_review(
         self,
