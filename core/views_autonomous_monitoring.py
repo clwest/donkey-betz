@@ -14,7 +14,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Sum, Avg
 from django.db.models.functions import TruncHour, TruncDay
@@ -651,6 +651,8 @@ def api_celery_schedules(request):
 
 # ============================================================
 # Session 497: ML Scoring Status API
+# Session 511: Enhanced with training status, feature importance,
+#              performance trends, model comparison, and SHAP explanations
 # ============================================================
 
 @require_GET
@@ -658,9 +660,19 @@ def api_ml_scoring_status(request):
     """
     Get ML Scoring Engine status.
     Returns model version, accuracy, feature importance, and recent predictions.
+
+    Session 511 enhancements:
+    - model_training: Training status with last trained, samples, can_train_now
+    - feature_importance: Top 10 features from active model
+    - performance_trends: R² and MSE over model versions
+    - model_comparison: All model versions for comparison
+    - recent_high_score: Enhanced with SHAP explanations
     """
     try:
-        from core.models_unified_system import SpiderData, Opportunity, OpportunityOutcome
+        from core.models_unified_system import (
+            SpiderData, Opportunity, OpportunityOutcome,
+            MLModelVersion, ScoringExplanation
+        )
         from core.services.ml_scoring_engine import get_ml_scoring_engine
 
         now = timezone.now()
@@ -704,22 +716,103 @@ def api_ml_scoring_status(request):
         outcome_map = {o['outcome']: o['count'] for o in outcome_counts}
 
         total_outcomes = sum(outcome_map.values())
-        success_outcomes = outcome_map.get('success', 0) + outcome_map.get('partial_success', 0)
+        # Count successful outcomes (won, success, partial, partial_success)
+        success_outcomes = (
+            outcome_map.get('won', 0) +
+            outcome_map.get('success', 0) +
+            outcome_map.get('partial', 0) +
+            outcome_map.get('partial_success', 0)
+        )
         accuracy_estimate = round((success_outcomes / total_outcomes * 100), 1) if total_outcomes > 0 else 0
 
-        # Recent high-score opportunities
+        # ============================================================
+        # Session 511: Model Training Status
+        # ============================================================
+        active_model = MLModelVersion.objects.filter(is_active=True).first()
+        model_training = {
+            'last_trained': active_model.trained_at.isoformat() if active_model and active_model.trained_at else None,
+            'training_samples': active_model.training_samples if active_model else 0,
+            'training_duration_seconds': active_model.training_duration_seconds if active_model else 0,
+            'min_samples_required': 100,
+            'can_train_now': total_outcomes >= 100,
+            'active_version': active_model.version if active_model else None,
+        }
+
+        # ============================================================
+        # Session 511: Feature Importance from Active Model
+        # ============================================================
+        feature_importance = []
+        if active_model and active_model.feature_importance:
+            # feature_importance is stored as list of {'feature': name, 'importance': score}
+            feature_importance = active_model.feature_importance[:10] if isinstance(
+                active_model.feature_importance, list
+            ) else []
+
+        # ============================================================
+        # Session 511: Performance Trends (all model versions)
+        # ============================================================
+        all_versions = MLModelVersion.objects.order_by('trained_at')[:10]
+        performance_trends = [{
+            'version': v.version,
+            'trained_at': v.trained_at.isoformat() if v.trained_at else None,
+            'test_r2': float(v.test_r2) if v.test_r2 is not None else None,
+            'test_mse': float(v.test_mse) if v.test_mse is not None else None,
+            'training_samples': v.training_samples,
+        } for v in all_versions]
+
+        # ============================================================
+        # Session 511: Model Comparison
+        # ============================================================
+        all_versions_list = list(MLModelVersion.objects.order_by('-trained_at')[:5])
+        model_comparison = {
+            'versions_count': MLModelVersion.objects.count(),
+            'active_version': active_model.version if active_model else None,
+            'versions': [{
+                'version': v.version,
+                'is_active': v.is_active,
+                'trained_at': v.trained_at.isoformat() if v.trained_at else None,
+                'test_r2': float(v.test_r2) if v.test_r2 is not None else None,
+                'test_mse': float(v.test_mse) if v.test_mse is not None else None,
+                'training_samples': v.training_samples,
+            } for v in all_versions_list]
+        }
+
+        # ============================================================
+        # Session 511: Enhanced high-score opportunities with SHAP
+        # ============================================================
         recent_high_score = Opportunity.objects.filter(
             created_at__gte=day_ago,
             overall_score__gte=70
         ).select_related('spider_data').order_by('-overall_score')[:5]
 
-        high_score_data = [{
-            'id': str(opp.id),
-            'title': opp.title[:50] if opp.title else 'Untitled',
-            'score': opp.overall_score or 0,
-            'source': getattr(opp.spider_data, 'spider_name', 'Unknown') if opp.spider_data else 'Unknown',
-            'created_at': opp.created_at.isoformat(),
-        } for opp in recent_high_score]
+        high_score_data = []
+        for opp in recent_high_score:
+            opp_data = {
+                'id': str(opp.id),
+                'title': opp.title[:150] if opp.title else 'Untitled',
+                'score': opp.overall_score or 0,
+                'source': getattr(opp.spider_data, 'spider_name', 'Unknown') if opp.spider_data else 'Unknown',
+                'created_at': opp.created_at.isoformat(),
+                'explanation': None,
+            }
+
+            # Try to get SHAP explanation
+            try:
+                explanation = ScoringExplanation.objects.filter(
+                    opportunity_id=opp.id
+                ).first()
+                if explanation:
+                    opp_data['explanation'] = {
+                        'top_positive': explanation.top_positive_features[:3] if explanation.top_positive_features else [],
+                        'top_negative': explanation.top_negative_features[:2] if explanation.top_negative_features else [],
+                        'confidence': float(explanation.confidence) if explanation.confidence else 0,
+                        'ml_score': float(explanation.ml_score) if explanation.ml_score else 0,
+                        'rule_score': float(explanation.rule_score) if explanation.rule_score else 0,
+                    }
+            except Exception:
+                pass  # No explanation available
+
+            high_score_data.append(opp_data)
 
         return JsonResponse({
             'success': True,
@@ -736,10 +829,154 @@ def api_ml_scoring_status(request):
                 'recent_high_score': high_score_data,
                 'training_data_count': total_outcomes,
                 'ready_for_training': total_outcomes >= 100,
+                # Session 511 additions
+                'model_training': model_training,
+                'feature_importance': feature_importance,
+                'performance_trends': performance_trends,
+                'model_comparison': model_comparison,
             }
         })
     except Exception as e:
         logger.error(f"ML Scoring status error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ============================================================
+# Session 511: ML Model Training Trigger
+# ============================================================
+
+@csrf_exempt
+@require_POST
+def api_ml_scoring_train(request):
+    """
+    Trigger ML model training manually.
+    POST /api/monitoring/ml-scoring/train/
+
+    Returns task_id for async training job.
+    """
+    import json
+    try:
+        from core.models_unified_system import OpportunityOutcome
+
+        # Check if we have enough training data
+        total_outcomes = OpportunityOutcome.objects.count()
+        min_required = 100
+
+        if total_outcomes < min_required:
+            return JsonResponse({
+                'success': False,
+                'error': f'Insufficient training data: {total_outcomes} samples (need {min_required}+)'
+            }, status=400)
+
+        # Parse request body for options
+        try:
+            body = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            body = {}
+
+        force_retrain = body.get('force_retrain', True)
+
+        # Queue the training task
+        from core.tasks import train_ml_scoring_model
+        result = train_ml_scoring_model.delay(force_retrain=force_retrain)
+
+        logger.info(f"ML model training triggered: task_id={result.id}")
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Training task queued successfully',
+            'task_id': str(result.id),
+            'training_samples': total_outcomes,
+        })
+
+    except Exception as e:
+        logger.error(f"ML training trigger error: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# ============================================================
+# Session 511: Score Explanation Endpoint
+# ============================================================
+
+@require_GET
+def api_ml_scoring_explanation(request, opportunity_id):
+    """
+    Get detailed SHAP explanation for a specific opportunity.
+    GET /api/monitoring/ml-scoring/opportunity/<uuid>/explanation/
+
+    Returns full SHAP breakdown + rule reasoning.
+    """
+    try:
+        from core.models_unified_system import (
+            Opportunity, ScoringExplanation
+        )
+
+        # Get the opportunity
+        try:
+            opportunity = Opportunity.objects.select_related('spider_data').get(id=opportunity_id)
+        except Opportunity.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Opportunity not found'
+            }, status=404)
+
+        # Get the scoring explanation
+        explanation = ScoringExplanation.objects.filter(
+            opportunity_id=opportunity_id
+        ).first()
+
+        if not explanation:
+            return JsonResponse({
+                'success': False,
+                'error': 'No ML explanation available for this opportunity'
+            }, status=404)
+
+        # Build feature details from SHAP values
+        features = []
+        if explanation.feature_names and explanation.shap_values:
+            for i, name in enumerate(explanation.feature_names):
+                shap_value = explanation.shap_values[i] if i < len(explanation.shap_values) else 0
+                feature_value = explanation.feature_values[i] if explanation.feature_values and i < len(explanation.feature_values) else None
+                features.append({
+                    'name': name,
+                    'value': feature_value,
+                    'shap_value': round(float(shap_value), 4) if shap_value else 0,
+                    'impact': 'positive' if shap_value and shap_value > 0 else 'negative'
+                })
+
+        # Sort by absolute SHAP value
+        features.sort(key=lambda x: abs(x['shap_value']), reverse=True)
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'opportunity_id': str(opportunity.id),
+                'title': opportunity.title or 'Untitled',
+                'source': getattr(opportunity.spider_data, 'spider_name', 'Unknown') if opportunity.spider_data else 'Unknown',
+                'scores': {
+                    'ml_score': round(float(explanation.ml_score), 2) if explanation.ml_score else 0,
+                    'rule_score': round(float(explanation.rule_score), 2) if explanation.rule_score else 0,
+                    'hybrid_score': round(float(explanation.hybrid_score), 2) if explanation.hybrid_score else 0,
+                    'confidence': round(float(explanation.confidence), 2) if explanation.confidence else 0,
+                },
+                'shap_explanation': {
+                    'base_value': round(float(explanation.shap_base_value), 4) if explanation.shap_base_value else 0,
+                    'features': features,
+                },
+                'rule_reasoning': explanation.rule_reasoning or {},
+                'model_version': explanation.model_version.version if explanation.model_version else 'unknown',
+                'scored_at': explanation.created_at.isoformat() if explanation.created_at else None,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"ML explanation error: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e)

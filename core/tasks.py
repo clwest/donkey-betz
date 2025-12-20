@@ -2448,24 +2448,46 @@ def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
                 }
 
         # Collect training data from outcomes
+        # Chain: OpportunityOutcome → task → opportunity → spider_data
         outcomes = OpportunityOutcome.objects.select_related(
-            'opportunity', 'opportunity__source_data'
+            'task', 'task__opportunity', 'task__opportunity__spider_data'
         ).filter(
-            actual_outcome__isnull=False,
-            opportunity__source_data__isnull=False
+            outcome__isnull=False,
+            task__opportunity__spider_data__isnull=False
         )
 
+        # Outcome to numeric score mapping
+        OUTCOME_SCORES = {
+            'won': 100,      # Full success
+            'partial': 60,   # Partial success
+            'expired': 30,   # Missed opportunity
+            'cancelled': 20, # User cancelled
+            'lost': 10,      # Rejected/failed
+        }
+
+        # Get ML engine for feature extraction
+        ml_engine = get_ml_scoring_engine()
+
         training_data = []
-        for outcome in outcomes:
-            opp = outcome.opportunity
-            spider_data = opp.source_data
+        for outcome_record in outcomes:
+            opp = outcome_record.task.opportunity
+            spider_data = opp.spider_data
 
             if spider_data:
-                training_data.append({
-                    'spider_data': spider_data,
-                    'target': outcome.actual_outcome,
-                    'revenue': outcome.actual_revenue or 0,
-                })
+                try:
+                    # Extract features from spider data
+                    features = ml_engine.extract_features(spider_data).flatten().tolist()
+
+                    # Convert outcome string to numeric score
+                    outcome_score = OUTCOME_SCORES.get(outcome_record.outcome, 50)
+
+                    training_data.append({
+                        'features': features,
+                        'outcome': outcome_score,
+                    })
+                except Exception as e:
+                    logger.warning(f"🧠 [ML SCORING] Failed to extract features: {e}")
+                    continue
 
         if len(training_data) < min_samples:
             logger.warning(f"🧠 [ML SCORING] Insufficient training data: {len(training_data)} < {min_samples}")
@@ -2478,26 +2500,48 @@ def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
                     'samples_available': len(training_data)
                 }
 
-        # Get the ML engine and train
-        ml_engine = get_ml_scoring_engine()
+        # Train the model
         training_result = ml_engine.train_model(training_data)
 
         duration = time.time() - start_time
 
         if training_result.get('success'):
+            # Extract metrics from nested structure
+            metrics = training_result.get('metrics', {})
+            version = training_result.get('version')
+            samples_used = metrics.get('samples_train', 0) + metrics.get('samples_test', 0)
+
+            # Deactivate previous models
+            MLModelVersion.objects.filter(is_active=True).update(is_active=False)
+
+            # Create new MLModelVersion record
+            model_record = MLModelVersion.objects.create(
+                version=version,
+                trained_at=timezone.now(),
+                is_active=True,
+                training_samples=samples_used,
+                training_duration_seconds=int(round(duration)),
+                train_mse=metrics.get('train_mse', 0),
+                test_mse=metrics.get('test_mse', 0),
+                train_r2=metrics.get('train_r2', 0),
+                test_r2=metrics.get('test_r2', 0),
+                feature_importance=training_result.get('feature_importance', [])
+            )
+            logger.info(f"🧠 [ML SCORING] Saved MLModelVersion: {model_record.id}")
+
             result = {
                 'status': 'completed',
-                'model_version': training_result.get('version'),
-                'samples_used': training_result.get('training_samples'),
-                'train_mse': training_result.get('train_mse'),
-                'test_mse': training_result.get('test_mse'),
-                'train_r2': training_result.get('train_r2'),
-                'test_r2': training_result.get('test_r2'),
+                'model_version': version,
+                'samples_used': samples_used,
+                'train_mse': metrics.get('train_mse', 0),
+                'test_mse': metrics.get('test_mse', 0),
+                'train_r2': metrics.get('train_r2', 0),
+                'test_r2': metrics.get('test_r2', 0),
                 'duration_seconds': round(duration, 2),
                 'top_features': training_result.get('feature_importance', [])[:5]
             }
             logger.info(f"🧠 [ML SCORING] Model training complete - v{result['model_version']}, "
-                       f"R²={result.get('test_r2', 0):.3f}, {result['samples_used']} samples")
+                       f"R²={result['test_r2']:.3f}, {result['samples_used']} samples")
             return result
         else:
             logger.error(f"🧠 [ML SCORING] Model training failed: {training_result.get('error')}")
