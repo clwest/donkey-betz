@@ -71,7 +71,91 @@ Also fixed `core/views_spider_dashboard.py` lines 134-150 to handle both dict an
 
 ---
 
-## Session 509 Ideas
+## Session 509 Priority: Domain-Specific Source Weighting
+
+### Problem Identified
+All narrative domains are pulling evidence from the **same general sources** (Axios, Variety, Google News, etc.). Evidence is matched by keywords only, not source specialty.
+
+**Current Evidence Distribution:**
+| Domain | Evidence Count | Issue |
+|--------|---------------|-------|
+| tech | 425 | General feeds - acceptable |
+| climate | 329 | Pulling from Variety, Scary Mommy, Eater - NOT climate sources! |
+| markets | 231 | Bloomberg, SEC, Finnhub - appropriate |
+| geopolitics | 196 | NPR, BBC, Politico - appropriate |
+| culture | 68 | General feeds - acceptable |
+| politics | 65 | Politico, NPR - appropriate |
+| crypto | 63 | Mixed sources |
+| health | 33 | StatNews + general - needs more health sources |
+
+### Recommended Solution
+Implement **domain-source affinity scoring** in `core/services/narrative_drift_service.py`:
+
+```python
+DOMAIN_SOURCE_WEIGHTS = {
+    'climate': {
+        'preferred': ['noaa.gov', 'epa.gov', 'nature.com', 'sciencedaily.com'],
+        'weight_boost': 1.5
+    },
+    'markets': {
+        'preferred': ['bloomberg.com', 'sec.gov', 'wsj.com', 'reuters.com'],
+        'weight_boost': 1.3
+    },
+    'health': {
+        'preferred': ['nih.gov', 'statnews.com', 'webmd.com', 'healthline.com'],
+        'weight_boost': 1.4
+    },
+    'crypto': {
+        'preferred': ['coindesk.com', 'cointelegraph.com', 'decrypt.co'],
+        'weight_boost': 1.3
+    }
+}
+```
+
+When collecting evidence, boost confidence for domain-appropriate sources.
+
+---
+
+## Session 509 Priority: Mythology Verification
+
+### Current Status
+Mythology validation exists in `LegalDocDrafterAgent` (lines 1183, 2764) to prevent legal hallucinations.
+
+### Recommended Integration Points for Narrative Drift
+1. **NarrativeEvidence creation** (`core/services/narrative_drift_service.py`)
+   - Before storing evidence, verify source URL is real and accessible
+   - Cross-reference claims with multiple sources before high confidence
+
+2. **Shift detection** (`detect_shifts()` method)
+   - Require minimum 3 corroborating sources before declaring a shift
+   - Flag single-source shifts as "unverified"
+
+3. **Watch notifications**
+   - Include source count in notifications: "Shift detected (5 sources)" vs "(1 source - unverified)"
+
+### Implementation Pattern
+```python
+def _verify_evidence(self, evidence_data: dict) -> dict:
+    """Mythology verification for narrative evidence."""
+    source_url = evidence_data.get('source_url', '')
+
+    # 1. Verify URL is valid and accessible
+    if not self._is_valid_source(source_url):
+        evidence_data['verified'] = False
+        evidence_data['confidence'] *= 0.5
+        return evidence_data
+
+    # 2. Check against known reliable sources
+    if self._is_preferred_source(source_url, evidence_data['domain']):
+        evidence_data['confidence'] *= 1.3
+        evidence_data['verified'] = True
+
+    return evidence_data
+```
+
+---
+
+## Other Session 509 Ideas
 
 1. Run spider network sweep to verify all legal spiders work
 2. Continue Discord vs Web feature parity
