@@ -26,6 +26,127 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# Session 509: Domain-Specific Source Weighting
+# =============================================================================
+# Problem: All domains were pulling evidence from same general sources.
+# Solution: Boost confidence for domain-appropriate sources.
+
+DOMAIN_SOURCE_WEIGHTS = {
+    'climate': {
+        'preferred': [
+            'noaa.gov', 'epa.gov', 'nature.com', 'sciencedaily.com',
+            'climate.gov', 'ipcc.ch', 'carbonbrief.org', 'insideclimatenews.org',
+            'climatecentral.org', 'grist.org'
+        ],
+        'weight_boost': 1.5,  # 50% confidence boost for preferred sources
+        'penalty_sources': ['scarymommy.com', 'eater.com', 'variety.com'],
+        'penalty': 0.5  # 50% confidence reduction for irrelevant sources
+    },
+    'markets': {
+        'preferred': [
+            'bloomberg.com', 'sec.gov', 'wsj.com', 'reuters.com',
+            'ft.com', 'cnbc.com', 'marketwatch.com', 'finance.yahoo.com',
+            'barrons.com', 'investopedia.com', 'seeking alpha'
+        ],
+        'weight_boost': 1.3,
+        'penalty_sources': [],
+        'penalty': 0.7
+    },
+    'health': {
+        'preferred': [
+            'nih.gov', 'cdc.gov', 'who.int', 'statnews.com',
+            'webmd.com', 'healthline.com', 'mayoclinic.org', 'nejm.org',
+            'jamanetwork.com', 'thelancet.com', 'medscape.com'
+        ],
+        'weight_boost': 1.4,
+        'penalty_sources': [],
+        'penalty': 0.6
+    },
+    'crypto': {
+        'preferred': [
+            'coindesk.com', 'cointelegraph.com', 'decrypt.co',
+            'theblock.co', 'bitcoinmagazine.com', 'cryptoslate.com',
+            'messari.io', 'defipulse.com', 'dappradar.com'
+        ],
+        'weight_boost': 1.3,
+        'penalty_sources': [],
+        'penalty': 0.7
+    },
+    'tech': {
+        'preferred': [
+            'techcrunch.com', 'theverge.com', 'wired.com', 'arstechnica.com',
+            'technologyreview.com', 'venturebeat.com', 'zdnet.com',
+            'engadget.com', 'hackernews.com', 'dev.to'
+        ],
+        'weight_boost': 1.2,
+        'penalty_sources': [],
+        'penalty': 0.8
+    },
+    'politics': {
+        'preferred': [
+            'politico.com', 'thehill.com', 'rollcall.com', 'c-span.org',
+            'congress.gov', 'whitehouse.gov', 'apnews.com', 'npr.org',
+            'realclearpolitics.com', 'fivethirtyeight.com'
+        ],
+        'weight_boost': 1.3,
+        'penalty_sources': [],
+        'penalty': 0.7
+    },
+    'geopolitics': {
+        'preferred': [
+            'foreignaffairs.com', 'cfr.org', 'brookings.edu', 'rand.org',
+            'bbc.com', 'aljazeera.com', 'dw.com', 'reuters.com',
+            'economist.com', 'stratfor.com'
+        ],
+        'weight_boost': 1.3,
+        'penalty_sources': [],
+        'penalty': 0.7
+    },
+    'culture': {
+        'preferred': [
+            'nytimes.com', 'newyorker.com', 'theatlantic.com', 'vox.com',
+            'slate.com', 'buzzfeed.com', 'vice.com', 'rollingstone.com'
+        ],
+        'weight_boost': 1.2,
+        'penalty_sources': [],
+        'penalty': 0.8
+    }
+}
+
+
+def get_source_weight(source_url: str, domain: str) -> tuple:
+    """
+    Calculate source weight for a given URL and domain.
+
+    Returns:
+        tuple: (multiplier, is_preferred, is_penalized)
+        - multiplier: float to multiply confidence by
+        - is_preferred: bool if source is preferred for domain
+        - is_penalized: bool if source is inappropriate for domain
+    """
+    if not source_url or not domain:
+        return (1.0, False, False)
+
+    source_lower = source_url.lower()
+    domain_config = DOMAIN_SOURCE_WEIGHTS.get(domain.lower(), {})
+
+    # Check preferred sources
+    preferred = domain_config.get('preferred', [])
+    for pref_source in preferred:
+        if pref_source in source_lower:
+            return (domain_config.get('weight_boost', 1.2), True, False)
+
+    # Check penalty sources
+    penalty_sources = domain_config.get('penalty_sources', [])
+    for penalty_source in penalty_sources:
+        if penalty_source in source_lower:
+            return (domain_config.get('penalty', 0.5), False, True)
+
+    # Neutral source
+    return (1.0, False, False)
+
+
+# =============================================================================
 # Session 506: Enhanced Sentiment Detection System
 # =============================================================================
 
@@ -458,13 +579,35 @@ class NarrativeDriftCoordinator(BaseAgent):
             )
 
             recent_count = recent_evidence.count()
-            recent_supports = recent_evidence.filter(sentiment='supports').count()
-            recent_contradicts = recent_evidence.filter(sentiment='contradicts').count()
 
-            # Check for shift signals
-            if recent_contradicts > recent_supports and recent_count >= 3:
-                confidence = 0.6 + (0.1 * min(recent_contradicts - recent_supports, 4))
-                shift_summary = f"'{narrative.title}' is receiving more contradicting than supporting evidence"
+            # Session 509: Use weighted strength instead of raw counts
+            # This gives more weight to evidence from domain-appropriate sources
+            from django.db.models import Sum
+            support_evidence = recent_evidence.filter(sentiment='supports')
+            contradict_evidence = recent_evidence.filter(sentiment='contradicts')
+
+            # Sum weighted strengths (default 0.5 if no strength set)
+            support_strength = support_evidence.aggregate(
+                total=Sum('strength')
+            )['total'] or Decimal('0')
+            contradict_strength = contradict_evidence.aggregate(
+                total=Sum('strength')
+            )['total'] or Decimal('0')
+
+            # Also track raw counts for logging
+            recent_supports = support_evidence.count()
+            recent_contradicts = contradict_evidence.count()
+
+            # Check for shift signals using weighted strength
+            # Contradicting evidence must outweigh supporting by 20%
+            if contradict_strength > support_strength * Decimal('1.2') and recent_count >= 3:
+                # Calculate confidence based on strength differential
+                strength_diff = float(contradict_strength - support_strength)
+                confidence = min(0.95, 0.6 + (0.1 * strength_diff))
+                shift_summary = (
+                    f"'{narrative.title}' is receiving more contradicting evidence "
+                    f"(weighted: {float(contradict_strength):.2f} vs {float(support_strength):.2f})"
+                )
 
                 # Session 506: Check if we already detected this shift recently (avoid duplicates)
                 existing_shift = NarrativeShift.objects.filter(
@@ -671,18 +814,42 @@ class NarrativeDriftCoordinator(BaseAgent):
                         narrative_title=narrative.title
                     )
 
-                    # Create evidence
+                    # Session 509: Apply domain-specific source weighting
+                    source_url = sd.source_url or ''
+                    source_weight, is_preferred, is_penalized = get_source_weight(
+                        source_url, narrative.domain
+                    )
+
+                    # Apply source weight to strength (capped at 1.0)
+                    base_strength = 0.5 + (confidence * 0.3)  # 0.5 to 0.8 range
+                    weighted_strength = min(1.0, base_strength * source_weight)
+
+                    # Log penalized sources for debugging
+                    if is_penalized:
+                        logger.info(
+                            f"⚠️ Penalized source for {narrative.domain}: {source_url[:50]} "
+                            f"(weight: {source_weight})"
+                        )
+
+                    # Create evidence with weighted strength
                     NarrativeEvidence.objects.create(
                         narrative=narrative,
                         spider_data=sd,
-                        source_url=sd.source_url or '',
+                        source_url=source_url,
                         source_title=first_title[:300] if first_title else sd.spider_name,
                         source_type=sd.data_type or '',
                         excerpt=content[:500],
                         sentiment=sentiment,
+                        strength=Decimal(str(round(weighted_strength, 2))),
                         source_date=sd.created_at
                     )
                     results['new_evidence_created'] += 1
+
+                    # Track preferred sources in results
+                    if is_preferred:
+                        if 'preferred_sources' not in results:
+                            results['preferred_sources'] = 0
+                        results['preferred_sources'] += 1
 
                     # Update narrative stats
                     narrative.mention_count += 1
