@@ -259,6 +259,48 @@
                 </div>
             </div>
 
+            <!-- Session 509: Mythology Validation Stats -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <div class="card-body py-2">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-shield-alt me-2" style="color: #34d399;"></i>
+                                    <span style="color: #34d399; font-weight: 600;">Mythology Validation</span>
+                                </div>
+                                <div class="d-flex gap-4">
+                                    <div class="text-center">
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 1rem; padding: 6px 12px;">
+                                            <i class="fas fa-check-circle me-1"></i><span id="mythologyVerifiedShifts">0</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">Verified Shifts</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 1rem; padding: 6px 12px;">
+                                            <i class="fas fa-exclamation-triangle me-1"></i><span id="mythologyUnverifiedShifts">0</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">Unverified Shifts</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); font-size: 1rem; padding: 6px 12px;">
+                                            <i class="fas fa-university me-1"></i><span id="mythologyAuthoritativeEvidence">0</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">Authoritative Sources</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.4); font-size: 1rem; padding: 6px 12px;">
+                                            <span id="mythologyValidationRate">0</span>%
+                                        </span>
+                                        <small class="text-muted d-block mt-1">Validation Rate</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <!-- Recent Shifts -->
                 <div class="col-lg-6">
@@ -976,6 +1018,14 @@ async function loadNarrativeDrift() {
             document.getElementById('narrativeAlerts').textContent = d.active_alerts || 0;
             document.getElementById('narrativeDomains').textContent = d.domains?.length || 0;
 
+            // Session 509: Mythology validation stats
+            const mythology = d.mythology || {};
+            document.getElementById('mythologyVerifiedShifts').textContent = mythology.verified_shifts || 0;
+            document.getElementById('mythologyUnverifiedShifts').textContent = mythology.unverified_shifts || 0;
+            document.getElementById('mythologyAuthoritativeEvidence').textContent = mythology.authoritative_evidence || 0;
+            const validatorStats = mythology.validator_stats || {};
+            document.getElementById('mythologyValidationRate').textContent = (validatorStats.validation_rate || 0).toFixed(0);
+
             // Render shifts
             renderNarrativeShifts(d.recent_shifts || []);
 
@@ -998,15 +1048,25 @@ function renderNarrativeShifts(shifts) {
     let html = '<div class="list-group list-group-flush">';
     for (const shift of shifts) {
         const importanceColor = shift.importance >= 0.7 ? '#ef4444' : shift.importance >= 0.4 ? '#fbbf24' : '#34d399';
+        // Session 509: Verification status badge
+        const verifiedBadge = shift.verified
+            ? '<span class="badge me-2" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.65rem;"><i class="fas fa-check-circle me-1"></i>VERIFIED</span>'
+            : '<span class="badge me-2" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.65rem;"><i class="fas fa-exclamation-triangle me-1"></i>UNVERIFIED</span>';
+        // Session 509: Show source count
+        const sourceInfo = shift.unique_sources
+            ? `<span class="text-muted ms-2" style="font-size: 0.7rem;"><i class="fas fa-link me-1"></i>${shift.unique_sources} sources</span>`
+            : '';
         html += `
             <div class="list-group-item px-3 py-2" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center flex-wrap">
                             <span class="badge me-2" style="background: ${importanceColor}22; color: ${importanceColor}; border: 1px solid ${importanceColor};">
                                 ${(shift.importance * 100).toFixed(0)}%
                             </span>
+                            ${verifiedBadge}
                             <span class="text-light">${escapeHtml(shift.narrative)}</span>
+                            ${sourceInfo}
                         </div>
                         <small class="text-muted d-block mt-1">${escapeHtml(shift.summary)}</small>
                     </div>
