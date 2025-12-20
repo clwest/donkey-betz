@@ -681,6 +681,172 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                     'description': 'Synthesize findings into go/no-go recommendation with action items'
                 }
             ]
+        },
+
+        # =========================================================================
+        # SESSION 496: Content Writing Workflows - Transform research into written content
+        # =========================================================================
+
+        # Write Blog Post from Research
+        'write_blog_post': {
+            'description': 'Transform research into a polished blog post',
+            'content_type': 'blog_post',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for insights and examples'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write the blog post based on research'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save content to a project'
+                }
+            ]
+        },
+
+        # Write Podcast Script from Research
+        'write_podcast_script': {
+            'description': 'Transform research into a conversational podcast script',
+            'content_type': 'podcast_script',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for talking points'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write the podcast script with segments and transitions'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save script to a project'
+                }
+            ]
+        },
+
+        # Write Video Script from Research
+        'write_video_script': {
+            'description': 'Transform research into a video script with scenes and narration',
+            'content_type': 'video_script',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for visual storytelling'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write video script with scenes, narration, and B-roll suggestions'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save script to a project'
+                }
+            ]
+        },
+
+        # Write Article from Research
+        'write_article': {
+            'description': 'Transform research into a professional article',
+            'content_type': 'article',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for depth and accuracy'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write the article with headline, lead, body, and CTA'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save article to a project'
+                }
+            ]
+        },
+
+        # Write Social Thread from Research
+        'write_social_thread': {
+            'description': 'Transform research into a viral social media thread',
+            'content_type': 'social_thread',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for engaging insights'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write connected social posts with hooks and hashtags'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save thread to a project'
+                }
+            ]
+        },
+
+        # Write Newsletter from Research
+        'write_newsletter': {
+            'description': 'Transform research into an email newsletter',
+            'content_type': 'newsletter',
+            'no_image_generation': True,
+            'steps': [
+                {
+                    'step': 1,
+                    'name': 'research',
+                    'agent': 'web_search',
+                    'description': 'Research the topic for newsletter content'
+                },
+                {
+                    'step': 2,
+                    'name': 'write_content',
+                    'agent': 'content_writer_agent',
+                    'description': 'Write newsletter with subject, preview, sections, and CTA'
+                },
+                {
+                    'step': 3,
+                    'name': 'create_project',
+                    'agent': 'create_project_from_research',
+                    'description': 'Save newsletter to a project'
+                }
+            ]
         }
     }
 
@@ -1101,6 +1267,10 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
         # Session 212: New workflow step handlers
         elif agent_name == 'image_variation_agent':
             return self._execute_image_variation_step(context)
+
+        # Session 496: Content Writer Agent for written content
+        elif agent_name == 'content_writer_agent':
+            return self._execute_content_writer_step(context)
 
         else:
             return {
@@ -2896,6 +3066,94 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
 
         except Exception as e:
             logger.error(f"Image variation failed: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # SESSION 496: CONTENT WRITER STEP HANDLER
+    # =========================================================================
+
+    def _execute_content_writer_step(self, context: Dict) -> Dict[str, Any]:
+        """
+        Execute the ContentWriterAgent to generate written content from research.
+
+        Session 496: Transforms research into blog posts, podcast scripts,
+        video scripts, articles, social threads, or newsletters.
+
+        Uses the research_summary from the research step (or provided_research)
+        to generate polished, ready-to-publish written content.
+        """
+        topic = context.get('topic', '')
+        content_type = context.get('content_type', 'blog_post')
+        research = context.get('research_summary', '') or context.get('provided_research', '')
+        tone = context.get('tone', 'professional')
+        target_audience = context.get('target_audience', 'general audience')
+        word_count = context.get('word_count', 1500)
+
+        logger.info(f"📝 Session 496: Content Writer step")
+        logger.info(f"   Topic: {topic}")
+        logger.info(f"   Content Type: {content_type}")
+        logger.info(f"   Research length: {len(research)} chars")
+        logger.info(f"   Tone: {tone}, Audience: {target_audience}")
+
+        if not research and not topic:
+            return {
+                'success': False,
+                'error': 'No research or topic provided for content writing'
+            }
+
+        try:
+            from core.agents.content_writer_agent import ContentWriterAgent
+
+            agent = ContentWriterAgent(
+                user=self.user,
+                project_id=self.project_id
+            )
+
+            # Build agent context
+            agent_context = {
+                'content_type': content_type,
+                'research': research or f"Write about: {topic}",
+                'tone': tone,
+                'target_audience': target_audience,
+                'word_count': word_count,
+                'topic': topic,
+            }
+
+            # Execute the agent
+            result = agent.execute(
+                task=f"Write {content_type} about {topic}",
+                context=agent_context,
+                scifi_context={},
+                spider_context={}
+            )
+
+            if result.success:
+                # Store the generated content in context for project creation
+                content_data = result.data.get('content', {})
+                context['generated_content'] = content_data
+                context['content_full_text'] = content_data.get('full_text', '')
+                context['content_metadata'] = result.data.get('metadata', {})
+
+                # Log the content type and word count
+                actual_words = len(context.get('content_full_text', '').split())
+                logger.info(f"✅ Content Writer: Generated {content_type} ({actual_words} words)")
+
+                return {
+                    'success': True,
+                    'content': content_data,
+                    'content_type': content_type,
+                    'word_count': actual_words,
+                    'message': f"Successfully wrote {content_type}: {actual_words} words"
+                }
+            else:
+                logger.error(f"❌ Content Writer failed: {result.error}")
+                return {
+                    'success': False,
+                    'error': result.error or 'Content generation failed'
+                }
+
+        except Exception as e:
+            logger.error(f"Content writer step failed: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
 
     # =========================================================================

@@ -5,12 +5,16 @@ Smart Trending Service - Dynamic Topic Extraction & Spider Routing
 Session 495: Replaces hardcoded if/elif topic filters with dynamic matching.
 Works for ANY topic without needing code changes.
 
+Session 513: Added web search fallback for topics not covered by spiders.
+Now works for ANY topic (automotive, real estate, local markets, etc.)
+
 Features:
 1. Dynamic topic extraction from natural language queries
 2. Semantic matching to spider categories (with keyword fallback)
 3. Category-aware spider data fetching
 4. Caching layer for performance
 5. Trending keyword extraction
+6. Web search fallback when spider data is insufficient (Session 513)
 """
 
 import logging
@@ -210,6 +214,10 @@ class SmartTrendingService:
     CACHE_TTL = 3600  # 1 hour
     CACHE_PREFIX = 'smart_trending_'
 
+    # Session 513: Web search fallback settings
+    MIN_ARTICLES_THRESHOLD = 3  # Fall back to web search if fewer than this
+    WEB_SEARCH_ENABLED = True   # Toggle for web search fallback
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
@@ -258,6 +266,30 @@ class SmartTrendingService:
         # Fetch spider data for those categories
         articles = self._fetch_articles_for_categories(categories, hours, article_limit)
 
+        # Session 513: Check if we have enough RELEVANT spider data, otherwise use web search
+        used_web_search = False
+        should_fallback = False
+
+        if len(articles) < self.MIN_ARTICLES_THRESHOLD:
+            should_fallback = True
+            self.logger.info(f"Spider data insufficient ({len(articles)} articles)")
+        elif self.WEB_SEARCH_ENABLED and topic:
+            # Check if spider articles are actually relevant to the topic
+            relevance = self._check_article_relevance(articles, topic)
+            if relevance < 0.2:  # Less than 20% of articles mention topic keywords
+                should_fallback = True
+                self.logger.info(
+                    f"Spider data not relevant to '{topic}' (relevance={relevance:.1%}). "
+                    f"Falling back to web search."
+                )
+
+        if should_fallback and self.WEB_SEARCH_ENABLED:
+            web_results = self._web_search_fallback(query, topic, article_limit)
+            if web_results:
+                articles = web_results
+                used_web_search = True
+                self.logger.info(f"Web search returned {len(articles)} results for '{topic}'")
+
         # Extract trending keywords from articles
         trends = self._extract_trending_keywords(articles, topic)
 
@@ -266,7 +298,8 @@ class SmartTrendingService:
             'articles': articles,
             'categories': categories,
             'topic': topic,
-            'cache_hit': False
+            'cache_hit': False,
+            'used_web_search': used_web_search  # Session 513: Track data source
         }
 
         # Cache the result
@@ -279,29 +312,41 @@ class SmartTrendingService:
         """
         Extract the main topic from a natural language query.
 
+        Session 513: Improved to handle multi-word topics like "Honda Civics in Denver"
+
         Examples:
             "What's trending in startups?" -> "startups"
             "Tell me about AI trends" -> "ai"
-            "Show me cybersecurity news" -> "cybersecurity"
+            "What's trending for Honda Civics in Denver?" -> "honda civics denver"
         """
         query_lower = query.lower()
 
-        # Pattern 1: "trending in X" or "trends in X"
+        # Session 513: Enhanced patterns for multi-word topics (product + location)
         patterns = [
-            r"trending\s+in\s+([a-z\s\-]+?)(?:\?|$|\.|\s+and|\s+or)",
-            r"trends?\s+in\s+([a-z\s\-]+?)(?:\?|$|\.|\s+and|\s+or)",
-            r"what'?s?\s+(?:hot|new|happening)\s+in\s+([a-z\s\-]+?)(?:\?|$|\.)",
-            r"news\s+(?:about|on|in)\s+([a-z\s\-]+?)(?:\?|$|\.)",
-            r"(?:show|tell|give)\s+me\s+([a-z\s\-]+?)\s+(?:trends?|news|updates?)(?:\?|$|\.)",
-            r"([a-z\s\-]+?)\s+(?:trends?|news|updates?)(?:\?|$|\.)",
+            # "trending for X in Y" - captures product + location
+            r"trending\s+for\s+([a-z0-9\s\-]+?)\s+in\s+([a-z\s\-]+?)(?:\?|$|\.)",
+            # "trending in X" or "trends in X"
+            r"trending\s+in\s+([a-z0-9\s\-]+?)(?:\?|$|\.|\s+and|\s+or)",
+            r"trends?\s+in\s+([a-z0-9\s\-]+?)(?:\?|$|\.|\s+and|\s+or)",
+            r"what'?s?\s+(?:hot|new|happening)\s+in\s+([a-z0-9\s\-]+?)(?:\?|$|\.)",
+            r"news\s+(?:about|on|in|for)\s+([a-z0-9\s\-]+?)(?:\?|$|\.)",
+            r"(?:show|tell|give)\s+me\s+([a-z0-9\s\-]+?)\s+(?:trends?|news|updates?)(?:\?|$|\.)",
+            r"([a-z0-9\s\-]+?)\s+(?:trends?|news|updates?)(?:\?|$|\.)",
         ]
 
         for pattern in patterns:
             match = re.search(pattern, query_lower)
             if match:
-                topic = match.group(1).strip()
-                # Clean up common words
-                topic = re.sub(r'\b(the|a|an|some|any|latest|recent|current)\b', '', topic).strip()
+                # Handle patterns with multiple groups (product + location)
+                if len(match.groups()) > 1 and match.group(2):
+                    topic = f"{match.group(1).strip()} {match.group(2).strip()}"
+                else:
+                    topic = match.group(1).strip()
+
+                # Clean up common filler words
+                topic = re.sub(r'\b(the|a|an|some|any|latest|recent|current|is|are|what)\b', '', topic).strip()
+                # Clean up multiple spaces
+                topic = ' '.join(topic.split())
                 if topic and len(topic) > 1:
                     return topic
 
@@ -316,12 +361,16 @@ class SmartTrendingService:
             if alias in query_lower:
                 return alias
 
-        # Default: try to find the last noun-like word before ?
-        words = re.findall(r'\b([a-z]{3,})\b', query_lower)
-        stopwords = {'what', 'trending', 'trends', 'tell', 'show', 'give', 'about', 'the', 'and', 'for'}
+        # Session 513: Better fallback - extract noun phrases, not just last word
+        # Remove question words and common verbs
+        stopwords = {'what', 'whats', "what's", 'trending', 'trends', 'tell', 'show',
+                     'give', 'about', 'the', 'and', 'for', 'in', 'is', 'are', 'me'}
+        words = re.findall(r'\b([a-z0-9]{2,})\b', query_lower)
         meaningful_words = [w for w in words if w not in stopwords]
+
+        # Return meaningful words as a phrase (up to 4 words)
         if meaningful_words:
-            return meaningful_words[-1]
+            return ' '.join(meaningful_words[:4])
 
         return ''  # No topic found
 
@@ -565,6 +614,152 @@ class SmartTrendingService:
         ][:15]
 
         return trending
+
+    def _check_article_relevance(
+        self,
+        articles: List[Dict[str, Any]],
+        topic: str
+    ) -> float:
+        """
+        Session 513: Check if articles are actually relevant to the topic.
+
+        Returns a relevance score between 0.0 and 1.0.
+        Low score means spider data is probably not useful for this topic.
+
+        Args:
+            articles: List of article dicts
+            topic: The extracted topic
+
+        Returns:
+            Float between 0.0 (no relevance) and 1.0 (all articles relevant)
+        """
+        if not articles or not topic:
+            return 0.0
+
+        # Split topic into keywords
+        topic_keywords = set(topic.lower().split())
+        # Remove very short words
+        topic_keywords = {kw for kw in topic_keywords if len(kw) > 2}
+
+        if not topic_keywords:
+            return 0.0
+
+        relevant_count = 0
+
+        for article in articles:
+            title = article.get('title', '').lower()
+            summary = article.get('summary', '').lower()
+            text = f"{title} {summary}"
+
+            # Check if any topic keyword appears in the article
+            if any(kw in text for kw in topic_keywords):
+                relevant_count += 1
+
+        relevance = relevant_count / len(articles)
+        self.logger.debug(f"Topic '{topic}' relevance: {relevant_count}/{len(articles)} = {relevance:.1%}")
+        return relevance
+
+    def _web_search_fallback(
+        self,
+        query: str,
+        topic: str,
+        limit: int = 15
+    ) -> List[Dict[str, Any]]:
+        """
+        Session 513: Fallback to web search when spider data is insufficient.
+
+        Uses DuckDuckGo via WebSearchTool to get real-time results for ANY topic.
+        This enables the platform to work for automotive, real estate, local markets,
+        or any other vertical not covered by the spider network.
+
+        Args:
+            query: The original user query
+            topic: The extracted topic
+            limit: Max results to return
+
+        Returns:
+            List of article dicts in the same format as spider data
+        """
+        try:
+            from core.tools.web_search import WebSearchTool
+
+            search_tool = WebSearchTool()
+            if not search_tool.is_configured:
+                self.logger.warning("WebSearchTool not configured, cannot fallback")
+                return []
+
+            # Build a search query focused on trends/news
+            search_query = f"{topic} trends news {datetime.now().year}"
+            if 'trending' not in query.lower():
+                search_query = f"trending {topic} latest news"
+
+            self.logger.info(f"Web search fallback query: '{search_query}'")
+
+            # Try news search first for more relevant results
+            result = search_tool.execute(
+                query=search_query,
+                search_type='news',
+                max_results=limit
+            )
+
+            articles = []
+
+            if result.get('success') and result.get('data', {}).get('results'):
+                for item in result['data']['results'][:limit]:
+                    # Skip synthetic/fallback results
+                    if item.get('method') == 'synthetic_fallback':
+                        continue
+
+                    articles.append({
+                        'title': item.get('title', ''),
+                        'url': item.get('url', ''),
+                        'source': item.get('source', 'Web Search'),
+                        'summary': item.get('snippet', item.get('body', ''))[:300],
+                        'published': item.get('date', ''),
+                        'created_at': datetime.now().isoformat(),
+                        'search_method': 'web_search_fallback'
+                    })
+
+            # If news search didn't get enough, try text search
+            if len(articles) < 5:
+                text_result = search_tool.execute(
+                    query=search_query,
+                    search_type='text',
+                    max_results=limit
+                )
+
+                if text_result.get('success') and text_result.get('data', {}).get('results'):
+                    seen_titles = {a['title'].lower()[:50] for a in articles}
+
+                    for item in text_result['data']['results']:
+                        if item.get('method') == 'synthetic_fallback':
+                            continue
+
+                        title = item.get('title', '')
+                        if title.lower()[:50] not in seen_titles:
+                            articles.append({
+                                'title': title,
+                                'url': item.get('url', ''),
+                                'source': item.get('source', 'Web Search'),
+                                'summary': item.get('snippet', '')[:300],
+                                'published': '',
+                                'created_at': datetime.now().isoformat(),
+                                'search_method': 'web_search_fallback'
+                            })
+                            seen_titles.add(title.lower()[:50])
+
+                        if len(articles) >= limit:
+                            break
+
+            self.logger.info(f"Web search fallback returned {len(articles)} articles")
+            return articles
+
+        except ImportError:
+            self.logger.error("WebSearchTool not available for fallback")
+            return []
+        except Exception as e:
+            self.logger.error(f"Web search fallback failed: {e}")
+            return []
 
     def get_categories(self) -> Dict[str, List[str]]:
         """Return all available categories and their keywords for debugging."""

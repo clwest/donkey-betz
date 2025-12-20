@@ -603,7 +603,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "workflow_orchestration_agent",
-                "description": "⚡ MANDATORY for ANY 'research + create/generate IMAGE' requests! If user says BOTH 'research' AND 'create/generate/make IMAGES/LOGOS/THUMBNAILS', you MUST use this agent. Examples that REQUIRE this agent: 'Research trending logos and generate a logo', 'Research AI trends and create images', 'Look up design trends and make me logos'. This agent handles the ENTIRE workflow: research → executive review → image generation → PROJECT CREATION. NEVER call web_search + coleadership_agent + image_generation_agent separately - use THIS ONE agent for the complete workflow! Available workflows: 'research_and_create_logos' (for logo requests), 'research_and_create_images' (for artwork/illustrations), 'youtube_thumbnail_package', 'brand_identity_package', 'product_photography_kit', 'logo_to_video'. ⛔ DO NOT USE THIS for saving/organizing existing analysis to a project - use create_project_from_research instead! 📊 SESSION 495: If user says 'create content based on this research' with '--- RESEARCH CONTEXT ---' in the message, EXTRACT THE TOPIC from the research (e.g., 'AI startups' from 'AI startup trends') and pass the FULL message including RESEARCH CONTEXT to user_message - the workflow will use the provided research instead of doing new research!",
+                "description": "⚡ FOR VISUAL/IMAGE CONTENT ONLY! Use ONLY when user wants IMAGES, LOGOS, THUMBNAILS, or VIDEOS generated from research. Examples: 'Research AI and create logos', 'Make thumbnails about tech'. ⛔ NEVER USE for written content like blog posts, articles, podcast scripts, newsletters - use content_writer_agent instead! Available workflows: 'research_and_create_logos', 'research_and_create_images', 'youtube_thumbnail_package', 'brand_identity_package', 'product_photography_kit', 'logo_to_video'. All of these produce IMAGES/VIDEOS, not written text!",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -639,6 +639,47 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                         }
                     },
                     "required": ["workflow", "topic", "user_message"]
+                }
+            },
+
+            # Session 496: Content Writer Agent - Transform research into written content
+            {
+                "type": "function",
+                "name": "content_writer_agent",
+                "description": "📝 MANDATORY for WRITTEN TEXT content! Use when user says 'write', 'blog post', 'podcast script', 'video script', 'article', 'newsletter', 'social thread'. ⚡ TRIGGER PHRASES: 'write a blog post', 'write a podcast script', 'write a video script', 'create a blog', 'turn into article', 'make a newsletter'. This produces WRITTEN TEXT (not images!). If message contains '--- RESEARCH CONTEXT ---', extract topic from research and use it as source material. Output: ready-to-publish text content with title, sections, and formatting.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["blog_post", "podcast_script", "video_script", "article", "social_thread", "newsletter"],
+                            "description": "Type of content to create: 'blog_post' (SEO-optimized blog), 'podcast_script' (conversational with segments), 'video_script' (scenes and narration), 'article' (professional with headline/lead/CTA), 'social_thread' (connected posts with hashtags), 'newsletter' (email with subject/preview/sections)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "The main topic to write about. If message contains '--- RESEARCH CONTEXT ---', extract the PRIMARY TOPIC from the research."
+                        },
+                        "tone": {
+                            "type": "string",
+                            "enum": ["professional", "conversational", "educational", "entertaining", "persuasive", "technical"],
+                            "default": "professional",
+                            "description": "Writing tone: 'professional' (clear, authoritative), 'conversational' (friendly, approachable), 'educational' (informative, patient), 'entertaining' (engaging, witty), 'persuasive' (compelling, action-oriented), 'technical' (precise, detailed)"
+                        },
+                        "target_audience": {
+                            "type": "string",
+                            "description": "Who the content is for (e.g., 'tech entrepreneurs', 'general audience', 'marketing professionals')"
+                        },
+                        "word_count": {
+                            "type": "integer",
+                            "default": 1500,
+                            "description": "Approximate word count for the content"
+                        },
+                        "research_context": {
+                            "type": "string",
+                            "description": "CRITICAL: If message contains '--- RESEARCH CONTEXT ---', pass the FULL research content here. This will be used as the source material for the written content."
+                        }
+                    },
+                    "required": ["content_type", "topic"]
                 }
             },
 
@@ -1236,6 +1277,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'competitor_analysis_agent', 'customer_research_agent',
                 # Session 337: Brand strategy agent
                 'brand_strategy_agent',
+                # Session 496: Content Writer Agent - written content from research
+                'content_writer_agent',
             }
 
             if function_name in ROUTER_ENABLED_TOOLS:
@@ -1287,6 +1330,12 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_web_search(arguments)
             elif function_name == 'create_brand_video':
                 result = self._handle_create_brand_video(arguments)
+            # Session 496: Workflow orchestration agent legacy handler
+            elif function_name == 'workflow_orchestration_agent':
+                result = self._handle_workflow_orchestration_agent(arguments)
+            # Session 496: Content writer agent legacy handler
+            elif function_name == 'content_writer_agent':
+                result = self._handle_content_writer_agent(arguments)
             # Session 189: Create project from research workflow
             elif function_name == 'create_project_from_research':
                 result = self._handle_create_project_from_research(arguments)
@@ -4708,6 +4757,178 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.error(f"❌ Create brand video error: {e}")
             import traceback
             traceback.print_exc()
+            return {'success': False, 'error': str(e)}
+
+    def _handle_workflow_orchestration_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle workflow_orchestration_agent tool - Session 496 (legacy fallback).
+
+        Executes creative workflows like research_and_create_logos, youtube_thumbnail_package, etc.
+        This is a fallback handler if the AgentRouter.execute_tool() fails.
+        """
+        logger.info(f"🔄 WORKFLOW_ORCHESTRATION_AGENT TOOL CALLED (legacy handler)")
+        logger.info(f"📋 Arguments: {arguments}")
+
+        try:
+            from core.agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+
+            workflow = arguments.get('workflow', 'research_and_create_images')
+            topic = arguments.get('topic', '')
+            count = arguments.get('count', 3)
+            style_preferences = arguments.get('style_preferences', '')
+            user_message = arguments.get('user_message', '')
+            project_id = arguments.get('project_id')
+
+            # Get current project if not provided
+            if not project_id:
+                current_project = getattr(self, 'project', None)
+                if current_project:
+                    project_id = str(current_project.id)
+
+            # Create agent instance
+            agent = WorkflowOrchestrationAgent(
+                user=self.user,
+                project_id=project_id
+            )
+
+            # Build context
+            context = {
+                'workflow': workflow,
+                'topic': topic,
+                'count': count,
+                'style_preferences': style_preferences,
+                'user_message': user_message,
+            }
+
+            logger.info(f"🎯 Executing workflow: {workflow} for topic: {topic}")
+            logger.info(f"📝 User message length: {len(user_message)} chars")
+
+            # Check if research context is present
+            if '--- RESEARCH CONTEXT ---' in user_message:
+                logger.info(f"📊 Research context detected in user_message!")
+
+            # Execute workflow
+            result = agent.execute(
+                task=user_message or topic,
+                context=context,
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Convert AgentResult to dict
+            if result.success:
+                return {
+                    'success': True,
+                    'message': result.message,
+                    'data': result.data,
+                    'agent_name': result.agent_name
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.error
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Workflow orchestration agent error: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    def _handle_content_writer_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle content_writer_agent tool - Session 496.
+
+        Transforms research into written content: blog posts, podcast scripts,
+        video scripts, articles, social threads, newsletters.
+        """
+        logger.info(f"📝 CONTENT_WRITER_AGENT TOOL CALLED!")
+        logger.info(f"📋 Arguments: {arguments}")
+
+        try:
+            from core.agents.content_writer_agent import ContentWriterAgent
+
+            content_type = arguments.get('content_type', 'blog_post')
+            # Session 496: Tool definition uses 'topic', but also accept 'task' for compatibility
+            task = arguments.get('topic', '') or arguments.get('task', '')
+            tone = arguments.get('tone', 'professional')
+            target_audience = arguments.get('target_audience', 'general audience')
+            word_count = arguments.get('word_count', 1500)
+            research = arguments.get('research_context', '')
+
+            # Get current project if not provided
+            project_id = arguments.get('project_id')
+            if not project_id:
+                current_project = getattr(self, 'project', None)
+                if current_project:
+                    project_id = str(current_project.id)
+
+            # Create agent instance
+            agent = ContentWriterAgent(
+                user=self.user,
+                project_id=project_id
+            )
+
+            # Build context
+            context = {
+                'content_type': content_type,
+                'research': research,
+                'tone': tone,
+                'target_audience': target_audience,
+                'word_count': word_count,
+                'task': task,
+            }
+
+            logger.info(f"🎯 Writing {content_type}: {task}")
+            logger.info(f"📝 Research context length: {len(research)} chars")
+
+            # Execute content writing
+            result = agent.execute(
+                task=task or f"Write {content_type}",
+                context=context,
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Session 496: Convert AgentResult to dict with proper structure for frontend
+            # Must match pattern from CompetitorAnalysisAgent for proper display
+            if result.success:
+                content_data = result.data.get('content', {})
+                full_text = content_data.get('full_text', '') if isinstance(content_data, dict) else str(content_data)
+
+                # Build response with proper structure for frontend
+                response = {
+                    'success': True,
+                    'message': result.message,
+                    'delegated_to': 'ContentWriterAgent',  # Session 496: For SuperPlatformCoordinator
+                    'agents_used': ['ContentWriterAgent'],  # Session 496: Include agent tracking
+                    'metadata': {
+                        'agent_result': {
+                            'success': result.success,
+                            'message': result.message,
+                            'data': result.data,  # Contains {content, metadata}
+                            'agent_name': result.agent_name,
+                            'execution_time_ms': result.execution_time_ms,
+                            'decisions_made': result.decisions_made,
+                            'tool_calls': getattr(result, 'tool_calls', [])
+                        }
+                    },
+                    'content_type': content_type,
+                    'content': content_data,
+                    'full_text': full_text,
+                    'data': result.data  # Also at top level for legacy compatibility
+                }
+
+                logger.info(f"📝 Returning success response with {content_type}")
+                logger.info(f"📝 Full text length: {len(full_text)} chars")
+                return response
+            else:
+                logger.error(f"📝 Agent returned failure: {result.error}")
+                return {
+                    'success': False,
+                    'error': result.error or 'Content writing failed'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Content writer agent error: {e}", exc_info=True)
             return {'success': False, 'error': str(e)}
 
     # Session 128: Updated to use Audio Generation Agent

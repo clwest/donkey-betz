@@ -45,28 +45,42 @@ class SmartSuggestionsService:
     # Suggestion templates by action type
     SUGGESTION_TEMPLATES = {
         'research': [
+            # Session 496: Written content options (highest priority)
             Suggestion(
-                text="Would you like me to create content based on this research?",
+                text="Would you like me to write a blog post based on this research?",
+                action_type='create',
+                priority=10,
+                metadata={'next_action': 'write_blog_post', 'content_type': 'blog_post'}
+            ),
+            Suggestion(
+                text="Should I write a podcast script from this research?",
                 action_type='create',
                 priority=9,
-                metadata={'next_action': 'content_creation'}
+                metadata={'next_action': 'write_podcast_script', 'content_type': 'podcast_script'}
             ),
+            Suggestion(
+                text="Would you like me to write a video script from this research?",
+                action_type='create',
+                priority=8,
+                metadata={'next_action': 'write_video_script', 'content_type': 'video_script'}
+            ),
+            # Visual content options
             Suggestion(
                 text="Should I generate a visual summary or infographic?",
                 action_type='create',
-                priority=8,
+                priority=7,
                 metadata={'next_action': 'image_generation'}
             ),
             Suggestion(
                 text="Would you like me to dive deeper into any of these topics?",
                 action_type='research',
-                priority=7,
+                priority=6,
                 metadata={'next_action': 'more_research'}
             ),
             Suggestion(
                 text="Should I save this research to a project for future reference?",
                 action_type='export',
-                priority=6,
+                priority=5,
                 metadata={'next_action': 'save_project'}
             ),
         ],
