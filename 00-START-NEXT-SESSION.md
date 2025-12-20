@@ -14,6 +14,17 @@
 - **Scan Window**: Increased from 6h to 12h for better detection rates
 - **Duplicate Prevention**: Added check to avoid creating same shift multiple times
 
+### UI Fixes
+- **Active Count**: Fixed to sum emerging + dominant + shifting (was showing 0)
+- **Domain Colors**: Updated mapping to match actual domain names (politics, markets, tech, culture, etc.)
+
+### Enhanced Sentiment Detection (NarrativeSentimentAnalyzer)
+- **100+ weighted keywords** (strong=2.0, standard=1.0, mild=0.5)
+- **6 domain-specific vocabularies** (tech, markets, politics, crypto, climate, health)
+- **Negation detection** ("not successful" → contradicts)
+- **Contradiction phrases** ("despite claims", "myth", "hype")
+- **Confidence scoring** with 30% margin requirement
+
 ### Verification Results
 - Before fix: 1 NarrativeShift (total ever)
 - After fix: 3 NarrativeShifts (2 new created)
@@ -68,17 +79,19 @@ open http://localhost:8000/ai-studio/
 
 | File | Changes |
 |------|---------|
-| `core/agents/narrative/narrative_drift_coordinator.py` | Added NarrativeShift record creation, increased scan window to 12h |
+| `core/agents/narrative/narrative_drift_coordinator.py` | Added NarrativeShift record creation, scan window 12h, NarrativeSentimentAnalyzer (~190 lines) |
+| `ai_core/templates/components/panels/autonomous_dashboard_panel.html` | Fixed "Active" count calculation, updated domain colors |
 
 ---
 
 ## Ideas for Session 507+
 
-1. Improve sentiment detection in `_process_new_spider_data()` to better identify contradicting evidence
-2. Add more narrative-specific keywords for better evidence matching
+1. ~~Improve sentiment detection~~ - **DONE** (NarrativeSentimentAnalyzer with 100+ keywords)
+2. Consider Huggingface sentiment model for ML-based detection (optional)
 3. Continue Discord vs Web feature parity work
-4. Add monitoring to track spider execution success rates
-5. Continue standardizing spider patterns across the codebase
+4. Add Discord commands for Narrative Drift monitoring
+5. Add more narratives to track across different domains
+6. Continue standardizing spider patterns across the codebase
 
 ---
 
@@ -89,7 +102,10 @@ open http://localhost:8000/ai-studio/
 |   Narrative Drift Detection Fix:                                    |
 |   - Fixed: Shifts now create database records                       |
 |   - Increased scan window from 6h to 12h                            |
-|   - Verified: 2 new NarrativeShifts created                         |
+|   - Fixed: UI "Active" count and domain colors                      |
+|   - NEW: NarrativeSentimentAnalyzer (100+ keywords, negation,       |
+|          domain-specific vocabularies, confidence scoring)          |
+|   - Verified: 3 NarrativeShifts now in database                     |
 |                                                                    |
 |   See: docs/handoffs/SESSION_506_NARRATIVE_DRIFT_FIX.md             |
 +====================================================================+
