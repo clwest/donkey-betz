@@ -18,7 +18,10 @@
 
 **Solution:**
 1. Fixed key mismatch: `trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])`
-2. Added explicit year instruction: `**IMPORTANT: This content is for 2025. DO NOT reference 2023 or 2024.**`
+2. Added **dynamic** year instruction using `datetime.now()`:
+   - `year = now.year` → 2025 (auto-updates to 2026, etc.)
+   - `old_years = f"{year-2} or {year-1}"` → "2023 or 2024" (auto-updates)
+   - `month_year = now.strftime('%B %Y')` → "December 2025" (auto-updates)
 3. Added published dates to articles: `(Source: X - Published: 2025-12-21)`
 4. Added debug logging to trace the flow
 
@@ -26,7 +29,7 @@
 
 | File | Changes |
 |------|---------|
-| `core/personal_ai_assistant_enhanced.py` | Fixed key mismatch, added year instruction, added debug logging |
+| `core/personal_ai_assistant_enhanced.py` | Fixed key mismatch, dynamic year instructions, debug logging |
 
 **Test Result:**
 - Before: "Top AI Trends Transforming Industries in 2023"
