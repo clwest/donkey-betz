@@ -175,7 +175,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             {
                 "type": "function",
                 "name": "image_generation_agent",
-                "description": "Generate BRAND NEW images from scratch using text prompts. CRITICAL: Use this agent whenever user wants to CREATE/GENERATE/MAKE images that don't exist yet: 'create banner', 'generate logo', 'make social media post', 'design avatar', 'create profile picture', 'create images matching style', etc. This generates NEW images, not modifications of existing ones. Supports custom dimensions (width/height), quality levels, style preferences, and multiple images. Use this for ALL new image creation requests, even if they mention matching a style.",
+                "description": "Generate BRAND NEW images from scratch using text prompts. CRITICAL: Use this agent whenever user wants to CREATE/GENERATE/MAKE images that don't exist yet: 'create banner', 'generate logo', 'make social media post', 'design avatar', 'create profile picture', 'create images matching style', 'header image', etc. This generates NEW images, not modifications of existing ones. ⚠️ MULTI-TOOL: If user asks for 'blog post + header image' or 'article with banner', call BOTH content_writer_agent AND this tool. Supports custom dimensions (width/height), quality levels, style preferences, and multiple images.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -643,10 +643,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             },
 
             # Session 496: Content Writer Agent - Transform research into written content
+            # Session 521: Upgraded to use real-time spider data + instruct to call image agent separately
             {
                 "type": "function",
                 "name": "content_writer_agent",
-                "description": "📝 MANDATORY for WRITTEN TEXT content! Use when user says 'write', 'blog post', 'podcast script', 'video script', 'article', 'newsletter', 'social thread'. ⚡ TRIGGER PHRASES: 'write a blog post', 'write a podcast script', 'write a video script', 'create a blog', 'turn into article', 'make a newsletter'. This produces WRITTEN TEXT (not images!). If message contains '--- RESEARCH CONTEXT ---', extract topic from research and use it as source material. Output: ready-to-publish text content with title, sections, and formatting.",
+                "description": "📝 MANDATORY for WRITTEN TEXT content! Use when user says 'write', 'blog post', 'podcast script', 'video script', 'article', 'newsletter', 'social thread'. ⚡ TRIGGER PHRASES: 'write a blog post', 'write a podcast script', 'write a video script', 'create a blog', 'turn into article', 'make a newsletter'. This produces WRITTEN TEXT using REAL-TIME spider data (no more 2023 dates!). ⚠️ IMPORTANT: If user ALSO asks for an image/header/banner, you MUST call BOTH this tool AND image_generation_agent separately. Example: 'write a blog post about AI and create a header image' requires TWO tool calls. Output: ready-to-publish text content with title, sections, and formatting based on current trends.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -4845,6 +4846,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
     def _handle_content_writer_agent(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Handle content_writer_agent tool - Session 496.
+        Session 521: Now fetches REAL spider data for current trends!
 
         Transforms research into written content: blog posts, podcast scripts,
         video scripts, articles, social threads, newsletters.
@@ -4854,6 +4856,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
         try:
             from core.agents.content_writer_agent import ContentWriterAgent
+            from datetime import datetime
 
             content_type = arguments.get('content_type', 'blog_post')
             # Session 496: Tool definition uses 'topic', but also accept 'task' for compatibility
@@ -4862,6 +4865,58 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             target_audience = arguments.get('target_audience', 'general audience')
             word_count = arguments.get('word_count', 1500)
             research = arguments.get('research_context', '')
+
+            # Session 521: Fetch REAL spider data if no research provided
+            spider_context = {}
+            if not research and task:
+                logger.info(f"🕷️ Session 521: Fetching real-time spider data for topic: {task}")
+                try:
+                    from core.services.smart_trending_service import SmartTrendingService
+                    trending_service = SmartTrendingService()
+                    trending_data = trending_service.get_trending_for_query(
+                        query=task,
+                        hours=72,
+                        article_limit=10,
+                        use_cache=True
+                    )
+
+                    # Build research context from spider data
+                    if trending_data:
+                        spider_context = trending_data
+                        # Format spider data as research context
+                        research_parts = [
+                            f"## Real-Time Research Data (as of {datetime.now().strftime('%B %d, %Y')})\n"
+                        ]
+
+                        # Add trending topics/keywords
+                        if trending_data.get('trending_keywords'):
+                            research_parts.append("### Current Trending Topics:")
+                            for kw in trending_data.get('trending_keywords', [])[:10]:
+                                research_parts.append(f"- {kw}")
+
+                        # Add articles with real data
+                        articles = trending_data.get('articles', [])
+                        if articles:
+                            research_parts.append(f"\n### Latest Articles ({len(articles)} found):")
+                            for i, article in enumerate(articles[:8], 1):
+                                title = article.get('title', 'Unknown')
+                                source = article.get('source', 'Unknown')
+                                summary = article.get('summary', article.get('content', ''))[:200]
+                                research_parts.append(f"\n**{i}. {title}** (Source: {source})")
+                                if summary:
+                                    research_parts.append(f"   {summary}...")
+
+                        # Add categories matched
+                        if trending_data.get('categories'):
+                            research_parts.append(f"\n### Relevant Categories: {', '.join(trending_data['categories'])}")
+
+                        research = "\n".join(research_parts)
+                        logger.info(f"📊 Session 521: Built {len(research)} chars of research from spider data")
+                        logger.info(f"📊 Found {len(articles)} articles, {len(trending_data.get('trending_keywords', []))} keywords")
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Session 521: Spider data fetch failed: {e}")
+                    # Continue without spider data
 
             # Get current project if not provided
             project_id = arguments.get('project_id')
@@ -4894,7 +4949,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 task=task or f"Write {content_type}",
                 context=context,
                 scifi_context={},
-                spider_context={}
+                spider_context=spider_context
             )
 
             # Session 496: Convert AgentResult to dict with proper structure for frontend

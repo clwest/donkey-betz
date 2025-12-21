@@ -73,12 +73,42 @@ PATCH /api/projects/{id}/update-content/  # Edit content
 |------|---------|
 | `ai_core/templates/ai_image_studio.html` | Added image display section + JS function |
 
+### 4. Real-Time Spider Data for ContentWriterAgent (DONE!)
+
+**Problem Fixed:** ContentWriterAgent was writing content about "2023 AI trends" instead of current 2025 data.
+
+**Solution:**
+- `_handle_content_writer_agent` now fetches real-time data from `SmartTrendingService`
+- Falls back to DuckDuckGo web search when spider data isn't fresh enough
+- Injects trending articles, keywords, and categories into research context
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `core/personal_ai_assistant_enhanced.py` | +50 lines in `_handle_content_writer_agent` |
+
+### 5. Multi-Tool Calling for Blog+Image (DONE!)
+
+**Problem Fixed:** GPT wasn't calling both `content_writer_agent` AND `image_generation_agent` when user asked for "blog post with header image".
+
+**Solution:**
+- Updated tool descriptions to explicitly instruct GPT to call BOTH tools
+- Added "MULTI-TOOL" warning in image_generation_agent description
+- Added example in content_writer_agent description
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `core/personal_ai_assistant_enhanced.py` | Updated tool descriptions (lines 177-178, 649-650) |
+
 **Test Command:**
 ```
 "Write a blog post about AI trends and create a header image for it"
 ```
 
-### 4. CLAUDE.md Cleanup
+### 6. CLAUDE.md Cleanup
 
 Reduced from 537 → 160 lines (70% smaller)
 
@@ -150,11 +180,12 @@ Export entire projects as zip or share links
 |   1. Content Export: Download in 4 formats (md/txt/docx/pdf)       |
 |   2. Content Editing: Full modal editor with sections              |
 |   3. Multi-Content Projects: Blog + Images in same project!        |
-|   4. CLAUDE.md: Cleaned up 70%                                     |
+|   4. Real-Time Spider Data: No more 2023 in AI articles!           |
+|   5. Multi-Tool Calling: GPT now calls both tools for blog+image   |
+|   6. CLAUDE.md: Cleaned up 70%                                     |
 |                                                                    |
-|   New Features:                                                    |
-|   - Generated Images section in project details                    |
-|   - loadProjectGeneratedImages() function                          |
-|   - Collapsible section with thumbnail grid                        |
+|   Fixes Applied:                                                   |
+|   - ContentWriterAgent fetches real trends from SmartTrending      |
+|   - Tool descriptions guide GPT to call multiple tools             |
 +====================================================================+
 ```
