@@ -91,13 +91,39 @@ def projects_list(request):
             file_count = len(project.workflow_steps) * 2 if project.workflow_steps else 5
             total_files += file_count
 
+            # Session 520: Calculate overdue status
+            from django.utils import timezone
+            is_overdue = False
+            if project.deadline and project.deadline < timezone.now() and project.status not in ['completed', 'archived']:
+                is_overdue = True
+
+            # Session 520: Return CreativeProject-compatible format for UI
             projects_data.append({
                 'id': str(project.id),
-                'name': project.project_name,
+                'name': project.project_name,  # UI expects 'name'
                 'type': project.project_type,
                 'status': project.status,
-                'progress': project.human_contribution_percent,
                 'description': project.description[:200] if project.description else '',
+                'goal': project.goal or project.description[:100] if project.description else '',  # Session 520: UI expects 'goal'
+                'category': project.category or project.project_type.replace('_', ' ').title(),  # Session 520: UI expects 'category'
+                'colors': project.colors,  # Session 520: UI expects 'colors'
+                'tags': project.tags or [],  # Session 520: UI expects 'tags' as array
+                'deadline': project.deadline.isoformat() if project.deadline else None,  # Session 520: UI expects 'deadline'
+                'is_overdue': is_overdue,  # Session 520: UI expects 'is_overdue'
+                'progress_percentage': project.total_workflows and int((project.completed_workflows / project.total_workflows) * 100) or 0,  # Session 520
+                'total_workflows': project.total_workflows,  # Session 520: UI expects this
+                'completed_workflows': project.completed_workflows,  # Session 520: UI expects this
+                'is_shared': project.is_shared,
+                'is_quick_starts': project.is_quick_starts,
+                'metadata': project.metadata,  # Session 520: UI needs this for written_content display
+                'learning_enabled': project.learning_enabled,  # Session 520: For learning toggle
+                'learning_frequency': project.learning_frequency,
+                'last_learning_run': project.last_learning_run.isoformat() if project.last_learning_run else None,
+                'next_learning_run': project.next_learning_run.isoformat() if project.next_learning_run else None,
+                'learning_topics': project.learning_topics or [],
+                'learning_history': project.learning_history or [],
+                # Legacy fields for backwards compatibility
+                'progress': project.human_contribution_percent,
                 'target_audience': project.project_type.replace('_', ' ').title(),
                 'agents_used': agents_used,
                 'files': file_count,
@@ -195,18 +221,41 @@ def project_detail(request, project_id):
         is_complete = project.status == 'completed'
         has_features = len(key_features) > 0
 
+        # Session 520: Calculate overdue status
+        from django.utils import timezone
+        is_overdue = False
+        if project.deadline and project.deadline < timezone.now() and project.status not in ['completed', 'archived']:
+            is_overdue = True
+
+        # Session 520: Return CreativeProject-compatible format for UI
         project_data = {
             'id': str(project.id),
-            'name': project.project_name,
+            'name': project.project_name,  # UI expects 'name'
+            'type': project.project_type,
             'status': project.status,
-            'progress': project.human_contribution_percent,
             'description': project.description,
+            'goal': project.goal or project.description[:100] if project.description else '',  # Session 520: UI expects 'goal'
+            'category': project.category or project.project_type.replace('_', ' ').title(),  # Session 520: UI expects 'category'
+            'colors': project.colors,  # Session 520: UI expects 'colors'
+            'tags': project.tags or [],  # Session 520: UI expects 'tags' as array
+            'deadline': project.deadline.isoformat() if project.deadline else None,  # Session 520: UI expects 'deadline'
+            'is_overdue': is_overdue,  # Session 520: UI expects 'is_overdue'
+            'progress_percentage': project.total_workflows and int((project.completed_workflows / project.total_workflows) * 100) or 0,  # Session 520
+            'total_workflows': project.total_workflows,  # Session 520: UI expects this
+            'completed_workflows': project.completed_workflows,  # Session 520: UI expects this
+            'is_shared': project.is_shared,
+            'is_quick_starts': project.is_quick_starts,
+            'metadata': project.metadata,  # Session 520: UI needs this for written_content display
+            'created_at': project.created_at.isoformat(),
+            'updated_at': project.updated_at.isoformat(),
+            # Legacy fields for backwards compatibility
+            'progress': project.human_contribution_percent,
             'target_audience': project.project_type.replace('_', ' ').title(),
             'agents_used': agents_used,
             'key_features': key_features,
             'workflow_steps': project.workflow_steps,
-            'ai_contributions': project.ai_contributions[:10],  # Last 10
-            'human_contributions': project.human_contributions[:10],  # Last 10
+            'ai_contributions': project.ai_contributions[:10] if project.ai_contributions else [],  # Last 10
+            'human_contributions': project.human_contributions[:10] if project.human_contributions else [],  # Last 10
             'ai_contribution_percent': project.ai_contribution_percent,
             'human_contribution_percent': project.human_contribution_percent,
             'quality_score': project.quality_score,
@@ -242,6 +291,183 @@ def project_detail(request, project_id):
         }, status=404)
     except Exception as e:
         logger.error(f"❌ Error loading project detail: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# Session 520: Added update_project endpoint for PartnershipProject
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_project(request, project_id):
+    """
+    Update an existing project
+    Session 520: Added to support PartnershipProject updates from UI
+
+    PUT/PATCH /api/projects/<project_id>/update/
+    """
+    try:
+        user = request.user
+        project = PartnershipProject.objects.get(id=project_id, user=user)
+
+        # Update fields if provided
+        if 'name' in request.data:
+            project.project_name = request.data['name'].strip()
+
+        if 'description' in request.data:
+            project.description = request.data['description'].strip()
+
+        if 'goal' in request.data:
+            project.goal = request.data['goal'].strip()
+
+        if 'status' in request.data:
+            status = request.data['status']
+            valid_statuses = ['planning', 'in_progress', 'review', 'completed', 'archived', 'building']
+            if status in valid_statuses:
+                project.status = status
+
+        if 'deadline' in request.data:
+            from django.utils.dateparse import parse_datetime
+            deadline_str = request.data['deadline']
+            if deadline_str:
+                project.deadline = parse_datetime(deadline_str)
+            else:
+                project.deadline = None
+
+        if 'category' in request.data:
+            project.category = request.data['category']
+
+        if 'colors' in request.data:
+            project.colors = request.data['colors']
+
+        if 'tags' in request.data:
+            project.tags = request.data['tags']
+
+        project.save()
+
+        logger.info(f"✅ Updated project: {project.project_name}")
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.id),
+                'name': project.project_name,
+                'status': project.status,
+                'goal': project.goal,
+                'description': project.description,
+                'category': project.category,
+                'colors': project.colors,
+                'tags': project.tags,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+            }
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error updating project: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# Session 520: Added delete_project endpoint for PartnershipProject
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_project(request, project_id):
+    """
+    Delete a project
+    Session 520: Added to support PartnershipProject deletion from UI
+
+    DELETE /api/projects/<project_id>/delete/
+    """
+    try:
+        user = request.user
+        project = PartnershipProject.objects.get(id=project_id, user=user)
+
+        project_name = project.project_name
+        project.delete()
+
+        logger.info(f"🗑️ Deleted project: {project_name}")
+
+        return Response({
+            'success': True,
+            'message': f'Project "{project_name}" deleted successfully'
+        })
+
+    except PartnershipProject.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Project not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"❌ Error deleting project: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# Session 520: Added create_project endpoint for PartnershipProject
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_project(request):
+    """
+    Create a new project
+    Session 520: Added to support PartnershipProject creation from UI
+
+    POST /api/projects/create/
+    """
+    try:
+        user = request.user
+
+        name = request.data.get('name', '').strip()
+        if not name:
+            return Response({
+                'success': False,
+                'error': 'Project name is required'
+            }, status=400)
+
+        from django.utils.dateparse import parse_datetime
+
+        project = PartnershipProject.objects.create(
+            user=user,
+            project_name=name,
+            project_type=request.data.get('category', 'general'),
+            description=request.data.get('description', ''),
+            goal=request.data.get('goal', ''),
+            status=request.data.get('status', 'planning'),
+            category=request.data.get('category', ''),
+            colors=request.data.get('colors', ''),
+            tags=request.data.get('tags', []),
+            deadline=parse_datetime(request.data['deadline']) if request.data.get('deadline') else None,
+        )
+
+        logger.info(f"✅ Created project: {project.project_name}")
+
+        return Response({
+            'success': True,
+            'project': {
+                'id': str(project.id),
+                'name': project.project_name,
+                'status': project.status,
+                'goal': project.goal,
+                'description': project.description,
+                'category': project.category,
+                'colors': project.colors,
+                'tags': project.tags,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'created_at': project.created_at.isoformat(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error creating project: {e}")
         return Response({
             'success': False,
             'error': str(e)

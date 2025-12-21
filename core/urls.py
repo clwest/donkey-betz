@@ -99,6 +99,10 @@ from core.views_projects_api import (
     toggle_project_learning,
     get_project_learning_status,
     trigger_project_learning,
+    # Session 520: PartnershipProject CRUD endpoints
+    update_project as update_partnership_project,
+    delete_project as delete_partnership_project,
+    create_project as create_partnership_project,
 )
 
 # Import agent tracking API views (Session 120)
@@ -1263,7 +1267,10 @@ urlpatterns = [
 
     # Project Management APIs (Phase 3: Frontend Reality Fix)
     path('api/projects/', projects_list, name='projects-list'),
+    path('api/projects/create/', create_partnership_project, name='partnership-project-create'),  # Session 520
     path('api/projects/<uuid:project_id>/', project_detail, name='project-detail'),
+    path('api/projects/<uuid:project_id>/update/', update_partnership_project, name='partnership-project-update'),  # Session 520
+    path('api/projects/<uuid:project_id>/delete/', delete_partnership_project, name='partnership-project-delete'),  # Session 520
     path('api/projects/<uuid:project_id>/agents/', project_agents, name='project-agents'),
     path('api/projects/<uuid:project_id>/assign-agent/', assign_agent_to_project, name='assign-agent'),
     path('api/projects/from-research/', create_project_from_research, name='create-project-from-research'),  # Session 302
