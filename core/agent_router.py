@@ -659,8 +659,10 @@ class AgentRouter:
                     }
 
             # Session 496: Special handling for ContentWriterAgent
+            # Session 522: Added real-time spider data fetching
             if agent_name == 'ContentWriterAgent':
                 from core.agents.content_writer_agent import ContentWriterAgent
+                from datetime import datetime
 
                 project_id = None
                 if project:
@@ -678,6 +680,62 @@ class AgentRouter:
                     if len(parts) > 1:
                         research = parts[1].strip()
 
+                # Session 522: Fetch real-time spider data if no research provided
+                spider_context = {}
+                topic = arguments.get('topic', '')
+                if not research and topic:
+                    logger.info(f"🕷️ Session 522: Fetching real-time spider data for topic: {topic}")
+                    try:
+                        from core.services.smart_trending_service import SmartTrendingService
+                        trending_service = SmartTrendingService()
+                        trending_data = trending_service.get_trending_for_query(
+                            query=topic,
+                            hours=72,
+                            article_limit=10,
+                            use_cache=True
+                        )
+
+                        if trending_data:
+                            spider_context = trending_data
+                            now = datetime.now()
+                            today = now.strftime('%B %d, %Y')
+                            month_year = now.strftime('%B %Y')
+                            year = now.year
+                            old_years = f"{year-2} or {year-1}"
+
+                            research_parts = [
+                                f"## Real-Time Research Data (as of {today})",
+                                f"**IMPORTANT: This content is for {year}. DO NOT reference {old_years}.**\n"
+                            ]
+
+                            trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])
+                            if trends:
+                                research_parts.append(f"### Current Trending Topics ({month_year}):")
+                                for kw in trends[:10]:
+                                    research_parts.append(f"- {kw}")
+
+                            articles = trending_data.get('articles', [])
+                            if articles:
+                                research_parts.append(f"\n### Latest Articles ({len(articles)} found) - ALL FROM {year}:")
+                                for i, article in enumerate(articles[:8], 1):
+                                    title = article.get('title', 'Unknown')
+                                    source = article.get('source', 'Unknown')
+                                    pub_date = article.get('published', '')
+                                    summary = article.get('summary', article.get('content', ''))[:200]
+                                    date_str = f" - Published: {pub_date[:10]}" if pub_date else ""
+                                    research_parts.append(f"\n**{i}. {title}** (Source: {source}{date_str})")
+                                    if summary:
+                                        research_parts.append(f"   {summary}...")
+
+                            if trending_data.get('categories'):
+                                research_parts.append(f"\n### Relevant Categories: {', '.join(trending_data['categories'])}")
+
+                            research = "\n".join(research_parts)
+                            logger.info(f"📊 Session 522: Built {len(research)} chars of research from spider data")
+
+                    except Exception as e:
+                        logger.warning(f"⚠️ Session 522: Spider data fetch failed: {e}")
+
                 # Build context
                 context = {
                     'content_type': arguments.get('content_type', 'blog_post'),
@@ -685,14 +743,14 @@ class AgentRouter:
                     'tone': arguments.get('tone', 'professional'),
                     'target_audience': arguments.get('target_audience', 'general audience'),
                     'word_count': arguments.get('word_count', 1500),
-                    'topic': arguments.get('topic', ''),
+                    'topic': topic,
                 }
 
                 result = agent.execute(
                     task=f"Write {context['content_type']} about {context['topic']}",
                     context=context,
                     scifi_context={},
-                    spider_context={}
+                    spider_context=spider_context
                 )
 
                 if result.success:
