@@ -103,6 +103,9 @@ from core.views_projects_api import (
     update_project as update_partnership_project,
     delete_project as delete_partnership_project,
     create_project as create_partnership_project,
+    # Session 521: Content Export & Edit
+    export_written_content,
+    update_written_content,
 )
 
 # Import agent tracking API views (Session 120)
@@ -1277,6 +1280,8 @@ urlpatterns = [
     path('api/projects/<uuid:project_id>/add-research/', add_research_to_project, name='add-research-to-project'),  # Session 324
     path('api/projects/<uuid:project_id>/export-research-pdf/', export_research_pdf, name='export-research-pdf'),  # Session 325
     path('api/projects/<uuid:project_id>/export-comprehensive-pdf/', export_comprehensive_pdf, name='export-comprehensive-pdf'),  # Session 352
+    path('api/projects/<uuid:project_id>/export-content/', export_written_content, name='export-written-content'),  # Session 521
+    path('api/projects/<uuid:project_id>/update-content/', update_written_content, name='update-written-content'),  # Session 521
     path('api/projects/<uuid:project_id>/add-creative-content/', add_creative_content_to_project, name='add-creative-content-to-project'),  # Session 334
     # Session 353: Research → Creative Pipeline
     path('api/projects/<uuid:project_id>/generate-brand-assets/', generate_brand_assets, name='generate-brand-assets'),
