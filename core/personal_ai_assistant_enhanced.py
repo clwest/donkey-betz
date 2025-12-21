@@ -4888,18 +4888,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     # Build research context from spider data
                     if trending_data:
                         spider_context = trending_data
-                        today = datetime.now().strftime('%B %d, %Y')
-                        year = datetime.now().year
+                        now = datetime.now()
+                        today = now.strftime('%B %d, %Y')
+                        month_year = now.strftime('%B %Y')
+                        year = now.year
+                        # Dynamic "don't use old years" instruction
+                        old_years = f"{year-2} or {year-1}"
                         # Format spider data as research context
                         research_parts = [
                             f"## Real-Time Research Data (as of {today})",
-                            f"**IMPORTANT: This content is for {year}. DO NOT reference 2023 or 2024.**\n"
+                            f"**IMPORTANT: This content is for {year}. DO NOT reference {old_years}.**\n"
                         ]
 
                         # Add trending topics/keywords (service returns 'trends', not 'trending_keywords')
                         trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])
                         if trends:
-                            research_parts.append("### Current Trending Topics (December 2025):")
+                            research_parts.append(f"### Current Trending Topics ({month_year}):")
                             for kw in trends[:10]:
                                 research_parts.append(f"- {kw}")
 
