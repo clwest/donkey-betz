@@ -2367,3 +2367,201 @@ def trigger_project_learning(request, project_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 521: Content Export API
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def export_written_content(request, project_id):
+    """
+    Export written content (blog posts, scripts, newsletters, etc.) from a project.
+
+    Session 521: Download written content in various formats.
+
+    POST /api/projects/<project_id>/export-content/
+
+    Body:
+    {
+        "content_index": 0,           # Index of content in written_content array
+        "format": "md"                # md, txt, docx, pdf
+    }
+
+    Returns: File download response
+    """
+    from django.http import HttpResponse
+    from core.services.content_export import export_written_content as do_export
+
+    try:
+        user = request.user
+        data = request.data
+
+        content_index = int(data.get('content_index', 0))
+        export_format = data.get('format', 'md').lower()
+
+        # Validate format
+        valid_formats = ['md', 'txt', 'docx', 'pdf']
+        if export_format not in valid_formats:
+            return Response({
+                'success': False,
+                'error': f'Invalid format. Must be one of: {valid_formats}'
+            }, status=400)
+
+        # Get project
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Get written content from metadata
+        metadata = project.metadata or {}
+        written_content = metadata.get('written_content', [])
+
+        if not written_content:
+            return Response({
+                'success': False,
+                'error': 'No written content found in this project'
+            }, status=404)
+
+        if content_index >= len(written_content):
+            return Response({
+                'success': False,
+                'error': f'Content index {content_index} out of range. Project has {len(written_content)} content items.'
+            }, status=400)
+
+        # Get the specific content
+        content_item = written_content[content_index]
+        content_type = content_item.get('content_type', 'blog_post')
+        content_data = content_item.get('data', content_item)
+
+        # Export the content
+        file_bytes, filename, content_type_header = do_export(
+            content_data=content_data,
+            content_type=content_type,
+            format=export_format
+        )
+
+        # Return file download
+        response = HttpResponse(file_bytes, content_type=content_type_header)
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        logger.info(f"📄 Exported written content from project {project.project_name} as {export_format}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Error exporting written content: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_written_content(request, project_id):
+    """
+    Update written content (blog posts, scripts, newsletters, etc.) in a project.
+
+    Session 521: Edit written content in-place.
+
+    PATCH /api/projects/<project_id>/update-content/
+
+    Body:
+    {
+        "content_index": 0,           # Index of content in written_content array
+        "data": {
+            "title": "New title",
+            "meta_description": "...",
+            "intro": "...",
+            "sections": [{"header": "...", "content": "..."}],
+            "conclusion": "...",
+            "tags": ["tag1", "tag2"]
+        }
+    }
+
+    Returns: Updated content data
+    """
+    try:
+        user = request.user
+        data = request.data
+
+        content_index = int(data.get('content_index', 0))
+        updated_data = data.get('data', {})
+
+        if not updated_data:
+            return Response({
+                'success': False,
+                'error': 'No data provided for update'
+            }, status=400)
+
+        # Get project
+        try:
+            project = PartnershipProject.objects.get(id=project_id, user=user)
+        except PartnershipProject.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Project not found'
+            }, status=404)
+
+        # Get written content from metadata
+        metadata = project.metadata or {}
+        written_content = metadata.get('written_content', [])
+
+        if not written_content:
+            return Response({
+                'success': False,
+                'error': 'No written content found in this project'
+            }, status=404)
+
+        if content_index >= len(written_content):
+            return Response({
+                'success': False,
+                'error': f'Content index {content_index} out of range. Project has {len(written_content)} content items.'
+            }, status=400)
+
+        # Update the content data
+        content_item = written_content[content_index]
+
+        # Ensure 'data' key exists
+        if 'data' not in content_item:
+            content_item['data'] = {}
+
+        # Update fields that were provided
+        for key in ['title', 'meta_description', 'intro', 'sections', 'conclusion', 'tags']:
+            if key in updated_data:
+                content_item['data'][key] = updated_data[key]
+
+        # Also update top-level title if provided
+        if 'title' in updated_data:
+            content_item['title'] = updated_data['title']
+
+        # Save back to project
+        written_content[content_index] = content_item
+        metadata['written_content'] = written_content
+        project.metadata = metadata
+        project.save()
+
+        logger.info(f"✏️ Updated written content in project {project.project_name}")
+
+        return Response({
+            'success': True,
+            'message': 'Content updated successfully',
+            'content': content_item
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error updating written content: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
