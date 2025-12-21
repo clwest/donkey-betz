@@ -1,40 +1,47 @@
-# Session 520 - Start Here
+# Session 521 - Start Here
 
-**Previous Session:** 519 (Auto-Project Creation & Content Display)
+**Previous Session:** 520 (Projects Tab Unification)
 **Date:** December 21, 2025
-**Status:** Projects now display full written content with beautiful UI!
+**Status:** Projects tab now shows ALL projects (including AI-generated content)!
 
 ---
 
-## Session 519 Achievements
+## Session 520 Achievements
 
-### 1. Auto-Project Creation (Completed from Session 518)
-- Fixed the project creation banner in clean architecture path
-- Green "Project Created" banner appears after ContentWriterAgent finishes
-- "View Project →" button navigates to Projects tab with project selected
+### Critical Fix: PartnershipProject vs CreativeProject Disconnect
 
-### 2. Written Content Display in Projects
-- Beautiful expandable content section with green gradient styling
-- Content type badges: 📝 Blog Post, 🎙️ Podcast Script, 🎬 Video Script, etc.
-- Structured display:
-  - Meta description (highlighted box)
-  - Introduction section
-  - Main sections with headers (left border styling)
-  - Conclusion (highlighted box)
-  - Tags as badges
-- Copy button to clipboard
-- Smooth expand/collapse animation
+**Problem Found:**
+- Projects tab used `CreativeProject` model (`/api/creative-projects/`)
+- Session 519's ContentWriterAgent created `PartnershipProject` records
+- Result: AI-generated content projects didn't appear in Projects tab!
 
-### 3. Bug Fix: AgentDecisionSummary Filter
-- Fixed error when loading project intelligence
-- Model lacks direct `project` field, now filters through `conversation.project` or `hive_session.project`
+**Solution Implemented:**
+1. Updated frontend to use `/api/projects/` (PartnershipProject) instead of `/api/creative-projects/`
+2. Added new backend endpoints for PartnershipProject CRUD:
+   - `POST /api/projects/create/`
+   - `PATCH /api/projects/{id}/update/`
+   - `DELETE /api/projects/{id}/delete/`
+3. Updated `projects_list` and `project_detail` to return CreativeProject-compatible format
+4. All project features now work with PartnershipProject:
+   - List, View, Create, Edit, Delete
+   - Written Content Display (Session 519)
+   - Intelligence Hub, Learning Loop, etc.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/views_projects_api.py` | Added CRUD endpoints, updated response format |
+| `core/urls.py` | Added 3 new URL routes for CRUD |
+| `ai_core/templates/ai_image_studio.html` | Updated API calls to use `/api/projects/` |
+| `docs/handoffs/SESSION_520_PROJECTS_TAB_AUDIT.md` | Comprehensive audit + fix documentation |
 
 ---
 
-## Session 520 Focus Ideas
+## Session 521 Focus Ideas
 
 ### 1. Content Export Options
-- Add download buttons: .md, .docx, .pdf formats
+- Add download buttons for written content: .md, .docx, .pdf formats
 - Similar to legal document export from Session 407
 
 ### 2. Content Editing
@@ -45,10 +52,12 @@
 - Test: "Write a blog post about X and create a header image"
 - Both content types should appear in same project
 
-### 4. Discord Campaign Commands
-- `/campaign-create <name> <product>` - Start new campaign
-- `/campaign-status <id>` - Get progress
-- `/campaign-list` - List all campaigns
+### 4. Remaining `/api/creative-projects/` Usage
+Some secondary features still use CreativeProject endpoints:
+- Export (zip/pdf/csv)
+- Share functionality
+- Workflow management
+Consider migrating these or keeping hybrid approach.
 
 ---
 
@@ -62,10 +71,9 @@ make celery      # Celery worker + beat
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Test ContentWriterAgent with Auto-Project
-# Navigate to AI Studio and try:
-# - "Write a blog post about sustainable energy"
-# Result: Blog post + Project + Viewable content in Projects tab!
+# 3. Test Projects Tab
+# Navigate to Projects tab - should now show PartnershipProject records
+# Including any projects created by ContentWriterAgent!
 ```
 
 ---
@@ -78,7 +86,8 @@ open http://localhost:8000/ai-studio/
 | Content Agents | 1 (ContentWriterAgent) |
 | Development Agents | 4 (all working) |
 | Auto-Project Creation | ✅ Complete |
-| Written Content Display | ✅ NEW - Session 519 |
+| Written Content Display | ✅ Complete |
+| Projects Tab Unified | ✅ NEW - Session 520 |
 | Spiders | 72 |
 | Discord Commands | 99+ |
 
@@ -86,36 +95,25 @@ open http://localhost:8000/ai-studio/
 
 ## Key Documentation
 
+- **Session 520:** `docs/handoffs/SESSION_520_PROJECTS_TAB_AUDIT.md`
 - **Session 519:** `docs/handoffs/SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md`
 - **Session 518:** `docs/handoffs/SESSION_518_AUTO_PROJECT_CREATION.md`
-- **Session 517:** `docs/handoffs/SESSION_517_CONTENT_WRITER_ROUTING.md`
 - **Agent Routing:** `docs/handoffs/SESSION_499_FULL_AGENT_ROUTING.md`
 - **Agents:** `docs/AGENTS.md`
 
 ---
 
-## Files Modified in Session 519
-
-| File | Changes |
-|------|---------|
-| `core/super_platform/coordinator.py` | Added project_created field to CoordinatorResult |
-| `core/views_project_intelligence.py` | Fixed AgentDecisionSummary filter |
-| `ai_core/templates/partials/js/ai_assistant.html` | Added project banner in clean arch path |
-| `ai_core/templates/ai_image_studio.html` | Added written content display + JS functions |
-
----
-
 ```
 +====================================================================+
-|              SESSION 519 COMPLETE!                                  |
+|              SESSION 520 COMPLETE!                                  |
 |                                                                    |
-|   Auto-Project Creation + Written Content Display                   |
+|   Projects Tab Unified to PartnershipProject                        |
 |   ================================================                   |
 |                                                                    |
-|   1. ContentWriterAgent -> Auto-creates Project                     |
-|   2. Green banner with "View Project" link appears                  |
-|   3. Projects tab shows full blog post content!                     |
-|   4. Collapsible sections, copy button, beautiful styling           |
+|   1. Found TWO project models causing disconnect                    |
+|   2. Frontend now uses /api/projects/ (PartnershipProject)          |
+|   3. Added CRUD endpoints for PartnershipProject                    |
+|   4. AI-generated content projects now appear in Projects tab!      |
 |                                                                    |
 |   Next Focus: Content export, editing, multi-content                |
 +====================================================================+

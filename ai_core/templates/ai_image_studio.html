@@ -35974,12 +35974,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 let url, method;
                 if (projectId) {
-                    // Update existing project
-                    url = `/api/creative-projects/${projectId}/update/`;
+                    // Session 520: Update to use /api/projects/ (PartnershipProject)
+                    url = `/api/projects/${projectId}/update/`;
                     method = 'PATCH';
                 } else {
-                    // Create new project
-                    url = '/api/creative-projects/create/';
+                    // Session 520: Create using /api/projects/ (PartnershipProject)
+                    url = '/api/projects/create/';
                     method = 'POST';
                 }
 
@@ -36052,12 +36052,16 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             `;
 
             try {
-                const response = await authenticatedFetch('/api/creative-projects/');
+                // Session 520: Use /api/projects/ (PartnershipProject) instead of /api/creative-projects/
+                // This includes AI-generated content projects from ContentWriterAgent
+                const response = await authenticatedFetch('/api/projects/');
                 const data = await response.json();
 
-                if (data.projects) {
-                    projectManagement.projects = data.projects;
-                    renderProjects(data.projects);
+                // Session 520: Handle new API response format {success: true, data: {projects: [...]}}
+                const projects = data.data?.projects || data.projects || [];
+                if (projects.length > 0 || data.success) {
+                    projectManagement.projects = projects;
+                    renderProjects(projects);
                 } else {
                     container.innerHTML = `
                         <div class="col-12 text-center py-5">
@@ -36199,11 +36203,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             projectManagement.detailModal.show();
 
             try {
-                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/`);
+                // Session 520: Use /api/projects/{id}/ (PartnershipProject) instead of /api/creative-projects/
+                const response = await authenticatedFetch(`/api/projects/${projectId}/`);
                 const data = await response.json();
 
-                if (data.project) {
-                    renderProjectDetails(data.project);
+                // Session 520: Handle new API response format {success: true, data: {project: {...}}}
+                const project = data.data?.project || data.project;
+                if (project) {
+                    renderProjectDetails(project);
                 } else {
                     detailContent.innerHTML = `
                         <div class="text-center py-5">
@@ -47761,7 +47768,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
 
             try {
-                const response = await authenticatedFetch(`/api/creative-projects/${projectId}/delete/`, {
+                // Session 520: Use /api/projects/ (PartnershipProject)
+                const response = await authenticatedFetch(`/api/projects/${projectId}/delete/`, {
                     method: 'DELETE'
                 });
 
