@@ -1,8 +1,8 @@
-# Session 521 - Start Here
+# Session 522 - Start Here
 
-**Previous Session:** 520 (Projects Tab Unification)
+**Previous Session:** 521 (Content Export, Editing & Multi-Content Projects)
 **Date:** December 21, 2025
-**Status:** Content Export & Editing COMPLETE!
+**Status:** Content Management COMPLETE!
 
 ---
 
@@ -47,20 +47,40 @@ POST /api/projects/{id}/export-content/   # Download content
 PATCH /api/projects/{id}/update-content/  # Edit content
 ```
 
-### 3. CLAUDE.md Cleanup
+### 3. Multi-Content Projects (DONE!)
+
+**New Feature:**
+- Projects can now display BOTH written content AND generated images
+- New "Generated Images" collapsible section in project details (blue theme)
+- Images from `metadata.image_ids` are loaded on-demand and displayed as thumbnails
+- Click any image to view full size in gallery
+
+**Backend Flow (Already Working):**
+1. GPT can call both `content_writer_agent` and `image_generation_agent` in one request
+2. `_auto_create_project_from_content()` collects both:
+   - `metadata.written_content` = array of content pieces
+   - `metadata.image_ids` = array of image IDs
+3. Project API returns full metadata to frontend
+
+**Frontend (NEW in Session 521):**
+- Added "Generated Images" section template (lines 36832-36854)
+- Added `loadProjectGeneratedImages()` function (lines 43277-43338)
+- Section is collapsible, loads images when expanded
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `ai_core/templates/ai_image_studio.html` | Added image display section + JS function |
+
+**Test Command:**
+```
+"Write a blog post about AI trends and create a header image for it"
+```
+
+### 4. CLAUDE.md Cleanup
 
 Reduced from 537 → 160 lines (70% smaller)
-
----
-
-## Session 521 - Remaining Ideas
-
-### 3. Multi-Content Projects
-- Test: "Write a blog post about X and create a header image"
-- Both content types should appear in same project
-
-### 4. Remaining `/api/creative-projects/` Usage
-Some secondary features still use CreativeProject endpoints
 
 ---
 
@@ -73,8 +93,14 @@ make start && make celery
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Test Content Export & Edit
-# - Go to Projects tab
+# 3. Test Multi-Content Project
+# - In Assistant tab, ask: "Write a blog post about AI and create a header image"
+# - Both content types should appear in same project
+# - Go to Projects tab to see the project
+# - Expand "Written Content" to see blog post
+# - Expand "Generated Images" to see header image
+
+# 4. Test Content Export & Edit
 # - Open a project with written content
 # - Click Download dropdown → choose format
 # - Click Edit → modify content → Save
@@ -89,9 +115,23 @@ open http://localhost:8000/ai-studio/
 | Routable Agents | **42** |
 | Content Export | ✅ 4 formats (md, txt, docx, pdf) |
 | Content Editing | ✅ Full modal editor |
+| Multi-Content Projects | ✅ Written content + images |
 | Projects Tab Unified | ✅ Session 520 |
 | Spiders | 72 |
 | Discord Commands | 99+ |
+
+---
+
+## Session 522 Ideas
+
+### 1. Remaining `/api/creative-projects/` Usage
+Some secondary features still use CreativeProject endpoints
+
+### 2. Project Templates
+Pre-defined project types with workflows
+
+### 3. Project Sharing/Export
+Export entire projects as zip or share links
 
 ---
 
@@ -105,16 +145,16 @@ open http://localhost:8000/ai-studio/
 
 ```
 +====================================================================+
-|              SESSION 521 - CONTENT EXPORT & EDIT COMPLETE!          |
+|        SESSION 521 - CONTENT MANAGEMENT COMPLETE!                  |
 |                                                                    |
-|   1. Content Export: Download in 4 formats (md/txt/docx/pdf)        |
-|   2. Content Editing: Full modal editor with sections               |
-|   3. CLAUDE.md: Cleaned up 70%                                      |
+|   1. Content Export: Download in 4 formats (md/txt/docx/pdf)       |
+|   2. Content Editing: Full modal editor with sections              |
+|   3. Multi-Content Projects: Blog + Images in same project!        |
+|   4. CLAUDE.md: Cleaned up 70%                                     |
 |                                                                    |
-|   New Endpoints:                                                    |
-|   - POST /api/projects/{id}/export-content/                         |
-|   - PATCH /api/projects/{id}/update-content/                        |
-|                                                                    |
-|   Next: Multi-content projects (blog + image in one project)        |
+|   New Features:                                                    |
+|   - Generated Images section in project details                    |
+|   - loadProjectGeneratedImages() function                          |
+|   - Collapsible section with thumbnail grid                        |
 +====================================================================+
 ```

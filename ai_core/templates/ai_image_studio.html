@@ -36829,6 +36829,30 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         `).join('')}
                     </div>` : ''}
 
+                    <!-- Session 521: Generated Images Display (from metadata.image_ids) -->
+                    ${project.metadata && project.metadata.image_ids && project.metadata.image_ids.length > 0 ? `
+                    <div class="mb-3 p-3" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.4);">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleProjectSection('${project.id}', 'generated-images')">
+                            <div>
+                                <span class="badge me-2" style="background: rgba(59, 130, 246, 0.3); color: #93c5fd; font-size: 10px; text-transform: uppercase;">
+                                    🖼️ Generated Images
+                                </span>
+                                <span style="color: #3b82f6; font-weight: 600; font-size: 14px;">
+                                    ${project.metadata.image_ids.length} Image${project.metadata.image_ids.length !== 1 ? 's' : ''}
+                                    <span id="section-toggle-generated-images-${project.id}" style="font-size: 10px; margin-left: 5px;">▶</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="section-content-generated-images-${project.id}" style="display: none; margin-top: 10px;">
+                            <div id="project-generated-images-${project.id}" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                                    <div class="small text-muted mt-1">Loading images...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>` : ''}
+
                     <!-- Dates (collapsed by default) -->
                     <div class="small text-muted" style="font-size: 11px;">
                         Created: ${new Date(project.created_at).toLocaleDateString()} •
@@ -43233,6 +43257,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     content.style.opacity = '1';
                     content.style.transform = 'translateY(0)';
                 }, 10);
+
+                // Session 521: Load generated images when that section is opened
+                if (sectionName === 'generated-images') {
+                    loadProjectGeneratedImages(projectId);
+                }
             } else {
                 // Collapse
                 content.style.display = 'none';
@@ -43243,6 +43272,69 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const prefs = JSON.parse(localStorage.getItem('projectSectionPrefs') || '{}');
             prefs[`${sectionName}-${projectId}`] = !isHidden; // Store collapsed state
             localStorage.setItem('projectSectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
+         * Session 521: Load and display generated images from project metadata.image_ids
+         * Called when the "Generated Images" section is toggled open
+         */
+        async function loadProjectGeneratedImages(projectId) {
+            const container = document.getElementById(`project-generated-images-${projectId}`);
+            if (!container) {
+                console.warn(`Image container not found for project ${projectId}`);
+                return;
+            }
+
+            // Get project from projectManagement
+            const project = projectManagement.projects?.find(p => p.id === projectId);
+            if (!project || !project.metadata?.image_ids?.length) {
+                container.innerHTML = '<div class="text-muted text-center py-2">No images to display</div>';
+                return;
+            }
+
+            const imageIds = project.metadata.image_ids;
+            console.log(`🖼️ Loading ${imageIds.length} generated images for project ${projectId}`);
+
+            try {
+                // Fetch all images for this user and filter to matching IDs
+                const response = await authenticatedFetch('/api/images/history/');
+                const data = await response.json();
+
+                if (!data.success || !data.images) {
+                    container.innerHTML = '<div class="text-danger text-center py-2">Failed to load images</div>';
+                    return;
+                }
+
+                // Filter to matching image IDs
+                const matchingImages = data.images.filter(img =>
+                    imageIds.includes(img.id) || imageIds.includes(String(img.id))
+                );
+
+                if (matchingImages.length === 0) {
+                    container.innerHTML = '<div class="text-muted text-center py-2">Images not found in gallery</div>';
+                    return;
+                }
+
+                // Render image grid
+                container.innerHTML = matchingImages.map(img => `
+                    <div class="position-relative" style="border-radius: 8px; overflow: hidden; cursor: pointer;"
+                         onclick="selectAndViewImage('${img.id}')"
+                         title="${img.prompt || 'Generated image'}">
+                        <img src="${img.url}"
+                             alt="${img.prompt || 'Generated image'}"
+                             style="width: 100%; height: 120px; object-fit: cover; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 4px 6px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); font-size: 10px; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${img.image_type || 'image'}
+                        </div>
+                    </div>
+                `).join('');
+
+                console.log(`✅ Loaded ${matchingImages.length} images for project ${projectId}`);
+
+            } catch (error) {
+                console.error('Error loading project images:', error);
+                container.innerHTML = '<div class="text-danger text-center py-2">Error loading images</div>';
+            }
         }
 
         /**
