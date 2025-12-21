@@ -1,11 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 19, 2025 - Session 511 (ML Scoring Sub-Tab Enhancement)
+**Last Updated:** December 21, 2025 - Session 519 (Auto-Project Creation & Content Display)
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features + Super Platform
-**Current Focus:** SmartTrendingService | Dynamic Topic Matching | 36 Categories | Autonomous Content Studio!
+**Current Focus:** ContentWriterAgent | Auto-Project Creation | Written Content Display in Projects!
 **Built-in Styles:** 80+ professional style presets
 **Spider Network:** 72 spiders | 20,712 data records | 88.1% embeddings | **Agents USE learned knowledge!**
-**Agent Ecosystem:** 43 routable agents + learning hooks | Autonomous Content Generation | 3-Agent Debates
+**Agent Ecosystem:** 42 routable agents + learning hooks | Autonomous Content Generation | 3-Agent Debates
 **Clean Architecture:** `core/agents/` - Isolated agents with deterministic routing!
 **Unified Intelligence:** SpiderData + BusinessResearchResult combined search with auto-refresh!
 **Knowledge Pipeline:** Spider → Embeddings → Learning Bridge → Agent Prompts (Session 400)
@@ -406,6 +406,7 @@ Built-in style library in `content/image_generation.py`:
 
 ## Recent Sessions
 
+- **Session 519:** Auto-Project Creation & Content Display - Completed the ContentWriterAgent → Project pipeline from Session 518. When users ask for blog posts, scripts, or other content, projects are now auto-created with full metadata. Added beautiful written content display to project UI with collapsible sections, copy button, and structured layout (intro, sections, conclusion, tags). Fixed AgentDecisionSummary filter error (model lacks direct project field, now filters through conversation/hive_session). Green "Project Created" banner with "View Project →" button appears after content generation. Handoff: `docs/handoffs/SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md`
 - **Session 513:** Campaign Orchestrator Agent (The Marketing Hub) - Built the missing "hub" that connects Intelligence → Agents → Autonomous → Delivery. New CampaignOrchestratorAgent (~750 lines) orchestrates full marketing campaigns: Research → Strategy → Creation → Packaging. Created 3 new database models (Campaign, CampaignDeliverable, CampaignResearch) with budget tiers ($500-$10K). Added 8 campaign API endpoints for CRUD + execution. Also enhanced SmartTrendingService with web search fallback using DuckDuckGo when spider data is insufficient - platform now works for ANY industry (automotive, real estate, etc.), not just tech. Handoff: `docs/handoffs/SESSION_513_CAMPAIGN_ORCHESTRATOR.md`
 - **Session 511:** ML Scoring Sub-Tab Enhancement - Added 5 new features to Autonomous → ML Scoring tab: (1) Model Training Status panel with "Train Now" button, (2) Feature Importance horizontal bar chart (Chart.js), (3) Score Explanation modal with SHAP breakdown (positive/negative factors), (4) Performance Trends chart (R² over model versions), (5) Model Comparison table. Added 2 new API endpoints (`/api/monitoring/ml-scoring/train/`, `/api/monitoring/ml-scoring/opportunity/<uuid>/explanation/`). Enhanced main API with model_training, feature_importance, performance_trends, model_comparison fields. Added 10 new JavaScript functions for rendering. Handoff: `docs/handoffs/SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md`
 - **Session 503:** Spider API Fixes (Etherscan + Kaggle) - Fixed two broken spiders that were returning "partial" status with 0 items. Root cause: `core/tasks.py` only looked for `fetch()` or `scrape()` methods, but Etherscan/Kaggle use `fetch_data(target)` pattern. Added fetch_data support in 3 locations. Fixed Etherscan IntelligenceData params (wrong names). Fixed Kaggle auth: new KGAT_* tokens use Bearer auth, not Basic auth. Verified: Kaggle fetching 15 competitions + 15 datasets, Etherscan fetching 30 transfers from Binance/Coinbase/Aave. Handoff: `docs/handoffs/SESSION_503_SPIDER_FIXES.md`

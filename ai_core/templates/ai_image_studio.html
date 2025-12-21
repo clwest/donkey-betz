@@ -30752,6 +30752,21 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         }
                     }
 
+                    // Session 519: Add project link if a project was created (Clean Architecture path)
+                    if (cleanData.project_created) {
+                        const project = cleanData.project_created;
+                        responseHtml += `\n\n<div class="project-created-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 24px;">📁</span>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600;">Project Created: ${project.project_name}</div>
+                                <div style="font-size: 12px; opacity: 0.9;">Your content has been organized into a project</div>
+                            </div>
+                            <a href="${project.project_url}" onclick="switchToProjectTab('${project.project_id}')" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 500; cursor: pointer;">
+                                View Project →
+                            </a>
+                        </div>`;
+                    }
+
                     // Session 483: Include quick_actions from SuperPlatform response
                     console.log('🔍 Session 483: Clean Architecture quick_actions:', cleanData.quick_actions);
                     return {
@@ -36626,6 +36641,90 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                 ${project.metadata.suggested_next_steps.map(step => `<li style="margin-bottom: 4px;">${step}</li>`).join('')}
                             </ul>
                         </div>
+                    </div>` : ''}
+
+                    <!-- Session 519: Written Content Display (Blog Posts, Scripts, etc.) -->
+                    ${project.metadata && project.metadata.written_content && project.metadata.written_content.length > 0 ? `
+                    <div class="mb-3 p-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.4);">
+                        ${project.metadata.written_content.map((content, idx) => `
+                        <div class="mb-2">
+                            <!-- Content Header -->
+                            <div class="d-flex justify-content-between align-items-center mb-2" style="cursor: pointer;" onclick="toggleWrittenContent('${project.id}', ${idx})">
+                                <div>
+                                    <span class="badge me-2" style="background: rgba(16, 185, 129, 0.3); color: #6ee7b7; font-size: 10px; text-transform: uppercase;">
+                                        ${content.content_type === 'blog_post' ? '📝 Blog Post' :
+                                          content.content_type === 'podcast_script' ? '🎙️ Podcast Script' :
+                                          content.content_type === 'video_script' ? '🎬 Video Script' :
+                                          content.content_type === 'social_media' ? '📱 Social Media' :
+                                          content.content_type === 'newsletter' ? '📧 Newsletter' :
+                                          content.content_type === 'whitepaper' ? '📄 Whitepaper' :
+                                          '📝 ' + (content.content_type || 'Content')}
+                                    </span>
+                                    <span style="color: #10b981; font-weight: 600; font-size: 14px;">
+                                        ${content.title || content.data?.title || 'Written Content'}
+                                        <span id="toggle-written-${project.id}-${idx}" style="font-size: 10px; margin-left: 5px;">▶</span>
+                                    </span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button onclick="event.stopPropagation(); copyWrittenContent('${project.id}', ${idx})"
+                                            class="btn btn-sm" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; font-size: 10px; padding: 2px 8px;"
+                                            title="Copy full content to clipboard">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Content Body (collapsed by default) -->
+                            <div id="content-written-${project.id}-${idx}" style="display: none; margin-top: 10px;">
+                                <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px; max-height: 500px; overflow-y: auto;">
+                                    ${content.data ? `
+                                        <!-- Meta Description -->
+                                        ${content.data.meta_description ? `
+                                        <div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid #10b981;">
+                                            <div style="color: #6ee7b7; font-size: 11px; font-weight: 600; margin-bottom: 4px;">META DESCRIPTION</div>
+                                            <div style="color: #d1fae5; font-size: 12px; font-style: italic;">${content.data.meta_description}</div>
+                                        </div>
+                                        ` : ''}
+
+                                        <!-- Introduction -->
+                                        ${content.data.intro ? `
+                                        <div style="margin-bottom: 20px;">
+                                            <div style="color: #10b981; font-size: 12px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase;">Introduction</div>
+                                            <div style="color: #e2e8f0; font-size: 13px; line-height: 1.7;">${content.data.intro}</div>
+                                        </div>
+                                        ` : ''}
+
+                                        <!-- Main Sections -->
+                                        ${content.data.sections && content.data.sections.length > 0 ? content.data.sections.map((section, sIdx) => `
+                                        <div style="margin-bottom: 20px; padding-left: 12px; border-left: 2px solid rgba(16, 185, 129, 0.3);">
+                                            <div style="color: #34d399; font-size: 14px; font-weight: 600; margin-bottom: 8px;">${section.header}</div>
+                                            <div style="color: #e2e8f0; font-size: 13px; line-height: 1.7;">${section.content}</div>
+                                        </div>
+                                        `).join('') : ''}
+
+                                        <!-- Conclusion -->
+                                        ${content.data.conclusion ? `
+                                        <div style="margin-bottom: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+                                            <div style="color: #10b981; font-size: 12px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase;">Conclusion</div>
+                                            <div style="color: #e2e8f0; font-size: 13px; line-height: 1.7;">${content.data.conclusion}</div>
+                                        </div>
+                                        ` : ''}
+
+                                        <!-- Tags -->
+                                        ${content.data.tags && content.data.tags.length > 0 ? `
+                                        <div style="padding-top: 12px; border-top: 1px solid rgba(16, 185, 129, 0.2);">
+                                            <div style="color: #10b981; font-size: 11px; font-weight: 600; margin-bottom: 8px;">TAGS</div>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                                ${content.data.tags.map(tag => `<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 10px; padding: 4px 8px;">#${tag}</span>`).join('')}
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                    ` : `
+                                        <div style="color: #94a3b8; font-size: 13px;">Content data not available.</div>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                        `).join('')}
                     </div>` : ''}
 
                     <!-- Dates (collapsed by default) -->
@@ -43123,6 +43222,78 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             const prefs = JSON.parse(localStorage.getItem('researchSectionPrefs') || '{}');
             prefs[`${sectionType}-${projectId}-${index}`] = !isHidden;
             localStorage.setItem('researchSectionPrefs', JSON.stringify(prefs));
+        }
+
+        /**
+         * Session 519: Toggle written content display (blog posts, scripts, etc.)
+         */
+        function toggleWrittenContent(projectId, index) {
+            const content = document.getElementById(`content-written-${projectId}-${index}`);
+            const toggle = document.getElementById(`toggle-written-${projectId}-${index}`);
+
+            if (!content || !toggle) {
+                console.warn(`Written content section not found: ${index} for project ${projectId}`);
+                return;
+            }
+
+            const isHidden = content.style.display === 'none';
+
+            if (isHidden) {
+                // Expand with smooth animation
+                content.style.display = 'block';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-10px)';
+                toggle.textContent = '▼';
+                setTimeout(() => {
+                    content.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                    content.style.opacity = '1';
+                    content.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Collapse
+                content.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+                content.style.opacity = '0';
+                content.style.transform = 'translateY(-5px)';
+                setTimeout(() => {
+                    content.style.display = 'none';
+                    toggle.textContent = '▶';
+                }, 150);
+            }
+        }
+
+        /**
+         * Session 519: Copy written content to clipboard
+         */
+        function copyWrittenContent(projectId, index) {
+            // Try to find from projectManagement.projects
+            if (typeof projectManagement !== 'undefined' && projectManagement.projects) {
+                const project = projectManagement.projects.find(p => p.id === projectId);
+                if (project && project.metadata && project.metadata.written_content && project.metadata.written_content[index]) {
+                    const content = project.metadata.written_content[index];
+                    const fullText = content.data?.full_text || content.data?.intro || '';
+                    navigator.clipboard.writeText(fullText).then(() => {
+                        showToast('Content copied to clipboard!', 'success');
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        showToast('Failed to copy content', 'error');
+                    });
+                    return;
+                }
+            }
+
+            // Fallback: Get text from the rendered content
+            const contentDiv = document.getElementById(`content-written-${projectId}-${index}`);
+            if (contentDiv) {
+                const text = contentDiv.innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Content copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showToast('Failed to copy content', 'error');
+                });
+            } else {
+                showToast('Could not find content to copy', 'warning');
+            }
         }
 
         /**

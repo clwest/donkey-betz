@@ -309,12 +309,16 @@ def get_project_boardroom(request, project_id):
         project = PartnershipProject.objects.get(id=project_id)
         limit = int(request.GET.get('limit', 20))
 
-        # Get base queryset for stats first (before slicing)
-        base_qs = AgentDecisionSummary.objects.filter(project=project)
+        # Session 519: AgentDecisionSummary doesn't have direct project field
+        # Filter through linked conversation.project or hive_session.project
+        from django.db.models import Q
+        base_qs = AgentDecisionSummary.objects.filter(
+            Q(conversation__project=project) | Q(hive_session__project=project)
+        )
         canonical_count = base_qs.filter(is_canonical=True).count()
 
         # Now get the limited results
-        decisions = base_qs.select_related('conversation').order_by('-created_at')[:limit]
+        decisions = base_qs.select_related('conversation', 'hive_session').order_by('-created_at')[:limit]
 
         decisions_data = []
         for d in decisions:
@@ -413,14 +417,13 @@ def get_project_intelligence_overview(request, project_id):
             project=project
         ).count()
 
-        # Boardroom stats
-        decision_count = AgentDecisionSummary.objects.filter(
-            project=project
-        ).count()
-        canonical_count = AgentDecisionSummary.objects.filter(
-            project=project,
-            is_canonical=True
-        ).count()
+        # Boardroom stats - Session 519: Filter through linked models
+        from django.db.models import Q
+        decision_qs = AgentDecisionSummary.objects.filter(
+            Q(conversation__project=project) | Q(hive_session__project=project)
+        )
+        decision_count = decision_qs.count()
+        canonical_count = decision_qs.filter(is_canonical=True).count()
 
         # Recent activity timestamps
         recent_knowledge = AgentKnowledgeSource.objects.filter(
@@ -429,9 +432,7 @@ def get_project_intelligence_overview(request, project_id):
         recent_conv = HiveMindSession.objects.filter(
             project=project
         ).order_by('-created_at').first()
-        recent_decision = AgentDecisionSummary.objects.filter(
-            project=project
-        ).order_by('-created_at').first()
+        recent_decision = decision_qs.order_by('-created_at').first()
 
         return JsonResponse({
             'success': True,
