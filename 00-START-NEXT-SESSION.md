@@ -30,6 +30,14 @@
 | File | Changes |
 |------|---------|
 | `core/personal_ai_assistant_enhanced.py` | Fixed key mismatch, dynamic year instructions, debug logging |
+| `core/agent_router.py` | **CRITICAL**: Added spider data fetching to delegate_to_agent path (this is what the web UI uses!) |
+
+**Important Discovery:**
+The web UI uses a **different code path** than direct API calls:
+- Web UI: `chat API → delegate_to_agent → agent_router.py → ContentWriterAgent`
+- Direct: `_handle_content_writer_agent → ContentWriterAgent`
+
+Both paths now have spider data fetching.
 
 **Test Result:**
 - Before: "Top AI Trends Transforming Industries in 2023"
