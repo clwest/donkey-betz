@@ -4866,6 +4866,11 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             word_count = arguments.get('word_count', 1500)
             research = arguments.get('research_context', '')
 
+            # Session 522: Log what GPT passed us
+            logger.info(f"🔍 Session 522 DEBUG: research_context from GPT = '{research[:200] if research else 'EMPTY'}'")
+            logger.info(f"🔍 Session 522 DEBUG: task = '{task}'")
+            logger.info(f"🔍 Session 522 DEBUG: will_fetch_spider_data = {not research and bool(task)}")
+
             # Session 521: Fetch REAL spider data if no research provided
             spider_context = {}
             if not research and task:
@@ -4883,26 +4888,32 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     # Build research context from spider data
                     if trending_data:
                         spider_context = trending_data
+                        today = datetime.now().strftime('%B %d, %Y')
+                        year = datetime.now().year
                         # Format spider data as research context
                         research_parts = [
-                            f"## Real-Time Research Data (as of {datetime.now().strftime('%B %d, %Y')})\n"
+                            f"## Real-Time Research Data (as of {today})",
+                            f"**IMPORTANT: This content is for {year}. DO NOT reference 2023 or 2024.**\n"
                         ]
 
-                        # Add trending topics/keywords
-                        if trending_data.get('trending_keywords'):
-                            research_parts.append("### Current Trending Topics:")
-                            for kw in trending_data.get('trending_keywords', [])[:10]:
+                        # Add trending topics/keywords (service returns 'trends', not 'trending_keywords')
+                        trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])
+                        if trends:
+                            research_parts.append("### Current Trending Topics (December 2025):")
+                            for kw in trends[:10]:
                                 research_parts.append(f"- {kw}")
 
                         # Add articles with real data
                         articles = trending_data.get('articles', [])
                         if articles:
-                            research_parts.append(f"\n### Latest Articles ({len(articles)} found):")
+                            research_parts.append(f"\n### Latest Articles ({len(articles)} found) - ALL FROM {year}:")
                             for i, article in enumerate(articles[:8], 1):
                                 title = article.get('title', 'Unknown')
                                 source = article.get('source', 'Unknown')
+                                pub_date = article.get('published', '')
                                 summary = article.get('summary', article.get('content', ''))[:200]
-                                research_parts.append(f"\n**{i}. {title}** (Source: {source})")
+                                date_str = f" - Published: {pub_date[:10]}" if pub_date else ""
+                                research_parts.append(f"\n**{i}. {title}** (Source: {source}{date_str})")
                                 if summary:
                                     research_parts.append(f"   {summary}...")
 
@@ -4912,7 +4923,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
                         research = "\n".join(research_parts)
                         logger.info(f"📊 Session 521: Built {len(research)} chars of research from spider data")
-                        logger.info(f"📊 Found {len(articles)} articles, {len(trending_data.get('trending_keywords', []))} keywords")
+                        logger.info(f"📊 Found {len(articles)} articles, {len(trends) if trends else 0} trends")
 
                 except Exception as e:
                     logger.warning(f"⚠️ Session 521: Spider data fetch failed: {e}")
