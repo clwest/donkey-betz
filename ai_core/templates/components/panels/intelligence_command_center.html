@@ -1,0 +1,619 @@
+{% comment %}
+Session 530: Intelligence Command Center - Unified Dashboard
+Replaces 3 siloed tabs (Agents, Intelligence, Autonomous) with ONE unified view
+Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
+
+3-Column Layout:
+- LEFT: Spider Network + Agent Roster
+- CENTER: Live Intelligence Flow (real-time events)
+- RIGHT: Autonomous Situations + Trigger Fires
+{% endcomment %}
+
+<style>
+/* Intelligence Command Center Styles */
+.icc-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 16px;
+    max-width: 1800px;
+    margin: 0 auto;
+    min-height: calc(100vh - 250px);
+}
+
+@media (max-width: 1200px) {
+    .icc-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.icc-panel-card {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(236, 72, 153, 0.3);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.icc-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(236, 72, 153, 0.1);
+    border-bottom: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+.icc-panel-header h5, .icc-panel-header h6 {
+    margin: 0;
+    color: #f9a8d4;
+    font-size: 0.95rem;
+}
+
+.icc-panel-header .badge {
+    background: linear-gradient(135deg, #ec4899, #db2777);
+    font-size: 0.8rem;
+}
+
+/* Spider & Agent Lists */
+.icc-list-container {
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.icc-category-header {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 10px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.icc-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    color: #e5e7eb;
+}
+
+.icc-list-item:hover {
+    background: rgba(236, 72, 153, 0.15);
+}
+
+.icc-list-item.selected {
+    background: rgba(236, 72, 153, 0.25);
+    border-left: 3px solid #ec4899;
+}
+
+.icc-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.icc-status-dot.active { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.icc-status-dot.idle { background: #6b7280; }
+.icc-status-dot.error { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+/* Live Feed */
+.icc-live-feed {
+    height: 450px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.icc-feed-event {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border-left: 3px solid #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icc-feed-event:hover {
+    background: rgba(236, 72, 153, 0.1);
+    transform: translateX(3px);
+}
+
+.icc-feed-event.spider { border-left-color: #f97316; }
+.icc-feed-event.trigger { border-left-color: #fbbf24; }
+.icc-feed-event.situation { border-left-color: #a78bfa; }
+.icc-feed-event.agent { border-left-color: #34d399; }
+
+.icc-feed-event-icon {
+    font-size: 1.2rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.icc-feed-event-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.icc-feed-event-title {
+    color: #e5e7eb;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.icc-feed-event-details {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+.icc-feed-event-time {
+    color: #6b7280;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+/* Data Flow Visualization */
+.icc-flow-stats {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.icc-flow-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.icc-flow-icon {
+    font-size: 1.5rem;
+}
+
+.icc-flow-label {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.icc-flow-count {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ec4899;
+}
+
+.icc-flow-arrow {
+    color: #f97316;
+    font-size: 1.5rem;
+    animation: pulse-arrow 2s infinite;
+}
+
+@keyframes pulse-arrow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Situations List */
+.icc-situation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #6b7280;
+}
+
+.icc-situation-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.icc-situation-info {
+    flex: 1;
+}
+
+.icc-situation-name {
+    color: #e5e7eb;
+    font-size: 0.8rem;
+}
+
+.icc-situation-stats {
+    color: #6b7280;
+    font-size: 0.7rem;
+}
+
+/* Domain colors */
+.icc-situation-item.content { border-left-color: #a78bfa; }
+.icc-situation-item.creative { border-left-color: #f472b6; }
+.icc-situation-item.income { border-left-color: #34d399; }
+.icc-situation-item.financial { border-left-color: #fbbf24; }
+.icc-situation-item.research { border-left-color: #60a5fa; }
+.icc-situation-item.legal { border-left-color: #9ca3af; }
+
+/* Toggle Switch */
+.icc-toggle {
+    position: relative;
+    width: 40px;
+    height: 20px;
+}
+
+.icc-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.icc-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #374151;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.icc-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.icc-toggle input:checked + .icc-toggle-slider {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.icc-toggle input:checked + .icc-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* Detail Panel */
+.icc-detail-panel {
+    background: rgba(30, 41, 59, 0.95);
+    border: 2px solid #ec4899;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.icc-detail-panel h6 {
+    color: #f9a8d4;
+    margin-bottom: 12px;
+}
+
+.icc-connections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.icc-connection-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icc-connection-badge:hover {
+    transform: scale(1.05);
+}
+
+.icc-connection-badge.agent { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+.icc-connection-badge.spider { background: rgba(249, 115, 22, 0.2); color: #f97316; }
+.icc-connection-badge.situation { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+
+/* Filter Controls */
+.icc-filter-bar {
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.icc-filter-bar input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #e5e7eb;
+    font-size: 0.8rem;
+}
+
+.icc-filter-bar input::placeholder {
+    color: #6b7280;
+}
+
+.icc-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.icc-controls select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #e5e7eb;
+    font-size: 0.75rem;
+}
+
+.icc-controls button {
+    background: rgba(236, 72, 153, 0.2);
+    border: 1px solid rgba(236, 72, 153, 0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: #f9a8d4;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icc-controls button:hover {
+    background: rgba(236, 72, 153, 0.4);
+}
+
+/* Empty state */
+.icc-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+}
+
+.icc-empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+/* Health indicators */
+.icc-health-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+}
+
+.icc-health-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+
+.icc-health-label {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.icc-health-value {
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.icc-health-value.good { color: #22c55e; }
+.icc-health-value.warning { color: #fbbf24; }
+.icc-health-value.error { color: #ef4444; }
+</style>
+
+<div class="tab-pane fade" id="intelligence-command-center" role="tabpanel">
+    <div class="container-fluid p-3">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 style="color: #f9a8d4; margin-bottom: 4px;">&#129504; Intelligence Command Center</h3>
+                <p class="text-muted mb-0" style="font-size: 0.85rem;">
+                    Unified view: <strong style="color: #f97316;">Spiders</strong> &#8594;
+                    <strong style="color: #fbbf24;">Triggers</strong> &#8594;
+                    <strong style="color: #a78bfa;">Situations</strong> &#8594;
+                    <strong style="color: #34d399;">Agents</strong>
+                </p>
+            </div>
+            <div class="icc-controls">
+                <select id="icc-flow-filter" onchange="ICCState.setFilter(this.value)">
+                    <option value="all">All Events</option>
+                    <option value="spider">Spiders Only</option>
+                    <option value="trigger">Triggers Only</option>
+                    <option value="situation">Situations Only</option>
+                    <option value="agent">Agents Only</option>
+                </select>
+                <button onclick="ICCState.togglePause()" id="icc-pause-btn" title="Pause/Resume feed">
+                    <span id="icc-pause-icon">&#9208;</span> <span id="icc-pause-text">Pause</span>
+                </button>
+                <button onclick="ICCState.refresh()" title="Refresh all data">
+                    &#8635; Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="icc-loading" class="text-center py-5">
+            <div class="spinner-border" style="color: #ec4899;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Initializing Intelligence Command Center...</p>
+        </div>
+
+        <!-- Main Grid (hidden until loaded) -->
+        <div id="icc-container" class="icc-grid" style="display: none;">
+
+            <!-- LEFT PANEL: System Roster -->
+            <div class="icc-left-panel">
+
+                <!-- Spider Network -->
+                <div class="icc-panel-card">
+                    <div class="icc-panel-header">
+                        <h6>&#128375; Spider Network</h6>
+                        <span class="badge" id="icc-spider-count">72</span>
+                    </div>
+                    <div class="icc-list-container" id="icc-spider-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Agent Roster -->
+                <div class="icc-panel-card">
+                    <div class="icc-panel-header">
+                        <h6>&#129302; Agent Roster</h6>
+                        <span class="badge" id="icc-agent-count">47</span>
+                    </div>
+                    <div class="icc-list-container" id="icc-agent-list">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="icc-filter-bar">
+                        <input type="text" placeholder="Filter agents..." id="icc-agent-filter" oninput="ICCState.filterAgents(this.value)">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CENTER PANEL: Live Intelligence Flow -->
+            <div class="icc-center-panel">
+
+                <div class="icc-panel-card" style="height: 100%;">
+                    <div class="icc-panel-header">
+                        <h5>&#9889; Live Intelligence Flow</h5>
+                        <span class="text-muted" style="font-size: 0.75rem;" id="icc-events-count">0 events</span>
+                    </div>
+
+                    <!-- Live Feed -->
+                    <div class="icc-live-feed" id="icc-live-feed">
+                        <div class="icc-empty-state" id="icc-feed-empty">
+                            <div class="icc-empty-state-icon">&#128225;</div>
+                            <p>Waiting for intelligence events...</p>
+                            <small>Events will appear here as spiders collect data and triggers fire</small>
+                        </div>
+                    </div>
+
+                    <!-- Data Flow Visualization -->
+                    <div class="icc-flow-stats">
+                        <div class="icc-flow-stat">
+                            <span class="icc-flow-icon">&#128375;</span>
+                            <span class="icc-flow-count" id="icc-flow-spiders">0</span>
+                            <span class="icc-flow-label">Spiders</span>
+                        </div>
+                        <span class="icc-flow-arrow">&#10132;</span>
+                        <div class="icc-flow-stat">
+                            <span class="icc-flow-icon">&#128270;</span>
+                            <span class="icc-flow-count" id="icc-flow-triggers">0</span>
+                            <span class="icc-flow-label">Triggers</span>
+                        </div>
+                        <span class="icc-flow-arrow">&#10132;</span>
+                        <div class="icc-flow-stat">
+                            <span class="icc-flow-icon">&#9889;</span>
+                            <span class="icc-flow-count" id="icc-flow-events">0</span>
+                            <span class="icc-flow-label">Events</span>
+                        </div>
+                        <span class="icc-flow-arrow">&#10132;</span>
+                        <div class="icc-flow-stat">
+                            <span class="icc-flow-icon">&#128736;</span>
+                            <span class="icc-flow-count" id="icc-flow-situations">0</span>
+                            <span class="icc-flow-label">Situations</span>
+                        </div>
+                        <span class="icc-flow-arrow">&#10132;</span>
+                        <div class="icc-flow-stat">
+                            <span class="icc-flow-icon">&#129302;</span>
+                            <span class="icc-flow-count" id="icc-flow-agents">0</span>
+                            <span class="icc-flow-label">Agents</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel (shown when clicking items) -->
+                <div class="icc-detail-panel" id="icc-detail-panel" style="display: none;">
+                    <!-- Populated by JS when clicking items -->
+                </div>
+
+            </div>
+
+            <!-- RIGHT PANEL: Autonomous Situations -->
+            <div class="icc-right-panel">
+
+                <!-- Autonomous Situations -->
+                <div class="icc-panel-card">
+                    <div class="icc-panel-header">
+                        <h6>&#128736; Autonomous Situations</h6>
+                        <span class="badge" id="icc-situation-count">19</span>
+                    </div>
+                    <div class="icc-list-container" id="icc-situations-list" style="max-height: 300px;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Recent Trigger Fires -->
+                <div class="icc-panel-card">
+                    <div class="icc-panel-header">
+                        <h6>&#9889; Trigger Fires (24h)</h6>
+                        <span class="badge" id="icc-trigger-count">0</span>
+                    </div>
+                    <div class="icc-list-container" id="icc-trigger-feed" style="max-height: 150px;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="icc-panel-card">
+                    <div class="icc-panel-header">
+                        <h6>&#128154; System Health</h6>
+                    </div>
+                    <div class="icc-health-grid" id="icc-health">
+                        <div class="icc-health-item">
+                            <span class="icc-status-dot active"></span>
+                            <div>
+                                <div class="icc-health-label">Spiders</div>
+                                <div class="icc-health-value good" id="icc-health-spiders">Active</div>
+                            </div>
+                        </div>
+                        <div class="icc-health-item">
+                            <span class="icc-status-dot active"></span>
+                            <div>
+                                <div class="icc-health-label">Agents</div>
+                                <div class="icc-health-value good" id="icc-health-agents">Online</div>
+                            </div>
+                        </div>
+                        <div class="icc-health-item">
+                            <span class="icc-status-dot active"></span>
+                            <div>
+                                <div class="icc-health-label">Triggers</div>
+                                <div class="icc-health-value good" id="icc-health-triggers">Active</div>
+                            </div>
+                        </div>
+                        <div class="icc-health-item">
+                            <span class="icc-status-dot active"></span>
+                            <div>
+                                <div class="icc-health-label">WebSocket</div>
+                                <div class="icc-health-value good" id="icc-health-ws">Connected</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
