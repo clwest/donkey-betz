@@ -4907,19 +4907,26 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                             for kw in trends[:10]:
                                 research_parts.append(f"- {kw}")
 
-                        # Add articles with real data
+                        # Add articles with real data - Session 523: Include URLs for citation
                         articles = trending_data.get('articles', [])
                         if articles:
                             research_parts.append(f"\n### Latest Articles ({len(articles)} found) - ALL FROM {year}:")
+                            research_parts.append("**CITE THESE SOURCES in your content!**\n")
                             for i, article in enumerate(articles[:8], 1):
                                 title = article.get('title', 'Unknown')
                                 source = article.get('source', 'Unknown')
+                                url = article.get('url', article.get('link', ''))
                                 pub_date = article.get('published', '')
                                 summary = article.get('summary', article.get('content', ''))[:200]
                                 date_str = f" - Published: {pub_date[:10]}" if pub_date else ""
-                                research_parts.append(f"\n**{i}. {title}** (Source: {source}{date_str})")
+
+                                # Session 523: Include URL for source citation
+                                research_parts.append(f"\n**{i}. {title}**")
+                                research_parts.append(f"   Source: {source}{date_str}")
+                                if url and not url.startswith('internal'):
+                                    research_parts.append(f"   URL: {url}")
                                 if summary:
-                                    research_parts.append(f"   {summary}...")
+                                    research_parts.append(f"   Summary: {summary}...")
 
                         # Add categories matched
                         if trending_data.get('categories'):
@@ -4959,11 +4966,30 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             logger.info(f"🎯 Writing {content_type}: {task}")
             logger.info(f"📝 Research context length: {len(research)} chars")
 
+            # Session 523: Fetch scifi context (mood, evolution, memories) for intelligent prompting
+            scifi_context = {}
+            try:
+                if SUPER_PLATFORM_AVAILABLE:
+                    scifi_service = get_scifi_integration_service()
+                    if scifi_service:
+                        scifi_result = scifi_service.get_scifi_context(
+                            agent_name='ContentWriterAgent',
+                            task=task,
+                            user=self.user
+                        )
+                        if scifi_result and hasattr(scifi_result, 'to_dict'):
+                            scifi_context = scifi_result.to_dict()
+                        elif isinstance(scifi_result, dict):
+                            scifi_context = scifi_result
+                        logger.info(f"🎭 Session 523: Fetched scifi context: mood={scifi_context.get('mood', {}).get('name', 'none')}")
+            except Exception as e:
+                logger.debug(f"Could not fetch scifi context: {e}")
+
             # Execute content writing
             result = agent.execute(
                 task=task or f"Write {content_type}",
                 context=context,
-                scifi_context={},
+                scifi_context=scifi_context,
                 spider_context=spider_context
             )
 

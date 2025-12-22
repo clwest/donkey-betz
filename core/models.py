@@ -596,9 +596,23 @@ class UserProfile(models.Model):
 
 class UserPreferences(models.Model):
     """
-    User AI preferences and configuration settings
+    DEPRECATED - Session 528: This model has 0 records and is not used.
+
+    AI preference fields should be added to UserProfile or EnhancedUserProfile instead.
+    This model will be removed in a future session.
+
+    Original purpose: User AI preferences and configuration settings
     """
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='ai_preferences')
+
+    def save(self, *args, **kwargs):
+        import warnings
+        warnings.warn(
+            "UserPreferences is deprecated. Use UserProfile for preferences.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().save(*args, **kwargs)
 
     # AI Configuration
     default_model = models.CharField(max_length=50, default='gpt-5')

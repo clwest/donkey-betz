@@ -457,6 +457,76 @@ class AgentRouter:
         scifi_context = self._get_scifi_context(agent_name, task)
         spider_context = self._get_spider_context(task)
 
+        # Session 522: Special handling for ContentWriterAgent - use SmartTrendingService
+        # with dynamic year references and DuckDuckGo fallback for fresh 2025 data
+        if agent_name == 'ContentWriterAgent':
+            from datetime import datetime
+            try:
+                from core.services.smart_trending_service import SmartTrendingService
+                trending_service = SmartTrendingService()
+                trending_data = trending_service.get_trending_for_query(
+                    query=task,
+                    hours=72,
+                    article_limit=10,
+                    use_cache=True
+                )
+
+                if trending_data:
+                    now = datetime.now()
+                    today = now.strftime('%B %d, %Y')
+                    month_year = now.strftime('%B %Y')
+                    year = now.year
+                    old_years = f"{year-2} or {year-1}"
+
+                    research_parts = [
+                        f"## Real-Time Research Data (as of {today})",
+                        f"**CRITICAL: This content is for {year}. DO NOT reference {old_years}. Use ONLY the data provided below.**\n"
+                    ]
+
+                    trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])
+                    if trends:
+                        research_parts.append(f"### Current Trending Topics ({month_year}):")
+                        for kw in trends[:10]:
+                            research_parts.append(f"- {kw}")
+
+                    articles = trending_data.get('articles', [])
+                    if articles:
+                        research_parts.append(f"\n### Latest Articles ({len(articles)} found) - ALL FROM {year}:")
+                        research_parts.append("**CITE THESE SOURCES in your content!**\n")
+                        for i, article in enumerate(articles[:8], 1):
+                            title = article.get('title', 'Unknown')
+                            source = article.get('source', 'Unknown')
+                            url = article.get('url', article.get('link', ''))
+                            pub_date = article.get('published', '')
+                            summary = article.get('summary', article.get('content', ''))[:200]
+                            date_str = f" - Published: {pub_date[:10]}" if pub_date else ""
+
+                            # Session 523: Include URL for source citation
+                            research_parts.append(f"\n**{i}. {title}**")
+                            research_parts.append(f"   Source: {source}{date_str}")
+                            if url and not url.startswith('internal'):
+                                research_parts.append(f"   URL: {url}")
+                            if summary:
+                                research_parts.append(f"   Summary: {summary}...")
+
+                    if trending_data.get('categories'):
+                        research_parts.append(f"\n### Relevant Categories: {', '.join(trending_data['categories'])}")
+
+                    # Inject research into CONTEXT (not spider_context) for ContentWriterAgent
+                    # ContentWriterAgent uses context.get('research', '') at line 173
+                    research_text = "\n".join(research_parts)
+                    if not context.get('research'):
+                        context['research'] = research_text
+                    else:
+                        # Prepend our fresh data to any existing research
+                        context['research'] = research_text + "\n\n" + context['research']
+                    context['year'] = year
+                    context['month_year'] = month_year
+                    logger.info(f"📊 Session 522: Built {len(research_text)} chars of research for ContentWriterAgent")
+
+            except Exception as e:
+                logger.warning(f"⚠️ Session 522: SmartTrendingService failed for ContentWriterAgent: {e}")
+
         # Execute the agent
         try:
             result = agent.execute(

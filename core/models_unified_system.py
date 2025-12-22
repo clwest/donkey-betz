@@ -3946,8 +3946,9 @@ class TrendSnapshot(models.Model):
 
 class UserBehaviorSignal(models.Model):
     """
-    Track individual user behavior signals for implicit learning.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
 
+    Original purpose: Track individual user behavior signals for implicit learning.
     Each signal represents a user action (download, share, delete, etc.)
     that indicates their preference toward certain styles/models.
     """
@@ -6218,7 +6219,9 @@ class DistributionPlatform(models.Model):
 
 class UserPlatformAccount(models.Model):
     """
-    User's account on a distribution platform.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
+
+    Original purpose: User's account on a distribution platform.
     """
     ACCOUNT_STATUS = [
         ('pending', 'Pending Verification'),
@@ -6713,7 +6716,9 @@ class DistributionInsight(models.Model):
 
 class UserLearningProfile(models.Model):
     """
-    Aggregated learning profile for each user.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
+
+    Original purpose: Aggregated learning profile for each user.
     Stores preferences, patterns, and AI assistant state.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -7326,7 +7331,9 @@ class AutomatedActionLog(models.Model):
 
 class UserNotificationPreference(models.Model):
     """
-    User preferences for notifications and alerts.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
+
+    Original purpose: User preferences for notifications and alerts.
     Controls what notifications users receive and how.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -7692,7 +7699,9 @@ class ABTestEvent(models.Model):
 
 class UserGoal(models.Model):
     """
-    User-defined goals for tracking progress.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
+
+    Original purpose: User-defined goals for tracking progress.
     """
     GOAL_TYPES = [
         ('revenue', 'Revenue Goal'),
@@ -17112,9 +17121,11 @@ class PredictionOutcome(models.Model):
 
 class UserBriefFeedback(models.Model):
     """
-    Captures user feedback and actions on Market Intelligence Briefs.
+    DEPRECATED - Session 528: This model has 0 records and is not used.
 
-    This enables:
+    Original purpose: Captures user feedback and actions on Market Intelligence Briefs.
+
+    This would have enabled:
     1. Tracking which briefs were useful vs not useful
     2. Measuring which stocks users acted on (buy/sell/hold)
     3. Learning which recommendations users follow

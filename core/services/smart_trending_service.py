@@ -263,8 +263,8 @@ class SmartTrendingService:
         categories = self._map_topic_to_categories(topic, query)
         self.logger.info(f"Mapped to categories: {categories}")
 
-        # Fetch spider data for those categories
-        articles = self._fetch_articles_for_categories(categories, hours, article_limit)
+        # Fetch spider data for those categories (Session 523: pass topic for filtering)
+        articles = self._fetch_articles_for_categories(categories, hours, article_limit, topic=topic)
 
         # Session 513: Check if we have enough RELEVANT spider data, otherwise use web search
         used_web_search = False
@@ -428,26 +428,45 @@ class SmartTrendingService:
         self,
         categories: List[str],
         hours: int,
-        limit: int
+        limit: int,
+        topic: str = None
     ) -> List[Dict[str, Any]]:
         """
         Fetch spider data for the given categories.
         Handles different data formats from various spiders.
+
+        Session 523: Always includes major news sources for topic diversity.
+        Category-specific spiders + news sources = comprehensive coverage.
+        Session 523 FIX: Also filters by topic keywords so "AI trends" gets AI articles.
         """
         from core.models_unified_system import SpiderData
         from ai_core.spiders.spider_registry import SpiderRegistry
 
         # Get spiders for each category
         registry = SpiderRegistry()
-        spider_names = []
+        spider_names = set()  # Use set to avoid duplicates
 
         for category in categories:
             category_spiders = registry.get_spiders_by_category(category)
-            spider_names.extend(category_spiders.keys())
+            spider_names.update(category_spiders.keys())
+
+        # Session 523: ALWAYS include major news sources for topic diversity
+        # These sources cover ALL topics (AI, startups, tech, business, etc.)
+        # Without these, queries like "AI trends" only get huggingface/kaggle (no news!)
+        ALWAYS_INCLUDE_NEWS = [
+            'techcrunch', 'axios', 'theverge', 'hackernews', 'devto',
+            'mit_tech_review', 'producthunt', 'medium', 'substack',
+            'google_news', 'reuters_rss', 'newsapi'
+        ]
+        spider_names.update(ALWAYS_INCLUDE_NEWS)
+        self.logger.debug(f"Session 523: Including news sources. Total spiders: {len(spider_names)}")
 
         if not spider_names:
             # Fallback: get all spiders
-            spider_names = list(registry.spider_classes.keys())[:20]
+            spider_names = set(list(registry.spider_classes.keys())[:20])
+
+        # Convert to list for database query
+        spider_names = list(spider_names)
 
         # Query database
         cutoff = timezone.now() - timedelta(hours=hours)
@@ -455,10 +474,28 @@ class SmartTrendingService:
         articles = []
         seen_titles = set()
 
+        # Session 523: Prepare topic keywords for filtering
+        topic_keywords = set()
+        if topic:
+            topic_keywords = {kw.lower() for kw in topic.split() if len(kw) > 2}
+            # Also add related keywords based on topic
+            # Session 523: Use SPECIFIC AI keywords - avoid generic words like 'deep', 'neural'
+            # that cause false positives ("deep cuts", "neural pathways in brain")
+            if 'ai' in topic_keywords or topic.lower() == 'ai':
+                topic_keywords.update([
+                    'artificial intelligence', 'machine learning',  # Multi-word (whole phrase check)
+                    'gpt', 'llm', 'openai', 'anthropic', 'claude', 'chatgpt',
+                    'gemini', 'copilot', 'midjourney', 'stable diffusion',
+                    'transformer', 'generative', 'automation'
+                ])
+            self.logger.debug(f"Session 523: Filtering by keywords: {topic_keywords}")
+
+        # Fetch more records to filter from (especially important when topic filtering)
+        fetch_multiplier = 10 if topic_keywords else 5
         queryset = SpiderData.objects.filter(
             spider_name__in=spider_names,
             created_at__gte=cutoff
-        ).order_by('-created_at')[:limit * 5]  # Fetch extra for dedup and format variations
+        ).order_by('-created_at')[:limit * fetch_multiplier]
 
         for item in queryset:
             raw_data = item.raw_data or {}
@@ -468,12 +505,19 @@ class SmartTrendingService:
 
             for article in extracted_articles:
                 title = article.get('title', '')
+                summary = article.get('summary', '')
 
                 # Deduplicate by title
                 title_key = title.lower()[:50] if title else ''
                 if title_key and title_key in seen_titles:
                     continue
                 seen_titles.add(title_key)
+
+                # Session 523: Filter by topic if keywords provided
+                if topic_keywords:
+                    text = f"{title} {summary}".lower()
+                    if not any(kw in text for kw in topic_keywords):
+                        continue  # Skip articles that don't match topic
 
                 if title:
                     articles.append(article)
@@ -484,6 +528,7 @@ class SmartTrendingService:
             if len(articles) >= limit:
                 break
 
+        self.logger.info(f"Session 523: Found {len(articles)} topic-filtered articles from spider data")
         return articles
 
     def _extract_articles_from_raw_data(
@@ -638,8 +683,19 @@ class SmartTrendingService:
 
         # Split topic into keywords
         topic_keywords = set(topic.lower().split())
-        # Remove very short words
-        topic_keywords = {kw for kw in topic_keywords if len(kw) > 2}
+        # Remove very short words BUT keep important short keywords like "ai"
+        # Session 523: Keep common tech/important short keywords
+        important_short_keywords = {'ai', 'ml', 'ux', 'ui', 'vc', 'vr', 'ar', 'xr', 'ev', 'ev', 'iot', 'api'}
+        topic_keywords = {kw for kw in topic_keywords if len(kw) > 2 or kw in important_short_keywords}
+
+        # Session 523: Also expand AI-related keywords for better matching
+        # Use SPECIFIC keywords to avoid false positives
+        if 'ai' in topic_keywords:
+            topic_keywords.update([
+                'artificial intelligence', 'machine learning',
+                'gpt', 'llm', 'openai', 'anthropic', 'chatgpt',
+                'gemini', 'copilot', 'midjourney', 'generative', 'automation'
+            ])
 
         if not topic_keywords:
             return 0.0

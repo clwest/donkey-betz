@@ -634,7 +634,7 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def save_completed_interview_profile(self, profile_data):
         """Save completed interview profile to database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
             from decimal import Decimal
 
             # Get or create enhanced profile
