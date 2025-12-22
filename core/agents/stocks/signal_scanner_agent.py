@@ -181,28 +181,37 @@ Always provide:
         }
     ]
 
-    def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> AgentResult:
+    def execute(self, task: str, context: Optional[Dict[str, Any]] = None,
+                scifi_context: Optional[Dict[str, Any]] = None,
+                spider_context: Optional[Dict[str, Any]] = None) -> AgentResult:
         """
         Execute signal scanning task.
 
         Args:
             task: Scanning instructions (e.g., "Scan SPY, QQQ for breakout patterns")
             context: Optional context with tickers, timeframe, etc.
+            scifi_context: Sci-fi features context (mood, memory, etc.)
+            spider_context: Spider data context
 
         Returns:
             AgentResult with detected signals and strength ratings
         """
         import time
         start_time = time.time()
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
 
         logger.info(f"📡 [SESSION 465] SignalScannerAgent executing: {task[:100]}")
 
         try:
+            # Session 529: Build intelligent prompt with full context
+            intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
             # Build system context
             scan_context = self._build_scan_context(context)
 
-            # Build prompt
-            prompt = self._build_prompt(task, additional_context=scan_context)
+            # Build prompt with intelligent context
+            prompt = intelligent_context + "\n\n" + scan_context
 
             # Call GPT with tools
             gpt_result = self._call_gpt(prompt, self.tools)

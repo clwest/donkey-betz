@@ -448,6 +448,11 @@ Available agents to delegate to:
             AgentResult with series data and all episode results
         """
         start_time = time.time()
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         # Reset state for new series
         self._series_config = {}

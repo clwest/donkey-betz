@@ -235,7 +235,7 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
 
         try:
             # Build prompt with system prompt + task
-            prompt = self._build_prompt(task, scifi_context, spider_context)
+            prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
             # Call OpenAI with tools
             response = self._call_openai(prompt)

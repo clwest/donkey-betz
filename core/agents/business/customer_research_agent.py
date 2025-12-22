@@ -606,6 +606,11 @@ For absurd ideas, suggest what realistic version might work."""
         tool_calls_made = []
         all_research_data = []
         self._gathered_discussions = []
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         with self.time_travel_session("customer_research", task, input_data=context):
             try:

@@ -270,7 +270,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
 
         try:
             # Build prompt with context
-            full_prompt = self._build_prompt(task, scifi_context, spider_context)
+            full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
             # Record decision
             self.record_decision(

@@ -856,6 +856,224 @@ class BaseAgent(ABC, TimeTravelMixin):
 
         return "\n".join(parts)
 
+    def _build_intelligent_prompt(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any],
+        additional_context: str = ""
+    ) -> str:
+        """
+        Session 528: Build an intelligent, context-aware prompt.
+
+        This is the PREFERRED method for building prompts. All agents should
+        use this instead of _build_prompt() for full intelligent prompting.
+
+        Includes:
+        - Platform context (capabilities, agents, etc.)
+        - Memory Palace context (past interactions)
+        - Agent mood influence
+        - User preferences
+        - Dynamic year/date references
+        - Spider intelligence summary
+        - Evolution level
+        - Policy context
+        - Learned knowledge
+
+        Args:
+            task: The user's task
+            scifi_context: Sci-fi system context (mood, evolution, memory)
+            spider_context: Spider intelligence context
+            additional_context: Any agent-specific context to append
+
+        Returns:
+            Complete intelligent prompt string
+        """
+        from datetime import datetime
+
+        now = datetime.now()
+        year = now.year
+        month_year = now.strftime('%B %Y')
+        today = now.strftime('%B %d, %Y')
+
+        prompt_parts = [self.system_prompt]
+
+        # 1. Add Platform Context
+        try:
+            from core.prompts.registry import PLATFORM_CONTEXT
+            if PLATFORM_CONTEXT:
+                prompt_parts.append(f"\n\n{PLATFORM_CONTEXT}")
+        except ImportError:
+            pass
+
+        # 2. Add Temporal Awareness
+        prompt_parts.append(f"""
+
+## TEMPORAL AWARENESS (Session 528)
+- Current Date: {today}
+- Current Year: {year}
+- CRITICAL: All content must be current and relevant to {month_year}
+- DO NOT reference outdated years like {year-2} or {year-1} unless discussing historical context
+- Use phrases like "in {year}" and "as of {month_year}" to ensure freshness""")
+
+        # 3. Add Agent Mood from scifi_context
+        if scifi_context:
+            mood = scifi_context.get('mood', {})
+            if mood:
+                mood_name = mood.get('mood_type') or mood.get('name', 'focused')
+                mood_desc = mood.get('description', '')
+                style_mod = mood.get('style_modifier', 'balanced')
+                confidence_mod = mood.get('confidence_modifier', 1.0)
+
+                prompt_parts.append(f"""
+
+## CREATIVE MOOD (Session 528)
+Current Mood: **{mood_name.title() if isinstance(mood_name, str) else 'Focused'}**
+Style Tendency: {style_mod}
+{f'Description: {mood_desc}' if mood_desc else ''}
+
+This influences your approach - embrace it!""")
+
+                # Add behavioral directive based on confidence
+                if confidence_mod >= 1.3:
+                    prompt_parts.append("**BEHAVIORAL DIRECTIVE:** You are highly confident. Make bold recommendations.")
+                elif confidence_mod >= 1.1:
+                    prompt_parts.append("**BEHAVIORAL DIRECTIVE:** You are confident. Provide clear recommendations with conviction.")
+                elif confidence_mod <= 0.8:
+                    prompt_parts.append("**BEHAVIORAL DIRECTIVE:** You are in a cautious state. Prefer safe, proven approaches.")
+
+            # 4. Add Evolution Level
+            evolution = scifi_context.get('evolution', {})
+            if evolution:
+                level = evolution.get('level', 1)
+                title = evolution.get('title', 'Apprentice')
+                authority = evolution.get('authority_level', 'junior')
+
+                prompt_parts.append(f"""
+
+## AGENT EVOLUTION (Session 528)
+Level: {level} - {title} ({authority})
+Your experience level influences the sophistication of your approach.""")
+
+                # Authority-based guidance
+                if authority == 'master' or level >= 31:
+                    prompt_parts.append("**AUTHORITY:** Lead with authority. Be definitive in your assessments.")
+                elif authority == 'expert' or level >= 16:
+                    prompt_parts.append("**AUTHORITY:** Provide authoritative guidance with confidence.")
+                elif authority == 'senior' or level >= 6:
+                    prompt_parts.append("**AUTHORITY:** Provide balanced recommendations based on experience.")
+
+            # 5. Add Memory Palace context
+            memory = scifi_context.get('memory', {})
+            if memory:
+                patterns = memory.get('learned_patterns', [])
+                if patterns:
+                    prompt_parts.append(f"""
+
+## MEMORY PALACE - Past Learning (Session 528)
+I remember from past interactions:
+{chr(10).join(f'- {p}' for p in patterns[:5])}
+
+Use these insights to personalize and improve the response.""")
+
+            # Recent dreams/insights
+            dreams = scifi_context.get('dreams', [])
+            if dreams:
+                recent = dreams[0] if isinstance(dreams, list) else {}
+                content = recent.get('content', '')[:100] if isinstance(recent, dict) else ''
+                if content:
+                    prompt_parts.append(f"""
+
+## Recent Creative Thought
+{content}""")
+
+        # 6. Add User Preferences (if user available)
+        if self.user:
+            try:
+                from core.models_unified_system import UserPreferences
+                prefs = UserPreferences.objects.filter(user=self.user).first()
+                if prefs:
+                    pref_items = []
+                    for attr in ['preferred_tone', 'writing_style', 'industry', 'preferred_style']:
+                        val = getattr(prefs, attr, None)
+                        if val:
+                            pref_items.append(f"- {attr.replace('_', ' ').title()}: {val}")
+
+                    if pref_items:
+                        prompt_parts.append(f"""
+
+## USER PREFERENCES (Session 528)
+{chr(10).join(pref_items)}
+
+Tailor the response to match these preferences.""")
+            except Exception:
+                pass
+
+        # 7. Add Spider Intelligence Summary
+        if spider_context:
+            trends = spider_context.get('relevant_trends', []) or spider_context.get('trends', [])
+            if trends:
+                # Handle both string lists and dict lists
+                trend_names = []
+                for t in trends[:5]:
+                    if isinstance(t, str):
+                        trend_names.append(t)
+                    elif isinstance(t, dict):
+                        trend_names.append(t.get('topic') or t.get('title') or str(t))
+
+                if trend_names:
+                    prompt_parts.append(f"""
+
+## REAL-TIME INTELLIGENCE (Session 528)
+Current trending topics from spider network:
+{', '.join(trend_names)}
+
+Consider these trends when crafting the response to maximize relevance and engagement.""")
+
+            # Creative trends
+            creative = spider_context.get('creative_trends', {})
+            if creative:
+                styles = creative.get('trending_styles', [])
+                if styles:
+                    style_names = [s.get('style', '') for s in styles[:3] if isinstance(s, dict)]
+                    if style_names:
+                        prompt_parts.append(f"Trending creative styles: {', '.join(style_names)}")
+
+        # 8. Add Relevant Knowledge from Past Learning (existing infrastructure)
+        relevant_knowledge = self._get_relevant_knowledge_for_task(task)
+        if relevant_knowledge:
+            prompt_parts.append(f"\n\n## Relevant Knowledge from Past Learning (Session 528)")
+            prompt_parts.append("You have learned the following that may be relevant:")
+            for idx, knowledge in enumerate(relevant_knowledge[:3], 1):
+                source = knowledge.get('source_agent', 'Unknown')
+                title = knowledge.get('title', '')[:60]
+                summary = knowledge.get('summary', '')[:150]
+                prompt_parts.append(f"\n{idx}. [{source}] {title}")
+                if summary:
+                    prompt_parts.append(f"   {summary}")
+
+        # 9. Add Policy Context (from Boardroom Decisions)
+        try:
+            from core.services.policy_context import get_policy_context_service
+            policy_service = get_policy_context_service()
+            policy_context = policy_service.get_policies_for_agent(self.name, max_policies=3)
+            if policy_context:
+                prompt_parts.append(policy_context)
+        except Exception:
+            pass
+
+        # 10. Add Agent-specific context if provided
+        if additional_context:
+            prompt_parts.append(f"\n\n{additional_context}")
+
+        # 11. Add the Task
+        prompt_parts.append(f"""
+
+## Task
+{task}""")
+
+        return "\n".join(prompt_parts)
+
     def _call_openai(
         self,
         prompt: str,

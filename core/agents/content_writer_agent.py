@@ -1,11 +1,19 @@
 """
-Content Writer Agent - Session 496
-===================================
+Content Writer Agent - Session 496 + Session 523 Intelligent Prompting
+=======================================================================
 
 Transforms research into written content: blog posts, podcast scripts, video scripts, articles.
 
 This agent takes research context (from spider data, web search, or prior analysis)
 and generates professional written content in the requested format.
+
+Session 523: INTEGRATED WITH INTELLIGENT PROMPTING SYSTEM
+- Uses DynamicPromptBuilder for context-aware prompts
+- Includes Memory Palace context (past interactions)
+- Includes agent mood influence
+- Includes user preferences
+- Uses platform context (capabilities, agents, etc.)
+- Dynamic year/date references
 
 Content Types Supported:
     - blog_post: Title, intro, sections with headers, conclusion, SEO metadata
@@ -36,9 +44,30 @@ Usage:
 import json
 import logging
 import time
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+
+# Session 523: Import Intelligent Prompting System
+try:
+    from core.prompts.registry import (
+        PLATFORM_CONTEXT,
+        get_agent_prompt,
+        DYNAMIC_PROMPT_SECTIONS,
+    )
+    PROMPTING_SYSTEM_AVAILABLE = True
+except ImportError:
+    PROMPTING_SYSTEM_AVAILABLE = False
+    PLATFORM_CONTEXT = ""
+
+# Session 523: Import Memory Palace for past context
+try:
+    from core.models_unified_system import ConversationMemory
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+    ConversationMemory = None
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +129,13 @@ class ContentWriterAgent(BaseAgent):
 
     Takes spider data, web research, or any context and produces
     blog posts, podcast scripts, video scripts, articles, and more.
+
+    Session 523: Now uses Intelligent Prompting System for rich, context-aware content.
     """
 
     name = "ContentWriterAgent"
 
+    # Base system prompt - will be enhanced with intelligent context
     system_prompt = """You are ContentWriterAgent, a professional content writer who transforms research into compelling written content.
 
 Your job is to take research data and create polished, ready-to-publish content in various formats.
@@ -136,6 +168,141 @@ Always deliver content that's:
         """Initialize the content writer agent."""
         super().__init__(user)
         self.project_id = project_id
+        self._intelligent_prompt_cache = None
+
+    def _build_intelligent_system_prompt(
+        self,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any],
+        content_type: str = 'blog_post'
+    ) -> str:
+        """
+        Session 523: Build an intelligent, context-aware system prompt.
+
+        Includes:
+        - Platform context (capabilities, agents, etc.)
+        - Memory Palace context (past interactions)
+        - Agent mood influence
+        - User preferences
+        - Dynamic year/date references
+        """
+        now = datetime.now()
+        year = now.year
+        month_year = now.strftime('%B %Y')
+        today = now.strftime('%B %d, %Y')
+
+        prompt_parts = [self.system_prompt]
+
+        # Add platform context if available
+        if PROMPTING_SYSTEM_AVAILABLE and PLATFORM_CONTEXT:
+            prompt_parts.append(f"\n\n{PLATFORM_CONTEXT}")
+
+        # Add temporal awareness
+        prompt_parts.append(f"""
+
+## TEMPORAL AWARENESS (Session 523)
+- Current Date: {today}
+- Current Year: {year}
+- CRITICAL: All content must be current and relevant to {month_year}
+- DO NOT reference outdated years like {year-2} or {year-1} unless discussing historical context
+- Use phrases like "in {year}" and "this {month_year}" to ensure freshness""")
+
+        # Add agent mood influence from scifi_context
+        if scifi_context:
+            mood = scifi_context.get('mood', {})
+            if mood:
+                mood_name = mood.get('name', 'focused')
+                mood_influence = mood.get('description', '')
+                prompt_parts.append(f"""
+
+## CREATIVE MOOD (Session 523)
+Current Mood: **{mood_name.title()}**
+{mood_influence}
+This influences your writing style - embrace it!""")
+
+            # Add evolution level if available
+            evolution = scifi_context.get('evolution', {})
+            if evolution:
+                level = evolution.get('level', 1)
+                title = evolution.get('title', 'Content Writer')
+                prompt_parts.append(f"""
+
+## AGENT EVOLUTION
+Level: {level} - {title}
+Your experience level influences the sophistication of your writing.""")
+
+        # Add Memory Palace context - past successful content
+        if MEMORY_AVAILABLE and self.user:
+            try:
+                recent_memories = ConversationMemory.objects.filter(
+                    user=self.user,
+                    memory_type__in=['success', 'insight', 'learning']
+                ).order_by('-created_at')[:5]
+
+                if recent_memories:
+                    memory_text = "\n".join([
+                        f"- {m.summary[:100]}..." if len(m.summary) > 100 else f"- {m.summary}"
+                        for m in recent_memories
+                    ])
+                    prompt_parts.append(f"""
+
+## MEMORY PALACE - Past Interactions (Session 523)
+I remember our previous work together:
+{memory_text}
+
+Use these insights to personalize and improve the content.""")
+            except Exception as e:
+                logger.debug(f"Could not fetch memories: {e}")
+
+        # Add user preferences if available
+        if self.user:
+            try:
+                from core.models_unified_system import UserPreferences
+                prefs = UserPreferences.objects.filter(user=self.user).first()
+                if prefs:
+                    pref_items = []
+                    if hasattr(prefs, 'preferred_tone') and prefs.preferred_tone:
+                        pref_items.append(f"- Preferred tone: {prefs.preferred_tone}")
+                    if hasattr(prefs, 'writing_style') and prefs.writing_style:
+                        pref_items.append(f"- Writing style: {prefs.writing_style}")
+                    if hasattr(prefs, 'industry') and prefs.industry:
+                        pref_items.append(f"- Industry focus: {prefs.industry}")
+
+                    if pref_items:
+                        prompt_parts.append(f"""
+
+## USER PREFERENCES (Session 523)
+{chr(10).join(pref_items)}
+
+Tailor the content to match these preferences.""")
+            except Exception as e:
+                logger.debug(f"Could not fetch user preferences: {e}")
+
+        # Add spider intelligence summary
+        if spider_context:
+            trends = spider_context.get('trends', [])
+            if trends:
+                trend_text = ", ".join(trends[:5]) if isinstance(trends[0], str) else ", ".join([t.get('title', str(t)) for t in trends[:5]])
+                prompt_parts.append(f"""
+
+## REAL-TIME INTELLIGENCE (Session 523)
+Current trending topics from spider network:
+{trend_text}
+
+Consider these trends when crafting the content to maximize relevance and engagement.""")
+
+        # Add content-type specific enhancement
+        prompt_parts.append(f"""
+
+## CONTENT EXCELLENCE STANDARDS
+For this {content_type}, ensure:
+- Hook readers in the first sentence
+- Use data and specific examples from the research
+- Include actionable takeaways
+- Write with authority and expertise
+- Make it shareable and memorable""")
+
+        return "\n".join(prompt_parts)
 
     def execute(
         self,
@@ -165,6 +332,11 @@ Always deliver content that's:
             AgentResult with the generated content
         """
         start_time = time.time()
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         with self.time_travel_session("content_writing", task, input_data=context):
             try:
@@ -223,8 +395,13 @@ Always deliver content that's:
                     keywords=keywords
                 )
 
-                # Generate content via GPT
-                generated_content = self._generate_content(prompt, content_type)
+                # Session 523: Generate content via GPT with intelligent prompting
+                generated_content = self._generate_content(
+                    prompt,
+                    content_type,
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
 
                 if not generated_content:
                     return AgentResult(
@@ -302,15 +479,38 @@ Always deliver content that's:
         word_count: int,
         keywords: List[str]
     ) -> str:
-        """Build the GPT prompt for content generation."""
+        """
+        Build the GPT prompt for content generation.
 
+        Session 523: Added source citation requirements.
+        """
         # Content-type specific instructions
         type_instructions = self._get_type_instructions(content_type, content_config)
 
+        # Session 523: Extract sources from research for citation
+        sources_instruction = ""
+        if research and ("Source:" in research or "Published:" in research):
+            sources_instruction = """
+
+## SOURCE CITATION REQUIREMENTS (Session 523)
+The research above includes REAL sources with publication dates. You MUST:
+1. Reference specific data, statistics, or quotes from the sources
+2. Attribute claims like "According to [Source]..." or "As reported by [Source]..."
+3. Include a 'sources' array in your JSON output with all sources used
+4. When mentioning numbers or facts, cite where they came from
+
+Example attributions:
+- "According to TechCrunch, the AI market is projected to reach $X billion..."
+- "A recent MIT Technology Review article notes that..."
+- "As reported by Reuters on December 21, 2025..."
+
+This builds credibility and allows readers to verify the information."""
+
         prompt = f"""Create a {content_config['name']} based on the following research and requirements.
 
-## RESEARCH CONTEXT
+## RESEARCH CONTEXT (Real-Time Data from Spider Network)
 {research if research else task}
+{sources_instruction}
 
 ## REQUIREMENTS
 - Content Type: {content_config['name']}
@@ -329,14 +529,17 @@ Return the content as a JSON object with the following structure based on conten
 For {content_type}, include these fields:
 {json.dumps(content_config['structure'], indent=2)}
 
-Plus a 'full_text' field with the complete content as plain text.
+Plus these additional fields:
+- 'full_text': Complete content as plain text with source attributions inline
+- 'sources': Array of source objects used, each with {{"name": "...", "url": "...", "published": "..."}}
 
 ## IMPORTANT
 - Base ALL content on the provided research - do not invent facts
+- CITE YOUR SOURCES! Attribute specific claims to their sources
 - Write in a natural, engaging style appropriate for {target_audience}
 - Ensure the content is ready to publish with minimal editing
 - Include practical examples and actionable insights where appropriate
-- Make it compelling and valuable to the reader
+- Make it compelling, valuable, and credible to the reader
 
 Generate the {content_config['name']} now:"""
 
@@ -395,18 +598,39 @@ Generate the {content_config['name']} now:"""
 
         return instructions.get(content_type, f"Follow standard {content_type} format.")
 
-    def _generate_content(self, prompt: str, content_type: str) -> Optional[Dict[str, Any]]:
-        """Generate content using GPT."""
+    def _generate_content(
+        self,
+        prompt: str,
+        content_type: str,
+        scifi_context: Dict[str, Any] = None,
+        spider_context: Dict[str, Any] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Generate content using GPT with intelligent prompting.
+
+        Session 523: Now uses _build_intelligent_system_prompt for rich context.
+        """
         try:
             from openai import OpenAI
             import os
 
             client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+            # Session 523: Build intelligent system prompt with all context
+            intelligent_system_prompt = self._build_intelligent_system_prompt(
+                scifi_context=scifi_context or {},
+                spider_context=spider_context or {},
+                content_type=content_type
+            )
+
+            logger.info(f"📝 Session 523: Using intelligent prompt ({len(intelligent_system_prompt)} chars)")
+            logger.debug(f"   Prompt includes: platform_context={PROMPTING_SYSTEM_AVAILABLE}, "
+                        f"scifi={bool(scifi_context)}, spider={bool(spider_context)}")
+
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": self.system_prompt},
+                    {"role": "system", "content": intelligent_system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=4000,

@@ -271,7 +271,7 @@ the user should use ImageAgent, VideoAgent, etc."""
                 )
 
                 # Build enhanced prompt with context
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
                 logger.info(f"ContentStrategyAgent executing: {task[:50]}...")
 

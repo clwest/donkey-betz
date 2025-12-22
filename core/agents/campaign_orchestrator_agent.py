@@ -232,13 +232,14 @@ Always provide status updates and be transparent about what's being created."""
         """Execute the campaign orchestration."""
         start_time = time.time()
         tool_calls_made = []
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
 
         with self.time_travel_session("campaign_orchestration", task, input_data=context):
             try:
-                # Build prompt with context
-                full_prompt, attribution = self._build_prompt_with_attribution(
-                    task, scifi_context, spider_context
-                )
+                # Session 529: Use intelligent prompting
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
+                attribution = None  # Legacy compatibility
 
                 # Call GPT to determine actions
                 gpt_response = self._call_openai(full_prompt)

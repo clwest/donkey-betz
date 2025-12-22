@@ -199,7 +199,7 @@ You orchestrate. You don't create content directly."""
                 )
 
                 # Build prompt with context and any previous results
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
                 # Allow up to 5 delegation rounds for complex workflows
                 max_iterations = 5

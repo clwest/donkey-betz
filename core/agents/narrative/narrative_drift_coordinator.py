@@ -1165,6 +1165,12 @@ class NarrativeDriftCoordinator(BaseAgent):
         spider_context: Dict[str, Any]
     ) -> AgentResult:
         """Execute the coordinator task."""
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
         logger.info(f"NarrativeDriftCoordinator executing: {task[:100]}...")
 
         system_prompt = """You are the Narrative Drift Coordinator - the orchestrator of the Narrative Drift Detection system.

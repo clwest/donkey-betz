@@ -139,6 +139,11 @@ Focus on transactions that diverge from normal patterns."""
         """
         start_time = datetime.now()
         context = context or {}
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         logger.info(f"InstitutionalWatcherAgent executing: {task[:100]}...")
 

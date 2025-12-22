@@ -153,7 +153,7 @@ If asked to do something outside 3D generation, politely explain you can only cr
                     confidence=0.9
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 gpt_response = self._call_openai(full_prompt)
 
                 if gpt_response.get('tool_calls'):

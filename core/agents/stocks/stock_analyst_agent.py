@@ -155,16 +155,21 @@ Alert on:
         """
         start_time = datetime.now()
         context = context or {}
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
 
         logger.info(f"StockAnalystAgent executing: {task[:100]}...")
 
         try:
+            # Session 529: Build intelligent prompt with full context
+            intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
             # Get relevant data from spiders
             filing_data = self._get_sec_filing_data(context.get('ticker'))
             fundamental_data = self._get_fundamental_data(context.get('ticker'))
 
-            # Build analysis prompt
-            prompt = self._build_analysis_prompt(task, filing_data, fundamental_data, context)
+            # Build analysis prompt with intelligent context
+            prompt = self._build_analysis_prompt(task, filing_data, fundamental_data, context, intelligent_context)
 
             # Get LLM analysis
             analysis = self._get_llm_analysis(prompt)
@@ -280,9 +285,13 @@ Alert on:
             return {'error': str(e)}
 
     def _build_analysis_prompt(self, task: str, filing_data: Dict,
-                                fundamental_data: Dict, context: Dict) -> str:
-        """Build the analysis prompt."""
-        prompt = f"""Analyze the following stock data:
+                                fundamental_data: Dict, context: Dict,
+                                intelligent_context: str = "") -> str:
+        """Build the analysis prompt with intelligent context."""
+        # Session 529: Include intelligent context for memory, mood, and platform awareness
+        prompt = f"""{intelligent_context}
+
+Analyze the following stock data:
 
 TASK: {task}
 
