@@ -1,0 +1,796 @@
+{% comment %}
+Session 530: Intelligence Command Center JavaScript
+State management singleton for unified intelligence dashboard
+Handles: API calls, WebSocket connections, cross-references, real-time updates
+{% endcomment %}
+
+<script>
+/**
+ * Intelligence Command Center State Manager
+ * Singleton pattern for managing unified intelligence dashboard
+ */
+const ICCState = {
+    // Initialization flag
+    initialized: false,
+
+    // Data stores
+    spiders: [],
+    spiderCategories: {},
+    agents: [],
+    situations: [],
+    events: [],
+    triggerFires: [],
+
+    // UI state
+    selectedItem: null,
+    selectedType: null,
+    isPaused: false,
+    filter: 'all',
+    agentFilter: '',
+
+    // WebSocket connections
+    wsSpider: null,
+    wsAutonomous: null,
+
+    // Cross-reference maps (populated from API)
+    spiderToAgents: {},
+    agentToSituations: {},
+    situationToSpiders: {},
+
+    // Counters for flow visualization
+    flowCounts: {
+        spiders: 0,
+        triggers: 0,
+        events: 0,
+        situations: 0,
+        agents: 0
+    },
+
+    /**
+     * Initialize the Intelligence Command Center
+     */
+    async init() {
+        if (this.initialized) {
+            console.log('ICC: Already initialized');
+            return;
+        }
+
+        console.log('ICC: Initializing Intelligence Command Center...');
+
+        try {
+            // Load initial data in parallel
+            await Promise.all([
+                this.loadSpiders(),
+                this.loadAgents(),
+                this.loadSituations(),
+                this.loadTriggerFires()
+            ]);
+
+            // Build cross-references
+            this.buildCrossReferences();
+
+            // Connect WebSockets
+            this.connectWebSockets();
+
+            // Hide loading, show content
+            document.getElementById('icc-loading').style.display = 'none';
+            document.getElementById('icc-container').style.display = 'grid';
+
+            // Start auto-refresh
+            this.startAutoRefresh();
+
+            this.initialized = true;
+            console.log('ICC: Initialization complete');
+
+            // Add a welcome event
+            this.addEvent({
+                type: 'system',
+                icon: '&#129504;',
+                title: 'Intelligence Command Center Online',
+                details: `${this.spiders.length} spiders, ${this.agents.length} agents, ${this.situations.length} situations`,
+                timestamp: new Date()
+            });
+
+        } catch (error) {
+            console.error('ICC: Initialization failed:', error);
+            document.getElementById('icc-loading').innerHTML = `
+                <div style="color: #ef4444;">
+                    <p>Failed to initialize: ${error.message}</p>
+                    <button onclick="ICCState.init()" class="btn btn-sm btn-outline-danger mt-2">Retry</button>
+                </div>
+            `;
+        }
+    },
+
+    /**
+     * Load spider data from API
+     */
+    async loadSpiders() {
+        try {
+            const response = await fetch('/api/spider-intelligence/dashboard-stats/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' || data.stats) {
+                const stats = data.stats || data;
+                this.flowCounts.spiders = stats.total_spiders || 72;
+                document.getElementById('icc-spider-count').textContent = this.flowCounts.spiders;
+                document.getElementById('icc-flow-spiders').textContent = this.flowCounts.spiders;
+
+                // Build spider categories from stats
+                this.spiderCategories = stats.categories || {};
+                this.renderSpiderList();
+            }
+        } catch (error) {
+            console.error('ICC: Failed to load spiders:', error);
+            this.renderSpiderListFallback();
+        }
+    },
+
+    /**
+     * Load agents from API
+     */
+    async loadAgents() {
+        try {
+            const response = await fetch('/api/agents/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (data.agents || Array.isArray(data)) {
+                this.agents = data.agents || data;
+                this.flowCounts.agents = this.agents.length;
+                document.getElementById('icc-agent-count').textContent = this.agents.length;
+                document.getElementById('icc-flow-agents').textContent = this.agents.length;
+                this.renderAgentList();
+            }
+        } catch (error) {
+            console.error('ICC: Failed to load agents:', error);
+            this.renderAgentListFallback();
+        }
+    },
+
+    /**
+     * Load autonomous situations from API
+     */
+    async loadSituations() {
+        try {
+            const response = await fetch('/api/autonomous/situations/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (data.success !== false) {
+                this.situations = data.situations || data || [];
+                this.flowCounts.situations = this.situations.length;
+                document.getElementById('icc-situation-count').textContent = this.situations.length;
+                document.getElementById('icc-flow-situations').textContent = this.situations.length;
+                this.renderSituationsList();
+            }
+        } catch (error) {
+            console.error('ICC: Failed to load situations:', error);
+            this.renderSituationsListFallback();
+        }
+    },
+
+    /**
+     * Load recent trigger fires
+     */
+    async loadTriggerFires() {
+        try {
+            const response = await fetch('/api/autonomous/trigger-events/?hours=24', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (data.events || Array.isArray(data)) {
+                this.triggerFires = data.events || data || [];
+                this.flowCounts.triggers = this.triggerFires.length;
+                this.flowCounts.events = this.triggerFires.length;
+                document.getElementById('icc-trigger-count').textContent = this.triggerFires.length;
+                document.getElementById('icc-flow-triggers').textContent = this.triggerFires.length;
+                document.getElementById('icc-flow-events').textContent = this.triggerFires.length;
+                this.renderTriggerFeed();
+            }
+        } catch (error) {
+            console.error('ICC: Failed to load trigger fires:', error);
+            // Non-critical, continue
+        }
+    },
+
+    /**
+     * Build cross-reference maps for drill-down
+     */
+    buildCrossReferences() {
+        // Spider → Agent mappings based on known patterns
+        this.spiderToAgents = {
+            'techcrunch': ['TrendAnalysisAgent', 'ContentWriterAgent', 'ResearchAgent'],
+            'hackernews': ['TrendAnalysisAgent', 'ContentWriterAgent', 'CodeGeneratorAgent'],
+            'coingecko': ['BlockchainAuditCoordinator', 'WhaleWatcherAgent', 'MarketIntelligenceCoordinator'],
+            'etherscan': ['BlockchainAuditCoordinator', 'SmartContractAuditorAgent', 'TransactionMonitorAgent'],
+            'reddit': ['TrendAnalysisAgent', 'ContentWriterAgent', 'SocialMediaAgent'],
+            'remoteok': ['OpportunityScoringAgent', 'OpportunityPipelineAgent'],
+            'dribbble': ['ImageAgent', 'BrandIdentityAgent', 'CreativeDirectorAgent'],
+            'yahoo_finance': ['StockAuditCoordinator', 'MarketIntelligenceCoordinator', 'StockAnalystAgent']
+        };
+
+        // Agent → Situation mappings
+        this.agentToSituations = {
+            'BlockchainAuditCoordinator': ['blockchain_security'],
+            'StockAuditCoordinator': ['stock_market_intelligence'],
+            'ContentWriterAgent': ['autonomous_content_generation', 'viral_content_predictor'],
+            'TrendAnalysisAgent': ['tech_stack_evolution', 'narrative_drift'],
+            'OpportunityScoringAgent': ['job_matching', 'freelance_scout'],
+            'ImageAgent': ['design_trends', 'thumbnail_optimizer'],
+            'LegalDocDrafterAgent': ['case_law_monitor', 'regulatory_change']
+        };
+
+        // Situation → Spider mappings
+        this.situationToSpiders = {
+            'blockchain_security': ['etherscan', 'coingecko', 'coindesk'],
+            'stock_market_intelligence': ['yahoo_finance', 'sec_edgar', 'marketwatch'],
+            'autonomous_content_generation': ['techcrunch', 'hackernews', 'reddit', 'the_verge'],
+            'job_matching': ['remoteok', 'weworkremotely', 'adzuna'],
+            'design_trends': ['dribbble', 'behance', 'unsplash']
+        };
+    },
+
+    /**
+     * Connect WebSocket for real-time updates
+     */
+    connectWebSockets() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+
+        // Try to connect to spider intelligence WebSocket
+        try {
+            const wsUrl = `${protocol}//${host}/ws/spider-intelligence/`;
+            this.wsSpider = new WebSocket(wsUrl);
+
+            this.wsSpider.onopen = () => {
+                console.log('ICC: Spider WebSocket connected');
+                this.updateHealthIndicator('ws', 'Connected', 'good');
+            };
+
+            this.wsSpider.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleWebSocketMessage(data);
+                } catch (e) {
+                    console.error('ICC: Failed to parse WebSocket message:', e);
+                }
+            };
+
+            this.wsSpider.onclose = () => {
+                console.log('ICC: Spider WebSocket closed, reconnecting...');
+                this.updateHealthIndicator('ws', 'Reconnecting', 'warning');
+                setTimeout(() => this.connectWebSockets(), 5000);
+            };
+
+            this.wsSpider.onerror = (error) => {
+                console.error('ICC: WebSocket error:', error);
+                this.updateHealthIndicator('ws', 'Error', 'error');
+            };
+        } catch (error) {
+            console.error('ICC: Failed to connect WebSocket:', error);
+            this.updateHealthIndicator('ws', 'Unavailable', 'error');
+        }
+    },
+
+    /**
+     * Handle incoming WebSocket messages
+     */
+    handleWebSocketMessage(data) {
+        if (this.isPaused) return;
+
+        switch (data.type) {
+            case 'spider_update':
+            case 'spider_data':
+                this.addEvent({
+                    type: 'spider',
+                    icon: '&#128375;',
+                    title: `${data.spider_name || 'Spider'} collected ${data.item_count || 'new'} items`,
+                    details: data.category || '',
+                    timestamp: new Date(),
+                    sourceId: data.spider_name
+                });
+                this.flowCounts.spiders++;
+                break;
+
+            case 'trigger_fired':
+                this.addEvent({
+                    type: 'trigger',
+                    icon: '&#9889;',
+                    title: `Trigger: ${data.trigger_name || 'Unknown'}`,
+                    details: `Matched: ${data.matched_value || 'N/A'}`,
+                    timestamp: new Date(),
+                    severity: data.severity
+                });
+                this.flowCounts.triggers++;
+                this.flowCounts.events++;
+                break;
+
+            case 'situation_started':
+                this.addEvent({
+                    type: 'situation',
+                    icon: '&#128736;',
+                    title: `Situation: ${data.situation_type || 'Unknown'}`,
+                    details: 'Processing...',
+                    timestamp: new Date()
+                });
+                break;
+
+            case 'agent_executed':
+                this.addEvent({
+                    type: 'agent',
+                    icon: '&#129302;',
+                    title: `Agent: ${data.agent_name || 'Unknown'}`,
+                    details: data.result || 'Completed',
+                    timestamp: new Date()
+                });
+                break;
+        }
+
+        this.updateFlowCounts();
+    },
+
+    /**
+     * Add event to live feed
+     */
+    addEvent(event) {
+        if (this.filter !== 'all' && event.type !== this.filter && event.type !== 'system') {
+            return;
+        }
+
+        this.events.unshift(event);
+        if (this.events.length > 100) this.events.pop();
+
+        // Hide empty state
+        const emptyState = document.getElementById('icc-feed-empty');
+        if (emptyState) emptyState.style.display = 'none';
+
+        // Render the event
+        const feed = document.getElementById('icc-live-feed');
+        const eventEl = document.createElement('div');
+        eventEl.className = `icc-feed-event ${event.type}`;
+        eventEl.onclick = () => this.showDetail(event.type, event.sourceId || event.title);
+
+        eventEl.innerHTML = `
+            <div class="icc-feed-event-icon">${event.icon}</div>
+            <div class="icc-feed-event-content">
+                <div class="icc-feed-event-title">${event.title}</div>
+                ${event.details ? `<div class="icc-feed-event-details">${event.details}</div>` : ''}
+            </div>
+            <div class="icc-feed-event-time">${this.formatTimeAgo(event.timestamp)}</div>
+        `;
+
+        feed.insertBefore(eventEl, feed.firstChild);
+
+        // Remove old events from DOM
+        while (feed.children.length > 50) {
+            feed.removeChild(feed.lastChild);
+        }
+
+        // Update event count
+        document.getElementById('icc-events-count').textContent = `${this.events.length} events`;
+    },
+
+    /**
+     * Render spider list by category
+     */
+    renderSpiderList() {
+        const container = document.getElementById('icc-spider-list');
+        let html = '';
+
+        // Default categories if API didn't provide them
+        const categories = Object.keys(this.spiderCategories).length > 0
+            ? this.spiderCategories
+            : {
+                'Tech News': 8,
+                'Financial': 6,
+                'Jobs': 5,
+                'Social': 12,
+                'Creative': 4,
+                'Crypto': 5,
+                'Research': 6,
+                'Other': 26
+            };
+
+        for (const [category, count] of Object.entries(categories)) {
+            html += `
+                <div class="icc-category-header">${category} (${count})</div>
+                <div class="icc-list-item" onclick="ICCState.showDetail('category', '${category}')">
+                    <span class="icc-status-dot active"></span>
+                    <span>${category} Spiders</span>
+                    <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">${count}</span>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+    },
+
+    /**
+     * Fallback spider list render
+     */
+    renderSpiderListFallback() {
+        const container = document.getElementById('icc-spider-list');
+        container.innerHTML = `
+            <div class="icc-list-item">
+                <span class="icc-status-dot active"></span>
+                <span>72 Active Spiders</span>
+            </div>
+            <div class="text-muted px-3 py-2" style="font-size: 0.75rem;">
+                Categories: Tech, Financial, Jobs, Creative, Crypto, Social
+            </div>
+        `;
+    },
+
+    /**
+     * Render agent list
+     */
+    renderAgentList() {
+        const container = document.getElementById('icc-agent-list');
+        let html = '';
+
+        const filteredAgents = this.agentFilter
+            ? this.agents.filter(a => {
+                const name = a.name || a.agent_name || '';
+                return name.toLowerCase().includes(this.agentFilter.toLowerCase());
+            })
+            : this.agents.slice(0, 20);
+
+        for (const agent of filteredAgents) {
+            const name = agent.name || agent.agent_name || 'Unknown';
+            const status = agent.status || 'idle';
+            html += `
+                <div class="icc-list-item" onclick="ICCState.showDetail('agent', '${name}')">
+                    <span class="icc-status-dot ${status === 'active' ? 'active' : 'idle'}"></span>
+                    <span>${name.replace('Agent', '')}</span>
+                </div>
+            `;
+        }
+
+        if (this.agents.length > 20 && !this.agentFilter) {
+            html += `<div class="text-muted text-center py-2" style="font-size: 0.75rem;">+ ${this.agents.length - 20} more agents</div>`;
+        }
+
+        container.innerHTML = html || '<div class="text-muted text-center py-3">No agents found</div>';
+    },
+
+    /**
+     * Fallback agent list render
+     */
+    renderAgentListFallback() {
+        const container = document.getElementById('icc-agent-list');
+        container.innerHTML = `
+            <div class="icc-list-item">
+                <span class="icc-status-dot active"></span>
+                <span>47 Registered Agents</span>
+            </div>
+        `;
+    },
+
+    /**
+     * Render situations list
+     */
+    renderSituationsList() {
+        const container = document.getElementById('icc-situations-list');
+        let html = '';
+
+        const domainColors = {
+            'content': 'content',
+            'creative': 'creative',
+            'income': 'income',
+            'financial': 'financial',
+            'research': 'research',
+            'legal': 'legal'
+        };
+
+        for (const sit of this.situations) {
+            const name = sit.name || sit.situation_type || 'Unknown';
+            const domain = sit.domain || 'research';
+            const status = sit.status || sit.is_active ? 'active' : 'inactive';
+            const runs = sit.runs_24h || sit.total_runs || 0;
+
+            html += `
+                <div class="icc-situation-item ${domainColors[domain] || ''}">
+                    <div class="icc-situation-info" onclick="ICCState.showDetail('situation', '${sit.situation_type || name}')">
+                        <div class="icc-situation-name">${name}</div>
+                        <div class="icc-situation-stats">${runs} runs</div>
+                    </div>
+                    <label class="icc-toggle">
+                        <input type="checkbox" ${status === 'active' ? 'checked' : ''}
+                               onchange="ICCState.toggleSituation('${sit.situation_type || name}', this.checked)">
+                        <span class="icc-toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html || '<div class="text-muted text-center py-3">No situations found</div>';
+    },
+
+    /**
+     * Fallback situations list render
+     */
+    renderSituationsListFallback() {
+        const container = document.getElementById('icc-situations-list');
+        container.innerHTML = `
+            <div class="icc-situation-item content">
+                <div class="icc-situation-info">
+                    <div class="icc-situation-name">Autonomous Content Studio</div>
+                    <div class="icc-situation-stats">Content generation</div>
+                </div>
+            </div>
+            <div class="icc-situation-item financial">
+                <div class="icc-situation-info">
+                    <div class="icc-situation-name">Market Intelligence</div>
+                    <div class="icc-situation-stats">Financial analysis</div>
+                </div>
+            </div>
+            <div class="text-muted text-center py-2" style="font-size: 0.75rem;">+ 17 more situations</div>
+        `;
+    },
+
+    /**
+     * Render trigger feed
+     */
+    renderTriggerFeed() {
+        const container = document.getElementById('icc-trigger-feed');
+        let html = '';
+
+        for (const trigger of this.triggerFires.slice(0, 10)) {
+            const name = trigger.trigger_name || trigger.name || 'Trigger';
+            const time = trigger.fired_at || trigger.created_at;
+            html += `
+                <div class="icc-list-item" onclick="ICCState.showDetail('trigger', '${name}')">
+                    <span style="color: #fbbf24;">&#9889;</span>
+                    <span style="flex: 1; font-size: 0.8rem;">${name}</span>
+                    <span style="font-size: 0.65rem; color: #6b7280;">${this.formatTimeAgo(new Date(time))}</span>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html || '<div class="text-muted text-center py-3" style="font-size: 0.8rem;">No triggers in 24h</div>';
+    },
+
+    /**
+     * Show detail panel with cross-references
+     */
+    showDetail(type, id) {
+        const panel = document.getElementById('icc-detail-panel');
+        panel.style.display = 'block';
+
+        let html = '';
+
+        switch (type) {
+            case 'spider':
+            case 'category':
+                const agents = this.spiderToAgents[id] || ['TrendAnalysisAgent', 'ContentWriterAgent'];
+                html = `
+                    <h6>&#128375; ${type === 'category' ? 'Category' : 'Spider'}: ${id}</h6>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Agents that use this data:</p>
+                    <div class="icc-connections">
+                        ${agents.map(a => `
+                            <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '')}</span>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+
+            case 'agent':
+                const situations = this.agentToSituations[id] || [];
+                html = `
+                    <h6>&#129302; Agent: ${id}</h6>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Autonomous situations using this agent:</p>
+                    <div class="icc-connections">
+                        ${situations.length > 0 ? situations.map(s => `
+                            <span class="icc-connection-badge situation" onclick="ICCState.showDetail('situation', '${s}')">${s.replace(/_/g, ' ')}</span>
+                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">No linked situations</span>'}
+                    </div>
+                `;
+                break;
+
+            case 'situation':
+                const spiders = this.situationToSpiders[id] || [];
+                html = `
+                    <h6>&#128736; Situation: ${id.replace(/_/g, ' ')}</h6>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Spider data sources:</p>
+                    <div class="icc-connections">
+                        ${spiders.length > 0 ? spiders.map(s => `
+                            <span class="icc-connection-badge spider" onclick="ICCState.showDetail('spider', '${s}')">${s}</span>
+                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Uses multiple sources</span>'}
+                    </div>
+                `;
+                break;
+
+            default:
+                html = `<h6>${type}: ${id}</h6>`;
+        }
+
+        panel.innerHTML = html + `
+            <button onclick="ICCState.hideDetail()" style="margin-top: 12px; background: transparent; border: 1px solid #6b7280; color: #9ca3af; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Close</button>
+        `;
+
+        this.selectedItem = id;
+        this.selectedType = type;
+    },
+
+    /**
+     * Hide detail panel
+     */
+    hideDetail() {
+        document.getElementById('icc-detail-panel').style.display = 'none';
+        this.selectedItem = null;
+        this.selectedType = null;
+    },
+
+    /**
+     * Toggle situation active status
+     */
+    async toggleSituation(situationType, active) {
+        try {
+            const response = await fetch(`/api/autonomous/situations/${situationType}/toggle/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({ active })
+            });
+
+            if (response.ok) {
+                this.addEvent({
+                    type: 'situation',
+                    icon: active ? '&#9989;' : '&#10060;',
+                    title: `${situationType.replace(/_/g, ' ')} ${active ? 'activated' : 'paused'}`,
+                    timestamp: new Date()
+                });
+            }
+        } catch (error) {
+            console.error('ICC: Failed to toggle situation:', error);
+        }
+    },
+
+    /**
+     * Filter agents by search term
+     */
+    filterAgents(term) {
+        this.agentFilter = term;
+        this.renderAgentList();
+    },
+
+    /**
+     * Set event filter
+     */
+    setFilter(filter) {
+        this.filter = filter;
+        // Clear and re-render filtered events
+        const feed = document.getElementById('icc-live-feed');
+        feed.innerHTML = '';
+
+        const filteredEvents = filter === 'all'
+            ? this.events
+            : this.events.filter(e => e.type === filter);
+
+        if (filteredEvents.length === 0) {
+            feed.innerHTML = `
+                <div class="icc-empty-state">
+                    <div class="icc-empty-state-icon">&#128269;</div>
+                    <p>No ${filter} events yet</p>
+                </div>
+            `;
+        } else {
+            for (const event of filteredEvents.slice(0, 50)) {
+                this.addEvent(event);
+            }
+        }
+    },
+
+    /**
+     * Toggle pause/resume feed
+     */
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        document.getElementById('icc-pause-icon').innerHTML = this.isPaused ? '&#9654;' : '&#9208;';
+        document.getElementById('icc-pause-text').textContent = this.isPaused ? 'Resume' : 'Pause';
+    },
+
+    /**
+     * Refresh all data
+     */
+    async refresh() {
+        console.log('ICC: Refreshing all data...');
+        await Promise.all([
+            this.loadSpiders(),
+            this.loadAgents(),
+            this.loadSituations(),
+            this.loadTriggerFires()
+        ]);
+
+        this.addEvent({
+            type: 'system',
+            icon: '&#8635;',
+            title: 'Data refreshed',
+            timestamp: new Date()
+        });
+    },
+
+    /**
+     * Update flow count displays
+     */
+    updateFlowCounts() {
+        document.getElementById('icc-flow-spiders').textContent = this.flowCounts.spiders;
+        document.getElementById('icc-flow-triggers').textContent = this.flowCounts.triggers;
+        document.getElementById('icc-flow-events').textContent = this.flowCounts.events;
+        document.getElementById('icc-flow-situations').textContent = this.flowCounts.situations;
+        document.getElementById('icc-flow-agents').textContent = this.flowCounts.agents;
+    },
+
+    /**
+     * Update health indicator
+     */
+    updateHealthIndicator(type, value, status) {
+        const el = document.getElementById(`icc-health-${type}`);
+        if (el) {
+            el.textContent = value;
+            el.className = `icc-health-value ${status}`;
+        }
+    },
+
+    /**
+     * Start auto-refresh timer
+     */
+    startAutoRefresh() {
+        // Refresh situations and triggers every 30 seconds
+        setInterval(() => {
+            if (!this.isPaused) {
+                this.loadSituations();
+                this.loadTriggerFires();
+            }
+        }, 30000);
+    },
+
+    /**
+     * Format time ago string
+     */
+    formatTimeAgo(date) {
+        if (!date) return '';
+        const d = date instanceof Date ? date : new Date(date);
+        const seconds = Math.floor((new Date() - d) / 1000);
+
+        if (seconds < 5) return 'Just now';
+        if (seconds < 60) return `${seconds}s ago`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        return `${Math.floor(seconds / 86400)}d ago`;
+    },
+
+    /**
+     * Get CSRF token
+     */
+    getCSRFToken() {
+        const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+        return cookie ? cookie.split('=')[1] : '';
+    }
+};
+
+// Initialize when tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const iccTab = document.getElementById('icc-tab');
+    if (iccTab) {
+        iccTab.addEventListener('shown.bs.tab', function() {
+            ICCState.init();
+        });
+    }
+
+    // Also check if tab is already active (direct navigation)
+    const iccPane = document.getElementById('intelligence-command-center');
+    if (iccPane && iccPane.classList.contains('active')) {
+        ICCState.init();
+    }
+});
+</script>
