@@ -28,55 +28,38 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     Provides consistent token validation across all API endpoints
     """
     
-    # Paths that don't require authentication (support session auth)
+    # Session 528: SECURITY HARDENING - Reduced PUBLIC_PATHS to truly public endpoints only
+    # Previously 48 paths were exempt from auth - now only essential endpoints are public
+    # All other /api/ endpoints now require session auth OR token auth
     PUBLIC_PATHS = [
+        # Health & Status (truly public)
         '/api/v1/health/',  # Health check endpoint
+        '/health/',  # Health check
+
+        # Authentication endpoints (must be public to allow login/register)
         '/api/v1/auth/login/',  # Login endpoint
         '/api/v1/auth/register/',  # Registration endpoint
-        '/api/v1/auth/forgot-password/',  # Password reset
+        '/api/v1/auth/forgot-password/',  # Password reset request
         '/api/v1/auth/reset-password/',  # Password reset confirmation
-        '/api/v1/intelligence/real-income-builder/',  # Income Builder endpoint - session auth
-        '/api/v1/style-memory/',  # Style Memory - Session 169: Learning from user interactions
-        '/api/preferences/recommendations/',  # Session 210: Style recommendations (works for anon too)
-        '/api/opportunities/',  # Session 223: Opportunity Engine - supports session auth
-        '/api/teams/',  # Session 227: Team Power - supports session auth
-        '/api/distribution/',  # Session 229: Smart Distribution - supports session auth
-        '/api/spider-dashboard/',  # Session 236: Spider Dashboard - supports session auth
-        '/api/spider-intelligence/',  # Session 236: Spider Intelligence feeds - supports session auth
-        '/api/learning-loop/',  # Session 232: Learning Loop - supports session auth
-        '/api/proactive/',  # Session 234: Proactive System - supports session auth
-        '/api/ab-testing/',  # Session 235: A/B Testing - supports session auth
-        '/api/goals/',  # Session 235: Goal Tracking - supports session auth
-        '/api/portfolio/generated_images/',  # Session 237: Legacy URL redirect (no auth needed)
-        '/api/agent-dreams/',  # Session 247: Agent Dreams - supports session auth
-        '/api/agent-learning/',  # Session 244: Agent Learning - supports session auth
-        '/api/autonomous-learning/',  # Session 243: Autonomous Learning - supports session auth
-        '/api/learning/',  # Session 248: Learning Feed - supports session auth
-        '/api/hive-mind/',  # Session 250: Hive Mind Mode - supports session auth
-        '/api/memory-palace/',  # Session 251: Memory Palace - supports session auth
-        '/api/agent-mood/',  # Session 252: Agent Mood System - supports session auth
-        '/api/agent-relationships/',  # Session 253: Agent Rivalries & Alliances - supports session auth
-        '/api/agent-evolution/',  # Session 254: Agent Evolution System - supports session auth
-        '/api/time-travel/',  # Session 255: Time Travel Debugging - supports session auth
-        '/api/personality/',  # Session 256: Agent Personality System - supports session auth
-        '/api/memory-clusters/',  # Session 257: Memory Clusters - supports session auth
-        '/api/predictions/',  # Session 258: Agent Predictions - supports session auth
-        '/api/time-capsules/',  # Session 259: Time Capsule Messages - supports session auth
-        '/api/super-platform/',  # Session 271: Super Platform - supports session auth
-        '/api/boardroom/',  # Session 323: Boardroom Decisions - supports session auth
-        '/api/agent-conversations/',  # Session 244: Agent Conversations - supports session auth
-        '/api/business-ideas/',  # Session 338: Autonomous Business Pipeline - supports session auth
-        '/api/agents/',  # Session 349: Agents Registry - supports session auth
-        '/api/agent-dashboard/',  # Session 349: Agent Dashboard - supports session auth
-        '/api/collective/',  # Session 349: Collective Intelligence API - supports session auth
-        '/api/creative-projects/',  # Session 350: Creative Projects - supports session auth
-        '/api/workflow-analytics/',  # Session 375: Workflow Analytics - supports session auth
-        '/api/income/',  # Session 388: Income Action Pipeline - supports session auth
-        '/api/discord/verify-link-code/',  # Session 430: Discord bot link verification (uses bot_secret)
-        '/api/voice-marketplace/',  # Session 440: Voice Marketplace - browse is public
-        '/api/monitoring/',  # Session 476: Autonomous Monitoring Dashboard - public for stress test visibility
-        '/admin/',  # Django admin has its own auth
         '/api-auth/',  # DRF browsable API auth
+
+        # Webhooks with their own verification (use secrets/signatures)
+        '/api/discord/verify-link-code/',  # Discord bot verification (uses bot_secret)
+        '/api/stripe/webhook/',  # Stripe webhook (uses signature verification)
+
+        # Django admin (has its own auth)
+        '/admin/',
+
+        # Public statistics (intentionally anonymous)
+        '/api/public-stats/',  # Explicitly public stats
+    ]
+
+    # Session 528: Paths that allow session auth but DON'T require it (optional auth)
+    # These endpoints work for both authenticated and anonymous users
+    # Anonymous users get limited/public data, authenticated users get full access
+    OPTIONAL_AUTH_PATHS = [
+        '/api/voice-marketplace/',  # Browse marketplace is public, purchasing requires auth
+        '/api/monitoring/',  # Public monitoring dashboard for stress tests
     ]
     
     # Paths that require staff privileges
@@ -88,13 +71,27 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
     
     def process_request(self, request):
         """Process incoming request for authentication"""
-        # Skip non-API requests
-        if not request.path.startswith('/api/'):
+        # Skip non-API requests (let Django handle them)
+        if not request.path.startswith('/api/') and not request.path.startswith('/admin/'):
             return None
 
-        # Skip public paths
+        # Skip truly public paths (no auth required at all)
         if any(request.path.startswith(path) for path in self.PUBLIC_PATHS):
             return None
+
+        # Session 528: Handle optional auth paths
+        # These work for both auth and anon users - try to authenticate but don't require it
+        is_optional_auth = any(request.path.startswith(path) for path in self.OPTIONAL_AUTH_PATHS)
+        if is_optional_auth:
+            # Try to authenticate, but don't fail if no auth provided
+            if hasattr(request, 'user') and request.user.is_authenticated:
+                return None  # Already authenticated via session
+            token = self.extract_token(request)
+            if token:
+                user = self.validate_token(token)
+                if user:
+                    request.user = user
+            return None  # Allow through regardless
 
         # Session 452: Support DRF's force_authenticate() for testing
         # DRF's force_authenticate sets _force_auth_user on the request

@@ -68,7 +68,7 @@ class ProfileContextService:
     async def _build_user_context(self, user_id: str, context_type: str) -> Dict[str, Any]:
         """Build comprehensive user context from all available sources"""
         from django.contrib.auth import get_user_model
-        from core.models_user_profile_enhanced import EnhancedUserProfile
+        from core.models import EnhancedUserProfile
         from django.db import transaction
 
         User = get_user_model()
@@ -201,7 +201,7 @@ class ProfileContextService:
     async def _get_enhanced_profile(self, user):
         """Get enhanced profile from database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
             from channels.db import database_sync_to_async
 
             @database_sync_to_async
@@ -279,7 +279,7 @@ class ProfileContextService:
     async def _update_profile_data(self, user_id: str, updates: Dict[str, Any]):
         """Update profile data in database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
             from channels.db import database_sync_to_async
 
             @database_sync_to_async

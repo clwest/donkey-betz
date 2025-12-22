@@ -179,7 +179,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     def check_completed_profile(self) -> bool:
         """Check if user has a completed interview profile"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
             profile = EnhancedUserProfile.objects.get(user=self.user)
             return profile.interview_completed
         except EnhancedUserProfile.DoesNotExist:
@@ -335,7 +335,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     def save_completed_profile(self, profile_data):
         """Save completed interview profile to database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
             from decimal import Decimal
 
             # Get or create enhanced profile
@@ -475,7 +475,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     def load_completed_profile(self):
         """Load completed profile from database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
 
             profile = EnhancedUserProfile.objects.get(user=self.user)
             if not profile.interview_completed:
@@ -523,7 +523,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     def update_database_profile(self, profile_data):
         """Update profile in database"""
         try:
-            from core.models_user_profile_enhanced import EnhancedUserProfile
+            from core.models import EnhancedUserProfile
 
             profile = EnhancedUserProfile.objects.get(user=self.user)
 
