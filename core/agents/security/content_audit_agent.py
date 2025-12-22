@@ -208,7 +208,7 @@ Available tools:
                     confidence=0.9
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 logger.info(f"ContentAuditAgent executing: {task[:50]}...")
 
                 gpt_response = self._call_openai(full_prompt)

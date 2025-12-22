@@ -160,7 +160,7 @@ You are a READ-ONLY security agent - you audit and isolate, not modify content."
                     confidence=0.95
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 logger.info(f"MemoryIsolationAgent executing: {task[:50]}...")
 
                 gpt_response = self._call_openai(full_prompt)

@@ -295,7 +295,7 @@ If asked to create something new, explain you can only edit existing videos."""
                     confidence=0.9
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 gpt_response = self._call_openai(full_prompt)
 
                 if gpt_response.get('tool_calls'):

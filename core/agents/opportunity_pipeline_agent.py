@@ -151,6 +151,11 @@ You produce comprehensive pipeline reports with value calculations and recommend
             AgentResult with pipeline execution results
         """
         start_time = time.time()
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         with self.time_travel_session("opportunity_pipeline", task, input_data=context):
             try:

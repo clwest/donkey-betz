@@ -274,13 +274,14 @@ Provide complete, working code that can be directly used."""
 
         start_time = time.time()
         tool_calls_made = []
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
 
         with self.time_travel_session("fullstack_development", task, input_data=context):
             try:
-                # Build prompt with attribution
-                full_prompt, knowledge_attribution = self._build_prompt_with_attribution(
-                    task, scifi_context, spider_context
-                )
+                # Session 529: Use intelligent prompting
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
+                knowledge_attribution = None  # Legacy compatibility
 
                 # Call OpenAI using BaseAgent's method
                 gpt_response = self._call_openai(full_prompt)

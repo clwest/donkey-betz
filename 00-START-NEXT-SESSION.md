@@ -1,159 +1,105 @@
-# Session 523 - Start Here
+# Session 530 - Start Here
 
-**Previous Session:** 522 (Real-Time Spider Data Fix)
+**Previous Session:** 529
 **Date:** December 21, 2025
-**Status:** Content Writer Now Uses 2025 Data!
+**Status:** ALL AGENTS CONNECTED TO INTELLIGENT PROMPTING
 
 ---
 
-## Session 522 Achievements
+## What Was Accomplished in Session 529
 
-### Real-Time Spider Data Fix (DONE!)
+### Intelligent Prompting Completion - ALL 38 AGENTS UPGRADED
 
-**Problem Fixed:** ContentWriterAgent was writing about "2023 AI trends" instead of current 2025 data.
+Session 528 reported 31 agents with intelligent prompting, but audit revealed **38 agents** were still missing the connection. Session 529 completed the remaining upgrades:
 
-**Root Cause:**
-1. Key mismatch: Code checked for `trending_keywords` but SmartTrendingService returns `trends`
-2. No explicit year instruction to GPT
+| Category | Count | Files Modified |
+|----------|-------|----------------|
+| **Stocks** | 9 | bear_case, bull_case, institutional_watcher, market_anomaly_detector, market_intelligence_coordinator, market_movement_monitor, signal_scanner, stock_analyst, stock_audit_coordinator |
+| **Blockchain** | 5 | blockchain_audit_coordinator, exploit_detector, smart_contract_auditor, transaction_monitor, whale_watcher |
+| **Business** | 5 | base_business_research, competitor_analysis, customer_research (+ 2 inherited: content_strategy, marketing_strategy) |
+| **Narrative** | 4 | cultural_impact, narrative_drift_coordinator, narrative_historian, trend_break_detector |
+| **Development** | 4 | code_generator, code_review, devops, fullstack_developer |
+| **Core** | 11 | ai_series_workflow, campaign_orchestrator, content_executor, content_writer, image, legal_doc_drafter, opportunity_pipeline, personal_assistant, podcast_coordinator, research, workflow_orchestration |
 
-**Solution:**
-1. Fixed key mismatch: `trends = trending_data.get('trends') or trending_data.get('trending_keywords', [])`
-2. Added **dynamic** year instruction using `datetime.now()`:
-   - `year = now.year` → 2025 (auto-updates to 2026, etc.)
-   - `old_years = f"{year-2} or {year-1}"` → "2023 or 2024" (auto-updates)
-   - `month_year = now.strftime('%B %Y')` → "December 2025" (auto-updates)
-3. Added published dates to articles: `(Source: X - Published: 2025-12-21)`
-4. Added debug logging to trace the flow
+**Total: 38 agents upgraded to `_build_intelligent_prompt()`**
 
-**Files Modified:**
+### Pattern Applied
 
-| File | Changes |
-|------|---------|
-| `core/personal_ai_assistant_enhanced.py` | Fixed key mismatch, dynamic year instructions, debug logging |
-| `core/agent_router.py` | **CRITICAL**: Added spider data fetching to delegate_to_agent path (this is what the web UI uses!) |
+Each agent now has this at the start of `execute()`:
+```python
+scifi_context = scifi_context or {}
+spider_context = spider_context or {}
 
-**Important Discovery:**
-The web UI uses a **different code path** than direct API calls:
-- Web UI: `chat API → delegate_to_agent → agent_router.py → ContentWriterAgent`
-- Direct: `_handle_content_writer_agent → ContentWriterAgent`
+# Session 529: Build intelligent prompt with full context
+self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+```
 
-Both paths now have spider data fetching.
-
-**Test Result:**
-- Before: "Top AI Trends Transforming Industries in 2023"
-- After: "Top AI Stocks and Tools Transforming the Market in 2025"
+This connects every agent to:
+- Mood and emotional context (sci-fi features)
+- Memory and learning context
+- Spider data and trends
+- Platform-wide intelligence sharing
 
 ---
 
-## Session 521 Achievements
+## Current System State
 
-### 1. Content Export Feature (DONE!)
+### Key Metrics
+| Metric | Value |
+|--------|-------|
+| Routable Agents | 47 (registered in DB) |
+| Agents with Intelligent Prompting | **ALL (100%)** |
+| Spiders | 72 |
+| Spider Data Records | 20,712 |
+| Discord Commands | 99+ |
 
-**New Feature:**
-- Download buttons for written content in 4 formats: .md, .txt, .docx, .pdf
-- Dropdown menu appears next to existing "Copy" button
-- All export formats tested and working
-
-**Files Created/Modified:**
-
-| File | Changes |
-|------|---------|
-| `core/services/content_export.py` | **NEW** - 340-line export service |
-| `core/views_projects_api.py` | Added `export_written_content` endpoint |
-| `core/urls.py` | Added export route |
-| `ai_core/templates/ai_image_studio.html` | Added download dropdown |
-
-### 2. Content Editing Feature (DONE!)
-
-**New Feature:**
-- Edit button next to Copy/Download buttons
-- Full modal editor with fields for: Title, Meta Description, Intro, Sections, Conclusion, Tags
-- Add/remove sections dynamically
-- Save changes back to project metadata
-- Projects list auto-refreshes after save
-
-**Files Modified:**
-
-| File | Changes |
-|------|---------|
-| `core/views_projects_api.py` | Added `update_written_content` endpoint |
-| `core/urls.py` | Added update route |
-| `ai_core/templates/ai_image_studio.html` | Added modal + 6 JS functions |
-
-**API Endpoints:**
+### Canonical Model Locations
+```python
+# User models - ALWAYS import from core.models
+from core.models import (
+    UserProfile,           # Main profile
+    ExtendedUserProfile,   # Job application data
+    EnhancedUserProfile,   # Power user/subscription
+    UserStatistics,        # Usage metrics
+    UserMemoryContext,     # Memory system
+    UserAgentLearning,     # Agent learning
+)
 ```
-POST /api/projects/{id}/export-content/   # Download content
-PATCH /api/projects/{id}/update-content/  # Edit content
-```
-
-### 3. Multi-Content Projects (DONE!)
-
-**New Feature:**
-- Projects can now display BOTH written content AND generated images
-- New "Generated Images" collapsible section in project details (blue theme)
-- Images from `metadata.image_ids` are loaded on-demand and displayed as thumbnails
-- Click any image to view full size in gallery
-
-**Backend Flow (Already Working):**
-1. GPT can call both `content_writer_agent` and `image_generation_agent` in one request
-2. `_auto_create_project_from_content()` collects both:
-   - `metadata.written_content` = array of content pieces
-   - `metadata.image_ids` = array of image IDs
-3. Project API returns full metadata to frontend
-
-**Frontend (NEW in Session 521):**
-- Added "Generated Images" section template (lines 36832-36854)
-- Added `loadProjectGeneratedImages()` function (lines 43277-43338)
-- Section is collapsible, loads images when expanded
-
-**Files Modified:**
-
-| File | Changes |
-|------|---------|
-| `ai_core/templates/ai_image_studio.html` | Added image display section + JS function |
-
-### 4. Real-Time Spider Data for ContentWriterAgent (DONE!)
-
-**Problem Fixed:** ContentWriterAgent was writing content about "2023 AI trends" instead of current 2025 data.
-
-**Solution:**
-- `_handle_content_writer_agent` now fetches real-time data from `SmartTrendingService`
-- Falls back to DuckDuckGo web search when spider data isn't fresh enough
-- Injects trending articles, keywords, and categories into research context
-
-**Files Modified:**
-
-| File | Changes |
-|------|---------|
-| `core/personal_ai_assistant_enhanced.py` | +50 lines in `_handle_content_writer_agent` |
-
-### 5. Multi-Tool Calling for Blog+Image (DONE!)
-
-**Problem Fixed:** GPT wasn't calling both `content_writer_agent` AND `image_generation_agent` when user asked for "blog post with header image".
-
-**Solution:**
-- Updated tool descriptions to explicitly instruct GPT to call BOTH tools
-- Added "MULTI-TOOL" warning in image_generation_agent description
-- Added example in content_writer_agent description
-
-**Files Modified:**
-
-| File | Changes |
-|------|---------|
-| `core/personal_ai_assistant_enhanced.py` | Updated tool descriptions (lines 177-178, 649-650) |
-
-**Test Command:**
-```
-"Write a blog post about AI trends and create a header image for it"
-```
-
-### 6. CLAUDE.md Cleanup
-
-Reduced from 537 → 160 lines (70% smaller)
 
 ---
 
-## Quick Start Commands
+## Documentation Index
+
+### Audit Reports (in `docs/audits/`)
+| File | Purpose |
+|------|---------|
+| `SPRINT_1_COMPLETION.md` | Quick wins implementation |
+| `SPRINT_2_COMPLETION.md` | Intelligent prompting rollout |
+| `SPRINT_3_COMPLETION.md` | Security hardening |
+| `SPRINT_4_COMPLETION.md` | Code quality analysis |
+| `TASKS_PY_ANALYSIS.md` | tasks.py structure (decision: keep as-is) |
+| `USER_MODEL_ANALYSIS.md` | User model cleanup details |
+| `PHASE_1_DISCOVERY_SUMMARY.md` | Full system discovery |
+| `PRIORITY_GAP_ANALYSIS.md` | 59 issues identified |
+| `REMEDIATION_ROADMAP.md` | Original remediation plan |
+
+### Core Documentation (in `docs/`)
+| File | Purpose |
+|------|---------|
+| `API.md` | API endpoint documentation |
+| `AGENTS.md` | Agent documentation |
+| `CAPABILITIES.md` | Full feature list |
+| `SPIDERS.md` | Spider network details |
+| `ARCHITECTURE.md` | System architecture |
+
+### Session Handoffs (in `docs/handoffs/`)
+| File | Purpose |
+|------|---------|
+| `SESSION_529_INTELLIGENT_PROMPTING_COMPLETE.md` | This session's work |
+
+---
+
+## Quick Start
 
 ```bash
 # 1. Start services
@@ -162,69 +108,47 @@ make start && make celery
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Test Multi-Content Project
-# - In Assistant tab, ask: "Write a blog post about AI and create a header image"
-# - Both content types should appear in same project
-# - Go to Projects tab to see the project
-# - Expand "Written Content" to see blog post
-# - Expand "Generated Images" to see header image
-
-# 4. Test Content Export & Edit
-# - Open a project with written content
-# - Click Download dropdown → choose format
-# - Click Edit → modify content → Save
+# 3. Health check
+curl http://localhost:8000/api/v1/health/
 ```
 
 ---
 
-## System Status
+## Remaining Technical Debt (Low Priority)
 
-| Metric | Value |
-|--------|-------|
-| Routable Agents | **42** |
-| Content Export | ✅ 4 formats (md, txt, docx, pdf) |
-| Content Editing | ✅ Full modal editor |
-| Multi-Content Projects | ✅ Written content + images |
-| Projects Tab Unified | ✅ Session 520 |
-| Spiders | 72 |
-| Discord Commands | 99+ |
+These items were analyzed and deferred as low-risk:
+
+1. **UserAgentLearning dual definition** - Works fine, Django deduplicates
+2. **7 deprecated models** - UserPreferences + 6 in models_unified_system.py (all 0 records, all marked DEPRECATED)
+3. **Profile model merge** - UserProfile + ExtendedUserProfile overlap, defer until needed
 
 ---
 
-## Session 522 Ideas
+## What's Next?
 
-### 1. Remaining `/api/creative-projects/` Usage
-Some secondary features still use CreativeProject endpoints
+The agent ecosystem is now **100% connected to intelligent prompting**. Options:
 
-### 2. Project Templates
-Pre-defined project types with workflows
-
-### 3. Project Sharing/Export
-Export entire projects as zip or share links
+1. **Feature Development** - New capabilities
+2. **Frontend Cleanup** - 72K-line monolithic file identified in audit
+3. **Revenue Activation** - Pipeline verified but $0 tracked
+4. **Performance Optimization** - Profile and optimize hot paths
 
 ---
 
-## Key Documentation
+## Session History Reference
 
-- **Session 520:** `docs/handoffs/SESSION_520_PROJECTS_TAB_AUDIT.md`
-- **Agents:** `docs/AGENTS.md`
-- **Capabilities:** `docs/CAPABILITIES.md`
+| Session | Focus |
+|---------|-------|
+| 529 | **Intelligent Prompting Completion** - All 38 remaining agents upgraded |
+| 528 | System Audit Remediation (4 Sprints) + User Model Cleanup |
+| 527 | Phase 3-4 Audits (Integration + Gap Analysis) |
+| 526 | Phase 2 P1 Audits (Sci-Fi, Content, Spider, Revenue) |
+| 525 | Phase 2 P0 Audits (Prompting, Learning, Autonomous) |
+| 523-524 | Intelligent Prompting System Integration |
+| 521-522 | Content Export/Edit, Real-time Spider Data |
+
+For full history, see `docs/handoffs/` directory.
 
 ---
 
-```
-+====================================================================+
-|        SESSION 521 - CONTENT MANAGEMENT COMPLETE!                  |
-|                                                                    |
-|   1. Content Export: Download in 4 formats (md/txt/docx/pdf)       |
-|   2. Content Editing: Full modal editor with sections              |
-|   3. Multi-Content Projects: Blog + Images in same project!        |
-|   4. Real-Time Spider Data: No more 2023 in AI articles!           |
-|   5. Multi-Tool Calling: GPT now calls both tools for blog+image   |
-|   6. CLAUDE.md: Cleaned up 70%                                     |
-|                                                                    |
-|   Fixes Applied:                                                   |
-|   - ContentWriterAgent fetches real trends from SmartTrending      |
-|   - Tool descriptions guide GPT to call multiple tools             |
-+====================================================================+
-```
+*Last updated: Session 529 - December 21, 2025*

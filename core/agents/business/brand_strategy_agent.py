@@ -443,7 +443,7 @@ After your brand strategy is complete, the user can use ImageAgent to generate v
                 )
 
                 # Build prompt with context
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
                 # Add project research context to prompt
                 if project_context.get('has_research'):

@@ -190,6 +190,11 @@ If asked to do something outside image generation, politely explain you can only
         """
         start_time = time.time()
         tool_calls_made = []
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         # Record time travel session for debugging
         with self.time_travel_session("image_generation", task, input_data=context):

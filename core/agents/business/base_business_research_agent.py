@@ -290,7 +290,9 @@ class BaseBusinessResearchAgent:
         """
         return ["tech", "news", "content", "social"]
 
-    def execute(self, task: str, context: Dict[str, Any] = None) -> AgentResult:
+    def execute(self, task: str, context: Dict[str, Any] = None,
+                scifi_context: Dict[str, Any] = None,
+                spider_context: Dict[str, Any] = None) -> AgentResult:
         """
         Execute the agent's research task.
 
@@ -305,7 +307,12 @@ class BaseBusinessResearchAgent:
         """
         start_time = time.time()
         context = context or {}
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
         self._current_task = task
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         # Session 349: Extract project_id from context if not set in constructor
         # This ensures research results are linked to the project
@@ -325,8 +332,8 @@ class BaseBusinessResearchAgent:
             # Step 3: Get project context if available
             project_context = self._get_project_context()
 
-            # Step 4: Build enhanced prompt
-            enhanced_prompt = self._build_prompt(task, prior_context, project_context, context)
+            # Step 4: Build enhanced prompt with intelligent context
+            enhanced_prompt = self._intelligent_context + "\n\n" + self._build_prompt(task, prior_context, project_context, context)
 
             # Step 5: Execute GPT loop with tools
             all_data, synthesis = self._execute_gpt_loop(enhanced_prompt, project_context)

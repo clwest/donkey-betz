@@ -586,6 +586,11 @@ ORCHESTRATION:
         """
         start_time = time.time()
         tool_calls_made = []
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
         # Session 483: Debug logging for spider context flow
         logger.info(f"🕷️ [Session 483] PersonalAssistant.execute() - spider_context keys: {list(spider_context.keys()) if spider_context else 'None'}")

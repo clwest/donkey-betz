@@ -611,6 +611,12 @@ class CulturalImpactAgent(BaseAgent):
         spider_context: Dict[str, Any]
     ) -> AgentResult:
         """Execute the cultural impact analysis task."""
+        scifi_context = scifi_context or {}
+        spider_context = spider_context or {}
+
+        # Session 529: Build intelligent prompt with full context
+        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+
         logger.info(f"CulturalImpactAgent executing: {task[:100]}...")
 
         system_prompt = """You are the Cultural Impact Agent - a specialist in analyzing second-order effects of narrative shifts.

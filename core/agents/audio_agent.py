@@ -196,7 +196,7 @@ If asked to do something outside audio generation, politely explain you can only
                     confidence=0.9
                 )
 
-                full_prompt = self._build_prompt(task, scifi_context, spider_context)
+                full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
                 gpt_response = self._call_openai(full_prompt)
 
                 if gpt_response.get('tool_calls'):

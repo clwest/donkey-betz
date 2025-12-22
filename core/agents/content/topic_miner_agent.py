@@ -168,7 +168,7 @@ CRITICAL: Always use tools to get real spider data. Never make up trends or fake
 
         try:
             # Build prompt with system prompt + task
-            prompt = self._build_prompt(task, scifi_context, spider_context)
+            prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
             # Call OpenAI with tools
             response = self._call_openai(prompt)
