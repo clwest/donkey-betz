@@ -1059,7 +1059,7 @@ def dashboard_stats(request):
 
         # Session 537: Build spider names grouped by category for ICC detail view
         spiders_by_category = {}
-        for name, spider_class in registry._spiders.items():
+        for name, spider_class in registry.spider_classes.items():
             config = registry.spider_configs.get(name, {})
             category = config.get('category', 'Other')
             if category not in spiders_by_category:
