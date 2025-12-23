@@ -675,20 +675,22 @@ const ICCState = {
         };
 
         for (const sit of this.situations) {
-            const name = sit.name || sit.situation_type || 'Unknown';
+            // Session 538: API returns 'type' not 'situation_type'
+            const sitType = sit.type || sit.situation_type || '';
+            const name = sit.name || sitType || 'Unknown';
             const domain = sit.domain || 'research';
             const status = sit.status || sit.is_active ? 'active' : 'inactive';
             const runs = sit.runs_24h || sit.total_runs || 0;
 
             html += `
                 <div class="icc-situation-item ${domainColors[domain] || ''}">
-                    <div class="icc-situation-info" onclick="ICCState.showDetail('situation', '${sit.situation_type || name}')">
+                    <div class="icc-situation-info" onclick="ICCState.showDetail('situation', '${sitType || name}')">
                         <div class="icc-situation-name">${name}</div>
                         <div class="icc-situation-stats">${runs} runs</div>
                     </div>
                     <label class="icc-toggle">
                         <input type="checkbox" ${status === 'active' ? 'checked' : ''}
-                               onchange="ICCState.toggleSituation('${sit.situation_type || name}', this.checked)">
+                               onchange="ICCState.toggleSituation('${sitType || name}', this.checked)">
                         <span class="icc-toggle-slider"></span>
                     </label>
                 </div>

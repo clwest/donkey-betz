@@ -59,6 +59,8 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-intelligence/detail/',  # Agent detail panel
         '/api/situation-intelligence/detail/',  # Situation detail panel
         '/api/intelligence/cross-references/',  # Cross-reference mappings
+        '/api/autonomous/situations/',  # Situations list for Command Center
+        '/api/autonomous/trigger-events/',  # Trigger events for Command Center
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
