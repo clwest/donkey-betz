@@ -95,7 +95,21 @@ class Command(BaseCommand):
 
         self.stdout.write("Analyzing entries...")
         for entry in entries:
-            items = entry.raw_data.get('items', []) if entry.raw_data else []
+            # Handle raw_data as string (JSON) or dict
+            raw_data = entry.raw_data
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    raw_data = {}
+
+            # For single-item entries (from news spiders), wrap in items list
+            items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
+            if not items and isinstance(raw_data, dict) and raw_data.get('title'):
+                # Single item stored directly (not wrapped in 'items')
+                items = [raw_data]
+
             if items:
                 # Has items - can be embedded
                 text = self._build_embedding_text(entry)
@@ -194,7 +208,21 @@ class Command(BaseCommand):
         if not entry.raw_data:
             return ""
 
-        items = entry.raw_data.get('items', [])
+        # Handle raw_data as string (JSON) or dict
+        raw_data = entry.raw_data
+        if isinstance(raw_data, str):
+            try:
+                import json
+                raw_data = json.loads(raw_data)
+            except (json.JSONDecodeError, TypeError):
+                return ""
+
+        # Get items list, or treat single item as list
+        items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
+        if not items and isinstance(raw_data, dict) and raw_data.get('title'):
+            # Single item stored directly (not wrapped in 'items')
+            items = [raw_data]
+
         if not items:
             return ""
 

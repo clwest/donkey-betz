@@ -203,7 +203,20 @@ class SpiderSemanticSearch:
             if not entry.raw_data:
                 continue
 
-            items = entry.raw_data.get('items', [])
+            # Session 534: Handle raw_data as string (JSON) or dict
+            raw_data = entry.raw_data
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+            # Get items list, or treat single item as list (from news spiders)
+            items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
+            if not items and isinstance(raw_data, dict) and raw_data.get('title'):
+                # Single item stored directly (not wrapped in 'items')
+                items = [raw_data]
             for item in items:
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
@@ -401,8 +414,22 @@ class SpiderSemanticSearch:
         for entry in entries:
             stats['processed'] += 1
 
+            # Session 534: Handle raw_data as string (JSON) or dict
+            raw_data = entry.raw_data
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    raw_data = {}
+
+            # Get items list, or treat single item as list (from news spiders)
+            items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
+            if not items and isinstance(raw_data, dict) and raw_data.get('title'):
+                items = [raw_data]
+
             # Skip entries with no items
-            if not entry.raw_data or not entry.raw_data.get('items'):
+            if not items:
                 stats['skipped'] += 1
                 # Session 394: Mark as empty so we don't reprocess
                 entry.embedding = []
@@ -476,8 +503,20 @@ class SpiderSemanticSearch:
             if similarity < min_similarity:
                 continue
 
-            # Extract top items from this entry
-            items = entry.raw_data.get('items', [])[:5]
+            # Session 534: Handle raw_data as string (JSON) or dict
+            raw_data = entry.raw_data
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+            # Get items list, or treat single item as list (from news spiders)
+            items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
+            if not items and isinstance(raw_data, dict) and raw_data.get('title'):
+                items = [raw_data]
+            items = items[:5]  # Limit for performance
             for item in items:
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
