@@ -628,11 +628,12 @@ app.conf.beat_schedule = {
     },
     # Session 466: Autonomous Content Studio (Tier 1 Autonomous Situation)
     # Property #5: Self-Renewal - system runs forever without intervention
+    # Session 539: Increased frequency from 4 hours to 1 hour for timely content
     'autonomous-content-studio-loop': {
         'task': 'autonomous_studio.run_main_loop',
-        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'schedule': crontab(minute=0),  # Every hour at :00
         'options': {
-            'expires': 14400,  # 4 hours
+            'expires': 3600,  # 1 hour
         }
     },
     'track-content-performance-daily': {
@@ -839,25 +840,25 @@ app.conf.beat_schedule = {
     # These send REAL alerts to Discord channels!
     # =========================================================================
 
-    # Blockchain Security Monitor - every 2 hours
+    # Blockchain Security Monitor - Session 539: increased to hourly
     # Analyzes etherscan/coingecko data for whale movements, price manipulation, unusual volume
     # Sends alerts to #blockchain-alerts Discord channel
     'autonomous-blockchain-security-monitor': {
         'task': 'autonomous.blockchain_security_monitor',
-        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours at :00
+        'schedule': crontab(minute=5),  # Every hour at :05
         'options': {
-            'expires': 7200,  # 2 hours
+            'expires': 3600,  # 1 hour
         }
     },
 
-    # Stock Market Intelligence - every 4 hours
+    # Stock Market Intelligence - Session 539: increased to hourly
     # Analyzes yahoo_finance/finnhub/sec_edgar data with Bull vs Bear debate
     # Sends alerts to #stock-alerts Discord channel
     'autonomous-stock-market-intelligence': {
         'task': 'autonomous.stock_market_intelligence',
-        'schedule': crontab(minute=30, hour='*/4'),  # Every 4 hours at :30
+        'schedule': crontab(minute=10),  # Every hour at :10
         'options': {
-            'expires': 14400,  # 4 hours
+            'expires': 3600,  # 1 hour
         }
     },
 
@@ -868,21 +869,23 @@ app.conf.beat_schedule = {
 
     # Situation #6: Trend-Driven Design System
     # Monitors Dribbble, Behance, Awwwards for design trends
+    # Session 539: increased from 6 hours to 2 hours
     'autonomous-design-trends-monitor': {
         'task': 'core.tasks.run_design_trends_monitor',
-        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
         'options': {
-            'expires': 21600,  # 6 hours
+            'expires': 7200,  # 2 hours
         }
     },
 
     # Situation #7: Viral Content Predictor
     # Analyzes Reddit, HackerNews, Bluesky for viral potential
+    # Session 539: increased from 4 hours to 1 hour - trends move fast
     'autonomous-viral-content-predictor': {
         'task': 'core.tasks.run_viral_content_predictor',
-        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+        'schedule': crontab(minute=20),  # Every hour at :20
         'options': {
-            'expires': 14400,  # 4 hours
+            'expires': 3600,  # 1 hour
         }
     },
 
@@ -938,11 +941,12 @@ app.conf.beat_schedule = {
 
     # Situation #13: Crypto Sentiment Monitor
     # Tracks crypto social sentiment from CoinGecko, Reddit, Bluesky
+    # Session 539: increased from 3 hours to 1 hour - crypto moves 24/7
     'autonomous-crypto-sentiment-monitor': {
         'task': 'core.tasks.run_crypto_sentiment_monitor',
-        'schedule': crontab(minute=0, hour='*/3'),  # Every 3 hours
+        'schedule': crontab(minute=25),  # Every hour at :25
         'options': {
-            'expires': 10800,  # 3 hours
+            'expires': 3600,  # 1 hour
         }
     },
 
@@ -958,21 +962,23 @@ app.conf.beat_schedule = {
 
     # Situation #15: Tech Stack Evolution Tracker
     # Monitors rising/falling tech from GitHub, HackerNews, Dev.to
+    # Session 539: increased from 8 hours to 4 hours
     'autonomous-tech-stack-tracker': {
         'task': 'core.tasks.run_tech_stack_tracker',
-        'schedule': crontab(minute=0, hour='*/8'),  # Every 8 hours
+        'schedule': crontab(minute=45, hour='*/4'),  # Every 4 hours at :45
         'options': {
-            'expires': 28800,  # 8 hours
+            'expires': 14400,  # 4 hours
         }
     },
 
     # Situation #16: AI Model Release Monitor
     # Tracks new AI models from HuggingFace, GitHub, HackerNews
+    # Session 539: increased from 6 hours to 2 hours - AI releases are big news
     'autonomous-ai-model-monitor': {
         'task': 'core.tasks.run_ai_model_monitor',
-        'schedule': crontab(minute=15, hour='*/6'),  # Every 6 hours at :15
+        'schedule': crontab(minute=30, hour='*/2'),  # Every 2 hours at :30
         'options': {
-            'expires': 21600,  # 6 hours
+            'expires': 7200,  # 2 hours
         }
     },
 
