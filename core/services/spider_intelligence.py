@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from django.utils import timezone
 from django.db.models import Count, Q
 from typing import Optional
+import json
 import re
 
 
@@ -103,6 +104,29 @@ class SpiderIntelligenceService:
         'gift', 'gifts', 'holiday', 'holidays', 'black', 'friday', 'cyber', 'monday'
     }
 
+    def _parse_raw_data(self, raw_data) -> Optional[dict]:
+        """
+        Session 535: Helper to safely parse raw_data which may be a string or dict.
+
+        Returns:
+            dict if successfully parsed, None otherwise
+        """
+        if not raw_data:
+            return None
+
+        if isinstance(raw_data, dict):
+            return raw_data
+
+        if isinstance(raw_data, str):
+            try:
+                parsed = json.loads(raw_data)
+                if isinstance(parsed, dict):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        return None
+
     def get_trending_topics(self, category: str = None, hours: int = 168, limit: int = 10, include_jobs: bool = False) -> list:
         """
         Session 237: Improved trending topic extraction.
@@ -155,7 +179,12 @@ class SpiderIntelligenceService:
             if not entry.raw_data:
                 continue
 
-            items = entry.raw_data.get('items', [])
+            # Session 535: Handle raw_data being string or dict
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
+                continue
+
+            items = raw_data.get('items', [])
             for item in items:
                 title = item.get('title') or item.get('name') or ''
                 url = item.get('url') or item.get('link') or ''
@@ -319,9 +348,10 @@ class SpiderIntelligenceService:
         # Process crypto data
         seen_crypto = set()
         for entry in crypto_data:
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
             for item in items:
                 symbol = item.get('symbol', '').upper()
                 if symbol and symbol not in seen_crypto:
@@ -340,9 +370,10 @@ class SpiderIntelligenceService:
         # Process stock data
         seen_stocks = set()
         for entry in stock_data:
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
             for item in items:
                 symbol = item.get('symbol', '').upper()
                 if symbol and symbol not in seen_stocks:
@@ -430,11 +461,12 @@ class SpiderIntelligenceService:
         seen_titles = set()  # Session 222: Deduplicate discussions
 
         for entry in tech_data:
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
 
             source = entry.spider_name
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
 
             # Track source contributions
             if source not in trends['sources']:
@@ -568,11 +600,12 @@ class SpiderIntelligenceService:
         seen_jobs = set()
 
         for entry in job_data:
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
 
             source = entry.spider_name
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
 
             if source not in summary['sources']:
                 summary['sources'][source] = 0
@@ -731,10 +764,11 @@ class SpiderIntelligenceService:
         seen = set()
 
         for entry in queryset.order_by('-created_at'):
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
 
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
             for item in items:
                 # Search in title, description, tags
                 title = item.get('title', '') or item.get('name', '')
@@ -976,11 +1010,12 @@ class SpiderIntelligenceService:
         sources_found = set()
 
         for entry in creative_data:
-            if not entry.raw_data:
+            raw_data = self._parse_raw_data(entry.raw_data)
+            if raw_data is None:
                 continue
 
             sources_found.add(entry.spider_name)
-            items = entry.raw_data.get('items', [])
+            items = raw_data.get('items', [])
 
             for item in items:
                 # Extract from title, description, tags
