@@ -1979,28 +1979,29 @@ def agent_detail(request, agent_name):
         knowledge_sources = AgentKnowledgeSource.objects.filter(
             agent=agent,
             is_active=True
-        ).order_by('-created_at')[:5]
+        ).order_by('-first_discovered_at')[:5]
 
         knowledge = []
         for ks in knowledge_sources:
             knowledge.append({
                 'title': ks.title or 'Untitled',
-                'source_type': ks.source_type or 'unknown',
+                'source_type': ks.knowledge_type or 'unknown',
                 'summary': (ks.summary or '')[:150] + '...' if ks.summary and len(ks.summary) > 150 else ks.summary,
-                'created_at': ks.created_at.isoformat() if ks.created_at else None,
+                'created_at': ks.first_discovered_at.isoformat() if ks.first_discovered_at else None,
             })
 
         # Get recent knowledge transfers (teaching/learning)
+        # KnowledgeTransfer uses connection.teacher_agent/student_agent
         transfers_given = KnowledgeTransfer.objects.filter(
-            source_agent=agent
-        ).select_related('target_agent').order_by('-created_at')[:3]
+            connection__teacher_agent=agent
+        ).select_related('connection__student_agent').order_by('-created_at')[:3]
 
         transfers_received = KnowledgeTransfer.objects.filter(
-            target_agent=agent
-        ).select_related('source_agent').order_by('-created_at')[:3]
+            connection__student_agent=agent
+        ).select_related('connection__teacher_agent').order_by('-created_at')[:3]
 
-        taught = [{'to': t.target_agent.name if t.target_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_given]
-        learned = [{'from': t.source_agent.name if t.source_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_received]
+        taught = [{'to': t.connection.student_agent.name if t.connection and t.connection.student_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_given]
+        learned = [{'from': t.connection.teacher_agent.name if t.connection and t.connection.teacher_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_received]
 
         return JsonResponse({
             'status': 'success',

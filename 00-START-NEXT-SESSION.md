@@ -1,8 +1,32 @@
-# Session 538 - Start Here
+# Session 539 - Start Here
 
-**Previous Session:** 537
+**Previous Session:** 538
 **Date:** December 23, 2025
 **Focus:** Continue UI Improvements / Discord Parity
+
+---
+
+## Session 538 Accomplishments
+
+### Fixed Authentication for Intelligence APIs
+
+Session 537 created the detail panel APIs, but they were blocked by auth middleware when accessed from the browser without a session.
+
+| Fix | File | Details |
+|-----|------|---------|
+| **Auth Middleware** | `core/auth_middleware.py` | Added 5 intelligence API paths to PUBLIC_PATHS |
+| **Agent Detail API** | `core/views_spider_intelligence.py` | Fixed `AgentKnowledgeSource` field names (`created_at` → `first_discovered_at`) |
+| **Knowledge Transfers** | `core/views_spider_intelligence.py` | Fixed `KnowledgeTransfer` field names (`source_agent` → `connection__teacher_agent`) |
+
+### APIs Now Public (No Session Required)
+
+```
+/api/spider-intelligence/dashboard-stats/
+/api/spider-intelligence/detail/<name>/
+/api/agent-intelligence/detail/<name>/
+/api/situation-intelligence/detail/<type>/
+/api/intelligence/cross-references/
+```
 
 ---
 
@@ -27,21 +51,6 @@
 | Dynamic Cross-References API | ✅ Real DB relationships |
 | Detail Panel Overlay | ✅ Fixed position, no layout shift |
 | Bug Fixes | ✅ 4 API fixes (attributes, dict iteration, strings) |
-
-### Session 537 Commits (10 total)
-
-```
-b4797d7 - feat: Situation detail panel with real data
-540e4b3 - feat: Agent detail panel with real data
-1eef9ca - fix: Detail panel now fixed overlay
-b02ecb4 - fix: Cross-references API dict iteration
-eb59822 - fix: Use spider_classes attribute
-5af1c99 - feat: Collapsible spider categories
-f1d1f37 - fix: Handle raw_data as string
-5951d73 - feat: Spider detail panel shows articles
-36ce1a9 - feat: Dynamic cross-references API
-9f6a03c - fix: Command Center WebSocket + accuracy
-```
 
 ---
 
@@ -89,11 +98,11 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
-| **537** | **All 3 Detail Panels** | **Spider, Agent, Situation all show real data** |
+| **538** | **Auth + Field Fixes** | **All detail panels work without login** |
+| 537 | All 3 Detail Panels | Spider, Agent, Situation all show real data |
 | 536 | UI Tab Consolidation + Analytics + Command Center | 3 major fixes |
 | 535 | UI Reality Check | WebSockets verified |
 | 534 | Spider Sync Conversion | 60+ spiders converted |
-| 533 | LLM Synthesis Fix | Data extraction fixed |
 
 ---
 
@@ -134,6 +143,7 @@ Returns: spider→agent, agent→situation, situation→spider mappings
 | Situation detail content | ✅ Done | Session 537 |
 | Collapsible spider list | ✅ Done | Session 537 |
 | Detail panel overlay | ✅ Done | Session 537 |
+| Auth fix for APIs | ✅ Done | Session 538 |
 | Discord/Web parity | Pending | Some features only on one platform |
 
 ---
@@ -154,4 +164,4 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-*Last updated: Session 537 - December 23, 2025*
+*Last updated: Session 538 - December 23, 2025*

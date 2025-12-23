@@ -52,6 +52,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Public statistics (intentionally anonymous)
         '/api/public-stats/',  # Explicitly public stats
+
+        # Session 538: Intelligence APIs (read-only, non-sensitive, used by UI Command Center)
+        '/api/spider-intelligence/dashboard-stats/',  # Spider statistics
+        '/api/spider-intelligence/detail/',  # Spider detail panel
+        '/api/agent-intelligence/detail/',  # Agent detail panel
+        '/api/situation-intelligence/detail/',  # Situation detail panel
+        '/api/intelligence/cross-references/',  # Cross-reference mappings
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
