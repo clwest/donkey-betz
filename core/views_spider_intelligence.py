@@ -1784,3 +1784,125 @@ def intelligence_cross_references(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def spider_detail(request, spider_name):
+    """
+    Session 536: Get detailed data for a specific spider.
+
+    Returns recent items collected by the spider with full content.
+    Used by ICC detail panel to show actual news/data.
+    """
+    try:
+        from core.models_unified_system import SpiderData
+        from django.utils import timezone
+        from datetime import timedelta
+
+        limit = min(int(request.GET.get('limit', 10)), 25)
+        hours = min(int(request.GET.get('hours', 168)), 336)  # Default 7 days, max 2 weeks
+
+        since = timezone.now() - timedelta(hours=hours)
+
+        # Get recent data from this spider
+        queryset = SpiderData.objects.filter(
+            spider_name__iexact=spider_name,
+            created_at__gte=since
+        ).exclude(raw_data__isnull=True).order_by('-created_at')[:20]
+
+        items = []
+        seen_urls = set()
+
+        for sd in queryset:
+            if not sd.raw_data:
+                continue
+
+            raw_items = sd.raw_data.get('items', [])
+            if not isinstance(raw_items, list):
+                # Handle single item format
+                raw_items = [sd.raw_data] if sd.raw_data.get('title') or sd.raw_data.get('name') else []
+
+            for item in raw_items[:10]:
+                # Deduplicate by URL
+                url = item.get('url') or item.get('link') or item.get('permalink') or item.get('html_url') or ''
+                if url and url in seen_urls:
+                    continue
+                if url:
+                    seen_urls.add(url)
+
+                # Extract title
+                title = (
+                    item.get('title') or
+                    item.get('name') or
+                    item.get('headline') or
+                    item.get('position') or  # Jobs
+                    item.get('symbol') or  # Crypto/stocks
+                    None
+                )
+                if not title:
+                    continue
+
+                # Extract description/content
+                description = (
+                    item.get('description') or
+                    item.get('summary') or
+                    item.get('selftext') or  # Reddit
+                    item.get('content') or
+                    item.get('body') or
+                    item.get('text') or
+                    ''
+                )
+
+                # Truncate long descriptions
+                if len(description) > 500:
+                    description = description[:500] + '...'
+
+                items.append({
+                    'title': title[:200] if title else 'Untitled',
+                    'description': description,
+                    'url': url,
+                    'source': spider_name,
+                    'timestamp': sd.created_at.isoformat(),
+                    'category': sd.data_type or 'general',
+                    # Extra fields for different data types
+                    'price': item.get('current_price') or item.get('price'),
+                    'change': item.get('price_change_percentage_24h') or item.get('change_percent'),
+                    'company': item.get('company') or item.get('company_name'),
+                    'location': item.get('location'),
+                    'salary': item.get('salary') or item.get('salary_range'),
+                    'score': item.get('score') or item.get('ups'),  # Reddit upvotes
+                    'comments': item.get('num_comments'),
+                })
+
+                if len(items) >= limit:
+                    break
+
+            if len(items) >= limit:
+                break
+
+        # Get spider metadata
+        total_records = SpiderData.objects.filter(spider_name__iexact=spider_name).count()
+        recent_records = SpiderData.objects.filter(
+            spider_name__iexact=spider_name,
+            created_at__gte=since
+        ).count()
+
+        return JsonResponse({
+            'status': 'success',
+            'spider_name': spider_name,
+            'items': items,
+            'meta': {
+                'total_records': total_records,
+                'recent_records': recent_records,
+                'items_returned': len(items),
+                'hours_lookback': hours
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in spider_detail: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
