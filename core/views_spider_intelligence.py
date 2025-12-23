@@ -1930,3 +1930,105 @@ def spider_detail(request, spider_name):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def agent_detail(request, agent_name):
+    """
+    Session 537: Get detailed data for a specific agent.
+
+    Returns agent info, recent conversations, knowledge sources, and activity.
+    Used by ICC detail panel to show actual agent activity.
+    """
+    try:
+        from core.models_unified_system import Agent, AgentConversation, AgentKnowledgeSource, KnowledgeTransfer
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Find the agent (case-insensitive)
+        agent = Agent.objects.filter(name__iexact=agent_name).first()
+        if not agent:
+            # Try partial match
+            agent = Agent.objects.filter(name__icontains=agent_name.replace('Agent', '').replace('Coordinator', '')).first()
+
+        if not agent:
+            return JsonResponse({
+                'status': 'success',
+                'agent_name': agent_name,
+                'found': False,
+                'message': 'Agent not found in database'
+            })
+
+        # Get recent conversations involving this agent
+        recent_convos = AgentConversation.objects.filter(
+            initiator__name__iexact=agent.name
+        ).order_by('-started_at')[:5]
+
+        conversations = []
+        for conv in recent_convos:
+            conversations.append({
+                'topic': conv.topic or 'Untitled conversation',
+                'type': conv.conversation_type or 'discussion',
+                'status': conv.status or 'completed',
+                'insights': conv.insights_generated or 0,
+                'started_at': conv.started_at.isoformat() if conv.started_at else None,
+            })
+
+        # Get knowledge sources this agent has created
+        knowledge_sources = AgentKnowledgeSource.objects.filter(
+            agent=agent,
+            is_active=True
+        ).order_by('-created_at')[:5]
+
+        knowledge = []
+        for ks in knowledge_sources:
+            knowledge.append({
+                'title': ks.title or 'Untitled',
+                'source_type': ks.source_type or 'unknown',
+                'summary': (ks.summary or '')[:150] + '...' if ks.summary and len(ks.summary) > 150 else ks.summary,
+                'created_at': ks.created_at.isoformat() if ks.created_at else None,
+            })
+
+        # Get recent knowledge transfers (teaching/learning)
+        transfers_given = KnowledgeTransfer.objects.filter(
+            source_agent=agent
+        ).select_related('target_agent').order_by('-created_at')[:3]
+
+        transfers_received = KnowledgeTransfer.objects.filter(
+            target_agent=agent
+        ).select_related('source_agent').order_by('-created_at')[:3]
+
+        taught = [{'to': t.target_agent.name if t.target_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_given]
+        learned = [{'from': t.source_agent.name if t.source_agent else 'Unknown', 'topic': (t.transfer_summary or '')[:50]} for t in transfers_received]
+
+        return JsonResponse({
+            'status': 'success',
+            'agent_name': agent.name,
+            'found': True,
+            'agent': {
+                'name': agent.name,
+                'type': agent.agent_type or 'General',
+                'category': agent.category or 'Uncategorized',
+                'description': agent.description or 'No description available',
+                'specialization': agent.specialization or '',
+                'effectiveness': agent.effectiveness_score or 0,
+                'total_executions': agent.total_executions or 0,
+                'successful_executions': agent.successful_executions or 0,
+                'is_active': agent.is_active,
+                'last_active': agent.last_active.isoformat() if agent.last_active else None,
+            },
+            'conversations': conversations,
+            'knowledge': knowledge,
+            'transfers': {
+                'taught': taught,
+                'learned': learned,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in agent_detail: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
