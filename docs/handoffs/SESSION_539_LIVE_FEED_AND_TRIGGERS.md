@@ -138,6 +138,23 @@ Trigger events now link directly to source articles instead of Google search.
 
 ---
 
+### 7. Trigger Feed Click Shows "Unknown/N/A"
+
+**Problem:** Clicking trigger events in the Trigger Fires list showed all fields as "unknown" or "N/A".
+
+**Root Cause:** `renderTriggerFeed()` passed trigger name instead of trigger ID to `showDetail()`.
+
+**Fix:** Changed line 765:
+```javascript
+// Before
+onclick="ICCState.showDetail('trigger', '${name}')"
+
+// After
+onclick="ICCState.showDetail('trigger', '${trigger.id}')"
+```
+
+---
+
 ## Console.log Debugging Added
 
 Added logging to track situation and trigger operations:
@@ -187,6 +204,7 @@ ICC: Trigger fires by situation: {stock_market: 5, blockchain: 3, ...}
 | `cb7c0a0` | Add console.logs for debugging |
 | `c37c771` | Update schedule display strings |
 | `16a9b83` | Add direct article links to trigger events |
+| (pending) | Fix trigger feed click to use ID instead of name |
 
 ---
 
