@@ -10,32 +10,33 @@
 
 | Task | Status |
 |------|--------|
-| Dynamic Cross-References API | ✅ Fetches from DB instead of hardcoded |
-| Spider Detail Panel | ✅ Shows actual articles with clickable links |
-| raw_data String Fix | ✅ Handles JSON string format in spider_detail |
+| Spider Detail API | ✅ `/api/spider-intelligence/detail/<name>/` |
+| Collapsible Spider Categories | ✅ Click to expand, individual spiders clickable |
+| Dynamic Cross-References API | ✅ Real DB relationships |
+| Detail Panel Overlay | ✅ Fixed position, no layout shift |
+| Bug Fixes | ✅ 4 API fixes (attribute names, dict iteration) |
 
-### Spider Detail Panel (Major Fix)
-- **Problem:** Clicking spiders in Live Intelligence Flow showed no useful content
-- **Solution:** Created `/api/spider-intelligence/detail/<spider_name>/` endpoint
-- Shows actual news articles with:
-  - Clickable titles (open in new tab)
-  - Article descriptions (truncated preview)
-  - Price/change for financial data
-  - Company/location for job listings
-  - Score/comments for Reddit posts
-- Handles raw_data stored as string or dict
+### Collapsible Spider List (New)
+- Categories now show as `▶ Tech News (10)` - click to expand
+- Individual spiders listed when expanded (Techcrunch, The Verge, etc.)
+- Clicking a spider shows actual articles with clickable links
 
-### Dynamic Cross-References
-- Created `/api/intelligence/cross-references/` endpoint
-- Builds mappings from actual database relationships:
-  - `spiderToAgents` - from AgentKnowledgeSource.source_spider_names
-  - `agentToSituations` - from SituationTrigger.agent assignments
-  - `situationToSpiders` - from SituationTrigger.target_spiders
-- Falls back to static mappings if API fails
+### Spider Detail Panel
+- **Problem:** Clicking "Tech News Spiders" searched for non-existent spider
+- **Solution:**
+  - API returns `spiders_by_category` with individual spider names
+  - Categories are collapsible with individual spiders inside
+  - Detail panel is fixed overlay at bottom (no layout shift)
+
+### Bug Fixes Applied
+1. `spider_classes` not `_spiders` in dashboard_stats
+2. `get_active_spiders()` returns dict, fixed iteration
+3. raw_data string handling in spider_detail
+4. Detail panel CSS: fixed overlay instead of inline
 
 ---
 
-## Current System State (Session 537 End)
+## Current System State
 
 | Component | Count | Status |
 |-----------|-------|--------|
@@ -46,26 +47,33 @@
 | Spider Data Records | 24,027+ | ✅ |
 | Knowledge Sources | 2,682 | ✅ |
 | LLM Summaries | 98% | ✅ |
-| Knowledge Transfers | 937 | ✅ |
-| Agent Conversations | 4,780 | ✅ |
 
 ---
 
-## Priority 1: Verify Session 537 Fixes
+## Session 537 Commits
+
+```
+5951d73 - Spider detail panel shows actual articles
+f1d1f37 - Handle raw_data as string in spider_detail API
+5af1c99 - Collapsible spider categories with individual clickable spiders
+eb59822 - Use spider_classes instead of _spiders attribute
+b02ecb4 - Fix cross-references API dict iteration
+1eef9ca - Detail panel now fixed overlay instead of inline
+```
+
+---
+
+## How to Test
 
 ```bash
 # Open AI Studio
 open http://localhost:8000/ai-studio/
 
-# Test Spider Detail:
-# 1. Go to Command Center tab
-# 2. Click on any spider in Live Intelligence Flow
-# 3. Should see actual articles with clickable links
-
-# Test Cross-References:
-# 1. Click on a spider → see which agents use it
-# 2. Click on an agent → see which situations use it
-# 3. Relationships should be from real data
+# Go to Command Center tab
+# 1. Click "▶ Tech News (10)" to expand category
+# 2. Click on "Techcrunch" spider
+# 3. See actual news articles with blue clickable links
+# 4. Detail panel appears as overlay at bottom
 ```
 
 ---
@@ -74,14 +82,11 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
-| 537 | Spider Detail + Cross-References | Actual content in ICC |
+| 537 | Spider Detail + Collapsible Categories | Real content in ICC |
 | 536 | UI Tab Consolidation + Analytics + Command Center | 3 major fixes |
-| 535 | UI Reality Check | WebSockets verified, API fix |
+| 535 | UI Reality Check | WebSockets verified |
 | 534 | Spider Sync Conversion | 60+ spiders converted |
 | 533 | LLM Synthesis Fix | Data extraction fixed |
-| 532 | Enhanced Content Display | Full knowledge in sub-tabs |
-| 531 | Sub-tabs Added | Conversations, Dreams, Memory |
-| 530 | Intelligence Command Center | Unified 3-column frontend |
 
 ---
 
@@ -89,14 +94,12 @@ open http://localhost:8000/ai-studio/
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Tab consolidation (18→12→9) | ✅ Done | Sessions 530 + 536 |
-| Analytics backend | ✅ Done | Session 536 |
-| Command Center real-time | ✅ Done | Session 536 |
 | Spider detail content | ✅ Done | Session 537 |
+| Collapsible spider list | ✅ Done | Session 537 |
 | Dynamic cross-references | ✅ Done | Session 537 |
+| Detail panel overlay | ✅ Done | Session 537 |
 | Discord/Web parity | Pending | Some features only on one platform |
 | Agent detail panel | Pending | Show agent knowledge, recent activity |
-| Situation detail panel | Pending | Show trigger history, execution logs |
 
 ---
 
@@ -108,11 +111,11 @@ open http://localhost:8000/ai-studio/
 # 2. Verify services
 make start && make celery  # If not running
 
-# 3. Open UI - should show 9 tabs
+# 3. Open UI
 open http://localhost:8000/ai-studio/
 
-# 4. Test ICC spider detail
-# Click any spider in Command Center → Live Intelligence Flow
+# 4. Test Command Center
+# Expand a spider category → click a spider → see articles
 ```
 
 ---
