@@ -2,243 +2,212 @@
 Medium Intelligence Spider - Content Monetization Platform
 ==========================================================
 
-Specialized spider for gathering content monetization opportunities from Medium.
-Focuses on Medium Partner Program and writing opportunities.
+Session 534: Simplified to work with spider network interface.
+Aggregates content creation and writing platform news via RSS feeds.
 """
 
+import feedparser
+import logging
 import re
-import json
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
-from bs4 import BeautifulSoup
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
-from ..revenue_tracker import create_project_revenue
+logger = logging.getLogger(__name__)
 
 
-class MediumIntelligenceSpider(BaseIntelligenceSpider):
+class MediumIntelligenceSpider:
     """Medium content monetization intelligence spider."""
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    name = "medium"
 
-        self.content_categories = ['technology', 'business', 'startup', 'ai', 'programming', 'design', 'marketing']
-        self.monetization_metrics = ['views', 'reads', 'claps', 'followers', 'earnings']
+    # Medium and writing platform RSS feeds
+    RSS_FEEDS = {
+        'medium_top': 'https://medium.com/feed/topic/technology',
+        'medium_startup': 'https://medium.com/feed/topic/startup',
+        'medium_programming': 'https://medium.com/feed/topic/programming',
+        'better_programming': 'https://medium.com/feed/better-programming',
+        'towards_data_science': 'https://towardsdatascience.com/feed',
+        'the_writing_cooperative': 'https://writingcooperative.com/feed',
+    }
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Medium data"""
-        try:
-            if 'medium.com' in target.url:
-                return await self._process_medium_opportunity(raw_data, target)
-            return await self._process_general_content(raw_data, target)
-        except Exception as e:
-            self.logger.error(f"Error processing Medium data: {e}")
-            return None
+    # Content categories
+    CATEGORIES = [
+        ('Technology', 'technology', 'Tech and programming content.'),
+        ('Business', 'business', 'Business and startup content.'),
+        ('Writing', 'writing', 'Writing tips and advice.'),
+        ('Monetization', 'monetization', 'Content monetization strategies.'),
+        ('Self Improvement', 'self', 'Personal development content.'),
+    ]
 
-    async def _process_medium_opportunity(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Medium content opportunity"""
-        if 'content' not in data:
-            return None
-
-        soup = BeautifulSoup(data['content'], 'html.parser')
-
-        content_info = {
-            'id': f"medium_{int(datetime.now().timestamp())}",
-            'title': self._extract_title(soup),
-            'author': self._extract_author(soup),
-            'publication': self._extract_publication(soup),
-            'tags': self._extract_tags(soup),
-            'read_time': self._extract_read_time(soup),
-            'claps': self._extract_claps(soup),
-            'responses': self._extract_responses(soup),
-            'published_date': self._extract_published_date(soup),
-            'partner_program': self._check_partner_program(soup),
-            'monetization_potential': self._assess_monetization_potential(soup),
-            'source': 'medium'
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.content_categories = {
+            'technology': ['tech', 'software', 'programming', 'code', 'developer', 'ai'],
+            'business': ['business', 'startup', 'entrepreneur', 'marketing', 'growth'],
+            'writing': ['writing', 'content', 'blogging', 'storytelling', 'author'],
+            'monetization': ['monetization', 'income', 'earnings', 'revenue', 'partner program'],
+            'self_improvement': ['productivity', 'habits', 'mindset', 'success', 'motivation'],
+            'design': ['design', 'ux', 'ui', 'product', 'creativity'],
+        }
+        self.monetization_signals = {
+            'partner_program': ['member-only', 'partner program', 'earnings', 'paywall'],
+            'high_engagement': ['viral', 'trending', 'popular', 'curated', 'featured'],
+            'publication': ['publication', 'editor', 'submit', 'contribute'],
         }
 
-        quality_score = self._calculate_content_quality_score(content_info)
-
-        return IntelligenceData(
-            spider_id=self.spider_id,
-            source_url=target.url,
-            data_type='content_monetization_opportunity',
-            content=content_info,
-            metadata={
-                'platform': 'medium',
-                'content_type': 'article',
-                'monetization_enabled': content_info.get('partner_program', False),
-                'processing_timestamp': datetime.now(timezone.utc).isoformat()
-            },
-            quality_score=quality_score,
-            timestamp=datetime.now(timezone.utc),
-            relevance_tags=['content_creation', 'medium', 'writing'] + content_info.get('tags', [])[:5],
-            target_agents=['income_builder', 'content_creator', 'medium_writer'],
-            target_advisors=['content_strategist', 'creator_economy_expert']
-        )
-
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract article title"""
-        for selector in ['h1', '[data-testid="storyTitle"]', '.graf--title']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Medium Article"
-
-    def _extract_author(self, soup: BeautifulSoup) -> str:
-        """Extract author name"""
-        for selector in ['[data-testid="authorName"]', '.author-name', '.u-accentColor--textNormal']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Unknown Author"
-
-    def _extract_publication(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract publication name"""
-        for selector in ['[data-testid="publicationName"]', '.publication-name']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return None
-
-    def _extract_tags(self, soup: BeautifulSoup) -> List[str]:
-        """Extract article tags"""
-        tags = []
-        for elem in soup.select('[data-testid="tag"]', '.tag'):
-            tag = elem.get_text().strip()
-            if tag and len(tag) < 50:
-                tags.append(tag)
-        return tags[:10]
-
-    def _extract_read_time(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract read time"""
-        for selector in ['[data-testid="readTime"]', '.reading-time']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return None
-
-    def _extract_claps(self, soup: BeautifulSoup) -> Optional[int]:
-        """Extract clap count"""
-        text = soup.get_text()
-        clap_match = re.search(r'(\d+(?:,\d{3})*)\s*claps?', text, re.IGNORECASE)
-        if clap_match:
-            return int(clap_match.group(1).replace(',', ''))
-        return None
-
-    def _extract_responses(self, soup: BeautifulSoup) -> Optional[int]:
-        """Extract response count"""
-        text = soup.get_text()
-        response_match = re.search(r'(\d+)\s*responses?', text, re.IGNORECASE)
-        if response_match:
-            return int(response_match.group(1))
-        return None
-
-    def _extract_published_date(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract published date"""
-        for selector in ['[data-testid="publishedDate"]', '.published-date', 'time']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return None
-
-    def _check_partner_program(self, soup: BeautifulSoup) -> bool:
-        """Check if article is in Partner Program"""
-        text = soup.get_text().lower()
-        return any(indicator in text for indicator in ['member-only', 'partner program', 'earnings'])
-
-    def _assess_monetization_potential(self, soup: BeautifulSoup) -> str:
-        """Assess monetization potential"""
-        claps = self._extract_claps(soup) or 0
-        responses = self._extract_responses(soup) or 0
-
-        if claps > 1000 or responses > 50:
-            return 'high'
-        elif claps > 100 or responses > 10:
-            return 'medium'
-        else:
-            return 'low'
-
-    def _calculate_content_quality_score(self, content_info: Dict[str, Any]) -> float:
-        """Calculate content quality score"""
-        score = 0.5
-
-        if content_info.get('partner_program'):
-            score += 0.3
-
-        claps = content_info.get('claps', 0)
-        if claps > 500:
-            score += 0.2
-        elif claps > 100:
-            score += 0.1
-
-        if content_info.get('publication'):
-            score += 0.1
-
-        return min(score, 1.0)
-
-    async def _process_general_content(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process general content opportunity"""
-        content_info = {
-            'id': f"general_content_{int(datetime.now().timestamp())}",
-            'title': 'General Content Opportunity',
-            'source': 'general',
-            'url': target.url
-        }
-
-        return IntelligenceData(
-            spider_id=self.spider_id,
-            source_url=target.url,
-            data_type='content_opportunity',
-            content=content_info,
-            metadata={'platform': 'general'},
-            quality_score=0.3,
-            timestamp=datetime.now(timezone.utc),
-            relevance_tags=['content_creation', 'general'],
-            target_agents=['income_builder'],
-            target_advisors=[]
-        )
-
-    async def track_revenue_conversion(
-        self,
-        application_id: str,
-        user_id: str,
-        content_title: str,
-        revenue_amount: float,
-        client_name: str = "Medium Partner Program",
-        **kwargs
-    ) -> Optional[str]:
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
         """
-        Track revenue when Medium content generates earnings.
-        Called when content monetization occurs.
+        Fetch content creation and writing platform content from RSS feeds.
 
         Args:
-            application_id: Unique identifier for this content opportunity
-            user_id: User who created the content
-            content_title: Title of the content that generated revenue
-            revenue_amount: Amount earned from the content
-            client_name: Platform or client name (defaults to Medium)
-            **kwargs: Additional metadata (tags, satisfaction_score, etc.)
+            max_results: Maximum number of items to fetch
 
         Returns:
-            Revenue record ID if successful, None otherwise
+            List of content creation dictionaries
         """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            record_id = await create_project_revenue(
-                application_id=application_id,
-                user_id=user_id,
-                client_name=client_name,
-                project_title=content_title,
-                contract_value=revenue_amount,
-                **kwargs
-            )
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting content categories: {e}")
 
-            if record_id:
-                self.logger.info(f"💰 Tracked Medium revenue: ${revenue_amount} for '{content_title}'")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return record_id
+        logger.info(f"Medium spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from content platform RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect content category and monetization signals
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                is_monetizable = self._is_monetizable(text)
+                has_high_engagement = self._has_high_engagement(text)
+
+                # Extract author
+                author = entry.get('author', 'Medium Writer')
+
+                # Extract tags from feed entry
+                entry_tags = []
+                if hasattr(entry, 'tags'):
+                    entry_tags = [tag.term for tag in entry.tags if hasattr(tag, 'term')][:5]
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': author,
+                    'category': category,
+                    'content_category': category,
+                    'is_monetizable': is_monetizable,
+                    'has_high_engagement': has_high_engagement,
+                    'entry_tags': entry_tags,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'content_monetization',
+                    'platform': 'medium',
+                    'tags': ['medium', 'content', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error tracking Medium revenue conversion: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_category(self, text: str) -> str:
+        """Detect content category from text."""
+        for category, keywords in self.content_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
+
+    def _is_monetizable(self, text: str) -> bool:
+        """Check if content has monetization signals."""
+        return any(kw in text for kw in self.monetization_signals['partner_program'])
+
+    def _has_high_engagement(self, text: str) -> bool:
+        """Check if content shows high engagement signals."""
+        return any(kw in text for kw in self.monetization_signals['high_engagement'])
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return content category links."""
+        return [
+            {
+                'title': f"Medium: {name}",
+                'url': f'https://medium.com/topic/{slug}',
+                'link': f'https://medium.com/topic/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Medium',
+                'data_type': 'content_category',
+                'platform': 'medium',
+                'tags': ['medium', 'content', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Tech Writing', 'technology', 'Technology and programming content.'),
+            ('Startup Stories', 'business', 'Business and entrepreneurship.'),
+            ('Writing Tips', 'writing', 'Writing and content creation advice.'),
+            ('Monetization', 'monetization', 'Content monetization strategies.'),
+            ('Personal Development', 'self', 'Self-improvement content.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://medium.com/topic/{category}',
+                'link': f'https://medium.com/topic/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Medium',
+                'data_type': 'content_topic',
+                'platform': 'medium',
+                'tags': ['medium', 'content', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
