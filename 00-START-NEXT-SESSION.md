@@ -1,70 +1,60 @@
-# Session 536 - Start Here
+# Session 537 - Start Here
 
-**Previous Session:** 535
+**Previous Session:** 536
 **Date:** December 23, 2025
-**Focus:** Complete System Review & Fresh Start
+**Focus:** Continue UI Improvements
 
 ---
 
-## Session 535 Accomplishments
+## Session 536 Accomplishments
 
 | Task | Status |
 |------|--------|
-| WebSocket connections verified | ✅ 7/7 working |
-| LLM summary coverage verified | ✅ 98% (2,626/2,677) |
-| Agent count UI fixed | ✅ 55 |
-| Spider count UI fixed | ✅ 75 |
-| API 500 error fixed | ✅ `_parse_raw_data()` helper |
-| Full service restart | ✅ Redis, Daphne, Celery |
-| Data refresh triggered | ✅ 18+ new records |
+| UI Tab Consolidation | ✅ 12 → 9 visible tabs |
+| Hidden Marketplace tab | ✅ No workflows populated |
+| Hidden Voices tab | ✅ No voices populated |
+| Hidden Opportunities tab | ✅ Duplicate of Command Center |
+| System audit completed | ✅ All services healthy |
 
-**Commits:**
-- `d3734ff` - fix: Handle raw_data as string in SpiderIntelligenceService
-- `4c88282` - docs: UI Reality Check handoff
+**Tab Changes:**
+- Marketplace → Hidden (Session 536)
+- Voices → Hidden (Session 536)
+- Opportunities → Hidden (Session 536)
+
+**Remaining Visible Tabs (9):**
+Assistant, Command Center, Analytics, Distribute, Legal, Portfolio, Preferences, Projects, Upload
 
 ---
 
-## Priority 1: Complete System Review
+## Current System State (Session 536 End)
 
-Run comprehensive audit of all system components:
+| Component | Count | Status |
+|-----------|-------|--------|
+| **Visible Tabs** | 9 | ✅ Consolidated from 12 |
+| **Hidden Tabs** | 15 | ✅ (was 12) |
+| Spiders (Registry) | 75 | ✅ |
+| Agents (Active) | 55 | ✅ |
+| Spider Data Records | 24,027+ | ✅ |
+| Knowledge Sources | 2,682 | ✅ |
+| LLM Summaries | 98% | ✅ |
+| Knowledge Transfers | 937 | ✅ |
+| Agent Conversations | 4,780 | ✅ |
+
+---
+
+## Priority 1: Verify Tab Consolidation
 
 ```bash
-# 1. Database counts
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.models_unified_system import Agent
-from core.models import AgentKnowledgeSource, KnowledgeTransfer, SpiderData
-from ai_core.spiders.spider_registry import SpiderRegistry
+# Open AI Studio and verify 9 tabs visible
+open http://localhost:8000/ai-studio/
 
-print('=== SYSTEM STATUS ===')
-print(f'Agents (active): {Agent.objects.filter(is_active=True).count()}')
-print(f'Spiders (registry): {len(SpiderRegistry().get_all_spiders())}')
-print(f'Spider Data Records: {SpiderData.objects.count()}')
-print(f'Knowledge Sources: {AgentKnowledgeSource.objects.filter(is_active=True).count()}')
-print(f'Knowledge Transfers: {KnowledgeTransfer.objects.count()}')
-"
-
-# 2. Recent activity
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from django.utils import timezone
-from datetime import timedelta
-from core.models import SpiderData, AgentConversation
-
-now = timezone.now()
-hour_ago = now - timedelta(hours=1)
-day_ago = now - timedelta(days=1)
-
-print('=== RECENT ACTIVITY ===')
-print(f'Spider data (last hour): {SpiderData.objects.filter(created_at__gte=hour_ago).count()}')
-print(f'Spider data (last 24h): {SpiderData.objects.filter(created_at__gte=day_ago).count()}')
-print(f'Conversations (last 24h): {AgentConversation.objects.filter(created_at__gte=day_ago).count()}')
-"
+# Expected tabs:
+# Assistant | Command Center | Analytics | Distribute | Legal | Portfolio | Preferences | Projects | Upload
 ```
 
 ---
 
-## Priority 2: Verify All Services Running
+## Priority 2: Service Health Check
 
 ```bash
 # Check all services
@@ -79,48 +69,28 @@ curl -s http://localhost:8000/health/ping/
 
 ---
 
-## Priority 3: UI Verification Checklist
-
-Navigate to `http://localhost:8000/ai-studio/` and verify:
-
-| Panel | Check | Expected |
-|-------|-------|----------|
-| Spider Network | Left panel | 75 spiders by category |
-| Agent Roster | Left panel | 55 agents with status |
-| Live Feed | Center panel | Real-time events |
-| Situations | Right panel | 19 situation types |
-| Learning Feed | Memory tab | LLM summaries visible |
-
-**Browser Console:** Press F12 → Console → No red errors
-
----
-
-## Current System State (Session 535 End)
-
-| Component | Count | Status |
-|-----------|-------|--------|
-| Spiders (Registry) | 75 | ✅ All sync interface |
-| Spider Categories | 36 | ✅ |
-| Agents (Active) | 55 | ✅ |
-| Spider Data Records | 23,970+ | ✅ Fresh data |
-| Knowledge Sources | 2,677 | ✅ |
-| LLM Summaries | 2,626 (98%) | ✅ |
-| Knowledge Transfers | 932 | ✅ |
-| Agent Conversations | 4,775 | ✅ |
-| WebSocket Endpoints | 80+ | ✅ 7 key ones tested |
-
----
-
 ## Session History (Recent)
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
+| 536 | UI Tab Consolidation | 12 → 9 tabs (hid Marketplace, Voices, Opportunities) |
 | 535 | UI Reality Check | WebSockets verified, API fix |
 | 534 | Spider Sync Conversion | 60+ spiders converted |
 | 533 | LLM Synthesis Fix | Data extraction fixed |
 | 532 | Enhanced Content Display | Full knowledge in sub-tabs |
 | 531 | Sub-tabs Added | Conversations, Dreams, Memory |
 | 530 | Intelligence Command Center | Unified 3-column frontend |
+
+---
+
+## Future UI Improvements (from Session 502 Audit)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Tab consolidation (18→12) | ✅ Done | Session 530 + 536 |
+| Further consolidation (12→9) | ✅ Done | Session 536 |
+| Discord/Web parity | Pending | Some features only on one platform |
+| Analytics backend | Pending | UI exists, needs real data |
 
 ---
 
@@ -132,8 +102,7 @@ Navigate to `http://localhost:8000/ai-studio/` and verify:
 | Capabilities | `docs/CAPABILITIES.md` | ✅ |
 | Agents | `docs/AGENTS.md` | ✅ |
 | Spiders | `docs/SPIDERS.md` | ✅ |
-| Sci-Fi Features | `docs/SCIFI_FEATURES.md` | ✅ |
-| Session 535 Handoff | `docs/handoffs/SESSION_535_UI_REALITY_CHECK.md` | ✅ |
+| UI Audit | `docs/UI_AUDIT_SESSION_502.md` | ✅ Updated |
 
 ---
 
@@ -145,15 +114,13 @@ Navigate to `http://localhost:8000/ai-studio/` and verify:
 # 2. Verify services
 make start && make celery  # If not running
 
-# 3. Open UI
+# 3. Open UI - should show 9 tabs
 open http://localhost:8000/ai-studio/
 
 # 4. Check browser console for errors
 # F12 → Console
-
-# 5. Run system audit commands above
 ```
 
 ---
 
-*Last updated: Session 535 - December 23, 2025*
+*Last updated: Session 536 - December 23, 2025*
