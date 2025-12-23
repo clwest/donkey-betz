@@ -2,21 +2,23 @@
 Envato Spider - Creative Assets Marketplace Intelligence
 ==========================================================
 
-Session 218: Specialized spider for Envato marketplace (ThemeForest, CodeCanyon, etc).
-Focuses on templates, themes, graphics, and digital asset trends.
+Session 534: Simplified to work with spider network interface.
+Uses Envato and design marketplace RSS feeds for asset trends.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class EnvatoSpider(BaseIntelligenceSpider):
+class EnvatoSpider:
     """Envato spider - creative assets marketplace intelligence"""
+
+    name = "envato"
 
     # Envato and design marketplace RSS feeds
     RSS_FEEDS = {
@@ -25,9 +27,21 @@ class EnvatoSpider(BaseIntelligenceSpider):
         'webdesigner_depot': 'https://www.webdesignerdepot.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Asset categories
+    CATEGORIES = [
+        ('Themes', 'themes', 'WordPress and website themes.'),
+        ('Graphics', 'graphics', 'Vector graphics and illustrations.'),
+        ('Code', 'code', 'Plugins and scripts.'),
+        ('Video', 'video', 'Video templates and motion graphics.'),
+        ('Audio', 'audio', 'Music and sound effects.'),
+        ('Photos', 'photos', 'Stock photography.'),
+        ('3D', '3d', '3D models and renders.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.asset_categories = {
             'themes': ['theme', 'template', 'wordpress', 'html', 'landing page'],
             'graphics': ['graphic', 'vector', 'illustration', 'icon', 'logo'],
@@ -37,168 +51,154 @@ class EnvatoSpider(BaseIntelligenceSpider):
             'photos': ['photo', 'stock', 'image', 'photography', 'mockup'],
             '3d': ['3d', 'model', 'render', 'blender', 'cinema 4d'],
         }
-
         self.trend_signals = {
             'trending': ['trending', 'popular', 'best seller', 'top rated', 'featured'],
             'new': ['new', 'just added', 'fresh', 'latest', 'released'],
             'sale': ['sale', 'discount', 'deal', 'offer', 'bundle'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Envato marketplace data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch creative asset content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting Envato categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'envato'}
+        logger.info(f"Envato spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from Envato RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect asset category and trend signals
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                signals = self._detect_signals(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name.replace('_', ' ').title()),
+                    'category': category,
+                    'asset_category': category,
+                    'signals': signals,
+                    'is_trending': 'trending' in signals,
+                    'is_new': 'new' in signals,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'creative_asset',
+                    'platform': 'envato',
+                    'tags': ['envato', 'assets', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Envato data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Envato marketplace data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect asset category from text."""
+        for category, keywords in self.asset_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            insights = self._generate_insights(processed_items)
+    def _detect_signals(self, text: str) -> List[str]:
+        """Detect trend signals from text."""
+        signals = []
+        for signal, keywords in self.trend_signals.items():
+            if any(kw in text for kw in keywords):
+                signals.append(signal)
+        return signals
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'trending_assets': self._extract_trending(processed_items),
-                'new_releases': self._extract_new(processed_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Envato category links."""
+        return [
+            {
+                'title': f"Envato: {name}",
+                'url': f'https://elements.envato.com/{slug}',
+                'link': f'https://elements.envato.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Envato',
+                'data_type': 'asset_category',
+                'platform': 'envato',
+                'tags': ['envato', 'assets', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Website Themes', 'themes', 'WordPress and HTML templates.'),
+            ('Graphics & Icons', 'graphics', 'Vector graphics and illustrations.'),
+            ('Code & Plugins', 'code', 'Scripts and extensions.'),
+            ('Video Templates', 'video', 'Motion graphics and templates.'),
+            ('Stock Photos', 'photos', 'Photography and mockups.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='envato.com',
-                data_type='creative_assets',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'envato',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['envato', 'templates', 'themes', 'graphics', 'digital assets'],
-                target_agents=['creative_agent', 'design_agent', 'content_agent'],
-                target_advisors=['creative_strategist', 'design_advisor']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Envato data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify asset category
-            category = 'general'
-            for cat, keywords in self.asset_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Check trend signals
-            signals = []
-            for signal, keywords in self.trend_signals.items():
-                if any(kw in text for kw in keywords):
-                    signals.append(signal)
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://elements.envato.com/{category}',
+                'link': f'https://elements.envato.com/{category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'signals': signals,
-                'is_trending': 'trending' in signals,
-                'is_new': 'new' in signals,
-                'sentiment': sentiment,
+                'source': 'Envato',
+                'data_type': 'asset_topic',
+                'platform': 'envato',
+                'tags': ['envato', 'assets', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate marketplace insights"""
-        if not items:
-            return {}
-
-        trending = [i for i in items if i.get('is_trending')]
-        new_items = [i for i in items if i.get('is_new')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'trending_count': len(trending),
-            'new_releases': len(new_items),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'market_pulse': 'active' if len(trending) > 3 else 'steady',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by asset category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending assets"""
-        return [{'title': i.get('title'), 'category': i.get('category'), 'link': i.get('link')}
-                for i in items if i.get('is_trending')][:5]
-
-    def _extract_new(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract new releases"""
-        return [{'title': i.get('title'), 'category': i.get('category'), 'link': i.get('link')}
-                for i in items if i.get('is_new')][:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['envato', 'themeforest', 'codecanyon', 'template', 'theme', 'graphics']
+            for title, category, desc in topics
+        ]
