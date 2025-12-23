@@ -1,214 +1,249 @@
 """
 Polygon Spider - Financial Market Data Intelligence
-===================================================
+====================================================
 
-Session 343: Phase 1 Spider Expansion
-Polygon.io provides comprehensive stock market data with a free tier.
+Session 534: Simplified to work with spider network interface.
+Uses Polygon.io API when available, RSS fallback for market news.
 """
 
 import os
-import aiohttp
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class PolygonSpider(BaseIntelligenceSpider):
-    """Polygon.io stock market data spider - real-time and historical market data"""
+class PolygonSpider:
+    """Polygon.io spider - stock market data and financial news"""
+
+    name = "polygon"
 
     BASE_URL = 'https://api.polygon.io'
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Financial news RSS feeds (fallback)
+    RSS_FEEDS = {
+        'yahoo_finance': 'https://finance.yahoo.com/news/rssindex',
+        'marketwatch': 'https://feeds.content.dowjones.io/public/rss/mw_topstories',
+        'cnbc': 'https://www.cnbc.com/id/100003114/device/rss/rss.html',
+        'seeking_alpha': 'https://seekingalpha.com/feed.xml',
+        'investing_com': 'https://www.investing.com/rss/news.rss',
+    }
+
+    # Top stocks to track
+    TRACKED_TICKERS = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
+        'BRK.B', 'JPM', 'V', 'UNH', 'XOM', 'JNJ', 'WMT', 'PG'
+    ]
+
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.api_key = os.getenv('POLYGON_API_KEY', '')
+        self.market_categories = {
+            'tech': ['tech', 'technology', 'software', 'ai', 'semiconductor', 'cloud'],
+            'finance': ['bank', 'finance', 'interest rate', 'fed', 'treasury'],
+            'energy': ['oil', 'gas', 'energy', 'renewable', 'solar', 'wind'],
+            'healthcare': ['pharma', 'biotech', 'healthcare', 'drug', 'fda'],
+            'retail': ['retail', 'consumer', 'e-commerce', 'shopping'],
+            'crypto': ['crypto', 'bitcoin', 'ethereum', 'blockchain'],
+        }
 
-        # Top stocks to track
-        self.tracked_tickers = [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-            'BRK.B', 'JPM', 'V', 'UNH', 'XOM', 'JNJ', 'WMT', 'PG'
-        ]
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch market data from Polygon.io API and RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch market data from Polygon.io"""
-        if not self.api_key:
-            self.logger.warning("POLYGON_API_KEY not set")
-            return None
+        Args:
+            max_results: Maximum number of items to fetch
 
-        try:
-            all_data = {
-                'ticker_snapshots': [],
-                'market_news': [],
-                'gainers_losers': None,
-            }
+        Returns:
+            List of financial market dictionaries
+        """
+        all_items = []
+        seen_keys = set()
 
-            async with aiohttp.ClientSession() as session:
-                # Get ticker snapshots for tracked stocks
-                for ticker in self.tracked_tickers[:5]:  # Limit to 5 for rate limits
-                    snapshot = await self._fetch_ticker_snapshot(session, ticker)
-                    if snapshot:
-                        all_data['ticker_snapshots'].append(snapshot)
+        # Try Polygon.io API if key available
+        if self.api_key:
+            try:
+                api_items = self._fetch_polygon_api()
+                for item in api_items:
+                    key = item.get('ticker', item.get('url', ''))
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching Polygon API: {e}")
 
-                # Get gainers and losers
-                gainers_losers = await self._fetch_gainers_losers(session)
-                if gainers_losers:
-                    all_data['gainers_losers'] = gainers_losers
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_keys:
+                        seen_keys.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
 
-                # Get market news
-                news = await self._fetch_market_news(session)
-                if news:
-                    all_data['market_news'] = news
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return all_data
+        logger.info(f"Polygon spider collected {len(all_items)} items")
+        return all_items[:max_results]
 
-        except Exception as e:
-            self.logger.error(f"Error fetching Polygon data: {e}")
-            return None
+    def _fetch_polygon_api(self) -> List[Dict[str, Any]]:
+        """Fetch stock data from Polygon.io API."""
+        items = []
 
-    async def _fetch_ticker_snapshot(self, session: aiohttp.ClientSession, ticker: str) -> Optional[Dict[str, Any]]:
-        """Fetch snapshot for a single ticker"""
-        try:
-            url = f"{self.BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
-            params = {'apiKey': self.api_key}
+        # Fetch ticker snapshots
+        for ticker in self.TRACKED_TICKERS[:5]:  # Limit for rate limits
+            try:
+                response = requests.get(
+                    f"{self.BASE_URL}/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}",
+                    params={'apiKey': self.api_key},
+                    timeout=10
+                )
 
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
+                if response.status_code == 200:
+                    data = response.json()
                     if data.get('status') == 'OK' and data.get('ticker'):
                         ticker_data = data['ticker']
-                        return {
+                        day = ticker_data.get('day', {})
+                        prev = ticker_data.get('prevDay', {})
+
+                        price = day.get('c', 0)
+                        change = ticker_data.get('todaysChange', 0)
+                        change_pct = ticker_data.get('todaysChangePerc', 0)
+
+                        sentiment = 'bullish' if change_pct > 1 else 'bearish' if change_pct < -1 else 'neutral'
+
+                        items.append({
+                            'title': f"{ticker}: ${price:.2f} ({change_pct:+.2f}%)",
+                            'url': f"polygon_{ticker}",
+                            'link': f'https://polygon.io/quote/{ticker}',
+                            'summary': f"{ticker} trading at ${price:.2f}, {'+' if change >= 0 else ''}{change:.2f} ({change_pct:+.2f}%)",
+                            'description': f"Open: ${day.get('o', 0):.2f}, High: ${day.get('h', 0):.2f}, Low: ${day.get('l', 0):.2f}, Vol: {day.get('v', 0):,}",
                             'ticker': ticker,
-                            'name': ticker_data.get('name', ticker),
-                            'price': ticker_data.get('day', {}).get('c', 0),
-                            'change': ticker_data.get('todaysChange', 0),
-                            'change_percent': ticker_data.get('todaysChangePerc', 0),
-                            'volume': ticker_data.get('day', {}).get('v', 0),
-                            'high': ticker_data.get('day', {}).get('h', 0),
-                            'low': ticker_data.get('day', {}).get('l', 0),
-                            'open': ticker_data.get('day', {}).get('o', 0),
-                            'previous_close': ticker_data.get('prevDay', {}).get('c', 0),
-                        }
-        except Exception as e:
-            self.logger.warning(f"Error fetching {ticker}: {e}")
-        return None
-
-    async def _fetch_gainers_losers(self, session: aiohttp.ClientSession) -> Optional[Dict[str, Any]]:
-        """Fetch market gainers and losers"""
-        try:
-            url = f"{self.BASE_URL}/v2/snapshot/locale/us/markets/stocks/gainers"
-            params = {'apiKey': self.api_key}
-
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    gainers = []
-                    for ticker in data.get('tickers', [])[:10]:
-                        gainers.append({
-                            'ticker': ticker.get('ticker'),
-                            'change_percent': ticker.get('todaysChangePerc', 0),
-                            'price': ticker.get('day', {}).get('c', 0),
+                            'price': price,
+                            'change': change,
+                            'change_percent': change_pct,
+                            'volume': day.get('v', 0),
+                            'sentiment': sentiment,
+                            'category': 'stocks',
+                            'source': 'Polygon.io',
+                            'data_type': 'stock_quote',
+                            'platform': 'polygon',
+                            'tags': ['polygon', 'stocks', 'finance', ticker.lower()],
+                            'timestamp': datetime.now().isoformat(),
                         })
 
-            # Fetch losers
-            url = f"{self.BASE_URL}/v2/snapshot/locale/us/markets/stocks/losers"
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    losers = []
-                    for ticker in data.get('tickers', [])[:10]:
-                        losers.append({
-                            'ticker': ticker.get('ticker'),
-                            'change_percent': ticker.get('todaysChangePerc', 0),
-                            'price': ticker.get('day', {}).get('c', 0),
-                        })
+            except Exception as e:
+                logger.warning(f"Error fetching {ticker}: {e}")
 
-            return {'gainers': gainers, 'losers': losers}
+        return items
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch financial news from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect market category
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                tickers = self._extract_tickers(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'tickers': tickers,
+                    'category': category,
+                    'sentiment': sentiment,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'financial_news',
+                    'platform': 'polygon',
+                    'tags': ['polygon', 'finance', 'markets', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.warning(f"Error fetching gainers/losers: {e}")
-        return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def _fetch_market_news(self, session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
-        """Fetch market news"""
-        try:
-            url = f"{self.BASE_URL}/v2/reference/news"
-            params = {'apiKey': self.api_key, 'limit': 20}
+        return items
 
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    news = []
-                    for article in data.get('results', []):
-                        news.append({
-                            'title': article.get('title', ''),
-                            'description': article.get('description', ''),
-                            'publisher': article.get('publisher', {}).get('name', ''),
-                            'url': article.get('article_url', ''),
-                            'tickers': article.get('tickers', []),
-                            'published': article.get('published_utc', ''),
-                        })
-                    return news
-        except Exception as e:
-            self.logger.warning(f"Error fetching news: {e}")
-        return []
+    def _detect_category(self, text: str) -> str:
+        """Detect market category from text."""
+        for category, keywords in self.market_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Polygon market data"""
-        try:
-            snapshots = raw_data.get('ticker_snapshots', [])
-            gainers_losers = raw_data.get('gainers_losers', {})
-            news = raw_data.get('market_news', [])
+    def _extract_tickers(self, text: str) -> List[str]:
+        """Extract stock tickers from text."""
+        tickers = []
+        for ticker in self.TRACKED_TICKERS:
+            if ticker.lower() in text or f"${ticker}" in text.upper():
+                tickers.append(ticker)
+        return tickers[:5]
 
-            # Calculate market sentiment from gainers/losers
-            market_sentiment = 'neutral'
-            if gainers_losers:
-                gainers = gainers_losers.get('gainers', [])
-                losers = gainers_losers.get('losers', [])
-                if gainers and losers:
-                    avg_gain = sum(g.get('change_percent', 0) for g in gainers) / len(gainers) if gainers else 0
-                    avg_loss = abs(sum(l.get('change_percent', 0) for l in losers) / len(losers)) if losers else 0
-                    if avg_gain > avg_loss * 1.2:
-                        market_sentiment = 'bullish'
-                    elif avg_loss > avg_gain * 1.2:
-                        market_sentiment = 'bearish'
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze market sentiment."""
+        bullish = ['gain', 'rise', 'surge', 'rally', 'bullish', 'record high', 'beat']
+        bearish = ['fall', 'drop', 'decline', 'crash', 'bearish', 'loss', 'miss']
 
-            content = {
-                'ticker_snapshots': snapshots,
-                'gainers_losers': gainers_losers,
-                'market_news': news,
-                'market_sentiment': market_sentiment,
-                'summary': {
-                    'tickers_tracked': len(snapshots),
-                    'news_articles': len(news),
-                    'market_sentiment': market_sentiment,
-                }
+        bull_count = sum(1 for word in bullish if word in text)
+        bear_count = sum(1 for word in bearish if word in text)
+
+        if bull_count > bear_count:
+            return 'bullish'
+        elif bear_count > bull_count:
+            return 'bearish'
+        return 'neutral'
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Market Overview', 'markets', 'Stock market overview and indices.'),
+            ('Tech Stocks', 'tech', 'Technology sector analysis.'),
+            ('Earnings Reports', 'earnings', 'Quarterly earnings coverage.'),
+            ('Economic Data', 'economy', 'Economic indicators and Fed news.'),
+            ('Crypto Markets', 'crypto', 'Cryptocurrency market data.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://polygon.io/{category}',
+                'link': f'https://polygon.io/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Polygon.io',
+                'data_type': 'financial_topic',
+                'platform': 'polygon',
+                'tags': ['polygon', 'finance', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-            quality_score = min(1.0, (len(snapshots) / 10 + len(news) / 20) / 2 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='polygon.io',
-                data_type='financial_market',
-                content=content,
-                metadata={
-                    'tickers_tracked': len(snapshots),
-                    'news_count': len(news),
-                    'source': 'polygon',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['stocks', 'finance', 'market', 'trading', 'investing'],
-                target_agents=['research_agent', 'financial_agent'],
-                target_advisors=['financial_analyst', 'market_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Polygon data: {e}")
-            return None
-
-    def get_required_fields(self) -> List[str]:
-        return ['ticker']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['stock', 'market', 'finance', 'trading', 'investing', 'earnings']
+            for title, category, desc in topics
+        ]
