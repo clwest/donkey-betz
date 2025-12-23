@@ -1,22 +1,26 @@
 """
 Science Spider - Scientific Research & Discovery
-================================================
+=================================================
 
-Session 343: Phase 1 RSS Expansion
-Aggregates scientific news from multiple research sources.
+Session 534: Simplified to work with spider network interface.
+Aggregates scientific news from multiple research sources via RSS.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class ScienceSpider(BaseIntelligenceSpider):
-    """Science news spider - research papers, discoveries, and science news"""
+class ScienceSpider:
+    """Science spider - research papers, discoveries, and science news"""
 
+    name = "science"
+
+    # Science news RSS feeds
     RSS_FEEDS = {
         'science_daily': 'https://www.sciencedaily.com/rss/all.xml',
         'science_mag': 'https://www.science.org/rss/news_current.xml',
@@ -26,107 +30,184 @@ class ScienceSpider(BaseIntelligenceSpider):
         'scientific_american': 'https://www.scientificamerican.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Science categories
+    CATEGORIES = [
+        ('Physics', 'physics', 'Quantum, particle physics, and cosmology.'),
+        ('Biology', 'biology', 'Life sciences, genetics, and evolution.'),
+        ('Chemistry', 'chemistry', 'Molecular science and chemical research.'),
+        ('Astronomy', 'astronomy', 'Space exploration and astrophysics.'),
+        ('Climate', 'climate', 'Climate science and environmental research.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.science_categories = {
-            'physics': ['physics', 'quantum', 'particle', 'gravity', 'relativity'],
-            'biology': ['biology', 'cell', 'gene', 'dna', 'evolution', 'species'],
-            'chemistry': ['chemistry', 'molecule', 'compound', 'reaction', 'element'],
-            'astronomy': ['space', 'nasa', 'planet', 'star', 'galaxy', 'black hole', 'mars'],
-            'climate': ['climate', 'warming', 'carbon', 'ocean', 'temperature', 'weather'],
-            'medicine': ['medicine', 'disease', 'treatment', 'drug', 'cancer', 'virus'],
-            'ai_computing': ['ai', 'artificial intelligence', 'robot', 'algorithm', 'computer'],
+            'physics': ['physics', 'quantum', 'particle', 'gravity', 'relativity', 'atom'],
+            'biology': ['biology', 'cell', 'gene', 'dna', 'evolution', 'species', 'organism'],
+            'chemistry': ['chemistry', 'molecule', 'compound', 'reaction', 'element', 'bond'],
+            'astronomy': ['space', 'nasa', 'planet', 'star', 'galaxy', 'black hole', 'mars', 'moon'],
+            'climate': ['climate', 'warming', 'carbon', 'ocean', 'temperature', 'weather', 'ice'],
+            'medicine': ['medicine', 'disease', 'treatment', 'drug', 'cancer', 'virus', 'vaccine'],
+            'ai_computing': ['ai', 'artificial intelligence', 'robot', 'algorithm', 'computer', 'neural'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from science sources"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch science news from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of science article dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_articles = []
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:12]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', entry.get('description', '')),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name}: {e}")
-            return {'articles': all_articles, 'source': 'science_aggregator'}
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error fetching science data: {e}")
-            return None
+            logger.warning(f"Error getting science categories: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process science articles"""
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Science spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch science articles from RSS feed."""
+        items = []
+
         try:
-            articles = raw_data.get('articles', [])
-            processed = []
+            feed = feedparser.parse(feed_url)
 
-            for article in articles:
-                p = self._process_article(article)
-                if p:
-                    processed.append(p)
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            # Categorize by field
-            by_field = {}
-            for a in processed:
-                for cat in a.get('categories', ['general']):
-                    by_field.setdefault(cat, []).append(a)
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='science_aggregator',
-                data_type='science_research',
-                content={
-                    'articles': processed,
-                    'by_field': {k: len(v) for k, v in by_field.items()},
-                    'count': len(processed),
-                },
-                metadata={'source': 'science_aggregator', 'feeds': list(self.RSS_FEEDS.keys())},
-                quality_score=min(1.0, len(processed) / 50 + 0.3),
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['science', 'research', 'discovery', 'physics', 'biology', 'medicine'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['science_analyst']
-            )
+                # Detect science category
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                is_breakthrough = self._is_breakthrough(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'category': category,
+                    'is_breakthrough': is_breakthrough,
+                    'sentiment': sentiment,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'science_news',
+                    'platform': 'science',
+                    'tags': ['science', 'research', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
         except Exception as e:
-            self.logger.error(f"Error processing science data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            text = f"{title} {summary}".lower()
+        return items
 
-            categories = []
-            for cat, keywords in self.science_categories.items():
-                if any(kw in text for kw in keywords):
-                    categories.append(cat)
+    def _detect_category(self, text: str) -> str:
+        """Detect science category from text."""
+        for category, keywords in self.science_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            blob = TextBlob(f"{title} {summary}")
-            return {
-                'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'source': article.get('source', ''),
-                'categories': categories or ['general'],
-                'sentiment': blob.sentiment.polarity,
+    def _is_breakthrough(self, text: str) -> bool:
+        """Check if article describes a breakthrough."""
+        breakthrough_keywords = [
+            'breakthrough', 'discovery', 'first time', 'revolutionary', 'groundbreaking',
+            'new study', 'researchers find', 'scientists discover', 'unprecedented'
+        ]
+        return any(kw in text for kw in breakthrough_keywords)
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze article sentiment."""
+        positive = ['breakthrough', 'success', 'discovery', 'cure', 'hope', 'advance', 'progress']
+        negative = ['threat', 'danger', 'warning', 'concern', 'crisis', 'extinction', 'risk']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return science category links."""
+        return [
+            {
+                'title': f"Science: {name}",
+                'url': f'https://www.sciencedaily.com/{slug}/',
+                'link': f'https://www.sciencedaily.com/{slug}/',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'ScienceDaily',
+                'data_type': 'science_category',
+                'platform': 'science',
+                'tags': ['science', 'research', slug],
+                'timestamp': datetime.now().isoformat(),
             }
-        except:
-            return None
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-    def get_required_fields(self) -> List[str]:
-        return ['title']
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Physics Research', 'physics', 'Quantum mechanics and particle physics.'),
+            ('Life Sciences', 'biology', 'Biology, genetics, and evolution.'),
+            ('Space & Astronomy', 'astronomy', 'Space exploration and cosmology.'),
+            ('Climate Science', 'climate', 'Climate research and environmental studies.'),
+            ('Medical Research', 'medicine', 'Drug discovery and disease research.'),
+        ]
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['science', 'research', 'study', 'discovery', 'breakthrough']
+        return [
+            {
+                'title': title,
+                'url': f'https://www.sciencedaily.com/{category}/',
+                'link': f'https://www.sciencedaily.com/{category}/',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'ScienceDaily',
+                'data_type': 'science_topic',
+                'platform': 'science',
+                'tags': ['science', 'research', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
