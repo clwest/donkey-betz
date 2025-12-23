@@ -1818,10 +1818,21 @@ def spider_detail(request, spider_name):
             if not sd.raw_data:
                 continue
 
-            raw_items = sd.raw_data.get('items', [])
+            # Handle raw_data as string or dict (Session 536 fix)
+            raw_data = sd.raw_data
+            if isinstance(raw_data, str):
+                try:
+                    import json
+                    raw_data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            if not isinstance(raw_data, dict):
+                continue
+
+            raw_items = raw_data.get('items', [])
             if not isinstance(raw_items, list):
                 # Handle single item format
-                raw_items = [sd.raw_data] if sd.raw_data.get('title') or sd.raw_data.get('name') else []
+                raw_items = [raw_data] if raw_data.get('title') or raw_data.get('name') else []
 
             for item in raw_items[:10]:
                 # Deduplicate by URL
