@@ -2,31 +2,46 @@
 SeekingAlpha Spider - Investment Analysis Intelligence
 =======================================================
 
-Session 218: Specialized spider for SeekingAlpha investment platform.
-Focuses on stock analysis, market commentary, and investment insights.
+Session 534: Simplified to work with spider network interface.
+Aggregates investment analysis from financial news RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class SeekingAlphaSpider(BaseIntelligenceSpider):
+class SeekingAlphaSpider:
     """SeekingAlpha spider - investment analysis and market insights"""
+
+    name = "seekingalpha"
 
     # Investment analysis RSS feeds
     RSS_FEEDS = {
         'marketwatch': 'https://feeds.content.dowjones.io/public/rss/mw_topstories',
         'investing': 'https://www.investing.com/rss/news.rss',
+        'yahoo_finance': 'https://finance.yahoo.com/news/rssindex',
+        'benzinga': 'https://www.benzinga.com/feed',
+        'motley_fool': 'https://www.fool.com/feeds/index.aspx?id=foolwatch',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Investment categories
+    CATEGORIES = [
+        ('Stocks', 'stocks', 'Stock picks and equity analysis.'),
+        ('ETFs', 'etf', 'ETF and index fund coverage.'),
+        ('Dividends', 'dividends', 'Dividend stocks and income investing.'),
+        ('Growth', 'growth', 'Growth stocks and momentum plays.'),
+        ('Macro', 'macro', 'Fed, rates, and economic analysis.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.investment_categories = {
             'stocks': ['stock', 'equity', 'shares', 'nasdaq', 'nyse', 's&p', 'dow'],
             'etf': ['etf', 'fund', 'index fund', 'vanguard', 'ishares', 'spdr'],
@@ -36,226 +51,186 @@ class SeekingAlphaSpider(BaseIntelligenceSpider):
             'options': ['options', 'calls', 'puts', 'derivatives', 'volatility'],
             'macro': ['fed', 'interest rate', 'inflation', 'gdp', 'economy', 'recession'],
         }
-
         self.analysis_types = {
             'bullish': ['buy', 'bullish', 'upgrade', 'outperform', 'overweight', 'strong buy'],
             'bearish': ['sell', 'bearish', 'downgrade', 'underperform', 'underweight'],
             'neutral': ['hold', 'neutral', 'equal weight', 'market perform'],
             'earnings': ['earnings', 'revenue', 'profit', 'beat', 'miss', 'guidance'],
         }
-
         self.sectors = {
             'tech': ['technology', 'tech', 'software', 'saas', 'cloud', 'semiconductor'],
             'healthcare': ['healthcare', 'biotech', 'pharma', 'medical', 'drug'],
             'finance': ['bank', 'financial', 'insurance', 'fintech'],
             'energy': ['oil', 'gas', 'energy', 'renewable', 'solar', 'wind'],
             'consumer': ['retail', 'consumer', 'e-commerce', 'restaurant'],
-            'industrial': ['industrial', 'manufacturing', 'aerospace', 'defense'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch investment analysis data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch investment analysis from financial RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of investment analysis dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting investment categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'seekingalpha_ecosystem'}
+        logger.info(f"SeekingAlpha spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch investment news from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Analysis
+                text = f"{title} {description}".lower()
+                category = self._detect_category(text)
+                analysis_type = self._detect_analysis_type(text)
+                sector = self._detect_sector(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'category': category,
+                    'analysis_type': analysis_type,
+                    'sector': sector,
+                    'is_bullish': analysis_type == 'bullish',
+                    'is_bearish': analysis_type == 'bearish',
+                    'is_earnings': analysis_type == 'earnings',
+                    'sentiment': sentiment,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'investment_analysis',
+                    'platform': 'seekingalpha',
+                    'tags': ['investing', 'stocks', category, analysis_type],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching SeekingAlpha data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process investment analysis data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect investment category from text."""
+        for category, keywords in self.investment_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            insights = self._generate_investment_insights(processed_items)
+    def _detect_analysis_type(self, text: str) -> str:
+        """Detect analysis type (bullish/bearish/neutral/earnings)."""
+        for atype, keywords in self.analysis_types.items():
+            if any(kw in text for kw in keywords):
+                return atype
+        return 'neutral'
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'sector_analysis': self._analyze_sectors(processed_items),
-                'bullish_picks': self._extract_bullish(processed_items),
-                'earnings_news': self._extract_earnings(processed_items),
+    def _detect_sector(self, text: str) -> str:
+        """Detect market sector from text."""
+        for sector, keywords in self.sectors.items():
+            if any(kw in text for kw in keywords):
+                return sector
+        return 'general'
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze investment sentiment."""
+        bullish = ['gain', 'rise', 'surge', 'rally', 'beat', 'record', 'upgrade', 'outperform']
+        bearish = ['fall', 'drop', 'decline', 'miss', 'downgrade', 'warning', 'sell', 'loss']
+
+        bull_count = sum(1 for word in bullish if word in text)
+        bear_count = sum(1 for word in bearish if word in text)
+
+        if bull_count > bear_count:
+            return 'bullish'
+        elif bear_count > bull_count:
+            return 'bearish'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return investment category links."""
+        return [
+            {
+                'title': f"Investing: {name}",
+                'url': f'https://seekingalpha.com/{slug}',
+                'link': f'https://seekingalpha.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'SeekingAlpha',
+                'data_type': 'investment_category',
+                'platform': 'seekingalpha',
+                'tags': ['investing', 'stocks', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 25 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Stock Analysis', 'stocks', 'Individual stock picks and analysis.'),
+            ('ETF Investing', 'etf', 'ETF and index fund coverage.'),
+            ('Dividend Investing', 'dividends', 'Dividend stocks and income strategies.'),
+            ('Growth Stocks', 'growth', 'High-growth stock opportunities.'),
+            ('Market Outlook', 'macro', 'Fed policy and economic analysis.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='seekingalpha.com',
-                data_type='investment_analysis',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'seekingalpha_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['stocks', 'investing', 'analysis', 'market', 'finance'],
-                target_agents=['investment_agent', 'stock_agent', 'wealth_agent'],
-                target_advisors=['investment_advisor', 'portfolio_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing SeekingAlpha data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify investment category
-            category = 'general'
-            for cat, keywords in self.investment_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify analysis type
-            analysis = 'neutral'
-            for atype, keywords in self.analysis_types.items():
-                if any(kw in text for kw in keywords):
-                    analysis = atype
-                    break
-
-            # Identify sector
-            sector = None
-            for sec, keywords in self.sectors.items():
-                if any(kw in text for kw in keywords):
-                    sector = sec
-                    break
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://seekingalpha.com/{category}',
+                'link': f'https://seekingalpha.com/{category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'analysis_type': analysis,
-                'sector': sector,
-                'is_bullish': analysis == 'bullish',
-                'is_bearish': analysis == 'bearish',
-                'is_earnings': analysis == 'earnings',
-                'sentiment': sentiment,
+                'source': 'SeekingAlpha',
+                'data_type': 'investment_topic',
+                'platform': 'seekingalpha',
+                'tags': ['investing', 'stocks', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_investment_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate investment insights"""
-        if not items:
-            return {}
-
-        bullish = [i for i in items if i.get('is_bullish')]
-        bearish = [i for i in items if i.get('is_bearish')]
-        earnings = [i for i in items if i.get('is_earnings')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        avg_sentiment = sum(i.get('sentiment', 0) for i in items) / len(items) if items else 0
-
-        return {
-            'total_items': len(items),
-            'bullish_count': len(bullish),
-            'bearish_count': len(bearish),
-            'earnings_news': len(earnings),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'market_sentiment': 'bullish' if len(bullish) > len(bearish) * 1.5 else 'bearish' if len(bearish) > len(bullish) * 1.5 else 'mixed',
-            'avg_sentiment': round(avg_sentiment, 2),
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by investment category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'analysis': item.get('analysis_type'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_sectors(self, items: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        """Analyze sector coverage"""
-        sectors = {}
-        for item in items:
-            sector = item.get('sector')
-            if sector:
-                if sector not in sectors:
-                    sectors[sector] = {'count': 0, 'bullish': 0, 'bearish': 0}
-                sectors[sector]['count'] += 1
-                if item.get('is_bullish'):
-                    sectors[sector]['bullish'] += 1
-                if item.get('is_bearish'):
-                    sectors[sector]['bearish'] += 1
-        return sectors
-
-    def _extract_bullish(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract bullish picks"""
-        bullish = []
-        for item in items:
-            if item.get('is_bullish'):
-                bullish.append({
-                    'title': item.get('title'),
-                    'sector': item.get('sector'),
-                    'category': item.get('category'),
-                    'link': item.get('link'),
-                })
-        return bullish[:5]
-
-    def _extract_earnings(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract earnings news"""
-        earnings = []
-        for item in items:
-            if item.get('is_earnings'):
-                earnings.append({
-                    'title': item.get('title'),
-                    'sector': item.get('sector'),
-                    'sentiment': item.get('sentiment'),
-                    'link': item.get('link'),
-                })
-        return earnings[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['stock', 'invest', 'market', 'buy', 'sell', 'earnings', 'dividend']
+            for title, category, desc in topics
+        ]
