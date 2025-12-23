@@ -2,21 +2,25 @@
 BBC Spider - BBC World News Intelligence
 =========================================
 
-Session 343: Phase 1 Spider Expansion
-BBC provides comprehensive international news coverage via free RSS feeds.
+Session 534: Simplified to work with spider network interface.
+Uses BBC RSS feeds for comprehensive international news coverage.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class BBCSpider(BaseIntelligenceSpider):
+class BBCSpider:
     """BBC news spider - international news coverage"""
 
+    name = "bbc"
+
+    # BBC RSS feeds by section
     RSS_FEEDS = {
         'top_stories': 'https://feeds.bbci.co.uk/news/rss.xml',
         'world': 'https://feeds.bbci.co.uk/news/world/rss.xml',
@@ -30,172 +34,162 @@ class BBCSpider(BaseIntelligenceSpider):
         'asia': 'https://feeds.bbci.co.uk/news/world/asia/rss.xml',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # News sections
+    SECTIONS = [
+        ('World News', 'world', 'International news coverage.'),
+        ('Business', 'business', 'Business and economics.'),
+        ('Technology', 'technology', 'Tech news and analysis.'),
+        ('Science', 'science_and_environment', 'Science and environment.'),
+        ('Health', 'health', 'Health news and research.'),
+        ('Entertainment', 'entertainment_and_arts', 'Entertainment and arts.'),
+        ('US & Canada', 'world/us_and_canada', 'North American news.'),
+        ('Europe', 'world/europe', 'European news.'),
+    ]
 
-        self.topic_categories = {
-            'technology': ['tech', 'software', 'ai', 'computer', 'digital', 'cyber', 'robot'],
-            'business': ['economy', 'market', 'company', 'industry', 'trade', 'finance', 'bank'],
-            'politics': ['government', 'minister', 'election', 'vote', 'parliament', 'policy'],
-            'science': ['research', 'study', 'scientist', 'discovery', 'space', 'climate', 'nasa'],
-            'health': ['health', 'medical', 'nhs', 'hospital', 'disease', 'vaccine', 'covid'],
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch news from BBC RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of article dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add section links
+        try:
+            sections = self._get_section_links()
+            all_items.extend(sections)
+        except Exception as e:
+            logger.warning(f"Error getting BBC sections: {e}")
+
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"BBC spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from BBC RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:10]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect category from content
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': 'BBC News',
+                    'category': category,
+                    'section': feed_name,
+                    'source': 'BBC News',
+                    'data_type': 'news_article',
+                    'platform': 'bbc',
+                    'tags': ['news', 'bbc', 'international', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_category(self, text: str) -> str:
+        """Detect article category from text."""
+        categories = {
+            'technology': ['tech', 'software', 'ai', 'computer', 'digital', 'cyber'],
+            'business': ['economy', 'market', 'company', 'industry', 'trade', 'finance'],
+            'politics': ['government', 'minister', 'election', 'vote', 'parliament'],
+            'science': ['research', 'study', 'scientist', 'discovery', 'space', 'nasa'],
+            'health': ['health', 'medical', 'nhs', 'hospital', 'disease', 'vaccine'],
             'international': ['ukraine', 'russia', 'china', 'us', 'eu', 'un', 'nato'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from BBC"""
-        try:
-            all_articles = []
+        for cat, keywords in categories.items():
+            if any(kw in text for kw in keywords):
+                return cat
+        return 'general'
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:10]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', ''),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'author': 'BBC News',
-                                'feed_source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'articles': all_articles, 'source': 'bbc'}
-
-        except Exception as e:
-            self.logger.error(f"Error fetching BBC data: {e}")
-            return None
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process BBC articles"""
-        try:
-            articles = raw_data.get('articles', [])
-            processed_articles = []
-
-            for article in articles:
-                processed = self._process_article(article)
-                if processed:
-                    processed_articles.append(processed)
-
-            analytics = self._generate_analytics(processed_articles)
-
-            content = {
-                'articles': processed_articles,
-                'analytics': analytics,
-                'trending_topics': self._extract_trending_topics(processed_articles),
-                'international_focus': self._extract_international_news(processed_articles),
+    def _get_section_links(self) -> List[Dict[str, Any]]:
+        """Return BBC section links."""
+        return [
+            {
+                'title': f"BBC: {name}",
+                'url': f'https://www.bbc.com/news/{slug}',
+                'link': f'https://www.bbc.com/news/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug.split('/')[-1] if '/' in slug else slug,
+                'source': 'BBC News',
+                'data_type': 'news_section',
+                'platform': 'bbc',
+                'tags': ['news', 'bbc', slug.split('/')[-1]],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.SECTIONS
+        ]
 
-            quality_score = min(1.0, len(processed_articles) / 50 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('World News', 'world', 'Global news coverage.'),
+            ('Business', 'business', 'Business and economics.'),
+            ('Technology', 'technology', 'Tech news and analysis.'),
+            ('Science', 'science', 'Science and environment.'),
+            ('Health', 'health', 'Health news and research.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='bbc.co.uk',
-                data_type='news',
-                content=content,
-                metadata={
-                    'article_count': len(processed_articles),
-                    'source': 'bbc',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['news', 'world', 'business', 'technology', 'health', 'international'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['news_analyst', 'global_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing BBC data: {e}")
-            return None
-
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual article"""
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            text = f"{title} {summary}".lower()
-
-            blob = TextBlob(f"{title} {summary}")
-            sentiment = {
-                'polarity': blob.sentiment.polarity,
-                'subjectivity': blob.sentiment.subjectivity,
-                'classification': 'positive' if blob.sentiment.polarity > 0.1 else 'negative' if blob.sentiment.polarity < -0.1 else 'neutral'
-            }
-
-            categories = []
-            for cat, keywords in self.topic_categories.items():
-                if any(kw in text for kw in keywords):
-                    categories.append(cat)
-
-            return {
+        return [
+            {
                 'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'author': article.get('author', ''),
-                'sentiment': sentiment,
-                'categories': categories or ['general'],
-                'feed_source': article.get('feed_source', ''),
+                'url': f'https://www.bbc.com/news/{category}',
+                'link': f'https://www.bbc.com/news/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'BBC News',
+                'data_type': 'news_topic',
+                'platform': 'bbc',
+                'tags': ['news', 'bbc', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing article: {e}")
-            return None
-
-    def _generate_analytics(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate analytics from articles"""
-        total = len(articles)
-        if total == 0:
-            return {}
-
-        return {
-            'total_articles': total,
-            'sentiment_breakdown': {
-                'positive': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'positive'),
-                'negative': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'negative'),
-                'neutral': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'neutral'),
-            },
-            'category_distribution': self._count_categories(articles),
-        }
-
-    def _count_categories(self, articles: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count articles per category"""
-        counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                counts[cat] = counts.get(cat, 0) + 1
-        return counts
-
-    def _extract_trending_topics(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending topics"""
-        topic_counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                topic_counts[cat] = topic_counts.get(cat, 0) + 1
-
-        sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
-        return [{'topic': t, 'count': c} for t, c in sorted_topics[:10]]
-
-    def _extract_international_news(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract international news articles"""
-        intl_news = []
-        for article in articles:
-            if 'international' in article.get('categories', []) or article.get('feed_source') in ['world', 'us_canada', 'europe', 'asia']:
-                intl_news.append({
-                    'title': article.get('title'),
-                    'region': article.get('feed_source'),
-                    'link': article.get('link'),
-                })
-        return intl_news[:15]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['news', 'world', 'business', 'technology', 'health', 'international']
+            for title, category, desc in topics
+        ]

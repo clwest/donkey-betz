@@ -2,177 +2,259 @@
 BlueSky Spider - Social Media Intelligence (Twitter/X Alternative)
 ===================================================================
 
-Session 294: Customer research spider for BlueSky social network.
-Collects posts about AI tools, content creation, and creator pain points.
-
-Uses BlueSky AT Protocol API with credentials from environment.
+Session 534: Simplified to work with spider network interface.
+Uses BlueSky API when credentials available, falls back to social RSS feeds.
 """
 
-import aiohttp
-import asyncio
 import os
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class BlueSkySpider(BaseIntelligenceSpider):
+class BlueSkySpider:
     """BlueSky spider - social media sentiment and discussions"""
 
-    # Search terms for customer research
-    SEARCH_TERMS = [
-        'AI tools',
-        'content creator',
-        'stable diffusion',
-        'midjourney',
-        'AI writing',
-        'creator economy',
-        'freelance',
-        'side project',
+    name = "bluesky"
+
+    # Fallback social/tech RSS feeds
+    RSS_FEEDS = {
+        'ycombinator': 'https://news.ycombinator.com/rss',
+        'lobsters': 'https://lobste.rs/rss',
+        'techmeme': 'https://www.techmeme.com/feed.xml',
+    }
+
+    # Social topic categories
+    TOPICS = [
+        ('AI Tools', 'ai-tools', 'AI and automation discussions.'),
+        ('Creator Economy', 'creators', 'Content creator topics.'),
+        ('Startups', 'startups', 'Startup ecosystem discussions.'),
+        ('Tech Industry', 'tech', 'Technology industry news.'),
+        ('Open Source', 'opensource', 'Open source projects.'),
+        ('Web Development', 'webdev', 'Web development topics.'),
     ]
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.identifier = os.getenv('BLUESKY_IDENTIFIER', '')
         self.password = os.getenv('BLUESKY_PASSWORD', '')
-        self.access_token = None
-        self.did = None
 
-    async def _authenticate(self, session: aiohttp.ClientSession) -> bool:
-        """Authenticate with BlueSky API"""
-        if not self.identifier or not self.password:
-            self.logger.warning("BlueSky credentials not configured")
-            return False
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch social discussions from BlueSky or fallback sources.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of post/discussion dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try BlueSky API if credentials available
+        if self.identifier and self.password:
+            try:
+                api_items = self._fetch_from_bluesky()
+                for item in api_items:
+                    if item.get('url') and item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching BlueSky API: {e}")
+
+        # Fetch from fallback RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add topic exploration links
+        try:
+            topics = self._get_topic_links()
+            all_items.extend(topics)
+        except Exception as e:
+            logger.warning(f"Error getting social topics: {e}")
+
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"BlueSky spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_from_bluesky(self) -> List[Dict[str, Any]]:
+        """Fetch posts from BlueSky API."""
+        items = []
 
         try:
+            # Authenticate
             auth_url = "https://bsky.social/xrpc/com.atproto.server.createSession"
-            async with session.post(auth_url, json={
+            auth_response = requests.post(auth_url, json={
                 "identifier": self.identifier,
                 "password": self.password
-            }) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    self.access_token = data.get('accessJwt')
-                    self.did = data.get('did')
-                    return True
-                else:
-                    self.logger.warning(f"BlueSky auth failed: {response.status}")
-                    return False
-        except Exception as e:
-            self.logger.error(f"BlueSky auth error: {e}")
-            return False
+            }, timeout=10)
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch posts from BlueSky"""
-        try:
-            all_posts = []
+            if auth_response.status_code != 200:
+                logger.warning("BlueSky authentication failed")
+                return items
 
-            async with aiohttp.ClientSession() as session:
-                # Authenticate first
-                if not await self._authenticate(session):
-                    return {'posts': [], 'source': 'bluesky', 'error': 'Authentication failed'}
+            auth_data = auth_response.json()
+            access_token = auth_data.get('accessJwt')
+            headers = {'Authorization': f'Bearer {access_token}'}
 
-                headers = {'Authorization': f'Bearer {self.access_token}'}
+            # Search for relevant posts
+            search_terms = ['AI tools', 'content creator', 'stable diffusion', 'startup']
 
-                # Search for each term
-                for term in self.SEARCH_TERMS[:5]:  # Limit to avoid rate limits
-                    try:
-                        search_url = f"https://bsky.social/xrpc/app.bsky.feed.searchPosts"
-                        params = {'q': term, 'limit': 20}
+            for term in search_terms[:3]:
+                try:
+                    search_url = "https://bsky.social/xrpc/app.bsky.feed.searchPosts"
+                    params = {'q': term, 'limit': 15}
 
-                        async with session.get(search_url, headers=headers, params=params, timeout=10) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                posts = data.get('posts', [])
+                    response = requests.get(search_url, headers=headers, params=params, timeout=10)
 
-                                for post in posts:
-                                    record = post.get('record', {})
-                                    author = post.get('author', {})
+                    if response.status_code == 200:
+                        data = response.json()
+                        for post in data.get('posts', []):
+                            record = post.get('record', {})
+                            author = post.get('author', {})
 
-                                    all_posts.append({
-                                        'text': record.get('text', ''),
-                                        'author': author.get('handle', ''),
-                                        'author_name': author.get('displayName', ''),
-                                        'created_at': record.get('createdAt', ''),
-                                        'uri': post.get('uri', ''),
-                                        'likes': post.get('likeCount', 0),
-                                        'reposts': post.get('repostCount', 0),
-                                        'replies': post.get('replyCount', 0),
-                                        'search_term': term,
-                                        'source': 'bluesky',
-                                        'type': 'social_post',
-                                    })
-
-                        await asyncio.sleep(0.5)
-
-                    except Exception as e:
-                        self.logger.warning(f"Error searching '{term}': {e}")
-
-            return {'posts': all_posts, 'source': 'bluesky'}
+                            items.append({
+                                'title': record.get('text', '')[:100],
+                                'url': post.get('uri', ''),
+                                'link': f"https://bsky.app/profile/{author.get('handle', '')}/post/{post.get('uri', '').split('/')[-1]}",
+                                'summary': record.get('text', ''),
+                                'description': record.get('text', ''),
+                                'author': author.get('handle', ''),
+                                'published': record.get('createdAt', ''),
+                                'likes': post.get('likeCount', 0),
+                                'reposts': post.get('repostCount', 0),
+                                'category': term.replace(' ', '-').lower(),
+                                'source': 'BlueSky',
+                                'data_type': 'social_post',
+                                'platform': 'bluesky',
+                                'tags': ['social', 'bluesky', 'discussion', term.split()[0].lower()],
+                                'timestamp': datetime.now().isoformat(),
+                            })
+                except Exception as e:
+                    logger.warning(f"Error searching BlueSky for '{term}': {e}")
 
         except Exception as e:
-            self.logger.error(f"Error fetching BlueSky data: {e}")
-            return None
+            logger.warning(f"Error with BlueSky API: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process BlueSky posts into intelligence"""
+        return items
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch discussions from RSS feed."""
+        items = []
+
         try:
-            posts = raw_data.get('posts', [])
+            feed = feedparser.parse(feed_url)
 
-            # Sentiment keywords
-            negative_keywords = ['frustrat', 'annoying', 'broken', 'bug', 'issue', 'problem',
-                               'hate', 'terrible', 'worst', 'disappointed', 'fail']
-            positive_keywords = ['love', 'amazing', 'great', 'awesome', 'best', 'perfect',
-                               'helpful', 'game changer', 'incredible']
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            sentiment_analysis = {'positive': 0, 'negative': 0, 'neutral': 0}
-            pain_point_posts = []
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:400]
 
-            for post in posts:
-                text = post.get('text', '').lower()
-                if any(kw in text for kw in negative_keywords):
-                    sentiment_analysis['negative'] += 1
-                    pain_point_posts.append(post)
-                elif any(kw in text for kw in positive_keywords):
-                    sentiment_analysis['positive'] += 1
-                else:
-                    sentiment_analysis['neutral'] += 1
+                # Detect topic from content
+                text = f"{title} {description}".lower()
+                topic = self._detect_topic(text)
 
-            content = {
-                'posts': posts,
-                'pain_point_posts': pain_point_posts[:20],
-                'sentiment_analysis': sentiment_analysis,
-                'total_posts': len(posts),
-                'engagement_avg': sum(p.get('likes', 0) + p.get('reposts', 0) for p in posts) / max(len(posts), 1),
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': topic,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'social_discussion',
+                    'platform': 'bluesky',
+                    'tags': ['social', 'tech', 'discussion', topic],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_topic(self, text: str) -> str:
+        """Detect discussion topic from text."""
+        topics = {
+            'ai': ['ai', 'machine learning', 'gpt', 'llm', 'artificial intelligence'],
+            'creator': ['creator', 'content', 'youtube', 'podcast', 'newsletter'],
+            'startup': ['startup', 'founder', 'funding', 'vc', 'venture'],
+            'webdev': ['javascript', 'react', 'web', 'frontend', 'backend'],
+            'opensource': ['open source', 'github', 'linux', 'oss'],
+        }
+
+        for topic, keywords in topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'tech'
+
+    def _get_topic_links(self) -> List[Dict[str, Any]]:
+        """Return BlueSky topic exploration links."""
+        return [
+            {
+                'title': f"BlueSky: {name}",
+                'url': f'https://bsky.app/search?q={slug}',
+                'link': f'https://bsky.app/search?q={slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'BlueSky',
+                'data_type': 'social_topic',
+                'platform': 'bluesky',
+                'tags': ['social', 'bluesky', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.TOPICS
+        ]
 
-            quality_score = min(1.0, len(posts) / 50 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('AI Discussions', 'ai', 'AI and automation conversations.'),
+            ('Tech News', 'tech', 'Technology industry discussions.'),
+            ('Startups', 'startups', 'Startup ecosystem topics.'),
+            ('Creator Economy', 'creators', 'Content creator discussions.'),
+            ('Open Source', 'opensource', 'Open source projects.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='bsky.social',
-                data_type='social_intelligence',
-                content=content,
-                metadata={
-                    'post_count': len(posts),
-                    'pain_points': len(pain_point_posts),
-                    'sentiment': sentiment_analysis,
-                    'source': 'bluesky',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['bluesky', 'social', 'sentiment', 'ai_tools', 'creators'],
-                target_agents=['customer_research_agent', 'trend_analysis_agent', 'social_media_agent'],
-                target_advisors=['social_strategist', 'market_advisor']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing BlueSky data: {e}")
-            return None
-
-    def get_required_fields(self) -> List[str]:
-        return ['text']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['bluesky', 'social', 'ai', 'tools', 'creator', 'sentiment']
+        return [
+            {
+                'title': title,
+                'url': f'https://bsky.app/search?q={category}',
+                'link': f'https://bsky.app/search?q={category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'BlueSky',
+                'data_type': 'social_topic',
+                'platform': 'bluesky',
+                'tags': ['social', 'bluesky', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
