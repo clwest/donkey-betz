@@ -2,418 +2,287 @@
 Kaggle Spider - ML Competition & Dataset Intelligence
 ======================================================
 
-Session 452: Spider for Kaggle API to track ML trends, competitions, and datasets.
-Complements HuggingFace spider for comprehensive ML intelligence.
-
-Uses KAGGLE_USERNAME and KAGGLE_KEY from environment for authenticated requests.
-Kaggle API requires authentication for all endpoints.
-
-Data collected:
-- Trending/popular datasets
-- Active and recent competitions
-- Popular notebooks/kernels
-- Prize pools and deadlines
+Session 534: Simplified to work with spider network interface.
+Uses Kaggle API when credentials available, RSS fallback otherwise.
 """
 
-import aiohttp
-import asyncio
 import os
+import requests
 import base64
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class KaggleSpider(BaseIntelligenceSpider):
-    """Kaggle spider - competitions, datasets, and ML trends"""
+class KaggleSpider:
+    """Kaggle spider - ML competitions, datasets, and notebooks"""
+
+    name = "kaggle"
 
     BASE_URL = "https://www.kaggle.com/api/v1"
 
-    # Dataset categories of interest
-    DATASET_TAGS = [
-        'computer-vision',
-        'nlp',
-        'tabular',
-        'time-series',
-        'image-data',
-        'text-data',
-        'audio-data',
-        'geospatial-data',
+    # Fallback ML/Data Science RSS feeds
+    RSS_FEEDS = {
+        'towards_data_science': 'https://towardsdatascience.com/feed',
+        'kdnuggets': 'https://www.kdnuggets.com/feed',
+        'analytics_vidhya': 'https://www.analyticsvidhya.com/feed/',
+    }
+
+    # ML categories
+    CATEGORIES = [
+        ('Competitions', 'competitions', 'ML competitions with prizes.'),
+        ('Datasets', 'datasets', 'Public datasets for ML.'),
+        ('Notebooks', 'notebooks', 'Code notebooks and kernels.'),
+        ('Discussions', 'discussions', 'Community discussions.'),
+        ('Learn', 'learn', 'ML courses and tutorials.'),
     ]
 
-    # Competition categories
-    COMPETITION_CATEGORIES = [
-        'featured',
-        'research',
-        'getting-started',
-        'playground',
-    ]
-
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.kaggle_username = os.getenv('KAGGLE_USERNAME', '')
-        # Session 503: Support KAGGLE_API_TOKEN (official), KAGGLE_API_KEY, and KAGGLE_KEY (legacy)
+        # Support multiple env var names for API key
         self.kaggle_key = os.getenv('KAGGLE_API_TOKEN', os.getenv('KAGGLE_API_KEY', os.getenv('KAGGLE_KEY', '')))
 
     def _get_auth_header(self) -> Dict[str, str]:
-        """Generate auth header for Kaggle API"""
+        """Generate auth header for Kaggle API."""
         if self.kaggle_key:
-            # Session 503: New KGAT_* tokens use Bearer auth, old tokens use Basic auth
             if self.kaggle_key.startswith('KGAT_'):
                 return {'Authorization': f'Bearer {self.kaggle_key}'}
             elif self.kaggle_username:
-                # Legacy Basic auth for old-style keys
                 credentials = f"{self.kaggle_username}:{self.kaggle_key}"
                 encoded = base64.b64encode(credentials.encode()).decode()
                 return {'Authorization': f'Basic {encoded}'}
         return {}
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Kaggle trending data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch ML content from Kaggle API and fallback sources.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of ML content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try Kaggle API if credentials available
+        headers = self._get_auth_header()
+        if headers:
+            try:
+                api_items = self._fetch_from_kaggle_api(headers)
+                for item in api_items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching from Kaggle API: {e}")
+
+        # Fetch from fallback RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_competitions = []
-            all_datasets = []
-            all_kernels = []
-
-            headers = self._get_auth_header()
-
-            if not headers:
-                self.logger.warning("Kaggle credentials not configured. Set KAGGLE_USERNAME and KAGGLE_KEY.")
-                return self._create_mock_data()
-
-            async with aiohttp.ClientSession() as session:
-                # Fetch active competitions
-                try:
-                    competitions_url = f"{self.BASE_URL}/competitions/list"
-                    params = {
-                        'sortBy': 'recentlyCreated',
-                        'page': 1,
-                        'pageSize': 20,
-                    }
-
-                    async with session.get(competitions_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            competitions = await response.json()
-                            for comp in competitions[:15]:
-                                all_competitions.append({
-                                    'id': comp.get('ref', comp.get('id', '')),
-                                    'title': comp.get('title', ''),
-                                    'category': comp.get('category', ''),
-                                    'reward': comp.get('reward', ''),
-                                    'deadline': comp.get('deadline', ''),
-                                    'teams_count': comp.get('teamCount', 0),
-                                    'description': comp.get('description', '')[:200] if comp.get('description') else '',
-                                    'url': f"https://www.kaggle.com/c/{comp.get('ref', '')}",
-                                    'tags': comp.get('tags', []),
-                                })
-                        else:
-                            self.logger.warning(f"Kaggle competitions API returned {response.status}")
-                except Exception as e:
-                    self.logger.error(f"Error fetching Kaggle competitions: {e}")
-
-                # Fetch trending datasets
-                try:
-                    datasets_url = f"{self.BASE_URL}/datasets/list"
-                    params = {
-                        'sortBy': 'hottest',
-                        'page': 1,
-                        'pageSize': 20,
-                    }
-
-                    async with session.get(datasets_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            datasets = await response.json()
-                            for ds in datasets[:15]:
-                                all_datasets.append({
-                                    'id': ds.get('ref', ds.get('id', '')),
-                                    'title': ds.get('title', ''),
-                                    'owner': ds.get('ownerName', ds.get('creatorName', '')),
-                                    'size': ds.get('totalBytes', 0),
-                                    'downloads': ds.get('downloadCount', 0),
-                                    'votes': ds.get('voteCount', 0),
-                                    'usability': ds.get('usabilityRating', 0),
-                                    'description': ds.get('subtitle', '')[:200] if ds.get('subtitle') else '',
-                                    'url': f"https://www.kaggle.com/datasets/{ds.get('ref', '')}",
-                                    'tags': ds.get('tags', []),
-                                    'last_updated': ds.get('lastUpdated', ''),
-                                })
-                        else:
-                            self.logger.warning(f"Kaggle datasets API returned {response.status}")
-                except Exception as e:
-                    self.logger.error(f"Error fetching Kaggle datasets: {e}")
-
-                # Fetch trending kernels/notebooks
-                try:
-                    kernels_url = f"{self.BASE_URL}/kernels/list"
-                    params = {
-                        'sortBy': 'hotness',
-                        'page': 1,
-                        'pageSize': 20,
-                    }
-
-                    async with session.get(kernels_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            kernels = await response.json()
-                            for kernel in kernels[:15]:
-                                all_kernels.append({
-                                    'id': kernel.get('ref', kernel.get('id', '')),
-                                    'title': kernel.get('title', ''),
-                                    'author': kernel.get('author', ''),
-                                    'votes': kernel.get('totalVotes', 0),
-                                    'language': kernel.get('language', ''),
-                                    'kernel_type': kernel.get('kernelType', ''),
-                                    'url': f"https://www.kaggle.com/code/{kernel.get('ref', '')}",
-                                    'competition': kernel.get('competitionDataSources', []),
-                                    'dataset': kernel.get('datasetDataSources', []),
-                                })
-                        else:
-                            self.logger.warning(f"Kaggle kernels API returned {response.status}")
-                except Exception as e:
-                    self.logger.error(f"Error fetching Kaggle kernels: {e}")
-
-            return {
-                'competitions': all_competitions,
-                'datasets': all_datasets,
-                'kernels': all_kernels,
-                'fetched_at': datetime.now(timezone.utc).isoformat(),
-                'source': 'kaggle_api',
-            }
-
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Kaggle spider error: {e}")
-            return None
+            logger.warning(f"Error getting Kaggle categories: {e}")
 
-    def _create_mock_data(self) -> Dict[str, Any]:
-        """Create mock data when credentials aren't available"""
-        return {
-            'competitions': [
-                {
-                    'id': 'mock-competition',
-                    'title': 'Configure KAGGLE_USERNAME and KAGGLE_KEY for real data',
-                    'category': 'featured',
-                    'reward': '$0',
-                    'teams_count': 0,
-                    'url': 'https://www.kaggle.com',
-                    'description': 'Set up Kaggle API credentials to fetch real competition data',
-                }
-            ],
-            'datasets': [],
-            'kernels': [],
-            'fetched_at': datetime.now(timezone.utc).isoformat(),
-            'source': 'mock',
-            'note': 'Configure KAGGLE_USERNAME and KAGGLE_KEY environment variables',
-        }
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-    def transform_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> List[IntelligenceData]:
-        """Transform Kaggle data into intelligence format"""
-        intelligence_items = []
+        logger.info(f"Kaggle spider collected {len(all_items)} items")
+        return all_items[:max_results]
 
-        if not raw_data:
-            return intelligence_items
+    def _fetch_from_kaggle_api(self, headers: Dict[str, str]) -> List[Dict[str, Any]]:
+        """Fetch data from Kaggle API."""
+        items = []
 
-        # Transform competitions
-        for comp in raw_data.get('competitions', []):
-            intelligence_items.append(IntelligenceData(
-                source='kaggle',
-                category='ml_competition',
-                title=comp.get('title', 'Unknown Competition'),
-                content=f"Competition: {comp.get('title')}\n"
-                        f"Category: {comp.get('category', 'N/A')}\n"
-                        f"Reward: {comp.get('reward', 'N/A')}\n"
-                        f"Teams: {comp.get('teams_count', 0)}\n"
-                        f"Deadline: {comp.get('deadline', 'N/A')}\n"
-                        f"{comp.get('description', '')}",
-                url=comp.get('url', ''),
-                metadata={
-                    'type': 'competition',
-                    'category': comp.get('category'),
-                    'reward': comp.get('reward'),
-                    'teams_count': comp.get('teams_count'),
-                    'deadline': comp.get('deadline'),
-                    'tags': comp.get('tags', []),
-                },
-                timestamp=datetime.now(timezone.utc),
-                relevance_score=min(1.0, comp.get('teams_count', 0) / 1000 + 0.5),
-            ))
-
-        # Transform datasets
-        for ds in raw_data.get('datasets', []):
-            # Calculate relevance based on downloads and votes
-            downloads = ds.get('downloads', 0)
-            votes = ds.get('votes', 0)
-            usability = ds.get('usability', 0)
-            relevance = min(1.0, (downloads / 10000) + (votes / 100) + (usability / 10))
-
-            intelligence_items.append(IntelligenceData(
-                source='kaggle',
-                category='ml_dataset',
-                title=ds.get('title', 'Unknown Dataset'),
-                content=f"Dataset: {ds.get('title')}\n"
-                        f"Owner: {ds.get('owner', 'N/A')}\n"
-                        f"Downloads: {downloads:,}\n"
-                        f"Votes: {votes}\n"
-                        f"Usability: {usability}/10\n"
-                        f"{ds.get('description', '')}",
-                url=ds.get('url', ''),
-                metadata={
-                    'type': 'dataset',
-                    'owner': ds.get('owner'),
-                    'downloads': downloads,
-                    'votes': votes,
-                    'usability': usability,
-                    'size_bytes': ds.get('size', 0),
-                    'tags': ds.get('tags', []),
-                    'last_updated': ds.get('last_updated'),
-                },
-                timestamp=datetime.now(timezone.utc),
-                relevance_score=relevance,
-            ))
-
-        # Transform kernels/notebooks
-        for kernel in raw_data.get('kernels', []):
-            votes = kernel.get('votes', 0)
-            relevance = min(1.0, votes / 100 + 0.3)
-
-            intelligence_items.append(IntelligenceData(
-                source='kaggle',
-                category='ml_notebook',
-                title=kernel.get('title', 'Unknown Notebook'),
-                content=f"Notebook: {kernel.get('title')}\n"
-                        f"Author: {kernel.get('author', 'N/A')}\n"
-                        f"Votes: {votes}\n"
-                        f"Language: {kernel.get('language', 'N/A')}\n"
-                        f"Type: {kernel.get('kernel_type', 'N/A')}",
-                url=kernel.get('url', ''),
-                metadata={
-                    'type': 'kernel',
-                    'author': kernel.get('author'),
-                    'votes': votes,
-                    'language': kernel.get('language'),
-                    'kernel_type': kernel.get('kernel_type'),
-                    'competition_sources': kernel.get('competition', []),
-                    'dataset_sources': kernel.get('dataset', []),
-                },
-                timestamp=datetime.now(timezone.utc),
-                relevance_score=relevance,
-            ))
-
-        return intelligence_items
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional['IntelligenceData']:
-        """Process Kaggle raw data into a single IntelligenceData object."""
+        # Fetch competitions
         try:
-            from ai_core.spiders.base_spider import IntelligenceData as BaseIntelligenceData
-
-            competitions = raw_data.get('competitions', [])
-            datasets = raw_data.get('datasets', [])
-            kernels = raw_data.get('kernels', [])
-
-            # Build summary content
-            summary_parts = []
-
-            if competitions:
-                top_comps = competitions[:5]
-                comp_summary = "Top Competitions:\n" + "\n".join(
-                    f"- {c.get('title', 'Unknown')} ({c.get('reward', 'N/A')})"
-                    for c in top_comps
-                )
-                summary_parts.append(comp_summary)
-
-            if datasets:
-                top_datasets = sorted(datasets, key=lambda x: x.get('downloads', 0), reverse=True)[:5]
-                ds_summary = "Trending Datasets:\n" + "\n".join(
-                    f"- {d.get('title', 'Unknown')} ({d.get('downloads', 0):,} downloads)"
-                    for d in top_datasets
-                )
-                summary_parts.append(ds_summary)
-
-            if kernels:
-                top_kernels = sorted(kernels, key=lambda x: x.get('votes', 0), reverse=True)[:5]
-                kernel_summary = "Popular Notebooks:\n" + "\n".join(
-                    f"- {k.get('title', 'Unknown')} ({k.get('votes', 0)} votes)"
-                    for k in top_kernels
-                )
-                summary_parts.append(kernel_summary)
-
-            content = "\n\n".join(summary_parts) if summary_parts else "No Kaggle data available"
-
-            return BaseIntelligenceData(
-                spider_id=self.spider_id,
-                source_url='kaggle.com',
-                data_type='ml_trends',
-                content={
-                    'summary': content,
-                    'competitions_count': len(competitions),
-                    'datasets_count': len(datasets),
-                    'kernels_count': len(kernels),
-                    'competitions': competitions[:10],
-                    'datasets': datasets[:10],
-                    'kernels': kernels[:10],
-                },
-                quality_score=0.9 if raw_data.get('source') != 'mock' else 0.3,
-                metadata={
-                    'source': raw_data.get('source', 'unknown'),
-                    'fetched_at': raw_data.get('fetched_at'),
-                },
-                timestamp=datetime.now(timezone.utc)  # Session 505: Added required timestamp field
+            response = requests.get(
+                f"{self.BASE_URL}/competitions/list",
+                headers=headers,
+                params={'sortBy': 'recentlyCreated', 'page': 1, 'pageSize': 15},
+                timeout=15
             )
 
+            if response.status_code == 200:
+                competitions = response.json()
+                for comp in competitions[:10]:
+                    items.append({
+                        'title': comp.get('title', 'Kaggle Competition'),
+                        'url': f"https://www.kaggle.com/c/{comp.get('ref', '')}",
+                        'link': f"https://www.kaggle.com/c/{comp.get('ref', '')}",
+                        'summary': comp.get('description', '')[:300] if comp.get('description') else '',
+                        'description': comp.get('description', '')[:300] if comp.get('description') else '',
+                        'reward': comp.get('reward', ''),
+                        'deadline': comp.get('deadline', ''),
+                        'teams_count': comp.get('teamCount', 0),
+                        'category': 'competition',
+                        'ml_category': comp.get('category', ''),
+                        'source': 'Kaggle',
+                        'data_type': 'ml_competition',
+                        'platform': 'kaggle',
+                        'tags': ['kaggle', 'competition', 'ml'],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
         except Exception as e:
-            self.logger.error(f"Error processing Kaggle data: {e}")
-            return None
+            logger.warning(f"Error fetching Kaggle competitions: {e}")
 
-    async def analyze_trends(self, data: List[IntelligenceData]) -> Dict[str, Any]:
-        """Analyze Kaggle trends from collected data"""
-        if not data:
-            return {'error': 'No data to analyze'}
+        # Fetch trending datasets
+        try:
+            response = requests.get(
+                f"{self.BASE_URL}/datasets/list",
+                headers=headers,
+                params={'sortBy': 'hottest', 'page': 1, 'pageSize': 15},
+                timeout=15
+            )
 
-        competitions = [d for d in data if d.metadata.get('type') == 'competition']
-        datasets = [d for d in data if d.metadata.get('type') == 'dataset']
-        kernels = [d for d in data if d.metadata.get('type') == 'kernel']
+            if response.status_code == 200:
+                datasets = response.json()
+                for ds in datasets[:10]:
+                    items.append({
+                        'title': ds.get('title', 'Kaggle Dataset'),
+                        'url': f"https://www.kaggle.com/datasets/{ds.get('ref', '')}",
+                        'link': f"https://www.kaggle.com/datasets/{ds.get('ref', '')}",
+                        'summary': ds.get('subtitle', '')[:300] if ds.get('subtitle') else '',
+                        'description': ds.get('subtitle', '')[:300] if ds.get('subtitle') else '',
+                        'downloads': ds.get('downloadCount', 0),
+                        'votes': ds.get('voteCount', 0),
+                        'usability': ds.get('usabilityRating', 0),
+                        'owner': ds.get('ownerName', ''),
+                        'category': 'dataset',
+                        'source': 'Kaggle',
+                        'data_type': 'ml_dataset',
+                        'platform': 'kaggle',
+                        'tags': ['kaggle', 'dataset', 'ml'],
+                        'timestamp': datetime.now().isoformat(),
+                    })
 
-        # Analyze competition categories
-        comp_categories = {}
-        for comp in competitions:
-            cat = comp.metadata.get('category', 'other')
-            comp_categories[cat] = comp_categories.get(cat, 0) + 1
+        except Exception as e:
+            logger.warning(f"Error fetching Kaggle datasets: {e}")
 
-        # Analyze popular dataset tags
-        dataset_tags = {}
-        for ds in datasets:
-            for tag in ds.metadata.get('tags', []):
-                if isinstance(tag, dict):
-                    tag = tag.get('name', str(tag))
-                dataset_tags[tag] = dataset_tags.get(tag, 0) + 1
+        return items
 
-        # Analyze notebook languages
-        kernel_languages = {}
-        for kernel in kernels:
-            lang = kernel.metadata.get('language', 'unknown')
-            kernel_languages[lang] = kernel_languages.get(lang, 0) + 1
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch ML content from RSS feed."""
+        items = []
 
-        # Top datasets by downloads
-        top_datasets = sorted(
-            datasets,
-            key=lambda x: x.metadata.get('downloads', 0),
-            reverse=True
-        )[:5]
+        try:
+            feed = feedparser.parse(feed_url)
 
-        return {
-            'total_items': len(data),
-            'competitions_count': len(competitions),
-            'datasets_count': len(datasets),
-            'kernels_count': len(kernels),
-            'competition_categories': comp_categories,
-            'popular_dataset_tags': dict(sorted(dataset_tags.items(), key=lambda x: x[1], reverse=True)[:10]),
-            'kernel_languages': kernel_languages,
-            'top_datasets': [
-                {
-                    'title': ds.title,
-                    'downloads': ds.metadata.get('downloads', 0),
-                    'url': ds.url,
-                }
-                for ds in top_datasets
-            ],
-            'analyzed_at': datetime.now(timezone.utc).isoformat(),
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect ML topic
+                text = f"{title} {summary}".lower()
+                ml_topic = self._detect_ml_topic(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', 'Data Scientist'),
+                    'ml_topic': ml_topic,
+                    'category': ml_topic,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'ml_content',
+                    'platform': 'kaggle',
+                    'tags': ['ml', 'data_science', ml_topic],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_ml_topic(self, text: str) -> str:
+        """Detect ML topic from text."""
+        ml_topics = {
+            'nlp': ['nlp', 'natural language', 'text', 'bert', 'transformer', 'llm'],
+            'computer_vision': ['vision', 'image', 'cnn', 'detection', 'segmentation'],
+            'tabular': ['tabular', 'xgboost', 'lightgbm', 'regression', 'classification'],
+            'deep_learning': ['deep learning', 'neural network', 'pytorch', 'tensorflow'],
+            'time_series': ['time series', 'forecasting', 'lstm', 'arima'],
+            'reinforcement': ['reinforcement', 'rl', 'agent', 'reward'],
         }
+
+        for topic, keywords in ml_topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Kaggle category links."""
+        return [
+            {
+                'title': f"Kaggle: {name}",
+                'url': f'https://www.kaggle.com/{slug}',
+                'link': f'https://www.kaggle.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Kaggle',
+                'data_type': 'kaggle_category',
+                'platform': 'kaggle',
+                'tags': ['kaggle', 'ml', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('ML Competitions', 'competitions', 'Active ML competitions with prizes.'),
+            ('Trending Datasets', 'datasets', 'Popular public datasets.'),
+            ('Top Notebooks', 'notebooks', 'Highly-voted code notebooks.'),
+            ('ML Courses', 'learn', 'Free ML courses and tutorials.'),
+            ('Discussions', 'discussions', 'Community Q&A and discussions.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://www.kaggle.com/{category}',
+                'link': f'https://www.kaggle.com/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Kaggle',
+                'data_type': 'kaggle_topic',
+                'platform': 'kaggle',
+                'tags': ['kaggle', 'ml', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
