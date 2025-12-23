@@ -2,31 +2,46 @@
 Udemy Spider - Online Learning Marketplace Intelligence
 =========================================================
 
-Session 218: Specialized spider for Udemy course marketplace.
-Focuses on course trends, pricing strategies, and learning demands.
+Session 534: Simplified to work with spider network interface.
+Aggregates e-learning and online course content via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class UdemySpider(BaseIntelligenceSpider):
+class UdemySpider:
     """Udemy spider - online course marketplace intelligence"""
 
-    # E-learning industry RSS feeds
+    name = "udemy"
+
+    # E-learning and course platform RSS feeds
     RSS_FEEDS = {
         'elearning_industry': 'https://elearningindustry.com/feed',
-        'learning_tech': 'https://www.learningtechnologies.co.uk/feed',
+        'edtech_magazine': 'https://edtechmagazine.com/higher/rss.xml',
+        'class_central': 'https://www.classcentral.com/report/feed/',
+        'coursera_blog': 'https://blog.coursera.org/feed/',
+        'edx_blog': 'https://blog.edx.org/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Course categories
+    CATEGORIES = [
+        ('Programming', 'programming', 'Coding and software development.'),
+        ('Data Science', 'data_science', 'Machine learning and analytics.'),
+        ('Business', 'business', 'Management and entrepreneurship.'),
+        ('Design', 'design', 'UI/UX and graphic design.'),
+        ('Marketing', 'marketing', 'Digital marketing skills.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.course_topics = {
             'programming': ['python', 'javascript', 'java', 'programming', 'coding', 'web development'],
             'data_science': ['data science', 'machine learning', 'ai', 'analytics', 'deep learning', 'sql'],
@@ -36,208 +51,182 @@ class UdemySpider(BaseIntelligenceSpider):
             'finance': ['finance', 'accounting', 'investing', 'trading', 'cryptocurrency'],
             'personal_dev': ['productivity', 'communication', 'career', 'public speaking'],
         }
-
-        self.learning_formats = {
-            'video': ['video', 'lecture', 'tutorial', 'watch'],
-            'interactive': ['interactive', 'hands-on', 'project', 'exercise', 'quiz'],
-            'certification': ['certificate', 'certification', 'credential', 'accredited'],
-            'bootcamp': ['bootcamp', 'intensive', 'immersive', 'accelerated'],
-        }
-
         self.skill_levels = {
             'beginner': ['beginner', 'introduction', 'fundamentals', 'basics', 'getting started'],
             'intermediate': ['intermediate', 'advanced beginner', 'next level'],
             'advanced': ['advanced', 'expert', 'master', 'professional'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch e-learning industry data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch e-learning content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of e-learning content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
-
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                                'tags': [tag.term for tag in entry.get('tags', [])] if hasattr(entry, 'tags') else [],
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'items': all_items, 'source': 'udemy_ecosystem'}
-
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error fetching Udemy data: {e}")
-            return None
+            logger.warning(f"Error getting course categories: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process e-learning data"""
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Udemy spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch e-learning content from RSS feed."""
+        items = []
+
         try:
-            items = raw_data.get('items', [])
-            processed_items = []
+            feed = feedparser.parse(feed_url)
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            insights = self._generate_learning_insights(processed_items)
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'trending_topics': self._analyze_trending_topics(processed_items),
-                'format_trends': self._analyze_formats(processed_items),
-                'skill_demand': self._analyze_skill_demand(processed_items),
-                'learning_opportunities': self._identify_opportunities(processed_items),
-            }
+                # Analysis
+                text = f"{title} {description}".lower()
+                topic = self._detect_topic(text)
+                skill_level = self._detect_skill_level(text)
+                is_trending = self._is_trending(text)
+                sentiment = self._analyze_sentiment(text)
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+                # Extract tags from entry if available
+                tags = []
+                if hasattr(entry, 'tags') and entry.tags:
+                    tags = [tag.term for tag in entry.tags[:5]]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='udemy.com',
-                data_type='learning_marketplace',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'udemy_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['courses', 'e-learning', 'skills', 'training', 'education'],
-                target_agents=['education_agent', 'skill_agent', 'career_agent'],
-                target_advisors=['learning_advisor', 'skill_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Udemy data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify topic
-            topic = 'general'
-            for top, keywords in self.course_topics.items():
-                if any(kw in text for kw in keywords):
-                    topic = top
-                    break
-
-            # Identify learning format
-            formats = []
-            for fmt, keywords in self.learning_formats.items():
-                if any(kw in text for kw in keywords):
-                    formats.append(fmt)
-
-            # Identify skill level
-            skill_level = 'all_levels'
-            for level, keywords in self.skill_levels.items():
-                if any(kw in text for kw in keywords):
-                    skill_level = level
-                    break
-
-            # Check for trend indicators
-            is_trending = any(word in text for word in ['trending', 'popular', 'top', 'best', 'most'])
-            is_new = any(word in text for word in ['new', 'latest', 'just released', '2024', '2025'])
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
-                'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'topic': topic,
-                'formats': formats or ['standard'],
-                'skill_level': skill_level,
-                'is_trending': is_trending,
-                'is_new': is_new,
-                'sentiment': sentiment,
-                'tags': item.get('tags', []),
-            }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_learning_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate learning market insights"""
-        if not items:
-            return {}
-
-        trending_items = [i for i in items if i.get('is_trending')]
-        new_items = [i for i in items if i.get('is_new')]
-
-        topic_counts = {}
-        for item in items:
-            topic = item.get('topic', 'general')
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'trending_count': len(trending_items),
-            'new_releases': len(new_items),
-            'hot_topics': sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'learning_pulse': 'high' if len(trending_items) > len(items) // 3 else 'steady',
-        }
-
-    def _analyze_trending_topics(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze trending topics"""
-        topic_counts = {}
-        for item in items:
-            topic = item.get('topic', 'general')
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1
-        return dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _analyze_formats(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze learning format trends"""
-        format_counts = {}
-        for item in items:
-            for fmt in item.get('formats', []):
-                format_counts[fmt] = format_counts.get(fmt, 0) + 1
-        return dict(sorted(format_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _analyze_skill_demand(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze skill level demand"""
-        level_counts = {}
-        for item in items:
-            level = item.get('skill_level', 'all_levels')
-            level_counts[level] = level_counts.get(level, 0) + 1
-        return level_counts
-
-    def _identify_opportunities(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify learning opportunities"""
-        opportunities = []
-        for item in items:
-            if item.get('is_trending') or item.get('is_new'):
-                opportunities.append({
-                    'title': item.get('title'),
-                    'topic': item.get('topic'),
-                    'skill_level': item.get('skill_level'),
-                    'link': item.get('link'),
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'topic': topic,
+                    'category': topic,
+                    'skill_level': skill_level,
+                    'is_trending': is_trending,
+                    'sentiment': sentiment,
+                    'entry_tags': tags,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'e_learning',
+                    'platform': 'udemy',
+                    'tags': ['courses', 'e-learning', 'education', topic],
+                    'timestamp': datetime.now().isoformat(),
                 })
-        return opportunities[:8]
 
-    def get_required_fields(self) -> List[str]:
-        return ['title']
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['udemy', 'course', 'learning', 'tutorial', 'training', 'skills']
+        return items
+
+    def _detect_topic(self, text: str) -> str:
+        """Detect course topic from text."""
+        for topic, keywords in self.course_topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
+
+    def _detect_skill_level(self, text: str) -> str:
+        """Detect skill level from text."""
+        for level, keywords in self.skill_levels.items():
+            if any(kw in text for kw in keywords):
+                return level
+        return 'all_levels'
+
+    def _is_trending(self, text: str) -> bool:
+        """Check if content is about trending topics."""
+        trending_keywords = ['trending', 'popular', 'top', 'best', 'most', 'new', 'hot']
+        return any(kw in text for kw in trending_keywords)
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze content sentiment."""
+        positive = ['best', 'top', 'amazing', 'essential', 'learn', 'master', 'success']
+        negative = ['difficult', 'hard', 'problem', 'issue', 'fail', 'avoid']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return course category links."""
+        return [
+            {
+                'title': f"Udemy: {name}",
+                'url': f'https://www.udemy.com/courses/{slug}/',
+                'link': f'https://www.udemy.com/courses/{slug}/',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'topic': slug,
+                'source': 'Udemy',
+                'data_type': 'course_category',
+                'platform': 'udemy',
+                'tags': ['courses', 'e-learning', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Programming Courses', 'programming', 'Learn coding and development.'),
+            ('Data Science Bootcamp', 'data_science', 'Machine learning and AI skills.'),
+            ('Business & Management', 'business', 'Leadership and entrepreneurship.'),
+            ('Digital Marketing', 'marketing', 'SEO and social media marketing.'),
+            ('Design Skills', 'design', 'UI/UX and graphic design.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://www.udemy.com/courses/{category}/',
+                'link': f'https://www.udemy.com/courses/{category}/',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'topic': category,
+                'source': 'Udemy',
+                'data_type': 'course_topic',
+                'platform': 'udemy',
+                'tags': ['courses', 'e-learning', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
