@@ -2,268 +2,213 @@
 AngelList Spider - Startup Job & Investment Intelligence
 =========================================================
 
-Session 218: Specialized spider for AngelList/Wellfound startup ecosystem.
-Focuses on startup jobs, funding rounds, and emerging companies.
+Session 534: Simplified to work with spider network interface.
+Uses startup ecosystem RSS feeds (YC, TechStartups) for startup news.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class AngelListSpider(BaseIntelligenceSpider):
+class AngelListSpider:
     """AngelList/Wellfound spider - startup jobs and ecosystem intelligence"""
 
-    # Wellfound (formerly AngelList Talent) doesn't have public RSS
-    # We'll use tech startup job aggregators and news sources
+    name = "angellist"
+
+    # Startup ecosystem RSS feeds
     RSS_FEEDS = {
         'ycombinator': 'https://news.ycombinator.com/rss',
         'techstartups': 'https://techstartups.com/feed/',
+        'eu_startups': 'https://www.eu-startups.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Startup job categories on Wellfound
+    CATEGORIES = [
+        ('Engineering', 'role/engineering', 'Software engineering roles at startups.'),
+        ('Product', 'role/product', 'Product management positions.'),
+        ('Design', 'role/design', 'UI/UX design at startups.'),
+        ('Marketing', 'role/marketing', 'Growth and marketing roles.'),
+        ('Sales', 'role/sales', 'Sales and business development.'),
+        ('Operations', 'role/operations', 'Operations and finance.'),
+        ('Remote Startups', 'remote', 'Remote-first startup jobs.'),
+        ('Early Stage', 'stage/seed', 'Seed and early stage startups.'),
+        ('AI Startups', 'ai-machine-learning', 'AI/ML focused startups.'),
+        ('Fintech', 'fintech', 'Financial technology startups.'),
+    ]
 
-        self.startup_stages = {
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch startup ecosystem news and job categories.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of startup news and category dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add startup job category links
+        try:
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting Wellfound categories: {e}")
+
+        # If feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"AngelList spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch startup news from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:20]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Detect startup-related content
+                text = f"{title} {description}".lower()
+                is_startup = self._is_startup_relevant(text)
+                industry = self._detect_industry(text)
+                stage = self._detect_stage(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': industry,
+                    'stage': stage,
+                    'is_startup_relevant': is_startup,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'startup_news',
+                    'platform': 'angellist',
+                    'tags': ['startup', 'venture', 'tech', industry],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _is_startup_relevant(self, text: str) -> bool:
+        """Check if content is startup-relevant."""
+        keywords = ['startup', 'founder', 'funding', 'series', 'raise', 'venture',
+                    'yc', 'launch', 'seed', 'angel', 'investor', 'valuation']
+        return any(kw in text for kw in keywords)
+
+    def _detect_industry(self, text: str) -> str:
+        """Detect startup industry from text."""
+        industries = {
+            'ai_ml': ['ai', 'machine learning', 'artificial intelligence', 'llm', 'gpt'],
+            'fintech': ['fintech', 'payments', 'banking', 'crypto', 'defi'],
+            'healthtech': ['healthtech', 'health', 'medical', 'biotech'],
+            'saas': ['saas', 'b2b', 'enterprise', 'software'],
+            'ecommerce': ['ecommerce', 'marketplace', 'retail'],
+            'edtech': ['edtech', 'education', 'learning'],
+            'climate': ['climate', 'cleantech', 'sustainability'],
+        }
+
+        for ind, keywords in industries.items():
+            if any(kw in text for kw in keywords):
+                return ind
+        return 'general'
+
+    def _detect_stage(self, text: str) -> str:
+        """Detect startup stage from text."""
+        stages = {
             'seed': ['seed', 'pre-seed', 'angel', 'bootstrapped'],
-            'early': ['series a', 'series b', 'early stage', 'growth'],
-            'growth': ['series c', 'series d', 'series e', 'late stage'],
+            'early': ['series a', 'series b', 'early stage'],
+            'growth': ['series c', 'series d', 'late stage'],
             'public': ['ipo', 'public', 'nasdaq', 'nyse'],
         }
 
-        self.role_types = {
-            'engineering': ['engineer', 'developer', 'cto', 'technical', 'software'],
-            'product': ['product manager', 'pm', 'product lead', 'product design'],
-            'design': ['designer', 'ui', 'ux', 'creative', 'brand'],
-            'growth': ['growth', 'marketing', 'sales', 'revenue', 'business development'],
-            'operations': ['operations', 'ops', 'coo', 'finance', 'hr', 'people'],
-            'founder': ['founder', 'ceo', 'co-founder', 'founding'],
-        }
+        for stage, keywords in stages.items():
+            if any(kw in text for kw in keywords):
+                return stage
+        return 'unknown'
 
-        self.industries = {
-            'ai_ml': ['ai', 'machine learning', 'artificial intelligence', 'ml', 'deep learning'],
-            'fintech': ['fintech', 'payments', 'banking', 'crypto', 'defi', 'blockchain'],
-            'healthtech': ['healthtech', 'health', 'medical', 'biotech', 'healthcare'],
-            'saas': ['saas', 'b2b', 'enterprise', 'software'],
-            'ecommerce': ['ecommerce', 'e-commerce', 'marketplace', 'retail'],
-            'edtech': ['edtech', 'education', 'learning', 'training'],
-            'climate': ['climate', 'cleantech', 'sustainability', 'green'],
-        }
-
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch startup ecosystem data"""
-        try:
-            all_items = []
-
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:25]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'items': all_items, 'source': 'angellist_ecosystem'}
-
-        except Exception as e:
-            self.logger.error(f"Error fetching AngelList data: {e}")
-            return None
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process startup ecosystem data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
-
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
-
-            # Filter for startup-relevant content
-            startup_items = [i for i in processed_items if i.get('is_startup_relevant')]
-
-            insights = self._generate_startup_insights(startup_items)
-
-            content = {
-                'items': startup_items,
-                'insights': insights,
-                'by_industry': self._group_by_industry(startup_items),
-                'by_stage': self._group_by_stage(startup_items),
-                'funding_signals': self._extract_funding_signals(startup_items),
-                'hot_industries': self._identify_hot_industries(startup_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Wellfound (AngelList) job category links."""
+        return [
+            {
+                'title': f"Wellfound: {name}",
+                'url': f'https://wellfound.com/{slug}',
+                'link': f'https://wellfound.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug.split('/')[-1] if '/' in slug else slug,
+                'source': 'Wellfound',
+                'data_type': 'startup_job_category',
+                'platform': 'angellist',
+                'tags': ['startup', 'jobs', 'wellfound', slug.split('/')[-1]],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(startup_items) / 25 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Startup Jobs', 'jobs', 'Jobs at venture-backed startups.'),
+            ('Remote Startups', 'remote', 'Remote-first startup positions.'),
+            ('AI/ML Startups', 'ai', 'Artificial intelligence startups.'),
+            ('Funded Startups', 'funded', 'Recently funded companies.'),
+            ('YC Companies', 'yc', 'Y Combinator backed startups.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='angel.co',
-                data_type='startup_ecosystem',
-                content=content,
-                metadata={
-                    'item_count': len(startup_items),
-                    'source': 'angellist_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['startups', 'jobs', 'funding', 'tech', 'venture'],
-                target_agents=['startup_agent', 'job_agent', 'investment_agent'],
-                target_advisors=['startup_advisor', 'venture_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing AngelList data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Check if startup-relevant
-            startup_keywords = ['startup', 'founder', 'funding', 'series', 'raise', 'venture', 'yc', 'ycombinator',
-                              'launch', 'seed', 'angel', 'investor', 'equity', 'valuation', 'hiring']
-            is_startup_relevant = any(kw in text for kw in startup_keywords)
-
-            # Identify industry
-            industry = 'general'
-            for ind, keywords in self.industries.items():
-                if any(kw in text for kw in keywords):
-                    industry = ind
-                    break
-
-            # Identify stage
-            stage = 'unknown'
-            for stg, keywords in self.startup_stages.items():
-                if any(kw in text for kw in keywords):
-                    stage = stg
-                    break
-
-            # Check for funding news
-            is_funding_news = any(word in text for word in ['raised', 'funding', 'series', 'million', 'billion', 'investment'])
-
-            # Check for job posting
-            is_job_related = any(word in text for word in ['hiring', 'job', 'role', 'position', 'join', 'team'])
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'industry': industry,
-                'stage': stage,
-                'is_startup_relevant': is_startup_relevant,
-                'is_funding_news': is_funding_news,
-                'is_job_related': is_job_related,
-                'sentiment': sentiment,
+                'url': f'https://wellfound.com/discover/{category}',
+                'link': f'https://wellfound.com/discover/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Wellfound',
+                'data_type': 'startup_topic',
+                'platform': 'angellist',
+                'tags': ['startup', 'wellfound', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_startup_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate startup ecosystem insights"""
-        if not items:
-            return {}
-
-        funding_news = [i for i in items if i.get('is_funding_news')]
-        job_items = [i for i in items if i.get('is_job_related')]
-
-        industry_counts = {}
-        for item in items:
-            ind = item.get('industry', 'general')
-            industry_counts[ind] = industry_counts.get(ind, 0) + 1
-
-        avg_sentiment = sum(i.get('sentiment', 0) for i in items) / len(items) if items else 0
-
-        return {
-            'total_items': len(items),
-            'funding_news_count': len(funding_news),
-            'job_related_count': len(job_items),
-            'hot_industries': sorted(industry_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'ecosystem_sentiment': 'bullish' if avg_sentiment > 0.1 else 'bearish' if avg_sentiment < -0.1 else 'neutral',
-        }
-
-    def _group_by_industry(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by industry"""
-        groups = {}
-        for item in items:
-            ind = item.get('industry', 'general')
-            if ind not in groups:
-                groups[ind] = []
-            groups[ind].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _group_by_stage(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count items by startup stage"""
-        counts = {}
-        for item in items:
-            stage = item.get('stage', 'unknown')
-            counts[stage] = counts.get(stage, 0) + 1
-        return counts
-
-    def _extract_funding_signals(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract funding-related news"""
-        funding = []
-        for item in items:
-            if item.get('is_funding_news'):
-                funding.append({
-                    'title': item.get('title'),
-                    'industry': item.get('industry'),
-                    'stage': item.get('stage'),
-                    'link': item.get('link'),
-                })
-        return funding[:10]
-
-    def _identify_hot_industries(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify hot industries based on activity"""
-        industry_data = {}
-        for item in items:
-            ind = item.get('industry', 'general')
-            if ind not in industry_data:
-                industry_data[ind] = {'count': 0, 'funding_news': 0, 'sentiment_sum': 0}
-            industry_data[ind]['count'] += 1
-            if item.get('is_funding_news'):
-                industry_data[ind]['funding_news'] += 1
-            industry_data[ind]['sentiment_sum'] += item.get('sentiment', 0)
-
-        results = []
-        for ind, data in industry_data.items():
-            avg_sentiment = data['sentiment_sum'] / data['count'] if data['count'] > 0 else 0
-            results.append({
-                'industry': ind,
-                'activity_count': data['count'],
-                'funding_news': data['funding_news'],
-                'sentiment': round(avg_sentiment, 2),
-            })
-
-        return sorted(results, key=lambda x: x['activity_count'], reverse=True)[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['startup', 'funding', 'venture', 'founder', 'series', 'angel']
+            for title, category, desc in topics
+        ]
