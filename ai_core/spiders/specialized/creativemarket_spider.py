@@ -2,31 +2,45 @@
 Creative Market Spider - Design Assets & Fonts Intelligence
 =============================================================
 
-Session 218: Specialized spider for Creative Market.
-Focuses on design assets, fonts, templates, and creative tools.
+Session 534: Simplified to work with spider network interface.
+Uses design RSS feeds for assets, fonts, and creative resources.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class CreativeMarketSpider(BaseIntelligenceSpider):
+class CreativeMarketSpider:
     """Creative Market spider - design assets and fonts intelligence"""
 
+    name = "creativemarket"
+
+    # Design asset RSS feeds
     RSS_FEEDS = {
         'creative_bloq': 'https://www.creativebloq.com/feed',
         'designmodo': 'https://designmodo.com/feed/',
         'smashing_mag': 'https://www.smashingmagazine.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Asset type categories
+    CATEGORIES = [
+        ('Fonts', 'fonts', 'Typography and typeface resources.'),
+        ('Graphics', 'graphics', 'Vector graphics and illustrations.'),
+        ('Templates', 'templates', 'Design templates and mockups.'),
+        ('Photos', 'photos', 'Stock photography resources.'),
+        ('Themes', 'themes', 'Website and UI themes.'),
+        ('Add-ons', 'add-ons', 'Plugins, brushes, and actions.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.asset_types = {
             'fonts': ['font', 'typeface', 'typography', 'lettering', 'type design'],
             'graphics': ['graphic', 'illustration', 'vector', 'clipart', 'artwork'],
@@ -35,7 +49,6 @@ class CreativeMarketSpider(BaseIntelligenceSpider):
             'themes': ['theme', 'wordpress', 'website', 'ui kit', 'dashboard'],
             'add_ons': ['add-on', 'plugin', 'extension', 'brush', 'action'],
         }
-
         self.design_trends = {
             'minimalist': ['minimal', 'clean', 'simple', 'modern', 'flat'],
             'vintage': ['vintage', 'retro', 'classic', 'old school', 'nostalgic'],
@@ -43,170 +56,146 @@ class CreativeMarketSpider(BaseIntelligenceSpider):
             'elegant': ['elegant', 'luxury', 'premium', 'sophisticated', 'refined'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Creative Market data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch design asset content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting Creative Market categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'creativemarket'}
+        logger.info(f"Creative Market spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from design RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect asset type and design trend
+                text = f"{title} {summary}".lower()
+                asset_type = self._detect_asset_type(text)
+                trend_style = self._detect_trend_style(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name.replace('_', ' ').title()),
+                    'category': asset_type,
+                    'asset_type': asset_type,
+                    'trend_style': trend_style,
+                    'is_font': asset_type == 'fonts',
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'design_asset',
+                    'platform': 'creativemarket',
+                    'tags': ['design', 'assets', asset_type],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Creative Market data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Creative Market data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_asset_type(self, text: str) -> str:
+        """Detect asset type from text."""
+        for atype, keywords in self.asset_types.items():
+            if any(kw in text for kw in keywords):
+                return atype
+        return 'general'
 
-            insights = self._generate_insights(processed_items)
+    def _detect_trend_style(self, text: str) -> str:
+        """Detect design trend style from text."""
+        for trend, keywords in self.design_trends.items():
+            if any(kw in text for kw in keywords):
+                return trend
+        return None
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_type': self._group_by_type(processed_items),
-                'trend_analysis': self._analyze_trends(processed_items),
-                'font_highlights': self._extract_fonts(processed_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Creative Market category links."""
+        return [
+            {
+                'title': f"Creative Market: {name}",
+                'url': f'https://creativemarket.com/{slug}',
+                'link': f'https://creativemarket.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Creative Market',
+                'data_type': 'asset_category',
+                'platform': 'creativemarket',
+                'tags': ['design', 'assets', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Free Fonts', 'fonts', 'Free and premium typography.'),
+            ('Vector Graphics', 'graphics', 'Illustrations and clipart.'),
+            ('Design Templates', 'templates', 'Mockups and presentations.'),
+            ('UI Kits', 'themes', 'Website and app themes.'),
+            ('Design Resources', 'resources', 'Tools and add-ons.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='creativemarket.com',
-                data_type='design_assets',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'creativemarket',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['creative market', 'fonts', 'graphics', 'templates', 'design'],
-                target_agents=['design_agent', 'creative_agent', 'branding_agent'],
-                target_advisors=['design_advisor', 'brand_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Creative Market data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify asset type
-            asset_type = 'general'
-            for atype, keywords in self.asset_types.items():
-                if any(kw in text for kw in keywords):
-                    asset_type = atype
-                    break
-
-            # Identify design trend
-            trend_style = None
-            for trend, keywords in self.design_trends.items():
-                if any(kw in text for kw in keywords):
-                    trend_style = trend
-                    break
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'asset_type': asset_type,
-                'trend_style': trend_style,
-                'is_font': asset_type == 'fonts',
-                'sentiment': sentiment,
+                'url': f'https://creativemarket.com/{category}',
+                'link': f'https://creativemarket.com/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Creative Market',
+                'data_type': 'asset_topic',
+                'platform': 'creativemarket',
+                'tags': ['design', 'assets', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate design market insights"""
-        if not items:
-            return {}
-
-        fonts = [i for i in items if i.get('is_font')]
-
-        type_counts = {}
-        for item in items:
-            atype = item.get('asset_type', 'general')
-            type_counts[atype] = type_counts.get(atype, 0) + 1
-
-        trend_counts = {}
-        for item in items:
-            trend = item.get('trend_style')
-            if trend:
-                trend_counts[trend] = trend_counts.get(trend, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'font_content': len(fonts),
-            'top_asset_types': sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'trending_styles': sorted(trend_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'design_pulse': 'creative' if len(items) > 10 else 'steady',
-        }
-
-    def _group_by_type(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by asset type"""
-        groups = {}
-        for item in items:
-            atype = item.get('asset_type', 'general')
-            if atype not in groups:
-                groups[atype] = []
-            groups[atype].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_trends(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze design trends"""
-        trend_counts = {}
-        for item in items:
-            trend = item.get('trend_style')
-            if trend:
-                trend_counts[trend] = trend_counts.get(trend, 0) + 1
-        return dict(sorted(trend_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_fonts(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract font-related content"""
-        return [{'title': i.get('title'), 'link': i.get('link')}
-                for i in items if i.get('is_font')][:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['creative market', 'fonts', 'graphics', 'templates', 'design assets']
+            for title, category, desc in topics
+        ]
