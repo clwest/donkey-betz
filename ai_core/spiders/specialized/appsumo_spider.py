@@ -2,222 +2,199 @@
 AppSumo Spider - Digital Tool Deals & Product Launches Intelligence
 ======================================================================
 
-Session 218: Specialized spider for AppSumo marketplace.
-Focuses on software deals, product launches, and SaaS trends.
+Session 534: Simplified to work with spider network interface.
+Uses product launch RSS feeds for software deals and SaaS trends.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class AppSumoSpider(BaseIntelligenceSpider):
+class AppSumoSpider:
     """AppSumo spider - digital tool deals and product launches intelligence"""
 
+    name = "appsumo"
+
+    # Product launch and deal RSS feeds
     RSS_FEEDS = {
-        'appsumo_blog': 'https://blog.appsumo.com/feed/',
         'product_hunt': 'https://www.producthunt.com/feed',
         'betalist': 'https://betalist.com/feed',
+        'saas_weekly': 'https://saasweekly.io/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # AppSumo deal categories
+    CATEGORIES = [
+        ('Marketing Tools', 'marketing', 'SEO, email, and social media tools.'),
+        ('Productivity', 'productivity', 'Project management and automation.'),
+        ('Design Tools', 'design', 'Graphic and video design software.'),
+        ('Development', 'development', 'Code, hosting, and API tools.'),
+        ('AI Tools', 'ai', 'AI-powered software and automation.'),
+        ('Business', 'business', 'CRM, finance, and operations.'),
+        ('Lifetime Deals', 'lifetime-deals', 'One-time payment software deals.'),
+        ('Plus Deals', 'plus', 'AppSumo Plus exclusive deals.'),
+    ]
 
-        self.tool_categories = {
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch software deals and product launches.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of deal and product dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add deal category links
+        try:
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting AppSumo categories: {e}")
+
+        # If feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"AppSumo spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch product launches from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:20]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Detect tool category and deal type
+                text = f"{title} {description}".lower()
+                category = self._detect_category(text)
+                deal_type = self._detect_deal_type(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': category,
+                    'deal_type': deal_type,
+                    'is_lifetime_deal': 'lifetime' in deal_type,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'software_deal',
+                    'platform': 'appsumo',
+                    'tags': ['deals', 'saas', 'software', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_category(self, text: str) -> str:
+        """Detect tool category from text."""
+        categories = {
             'marketing': ['marketing', 'seo', 'email', 'social media', 'analytics'],
             'productivity': ['productivity', 'project', 'task', 'automation', 'workflow'],
             'design': ['design', 'graphic', 'video', 'photo', 'creative'],
             'development': ['development', 'code', 'api', 'hosting', 'database'],
-            'ai_tools': ['ai', 'gpt', 'chatbot', 'automation', 'machine learning'],
+            'ai': ['ai', 'gpt', 'chatbot', 'machine learning', 'automation'],
             'business': ['crm', 'sales', 'finance', 'hr', 'operations'],
         }
 
-        self.deal_signals = {
-            'lifetime': ['lifetime', 'ltd', 'one-time', 'forever', 'no subscription'],
-            'discount': ['discount', 'off', 'deal', 'save', 'limited'],
-            'new_launch': ['launch', 'new', 'introducing', 'announcing', 'released'],
-            'popular': ['popular', 'trending', 'hot', 'bestseller', 'top'],
-        }
+        for cat, keywords in categories.items():
+            if any(kw in text for kw in keywords):
+                return cat
+        return 'general'
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch AppSumo ecosystem data"""
-        try:
-            all_items = []
+    def _detect_deal_type(self, text: str) -> str:
+        """Detect deal type from text."""
+        if any(kw in text for kw in ['lifetime', 'ltd', 'one-time', 'forever']):
+            return 'lifetime'
+        if any(kw in text for kw in ['discount', 'off', 'save', 'deal']):
+            return 'discount'
+        if any(kw in text for kw in ['launch', 'new', 'introducing', 'announcing']):
+            return 'new_launch'
+        return 'standard'
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'items': all_items, 'source': 'appsumo'}
-
-        except Exception as e:
-            self.logger.error(f"Error fetching AppSumo data: {e}")
-            return None
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process AppSumo ecosystem data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
-
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
-
-            insights = self._generate_insights(processed_items)
-
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'deal_analysis': self._analyze_deals(processed_items),
-                'hot_deals': self._extract_hot_deals(processed_items),
-                'new_launches': self._extract_launches(processed_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return AppSumo category links."""
+        return [
+            {
+                'title': f"AppSumo: {name}",
+                'url': f'https://appsumo.com/browse/?category={slug}',
+                'link': f'https://appsumo.com/browse/?category={slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'AppSumo',
+                'data_type': 'deal_category',
+                'platform': 'appsumo',
+                'tags': ['deals', 'appsumo', 'saas', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Lifetime Deals', 'lifetime', 'Pay once, use forever software.'),
+            ('AI Tools', 'ai-tools', 'AI-powered productivity tools.'),
+            ('Marketing Stack', 'marketing', 'Essential marketing software.'),
+            ('Developer Tools', 'dev-tools', 'APIs and development utilities.'),
+            ('Hot Deals', 'hot', 'Trending software deals.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='appsumo.com',
-                data_type='software_deals',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'appsumo',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['appsumo', 'deals', 'software', 'saas', 'lifetime deals'],
-                target_agents=['deals_agent', 'product_agent', 'saas_agent'],
-                target_advisors=['deal_hunter', 'saas_advisor']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing AppSumo data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify tool category
-            category = 'general'
-            for cat, keywords in self.tool_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify deal signals
-            signals = []
-            for signal, keywords in self.deal_signals.items():
-                if any(kw in text for kw in keywords):
-                    signals.append(signal)
-
-            is_lifetime_deal = 'lifetime' in signals
-            is_new_launch = 'new_launch' in signals
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://appsumo.com/browse/?tag={category}',
+                'link': f'https://appsumo.com/browse/?tag={category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'deal_signals': signals,
-                'is_lifetime_deal': is_lifetime_deal,
-                'is_new_launch': is_new_launch,
-                'sentiment': sentiment,
+                'source': 'AppSumo',
+                'data_type': 'deal_topic',
+                'platform': 'appsumo',
+                'tags': ['deals', 'appsumo', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate software deals insights"""
-        if not items:
-            return {}
-
-        lifetime_deals = [i for i in items if i.get('is_lifetime_deal')]
-        new_launches = [i for i in items if i.get('is_new_launch')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        signal_counts = {}
-        for item in items:
-            for signal in item.get('deal_signals', []):
-                signal_counts[signal] = signal_counts.get(signal, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'lifetime_deals': len(lifetime_deals),
-            'new_launches': len(new_launches),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'deal_types': signal_counts,
-            'market_pulse': 'hot' if len(lifetime_deals) > 3 else 'active',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by tool category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_deals(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze deal signal distribution"""
-        signal_counts = {}
-        for item in items:
-            for signal in item.get('deal_signals', []):
-                signal_counts[signal] = signal_counts.get(signal, 0) + 1
-        return dict(sorted(signal_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_hot_deals(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract hot lifetime deals"""
-        ltd_items = [i for i in items if i.get('is_lifetime_deal')]
-        sorted_items = sorted(ltd_items, key=lambda x: x.get('sentiment', 0), reverse=True)
-        return [{'title': i.get('title'), 'category': i.get('category'), 'link': i.get('link')}
-                for i in sorted_items[:5]]
-
-    def _extract_launches(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract new launches"""
-        return [{'title': i.get('title'), 'category': i.get('category'), 'link': i.get('link')}
-                for i in items if i.get('is_new_launch')][:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['appsumo', 'deal', 'lifetime', 'software', 'saas', 'tool']
+            for title, category, desc in topics
+        ]
