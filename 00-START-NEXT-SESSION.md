@@ -17,6 +17,15 @@ Session 537 created the detail panel APIs, but they were blocked by auth middlew
 | **Auth Middleware** | `core/auth_middleware.py` | Added 5 intelligence API paths to PUBLIC_PATHS |
 | **Agent Detail API** | `core/views_spider_intelligence.py` | Fixed `AgentKnowledgeSource` field names (`created_at` → `first_discovered_at`) |
 | **Knowledge Transfers** | `core/views_spider_intelligence.py` | Fixed `KnowledgeTransfer` field names (`source_agent` → `connection__teacher_agent`) |
+| **Situation Detail Panel** | `intelligence_command_center.html` | Fixed JS field names to match API (`success`, `situation.triggers`, `situation.name`) |
+
+### Situation Detail Now Shows Real Data
+
+- Status indicator (active/inactive with color)
+- Schedule and domain badges
+- 3-stat grid: Triggers, Total Fires, 24h Fires
+- Active triggers list with severity colors
+- Recent sessions with items/alerts/duration
 
 ### APIs Now Public (No Session Required)
 
