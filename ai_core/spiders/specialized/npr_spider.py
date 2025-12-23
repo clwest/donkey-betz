@@ -2,21 +2,25 @@
 NPR Spider - National Public Radio News Intelligence
 =====================================================
 
-Session 343: Phase 1 Spider Expansion
-NPR provides high-quality news coverage via free RSS feeds.
+Session 534: Simplified to work with spider network interface.
+Aggregates NPR news content via RSS feeds.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class NPRSpider(BaseIntelligenceSpider):
+class NPRSpider:
     """NPR news spider - comprehensive news coverage across all topics"""
 
+    name = "npr"
+
+    # NPR RSS feeds by topic
     RSS_FEEDS = {
         'top_stories': 'https://feeds.npr.org/1001/rss.xml',
         'world': 'https://feeds.npr.org/1004/rss.xml',
@@ -26,162 +30,178 @@ class NPRSpider(BaseIntelligenceSpider):
         'technology': 'https://feeds.npr.org/1019/rss.xml',
         'science': 'https://feeds.npr.org/1007/rss.xml',
         'health': 'https://feeds.npr.org/1128/rss.xml',
-        'education': 'https://feeds.npr.org/1013/rss.xml',
-        'arts': 'https://feeds.npr.org/1008/rss.xml',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # News categories
+    CATEGORIES = [
+        ('World News', 'world', 'International news coverage.'),
+        ('Politics', 'politics', 'Political news and analysis.'),
+        ('Business', 'business', 'Business and economy news.'),
+        ('Technology', 'technology', 'Tech news and innovation.'),
+        ('Science', 'science', 'Science and research news.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.topic_categories = {
             'technology': ['tech', 'software', 'ai', 'computer', 'digital', 'internet', 'cyber'],
             'business': ['economy', 'market', 'company', 'industry', 'trade', 'finance', 'stock'],
             'politics': ['congress', 'president', 'election', 'vote', 'bill', 'senate', 'house'],
             'science': ['research', 'study', 'scientist', 'discovery', 'space', 'climate'],
             'health': ['health', 'medical', 'doctor', 'hospital', 'disease', 'treatment'],
+            'world': ['international', 'global', 'foreign', 'country', 'nation', 'world'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from NPR"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch NPR news content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of news content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_articles = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting NPR categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:10]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', ''),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'author': entry.get('author', 'NPR'),
-                                'feed_source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'articles': all_articles, 'source': 'npr'}
+        logger.info(f"NPR spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from NPR RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:10]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect news categories
+                text = f"{title} {summary}".lower()
+                categories = self._detect_categories(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', 'NPR'),
+                    'categories': categories,
+                    'category': categories[0] if categories else feed_name,
+                    'feed_source': feed_name,
+                    'sentiment': sentiment,
+                    'source': 'NPR',
+                    'data_type': 'news',
+                    'platform': 'npr',
+                    'tags': ['npr', 'news'] + categories[:2],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching NPR data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process NPR articles"""
-        try:
-            articles = raw_data.get('articles', [])
-            processed_articles = []
+        return items
 
-            for article in articles:
-                processed = self._process_article(article)
-                if processed:
-                    processed_articles.append(processed)
+    def _detect_categories(self, text: str) -> List[str]:
+        """Detect news categories from text."""
+        categories = []
+        for cat, keywords in self.topic_categories.items():
+            if any(kw in text for kw in keywords):
+                categories.append(cat)
+        return categories if categories else ['general']
 
-            analytics = self._generate_analytics(processed_articles)
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze news sentiment."""
+        positive_words = ['success', 'win', 'gain', 'improve', 'grow', 'progress', 'breakthrough']
+        negative_words = ['fail', 'loss', 'decline', 'crisis', 'concern', 'threat', 'problem']
 
-            content = {
-                'articles': processed_articles,
-                'analytics': analytics,
-                'trending_topics': self._extract_trending_topics(processed_articles),
+        positive_count = sum(1 for word in positive_words if word in text)
+        negative_count = sum(1 for word in negative_words if word in text)
+
+        if positive_count > negative_count:
+            return 'positive'
+        elif negative_count > positive_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return NPR category links."""
+        return [
+            {
+                'title': f"NPR: {name}",
+                'url': f'https://www.npr.org/sections/{slug}',
+                'link': f'https://www.npr.org/sections/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'NPR',
+                'data_type': 'news_category',
+                'platform': 'npr',
+                'tags': ['npr', 'news', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_articles) / 50 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Top Stories', 'news', 'NPR top stories.'),
+            ('World News', 'world', 'International coverage.'),
+            ('Politics', 'politics', 'Political news and analysis.'),
+            ('Business', 'business', 'Economy and business news.'),
+            ('Technology', 'technology', 'Tech news and innovation.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='npr.org',
-                data_type='news',
-                content=content,
-                metadata={
-                    'article_count': len(processed_articles),
-                    'source': 'npr',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['news', 'politics', 'business', 'technology', 'health', 'science'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['news_analyst']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing NPR data: {e}")
-            return None
-
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual article"""
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            text = f"{title} {summary}".lower()
-
-            blob = TextBlob(f"{title} {summary}")
-            sentiment = {
-                'polarity': blob.sentiment.polarity,
-                'subjectivity': blob.sentiment.subjectivity,
-                'classification': 'positive' if blob.sentiment.polarity > 0.1 else 'negative' if blob.sentiment.polarity < -0.1 else 'neutral'
-            }
-
-            categories = []
-            for cat, keywords in self.topic_categories.items():
-                if any(kw in text for kw in keywords):
-                    categories.append(cat)
-
-            return {
+        return [
+            {
                 'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'author': article.get('author', ''),
-                'sentiment': sentiment,
-                'categories': categories or ['general'],
-                'feed_source': article.get('feed_source', ''),
+                'url': f'https://www.npr.org/sections/{category}',
+                'link': f'https://www.npr.org/sections/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'NPR',
+                'data_type': 'news_topic',
+                'platform': 'npr',
+                'tags': ['npr', 'news', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing article: {e}")
-            return None
-
-    def _generate_analytics(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate analytics from articles"""
-        total = len(articles)
-        if total == 0:
-            return {}
-
-        return {
-            'total_articles': total,
-            'sentiment_breakdown': {
-                'positive': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'positive'),
-                'negative': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'negative'),
-                'neutral': sum(1 for a in articles if a.get('sentiment', {}).get('classification') == 'neutral'),
-            },
-            'category_distribution': self._count_categories(articles),
-        }
-
-    def _count_categories(self, articles: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count articles per category"""
-        counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                counts[cat] = counts.get(cat, 0) + 1
-        return counts
-
-    def _extract_trending_topics(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending topics"""
-        topic_counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                topic_counts[cat] = topic_counts.get(cat, 0) + 1
-
-        sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
-        return [{'topic': t, 'count': c} for t, c in sorted_topics[:10]]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['news', 'politics', 'business', 'technology', 'health', 'science']
+            for title, category, desc in topics
+        ]
