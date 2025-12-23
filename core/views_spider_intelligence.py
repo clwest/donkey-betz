@@ -1708,14 +1708,14 @@ def intelligence_cross_references(request):
             'legal': ['LegalDocDrafterAgent'],
         }
 
-        for spider_info in all_spiders:
-            spider_name = spider_info.get('name', '').lower()
-            category = spider_info.get('category', '').lower()
+        for spider_name, spider_class in all_spiders.items():
+            config = registry.spider_configs.get(spider_name, {})
+            category = config.get('category', '').lower()
 
             # Add agents from category mapping
             if category in category_to_agents:
                 for agent_name in category_to_agents[category]:
-                    spider_to_agents[spider_name].add(agent_name)
+                    spider_to_agents[spider_name.lower()].add(agent_name)
 
         # Convert sets to lists
         spider_to_agents = {k: sorted(list(v)) for k, v in spider_to_agents.items()}
