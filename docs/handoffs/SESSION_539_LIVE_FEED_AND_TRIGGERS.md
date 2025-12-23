@@ -204,7 +204,7 @@ ICC: Trigger fires by situation: {stock_market: 5, blockchain: 3, ...}
 | `cb7c0a0` | Add console.logs for debugging |
 | `c37c771` | Update schedule display strings |
 | `16a9b83` | Add direct article links to trigger events |
-| (pending) | Fix trigger feed click to use ID instead of name |
+| `b2f696d` | Fix trigger feed click to use ID instead of name |
 
 ---
 
