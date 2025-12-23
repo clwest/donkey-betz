@@ -197,6 +197,8 @@ from core.views_spider_intelligence import (
     spider_data_feed,
     spider_knowledge,
     spider_timeline,
+    # Session 536: Cross-references for ICC
+    intelligence_cross_references,
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -2516,6 +2518,9 @@ urlpatterns = [
     path('api/spider-intelligence/feed/', spider_data_feed, name='spider-intelligence-feed'),
     path('api/spider-intelligence/knowledge/', spider_knowledge, name='spider-intelligence-knowledge'),
     path('api/spider-intelligence/timeline/', spider_timeline, name='spider-intelligence-timeline'),
+
+    # Session 536: Cross-references for Intelligence Command Center
+    path('api/intelligence/cross-references/', intelligence_cross_references, name='intelligence-cross-references'),
 
     # Session 388: Income Action Pipeline - Spider to Income Bridge
     path('api/income/save-opportunity/', income_save_opportunity, name='income-save-opportunity'),

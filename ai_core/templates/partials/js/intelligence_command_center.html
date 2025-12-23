@@ -66,8 +66,8 @@ const ICCState = {
                 this.loadTriggerFires()
             ]);
 
-            // Build cross-references
-            this.buildCrossReferences();
+            // Session 536: Build cross-references from API (now async)
+            await this.buildCrossReferences();
 
             // Connect WebSockets
             this.connectWebSockets();
@@ -268,37 +268,56 @@ const ICCState = {
     },
 
     /**
-     * Build cross-reference maps for drill-down
+     * Session 536: Build cross-reference maps from API (no longer hardcoded)
      */
-    buildCrossReferences() {
-        // Spider → Agent mappings based on known patterns
+    async buildCrossReferences() {
+        try {
+            const response = await fetch('/api/intelligence/cross-references/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                this.spiderToAgents = data.spider_to_agents || {};
+                this.agentToSituations = data.agent_to_situations || {};
+                this.situationToSpiders = data.situation_to_spiders || {};
+                console.log(`ICC: Loaded cross-references - ${data.stats?.spiders_mapped || 0} spiders, ${data.stats?.agents_mapped || 0} agents, ${data.stats?.situations_mapped || 0} situations`);
+            } else {
+                console.warn('ICC: Using fallback cross-references');
+                this.useFallbackCrossReferences();
+            }
+        } catch (error) {
+            console.error('ICC: Failed to load cross-references, using fallback:', error);
+            this.useFallbackCrossReferences();
+        }
+    },
+
+    /**
+     * Fallback cross-references if API fails
+     */
+    useFallbackCrossReferences() {
         this.spiderToAgents = {
             'techcrunch': ['TrendAnalysisAgent', 'ContentWriterAgent', 'ResearchAgent'],
             'hackernews': ['TrendAnalysisAgent', 'ContentWriterAgent', 'CodeGeneratorAgent'],
-            'coingecko': ['BlockchainAuditCoordinator', 'WhaleWatcherAgent', 'MarketIntelligenceCoordinator'],
-            'etherscan': ['BlockchainAuditCoordinator', 'SmartContractAuditorAgent', 'TransactionMonitorAgent'],
-            'reddit': ['TrendAnalysisAgent', 'ContentWriterAgent', 'SocialMediaAgent'],
+            'coingecko': ['BlockchainAuditCoordinator', 'WhaleWatcherAgent'],
+            'etherscan': ['BlockchainAuditCoordinator', 'SmartContractAuditorAgent'],
+            'reddit': ['TrendAnalysisAgent', 'SocialMediaAgent'],
             'remoteok': ['OpportunityScoringAgent', 'OpportunityPipelineAgent'],
-            'dribbble': ['ImageAgent', 'BrandIdentityAgent', 'CreativeDirectorAgent'],
-            'yahoo_finance': ['StockAuditCoordinator', 'MarketIntelligenceCoordinator', 'StockAnalystAgent']
+            'dribbble': ['ImageAgent', 'BrandIdentityAgent'],
+            'yahoo_finance': ['StockAuditCoordinator', 'MarketIntelligenceCoordinator']
         };
-
-        // Agent → Situation mappings
         this.agentToSituations = {
-            'BlockchainAuditCoordinator': ['blockchain_security'],
+            'BlockchainAuditCoordinator': ['blockchain_security', 'crypto_whale_alerts'],
             'StockAuditCoordinator': ['stock_market_intelligence'],
-            'ContentWriterAgent': ['autonomous_content_generation', 'viral_content_predictor'],
             'TrendAnalysisAgent': ['tech_stack_evolution', 'narrative_drift'],
             'OpportunityScoringAgent': ['job_matching', 'freelance_scout'],
-            'ImageAgent': ['design_trends', 'thumbnail_optimizer'],
+            'ImageAgent': ['design_trends', 'thumbnail_optimization'],
             'LegalDocDrafterAgent': ['case_law_monitor', 'regulatory_change']
         };
-
-        // Situation → Spider mappings
         this.situationToSpiders = {
-            'blockchain_security': ['etherscan', 'coingecko', 'coindesk'],
-            'stock_market_intelligence': ['yahoo_finance', 'sec_edgar', 'marketwatch'],
-            'autonomous_content_generation': ['techcrunch', 'hackernews', 'reddit', 'the_verge'],
+            'blockchain_security': ['etherscan', 'coingecko'],
+            'stock_market_intelligence': ['yahoo_finance', 'seekingalpha'],
+            'autonomous_content_generation': ['techcrunch', 'hackernews', 'reddit'],
             'job_matching': ['remoteok', 'weworkremotely', 'adzuna'],
             'design_trends': ['dribbble', 'behance', 'unsplash']
         };
@@ -694,14 +713,15 @@ const ICCState = {
         switch (type) {
             case 'spider':
             case 'category':
-                const agents = this.spiderToAgents[id] || ['TrendAnalysisAgent', 'ContentWriterAgent'];
+                // Session 536: Now uses API data, show proper message if no mapping exists
+                const agents = this.spiderToAgents[id.toLowerCase()] || this.spiderToAgents[id] || [];
                 html = `
                     <h6>&#128375; ${type === 'category' ? 'Category' : 'Spider'}: ${id}</h6>
                     <p style="color: #9ca3af; font-size: 0.8rem;">Agents that use this data:</p>
                     <div class="icc-connections">
-                        ${agents.map(a => `
-                            <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '')}</span>
-                        `).join('')}
+                        ${agents.length > 0 ? agents.map(a => `
+                            <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '').replace('Coordinator', '')}</span>
+                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Data available to all research agents</span>'}
                     </div>
                 `;
                 break;
