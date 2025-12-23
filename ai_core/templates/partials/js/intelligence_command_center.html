@@ -1090,7 +1090,9 @@ const ICCState = {
                     'low': '#22c55e'
                 };
                 const severityColor = severityColors[trigger.severity] || '#fbbf24';
-                // Create a Google News search URL for the headline
+
+                // Session 539: Use direct article URL if available, fallback to Google search
+                const articleUrl = trigger.article_url;
                 const searchQuery = encodeURIComponent(trigger.matched_value || '');
                 const searchUrl = `https://news.google.com/search?q=${searchQuery}`;
 
@@ -1118,9 +1120,15 @@ const ICCState = {
                         <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Headline</div>
                         <div style="color: #e5e7eb; font-size: 0.9rem; word-break: break-word; line-height: 1.4;">${trigger.matched_value || 'N/A'}</div>
                     </div>
-                    <a href="${searchUrl}" target="_blank" rel="noopener" style="display: block; margin-top: 10px; padding: 8px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem;">
-                        🔍 Search for this article
-                    </a>
+                    ${articleUrl ? `
+                        <a href="${articleUrl}" target="_blank" rel="noopener" style="display: block; margin-top: 10px; padding: 8px 12px; background: #22c55e; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem;">
+                            📰 Read Original Article
+                        </a>
+                    ` : `
+                        <a href="${searchUrl}" target="_blank" rel="noopener" style="display: block; margin-top: 10px; padding: 8px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem;">
+                            🔍 Search for this article
+                        </a>
+                    `}
                 `;
                 break;
 

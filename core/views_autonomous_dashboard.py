@@ -580,8 +580,23 @@ def list_trigger_events(request):
 
         queryset = queryset.order_by('-fired_at')[:limit]
 
-        events = [
-            {
+        events = []
+        for e in queryset:
+            # Session 539: Extract article URL from raw_data_snapshot
+            article_url = None
+            if e.raw_data_snapshot:
+                # Try to find the matched item in the items array
+                items = e.raw_data_snapshot.get('items', [])
+                for item in items:
+                    item_title = item.get('title', '')
+                    if item_title and e.matched_value and item_title in e.matched_value:
+                        article_url = item.get('link') or item.get('url') or item.get('href')
+                        break
+                # If not found in items, check top-level
+                if not article_url:
+                    article_url = e.raw_data_snapshot.get('link') or e.raw_data_snapshot.get('url')
+
+            events.append({
                 'id': str(e.id),
                 'trigger_id': str(e.trigger.id),
                 'trigger_name': e.trigger.name,
@@ -591,13 +606,12 @@ def list_trigger_events(request):
                 'spider_name': e.spider_name,
                 'matched_field': e.matched_field,
                 'matched_value': e.matched_value,
+                'article_url': article_url,  # Session 539: Direct link to article
                 'status': e.status,
                 'alert_generated': e.alert_generated,
                 'discord_sent': e.discord_sent,
                 'fired_at': e.fired_at.isoformat(),
-            }
-            for e in queryset
-        ]
+            })
 
         # Stats
         now = timezone.now()
