@@ -2,249 +2,211 @@
 Bloomberg Spider - Professional Finance & Markets Intelligence
 ===============================================================
 
-Session 218: Specialized spider for Bloomberg-style financial news.
-Focuses on markets, economics, and professional finance insights.
+Session 534: Simplified to work with spider network interface.
+Uses professional finance RSS feeds for market and economic news.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class BloombergSpider(BaseIntelligenceSpider):
+class BloombergSpider:
     """Bloomberg spider - professional finance and markets intelligence"""
 
-    # Professional finance RSS feeds (Bloomberg alternatives)
+    name = "bloomberg"
+
+    # Professional finance RSS feeds
     RSS_FEEDS = {
-        'financial_times': 'https://www.ft.com/rss/home',
         'wsj_markets': 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
-        'reuters_business': 'https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best',
+        'wsj_business': 'https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml',
+        'marketwatch': 'https://feeds.marketwatch.com/marketwatch/topstories/',
+        'cnbc': 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Market sections
+    SECTIONS = [
+        ('Markets', 'markets', 'Stock and bond market news.'),
+        ('Economics', 'economics', 'Economic data and analysis.'),
+        ('Companies', 'companies', 'Corporate news and earnings.'),
+        ('Technology', 'technology', 'Tech sector coverage.'),
+        ('Crypto', 'crypto', 'Cryptocurrency and digital assets.'),
+        ('Commodities', 'commodities', 'Oil, gold, and commodities.'),
+        ('Personal Finance', 'personal-finance', 'Investing and wealth.'),
+        ('Real Estate', 'real-estate', 'Property market news.'),
+    ]
 
-        self.market_topics = {
-            'equities': ['stock', 'equity', 'shares', 'nasdaq', 'nyse', 's&p 500', 'dow jones'],
-            'fixed_income': ['bond', 'treasury', 'yield', 'fixed income', 'credit', 'debt'],
-            'forex': ['forex', 'currency', 'dollar', 'euro', 'yen', 'fx', 'exchange rate'],
-            'commodities': ['oil', 'gold', 'commodity', 'crude', 'copper', 'silver'],
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch financial news from professional sources.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of article dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add market section links
+        try:
+            sections = self._get_section_links()
+            all_items.extend(sections)
+        except Exception as e:
+            logger.warning(f"Error getting Bloomberg sections: {e}")
+
+        # If feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Bloomberg spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from finance RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Detect market topic and indicators
+                text = f"{title} {description}".lower()
+                market_topic = self._detect_market_topic(text)
+                economic_indicator = self._detect_economic_indicator(text)
+                is_high_impact = self._is_high_impact(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name.replace('_', ' ').title()),
+                    'category': market_topic,
+                    'market_topic': market_topic,
+                    'economic_indicator': economic_indicator,
+                    'is_high_impact': is_high_impact,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'finance_article',
+                    'platform': 'bloomberg',
+                    'tags': ['finance', 'markets', 'economics', market_topic],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_market_topic(self, text: str) -> str:
+        """Detect market topic from text."""
+        topics = {
+            'equities': ['stock', 'equity', 'shares', 'nasdaq', 'nyse', 's&p 500', 'dow'],
+            'fixed_income': ['bond', 'treasury', 'yield', 'fixed income', 'credit'],
+            'forex': ['forex', 'currency', 'dollar', 'euro', 'yen', 'exchange rate'],
+            'commodities': ['oil', 'gold', 'commodity', 'crude', 'copper'],
             'crypto': ['bitcoin', 'crypto', 'ethereum', 'digital asset'],
         }
 
-        self.economic_indicators = {
-            'monetary': ['fed', 'central bank', 'interest rate', 'rate hike', 'rate cut', 'monetary policy'],
-            'inflation': ['inflation', 'cpi', 'pce', 'price', 'deflation'],
-            'employment': ['jobs', 'employment', 'unemployment', 'payroll', 'labor'],
-            'gdp': ['gdp', 'growth', 'recession', 'expansion', 'economic'],
+        for topic, keywords in topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
+
+    def _detect_economic_indicator(self, text: str) -> str:
+        """Detect economic indicator from text."""
+        indicators = {
+            'monetary': ['fed', 'central bank', 'interest rate', 'rate hike'],
+            'inflation': ['inflation', 'cpi', 'pce', 'price'],
+            'employment': ['jobs', 'employment', 'unemployment', 'payroll'],
+            'gdp': ['gdp', 'growth', 'recession', 'economic'],
         }
 
-        self.news_types = {
-            'breaking': ['breaking', 'just in', 'alert', 'urgent'],
-            'analysis': ['analysis', 'outlook', 'forecast', 'opinion'],
-            'data': ['report', 'data', 'numbers', 'statistics', 'figures'],
-            'corporate': ['earnings', 'merger', 'acquisition', 'm&a', 'ipo', 'deal'],
-        }
+        for indicator, keywords in indicators.items():
+            if any(kw in text for kw in keywords):
+                return indicator
+        return None
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch professional finance data"""
-        try:
-            all_items = []
+    def _is_high_impact(self, text: str) -> bool:
+        """Check if news is high impact."""
+        high_impact = ['surge', 'plunge', 'crash', 'soar', 'tumble', 'record',
+                       'historic', 'breaking', 'alert', 'urgent']
+        return any(word in text for word in high_impact)
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:15]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'items': all_items, 'source': 'bloomberg_ecosystem'}
-
-        except Exception as e:
-            self.logger.error(f"Error fetching Bloomberg data: {e}")
-            return None
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process professional finance data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
-
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
-
-            insights = self._generate_market_insights(processed_items)
-
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'market_coverage': self._analyze_market_coverage(processed_items),
-                'economic_focus': self._analyze_economic_focus(processed_items),
-                'breaking_news': self._extract_breaking(processed_items),
-                'market_movers': self._identify_market_movers(processed_items),
+    def _get_section_links(self) -> List[Dict[str, Any]]:
+        """Return Bloomberg section links."""
+        return [
+            {
+                'title': f"Bloomberg: {name}",
+                'url': f'https://www.bloomberg.com/{slug}',
+                'link': f'https://www.bloomberg.com/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Bloomberg',
+                'data_type': 'finance_section',
+                'platform': 'bloomberg',
+                'tags': ['finance', 'bloomberg', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.SECTIONS
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 25 + 0.4)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Market News', 'markets', 'Stock and bond markets.'),
+            ('Economic Data', 'economics', 'Economic indicators and data.'),
+            ('Company News', 'companies', 'Corporate earnings and news.'),
+            ('Tech Sector', 'technology', 'Technology company coverage.'),
+            ('Crypto Markets', 'crypto', 'Digital asset news.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='bloomberg.com',
-                data_type='professional_finance',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'bloomberg_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['markets', 'finance', 'economics', 'professional', 'trading'],
-                target_agents=['market_agent', 'trading_agent', 'macro_agent'],
-                target_advisors=['market_strategist', 'chief_economist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Bloomberg data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify market topic
-            market_topic = 'general'
-            for topic, keywords in self.market_topics.items():
-                if any(kw in text for kw in keywords):
-                    market_topic = topic
-                    break
-
-            # Identify economic indicator
-            economic_indicator = None
-            for indicator, keywords in self.economic_indicators.items():
-                if any(kw in text for kw in keywords):
-                    economic_indicator = indicator
-                    break
-
-            # Identify news type
-            news_type = 'news'
-            for ntype, keywords in self.news_types.items():
-                if any(kw in text for kw in keywords):
-                    news_type = ntype
-                    break
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            # Market impact assessment
-            high_impact_words = ['surge', 'plunge', 'crash', 'soar', 'tumble', 'record', 'historic']
-            is_high_impact = any(word in text for word in high_impact_words)
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'market_topic': market_topic,
-                'economic_indicator': economic_indicator,
-                'news_type': news_type,
-                'is_breaking': news_type == 'breaking',
-                'is_high_impact': is_high_impact,
-                'sentiment': sentiment,
+                'url': f'https://www.bloomberg.com/{category}',
+                'link': f'https://www.bloomberg.com/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Bloomberg',
+                'data_type': 'finance_topic',
+                'platform': 'bloomberg',
+                'tags': ['finance', 'bloomberg', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_market_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate market insights"""
-        if not items:
-            return {}
-
-        breaking = [i for i in items if i.get('is_breaking')]
-        high_impact = [i for i in items if i.get('is_high_impact')]
-
-        topic_counts = {}
-        for item in items:
-            topic = item.get('market_topic', 'general')
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1
-
-        avg_sentiment = sum(i.get('sentiment', 0) for i in items) / len(items) if items else 0
-
-        return {
-            'total_items': len(items),
-            'breaking_news': len(breaking),
-            'high_impact_stories': len(high_impact),
-            'market_focus': sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'market_mood': 'risk-on' if avg_sentiment > 0.1 else 'risk-off' if avg_sentiment < -0.1 else 'neutral',
-        }
-
-    def _analyze_market_coverage(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze market topic coverage"""
-        topic_counts = {}
-        for item in items:
-            topic = item.get('market_topic', 'general')
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1
-        return dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _analyze_economic_focus(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze economic indicator focus"""
-        indicator_counts = {}
-        for item in items:
-            indicator = item.get('economic_indicator')
-            if indicator:
-                indicator_counts[indicator] = indicator_counts.get(indicator, 0) + 1
-        return dict(sorted(indicator_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_breaking(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract breaking news"""
-        breaking = []
-        for item in items:
-            if item.get('is_breaking') or item.get('is_high_impact'):
-                breaking.append({
-                    'title': item.get('title'),
-                    'market_topic': item.get('market_topic'),
-                    'sentiment': item.get('sentiment'),
-                    'link': item.get('link'),
-                })
-        return breaking[:5]
-
-    def _identify_market_movers(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify market-moving stories"""
-        movers = []
-        for item in items:
-            if item.get('is_high_impact'):
-                movers.append({
-                    'title': item.get('title'),
-                    'market_topic': item.get('market_topic'),
-                    'economic_indicator': item.get('economic_indicator'),
-                    'link': item.get('link'),
-                })
-        return movers[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['market', 'stocks', 'bonds', 'fed', 'economy', 'trading', 'finance']
+            for title, category, desc in topics
+        ]
