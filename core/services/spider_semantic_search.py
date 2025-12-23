@@ -235,6 +235,8 @@ class SpiderSemanticSearch:
                     flat_items.append(item)
 
             for item in flat_items:
+                if not isinstance(item, dict):
+                    continue
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
                     continue
@@ -554,6 +556,8 @@ class SpiderSemanticSearch:
                     flat_items.append(item)
 
             for item in flat_items[:10]:
+                if not isinstance(item, dict):
+                    continue
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
                     continue
