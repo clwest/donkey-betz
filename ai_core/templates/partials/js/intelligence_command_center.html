@@ -822,16 +822,106 @@ const ICCState = {
                 break;
 
             case 'agent':
-                const situations = this.agentToSituations[id] || [];
-                html = `
+                // Session 537: Show loading, then fetch real agent data
+                panel.innerHTML = `
                     <h6>&#129302; Agent: ${id}</h6>
-                    <p style="color: #9ca3af; font-size: 0.8rem;">Autonomous situations using this agent:</p>
-                    <div class="icc-connections">
-                        ${situations.length > 0 ? situations.map(s => `
-                            <span class="icc-connection-badge situation" onclick="ICCState.showDetail('situation', '${s}')">${s.replace(/_/g, ' ')}</span>
-                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">No linked situations</span>'}
-                    </div>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Loading agent details...</p>
                 `;
+
+                try {
+                    const agentResponse = await fetch(`/api/agent-intelligence/detail/${encodeURIComponent(id)}/`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const agentData = await agentResponse.json();
+
+                    if (agentData.status === 'success' && agentData.found) {
+                        const agent = agentData.agent;
+                        const convos = agentData.conversations || [];
+                        const knowledge = agentData.knowledge || [];
+                        const transfers = agentData.transfers || {};
+
+                        // Effectiveness bar color
+                        const effColor = agent.effectiveness >= 80 ? '#22c55e' : agent.effectiveness >= 50 ? '#fbbf24' : '#ef4444';
+
+                        html = `
+                            <h6 style="margin-bottom: 8px;">&#129302; ${agent.name}</h6>
+                            <div style="color: #a855f7; font-size: 0.75rem; margin-bottom: 8px;">${agent.category} • ${agent.type}</div>
+                            <p style="color: #d1d5db; font-size: 0.8rem; margin-bottom: 12px;">${agent.description}</p>
+
+                            <!-- Stats Grid -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Executions</div>
+                                    <div style="color: #60a5fa; font-weight: 600;">${agent.total_executions}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Success</div>
+                                    <div style="color: #22c55e; font-weight: 600;">${agent.successful_executions}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Effectiveness</div>
+                                    <div style="color: ${effColor}; font-weight: 600;">${agent.effectiveness}%</div>
+                                </div>
+                            </div>
+
+                            ${knowledge.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Recent Knowledge</div>
+                                ${knowledge.slice(0, 3).map(k => `
+                                    <div style="background: rgba(34, 197, 94, 0.1); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px; border-left: 2px solid #22c55e;">
+                                        <div style="color: #e5e7eb; font-size: 0.8rem;">${k.title}</div>
+                                        ${k.summary ? `<div style="color: #9ca3af; font-size: 0.7rem;">${k.summary}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+
+                            ${transfers.taught && transfers.taught.length > 0 ? `
+                            <div style="margin-bottom: 8px;">
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Taught To</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${transfers.taught.map(t => `<span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${t.to}')" style="font-size: 0.7rem;">${t.to.replace('Agent', '')}</span>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${transfers.learned && transfers.learned.length > 0 ? `
+                            <div>
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Learned From</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${transfers.learned.map(t => `<span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${t.from}')" style="font-size: 0.7rem;">${t.from.replace('Agent', '')}</span>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                        `;
+                    } else {
+                        // Agent not found - show basic info
+                        const situations = this.agentToSituations[id] || [];
+                        html = `
+                            <h6>&#129302; Agent: ${id}</h6>
+                            <p style="color: #fbbf24; font-size: 0.8rem;">Agent details not found in database.</p>
+                            <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Linked situations:</p>
+                            <div class="icc-connections">
+                                ${situations.length > 0 ? situations.map(s => `
+                                    <span class="icc-connection-badge situation" onclick="ICCState.showDetail('situation', '${s}')">${s.replace(/_/g, ' ')}</span>
+                                `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">No linked situations</span>'}
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('ICC: Failed to load agent detail:', error);
+                    const situations = this.agentToSituations[id] || [];
+                    html = `
+                        <h6>&#129302; Agent: ${id}</h6>
+                        <p style="color: #ef4444; font-size: 0.8rem;">Failed to load agent details</p>
+                        <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Linked situations:</p>
+                        <div class="icc-connections">
+                            ${situations.length > 0 ? situations.map(s => `
+                                <span class="icc-connection-badge situation" onclick="ICCState.showDetail('situation', '${s}')">${s.replace(/_/g, ' ')}</span>
+                            `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">No linked situations</span>'}
+                        </div>
+                    `;
+                }
                 break;
 
             case 'situation':
