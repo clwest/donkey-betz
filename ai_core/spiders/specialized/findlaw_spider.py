@@ -182,9 +182,10 @@ class FindLawSpider:
 
             soup = BeautifulSoup(response.content, 'html.parser')
             articles = []
+            seen_urls = set()
 
-            # Find article links
-            article_links = soup.find_all('a', href=lambda h: h and path in h, limit=max_results)
+            # Find article links - look for deeper content pages (with .html extension)
+            article_links = soup.find_all('a', href=lambda h: h and path in h and '.html' in h)
 
             for link in article_links:
                 try:
@@ -196,19 +197,38 @@ class FindLawSpider:
                     if not article_url.startswith('http'):
                         article_url = f"{self.base_url}{article_url}"
 
-                    # Skip duplicate base URLs
-                    if article_url == url or article_url == f"{self.base_url}{path}/":
+                    # Skip duplicate base URLs and category pages
+                    if article_url == url or article_url in seen_urls:
                         continue
+
+                    # Skip main category pages (only one path segment after practice area)
+                    url_path = article_url.replace(self.base_url, '')
+                    if url_path.count('/') < 2:
+                        continue
+
+                    seen_urls.add(article_url)
+
+                    # Try to get summary from parent element
+                    summary = ''
+                    parent = link.find_parent(['li', 'div', 'article'])
+                    if parent:
+                        p_tag = parent.find('p')
+                        if p_tag:
+                            summary = p_tag.get_text(strip=True)[:200]
 
                     articles.append({
                         'title': title,
                         'url': article_url,
+                        'summary': summary or f"Legal information about {title.lower()} in {practice_area} law.",
                         'practice_area': practice_area,
                         'source': 'FindLaw',
                         'data_type': 'legal_article',
-                        'tags': ['legal', 'article', practice_area.replace('-', '_')],
+                        'tags': ['legal', 'article', practice_area.replace('-', '_')] + self._extract_tags(title, summary, practice_area),
                         'timestamp': datetime.now().isoformat(),
                     })
+
+                    if len(articles) >= max_results:
+                        break
 
                 except Exception as e:
                     logger.warning(f"Error parsing practice area link: {e}")
