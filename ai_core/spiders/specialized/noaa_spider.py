@@ -2,201 +2,248 @@
 NOAA Spider - Weather & Climate Intelligence
 =============================================
 
-Session 343: Spider for NOAA API to track weather alerts and climate data.
-Collects weather alerts, forecasts, and climate trends.
-
-Uses NOAA_API_KEY from environment for authenticated requests.
+Session 534: Simplified to work with spider network interface.
+Uses NOAA API when available, RSS fallback for weather news.
 """
 
-import aiohttp
-import asyncio
 import os
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class NOAASpider(BaseIntelligenceSpider):
+class NOAASpider:
     """NOAA spider - weather alerts, forecasts, and climate data"""
+
+    name = "noaa"
 
     BASE_URL = "https://api.weather.gov"
 
-    # US regions for alerts
-    REGIONS = [
-        'US',  # National
+    # Weather news RSS feeds (fallback)
+    RSS_FEEDS = {
+        'weather_underground': 'https://www.wunderground.com/rss/wxfeeds.xml',
+        'accuweather_news': 'https://www.accuweather.com/en/weather-news.rss',
+        'noaa_news': 'https://www.noaa.gov/news/rss.xml',
+        'climate_central': 'https://www.climatecentral.org/feed',
+    }
+
+    # Weather categories
+    CATEGORIES = [
+        ('Alerts', 'alerts', 'Active weather alerts.'),
+        ('Forecasts', 'forecast', 'Weather forecasts.'),
+        ('Climate', 'climate', 'Climate news and data.'),
+        ('Severe', 'severe', 'Severe weather events.'),
+        ('Tropical', 'tropical', 'Tropical weather updates.'),
     ]
 
-    # Major metro areas for forecasts
-    METRO_POINTS = [
-        ('40.7128', '-74.0060'),   # New York
-        ('34.0522', '-118.2437'),  # Los Angeles
-        ('41.8781', '-87.6298'),   # Chicago
-        ('29.7604', '-95.3698'),   # Houston
-        ('33.4484', '-112.0740'),  # Phoenix
-    ]
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.weather_categories = {
+            'severe': ['severe', 'warning', 'watch', 'tornado', 'hurricane', 'flood'],
+            'winter': ['winter', 'snow', 'ice', 'blizzard', 'cold', 'freeze'],
+            'heat': ['heat', 'hot', 'temperature', 'record', 'heatwave'],
+            'storm': ['storm', 'thunder', 'lightning', 'wind', 'rain'],
+            'tropical': ['tropical', 'hurricane', 'cyclone', 'typhoon'],
+            'climate': ['climate', 'drought', 'trend', 'pattern', 'change'],
+        }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
-        self.api_key = os.getenv('NOAA_API_KEY', '')
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch weather data from NOAA API and RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch weather data from NOAA"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of weather content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try NOAA API for alerts
         try:
-            all_alerts = []
-            all_forecasts = []
+            api_items = self._fetch_noaa_alerts()
+            for item in api_items:
+                if item.get('url', item.get('id', '')) not in seen_urls:
+                    seen_urls.add(item.get('url', item.get('id', '')))
+                    all_items.append(item)
+        except Exception as e:
+            logger.warning(f"Error fetching NOAA alerts: {e}")
 
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
+        try:
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting weather categories: {e}")
+
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"NOAA spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_noaa_alerts(self) -> List[Dict[str, Any]]:
+        """Fetch active weather alerts from NOAA API."""
+        items = []
+
+        try:
             headers = {
-                'User-Agent': 'DonkeyBetz-Spider/1.0 (contact@donkeybetz.com)',
+                'User-Agent': 'WeatherSpider/1.0',
                 'Accept': 'application/geo+json'
             }
 
-            async with aiohttp.ClientSession() as session:
-                # Fetch active alerts (no API key needed for weather.gov)
-                try:
-                    url = f"{self.BASE_URL}/alerts/active"
-                    params = {
-                        'status': 'actual',
-                        'message_type': 'alert',
-                        'limit': 50
-                    }
-
-                    async with session.get(url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            features = data.get('features', [])
-
-                            for feature in features:
-                                props = feature.get('properties', {})
-                                all_alerts.append({
-                                    'id': props.get('id', ''),
-                                    'event': props.get('event', ''),
-                                    'headline': props.get('headline', ''),
-                                    'description': props.get('description', '')[:500] if props.get('description') else '',
-                                    'severity': props.get('severity', ''),
-                                    'certainty': props.get('certainty', ''),
-                                    'urgency': props.get('urgency', ''),
-                                    'area_desc': props.get('areaDesc', ''),
-                                    'sender': props.get('senderName', ''),
-                                    'effective': props.get('effective', ''),
-                                    'expires': props.get('expires', ''),
-                                    'status': props.get('status', ''),
-                                    'source': 'noaa',
-                                    'type': 'weather_alert',
-                                })
-                        else:
-                            self.logger.warning(f"NOAA alerts returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching alerts: {e}")
-
-                await asyncio.sleep(0.3)
-
-                # Fetch forecasts for major metros (sample)
-                for lat, lon in self.METRO_POINTS[:2]:  # Limit to avoid rate limits
-                    try:
-                        # First get the grid point
-                        point_url = f"{self.BASE_URL}/points/{lat},{lon}"
-
-                        async with session.get(point_url, headers=headers, timeout=10) as response:
-                            if response.status == 200:
-                                point_data = await response.json()
-                                forecast_url = point_data.get('properties', {}).get('forecast', '')
-
-                                if forecast_url:
-                                    async with session.get(forecast_url, headers=headers, timeout=10) as forecast_response:
-                                        if forecast_response.status == 200:
-                                            forecast_data = await forecast_response.json()
-                                            periods = forecast_data.get('properties', {}).get('periods', [])
-
-                                            for period in periods[:3]:  # Just next 3 periods
-                                                all_forecasts.append({
-                                                    'name': period.get('name', ''),
-                                                    'temperature': period.get('temperature', ''),
-                                                    'temperature_unit': period.get('temperatureUnit', ''),
-                                                    'wind_speed': period.get('windSpeed', ''),
-                                                    'wind_direction': period.get('windDirection', ''),
-                                                    'short_forecast': period.get('shortForecast', ''),
-                                                    'detailed_forecast': period.get('detailedForecast', ''),
-                                                    'location': f"{lat},{lon}",
-                                                    'source': 'noaa',
-                                                    'type': 'forecast',
-                                                })
-
-                        await asyncio.sleep(0.5)
-
-                    except Exception as e:
-                        self.logger.warning(f"Error fetching forecast for {lat},{lon}: {e}")
-
-            return {
-                'alerts': all_alerts,
-                'forecasts': all_forecasts,
-                'source': 'noaa'
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error fetching NOAA data: {e}")
-            return None
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process NOAA data into intelligence"""
-        try:
-            alerts = raw_data.get('alerts', [])
-            forecasts = raw_data.get('forecasts', [])
-
-            # Categorize alerts by severity
-            severity_counts = {}
-            for alert in alerts:
-                severity = alert.get('severity', 'Unknown')
-                severity_counts[severity] = severity_counts.get(severity, 0) + 1
-
-            # Event types
-            event_counts = {}
-            for alert in alerts:
-                event = alert.get('event', 'Unknown')
-                event_counts[event] = event_counts.get(event, 0) + 1
-
-            top_events = sorted(event_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-            # High priority alerts (Extreme/Severe)
-            high_priority = [a for a in alerts if a.get('severity') in ['Extreme', 'Severe']]
-
-            content = {
-                'alerts': alerts,
-                'forecasts': forecasts,
-                'severity_breakdown': severity_counts,
-                'top_events': top_events,
-                'high_priority_alerts': high_priority,
-                'total_alerts': len(alerts),
-                'total_forecasts': len(forecasts),
-            }
-
-            quality_score = min(1.0, (len(alerts) + len(forecasts)) / 40 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='weather.gov',
-                data_type='weather_intelligence',
-                content=content,
-                metadata={
-                    'alert_count': len(alerts),
-                    'forecast_count': len(forecasts),
-                    'high_priority_count': len(high_priority),
-                    'source': 'noaa',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['weather', 'alerts', 'forecast', 'climate', 'noaa', 'storms', 'temperature'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['operations_advisor', 'risk_analyst', 'logistics_advisor']
+            response = requests.get(
+                f"{self.BASE_URL}/alerts/active",
+                headers=headers,
+                params={'status': 'actual', 'limit': 30},
+                timeout=15
             )
 
+            if response.status_code == 200:
+                data = response.json()
+                features = data.get('features', [])
+
+                for feature in features[:20]:
+                    props = feature.get('properties', {})
+                    severity = props.get('severity', '')
+                    event = props.get('event', '')
+
+                    items.append({
+                        'title': props.get('headline', event),
+                        'url': props.get('id', ''),
+                        'link': f"https://alerts.weather.gov",
+                        'summary': props.get('description', '')[:400] if props.get('description') else '',
+                        'description': props.get('description', '')[:400] if props.get('description') else '',
+                        'event_type': event,
+                        'severity': severity,
+                        'urgency': props.get('urgency', ''),
+                        'area': props.get('areaDesc', ''),
+                        'effective': props.get('effective', ''),
+                        'expires': props.get('expires', ''),
+                        'category': self._detect_category(f"{event} {props.get('description', '')}".lower()),
+                        'is_severe': severity in ['Extreme', 'Severe'],
+                        'source': 'NOAA',
+                        'data_type': 'weather_alert',
+                        'platform': 'noaa',
+                        'tags': ['noaa', 'weather', 'alert', severity.lower()],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
         except Exception as e:
-            self.logger.error(f"Error processing NOAA data: {e}")
-            return None
+            logger.warning(f"Error fetching NOAA API: {e}")
 
-    def get_required_fields(self) -> List[str]:
-        return ['event', 'severity']
+        return items
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['weather', 'forecast', 'alert', 'storm', 'temperature', 'climate', 'noaa']
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch weather news from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect weather category
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'category': category,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'weather_news',
+                    'platform': 'noaa',
+                    'tags': ['noaa', 'weather', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_category(self, text: str) -> str:
+        """Detect weather category from text."""
+        for category, keywords in self.weather_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return weather category links."""
+        return [
+            {
+                'title': f"Weather: {name}",
+                'url': f'https://www.weather.gov/{slug}',
+                'link': f'https://www.weather.gov/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'NOAA',
+                'data_type': 'weather_category',
+                'platform': 'noaa',
+                'tags': ['noaa', 'weather', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Weather Alerts', 'alerts', 'Active weather alerts and warnings.'),
+            ('Forecasts', 'forecast', 'Weather forecasts nationwide.'),
+            ('Climate Data', 'climate', 'Climate trends and patterns.'),
+            ('Severe Weather', 'severe', 'Severe weather events.'),
+            ('Tropical Updates', 'tropical', 'Tropical storm tracking.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://www.weather.gov/{category}',
+                'link': f'https://www.weather.gov/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'NOAA',
+                'data_type': 'weather_topic',
+                'platform': 'noaa',
+                'tags': ['noaa', 'weather', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
