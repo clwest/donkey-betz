@@ -2,32 +2,47 @@
 Hacker News Spider - Tech Community & Startup Intelligence
 ===========================================================
 
-Session 218: Specialized spider for Hacker News (Y Combinator).
-Focuses on tech discussions, startup news, and developer trends.
+Session 534: Simplified to work with spider network interface.
+Uses Hacker News RSS feeds for tech discussions and startup news.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class HackerNewsSpider(BaseIntelligenceSpider):
+class HackerNewsSpider:
     """Hacker News spider - tech community and startup intelligence"""
+
+    name = "hackernews"
 
     # HN RSS feeds
     RSS_FEEDS = {
         'front_page': 'https://hnrss.org/frontpage',
         'best': 'https://hnrss.org/best',
         'newest': 'https://hnrss.org/newest?count=30',
+        'show_hn': 'https://hnrss.org/show',
+        'ask_hn': 'https://hnrss.org/ask',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Topic categories
+    TOPICS = [
+        ('AI & ML', 'ai_ml', 'Artificial intelligence and machine learning.'),
+        ('Startups', 'startups', 'Startup news and YC companies.'),
+        ('Programming', 'programming', 'Programming discussions.'),
+        ('Web Dev', 'webdev', 'Web development topics.'),
+        ('DevOps', 'devops', 'DevOps and infrastructure.'),
+        ('Security', 'security', 'Security and privacy.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.tech_topics = {
             'programming': ['programming', 'code', 'software', 'developer', 'algorithm', 'api'],
             'ai_ml': ['ai', 'machine learning', 'gpt', 'llm', 'neural', 'openai', 'anthropic'],
@@ -39,243 +54,166 @@ class HackerNewsSpider(BaseIntelligenceSpider):
             'open_source': ['open source', 'github', 'oss', 'linux', 'mit license'],
         }
 
-        self.content_types = {
-            'show_hn': ['show hn', 'launch'],
-            'ask_hn': ['ask hn', 'question'],
-            'news': ['announces', 'releases', 'launches'],
-            'discussion': ['why', 'how', 'what', 'opinion'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch Hacker News content from RSS feeds.
 
-        self.engagement_signals = {
-            'high_engagement': ['comments', 'points', 'upvotes'],
-            'controversial': ['debate', 'disagree', 'unpopular'],
-        }
+        Args:
+            max_results: Maximum number of items to fetch
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Hacker News data"""
+        Returns:
+            List of HN content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add topic links
         try:
-            all_items = []
+            topics = self._get_topic_links()
+            all_items.extend(topics)
+        except Exception as e:
+            logger.warning(f"Error getting HN topics: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:25]:
-                            # Extract points and comments from description
-                            description = entry.get('summary', entry.get('description', ''))
-                            points = 0
-                            comments = 0
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-                            # HN RSS includes points and comments in description
-                            if 'points' in description.lower():
-                                try:
-                                    import re
-                                    points_match = re.search(r'(\d+)\s*points?', description.lower())
-                                    if points_match:
-                                        points = int(points_match.group(1))
-                                    comments_match = re.search(r'(\d+)\s*comments?', description.lower())
-                                    if comments_match:
-                                        comments = int(comments_match.group(1))
-                                except:
-                                    pass
+        logger.info(f"Hacker News spider collected {len(all_items)} items")
+        return all_items[:max_results]
 
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': description[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                                'points': points,
-                                'comments': comments,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch stories from HN RSS feed."""
+        items = []
 
-            return {'items': all_items, 'source': 'hackernews'}
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:20]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Extract points and comments from description
+                points = 0
+                comments = 0
+                if summary:
+                    points_match = re.search(r'(\d+)\s*points?', summary.lower())
+                    if points_match:
+                        points = int(points_match.group(1))
+                    comments_match = re.search(r'(\d+)\s*comments?', summary.lower())
+                    if comments_match:
+                        comments = int(comments_match.group(1))
+
+                # Detect topic and content type
+                text = f"{title} {summary}".lower()
+                topic = self._detect_topic(text)
+                content_type = self._detect_content_type(text, feed_name)
+                is_hot = points > 100 or comments > 50
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'points': points,
+                    'comments': comments,
+                    'topic': topic,
+                    'content_type': content_type,
+                    'is_hot': is_hot,
+                    'is_show_hn': 'show hn' in text,
+                    'is_ask_hn': 'ask hn' in text,
+                    'source': 'Hacker News',
+                    'feed_type': feed_name,
+                    'data_type': 'tech_community',
+                    'platform': 'hackernews',
+                    'tags': ['hackernews', 'tech', topic],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Hacker News data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Hacker News data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_topic(self, text: str) -> str:
+        """Detect tech topic from text."""
+        for topic, keywords in self.tech_topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
 
-            insights = self._generate_hn_insights(processed_items)
+    def _detect_content_type(self, text: str, feed_name: str) -> str:
+        """Detect content type from text and feed."""
+        if 'show_hn' in feed_name or 'show hn' in text:
+            return 'show_hn'
+        elif 'ask_hn' in feed_name or 'ask hn' in text:
+            return 'ask_hn'
+        elif any(word in text for word in ['why', 'how', 'what do you think']):
+            return 'discussion'
+        return 'news'
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_topic': self._group_by_topic(processed_items),
-                'trending_topics': self._analyze_trending(processed_items),
-                'show_hn': self._extract_show_hn(processed_items),
-                'hot_discussions': self._extract_hot_discussions(processed_items),
+    def _get_topic_links(self) -> List[Dict[str, Any]]:
+        """Return HN topic exploration links."""
+        return [
+            {
+                'title': f"HN: {name}",
+                'url': f'https://news.ycombinator.com/',
+                'link': f'https://news.ycombinator.com/',
+                'summary': desc,
+                'description': desc,
+                'topic': slug,
+                'category': slug,
+                'source': 'Hacker News',
+                'data_type': 'hn_topic',
+                'platform': 'hackernews',
+                'tags': ['hackernews', 'tech', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.TOPICS
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 30 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('HN Front Page', 'frontpage', 'Top stories from Hacker News.'),
+            ('Show HN', 'show', 'New projects and launches.'),
+            ('Ask HN', 'ask', 'Community questions.'),
+            ('Best Stories', 'best', 'Highest-rated submissions.'),
+            ('New Stories', 'new', 'Latest submissions.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='news.ycombinator.com',
-                data_type='tech_community',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'hackernews',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['tech', 'startups', 'programming', 'ycombinator', 'developers'],
-                target_agents=['tech_agent', 'startup_agent', 'developer_agent'],
-                target_advisors=['tech_advisor', 'startup_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Hacker News data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify tech topic
-            topic = 'general'
-            for top, keywords in self.tech_topics.items():
-                if any(kw in text for kw in keywords):
-                    topic = top
-                    break
-
-            # Identify content type
-            content_type = 'news'
-            if 'show hn' in text:
-                content_type = 'show_hn'
-            elif 'ask hn' in text:
-                content_type = 'ask_hn'
-            elif any(word in text for word in ['why', 'how', 'what do you think']):
-                content_type = 'discussion'
-
-            # Calculate engagement level
-            points = item.get('points', 0)
-            comments = item.get('comments', 0)
-            is_hot = points > 100 or comments > 50
-            is_trending = points > 50 or comments > 20
-
-            # Sentiment
-            blob = TextBlob(title)
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'topic': topic,
-                'content_type': content_type,
-                'points': points,
-                'comments': comments,
-                'is_hot': is_hot,
-                'is_trending': is_trending,
-                'is_show_hn': content_type == 'show_hn',
-                'is_ask_hn': content_type == 'ask_hn',
-                'sentiment': sentiment,
+                'url': f'https://news.ycombinator.com/{category}',
+                'link': f'https://news.ycombinator.com/{category}',
+                'summary': desc,
+                'description': desc,
+                'topic': category,
+                'category': category,
+                'source': 'Hacker News',
+                'data_type': 'hn_topic',
+                'platform': 'hackernews',
+                'tags': ['hackernews', 'tech', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_hn_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate Hacker News insights"""
-        if not items:
-            return {}
-
-        hot_items = [i for i in items if i.get('is_hot')]
-        show_hn = [i for i in items if i.get('is_show_hn')]
-        ask_hn = [i for i in items if i.get('is_ask_hn')]
-
-        topic_counts = {}
-        for item in items:
-            topic = item.get('topic', 'general')
-            topic_counts[topic] = topic_counts.get(topic, 0) + 1
-
-        total_points = sum(i.get('points', 0) for i in items)
-        total_comments = sum(i.get('comments', 0) for i in items)
-
-        return {
-            'total_items': len(items),
-            'hot_stories': len(hot_items),
-            'show_hn_count': len(show_hn),
-            'ask_hn_count': len(ask_hn),
-            'total_engagement': total_points + total_comments,
-            'hot_topics': sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'community_mood': 'active' if len(hot_items) > 5 else 'normal',
-        }
-
-    def _group_by_topic(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by tech topic"""
-        groups = {}
-        for item in items:
-            topic = item.get('topic', 'general')
-            if topic not in groups:
-                groups[topic] = []
-            groups[topic].append({
-                'title': item.get('title'),
-                'points': item.get('points'),
-                'comments': item.get('comments'),
-                'link': item.get('link'),
-            })
-        return groups
-
-    def _analyze_trending(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze trending topics"""
-        topic_counts = {}
-        for item in items:
-            if item.get('is_trending'):
-                topic = item.get('topic', 'general')
-                topic_counts[topic] = topic_counts.get(topic, 0) + 1
-        return dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_show_hn(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract Show HN posts"""
-        show_hn = []
-        for item in items:
-            if item.get('is_show_hn'):
-                show_hn.append({
-                    'title': item.get('title'),
-                    'topic': item.get('topic'),
-                    'points': item.get('points'),
-                    'link': item.get('link'),
-                })
-        return sorted(show_hn, key=lambda x: x.get('points', 0), reverse=True)[:5]
-
-    def _extract_hot_discussions(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract hot discussions"""
-        hot = []
-        for item in items:
-            if item.get('is_hot') or item.get('comments', 0) > 30:
-                hot.append({
-                    'title': item.get('title'),
-                    'topic': item.get('topic'),
-                    'comments': item.get('comments'),
-                    'link': item.get('link'),
-                })
-        return sorted(hot, key=lambda x: x.get('comments', 0), reverse=True)[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['hacker news', 'hn', 'startup', 'programming', 'tech', 'developer']
+            for title, category, desc in topics
+        ]
