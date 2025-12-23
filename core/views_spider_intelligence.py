@@ -2032,3 +2032,109 @@ def agent_detail(request, agent_name):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def situation_detail(request, situation_type):
+    """
+    Session 537: Get detailed data for a specific autonomous situation.
+
+    Returns situation config, recent trigger events, and related entities.
+    Used by ICC detail panel to show actual situation activity.
+    """
+    try:
+        from core.models_situation_triggers import SituationTrigger, TriggerEvent
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Find triggers for this situation type
+        triggers = SituationTrigger.objects.filter(
+            situation_type__iexact=situation_type.replace(' ', '_')
+        )
+
+        if not triggers.exists():
+            # Try without underscores
+            triggers = SituationTrigger.objects.filter(
+                situation_type__icontains=situation_type.replace('_', ' ').replace(' ', '')[:10]
+            )
+
+        if not triggers.exists():
+            return JsonResponse({
+                'status': 'success',
+                'situation_type': situation_type,
+                'found': False,
+                'message': 'Situation not found'
+            })
+
+        # Get trigger info
+        trigger_list = []
+        total_fires = 0
+        target_spiders = set()
+
+        for trig in triggers:
+            trigger_list.append({
+                'name': trig.name,
+                'description': trig.description or '',
+                'trigger_type': trig.trigger_type or 'threshold',
+                'severity': trig.severity or 'medium',
+                'target_field': trig.target_field or '',
+                'operator': trig.operator or '',
+                'threshold': trig.threshold_value or '',
+                'cooldown': trig.cooldown_minutes or 60,
+                'total_fires': trig.total_fires or 0,
+                'is_active': trig.is_active,
+                'last_triggered': trig.last_triggered_at.isoformat() if trig.last_triggered_at else None,
+            })
+            total_fires += trig.total_fires or 0
+            if trig.target_spiders:
+                for spider in trig.target_spiders:
+                    target_spiders.add(spider)
+
+        # Get recent trigger events
+        trigger_ids = [t.id for t in triggers]
+        recent_events = TriggerEvent.objects.filter(
+            trigger_id__in=trigger_ids
+        ).order_by('-fired_at')[:10]
+
+        events = []
+        for evt in recent_events:
+            events.append({
+                'trigger_name': evt.trigger.name if evt.trigger else 'Unknown',
+                'spider_name': evt.spider_name or 'Unknown',
+                'matched_value': (evt.matched_value or '')[:100],
+                'severity': evt.trigger.severity if evt.trigger else 'medium',
+                'status': evt.status or 'fired',
+                'discord_sent': evt.discord_sent,
+                'fired_at': evt.fired_at.isoformat() if evt.fired_at else None,
+            })
+
+        # Calculate stats
+        last_24h = timezone.now() - timedelta(hours=24)
+        fires_24h = TriggerEvent.objects.filter(
+            trigger_id__in=trigger_ids,
+            fired_at__gte=last_24h
+        ).count()
+
+        return JsonResponse({
+            'status': 'success',
+            'situation_type': situation_type,
+            'found': True,
+            'situation': {
+                'type': situation_type,
+                'display_name': situation_type.replace('_', ' ').title(),
+                'trigger_count': len(trigger_list),
+                'total_fires': total_fires,
+                'fires_24h': fires_24h,
+                'target_spiders': sorted(list(target_spiders)),
+            },
+            'triggers': trigger_list,
+            'recent_events': events,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in situation_detail: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)

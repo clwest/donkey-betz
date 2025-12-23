@@ -925,16 +925,113 @@ const ICCState = {
                 break;
 
             case 'situation':
-                const spiders = this.situationToSpiders[id] || [];
-                html = `
+                // Session 537: Show loading, then fetch real situation data
+                panel.innerHTML = `
                     <h6>&#128736; Situation: ${id.replace(/_/g, ' ')}</h6>
-                    <p style="color: #9ca3af; font-size: 0.8rem;">Spider data sources:</p>
-                    <div class="icc-connections">
-                        ${spiders.length > 0 ? spiders.map(s => `
-                            <span class="icc-connection-badge spider" onclick="ICCState.showDetail('spider', '${s}')">${s}</span>
-                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Uses multiple sources</span>'}
-                    </div>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Loading situation details...</p>
                 `;
+
+                try {
+                    const sitResponse = await fetch(`/api/situation-intelligence/detail/${encodeURIComponent(id)}/`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const sitData = await sitResponse.json();
+
+                    if (sitData.status === 'success' && sitData.found) {
+                        const sit = sitData.situation;
+                        const triggers = sitData.triggers || [];
+                        const events = sitData.recent_events || [];
+
+                        html = `
+                            <h6 style="margin-bottom: 8px;">&#128736; ${sit.display_name}</h6>
+
+                            <!-- Stats Grid -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Triggers</div>
+                                    <div style="color: #a855f7; font-weight: 600;">${sit.trigger_count}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Total Fires</div>
+                                    <div style="color: #f97316; font-weight: 600;">${sit.total_fires}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                                    <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Last 24h</div>
+                                    <div style="color: #22c55e; font-weight: 600;">${sit.fires_24h}</div>
+                                </div>
+                            </div>
+
+                            ${sit.target_spiders && sit.target_spiders.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Data Sources</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${sit.target_spiders.map(s => `<span class="icc-connection-badge spider" onclick="ICCState.showDetail('spider', '${s}')" style="font-size: 0.7rem;">${s}</span>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${triggers.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Active Triggers</div>
+                                ${triggers.slice(0, 3).map(t => {
+                                    const sevColors = { 'critical': '#ef4444', 'high': '#f97316', 'medium': '#fbbf24', 'low': '#22c55e' };
+                                    const sevColor = sevColors[t.severity] || '#fbbf24';
+                                    return `
+                                    <div style="background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px; border-left: 2px solid ${sevColor};">
+                                        <div style="color: #e5e7eb; font-size: 0.8rem;">${t.name}</div>
+                                        <div style="color: #9ca3af; font-size: 0.7rem;">${t.trigger_type} • ${t.total_fires} fires • ${t.is_active ? '✓ Active' : '✗ Inactive'}</div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+                            ` : ''}
+
+                            ${events.length > 0 ? `
+                            <div>
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Recent Events</div>
+                                ${events.slice(0, 4).map(e => {
+                                    const sevColors = { 'critical': '#ef4444', 'high': '#f97316', 'medium': '#fbbf24', 'low': '#22c55e' };
+                                    const sevColor = sevColors[e.severity] || '#fbbf24';
+                                    const time = e.fired_at ? new Date(e.fired_at).toLocaleString() : 'Unknown';
+                                    return `
+                                    <div style="background: rgba(249, 115, 22, 0.1); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="color: ${sevColor}; font-size: 0.75rem;">⚡ ${e.trigger_name}</span>
+                                            <span style="color: #6b7280; font-size: 0.65rem;">${time}</span>
+                                        </div>
+                                        <div style="color: #9ca3af; font-size: 0.7rem; margin-top: 2px;">${e.matched_value || 'No value'}</div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+                            ` : ''}
+                        `;
+                    } else {
+                        // Situation not found - show basic info
+                        const spiders = this.situationToSpiders[id] || [];
+                        html = `
+                            <h6>&#128736; Situation: ${id.replace(/_/g, ' ')}</h6>
+                            <p style="color: #fbbf24; font-size: 0.8rem;">Situation details not found.</p>
+                            <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Spider data sources:</p>
+                            <div class="icc-connections">
+                                ${spiders.length > 0 ? spiders.map(s => `
+                                    <span class="icc-connection-badge spider" onclick="ICCState.showDetail('spider', '${s}')">${s}</span>
+                                `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Uses multiple sources</span>'}
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('ICC: Failed to load situation detail:', error);
+                    const spiders = this.situationToSpiders[id] || [];
+                    html = `
+                        <h6>&#128736; Situation: ${id.replace(/_/g, ' ')}</h6>
+                        <p style="color: #ef4444; font-size: 0.8rem;">Failed to load situation details</p>
+                        <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Spider data sources:</p>
+                        <div class="icc-connections">
+                            ${spiders.length > 0 ? spiders.map(s => `
+                                <span class="icc-connection-badge spider" onclick="ICCState.showDetail('spider', '${s}')">${s}</span>
+                            `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Uses multiple sources</span>'}
+                        </div>
+                    `;
+                }
                 break;
 
             case 'trigger':
