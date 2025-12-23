@@ -270,12 +270,8 @@ const ICCState = {
                 <div class="icc-feed-event-time">${this.formatTimeAgo(event.timestamp)}</div>
             `;
 
-            // Prepend to show newest first
-            if (feed.firstChild && feed.firstChild !== emptyState) {
-                feed.insertBefore(eventEl, feed.firstChild);
-            } else {
-                feed.appendChild(eventEl);
-            }
+            // Session 539: Append in order (API already returns newest first)
+            feed.appendChild(eventEl);
         }
 
         // Update event count
