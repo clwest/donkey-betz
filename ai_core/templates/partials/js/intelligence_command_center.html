@@ -702,9 +702,9 @@ const ICCState = {
     },
 
     /**
-     * Show detail panel with cross-references
+     * Session 536: Show detail panel with actual content (async for API fetches)
      */
-    showDetail(type, id) {
+    async showDetail(type, id) {
         const panel = document.getElementById('icc-detail-panel');
         panel.style.display = 'block';
 
@@ -713,17 +713,71 @@ const ICCState = {
         switch (type) {
             case 'spider':
             case 'category':
-                // Session 536: Now uses API data, show proper message if no mapping exists
-                const agents = this.spiderToAgents[id.toLowerCase()] || this.spiderToAgents[id] || [];
-                html = `
+                // Show loading state
+                panel.innerHTML = `
                     <h6>&#128375; ${type === 'category' ? 'Category' : 'Spider'}: ${id}</h6>
-                    <p style="color: #9ca3af; font-size: 0.8rem;">Agents that use this data:</p>
-                    <div class="icc-connections">
-                        ${agents.length > 0 ? agents.map(a => `
-                            <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '').replace('Coordinator', '')}</span>
-                        `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Data available to all research agents</span>'}
-                    </div>
+                    <p style="color: #9ca3af; font-size: 0.8rem;">Loading content...</p>
                 `;
+
+                // Fetch actual spider data
+                try {
+                    const response = await fetch(`/api/spider-intelligence/detail/${encodeURIComponent(id)}/`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success' && data.items && data.items.length > 0) {
+                        // Show agents that use this data
+                        const agents = this.spiderToAgents[id.toLowerCase()] || this.spiderToAgents[id] || [];
+                        const agentBadges = agents.length > 0
+                            ? agents.slice(0, 4).map(a => `<span class="icc-connection-badge agent" style="font-size: 0.65rem;" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '').replace('Coordinator', '')}</span>`).join('')
+                            : '';
+
+                        html = `
+                            <h6 style="margin-bottom: 8px;">&#128375; ${id} <span style="color: #6b7280; font-size: 0.7rem;">(${data.meta?.total_records || 0} records)</span></h6>
+                            ${agentBadges ? `<div style="margin-bottom: 10px;">${agentBadges}</div>` : ''}
+                            <div style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                                ${data.items.map(item => `
+                                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #f97316;">
+                                        <div style="font-size: 0.85rem; color: #e5e7eb; font-weight: 500; margin-bottom: 4px;">
+                                            ${item.url ? `<a href="${item.url}" target="_blank" style="color: #60a5fa; text-decoration: none;" title="Open article">${item.title}</a>` : item.title}
+                                        </div>
+                                        ${item.description ? `<div style="font-size: 0.75rem; color: #9ca3af; line-height: 1.4;">${item.description.substring(0, 200)}${item.description.length > 200 ? '...' : ''}</div>` : ''}
+                                        ${item.price ? `<div style="font-size: 0.8rem; color: #22c55e; margin-top: 4px;">$${item.price.toLocaleString()} ${item.change ? `(${item.change > 0 ? '+' : ''}${item.change.toFixed(2)}%)` : ''}</div>` : ''}
+                                        ${item.company ? `<div style="font-size: 0.75rem; color: #a855f7; margin-top: 4px;">${item.company}${item.location ? ` • ${item.location}` : ''}</div>` : ''}
+                                        ${item.score ? `<div style="font-size: 0.7rem; color: #6b7280; margin-top: 4px;">↑${item.score}${item.comments ? ` • ${item.comments} comments` : ''}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        // No data found - show cross-references instead
+                        const agents = this.spiderToAgents[id.toLowerCase()] || this.spiderToAgents[id] || [];
+                        html = `
+                            <h6>&#128375; ${type === 'category' ? 'Category' : 'Spider'}: ${id}</h6>
+                            <p style="color: #fbbf24; font-size: 0.8rem;">No recent data found for this spider.</p>
+                            <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Agents that use this data:</p>
+                            <div class="icc-connections">
+                                ${agents.length > 0 ? agents.map(a => `
+                                    <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '').replace('Coordinator', '')}</span>
+                                `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Data available to all research agents</span>'}
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('ICC: Failed to load spider detail:', error);
+                    const agents = this.spiderToAgents[id.toLowerCase()] || this.spiderToAgents[id] || [];
+                    html = `
+                        <h6>&#128375; ${type === 'category' ? 'Category' : 'Spider'}: ${id}</h6>
+                        <p style="color: #ef4444; font-size: 0.8rem;">Failed to load content</p>
+                        <p style="color: #9ca3af; font-size: 0.8rem; margin-top: 10px;">Agents that use this data:</p>
+                        <div class="icc-connections">
+                            ${agents.length > 0 ? agents.map(a => `
+                                <span class="icc-connection-badge agent" onclick="ICCState.showDetail('agent', '${a}')">${a.replace('Agent', '').replace('Coordinator', '')}</span>
+                            `).join('') : '<span style="color: #6b7280; font-size: 0.8rem;">Data available to all research agents</span>'}
+                        </div>
+                    `;
+                }
                 break;
 
             case 'agent':
