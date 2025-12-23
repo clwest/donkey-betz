@@ -210,64 +210,75 @@ const ICCState = {
 
     /**
      * Populate live feed with trigger events
+     * Session 539: Fixed to properly refresh on each load instead of only on first load
      */
     populateLiveFeedFromTriggers() {
-        // Clear existing events first time, then add trigger events
-        if (this.events.length === 0 || this.events[0]?.type === 'system') {
-            // Hide empty state
-            const emptyState = document.getElementById('icc-feed-empty');
-            if (emptyState) emptyState.style.display = 'none';
+        // Hide empty state
+        const emptyState = document.getElementById('icc-feed-empty');
+        if (emptyState) emptyState.style.display = 'none';
 
-            const feed = document.getElementById('icc-live-feed');
+        const feed = document.getElementById('icc-live-feed');
 
-            // Add events sorted by most recent first (already sorted from API)
-            for (const trigger of this.triggerFires.slice(0, 20)) {
-                const severityColors = {
-                    'critical': '#ef4444',
-                    'high': '#f97316',
-                    'medium': '#fbbf24',
-                    'low': '#22c55e'
-                };
-                const severityIcons = {
-                    'critical': '🚨',
-                    'high': '⚠️',
-                    'medium': '📢',
-                    'low': '📌'
-                };
+        // Session 539: Clear feed and rebuild with fresh data on each refresh
+        // Remove all trigger events (keep other event types like websocket messages)
+        const existingTriggerEvents = feed.querySelectorAll('.icc-feed-event.trigger');
+        existingTriggerEvents.forEach(el => el.remove());
 
-                const event = {
-                    type: 'trigger',
-                    icon: severityIcons[trigger.severity] || '⚡',
-                    title: `${trigger.trigger_name}: ${(trigger.matched_value || '').substring(0, 50)}...`,
-                    details: `${trigger.spider_name} → ${trigger.situation_type} | ${trigger.severity}`,
-                    timestamp: new Date(trigger.fired_at),
-                    severity: trigger.severity,
-                    sourceId: trigger.trigger_name
-                };
+        // Clear trigger events from this.events array (keep non-trigger events)
+        this.events = this.events.filter(e => e.type !== 'trigger');
 
-                this.events.push(event);
+        const severityColors = {
+            'critical': '#ef4444',
+            'high': '#f97316',
+            'medium': '#fbbf24',
+            'low': '#22c55e'
+        };
+        const severityIcons = {
+            'critical': '🚨',
+            'high': '⚠️',
+            'medium': '📢',
+            'low': '📌'
+        };
 
-                // Render to DOM
-                const eventEl = document.createElement('div');
-                eventEl.className = `icc-feed-event trigger`;
-                eventEl.style.borderLeftColor = severityColors[trigger.severity] || '#fbbf24';
-                eventEl.onclick = () => this.showDetail('trigger', trigger.trigger_name);
+        // Add events sorted by most recent first (already sorted from API)
+        for (const trigger of this.triggerFires.slice(0, 20)) {
+            const event = {
+                type: 'trigger',
+                icon: severityIcons[trigger.severity] || '⚡',
+                title: `${trigger.trigger_name}: ${(trigger.matched_value || '').substring(0, 50)}...`,
+                details: `${trigger.spider_name} → ${trigger.situation_type} | ${trigger.severity}`,
+                timestamp: new Date(trigger.fired_at),
+                severity: trigger.severity,
+                sourceId: trigger.id || trigger.trigger_name
+            };
 
-                eventEl.innerHTML = `
-                    <div class="icc-feed-event-icon">${event.icon}</div>
-                    <div class="icc-feed-event-content">
-                        <div class="icc-feed-event-title">${event.title}</div>
-                        <div class="icc-feed-event-details">${event.details}</div>
-                    </div>
-                    <div class="icc-feed-event-time">${this.formatTimeAgo(event.timestamp)}</div>
-                `;
+            this.events.push(event);
 
+            // Render to DOM
+            const eventEl = document.createElement('div');
+            eventEl.className = `icc-feed-event trigger`;
+            eventEl.style.borderLeftColor = severityColors[trigger.severity] || '#fbbf24';
+            eventEl.onclick = () => this.showDetail('trigger', trigger.trigger_name);
+
+            eventEl.innerHTML = `
+                <div class="icc-feed-event-icon">${event.icon}</div>
+                <div class="icc-feed-event-content">
+                    <div class="icc-feed-event-title">${event.title}</div>
+                    <div class="icc-feed-event-details">${event.details}</div>
+                </div>
+                <div class="icc-feed-event-time">${this.formatTimeAgo(event.timestamp)}</div>
+            `;
+
+            // Prepend to show newest first
+            if (feed.firstChild && feed.firstChild !== emptyState) {
+                feed.insertBefore(eventEl, feed.firstChild);
+            } else {
                 feed.appendChild(eventEl);
             }
-
-            // Update event count
-            document.getElementById('icc-events-count').textContent = `${this.events.length} events`;
         }
+
+        // Update event count
+        document.getElementById('icc-events-count').textContent = `${this.events.length} events`;
     },
 
     /**
