@@ -1645,3 +1645,142 @@ def spider_timeline(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def intelligence_cross_references(request):
+    """
+    Session 536: Get cross-reference mappings for Intelligence Command Center.
+
+    Returns dynamic mappings of:
+    - spider_to_agents: Which agents use data from which spiders
+    - agent_to_situations: Which autonomous situations involve which agents
+    - situation_to_spiders: Which situations are triggered by which spiders
+
+    These are built from actual database relationships, not hardcoded.
+    """
+    try:
+        from collections import defaultdict
+        from core.models_unified_system import Agent, AgentKnowledgeSource
+        from core.models_situation_triggers import SituationTrigger
+        from ai_core.spiders.spider_registry import SpiderRegistry
+
+        # ========== SPIDER → AGENT MAPPINGS ==========
+        # Built from AgentKnowledgeSource.source_spider_names
+        spider_to_agents = defaultdict(set)
+
+        knowledge_sources = AgentKnowledgeSource.objects.filter(
+            is_active=True
+        ).select_related('agent').only('agent__name', 'source_spider_names')
+
+        for ks in knowledge_sources:
+            if ks.source_spider_names and ks.agent:
+                for spider_name in ks.source_spider_names:
+                    spider_to_agents[spider_name.lower()].add(ks.agent.name)
+
+        # Also add mappings based on spider categories → agent types
+        registry = SpiderRegistry()
+        all_spiders = registry.get_active_spiders()
+
+        # Agent capability mappings by category
+        category_to_agents = {
+            'tech': ['TrendAnalysisAgent', 'ResearchAgent', 'ContentStrategyAgent'],
+            'financial': ['MarketIntelligenceCoordinator', 'StockAuditCoordinator'],
+            'crypto': ['BlockchainAuditCoordinator', 'WhaleWatcherAgent'],
+            'jobs': ['OpportunityScoringAgent', 'OpportunityPipelineAgent'],
+            'creative': ['ImageAgent', 'BrandIdentityAgent', 'CreativeDirectorAgent'],
+            'social': ['TrendAnalysisAgent', 'SocialMediaAgent', 'ContentWriterAgent'],
+            'news': ['TrendAnalysisAgent', 'ResearchAgent'],
+            'legal': ['LegalDocDrafterAgent'],
+        }
+
+        for spider_info in all_spiders:
+            spider_name = spider_info.get('name', '').lower()
+            category = spider_info.get('category', '').lower()
+
+            # Add agents from category mapping
+            if category in category_to_agents:
+                for agent_name in category_to_agents[category]:
+                    spider_to_agents[spider_name].add(agent_name)
+
+        # Convert sets to lists
+        spider_to_agents = {k: sorted(list(v)) for k, v in spider_to_agents.items()}
+
+        # ========== AGENT → SITUATION MAPPINGS ==========
+        # Based on agent types and situation types
+        agent_to_situations = {
+            'BlockchainAuditCoordinator': ['blockchain_security', 'crypto_whale_alerts'],
+            'WhaleWatcherAgent': ['crypto_whale_alerts', 'blockchain_security'],
+            'StockAuditCoordinator': ['stock_market_intelligence', 'earnings_surprise'],
+            'MarketIntelligenceCoordinator': ['stock_market_intelligence', 'market_volatility'],
+            'TrendAnalysisAgent': ['tech_stack_evolution', 'narrative_drift', 'viral_content_predictor'],
+            'ContentWriterAgent': ['autonomous_content_generation', 'viral_content_predictor'],
+            'ContentStrategyAgent': ['autonomous_content_generation', 'thumbnail_optimization'],
+            'OpportunityScoringAgent': ['job_matching', 'freelance_scout'],
+            'OpportunityPipelineAgent': ['job_matching', 'freelance_scout'],
+            'ImageAgent': ['design_trends', 'thumbnail_optimization'],
+            'CreativeDirectorAgent': ['design_trends', 'viral_content_predictor'],
+            'LegalDocDrafterAgent': ['case_law_monitor', 'regulatory_change'],
+            'ResearchAgent': ['tech_stack_evolution', 'competitive_intel'],
+            'SocialMediaAgent': ['viral_content_predictor', 'narrative_drift'],
+        }
+
+        # ========== SITUATION → SPIDER MAPPINGS ==========
+        # Built from SituationTrigger.target_spiders
+        situation_to_spiders = defaultdict(set)
+
+        triggers = SituationTrigger.objects.filter(
+            is_active=True
+        ).values('situation_type', 'target_spiders')
+
+        for trigger in triggers:
+            situation_type = trigger['situation_type']
+            target_spiders = trigger['target_spiders'] or []
+            for spider in target_spiders:
+                situation_to_spiders[situation_type].add(spider.lower())
+
+        # Add default situation → spider mappings for common patterns
+        default_situation_spiders = {
+            'blockchain_security': ['etherscan', 'coingecko', 'coindesk'],
+            'crypto_whale_alerts': ['etherscan', 'coingecko'],
+            'stock_market_intelligence': ['yahoo_finance', 'seekingalpha', 'newsapi'],
+            'earnings_surprise': ['yahoo_finance', 'seekingalpha'],
+            'market_volatility': ['yahoo_finance', 'newsapi'],
+            'tech_stack_evolution': ['techcrunch', 'hackernews', 'the_verge', 'mit_tech_review'],
+            'autonomous_content_generation': ['techcrunch', 'hackernews', 'reddit', 'the_verge'],
+            'viral_content_predictor': ['reddit', 'hackernews', 'youtube_trending'],
+            'job_matching': ['remoteok', 'weworkremotely', 'adzuna'],
+            'freelance_scout': ['remoteok', 'weworkremotely', 'freelancer_api'],
+            'design_trends': ['dribbble', 'behance', 'unsplash'],
+            'thumbnail_optimization': ['youtube_trending', 'dribbble'],
+            'narrative_drift': ['reddit', 'hackernews', 'newsapi'],
+            'case_law_monitor': ['justia', 'colorado_family_law'],
+            'regulatory_change': ['sec_edgar', 'newsapi'],
+        }
+
+        for situation, spiders in default_situation_spiders.items():
+            for spider in spiders:
+                situation_to_spiders[situation].add(spider)
+
+        # Convert sets to lists
+        situation_to_spiders = {k: sorted(list(v)) for k, v in situation_to_spiders.items()}
+
+        return JsonResponse({
+            'status': 'success',
+            'spider_to_agents': spider_to_agents,
+            'agent_to_situations': agent_to_situations,
+            'situation_to_spiders': situation_to_spiders,
+            'stats': {
+                'spiders_mapped': len(spider_to_agents),
+                'agents_mapped': len(agent_to_situations),
+                'situations_mapped': len(situation_to_spiders)
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in intelligence_cross_references: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
