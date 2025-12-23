@@ -38,6 +38,8 @@ from .specialized.justia_playwright_spider import JustiaPlaywrightSpider
 from .specialized.techcrunch_spider import TechCrunchSpider
 from .specialized.axios_spider import AxiosSpider
 from .specialized.verge_spider import TheVergeSpider
+# Session 534: CNN RSS spider (fixed and re-added)
+from .specialized.cnn_spider import CNNSpider
 
 # Session 495: STARTUP FUNDING & SECTOR SPIDERS (5 new)
 from .specialized.crunchbase_spider import CrunchbaseSpider
@@ -392,6 +394,14 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['theverge.com/rss/']
+        })
+
+        # Session 534: CNN RSS spider (re-added with fixed interface)
+        self.register_spider('cnn', CNNSpider, {
+            'category': 'news',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['rss.cnn.com/rss/']
         })
 
         # ============================================================
