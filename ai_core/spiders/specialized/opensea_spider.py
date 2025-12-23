@@ -2,256 +2,192 @@
 OpenSea Spider - NFT Marketplace Intelligence
 ==============================================
 
-Session 218: Specialized spider for OpenSea NFT marketplace.
-Focuses on NFT trends, collections, and digital art market intelligence.
+Session 534: Simplified to work with spider network interface.
+Uses NFT news RSS feeds and curated collection categories.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class OpenSeaSpider(BaseIntelligenceSpider):
-    """OpenSea spider - NFT marketplace and digital art intelligence"""
+class OpenSeaSpider:
+    """OpenSea spider - NFT marketplace and digital art trends"""
 
-    # NFT/Digital Art RSS feeds
+    name = "opensea"
+
+    # NFT news RSS feeds
     RSS_FEEDS = {
-        'nft_news': 'https://nftnow.com/feed/',
-        'decrypt_nft': 'https://decrypt.co/feed',
+        'nft_now': 'https://nftnow.com/feed/',
+        'decrypt': 'https://decrypt.co/feed',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # NFT categories on OpenSea
+    CATEGORIES = [
+        # Art
+        ('Digital Art', 'art', 'Digital artwork and generative art NFTs.'),
+        ('Photography', 'photography', 'Photography NFT collections.'),
+        ('AI Art', 'ai-art', 'AI-generated art and neural network creations.'),
 
-        self.nft_categories = {
-            'art': ['art', 'artist', 'artwork', 'digital art', 'generative', 'ai art'],
-            'pfp': ['pfp', 'profile picture', 'avatar', 'collection', 'ape', 'punk'],
-            'gaming': ['gaming', 'game', 'metaverse', 'virtual world', 'play to earn', 'p2e'],
-            'music': ['music', 'audio', 'song', 'album', 'sound'],
-            'photography': ['photography', 'photo', 'photographer'],
-            'collectibles': ['collectible', 'trading card', 'sports', 'memorabilia'],
-            'utility': ['utility', 'membership', 'access', 'token-gated'],
-        }
+        # Collectibles
+        ('PFP Collections', 'pfps', 'Profile picture NFT collections.'),
+        ('Gaming NFTs', 'gaming', 'In-game items and gaming collectibles.'),
+        ('Music NFTs', 'music', 'Music and audio NFTs.'),
 
-        self.market_signals = {
-            'bullish': ['floor', 'volume', 'sale', 'sold', 'record', 'million', 'eth'],
-            'launch': ['launch', 'mint', 'drop', 'release', 'debut'],
-            'partnership': ['partnership', 'collab', 'collaboration', 'brand'],
-            'celebrity': ['celebrity', 'famous', 'influencer', 'musician', 'actor'],
-        }
+        # Virtual Worlds
+        ('Virtual Worlds', 'virtual-worlds', 'Metaverse land and virtual real estate.'),
+        ('Domain Names', 'domain-names', 'ENS and blockchain domain names.'),
 
-        self.platforms = {
-            'opensea': ['opensea', 'open sea'],
-            'blur': ['blur'],
-            'rarible': ['rarible'],
-            'foundation': ['foundation'],
-            'superrare': ['superrare', 'super rare'],
-        }
+        # Utility
+        ('Memberships', 'memberships', 'Token-gated membership NFTs.'),
+        ('Sports Collectibles', 'sports-collectibles', 'Sports memorabilia NFTs.'),
+    ]
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch NFT ecosystem data"""
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch NFT news and collection categories.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of NFT news and category dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting OpenSea categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:15]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'opensea_ecosystem'}
+        logger.info(f"OpenSea spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch NFT news from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Detect NFT category
+                category = self._detect_category(f"{title} {description}".lower())
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': category,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'nft_news',
+                    'platform': 'opensea',
+                    'tags': ['nft', 'crypto', 'digital-art', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching OpenSea data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process NFT ecosystem data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect NFT category from text."""
+        categories = {
+            'art': ['art', 'artwork', 'artist', 'generative'],
+            'pfp': ['pfp', 'avatar', 'profile', 'collection'],
+            'gaming': ['game', 'gaming', 'metaverse', 'play'],
+            'music': ['music', 'audio', 'song', 'album'],
+            'photography': ['photo', 'photography', 'photographer'],
+        }
 
-            # Filter for NFT-relevant content
-            nft_items = [i for i in processed_items if i.get('is_nft_relevant')]
+        for cat, keywords in categories.items():
+            if any(kw in text for kw in keywords):
+                return cat
+        return 'collectibles'
 
-            insights = self._generate_nft_insights(nft_items)
-
-            content = {
-                'items': nft_items,
-                'insights': insights,
-                'by_category': self._group_by_category(nft_items),
-                'market_activity': self._analyze_market_activity(nft_items),
-                'trending_collections': self._extract_trending(nft_items),
-                'opportunities': self._identify_opportunities(nft_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return OpenSea category exploration links."""
+        return [
+            {
+                'title': f"OpenSea: {name}",
+                'url': f'https://opensea.io/category/{slug}',
+                'link': f'https://opensea.io/category/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'OpenSea',
+                'data_type': 'nft_category',
+                'platform': 'opensea',
+                'tags': ['nft', 'opensea', 'crypto', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(nft_items) / 15 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Trending NFTs', 'trending', 'Hot and trending NFT collections.'),
+            ('New Drops', 'new', 'Recently launched NFT collections.'),
+            ('Top Collections', 'top', 'Highest volume NFT collections.'),
+            ('Art NFTs', 'art', 'Digital art and generative art.'),
+            ('Gaming NFTs', 'gaming', 'Gaming and metaverse NFTs.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='opensea.io',
-                data_type='nft_marketplace',
-                content=content,
-                metadata={
-                    'item_count': len(nft_items),
-                    'source': 'opensea_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['nft', 'digital art', 'collectibles', 'opensea', 'crypto art'],
-                target_agents=['nft_agent', 'art_agent', 'investment_agent'],
-                target_advisors=['nft_advisor', 'art_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing OpenSea data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Check if NFT-relevant
-            nft_keywords = ['nft', 'non-fungible', 'opensea', 'mint', 'collection', 'digital art',
-                          'crypto art', 'pfp', 'airdrop', 'floor price', 'blur']
-            is_nft_relevant = any(kw in text for kw in nft_keywords)
-
-            # Identify category
-            category = 'general'
-            for cat, keywords in self.nft_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify market signals
-            signals = []
-            for signal, keywords in self.market_signals.items():
-                if any(kw in text for kw in keywords):
-                    signals.append(signal)
-
-            # Identify platform mentions
-            platform = None
-            for plat, keywords in self.platforms.items():
-                if any(kw in text for kw in keywords):
-                    platform = plat
-                    break
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://opensea.io/rankings?category={category}',
+                'link': f'https://opensea.io/rankings?category={category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'signals': signals,
-                'platform': platform,
-                'is_nft_relevant': is_nft_relevant,
-                'is_launch': 'launch' in signals,
-                'is_bullish': 'bullish' in signals,
-                'sentiment': sentiment,
+                'source': 'OpenSea',
+                'data_type': 'nft_topic',
+                'platform': 'opensea',
+                'tags': ['nft', 'opensea', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_nft_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate NFT market insights"""
-        if not items:
-            return {}
-
-        launches = [i for i in items if i.get('is_launch')]
-        bullish_items = [i for i in items if i.get('is_bullish')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        avg_sentiment = sum(i.get('sentiment', 0) for i in items) / len(items) if items else 0
-
-        return {
-            'total_items': len(items),
-            'new_launches': len(launches),
-            'bullish_signals': len(bullish_items),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'market_mood': 'bullish' if avg_sentiment > 0.1 else 'bearish' if avg_sentiment < -0.1 else 'neutral',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by NFT category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_market_activity(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze market activity signals"""
-        signal_counts = {}
-        for item in items:
-            for signal in item.get('signals', []):
-                signal_counts[signal] = signal_counts.get(signal, 0) + 1
-        return dict(sorted(signal_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending collections/items"""
-        trending = []
-        for item in items:
-            if item.get('is_bullish') or item.get('is_launch'):
-                trending.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'signals': item.get('signals'),
-                    'link': item.get('link'),
-                })
-        return trending[:5]
-
-    def _identify_opportunities(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify NFT opportunities"""
-        opportunities = []
-        for item in items:
-            if item.get('is_launch') and item.get('sentiment', 0) > 0:
-                opportunities.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'platform': item.get('platform'),
-                    'link': item.get('link'),
-                })
-        return opportunities[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['nft', 'opensea', 'digital art', 'collection', 'mint', 'crypto art']
+            for title, category, desc in topics
+        ]
