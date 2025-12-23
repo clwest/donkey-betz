@@ -2,299 +2,257 @@
 HuggingFace Spider - AI/ML Model & Dataset Intelligence
 ========================================================
 
-Session 343: Spider for HuggingFace Hub API to track AI/ML trends.
-Collects trending models, datasets, and spaces.
-
-Uses HUGGING_FACE_API from environment for authenticated requests.
-HuggingFace Hub API is largely free and doesn't require auth for basic queries.
+Session 534: Simplified to work with spider network interface.
+Uses HuggingFace Hub API to track trending models and datasets.
 """
 
-import aiohttp
-import asyncio
-import os
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+import requests
+import logging
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class HuggingFaceSpider(BaseIntelligenceSpider):
-    """HuggingFace spider - trending models, datasets, and AI/ML spaces"""
+class HuggingFaceSpider:
+    """HuggingFace spider - trending AI/ML models and datasets"""
+
+    name = "huggingface"
 
     BASE_URL = "https://huggingface.co/api"
 
-    # Model types of interest
+    # Model tasks to track
     MODEL_TASKS = [
         'text-generation',
-        'image-to-text',
         'text-to-image',
+        'image-to-text',
         'automatic-speech-recognition',
-        'text-to-speech',
         'text-classification',
-        'question-answering',
-        'summarization',
-        'translation',
-        'feature-extraction',
     ]
 
-    # Popular model architectures to track
-    ARCHITECTURES = [
-        'llama',
-        'mistral',
-        'phi',
-        'gemma',
-        'qwen',
-        'stable-diffusion',
-        'flux',
-        'whisper',
-    ]
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
-        self.api_key = os.getenv('HUGGING_FACE_API', '')
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch trending models and datasets from HuggingFace Hub.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch HuggingFace trending data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of model/dataset dictionaries
+        """
+        all_items = []
+
+        # Fetch trending models
         try:
-            all_models = []
-            all_datasets = []
-            all_spaces = []
+            models = self._fetch_models(limit=max_results // 2)
+            all_items.extend(models)
+        except Exception as e:
+            logger.warning(f"Error fetching HuggingFace models: {e}")
 
-            headers = {}
-            if self.api_key:
-                headers['Authorization'] = f'Bearer {self.api_key}'
+        # Fetch trending datasets
+        try:
+            datasets = self._fetch_datasets(limit=max_results // 4)
+            all_items.extend(datasets)
+        except Exception as e:
+            logger.warning(f"Error fetching HuggingFace datasets: {e}")
 
-            async with aiohttp.ClientSession() as session:
-                # Fetch trending models
-                try:
-                    models_url = f"{self.BASE_URL}/models"
-                    params = {
-                        'sort': 'downloads',
-                        'direction': '-1',
-                        'limit': 30,
-                    }
+        # Fetch trending spaces
+        try:
+            spaces = self._fetch_spaces(limit=max_results // 4)
+            all_items.extend(spaces)
+        except Exception as e:
+            logger.warning(f"Error fetching HuggingFace spaces: {e}")
 
-                    async with session.get(models_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            models = await response.json()
+        # If API fails, return curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-                            for model in models:
-                                all_models.append({
-                                    'id': model.get('id', ''),
-                                    'modelId': model.get('modelId', ''),
-                                    'author': model.get('author', ''),
-                                    'downloads': model.get('downloads', 0),
-                                    'likes': model.get('likes', 0),
-                                    'pipeline_tag': model.get('pipeline_tag', ''),
-                                    'tags': model.get('tags', [])[:10],
-                                    'created_at': model.get('createdAt', ''),
-                                    'last_modified': model.get('lastModified', ''),
-                                    'library_name': model.get('library_name', ''),
-                                    'url': f"https://huggingface.co/{model.get('id', '')}",
-                                    'source': 'huggingface',
-                                    'type': 'model',
-                                })
-                        else:
-                            self.logger.warning(f"HuggingFace models API returned {response.status}")
+        logger.info(f"HuggingFace spider collected {len(all_items)} items")
+        return all_items[:max_results]
 
-                except Exception as e:
-                    self.logger.warning(f"Error fetching models: {e}")
+    def _fetch_models(self, limit: int = 25) -> List[Dict[str, Any]]:
+        """Fetch trending models from HuggingFace."""
+        items = []
 
-                await asyncio.sleep(0.5)
-
-                # Fetch trending datasets
-                try:
-                    datasets_url = f"{self.BASE_URL}/datasets"
-                    params = {
-                        'sort': 'downloads',
-                        'direction': '-1',
-                        'limit': 20,
-                    }
-
-                    async with session.get(datasets_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            datasets = await response.json()
-
-                            for dataset in datasets:
-                                all_datasets.append({
-                                    'id': dataset.get('id', ''),
-                                    'author': dataset.get('author', ''),
-                                    'downloads': dataset.get('downloads', 0),
-                                    'likes': dataset.get('likes', 0),
-                                    'tags': dataset.get('tags', [])[:10],
-                                    'created_at': dataset.get('createdAt', ''),
-                                    'url': f"https://huggingface.co/datasets/{dataset.get('id', '')}",
-                                    'source': 'huggingface',
-                                    'type': 'dataset',
-                                })
-                        else:
-                            self.logger.warning(f"HuggingFace datasets API returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching datasets: {e}")
-
-                await asyncio.sleep(0.5)
-
-                # Fetch trending spaces (demos)
-                try:
-                    spaces_url = f"{self.BASE_URL}/spaces"
-                    params = {
-                        'sort': 'likes',
-                        'direction': '-1',
-                        'limit': 20,
-                    }
-
-                    async with session.get(spaces_url, headers=headers, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            spaces = await response.json()
-
-                            for space in spaces:
-                                all_spaces.append({
-                                    'id': space.get('id', ''),
-                                    'author': space.get('author', ''),
-                                    'likes': space.get('likes', 0),
-                                    'sdk': space.get('sdk', ''),
-                                    'tags': space.get('tags', [])[:10],
-                                    'created_at': space.get('createdAt', ''),
-                                    'url': f"https://huggingface.co/spaces/{space.get('id', '')}",
-                                    'source': 'huggingface',
-                                    'type': 'space',
-                                })
-                        else:
-                            self.logger.warning(f"HuggingFace spaces API returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching spaces: {e}")
-
-                # Fetch models by specific tasks
-                for task in self.MODEL_TASKS[:3]:  # Limit to avoid rate limits
-                    try:
-                        task_url = f"{self.BASE_URL}/models"
-                        params = {
-                            'filter': task,
-                            'sort': 'downloads',
-                            'direction': '-1',
-                            'limit': 10,
-                        }
-
-                        async with session.get(task_url, headers=headers, params=params, timeout=10) as response:
-                            if response.status == 200:
-                                models = await response.json()
-                                for model in models:
-                                    model_data = {
-                                        'id': model.get('id', ''),
-                                        'modelId': model.get('modelId', ''),
-                                        'author': model.get('author', ''),
-                                        'downloads': model.get('downloads', 0),
-                                        'likes': model.get('likes', 0),
-                                        'pipeline_tag': model.get('pipeline_tag', ''),
-                                        'task': task,
-                                        'url': f"https://huggingface.co/{model.get('id', '')}",
-                                        'source': 'huggingface',
-                                        'type': 'model',
-                                    }
-                                    # Avoid duplicates
-                                    if model_data['id'] not in [m['id'] for m in all_models]:
-                                        all_models.append(model_data)
-
-                        await asyncio.sleep(0.3)
-
-                    except Exception as e:
-                        self.logger.warning(f"Error fetching {task} models: {e}")
-
-            return {
-                'models': all_models,
-                'datasets': all_datasets,
-                'spaces': all_spaces,
-                'source': 'huggingface'
+        try:
+            # Fetch models sorted by trending/downloads
+            url = f"{self.BASE_URL}/models"
+            params = {
+                'sort': 'trending',
+                'direction': -1,
+                'limit': limit,
             }
 
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            models = response.json()
+
+            for model in models:
+                model_id = model.get('modelId', model.get('id', ''))
+                if not model_id:
+                    continue
+
+                # Get task/pipeline tag
+                pipeline_tag = model.get('pipeline_tag', 'unknown')
+                tags = model.get('tags', [])
+
+                # Build description
+                description = f"AI model for {pipeline_tag}. "
+                if model.get('downloads'):
+                    description += f"Downloads: {model.get('downloads'):,}. "
+                if model.get('likes'):
+                    description += f"Likes: {model.get('likes'):,}."
+
+                items.append({
+                    'title': model_id,
+                    'name': model_id,
+                    'url': f"https://huggingface.co/{model_id}",
+                    'link': f"https://huggingface.co/{model_id}",
+                    'summary': description,
+                    'description': description,
+                    'author': model_id.split('/')[0] if '/' in model_id else 'HuggingFace',
+                    'pipeline_tag': pipeline_tag,
+                    'downloads': model.get('downloads', 0),
+                    'likes': model.get('likes', 0),
+                    'category': 'model',
+                    'source': 'HuggingFace',
+                    'data_type': 'ai_model',
+                    'tags': ['ai', 'ml', 'model', pipeline_tag] + tags[:3],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
         except Exception as e:
-            self.logger.error(f"Error fetching HuggingFace data: {e}")
-            return None
+            logger.warning(f"Error fetching HuggingFace models: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process HuggingFace data into intelligence"""
+        return items
+
+    def _fetch_datasets(self, limit: int = 15) -> List[Dict[str, Any]]:
+        """Fetch trending datasets from HuggingFace."""
+        items = []
+
         try:
-            models = raw_data.get('models', [])
-            datasets = raw_data.get('datasets', [])
-            spaces = raw_data.get('spaces', [])
+            url = f"{self.BASE_URL}/datasets"
+            params = {
+                'sort': 'trending',
+                'direction': -1,
+                'limit': limit,
+            }
 
-            # Analyze model types/tasks
-            task_stats = {}
-            for model in models:
-                task = model.get('pipeline_tag', 'other') or 'other'
-                if task not in task_stats:
-                    task_stats[task] = {'count': 0, 'total_downloads': 0}
-                task_stats[task]['count'] += 1
-                task_stats[task]['total_downloads'] += model.get('downloads', 0)
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            datasets = response.json()
 
-            # Top models by downloads
-            top_models = sorted(models, key=lambda x: x.get('downloads', 0), reverse=True)[:15]
+            for ds in datasets:
+                ds_id = ds.get('id', '')
+                if not ds_id:
+                    continue
 
-            # Extract trending tags
-            all_tags = []
-            for model in models:
-                all_tags.extend(model.get('tags', []))
-            tag_frequency = {}
-            for tag in all_tags:
-                tag_frequency[tag] = tag_frequency.get(tag, 0) + 1
-            trending_tags = sorted(tag_frequency.items(), key=lambda x: x[1], reverse=True)[:30]
+                description = f"Dataset: {ds_id}. "
+                if ds.get('downloads'):
+                    description += f"Downloads: {ds.get('downloads'):,}."
 
-            # Popular libraries
-            library_stats = {}
-            for model in models:
-                lib = model.get('library_name', 'unknown') or 'unknown'
-                library_stats[lib] = library_stats.get(lib, 0) + 1
+                items.append({
+                    'title': ds_id,
+                    'name': ds_id,
+                    'url': f"https://huggingface.co/datasets/{ds_id}",
+                    'link': f"https://huggingface.co/datasets/{ds_id}",
+                    'summary': description,
+                    'description': description,
+                    'author': ds_id.split('/')[0] if '/' in ds_id else 'HuggingFace',
+                    'downloads': ds.get('downloads', 0),
+                    'likes': ds.get('likes', 0),
+                    'category': 'dataset',
+                    'source': 'HuggingFace',
+                    'data_type': 'ai_dataset',
+                    'tags': ['ai', 'ml', 'dataset', 'training'],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
-            # SDK usage in spaces
-            sdk_stats = {}
+        except Exception as e:
+            logger.warning(f"Error fetching HuggingFace datasets: {e}")
+
+        return items
+
+    def _fetch_spaces(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Fetch trending spaces (demos) from HuggingFace."""
+        items = []
+
+        try:
+            url = f"{self.BASE_URL}/spaces"
+            params = {
+                'sort': 'trending',
+                'direction': -1,
+                'limit': limit,
+            }
+
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            spaces = response.json()
+
             for space in spaces:
-                sdk = space.get('sdk', 'unknown') or 'unknown'
-                sdk_stats[sdk] = sdk_stats.get(sdk, 0) + 1
+                space_id = space.get('id', '')
+                if not space_id:
+                    continue
 
-            content = {
-                'models': models,
-                'datasets': datasets,
-                'spaces': spaces,
-                'top_models': top_models,
-                'task_stats': task_stats,
-                'trending_tags': trending_tags,
-                'library_stats': library_stats,
-                'sdk_stats': sdk_stats,
-                'total_models': len(models),
-                'total_datasets': len(datasets),
-                'total_spaces': len(spaces),
-                'total_downloads': sum(m.get('downloads', 0) for m in models),
-            }
+                sdk = space.get('sdk', 'gradio')
+                description = f"AI demo/app using {sdk}. "
+                if space.get('likes'):
+                    description += f"Likes: {space.get('likes'):,}."
 
-            quality_score = min(1.0, (len(models) + len(datasets) + len(spaces)) / 60 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='huggingface.co',
-                data_type='ai_ml_intelligence',
-                content=content,
-                metadata={
-                    'model_count': len(models),
-                    'dataset_count': len(datasets),
-                    'space_count': len(spaces),
-                    'top_tasks': list(task_stats.keys())[:5],
-                    'source': 'huggingface',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['huggingface', 'ai', 'ml', 'models', 'datasets', 'llm', 'transformers'],
-                target_agents=['research_agent', 'trend_analysis_agent', 'competitor_analysis_agent'],
-                target_advisors=['ai_advisor', 'tech_strategist', 'innovation_advisor']
-            )
+                items.append({
+                    'title': space_id,
+                    'name': space_id,
+                    'url': f"https://huggingface.co/spaces/{space_id}",
+                    'link': f"https://huggingface.co/spaces/{space_id}",
+                    'summary': description,
+                    'description': description,
+                    'author': space_id.split('/')[0] if '/' in space_id else 'HuggingFace',
+                    'sdk': sdk,
+                    'likes': space.get('likes', 0),
+                    'category': 'space',
+                    'source': 'HuggingFace',
+                    'data_type': 'ai_demo',
+                    'tags': ['ai', 'ml', 'demo', 'app', sdk],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error processing HuggingFace data: {e}")
-            return None
+            logger.warning(f"Error fetching HuggingFace spaces: {e}")
 
-    def get_required_fields(self) -> List[str]:
-        return ['id', 'downloads']
+        return items
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['huggingface', 'model', 'dataset', 'ai', 'ml', 'llm', 'transformers', 'diffusion']
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated AI/ML topics when API fails."""
+        topics = [
+            ('Text Generation Models', 'text-generation', 'LLMs for text generation like Llama, Mistral, GPT.'),
+            ('Image Generation Models', 'text-to-image', 'Stable Diffusion, FLUX, and other image generators.'),
+            ('Speech Recognition', 'asr', 'Whisper and other speech-to-text models.'),
+            ('Vision Models', 'image-to-text', 'Image captioning and visual understanding models.'),
+            ('Embedding Models', 'embedding', 'Text and image embedding models for search and RAG.'),
+            ('Fine-tuning Datasets', 'dataset', 'Popular datasets for training and fine-tuning.'),
+            ('AI Demo Spaces', 'space', 'Interactive AI demos and applications.'),
+            ('LoRA Adapters', 'lora', 'Low-rank adaptation models for efficient fine-tuning.'),
+            ('Multimodal Models', 'multimodal', 'Models combining text, image, and audio.'),
+            ('Code Generation', 'code', 'AI models for code generation and completion.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://huggingface.co/models?pipeline_tag={category}',
+                'link': f'https://huggingface.co/models?pipeline_tag={category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'HuggingFace',
+                'data_type': 'ai_topic',
+                'tags': ['ai', 'ml', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
