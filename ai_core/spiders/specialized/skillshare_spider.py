@@ -2,31 +2,46 @@
 Skillshare Spider - Creative Learning & Project-Based Education Intelligence
 =============================================================================
 
-Session 218: Specialized spider for Skillshare creative learning platform.
-Focuses on creative skills, project-based learning, and creator opportunities.
+Session 534: Simplified to work with spider network interface.
+Aggregates creative learning and design education content via RSS.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class SkillshareSpider(BaseIntelligenceSpider):
+class SkillshareSpider:
     """Skillshare spider - creative learning and project-based education"""
+
+    name = "skillshare"
 
     # Creative education RSS feeds
     RSS_FEEDS = {
         'creative_bloq': 'https://www.creativebloq.com/feed',
         'design_shack': 'https://designshack.net/feed/',
+        'skillshare_blog': 'https://www.skillshare.com/blog/feed',
+        'ux_collective': 'https://uxdesign.cc/feed',
+        'dribbble_stories': 'https://dribbble.com/stories.rss',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Learning categories
+    CATEGORIES = [
+        ('Illustration', 'illustration', 'Drawing and digital art.'),
+        ('Graphic Design', 'graphic_design', 'Logo, branding, and typography.'),
+        ('UI/UX Design', 'ui_ux', 'User interface and experience.'),
+        ('Photography', 'photography', 'Photo editing and techniques.'),
+        ('Video & Animation', 'video', 'Motion graphics and filmmaking.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.creative_categories = {
             'illustration': ['illustration', 'drawing', 'sketch', 'digital art', 'character design'],
             'graphic_design': ['graphic design', 'logo', 'branding', 'typography', 'layout'],
@@ -35,9 +50,7 @@ class SkillshareSpider(BaseIntelligenceSpider):
             'video': ['video editing', 'filmmaking', 'animation', 'motion graphics', 'after effects'],
             'writing': ['creative writing', 'copywriting', 'storytelling', 'content', 'blogging'],
             'crafts': ['crafts', 'diy', 'handmade', 'pottery', 'knitting', 'calligraphy'],
-            'music': ['music', 'audio', 'podcast', 'sound design', 'music production'],
         }
-
         self.skill_aspects = {
             'tools': ['photoshop', 'illustrator', 'figma', 'procreate', 'premiere', 'after effects'],
             'techniques': ['technique', 'how to', 'tips', 'tutorial', 'guide', 'masterclass'],
@@ -45,210 +58,168 @@ class SkillshareSpider(BaseIntelligenceSpider):
             'trends': ['trend', 'style', 'modern', '2024', '2025', 'new'],
         }
 
-        self.project_types = {
-            'hands_on': ['project', 'create', 'make', 'build', 'design your own'],
-            'challenge': ['challenge', 'exercise', 'practice', 'assignment'],
-            'portfolio': ['portfolio', 'showcase', 'professional', 'client-ready'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch creative learning content from RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch creative learning data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of creative learning content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting learning categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                                'tags': [tag.term for tag in entry.get('tags', [])] if hasattr(entry, 'tags') else [],
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'skillshare_ecosystem'}
+        logger.info(f"Skillshare spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch creative learning content from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Analysis
+                text = f"{title} {description}".lower()
+                category = self._detect_category(text)
+                aspects = self._detect_aspects(text)
+                is_tutorial = self._is_tutorial(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'category': category,
+                    'aspects': aspects,
+                    'is_tutorial': is_tutorial,
+                    'sentiment': sentiment,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'creative_learning',
+                    'platform': 'skillshare',
+                    'tags': ['creative', 'learning', 'design', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Skillshare data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process creative learning data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect creative category from text."""
+        for category, keywords in self.creative_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            insights = self._generate_creative_insights(processed_items)
+    def _detect_aspects(self, text: str) -> List[str]:
+        """Detect skill aspects from text."""
+        aspects = []
+        for aspect, keywords in self.skill_aspects.items():
+            if any(kw in text for kw in keywords):
+                aspects.append(aspect)
+        return aspects
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'tool_trends': self._analyze_tools(processed_items),
-                'project_ideas': self._extract_project_ideas(processed_items),
-                'skill_opportunities': self._identify_skill_opportunities(processed_items),
+    def _is_tutorial(self, text: str) -> bool:
+        """Check if content is a tutorial."""
+        tutorial_keywords = ['tutorial', 'how to', 'guide', 'learn', 'step by step', 'course', 'class']
+        return any(kw in text for kw in tutorial_keywords)
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze content sentiment."""
+        positive = ['amazing', 'creative', 'inspiring', 'beautiful', 'best', 'master', 'pro']
+        negative = ['difficult', 'mistake', 'avoid', 'bad', 'hard', 'fail']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return creative learning category links."""
+        return [
+            {
+                'title': f"Skillshare: {name}",
+                'url': f'https://www.skillshare.com/browse/{slug}',
+                'link': f'https://www.skillshare.com/browse/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Skillshare',
+                'data_type': 'learning_category',
+                'platform': 'skillshare',
+                'tags': ['creative', 'learning', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Illustration Basics', 'illustration', 'Learn digital illustration.'),
+            ('Graphic Design Fundamentals', 'graphic_design', 'Logo and branding design.'),
+            ('UI/UX Design Course', 'ui_ux', 'User experience design.'),
+            ('Photography for Beginners', 'photography', 'Camera and editing skills.'),
+            ('Motion Graphics', 'video', 'Animation and video editing.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='skillshare.com',
-                data_type='creative_learning',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'skillshare_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['creative', 'design', 'skills', 'learning', 'projects'],
-                target_agents=['creative_agent', 'skill_agent', 'education_agent'],
-                target_advisors=['creative_advisor', 'skill_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Skillshare data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify creative category
-            category = 'general_creative'
-            for cat, keywords in self.creative_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify skill aspects
-            aspects = []
-            for aspect, keywords in self.skill_aspects.items():
-                if any(kw in text for kw in keywords):
-                    aspects.append(aspect)
-
-            # Identify project type
-            project_type = None
-            for ptype, keywords in self.project_types.items():
-                if any(kw in text for kw in keywords):
-                    project_type = ptype
-                    break
-
-            # Check for tutorial/guide content
-            is_tutorial = any(word in text for word in ['tutorial', 'how to', 'guide', 'learn', 'step by step'])
-            is_inspiration = any(word in text for word in ['inspiration', 'ideas', 'examples', 'showcase', 'gallery'])
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://www.skillshare.com/classes/{category}',
+                'link': f'https://www.skillshare.com/classes/{category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'aspects': aspects or ['general'],
-                'project_type': project_type,
-                'is_tutorial': is_tutorial,
-                'is_inspiration': is_inspiration,
-                'sentiment': sentiment,
-                'tags': item.get('tags', []),
+                'source': 'Skillshare',
+                'data_type': 'learning_topic',
+                'platform': 'skillshare',
+                'tags': ['creative', 'learning', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_creative_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate creative learning insights"""
-        if not items:
-            return {}
-
-        tutorials = [i for i in items if i.get('is_tutorial')]
-        inspiration = [i for i in items if i.get('is_inspiration')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general_creative')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'tutorials_count': len(tutorials),
-            'inspiration_count': len(inspiration),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'creative_pulse': 'vibrant' if len(items) > 15 else 'steady',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by creative category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general_creative')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_tools(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze tool mentions"""
-        tool_counts = {}
-        for item in items:
-            if 'tools' in item.get('aspects', []):
-                text = f"{item.get('title', '')} {item.get('description', '')}".lower()
-                for tool in self.skill_aspects['tools']:
-                    if tool in text:
-                        tool_counts[tool] = tool_counts.get(tool, 0) + 1
-        return dict(sorted(tool_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_project_ideas(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract project ideas"""
-        projects = []
-        for item in items:
-            if item.get('project_type') or item.get('is_tutorial'):
-                projects.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'project_type': item.get('project_type'),
-                    'link': item.get('link'),
-                })
-        return projects[:8]
-
-    def _identify_skill_opportunities(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify skill learning opportunities"""
-        opportunities = []
-        for item in items:
-            if item.get('is_tutorial') and item.get('sentiment', 0) > 0:
-                opportunities.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'aspects': item.get('aspects'),
-                    'link': item.get('link'),
-                })
-        return opportunities[:6]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['skillshare', 'creative', 'design', 'illustration', 'tutorial', 'project']
+            for title, category, desc in topics
+        ]

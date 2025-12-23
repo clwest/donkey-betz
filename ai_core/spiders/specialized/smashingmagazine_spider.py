@@ -2,184 +2,215 @@
 Smashing Magazine Spider - Web Design & Development
 ===================================================
 
-Session 343: Phase 1 Spider Expansion
-Smashing Magazine provides web design and development content via free RSS.
+Session 534: Simplified to work with spider network interface.
+Smashing Magazine provides web design and development content via RSS.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class SmashingMagazineSpider(BaseIntelligenceSpider):
+class SmashingMagazineSpider:
     """Smashing Magazine spider - web design and front-end development"""
 
+    name = "smashingmagazine"
+
+    # Web development RSS feeds
     RSS_FEEDS = {
-        'main': 'https://www.smashingmagazine.com/feed/',
+        'smashing': 'https://www.smashingmagazine.com/feed/',
+        'css_tricks': 'https://css-tricks.com/feed/',
+        'a_list_apart': 'https://alistapart.com/main/feed/',
+        'codrops': 'https://tympanus.net/codrops/feed/',
+        'webdesigner_depot': 'https://www.webdesignerdepot.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Web development categories
+    CATEGORIES = [
+        ('CSS', 'css', 'CSS techniques and styling.'),
+        ('JavaScript', 'javascript', 'JavaScript frameworks and coding.'),
+        ('UX', 'ux', 'User experience and accessibility.'),
+        ('Design', 'design', 'UI design and visual layout.'),
+        ('Performance', 'performance', 'Web performance optimization.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.web_categories = {
-            'css': ['css', 'flexbox', 'grid', 'animation', 'responsive', 'tailwind'],
-            'javascript': ['javascript', 'js', 'react', 'vue', 'angular', 'svelte', 'typescript'],
-            'ux': ['ux', 'user experience', 'usability', 'accessibility', 'a11y'],
-            'design': ['design', 'ui', 'interface', 'layout', 'typography', 'color'],
-            'performance': ['performance', 'speed', 'optimization', 'core web vitals', 'lazy load'],
-            'tools': ['webpack', 'vite', 'npm', 'git', 'figma', 'sketch'],
+            'css': ['css', 'flexbox', 'grid', 'animation', 'responsive', 'tailwind', 'sass'],
+            'javascript': ['javascript', 'js', 'react', 'vue', 'angular', 'svelte', 'typescript', 'node'],
+            'ux': ['ux', 'user experience', 'usability', 'accessibility', 'a11y', 'research'],
+            'design': ['design', 'ui', 'interface', 'layout', 'typography', 'color', 'figma'],
+            'performance': ['performance', 'speed', 'optimization', 'core web vitals', 'lazy load', 'lighthouse'],
+            'tools': ['webpack', 'vite', 'npm', 'git', 'docker', 'ci/cd', 'testing'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from Smashing Magazine"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch web development content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of web development content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_articles = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting web dev categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', ''),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'author': entry.get('author', 'Smashing Magazine'),
-                                'tags': [tag.term for tag in entry.get('tags', [])],
-                                'feed_source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'articles': all_articles, 'source': 'smashingmagazine'}
+        logger.info(f"SmashingMagazine spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch web development articles from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect category and type
+                text = f"{title} {summary}".lower()
+                categories = self._detect_categories(text)
+                is_tutorial = self._is_tutorial(text)
+                sentiment = self._analyze_sentiment(text)
+
+                # Extract tags from entry if available
+                tags = []
+                if hasattr(entry, 'tags') and entry.tags:
+                    tags = [tag.term for tag in entry.tags[:5]]
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', 'Smashing Magazine'),
+                    'categories': categories,
+                    'category': categories[0] if categories else 'general',
+                    'is_tutorial': is_tutorial,
+                    'sentiment': sentiment,
+                    'entry_tags': tags,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'web_development',
+                    'platform': 'smashingmagazine',
+                    'tags': ['web development', 'frontend'] + categories[:2],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Smashing Magazine data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Smashing Magazine articles"""
-        try:
-            articles = raw_data.get('articles', [])
-            processed_articles = []
+        return items
 
-            for article in articles:
-                processed = self._process_article(article)
-                if processed:
-                    processed_articles.append(processed)
+    def _detect_categories(self, text: str) -> List[str]:
+        """Detect web development categories from text."""
+        categories = []
+        for category, keywords in self.web_categories.items():
+            if any(kw in text for kw in keywords):
+                categories.append(category)
+        return categories or ['general']
 
-            content = {
-                'articles': processed_articles,
-                'analytics': self._generate_analytics(processed_articles),
-                'trending_topics': self._extract_trending_topics(processed_articles),
-                'tech_stack_trends': self._extract_tech_trends(processed_articles),
+    def _is_tutorial(self, text: str) -> bool:
+        """Check if article is a tutorial."""
+        tutorial_keywords = ['tutorial', 'how to', 'guide', 'step by step', 'complete guide', 'introduction to']
+        return any(kw in text for kw in tutorial_keywords)
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze article sentiment."""
+        positive = ['best', 'modern', 'powerful', 'complete', 'essential', 'ultimate', 'amazing']
+        negative = ['avoid', 'mistake', 'problem', 'issue', 'deprecated', 'bad']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return web development category links."""
+        return [
+            {
+                'title': f"Smashing: {name}",
+                'url': f'https://www.smashingmagazine.com/category/{slug}/',
+                'link': f'https://www.smashingmagazine.com/category/{slug}/',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Smashing Magazine',
+                'data_type': 'webdev_category',
+                'platform': 'smashingmagazine',
+                'tags': ['web development', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_articles) / 20 + 0.4)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('CSS Techniques', 'css', 'Modern CSS layouts and styling.'),
+            ('JavaScript Frameworks', 'javascript', 'React, Vue, and JS development.'),
+            ('UX Design Patterns', 'ux', 'User experience best practices.'),
+            ('Web Performance', 'performance', 'Site speed optimization.'),
+            ('Design Systems', 'design', 'UI components and design tokens.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='smashingmagazine.com',
-                data_type='web_development',
-                content=content,
-                metadata={
-                    'article_count': len(processed_articles),
-                    'source': 'smashingmagazine',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['web development', 'css', 'javascript', 'design', 'ux'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['web_dev_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Smashing Magazine data: {e}")
-            return None
-
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual article"""
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            text = f"{title} {summary}".lower()
-
-            blob = TextBlob(f"{title} {summary}")
-            sentiment = {
-                'polarity': blob.sentiment.polarity,
-                'subjectivity': blob.sentiment.subjectivity,
-                'classification': 'positive' if blob.sentiment.polarity > 0.1 else 'negative' if blob.sentiment.polarity < -0.1 else 'neutral'
-            }
-
-            categories = []
-            for cat, keywords in self.web_categories.items():
-                if any(kw in text for kw in keywords):
-                    categories.append(cat)
-
-            return {
+        return [
+            {
                 'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'author': article.get('author', ''),
-                'sentiment': sentiment,
-                'categories': categories or ['general'],
-                'tags': article.get('tags', []),
+                'url': f'https://www.smashingmagazine.com/category/{category}/',
+                'link': f'https://www.smashingmagazine.com/category/{category}/',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Smashing Magazine',
+                'data_type': 'webdev_topic',
+                'platform': 'smashingmagazine',
+                'tags': ['web development', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing article: {e}")
-            return None
-
-    def _generate_analytics(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate analytics from articles"""
-        total = len(articles)
-        if total == 0:
-            return {}
-
-        return {
-            'total_articles': total,
-            'category_distribution': self._count_categories(articles),
-        }
-
-    def _count_categories(self, articles: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count articles per category"""
-        counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                counts[cat] = counts.get(cat, 0) + 1
-        return counts
-
-    def _extract_trending_topics(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending topics"""
-        topic_counts = {}
-        for article in articles:
-            for cat in article.get('categories', []):
-                topic_counts[cat] = topic_counts.get(cat, 0) + 1
-            for tag in article.get('tags', []):
-                topic_counts[tag] = topic_counts.get(tag, 0) + 1
-
-        sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
-        return [{'topic': t, 'count': c} for t, c in sorted_topics[:10]]
-
-    def _extract_tech_trends(self, articles: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Extract technology stack trends"""
-        tech_counts = {cat: 0 for cat in self.web_categories.keys()}
-        for article in articles:
-            for cat in article.get('categories', []):
-                if cat in tech_counts:
-                    tech_counts[cat] += 1
-        return tech_counts
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['web development', 'css', 'javascript', 'react', 'design', 'ux']
+            for title, category, desc in topics
+        ]
