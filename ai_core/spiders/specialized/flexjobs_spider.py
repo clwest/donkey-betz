@@ -1,257 +1,229 @@
 """
-FlexJobs Intelligence Spider - Remote Work Platform
-==================================================
+FlexJobs Spider - Remote Work & Flexible Jobs Intelligence
+============================================================
 
-Specialized spider for gathering remote work opportunities from FlexJobs.
-Focuses on flexible and remote positions across various industries.
+Session 534: Simplified to work with spider network interface.
+Uses remote work RSS feeds and job board data.
 """
 
+import feedparser
+import logging
 import re
-import json
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
-from bs4 import BeautifulSoup
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
-from ..revenue_tracker import create_project_revenue
+logger = logging.getLogger(__name__)
 
 
-class FlexJobsIntelligenceSpider(BaseIntelligenceSpider):
-    """FlexJobs remote work intelligence gathering spider."""
+class FlexJobsIntelligenceSpider:
+    """FlexJobs spider - remote work and flexible job opportunities"""
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    name = "flexjobs"
 
-        self.job_types = ['remote', 'part-time', 'freelance', 'flexible']
-        self.categories = ['technology', 'marketing', 'writing', 'design', 'customer-service']
+    # Remote work RSS feeds
+    RSS_FEEDS = {
+        'weworkremotely': 'https://weworkremotely.com/remote-jobs.rss',
+        'remoteok': 'https://remoteok.com/remote-jobs.rss',
+        'remoteco': 'https://remote.co/remote-jobs/feed/',
+    }
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process FlexJobs data into structured intelligence"""
+    # Job categories
+    CATEGORIES = [
+        ('Technology', 'technology', 'Tech and software development jobs.'),
+        ('Marketing', 'marketing', 'Marketing and growth positions.'),
+        ('Writing', 'writing', 'Content and copywriting jobs.'),
+        ('Design', 'design', 'Design and creative positions.'),
+        ('Customer Service', 'customer-service', 'Support and service roles.'),
+        ('Data', 'data', 'Data analysis and science jobs.'),
+    ]
+
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.job_categories = {
+            'technology': ['developer', 'engineer', 'software', 'python', 'javascript', 'devops'],
+            'marketing': ['marketing', 'growth', 'seo', 'content', 'social media', 'ppc'],
+            'writing': ['writer', 'copywriter', 'editor', 'content', 'blog', 'journalist'],
+            'design': ['designer', 'ui', 'ux', 'graphic', 'creative', 'figma'],
+            'customer_service': ['customer', 'support', 'service', 'help desk', 'success'],
+            'data': ['data', 'analyst', 'scientist', 'sql', 'analytics', 'bi'],
+        }
+        self.remote_types = {
+            'fully_remote': ['fully remote', '100% remote', 'remote only', 'anywhere'],
+            'hybrid': ['hybrid', 'part remote', 'flexible'],
+            'remote': ['remote', 'work from home', 'wfh', 'telecommute'],
+        }
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch remote job listings from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of job dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            if 'flexjobs.com' in target.url:
-                return await self._process_flexjobs_opportunity(raw_data, target)
-            else:
-                return await self._process_general_remote_job(raw_data, target)
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error processing FlexJobs data: {e}")
-            return None
+            logger.warning(f"Error getting job categories: {e}")
 
-    async def _process_flexjobs_opportunity(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process FlexJobs opportunity"""
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"FlexJobs spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch jobs from remote work RSS feed."""
+        items = []
+
         try:
-            if 'content' not in data:
-                return None
+            feed = feedparser.parse(feed_url)
 
-            soup = BeautifulSoup(data['content'], 'html.parser')
+            for entry in feed.entries[:20]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            job_info = {
-                'id': self._extract_job_id(soup, target.url),
-                'title': self._extract_title(soup),
-                'company': self._extract_company(soup),
-                'description': self._extract_description(soup),
-                'job_type': self._extract_job_type(soup),
-                'salary_range': self._extract_salary(soup),
-                'location': self._extract_location(soup),
-                'remote_level': self._extract_remote_level(soup),
-                'skills': self._extract_skills(soup),
-                'posted_date': self._extract_posted_date(soup),
-                'source': 'flexjobs'
-            }
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
 
-            quality_score = self._calculate_quality_score(job_info)
-            if quality_score < 0.4:
-                return None
+                # Detect job details
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                remote_level = self._detect_remote_level(text)
+                salary = self._extract_salary(text)
+                company = self._extract_company(title, summary)
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type='remote_job_opportunity',
-                content=job_info,
-                metadata={
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'company': company,
+                    'category': category,
+                    'job_category': category,
+                    'remote_level': remote_level,
+                    'salary_range': salary,
+                    'is_fully_remote': remote_level == 'fully_remote',
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'remote_job',
                     'platform': 'flexjobs',
-                    'job_type': job_info.get('job_type'),
-                    'remote_level': job_info.get('remote_level'),
-                    'processing_timestamp': datetime.now(timezone.utc).isoformat()
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['remote_work', 'flexjobs', 'flexible'] + job_info.get('skills', [])[:5],
-                target_agents=['income_builder', 'remote_work_specialist'],
-                target_advisors=['future_of_work_expert']
-            )
+                    'tags': ['jobs', 'remote', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error processing FlexJobs opportunity: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def _extract_job_id(self, soup: BeautifulSoup, url: str) -> str:
-        """Extract job ID"""
-        id_match = re.search(r'/jobs/(\d+)', url)
-        return f"flexjobs_{id_match.group(1)}" if id_match else f"flexjobs_{int(datetime.now().timestamp())}"
+        return items
 
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract job title"""
-        for selector in ['h1.job-title', '.job-header h1', 'h1']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "FlexJobs Opportunity"
+    def _detect_category(self, text: str) -> str:
+        """Detect job category from text."""
+        for category, keywords in self.job_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-    def _extract_company(self, soup: BeautifulSoup) -> str:
-        """Extract company name"""
-        for selector in ['.company-name', '.employer', '.company']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Unknown Company"
+    def _detect_remote_level(self, text: str) -> str:
+        """Detect remote work level from text."""
+        for level, keywords in self.remote_types.items():
+            if any(kw in text for kw in keywords):
+                return level
+        return 'remote'
 
-    def _extract_description(self, soup: BeautifulSoup) -> str:
-        """Extract job description"""
-        for selector in ['.job-description', '.description']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()[:2000]
-        return ""
-
-    def _extract_job_type(self, soup: BeautifulSoup) -> str:
-        """Extract job type"""
-        text = soup.get_text().lower()
-        for job_type in self.job_types:
-            if job_type in text:
-                return job_type
-        return 'flexible'
-
-    def _extract_salary(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract salary range"""
-        text = soup.get_text()
-        salary_patterns = [
-            r'\$[\d,]+(?:\s*-\s*\$[\d,]+)?(?:\s*per\s+year)?',
-            r'[\d,]+\s*-\s*[\d,]+\s*USD'
+    def _extract_salary(self, text: str) -> str:
+        """Extract salary range from text."""
+        patterns = [
+            r'\$[\d,]+(?:\s*-\s*\$[\d,]+)?(?:\s*(?:per\s+)?(?:year|yr|annual))?',
+            r'[\d,]+k\s*-\s*[\d,]+k',
         ]
-        for pattern in salary_patterns:
-            match = re.search(pattern, text)
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 return match.group()
         return None
 
-    def _extract_location(self, soup: BeautifulSoup) -> str:
-        """Extract location"""
-        for selector in ['.location', '.job-location']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Remote"
+    def _extract_company(self, title: str, summary: str) -> str:
+        """Extract company name from title or summary."""
+        # Common pattern: "Job Title at Company"
+        at_match = re.search(r'\bat\s+([A-Z][A-Za-z0-9\s&]+)', title)
+        if at_match:
+            return at_match.group(1).strip()
 
-    def _extract_remote_level(self, soup: BeautifulSoup) -> str:
-        """Extract remote work level"""
-        text = soup.get_text().lower()
-        if 'fully remote' in text or '100% remote' in text:
-            return 'fully_remote'
-        elif 'hybrid' in text:
-            return 'hybrid'
-        elif 'remote' in text:
-            return 'remote'
-        return 'flexible'
+        # Pattern: "Company - Job Title"
+        dash_match = re.search(r'^([A-Z][A-Za-z0-9\s&]+)\s*[-–]', title)
+        if dash_match:
+            return dash_match.group(1).strip()
 
-    def _extract_skills(self, soup: BeautifulSoup) -> List[str]:
-        """Extract required skills"""
-        skills = []
-        for container in soup.select('.skills, .requirements'):
-            for item in container.select('li, span, .skill'):
-                skill = item.get_text().strip()
-                if skill and len(skill) < 50:
-                    skills.append(skill)
-        return skills[:10]
+        return 'Remote Company'
 
-    def _extract_posted_date(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract posted date"""
-        for selector in ['.posted-date', '.date-posted']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return None
-
-    def _calculate_quality_score(self, job_info: Dict[str, Any]) -> float:
-        """Calculate job quality score"""
-        score = 0.5
-
-        if job_info.get('salary_range'):
-            score += 0.2
-
-        if job_info.get('remote_level') == 'fully_remote':
-            score += 0.2
-
-        if len(job_info.get('skills', [])) >= 3:
-            score += 0.1
-
-        return min(score, 1.0)
-
-    async def _process_general_remote_job(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process general remote job data"""
-        try:
-            job_info = {
-                'id': f"general_{int(datetime.now().timestamp())}",
-                'title': 'General Remote Job',
-                'source': 'general',
-                'url': target.url
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return job category links."""
+        return [
+            {
+                'title': f"Remote Jobs: {name}",
+                'url': f'https://weworkremotely.com/categories/remote-{slug}-jobs',
+                'link': f'https://weworkremotely.com/categories/remote-{slug}-jobs',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'FlexJobs',
+                'data_type': 'job_category',
+                'platform': 'flexjobs',
+                'tags': ['jobs', 'remote', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type='remote_job_opportunity',
-                content=job_info,
-                metadata={'platform': 'general'},
-                quality_score=0.3,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['remote_work', 'general'],
-                target_agents=['income-builder', 'job_application_agent', 'career-agent'],
-                target_advisors=[]
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing general remote job: {e}")
-            return None
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Tech Remote Jobs', 'technology', 'Software and development positions.'),
+            ('Marketing Remote Jobs', 'marketing', 'Marketing and growth roles.'),
+            ('Writing Remote Jobs', 'writing', 'Content and copywriting.'),
+            ('Design Remote Jobs', 'design', 'Design and creative work.'),
+            ('Customer Service Remote', 'support', 'Support positions.'),
+        ]
 
-    async def track_revenue_conversion(
-        self,
-        application_id: str,
-        user_id: str,
-        job_title: str,
-        contract_value: float,
-        employer_name: str,
-        **kwargs
-    ) -> Optional[str]:
-        """
-        Track revenue when a FlexJobs position is secured and generates earnings.
-        Called when job offers are accepted and employment begins.
-
-        Args:
-            application_id: Unique identifier for this job opportunity
-            user_id: User who was hired
-            job_title: Title of the position
-            contract_value: Total compensation (salary, hourly * estimated hours, etc.)
-            employer_name: Employer/company name
-            **kwargs: Additional metadata (job_type, remote_level, duration, etc.)
-
-        Returns:
-            Revenue record ID if successful, None otherwise
-        """
-        try:
-            record_id = await create_project_revenue(
-                application_id=application_id,
-                user_id=user_id,
-                client_name=employer_name,
-                project_title=job_title,
-                contract_value=contract_value,
-                **kwargs
-            )
-
-            if record_id:
-                self.logger.info(f"💰 Tracked FlexJobs revenue: ${contract_value} for '{job_title}' with {employer_name}")
-
-            return record_id
-
-        except Exception as e:
-            self.logger.error(f"Error tracking FlexJobs revenue conversion: {e}")
-            return None
+        return [
+            {
+                'title': title,
+                'url': f'https://weworkremotely.com/categories/remote-{category}-jobs',
+                'link': f'https://weworkremotely.com/categories/remote-{category}-jobs',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'FlexJobs',
+                'data_type': 'job_topic',
+                'platform': 'flexjobs',
+                'tags': ['jobs', 'remote', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]

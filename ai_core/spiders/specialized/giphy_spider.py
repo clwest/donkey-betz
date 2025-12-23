@@ -2,219 +2,263 @@
 Giphy Spider - GIF & Meme Trends Intelligence
 ==============================================
 
-Session 343: Spider for Giphy API to track trending GIFs and meme culture.
-Collects trending GIFs, popular searches, and visual culture trends.
-
-Uses GIPHY_API_Key from environment for authenticated requests.
+Session 534: Simplified to work with spider network interface.
+Uses Giphy API for trending GIFs and meme culture.
 """
 
-import aiohttp
-import asyncio
 import os
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class GiphySpider(BaseIntelligenceSpider):
+class GiphySpider:
     """Giphy spider - trending GIFs, stickers, and meme culture"""
+
+    name = "giphy"
 
     BASE_URL = "https://api.giphy.com/v1"
 
-    # Search terms to track trends
-    TREND_SEARCHES = [
-        'reaction',
-        'meme',
-        'funny',
-        'celebrate',
-        'work',
-        'mood',
-        'tech',
-        'business',
+    # Fallback meme/culture RSS feeds
+    RSS_FEEDS = {
+        'know_your_meme': 'https://knowyourmeme.com/newsfeed.rss',
+        'reddit_memes': 'https://www.reddit.com/r/memes/.rss',
+    }
+
+    # GIF categories
+    CATEGORIES = [
+        ('Trending', 'trending', 'Trending GIFs right now.'),
+        ('Reactions', 'reactions', 'Reaction GIFs for conversations.'),
+        ('Memes', 'memes', 'Popular meme content.'),
+        ('Stickers', 'stickers', 'Animated stickers.'),
+        ('Entertainment', 'entertainment', 'Movies, TV, and pop culture.'),
+        ('Sports', 'sports', 'Sports highlights and celebrations.'),
     ]
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
-        self.api_key = os.getenv('GIPHY_API_Key', '')
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.api_key = os.getenv('GIPHY_API_KEY', '')
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch trending GIFs from Giphy"""
-        if not self.api_key:
-            self.logger.warning("GIPHY_API_Key not configured")
-            return {'gifs': [], 'source': 'giphy', 'error': 'API key not configured'}
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch trending GIFs from Giphy and fallback sources.
 
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of GIF/meme dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try Giphy API if key is available
+        if self.api_key:
+            try:
+                api_items = self._fetch_from_giphy()
+                for item in api_items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching from Giphy API: {e}")
+
+        # Fetch from fallback RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_gifs = []
-            trending_searches = []
-
-            async with aiohttp.ClientSession() as session:
-                # Fetch trending GIFs
-                try:
-                    url = f"{self.BASE_URL}/gifs/trending"
-                    params = {
-                        'api_key': self.api_key,
-                        'limit': 25,
-                        'rating': 'pg-13'
-                    }
-
-                    async with session.get(url, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            gifs = data.get('data', [])
-
-                            for gif in gifs:
-                                all_gifs.append({
-                                    'id': gif.get('id', ''),
-                                    'title': gif.get('title', ''),
-                                    'url': gif.get('url', ''),
-                                    'embed_url': gif.get('embed_url', ''),
-                                    'preview_url': gif.get('images', {}).get('preview_gif', {}).get('url', ''),
-                                    'original_url': gif.get('images', {}).get('original', {}).get('url', ''),
-                                    'username': gif.get('username', ''),
-                                    'source_domain': gif.get('source_tld', ''),
-                                    'trending_datetime': gif.get('trending_datetime', ''),
-                                    'import_datetime': gif.get('import_datetime', ''),
-                                    'rating': gif.get('rating', ''),
-                                    'source': 'giphy',
-                                    'type': 'gif',
-                                    'category': 'trending',
-                                })
-                        else:
-                            self.logger.warning(f"Giphy trending returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching trending GIFs: {e}")
-
-                await asyncio.sleep(0.3)
-
-                # Fetch trending search terms
-                try:
-                    url = f"{self.BASE_URL}/trending/searches"
-                    params = {
-                        'api_key': self.api_key,
-                    }
-
-                    async with session.get(url, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            trending_searches = data.get('data', [])
-                        else:
-                            self.logger.warning(f"Giphy trending searches returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching trending searches: {e}")
-
-                await asyncio.sleep(0.3)
-
-                # Fetch stickers (another trend indicator)
-                try:
-                    url = f"{self.BASE_URL}/stickers/trending"
-                    params = {
-                        'api_key': self.api_key,
-                        'limit': 15,
-                        'rating': 'pg-13'
-                    }
-
-                    async with session.get(url, params=params, timeout=15) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            stickers = data.get('data', [])
-
-                            for sticker in stickers:
-                                all_gifs.append({
-                                    'id': sticker.get('id', ''),
-                                    'title': sticker.get('title', ''),
-                                    'url': sticker.get('url', ''),
-                                    'embed_url': sticker.get('embed_url', ''),
-                                    'preview_url': sticker.get('images', {}).get('preview_gif', {}).get('url', ''),
-                                    'original_url': sticker.get('images', {}).get('original', {}).get('url', ''),
-                                    'username': sticker.get('username', ''),
-                                    'rating': sticker.get('rating', ''),
-                                    'source': 'giphy',
-                                    'type': 'sticker',
-                                    'category': 'trending_sticker',
-                                })
-                        else:
-                            self.logger.warning(f"Giphy stickers returned {response.status}")
-
-                except Exception as e:
-                    self.logger.warning(f"Error fetching stickers: {e}")
-
-            return {
-                'gifs': all_gifs,
-                'trending_searches': trending_searches,
-                'source': 'giphy'
-            }
-
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error fetching Giphy data: {e}")
-            return None
+            logger.warning(f"Error getting Giphy categories: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Giphy data into intelligence"""
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Giphy spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_from_giphy(self) -> List[Dict[str, Any]]:
+        """Fetch trending GIFs from Giphy API."""
+        items = []
+
         try:
-            gifs = raw_data.get('gifs', [])
-            trending_searches = raw_data.get('trending_searches', [])
-
-            # Separate GIFs and stickers
-            gif_items = [g for g in gifs if g.get('type') == 'gif']
-            sticker_items = [g for g in gifs if g.get('type') == 'sticker']
-
-            # Extract creators
-            creator_counts = {}
-            for gif in gifs:
-                creator = gif.get('username', 'anonymous')
-                if creator:
-                    creator_counts[creator] = creator_counts.get(creator, 0) + 1
-
-            top_creators = sorted(creator_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-            # Extract source domains
-            domain_counts = {}
-            for gif in gifs:
-                domain = gif.get('source_domain', '')
-                if domain:
-                    domain_counts[domain] = domain_counts.get(domain, 0) + 1
-
-            top_domains = sorted(domain_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-            content = {
-                'gifs': gif_items,
-                'stickers': sticker_items,
-                'trending_searches': trending_searches[:20],
-                'top_creators': top_creators,
-                'top_domains': top_domains,
-                'total_gifs': len(gif_items),
-                'total_stickers': len(sticker_items),
-            }
-
-            quality_score = min(1.0, len(gifs) / 30 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='giphy.com',
-                data_type='meme_intelligence',
-                content=content,
-                metadata={
-                    'gif_count': len(gif_items),
-                    'sticker_count': len(sticker_items),
-                    'trending_search_count': len(trending_searches),
-                    'source': 'giphy',
+            # Fetch trending GIFs
+            response = requests.get(
+                f"{self.BASE_URL}/gifs/trending",
+                params={
+                    'api_key': self.api_key,
+                    'limit': 20,
+                    'rating': 'pg-13'
                 },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['giphy', 'gif', 'meme', 'sticker', 'visual', 'culture', 'trending', 'social'],
-                target_agents=['trend_analysis_agent', 'social_media_agent', 'content_strategy_agent'],
-                target_advisors=['social_media_advisor', 'content_strategist', 'culture_analyst']
+                timeout=15
             )
 
+            if response.status_code == 200:
+                data = response.json()
+                gifs = data.get('data', [])
+
+                for gif in gifs:
+                    items.append({
+                        'title': gif.get('title', 'Trending GIF'),
+                        'url': gif.get('url', ''),
+                        'link': gif.get('url', ''),
+                        'summary': f"Trending GIF by @{gif.get('username', 'giphy')}",
+                        'description': gif.get('title', ''),
+                        'gif_id': gif.get('id', ''),
+                        'embed_url': gif.get('embed_url', ''),
+                        'preview_url': gif.get('images', {}).get('preview_gif', {}).get('url', ''),
+                        'original_url': gif.get('images', {}).get('original', {}).get('url', ''),
+                        'username': gif.get('username', ''),
+                        'rating': gif.get('rating', 'pg'),
+                        'category': 'trending',
+                        'content_type': 'gif',
+                        'source': 'Giphy',
+                        'data_type': 'gif',
+                        'platform': 'giphy',
+                        'tags': ['gif', 'trending', 'meme'],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
+            # Fetch trending stickers
+            response = requests.get(
+                f"{self.BASE_URL}/stickers/trending",
+                params={
+                    'api_key': self.api_key,
+                    'limit': 10,
+                    'rating': 'pg-13'
+                },
+                timeout=15
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                stickers = data.get('data', [])
+
+                for sticker in stickers:
+                    items.append({
+                        'title': sticker.get('title', 'Trending Sticker'),
+                        'url': sticker.get('url', ''),
+                        'link': sticker.get('url', ''),
+                        'summary': f"Trending sticker by @{sticker.get('username', 'giphy')}",
+                        'description': sticker.get('title', ''),
+                        'gif_id': sticker.get('id', ''),
+                        'embed_url': sticker.get('embed_url', ''),
+                        'preview_url': sticker.get('images', {}).get('preview_gif', {}).get('url', ''),
+                        'username': sticker.get('username', ''),
+                        'rating': sticker.get('rating', 'pg'),
+                        'category': 'stickers',
+                        'content_type': 'sticker',
+                        'source': 'Giphy',
+                        'data_type': 'sticker',
+                        'platform': 'giphy',
+                        'tags': ['sticker', 'trending', 'animated'],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
         except Exception as e:
-            self.logger.error(f"Error processing Giphy data: {e}")
-            return None
+            logger.warning(f"Error with Giphy API: {e}")
 
-    def get_required_fields(self) -> List[str]:
-        return ['id', 'url']
+        return items
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['giphy', 'gif', 'meme', 'sticker', 'reaction', 'viral', 'trending']
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch meme content from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:300]
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': 'memes',
+                    'content_type': 'meme',
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'meme_content',
+                    'platform': 'giphy',
+                    'tags': ['meme', 'culture', 'viral'],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Giphy category links."""
+        return [
+            {
+                'title': f"Giphy: {name}",
+                'url': f'https://giphy.com/explore/{slug}',
+                'link': f'https://giphy.com/explore/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Giphy',
+                'data_type': 'gif_category',
+                'platform': 'giphy',
+                'tags': ['gif', 'giphy', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Trending GIFs', 'trending', 'Most popular GIFs now.'),
+            ('Reaction GIFs', 'reactions', 'Express yourself with reactions.'),
+            ('Meme GIFs', 'memes', 'Popular meme content.'),
+            ('Stickers', 'stickers', 'Animated stickers.'),
+            ('Entertainment', 'entertainment', 'Pop culture GIFs.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://giphy.com/explore/{category}',
+                'link': f'https://giphy.com/explore/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Giphy',
+                'data_type': 'gif_topic',
+                'platform': 'giphy',
+                'tags': ['gif', 'giphy', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
