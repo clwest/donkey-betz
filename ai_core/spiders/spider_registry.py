@@ -16,7 +16,7 @@ from datetime import datetime
 import logging
 
 # Import working freelance platform spiders (Session 397: Removed broken/no-API spiders)
-from .specialized.remoteok_spider import RemoteOKIntelligenceSpider
+from .specialized.remoteok_spider import RemoteOKSpider
 
 # Import content monetization spiders (Session 397: Removed gumroad - no public API)
 from .specialized.medium_spider import MediumIntelligenceSpider
@@ -201,7 +201,7 @@ class SpiderRegistry:
         # Removed: financial, innovation, social_sentiment, market_data, news_harvester (placeholders)
         # Removed: toptal, guru, peopleperhour, ninetyninedesigns, flexjobs, angellist (no public API)
 
-        self.register_spider('remoteok', RemoteOKIntelligenceSpider, {
+        self.register_spider('remoteok', RemoteOKSpider, {
             'category': 'remote_work',
             'priority': 2,
             'rate_limit': 1.0,

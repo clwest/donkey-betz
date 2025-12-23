@@ -1,160 +1,250 @@
 """
-RemoteOK Intelligence Spider - Remote Jobs Platform
-===================================================
+RemoteOK Spider - Remote Jobs Platform Intelligence
+====================================================
 
-Specialized spider for gathering remote job opportunities from RemoteOK.
-Focuses on tech and startup remote positions worldwide.
+Session 534: Simplified to work with spider network interface.
+Uses RemoteOK API and remote job RSS feeds.
 """
 
+import requests
+import feedparser
+import logging
 import re
-import json
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
-from bs4 import BeautifulSoup
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class RemoteOKIntelligenceSpider(BaseIntelligenceSpider):
-    """RemoteOK remote jobs intelligence gathering spider."""
+class RemoteOKSpider:
+    """RemoteOK spider - remote tech jobs worldwide"""
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    name = "remoteok"
 
-        self.tech_categories = ['engineering', 'design', 'marketing', 'sales', 'support', 'management']
-        self.salary_ranges = {'junior': (30000, 70000), 'mid': (70000, 120000), 'senior': (120000, 200000)}
+    # RemoteOK provides a JSON API
+    API_URL = "https://remoteok.com/api"
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process RemoteOK data"""
-        try:
-            if 'remoteok.io' in target.url:
-                return await self._process_remoteok_job(raw_data, target)
-            return await self._process_general_tech_job(raw_data, target)
-        except Exception as e:
-            self.logger.error(f"Error processing RemoteOK data: {e}")
-            return None
+    # Remote job RSS feeds (fallback)
+    RSS_FEEDS = {
+        'weworkremotely': 'https://weworkremotely.com/remote-jobs.rss',
+        'remotive': 'https://remotive.com/remote-jobs/feed',
+        'remote_co': 'https://remote.co/remote-jobs/feed/',
+        'flexjobs': 'https://www.flexjobs.com/rss/all',
+    }
 
-    async def _process_remoteok_job(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process RemoteOK job posting"""
-        if 'content' not in data:
-            return None
+    # Job categories
+    CATEGORIES = [
+        ('Engineering', 'dev', 'Software development and engineering.'),
+        ('Design', 'design', 'UI/UX and graphic design.'),
+        ('Marketing', 'marketing', 'Digital marketing and growth.'),
+        ('Sales', 'sales', 'Sales and business development.'),
+        ('Support', 'support', 'Customer support and success.'),
+    ]
 
-        soup = BeautifulSoup(data['content'], 'html.parser')
-
-        job_info = {
-            'id': f"remoteok_{int(datetime.now().timestamp())}",
-            'title': self._extract_title(soup),
-            'company': self._extract_company(soup),
-            'description': self._extract_description(soup),
-            'salary': self._extract_salary(soup),
-            'tags': self._extract_tags(soup),
-            'location': 'Worldwide',
-            'apply_url': self._extract_apply_url(soup),
-            'posted_date': self._extract_posted_date(soup),
-            'source': 'remoteok'
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.tech_categories = {
+            'engineering': ['developer', 'engineer', 'programmer', 'backend', 'frontend', 'fullstack'],
+            'design': ['designer', 'ui', 'ux', 'graphic', 'product design'],
+            'marketing': ['marketing', 'seo', 'growth', 'content', 'social media'],
+            'sales': ['sales', 'account', 'business development', 'revenue'],
+            'support': ['support', 'customer success', 'help desk', 'service'],
+            'devops': ['devops', 'sre', 'infrastructure', 'cloud', 'aws', 'kubernetes'],
+            'data': ['data', 'analyst', 'scientist', 'machine learning', 'ai'],
         }
 
-        quality_score = 0.7  # RemoteOK generally has quality jobs
-        if job_info.get('salary'):
-            quality_score += 0.2
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch remote jobs from RemoteOK API and RSS feeds.
 
-        return IntelligenceData(
-            spider_id=self.spider_id,
-            source_url=target.url,
-            data_type='remote_tech_job',
-            content=job_info,
-            metadata={
-                'platform': 'remoteok',
-                'job_category': 'tech',
-                'salary_disclosed': bool(job_info.get('salary')),
-                'processing_timestamp': datetime.now(timezone.utc).isoformat()
-            },
-            quality_score=quality_score,
-            timestamp=datetime.now(timezone.utc),
-            relevance_tags=['remote_work', 'tech_jobs', 'startup'] + job_info.get('tags', [])[:5],
-            target_agents=['income-builder', 'job_application_agent', 'career-agent', 'tech-job-specialist'],  # FIXED: Correct agent names
-            target_advisors=['startup_guru', 'tech_innovator']
-        )
+        Args:
+            max_results: Maximum number of items to fetch
 
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract job title"""
-        for selector in ['h2', 'h1', '.job-title']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "RemoteOK Tech Job"
+        Returns:
+            List of remote job dictionaries
+        """
+        all_items = []
+        seen_urls = set()
 
-    def _extract_company(self, soup: BeautifulSoup) -> str:
-        """Extract company name"""
-        for selector in ['.company', '.employer', 'h3']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Tech Startup"
+        # Try RemoteOK API first
+        try:
+            api_items = self._fetch_remoteok_api()
+            for item in api_items:
+                if item['url'] not in seen_urls:
+                    seen_urls.add(item['url'])
+                    all_items.append(item)
+        except Exception as e:
+            logger.warning(f"Error fetching RemoteOK API: {e}")
 
-    def _extract_description(self, soup: BeautifulSoup) -> str:
-        """Extract job description"""
-        for selector in ['.markdown', '.description', 'p']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()[:2000]
-        return ""
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
 
-    def _extract_salary(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract salary"""
-        text = soup.get_text()
-        salary_patterns = [
-            r'\$[\d,]+k?(?:\s*-\s*\$[\d,]+k?)?',
-            r'[\d,]+k?\s*USD'
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"RemoteOK spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_remoteok_api(self) -> List[Dict[str, Any]]:
+        """Fetch jobs from RemoteOK JSON API."""
+        items = []
+
+        try:
+            headers = {'User-Agent': 'DonkeyBetz-Spider/1.0'}
+            response = requests.get(self.API_URL, headers=headers, timeout=15)
+
+            if response.status_code == 200:
+                jobs = response.json()
+
+                # First item is usually metadata, skip it
+                for job in jobs[1:25] if len(jobs) > 1 else []:
+                    if not isinstance(job, dict):
+                        continue
+
+                    title = job.get('position', '')
+                    if not title:
+                        continue
+
+                    company = job.get('company', 'Remote Company')
+                    salary = self._format_salary(job.get('salary_min'), job.get('salary_max'))
+                    tags = job.get('tags', [])
+                    category = self._detect_category(f"{title} {' '.join(tags)}".lower())
+
+                    items.append({
+                        'title': f"{title} at {company}",
+                        'url': job.get('url', f"https://remoteok.com/jobs/{job.get('id', '')}"),
+                        'link': job.get('url', f"https://remoteok.com/jobs/{job.get('id', '')}"),
+                        'summary': job.get('description', '')[:400] if job.get('description') else '',
+                        'description': job.get('description', '')[:400] if job.get('description') else '',
+                        'company': company,
+                        'company_logo': job.get('company_logo', ''),
+                        'salary': salary,
+                        'tags': tags[:10],
+                        'category': category,
+                        'location': job.get('location', 'Worldwide'),
+                        'posted_date': job.get('date', ''),
+                        'source': 'RemoteOK',
+                        'data_type': 'remote_job',
+                        'platform': 'remoteok',
+                        'remote_type': 'fully_remote',
+                        'job_tags': ['remote', 'tech', category] + tags[:3],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RemoteOK API: {e}")
+
+        return items
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch remote jobs from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect job category
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                salary = self._extract_salary(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'category': category,
+                    'salary': salary,
+                    'location': 'Remote',
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'remote_job',
+                    'platform': 'remoteok',
+                    'remote_type': 'fully_remote',
+                    'tags': ['remote', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_category(self, text: str) -> str:
+        """Detect job category from text."""
+        for category, keywords in self.tech_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
+
+    def _format_salary(self, min_sal: Any, max_sal: Any) -> str:
+        """Format salary range."""
+        if min_sal and max_sal:
+            return f"${int(min_sal):,} - ${int(max_sal):,}"
+        elif min_sal:
+            return f"${int(min_sal):,}+"
+        elif max_sal:
+            return f"Up to ${int(max_sal):,}"
+        return ''
+
+    def _extract_salary(self, text: str) -> str:
+        """Extract salary from text."""
+        patterns = [
+            r'\$[\d,]+k?\s*-\s*\$?[\d,]+k?',
+            r'\$[\d,]+k?(?:\s*\/\s*(?:year|yr|annual))?',
+            r'[\d,]+k?\s*(?:USD|usd)',
         ]
-        for pattern in salary_patterns:
-            match = re.search(pattern, text)
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 return match.group()
-        return None
+        return ''
 
-    def _extract_tags(self, soup: BeautifulSoup) -> List[str]:
-        """Extract job tags/skills"""
-        tags = []
-        for elem in soup.select('.tag, .skill, .label'):
-            tag = elem.get_text().strip()
-            if tag and len(tag) < 30:
-                tags.append(tag)
-        return tags[:15]
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Remote Engineering Jobs', 'dev', 'Software development positions.'),
+            ('Remote Design Jobs', 'design', 'UI/UX and graphic design.'),
+            ('Remote Marketing Jobs', 'marketing', 'Digital marketing roles.'),
+            ('Remote Sales Jobs', 'sales', 'Sales and BD positions.'),
+            ('Remote Support Jobs', 'support', 'Customer success roles.'),
+        ]
 
-    def _extract_apply_url(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract application URL"""
-        for elem in soup.select('a[href*="apply"], a[href*="jobs"]'):
-            return elem.get('href')
-        return None
-
-    def _extract_posted_date(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract posted date"""
-        for selector in ['.time', '.date', '.posted']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return None
-
-    async def _process_general_tech_job(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process general tech job"""
-        job_info = {
-            'id': f"general_tech_{int(datetime.now().timestamp())}",
-            'title': 'General Tech Job',
-            'source': 'general',
-            'url': target.url
-        }
-
-        return IntelligenceData(
-            spider_id=self.spider_id,
-            source_url=target.url,
-            data_type='tech_job_opportunity',
-            content=job_info,
-            metadata={'platform': 'general'},
-            quality_score=0.4,
-            timestamp=datetime.now(timezone.utc),
-            relevance_tags=['tech_jobs', 'general'],
-            target_agents=['income-builder', 'job_application_agent', 'career-agent'],
-            target_advisors=[]
-        )
+        return [
+            {
+                'title': title,
+                'url': f'https://remoteok.com/remote-{category}-jobs',
+                'link': f'https://remoteok.com/remote-{category}-jobs',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'RemoteOK',
+                'data_type': 'job_category',
+                'platform': 'remoteok',
+                'tags': ['remote', 'jobs', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
