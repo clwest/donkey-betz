@@ -1668,6 +1668,51 @@ Spider Data → post_save Signal → Evaluate 34 Triggers → Fire Task → Inst
 
 ---
 
+## Intelligence Command Center (Sessions 536-538)
+
+**Status:** COMPLETE - All 3 Detail Panels Working
+
+The Command Center tab in AI Studio provides a unified view of the platform's intelligence network with real-time data and clickable detail panels.
+
+### Three Detail Panels
+
+| Panel | API Endpoint | Shows |
+|-------|--------------|-------|
+| **Spider Detail** | `/api/spider-intelligence/detail/<name>/` | Actual articles with clickable links, metadata |
+| **Agent Detail** | `/api/agent-intelligence/detail/<name>/` | Stats, knowledge sources, transfer relationships |
+| **Situation Detail** | `/api/situation-intelligence/detail/<type>/` | Triggers, total fires, recent events |
+
+### Features
+
+| Feature | Status | Session |
+|---------|--------|---------|
+| Spider List by Category | ✅ Collapsible | 537 |
+| Agent Roster (55 agents) | ✅ Clickable | 537 |
+| Situation List (19 situations) | ✅ Clickable | 537 |
+| Detail Panel Overlay | ✅ Fixed position | 537 |
+| Public APIs (no auth) | ✅ | 538 |
+
+### APIs (All Public)
+
+```
+GET /api/spider-intelligence/dashboard-stats/
+GET /api/spider-intelligence/detail/<spider_name>/
+GET /api/agent-intelligence/detail/<agent_name>/
+GET /api/situation-intelligence/detail/<situation_type>/
+GET /api/intelligence/cross-references/
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `ai_core/templates/partials/js/intelligence_command_center.html` | Frontend JavaScript |
+| `ai_core/templates/components/panels/intelligence_command_center.html` | UI layout |
+| `core/views_spider_intelligence.py` | API endpoints |
+| `core/auth_middleware.py` | PUBLIC_PATHS config |
+
+---
+
 ## See Also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
