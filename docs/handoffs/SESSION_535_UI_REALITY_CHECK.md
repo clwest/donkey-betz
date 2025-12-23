@@ -86,6 +86,28 @@ All 7 key endpoints tested and working:
 
 ---
 
+## Bug Fix: Spider Intelligence API 500 Error
+
+**Problem:** `/api/spider-intelligence/trends/` returning 500 error in browser console.
+
+**Root Cause:** Some `SpiderData.raw_data` values stored as JSON strings instead of dicts.
+
+**Fix:** Added `_parse_raw_data()` helper method to `SpiderIntelligenceService` that safely handles both formats.
+
+**File Modified:** `core/services/spider_intelligence.py`
+- Added `_parse_raw_data()` helper method (lines 107-128)
+- Fixed 7 occurrences of `entry.raw_data.get()` across methods:
+  - `get_trending_topics()`
+  - `get_market_insights()` (crypto + stocks)
+  - `get_tech_trends()`
+  - `get_job_summary()`
+  - `search()`
+  - `get_creative_trends()`
+
+**Commit:** `d3734ff`
+
+---
+
 ## Files Reviewed (Not Modified)
 
 | File | Purpose |
