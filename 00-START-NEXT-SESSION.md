@@ -11,18 +11,24 @@
 | Task | Status |
 |------|--------|
 | UI Tab Consolidation | ✅ 12 → 9 visible tabs |
+| Analytics Full Fix | ✅ Cost + performance tracking wired |
+| Command Center Full Fix | ✅ WebSocket + data accuracy fixed |
 | Hidden Marketplace tab | ✅ No workflows populated |
 | Hidden Voices tab | ✅ No voices populated |
 | Hidden Opportunities tab | ✅ Duplicate of Command Center |
-| System audit completed | ✅ All services healthy |
 
-**Tab Changes:**
-- Marketplace → Hidden (Session 536)
-- Voices → Hidden (Session 536)
-- Opportunities → Hidden (Session 536)
+### Analytics Fix Details
+- Added `_track_llm_analytics()` to BaseAgent - tracks every LLM call
+- Cost tracking: token usage + estimated costs
+- Performance tracking: response times per agent
+- Updated `analytics_overview_v2()` API format
 
-**Remaining Visible Tabs (9):**
-Assistant, Command Center, Analytics, Distribute, Legal, Portfolio, Preferences, Projects, Upload
+### Command Center Fix Details
+- Fixed WebSocket URL: `/ws/spider-intelligence/` → `/ws/spider-updates/`
+- Added Learning Feed WebSocket connection
+- Added `handleLearningMessage()` for real-time knowledge transfer events
+- Updated hardcoded fallbacks: 72 → 75 spiders
+- Updated category fallback to total 75
 
 ---
 
@@ -42,29 +48,21 @@ Assistant, Command Center, Analytics, Distribute, Legal, Portfolio, Preferences,
 
 ---
 
-## Priority 1: Verify Tab Consolidation
+## Priority 1: Verify Fixes
 
 ```bash
-# Open AI Studio and verify 9 tabs visible
+# Open AI Studio
 open http://localhost:8000/ai-studio/
 
-# Expected tabs:
-# Assistant | Command Center | Analytics | Distribute | Legal | Portfolio | Preferences | Projects | Upload
-```
+# Test Command Center:
+# 1. Go to Command Center tab
+# 2. Check browser console (F12) for "ICC: Spider WebSocket connected"
+# 3. Verify Live Feed shows events
 
----
-
-## Priority 2: Service Health Check
-
-```bash
-# Check all services
-pgrep -f daphne && echo "✅ Daphne (Web)" || echo "❌ Daphne"
-pgrep -f "celery.*worker" && echo "✅ Celery Worker" || echo "❌ Celery Worker"
-pgrep -f "celery.*beat" && echo "✅ Celery Beat" || echo "❌ Celery Beat"
-redis-cli ping && echo "✅ Redis" || echo "❌ Redis"
-
-# API health
-curl -s http://localhost:8000/health/ping/
+# Test Analytics:
+# 1. Use Assistant tab to make an agent request
+# 2. Go to Analytics tab
+# 3. Verify data appears (costs, usage, response times)
 ```
 
 ---
@@ -73,7 +71,7 @@ curl -s http://localhost:8000/health/ping/
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
-| 536 | UI Tab Consolidation | 12 → 9 tabs (hid Marketplace, Voices, Opportunities) |
+| 536 | UI Tab Consolidation + Analytics + Command Center | 3 major fixes |
 | 535 | UI Reality Check | WebSockets verified, API fix |
 | 534 | Spider Sync Conversion | 60+ spiders converted |
 | 533 | LLM Synthesis Fix | Data extraction fixed |
@@ -89,20 +87,9 @@ curl -s http://localhost:8000/health/ping/
 |------|--------|-------|
 | Tab consolidation (18→12) | ✅ Done | Session 530 + 536 |
 | Further consolidation (12→9) | ✅ Done | Session 536 |
+| Analytics backend | ✅ Done | Session 536 |
+| Command Center real-time | ✅ Done | Session 536 |
 | Discord/Web parity | Pending | Some features only on one platform |
-| Analytics backend | Pending | UI exists, needs real data |
-
----
-
-## Documentation Status
-
-| Doc | Location | Status |
-|-----|----------|--------|
-| Architecture | `docs/ARCHITECTURE.md` | ✅ |
-| Capabilities | `docs/CAPABILITIES.md` | ✅ |
-| Agents | `docs/AGENTS.md` | ✅ |
-| Spiders | `docs/SPIDERS.md` | ✅ |
-| UI Audit | `docs/UI_AUDIT_SESSION_502.md` | ✅ Updated |
 
 ---
 

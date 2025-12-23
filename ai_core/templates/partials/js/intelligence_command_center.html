@@ -82,12 +82,15 @@ const ICCState = {
             this.initialized = true;
             console.log('ICC: Initialization complete');
 
+            // Session 536: Update health indicator after successful data load
+            this.updateHealthIndicator('api', 'Connected', 'good');
+
             // Add a welcome event
             this.addEvent({
                 type: 'system',
                 icon: '&#129504;',
                 title: 'Intelligence Command Center Online',
-                details: `${this.spiders.length} spiders, ${this.agents.length} agents, ${this.situations.length} situations`,
+                details: `${this.flowCounts.spiders} spiders, ${this.flowCounts.agents} agents, ${this.flowCounts.situations} situations`,
                 timestamp: new Date()
             });
 
@@ -114,7 +117,7 @@ const ICCState = {
 
             if (data.status === 'success' || data.stats) {
                 const stats = data.stats || data;
-                this.flowCounts.spiders = stats.total_spiders || 72;
+                this.flowCounts.spiders = stats.total_spiders || 75; // Session 536: Updated from 72
                 document.getElementById('icc-spider-count').textContent = this.flowCounts.spiders;
                 document.getElementById('icc-flow-spiders').textContent = this.flowCounts.spiders;
 
@@ -308,9 +311,9 @@ const ICCState = {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
 
-        // Try to connect to spider intelligence WebSocket
+        // Session 536: Connect to spider-updates WebSocket (fixed URL)
         try {
-            const wsUrl = `${protocol}//${host}/ws/spider-intelligence/`;
+            const wsUrl = `${protocol}//${host}/ws/spider-updates/`;
             this.wsSpider = new WebSocket(wsUrl);
 
             this.wsSpider.onopen = () => {
@@ -340,6 +343,30 @@ const ICCState = {
         } catch (error) {
             console.error('ICC: Failed to connect WebSocket:', error);
             this.updateHealthIndicator('ws', 'Unavailable', 'error');
+        }
+
+        // Session 536: Connect to learning feed for knowledge transfer events
+        try {
+            this.wsLearning = new WebSocket(`${protocol}//${host}/ws/learning-feed/`);
+
+            this.wsLearning.onopen = () => {
+                console.log('ICC: Learning Feed WebSocket connected');
+            };
+
+            this.wsLearning.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleLearningMessage(data);
+                } catch (e) {
+                    console.error('ICC: Failed to parse learning message:', e);
+                }
+            };
+
+            this.wsLearning.onerror = (error) => {
+                console.error('ICC: Learning WebSocket error:', error);
+            };
+        } catch (error) {
+            console.error('ICC: Failed to connect Learning WebSocket:', error);
         }
     },
 
@@ -401,6 +428,39 @@ const ICCState = {
     },
 
     /**
+     * Session 536: Handle learning feed WebSocket messages
+     */
+    handleLearningMessage(data) {
+        if (this.isPaused) return;
+
+        // Handle learning activity feed (sent on connect)
+        if (data.type === 'learning_activity' && data.feed_items) {
+            // Add recent knowledge transfers to the live feed
+            for (const item of data.feed_items.slice(0, 5)) {
+                this.addEvent({
+                    type: 'learning',
+                    icon: '&#129504;', // brain emoji
+                    title: item.description || 'Knowledge Transfer',
+                    details: item.knowledge ? item.knowledge.substring(0, 50) + '...' : '',
+                    timestamp: new Date(item.timestamp)
+                });
+            }
+        }
+
+        // Handle individual learning events (broadcast in real-time)
+        if (data.type === 'learning_event' && data.event) {
+            const event = data.event;
+            this.addEvent({
+                type: 'learning',
+                icon: '&#129504;', // brain emoji
+                title: event.description || `${event.teacher} shared knowledge`,
+                details: event.knowledge ? event.knowledge.substring(0, 50) + '...' : '',
+                timestamp: new Date()
+            });
+        }
+    },
+
+    /**
      * Add event to live feed
      */
     addEvent(event) {
@@ -448,18 +508,18 @@ const ICCState = {
         const container = document.getElementById('icc-spider-list');
         let html = '';
 
-        // Default categories if API didn't provide them
+        // Session 536: Updated default categories to match actual 75 spider count
         const categories = Object.keys(this.spiderCategories).length > 0
             ? this.spiderCategories
             : {
-                'Tech News': 8,
-                'Financial': 6,
-                'Jobs': 5,
-                'Social': 12,
-                'Creative': 4,
-                'Crypto': 5,
+                'Tech News': 10,
+                'Financial': 8,
+                'Jobs': 7,
+                'Social': 15,
+                'Creative': 6,
+                'Crypto': 7,
                 'Research': 6,
-                'Other': 26
+                'Other': 16
             };
 
         for (const [category, count] of Object.entries(categories)) {
@@ -479,15 +539,16 @@ const ICCState = {
     /**
      * Fallback spider list render
      */
+    // Session 536: Updated fallback from 72 to 75 spiders
     renderSpiderListFallback() {
         const container = document.getElementById('icc-spider-list');
         container.innerHTML = `
             <div class="icc-list-item">
                 <span class="icc-status-dot active"></span>
-                <span>72 Active Spiders</span>
+                <span>75 Active Spiders</span>
             </div>
             <div class="text-muted px-3 py-2" style="font-size: 0.75rem;">
-                Categories: Tech, Financial, Jobs, Creative, Crypto, Social
+                Categories: Tech, Financial, Jobs, Creative, Crypto, Social, Research
             </div>
         `;
     },
