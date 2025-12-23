@@ -59,8 +59,10 @@ from .specialized.behance_spider import BehanceSpider
 # Session 218: FREELANCE spiders (Session 397: Removed AngelList - no public API)
 from .specialized.weworkremotely_spider import WeWorkRemotelySpider
 
-# Session 218: EDUCATION spiders (Session 397: Removed teachable, skillshare - no public API)
-# Session 399: UdemySpider removed - API requires auth, now using coursera via PHASE3_API_SPIDERS
+# Session 218: EDUCATION spiders
+# Session 534: Re-added teachable and udemy with RSS feed support
+from .specialized.teachable_spider import TeachableSpider
+from .specialized.udemy_spider import UdemySpider
 
 # Session 218: FINANCIAL spiders (Session 397: Removed opensea, seekingalpha, bloomberg, reuters - no public API)
 from .specialized.etherscan_spider import EtherscanSpider
@@ -247,6 +249,21 @@ class SpiderRegistry:
             'priority': 1,
             'rate_limit': 1.0,
             'targets': ['blog.coursera.org/feed/']
+        })
+
+        # Session 534: Re-added with RSS feed support
+        self.register_spider('teachable', TeachableSpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['teachable.com/blog', 'thinkific.com/blog']
+        })
+
+        self.register_spider('udemy', UdemySpider, {
+            'category': 'education',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'targets': ['elearningindustry.com', 'classcentral.com']
         })
 
         # === SESSION 397: WORKING FINANCIAL SPIDERS ===
