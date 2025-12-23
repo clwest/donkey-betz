@@ -1452,24 +1452,35 @@ advanced_analytics_service = AdvancedAnalyticsService()
 def analytics_overview_v2(request):
     """
     Session 221 Phase F: Get analytics overview for the current user.
+    Session 536: Updated response format to match frontend expectations.
     Returns summary stats for all metric categories.
     """
     if not ANALYTICS_MODELS_AVAILABLE:
         return Response({'error': 'Analytics models not available'}, status=503)
 
-    time_range = request.GET.get('range', '24h')
+    time_range = request.GET.get('time_range', request.GET.get('range', '24h'))
     start_time = AdvancedAnalyticsService.get_time_range(time_range)
 
     user_filter = Q(user=request.user) if request.user.is_authenticated else Q()
 
     # Usage summary by category
-    usage_by_category = UsageMetric.objects.filter(
+    usage_by_category_qs = UsageMetric.objects.filter(
         user_filter,
         timestamp__gte=start_time
     ).values('category').annotate(
         count=Sum('count'),
         total_value=Sum('value')
     ).order_by('-count')
+
+    # Convert to dict format expected by frontend
+    category_breakdown = {
+        'image': 0, 'video': 0, 'audio': 0, 'workflow': 0, 'agent': 0,
+        '3d': 0, 'spider': 0, 'collaboration': 0, 'api': 0
+    }
+    total_usage = 0
+    for item in usage_by_category_qs:
+        category_breakdown[item['category']] = item['count'] or 0
+        total_usage += item['count'] or 0
 
     # Performance summary
     performance_summary = PerformanceLog.objects.filter(
@@ -1480,43 +1491,61 @@ def analytics_overview_v2(request):
         error_count=Count('id', filter=Q(success=False)),
     )
 
-    # Cost summary
+    total_requests = performance_summary['total_requests'] or 0
+    error_count = performance_summary['error_count'] or 0
+    error_rate = (error_count / max(total_requests, 1)) * 100
+
+    # Cost summary by provider
     cost_filter = Q(user=request.user) if request.user.is_authenticated else Q()
-    cost_summary = CostTracking.objects.filter(
+    cost_by_provider_qs = CostTracking.objects.filter(
         cost_filter,
         timestamp__gte=start_time
-    ).aggregate(
-        total_cost=Sum('estimated_cost_usd'),
-        total_tokens=Sum('total_tokens'),
-        total_credits=Sum('credits_used'),
+    ).values('provider').annotate(
+        total=Sum('estimated_cost_usd')
     )
 
-    # Top features
-    top_features = UsageMetric.objects.filter(
+    cost_by_provider = {}
+    total_cost = 0
+    for item in cost_by_provider_qs:
+        provider = item['provider'] or 'other'
+        amount = float(item['total'] or 0)
+        cost_by_provider[provider] = amount
+        total_cost += amount
+
+    # Top features - format for frontend
+    top_features_qs = UsageMetric.objects.filter(
         user_filter,
         timestamp__gte=start_time
     ).values('feature_name').annotate(
-        count=Sum('count')
-    ).order_by('-count')[:10]
+        total_count=Sum('count')
+    ).order_by('-total_count')[:10]
 
+    top_features = [
+        {'feature_name': item['feature_name'], 'total_count': item['total_count'] or 0}
+        for item in top_features_qs
+    ]
+
+    # Session 536: Return flattened structure matching frontend expectations
     return Response({
         'time_range': time_range,
-        'usage_by_category': list(usage_by_category),
+        'total_usage': total_usage,
+        'total_cost': total_cost,
+        'avg_response_time': performance_summary['avg_response_time'] or 0,
+        'error_rate': error_rate,
+        'category_breakdown': category_breakdown,
+        'cost_by_provider': cost_by_provider,
+        'top_features': top_features,
+        # Also include nested format for backward compatibility
         'performance': {
             'avg_response_time_ms': performance_summary['avg_response_time'] or 0,
-            'total_requests': performance_summary['total_requests'] or 0,
-            'error_count': performance_summary['error_count'] or 0,
-            'success_rate': (
-                (1 - (performance_summary['error_count'] or 0) /
-                 max(performance_summary['total_requests'] or 1, 1)) * 100
-            ),
+            'total_requests': total_requests,
+            'error_count': error_count,
+            'success_rate': 100 - error_rate,
         },
         'costs': {
-            'total_usd': float(cost_summary['total_cost'] or 0),
-            'total_tokens': cost_summary['total_tokens'] or 0,
-            'total_credits': float(cost_summary['total_credits'] or 0),
+            'total_usd': total_cost,
+            'total_tokens': CostTracking.objects.filter(cost_filter, timestamp__gte=start_time).aggregate(t=Sum('total_tokens'))['t'] or 0,
         },
-        'top_features': list(top_features),
     })
 
 

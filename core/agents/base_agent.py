@@ -1104,6 +1104,7 @@ Consider these trends when crafting the response to maximize relevance and engag
         # Make API call
         # Session 293: gpt-5-mini uses tokens for internal reasoning first
         # Need high token limit to ensure room for reasoning + visible output
+        start_time = time.time()  # Session 536: Track timing for analytics
         try:
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
@@ -1112,6 +1113,9 @@ Consider these trends when crafting the response to maximize relevance and engag
                 tool_choice="auto" if self.tools else None,
                 max_completion_tokens=6000,  # High enough for reasoning + output
             )
+
+            # Session 536: Track analytics (cost, tokens, performance)
+            self._track_llm_analytics(response, start_time)
 
             choice = response.choices[0]
 
@@ -1135,6 +1139,78 @@ Consider these trends when crafting the response to maximize relevance and engag
         except Exception as e:
             logger.error(f"OpenAI API error in {self.name}: {e}")
             raise
+
+    def _track_llm_analytics(self, response, start_time: float) -> None:
+        """
+        Session 536: Track LLM call analytics - cost, tokens, performance.
+
+        This method is called after every successful OpenAI API call to record:
+        - Token usage (input/output)
+        - Estimated cost
+        - Response time
+        - Performance metrics
+
+        All tracking is wrapped in try/except to never break agent execution.
+        """
+        try:
+            from core.views_analytics import AdvancedAnalyticsService
+            from core.models_unified_system import PerformanceLog
+
+            end_time = time.time()
+            duration_ms = int((end_time - start_time) * 1000)
+
+            # Get user context (may be None for system operations)
+            user = getattr(self, 'user', None)
+
+            # Extract token usage from response
+            usage = getattr(response, 'usage', None)
+            input_tokens = getattr(usage, 'prompt_tokens', 0) if usage else 0
+            output_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
+            total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
+
+            # Calculate cost (GPT-5-mini estimated pricing)
+            # Reasoning models typically: $0.003/1K input, $0.012/1K output
+            estimated_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
+
+            # Track cost (requires authenticated user)
+            if user:
+                AdvancedAnalyticsService.track_cost(
+                    user=user,
+                    provider='openai',
+                    service='gpt-5-mini',
+                    operation='agent_execution',
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    estimated_cost_usd=estimated_cost,
+                    metadata={'agent': self.name, 'total_tokens': total_tokens}
+                )
+
+                # Track usage metric
+                AdvancedAnalyticsService.track_usage(
+                    user=user,
+                    category='agent',
+                    metric_type='llm_call',
+                    feature_name=self.name,
+                    count=1,
+                    duration_ms=duration_ms,
+                    provider='openai'
+                )
+
+            # Track performance (system-wide, no user required)
+            PerformanceLog.objects.create(
+                component_type='api',
+                component_name=f'agent:{self.name}',
+                response_time_ms=duration_ms,
+                success=True,
+                endpoint='openai/chat/completions',
+                method='POST'
+            )
+
+            logger.debug(f"Analytics tracked for {self.name}: {total_tokens} tokens, ${estimated_cost:.4f}, {duration_ms}ms")
+
+        except Exception as tracking_error:
+            # Never let tracking failures break agent execution
+            logger.debug(f"Analytics tracking failed (non-critical): {tracking_error}")
 
     def _execute_tool_call(
         self,
