@@ -2,208 +2,286 @@
 GitHub Spider - Developer Trends & Open Source Intelligence
 ============================================================
 
-Session 343: Spider for GitHub API to track developer trends.
-Collects trending repos, topics, and developer activity.
-
-Uses GITHUB_TOKEN from environment for authenticated requests.
+Session 534: Simplified to work with spider network interface.
+Uses GitHub API for trending repos and developer trends.
 """
 
-import aiohttp
-import asyncio
 import os
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class GitHubSpider(BaseIntelligenceSpider):
+class GitHubSpider:
     """GitHub spider - trending repos, topics, and developer activity"""
+
+    name = "github"
 
     BASE_URL = "https://api.github.com"
 
+    # Fallback RSS feeds for developer news
+    RSS_FEEDS = {
+        'github_blog': 'https://github.blog/feed/',
+        'hackernews': 'https://news.ycombinator.com/rss',
+        'lobsters': 'https://lobste.rs/rss',
+    }
+
     # Topics of interest
     TOPICS = [
-        'artificial-intelligence',
-        'machine-learning',
-        'generative-ai',
-        'llm',
-        'stable-diffusion',
-        'react',
-        'python',
-        'typescript',
-        'rust',
-        'golang',
+        ('Artificial Intelligence', 'artificial-intelligence', 'AI and machine learning projects.'),
+        ('Machine Learning', 'machine-learning', 'ML libraries and frameworks.'),
+        ('LLM', 'llm', 'Large language model projects.'),
+        ('Python', 'python', 'Python libraries and tools.'),
+        ('TypeScript', 'typescript', 'TypeScript projects.'),
+        ('Rust', 'rust', 'Rust programming projects.'),
     ]
 
-    # Search queries for trending
-    SEARCH_QUERIES = [
-        'stars:>1000 pushed:>2024-01-01',  # Popular active repos
-        'topic:ai created:>2024-06-01',     # New AI repos
-        'topic:llm stars:>100',             # LLM projects
-    ]
-
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.token = os.getenv('GITHUB_TOKEN', '')
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch trending GitHub data"""
-        try:
-            all_repos = []
-            trending_topics = []
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch trending GitHub repos and developer content.
 
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of repo/content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try GitHub API if token is available
+        if self.token:
+            try:
+                api_items = self._fetch_from_github_api()
+                for item in api_items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching from GitHub API: {e}")
+
+        # Fetch from fallback RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add topic links
+        try:
+            topics = self._get_topic_links()
+            all_items.extend(topics)
+        except Exception as e:
+            logger.warning(f"Error getting GitHub topics: {e}")
+
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"GitHub spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_from_github_api(self) -> List[Dict[str, Any]]:
+        """Fetch trending repos from GitHub API."""
+        items = []
+
+        try:
             headers = {
                 'Accept': 'application/vnd.github.v3+json',
+                'Authorization': f'token {self.token}',
                 'User-Agent': 'DonkeyBetz-Spider/1.0'
             }
-            if self.token:
-                headers['Authorization'] = f'token {self.token}'
 
-            async with aiohttp.ClientSession() as session:
-                # Fetch trending repos via search
-                search_url = f"{self.BASE_URL}/search/repositories"
+            # Search for trending repos
+            search_queries = [
+                'stars:>1000 pushed:>2024-01-01',
+                'topic:ai stars:>100',
+            ]
 
-                for query in self.SEARCH_QUERIES[:2]:  # Limit queries
-                    try:
-                        params = {
+            for query in search_queries[:2]:
+                try:
+                    response = requests.get(
+                        f"{self.BASE_URL}/search/repositories",
+                        headers=headers,
+                        params={
                             'q': query,
                             'sort': 'stars',
                             'order': 'desc',
-                            'per_page': 20
-                        }
+                            'per_page': 15
+                        },
+                        timeout=15
+                    )
 
-                        async with session.get(search_url, headers=headers, params=params, timeout=15) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                repos = data.get('items', [])
+                    if response.status_code == 200:
+                        data = response.json()
+                        repos = data.get('items', [])
 
-                                for repo in repos:
-                                    all_repos.append({
-                                        'name': repo.get('full_name', ''),
-                                        'description': repo.get('description', ''),
-                                        'url': repo.get('html_url', ''),
-                                        'stars': repo.get('stargazers_count', 0),
-                                        'forks': repo.get('forks_count', 0),
-                                        'watchers': repo.get('watchers_count', 0),
-                                        'language': repo.get('language', ''),
-                                        'topics': repo.get('topics', []),
-                                        'created_at': repo.get('created_at', ''),
-                                        'updated_at': repo.get('updated_at', ''),
-                                        'open_issues': repo.get('open_issues_count', 0),
-                                        'license': repo.get('license', {}).get('name', '') if repo.get('license') else '',
-                                        'source': 'github',
-                                        'type': 'repository',
-                                    })
-                            elif response.status == 403:
-                                self.logger.warning("GitHub rate limit hit")
-                                break
-                            else:
-                                self.logger.warning(f"GitHub API returned {response.status}")
+                        for repo in repos:
+                            language = repo.get('language', 'Unknown') or 'Unknown'
+                            stars = repo.get('stargazers_count', 0)
 
-                        await asyncio.sleep(1)  # Rate limit protection
+                            items.append({
+                                'title': f"{repo.get('full_name', '')} ⭐ {stars:,}",
+                                'url': repo.get('html_url', ''),
+                                'link': repo.get('html_url', ''),
+                                'summary': repo.get('description', '') or 'No description',
+                                'description': repo.get('description', '') or 'No description',
+                                'stars': stars,
+                                'forks': repo.get('forks_count', 0),
+                                'language': language,
+                                'topics': repo.get('topics', []),
+                                'author': repo.get('owner', {}).get('login', ''),
+                                'category': self._detect_category(language, repo.get('topics', [])),
+                                'source': 'GitHub',
+                                'data_type': 'github_repo',
+                                'platform': 'github',
+                                'tags': ['github', 'opensource', language.lower()] + repo.get('topics', [])[:3],
+                                'timestamp': datetime.now().isoformat(),
+                            })
 
-                    except Exception as e:
-                        self.logger.warning(f"Error searching GitHub: {e}")
+                    elif response.status_code == 403:
+                        logger.warning("GitHub rate limit hit")
+                        break
 
-                # Fetch topic info for trending topics
-                for topic in self.TOPICS[:5]:
-                    try:
-                        topic_url = f"{self.BASE_URL}/search/topics"
-                        params = {'q': topic}
-
-                        async with session.get(topic_url, headers={**headers, 'Accept': 'application/vnd.github.mercy-preview+json'}, params=params, timeout=10) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                items = data.get('items', [])
-                                if items:
-                                    topic_data = items[0]
-                                    trending_topics.append({
-                                        'name': topic_data.get('name', ''),
-                                        'display_name': topic_data.get('display_name', ''),
-                                        'description': topic_data.get('short_description', ''),
-                                        'created_by': topic_data.get('created_by', ''),
-                                        'featured': topic_data.get('featured', False),
-                                        'curated': topic_data.get('curated', False),
-                                    })
-
-                        await asyncio.sleep(0.5)
-
-                    except Exception as e:
-                        self.logger.warning(f"Error fetching topic {topic}: {e}")
-
-            return {
-                'repositories': all_repos,
-                'topics': trending_topics,
-                'source': 'github'
-            }
+                except Exception as e:
+                    logger.warning(f"Error searching GitHub: {e}")
 
         except Exception as e:
-            self.logger.error(f"Error fetching GitHub data: {e}")
-            return None
+            logger.warning(f"Error with GitHub API: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process GitHub data into intelligence"""
+        return items
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch developer content from RSS feed."""
+        items = []
+
         try:
-            repos = raw_data.get('repositories', [])
-            topics = raw_data.get('topics', [])
+            feed = feedparser.parse(feed_url)
 
-            # Analyze by language
-            language_stats = {}
-            for repo in repos:
-                lang = repo.get('language', 'Unknown') or 'Unknown'
-                if lang not in language_stats:
-                    language_stats[lang] = {'count': 0, 'total_stars': 0}
-                language_stats[lang]['count'] += 1
-                language_stats[lang]['total_stars'] += repo.get('stars', 0)
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            # Find most starred repos
-            top_repos = sorted(repos, key=lambda x: x.get('stars', 0), reverse=True)[:10]
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
 
-            # Extract common topics from repos
-            all_topics = []
-            for repo in repos:
-                all_topics.extend(repo.get('topics', []))
-            topic_frequency = {}
-            for t in all_topics:
-                topic_frequency[t] = topic_frequency.get(t, 0) + 1
-            trending_repo_topics = sorted(topic_frequency.items(), key=lambda x: x[1], reverse=True)[:20]
+                # Detect category from content
+                text = f"{title} {summary}".lower()
+                category = self._detect_topic(text)
 
-            content = {
-                'repositories': repos,
-                'top_repos': top_repos,
-                'topics': topics,
-                'language_stats': language_stats,
-                'trending_topics': trending_repo_topics,
-                'total_repos': len(repos),
-                'total_stars': sum(r.get('stars', 0) for r in repos),
-            }
-
-            quality_score = min(1.0, len(repos) / 30 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='github.com',
-                data_type='developer_intelligence',
-                content=content,
-                metadata={
-                    'repo_count': len(repos),
-                    'languages': list(language_stats.keys()),
-                    'source': 'github',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['github', 'developer', 'open-source', 'trending', 'repos', 'ai', 'ml'],
-                target_agents=['research_agent', 'trend_analysis_agent', 'competitor_analysis_agent'],
-                target_advisors=['tech_advisor', 'developer_advocate', 'innovation_strategist']
-            )
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': category,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'developer_content',
+                    'platform': 'github',
+                    'tags': ['developer', 'opensource', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error processing GitHub data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def get_required_fields(self) -> List[str]:
-        return ['name', 'stars']
+        return items
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['github', 'repository', 'developer', 'open-source', 'trending', 'stars']
+    def _detect_category(self, language: str, topics: List[str]) -> str:
+        """Detect repo category from language and topics."""
+        lang_lower = language.lower()
+        topics_str = ' '.join(topics).lower()
+
+        if 'ai' in topics_str or 'machine-learning' in topics_str or 'llm' in topics_str:
+            return 'ai_ml'
+        elif lang_lower in ['python', 'jupyter notebook']:
+            return 'python'
+        elif lang_lower in ['javascript', 'typescript']:
+            return 'javascript'
+        elif lang_lower == 'rust':
+            return 'rust'
+        elif lang_lower == 'go':
+            return 'golang'
+        return 'general'
+
+    def _detect_topic(self, text: str) -> str:
+        """Detect topic from text."""
+        topics = {
+            'ai_ml': ['ai', 'machine learning', 'llm', 'gpt', 'neural'],
+            'python': ['python', 'django', 'flask', 'pandas'],
+            'javascript': ['javascript', 'react', 'vue', 'node', 'typescript'],
+            'rust': ['rust', 'cargo'],
+            'devops': ['docker', 'kubernetes', 'ci/cd', 'devops'],
+        }
+
+        for topic, keywords in topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
+
+    def _get_topic_links(self) -> List[Dict[str, Any]]:
+        """Return GitHub topic exploration links."""
+        return [
+            {
+                'title': f"GitHub: {name}",
+                'url': f'https://github.com/topics/{slug}',
+                'link': f'https://github.com/topics/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'GitHub',
+                'data_type': 'github_topic',
+                'platform': 'github',
+                'tags': ['github', 'topic', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.TOPICS
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Trending Repos', 'trending', 'Popular repositories this week.'),
+            ('AI Projects', 'artificial-intelligence', 'AI and machine learning.'),
+            ('Python Libraries', 'python', 'Python projects and tools.'),
+            ('Web Development', 'web', 'Frontend and backend projects.'),
+            ('Open Source', 'opensource', 'Open source contributions.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://github.com/topics/{category}',
+                'link': f'https://github.com/topics/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'GitHub',
+                'data_type': 'github_topic',
+                'platform': 'github',
+                'tags': ['github', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]

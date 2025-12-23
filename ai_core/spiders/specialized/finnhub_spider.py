@@ -2,204 +2,263 @@
 Finnhub Spider - Financial Market Intelligence
 ==============================================
 
-Session 343: Phase 1 Spider Expansion
-Finnhub provides real-time stock data, forex, crypto with free tier (60 calls/min).
+Session 534: Simplified to work with spider network interface.
+Uses Finnhub API for real-time stock data and market news.
 """
 
 import os
-import aiohttp
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+import requests
+import feedparser
+import logging
+import re
+from datetime import datetime, timedelta
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class FinnhubSpider(BaseIntelligenceSpider):
-    """Finnhub financial data spider - stocks, forex, crypto, company fundamentals"""
+class FinnhubSpider:
+    """Finnhub financial data spider - stocks, news, earnings"""
+
+    name = "finnhub"
 
     BASE_URL = 'https://finnhub.io/api/v1'
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Fallback finance RSS feeds
+    RSS_FEEDS = {
+        'marketwatch': 'https://feeds.marketwatch.com/marketwatch/topstories/',
+        'cnbc': 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114',
+    }
+
+    # Tracked symbols
+    TRACKED_SYMBOLS = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
+        'JPM', 'V', 'UNH'
+    ]
+
+    # Market sections
+    SECTIONS = [
+        ('Stocks', 'stocks', 'Stock market data and news.'),
+        ('Earnings', 'earnings', 'Company earnings reports.'),
+        ('Market News', 'news', 'Financial market news.'),
+        ('Forex', 'forex', 'Currency exchange rates.'),
+        ('Crypto', 'crypto', 'Cryptocurrency data.'),
+    ]
+
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.api_key = os.getenv('FINNHUB_API_KEY', '')
 
-        # Top stocks to track
-        self.tracked_symbols = [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-            'JPM', 'V', 'UNH'
-        ]
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch financial data from Finnhub API and fallback sources.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch financial data from Finnhub"""
-        if not self.api_key:
-            self.logger.warning("FINNHUB_API_KEY not set")
-            return None
+        Args:
+            max_results: Maximum number of items to fetch
 
+        Returns:
+            List of financial data dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Try Finnhub API if key is available
+        if self.api_key:
+            try:
+                api_items = self._fetch_from_finnhub()
+                for item in api_items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching from Finnhub API: {e}")
+
+        # Fetch from fallback RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add section links
         try:
-            all_data = {
-                'quotes': [],
-                'market_news': [],
-                'company_news': [],
-                'earnings_calendar': [],
-            }
-
-            async with aiohttp.ClientSession() as session:
-                # Get quotes for tracked symbols
-                for symbol in self.tracked_symbols[:5]:  # Limit for rate limits
-                    quote = await self._fetch_quote(session, symbol)
-                    if quote:
-                        all_data['quotes'].append(quote)
-
-                # Get market news
-                news = await self._fetch_market_news(session)
-                if news:
-                    all_data['market_news'] = news
-
-                # Get earnings calendar
-                earnings = await self._fetch_earnings_calendar(session)
-                if earnings:
-                    all_data['earnings_calendar'] = earnings
-
-            return all_data
-
+            sections = self._get_section_links()
+            all_items.extend(sections)
         except Exception as e:
-            self.logger.error(f"Error fetching Finnhub data: {e}")
-            return None
+            logger.warning(f"Error getting Finnhub sections: {e}")
 
-    async def _fetch_quote(self, session: aiohttp.ClientSession, symbol: str) -> Optional[Dict[str, Any]]:
-        """Fetch quote for a single symbol"""
-        try:
-            url = f"{self.BASE_URL}/quote"
-            params = {'symbol': symbol, 'token': self.api_key}
+        # If all sources fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
+        logger.info(f"Finnhub spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_from_finnhub(self) -> List[Dict[str, Any]]:
+        """Fetch data from Finnhub API."""
+        items = []
+
+        # Fetch quotes for tracked symbols
+        for symbol in self.TRACKED_SYMBOLS[:5]:
+            try:
+                response = requests.get(
+                    f"{self.BASE_URL}/quote",
+                    params={'symbol': symbol, 'token': self.api_key},
+                    timeout=10
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
                     if data.get('c'):  # Current price exists
-                        return {
+                        price = data.get('c', 0)
+                        change = data.get('d', 0)
+                        change_pct = data.get('dp', 0)
+                        change_str = f"+{change_pct:.2f}%" if change_pct >= 0 else f"{change_pct:.2f}%"
+
+                        items.append({
+                            'title': f"{symbol}: ${price:,.2f} ({change_str})",
+                            'url': f"https://finnhub.io/stock/{symbol}",
+                            'link': f"https://finnhub.io/stock/{symbol}",
+                            'summary': f"{symbol} - Current: ${price:,.2f}, Change: {change_str}",
+                            'description': f"Real-time quote for {symbol}. High: ${data.get('h', 0):,.2f}, Low: ${data.get('l', 0):,.2f}",
                             'symbol': symbol,
-                            'current': data.get('c', 0),
+                            'price': price,
+                            'change': change,
+                            'change_percent': change_pct,
                             'high': data.get('h', 0),
                             'low': data.get('l', 0),
                             'open': data.get('o', 0),
                             'previous_close': data.get('pc', 0),
-                            'change': data.get('d', 0),
-                            'change_percent': data.get('dp', 0),
-                            'timestamp': data.get('t', 0),
-                        }
-        except Exception as e:
-            self.logger.warning(f"Error fetching quote for {symbol}: {e}")
-        return None
-
-    async def _fetch_market_news(self, session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
-        """Fetch general market news"""
-        try:
-            url = f"{self.BASE_URL}/news"
-            params = {'category': 'general', 'token': self.api_key}
-
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    news = []
-                    for article in data[:15]:
-                        news.append({
-                            'headline': article.get('headline', ''),
-                            'summary': article.get('summary', ''),
-                            'source': article.get('source', ''),
-                            'url': article.get('url', ''),
-                            'datetime': article.get('datetime', 0),
-                            'category': article.get('category', ''),
-                            'related': article.get('related', ''),
+                            'category': 'stocks',
+                            'source': 'Finnhub',
+                            'data_type': 'stock_quote',
+                            'platform': 'finnhub',
+                            'tags': ['finance', 'stocks', symbol],
+                            'timestamp': datetime.now().isoformat(),
                         })
-                    return news
-        except Exception as e:
-            self.logger.warning(f"Error fetching market news: {e}")
-        return []
 
-    async def _fetch_earnings_calendar(self, session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
-        """Fetch upcoming earnings"""
+            except Exception as e:
+                logger.warning(f"Error fetching quote for {symbol}: {e}")
+
+        # Fetch market news
         try:
-            from datetime import timedelta
-            today = datetime.now().strftime('%Y-%m-%d')
-            next_week = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
-
-            url = f"{self.BASE_URL}/calendar/earnings"
-            params = {'from': today, 'to': next_week, 'token': self.api_key}
-
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    earnings = []
-                    for entry in data.get('earningsCalendar', [])[:20]:
-                        earnings.append({
-                            'symbol': entry.get('symbol', ''),
-                            'date': entry.get('date', ''),
-                            'eps_estimate': entry.get('epsEstimate', 0),
-                            'eps_actual': entry.get('epsActual'),
-                            'revenue_estimate': entry.get('revenueEstimate', 0),
-                            'hour': entry.get('hour', ''),
-                        })
-                    return earnings
-        except Exception as e:
-            self.logger.warning(f"Error fetching earnings calendar: {e}")
-        return []
-
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Finnhub financial data"""
-        try:
-            quotes = raw_data.get('quotes', [])
-            news = raw_data.get('market_news', [])
-            earnings = raw_data.get('earnings_calendar', [])
-
-            # Calculate overall market direction
-            positive_moves = sum(1 for q in quotes if q.get('change_percent', 0) > 0)
-            negative_moves = len(quotes) - positive_moves
-            market_direction = 'bullish' if positive_moves > negative_moves else 'bearish' if negative_moves > positive_moves else 'mixed'
-
-            # Top movers
-            sorted_quotes = sorted(quotes, key=lambda x: abs(x.get('change_percent', 0)), reverse=True)
-            top_movers = sorted_quotes[:5]
-
-            content = {
-                'quotes': quotes,
-                'market_news': news,
-                'earnings_calendar': earnings,
-                'market_direction': market_direction,
-                'top_movers': top_movers,
-                'summary': {
-                    'symbols_tracked': len(quotes),
-                    'news_articles': len(news),
-                    'upcoming_earnings': len(earnings),
-                    'market_direction': market_direction,
-                }
-            }
-
-            quality_score = min(1.0, (len(quotes) / 10 + len(news) / 15) / 2 + 0.3)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='finnhub.io',
-                data_type='financial_market',
-                content=content,
-                metadata={
-                    'symbols_tracked': len(quotes),
-                    'news_count': len(news),
-                    'earnings_count': len(earnings),
-                    'source': 'finnhub',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['stocks', 'finance', 'market', 'earnings', 'news'],
-                target_agents=['research_agent', 'financial_agent'],
-                target_advisors=['financial_analyst', 'market_strategist']
+            response = requests.get(
+                f"{self.BASE_URL}/news",
+                params={'category': 'general', 'token': self.api_key},
+                timeout=10
             )
 
+            if response.status_code == 200:
+                news = response.json()
+                for article in news[:10]:
+                    items.append({
+                        'title': article.get('headline', ''),
+                        'url': article.get('url', ''),
+                        'link': article.get('url', ''),
+                        'summary': article.get('summary', '')[:400],
+                        'description': article.get('summary', '')[:400],
+                        'published': datetime.fromtimestamp(article.get('datetime', 0)).isoformat() if article.get('datetime') else '',
+                        'author': article.get('source', 'Finnhub'),
+                        'category': 'news',
+                        'related_symbols': article.get('related', ''),
+                        'source': article.get('source', 'Finnhub'),
+                        'data_type': 'market_news',
+                        'platform': 'finnhub',
+                        'tags': ['finance', 'news', 'market'],
+                        'timestamp': datetime.now().isoformat(),
+                    })
+
         except Exception as e:
-            self.logger.error(f"Error processing Finnhub data: {e}")
-            return None
+            logger.warning(f"Error fetching market news: {e}")
 
-    def get_required_fields(self) -> List[str]:
-        return ['symbol']
+        return items
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['stock', 'market', 'finance', 'earnings', 'investing', 'trading']
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from finance RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:10]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name.replace('_', ' ').title()),
+                    'category': 'news',
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'finance_article',
+                    'platform': 'finnhub',
+                    'tags': ['finance', 'news', 'market'],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
+        except Exception as e:
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _get_section_links(self) -> List[Dict[str, Any]]:
+        """Return Finnhub section links."""
+        return [
+            {
+                'title': f"Finnhub: {name}",
+                'url': f'https://finnhub.io/{slug}',
+                'link': f'https://finnhub.io/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Finnhub',
+                'data_type': 'finance_section',
+                'platform': 'finnhub',
+                'tags': ['finance', 'finnhub', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.SECTIONS
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when all sources fail."""
+        topics = [
+            ('Stock Quotes', 'stocks', 'Real-time stock data.'),
+            ('Market News', 'news', 'Financial news and analysis.'),
+            ('Earnings Calendar', 'earnings', 'Upcoming earnings reports.'),
+            ('Forex Rates', 'forex', 'Currency exchange data.'),
+            ('Crypto Prices', 'crypto', 'Cryptocurrency data.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://finnhub.io/{category}',
+                'link': f'https://finnhub.io/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Finnhub',
+                'data_type': 'finance_topic',
+                'platform': 'finnhub',
+                'tags': ['finance', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
