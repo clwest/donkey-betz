@@ -1,58 +1,49 @@
-# Session 540 - Start Here
+# Session 541 - Start Here
 
-**Previous Session:** 539
+**Previous Session:** 540
 **Date:** December 23, 2025
-**Focus:** Monitor Triggers / Discord-Web Parity
+**Focus:** Monitor Learning Network / Agent Collaboration
 
 ---
 
-## Session 539 Accomplishments
+## Session 540 Accomplishments
 
-### Major: Triggers for ALL Autonomous Situations
+### Major: Learning Network Expansion
 
-Created 23 new triggers - every situation now has event-based triggers!
+Expanded agent learning connections from 37 to 114 - now ALL 55 agents participate!
 
-| Domain | Triggers Added |
-|--------|----------------|
-| Content | 4 (content_studio, narrative_drift, viral_prediction) |
-| Creative | 2 (design_trends) |
-| Income | 4 (job_matching, freelance_scout, side_hustle) |
-| Financial | 4 (market_intelligence, sec_filing, earnings, crypto) |
-| Research | 5 (tech_stack, ai_model, skill_gap) |
-| Legal | 4 (case_law, regulatory) |
+| Metric | Before | After |
+|--------|--------|-------|
+| **Learning Connections** | 37 | 114 |
+| **Agents Participating** | ~17 | 55 (100%) |
+| **Teaching Agents** | 17 | 55 |
+| **Learning Agents** | 14 | 55 |
 
-**Total: 34 active triggers** (was 11)
+### New Connection Categories
 
-### Direct Article Links
+| Domain | Connections Added |
+|--------|-------------------|
+| Code Agents | 6 (CodeGenerator ↔ CodeReview, FullStack ↔ DevOps) |
+| Content Agents | 5 (Strategy → Writer, Audit) |
+| Business Agents | 5 (Research → Competitor, Customer, BrandStrategy) |
+| Marketing Agents | 6 (Campaign Orchestrator connections) |
+| Creative Agents | 6 (Image ↔ ImageEditing, Video ↔ VideoEditing) |
+| Content Studio | 6 (Coordinator, TopicMiner, Contrarian, PerformanceAnalyst) |
+| Financial Agents | 6 (Blockchain, Stock, MarketIntelligence coordinators) |
+| All Others | 33 (Executive, Debate, Personal Assistant, etc.) |
 
-Trigger events now link directly to source articles:
-- Green "📰 Read Original Article" button when URL available
-- Blue "🔍 Search for this article" fallback when not
+### Bug Fix: Trigger Click
 
-### Other Fixes
-
-| Fix | Details |
-|-----|---------|
-| Live Feed Refresh | Now properly refreshes on each load |
-| Situation Frequency | Updated to hourly (was 4-8h) |
-| Event Sorting | Newest first (fixed order reversal) |
-| Trigger Patterns | Refined to prevent false positives |
-| Schedule Display | Shows correct "Every hour" text |
-| Console Logging | Added ICC debugging logs |
-| Trigger Click | Fixed click to pass ID instead of name |
+Fixed trigger feed click showing "unknown/N/A" - now passes trigger.id instead of name.
 
 ---
 
-## Commits from Session 539
+## Commits from Session 540
 
 ```
-16a9b83 feat(Session 539): Add direct article links to trigger events
-c37c771 fix(Session 539): Update schedule display strings
-cb7c0a0 feat(Session 539): Add console.logs for debugging
-15ccd38 fix(Session 539): Fix event sorting and trigger pattern
-1191fdf fix(Session 539): Improve trigger event detail panel
-aabfe67 feat(Session 539): Increase autonomous situation frequency
-968c8b1 fix(Session 539): Live Intelligence Flow refreshes properly
+b2f696d fix(Session 539): Fix trigger feed click to use ID instead of name
+765214a docs(Session 539): Update handoff with commit hash b2f696d
+(pending) Session 540 learning network expansion
 ```
 
 ---
@@ -61,32 +52,38 @@ aabfe67 feat(Session 539): Increase autonomous situation frequency
 
 | Component | Count | Status |
 |-----------|-------|--------|
+| **Learning Connections** | 114 | All agents connected |
 | **Active Triggers** | 34 | Firing |
 | **Situations with Triggers** | 17/19 | Complete |
 | Spiders (Registry) | 75 | Active |
-| Agents (Active) | 55 | Active |
+| Agents (Active) | 55 | All learning |
 | Spider Data Records | 24,000+ | Growing |
 | Knowledge Sources | 2,682 | 98% with LLM summaries |
 
 ---
 
-## How to Test
+## How to Verify Learning
 
 ```bash
-# Open AI Studio
-open http://localhost:8000/ai-studio/
+# Check learning connections
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.models import AgentLearningConnection
+conns = AgentLearningConnection.objects.filter(is_active=True)
+print(f'Total connections: {conns.count()}')
+teachers = set(conns.values_list('teacher_agent__name', flat=True))
+students = set(conns.values_list('student_agent__name', flat=True))
+print(f'Unique teachers: {len(teachers)}')
+print(f'Unique students: {len(students)}')
+"
 
-# Go to Command Center tab
-
-# Test Trigger Events:
-# 1. Watch Live Intelligence Flow for new events
-# 2. Click any trigger event
-# 3. See green "Read Original Article" button
-# 4. Click to go directly to source article
-
-# Check browser console (F12) for ICC logs:
-# ICC: Loading autonomous situations...
-# ICC: Trigger fires by situation: {...}
+# Trigger a learning cycle manually
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.tasks import run_agent_learning_cycle
+result = run_agent_learning_cycle()
+print(f'Transfers: {result.get(\"transfers_made\", 0)}')
+"
 ```
 
 ---
@@ -95,11 +92,11 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
-| **539** | **Triggers for ALL Situations** | **34 triggers, direct article links** |
+| **540** | **Learning Network Expansion** | **114 connections, 55 agents learning** |
+| 539 | Triggers for ALL Situations | 34 triggers, direct article links |
 | 538 | Auth + Field Fixes | All detail panels work without login |
 | 537 | All 3 Detail Panels | Spider, Agent, Situation show real data |
 | 536 | UI Tab Consolidation | Command Center improvements |
-| 535 | UI Reality Check | WebSockets verified |
 
 ---
 
@@ -112,25 +109,26 @@ open http://localhost:8000/ai-studio/
 /api/situation-intelligence/detail/<type>/
 /api/intelligence/cross-references/
 /api/autonomous/situations/
-/api/autonomous/trigger-events/  # Now includes article_url!
+/api/autonomous/trigger-events/
 ```
 
 ---
 
-## Potential Session 540 Tasks
+## Potential Session 541 Tasks
 
-### Priority 1: Monitor Trigger Volume
-- With 34 triggers active, watch for alert spam
-- Adjust cooldown_minutes if triggers fire too often
-- Check for false positives with new patterns
+### Priority 1: Monitor Learning Activity
+- Check Agent Roster to verify more agents showing "Learning From"
+- Watch Learning Feed for diverse agent participation
+- Look for agents that were previously not learning
 
-### Priority 2: Discord Notifications
-- Ensure Discord webhook sends trigger alerts
+### Priority 2: Learning Quality Check
+- Ensure knowledge transfers are useful and not redundant
+- Check semantic deduplication is working properly
+- Look for "[Learned]" prefix accumulation issues
+
+### Priority 3: Discord Parity
+- Ensure Discord gets learning notifications
 - Match Discord/Web feature parity
-
-### Priority 3: Trigger Pattern Refinement
-- Watch actual matches and refine patterns
-- Consider adding more specific keywords
 
 ---
 
@@ -145,9 +143,10 @@ make start && make celery  # If not running
 # 3. Open UI
 open http://localhost:8000/ai-studio/
 
-# 4. Check Command Center - 34 triggers now active!
+# 4. Check Agents tab → Overview for learning stats
+# 5. Check Agents tab → Social for Learning Feed
 ```
 
 ---
 
-*Last updated: Session 539 - December 23, 2025*
+*Last updated: Session 540 - December 23, 2025*
