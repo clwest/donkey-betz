@@ -1,7 +1,7 @@
-# Session 530: Intelligence Command Center
+# Session 530-531: Intelligence Command Center
 
 **Date:** December 21, 2025
-**Focus:** Unify 3 siloed tabs into one unified Intelligence Command Center
+**Focus:** Unify 3 siloed tabs into one unified Intelligence Command Center with sub-tabs
 **Status:** COMPLETE
 
 ---
@@ -147,12 +147,63 @@ python manage.py check
 
 ---
 
-## Next Steps
+## Session 531: Sub-tabs Added
 
-1. **Browser Testing** - Verify all features work in actual browser
-2. **WebSocket Testing** - Ensure real-time updates flow correctly
-3. **Polish** - Adjust styling and UX based on usage
+User feedback after Session 530: "So you removed a lot of very important parts it seems. The agent conversations, dreams, boardroom, etc are all things that could be used by the system to improve itself, but now we no longer can see any of those."
+
+### Solution: Sub-tabs within Command Center
+
+Added 5 sub-tabs to the Intelligence Command Center:
+
+| Sub-Tab | Purpose |
+|---------|---------|
+| **Overview** | Original 3-column unified view (spiders, live feed, situations) |
+| **Conversations** | Agent-to-agent discussions with topic and participant badges |
+| **Dreams** | Dream journal with type colors and trigger button |
+| **Boardroom** | Decision governance + Dreams awaiting approval with Approve/Defer/Reject |
+| **Memory** | Hive Mind Q&A + Learning Feed |
+
+### Boardroom Decision Acceptance (User's Priority)
+
+The Boardroom sub-tab includes:
+- **Decisions List** with `promoteDecision()` and `rejectDecision()` actions
+- **Dreams Awaiting Decision** with `decideDream()` for Approve/Defer/Reject
+- Filter dropdown for decision types (canonical, guideline, product, etc.)
+
+### New JavaScript Functions Added to ICCState
+
+| Function | Purpose |
+|----------|---------|
+| `loadConversations()` | Fetch and render agent conversations |
+| `startConversation()` | Trigger new agent chat |
+| `loadDreams()` | Fetch and render dream journal |
+| `triggerDream()` | Trigger new agent dream |
+| `loadBoardroomDecisions(filter)` | Fetch decisions with optional filter |
+| `promoteDecision(id)` | Adopt decision as canonical policy |
+| `rejectDecision(id)` | Mark decision as rejected |
+| `loadBoardroomDreams()` | Fetch pending dream approvals |
+| `decideDream(id, decision)` | Approve/Defer/Reject a dream |
+| `loadLearningFeed()` | Fetch learning transfers |
+| `askHiveMind()` | Submit question to collective intelligence |
+
+### Files Modified (Session 531)
+
+- `ai_core/templates/components/panels/intelligence_command_center.html` - Added sub-tabs HTML
+- `ai_core/templates/partials/js/intelligence_command_center.html` - Added 11 new functions
 
 ---
 
-*Session 530 Complete - December 21, 2025*
+## Result
+
+| Metric | Before Session 530 | After Session 530 | After Session 531 |
+|--------|-------------------|-------------------|-------------------|
+| Visible Tabs | 3 (siloed) | 1 (unified) | 1 with 5 sub-tabs |
+| Autonomous Tab | Broken (empty) | Fixed | Integrated in Overview |
+| Conversations | In hidden Agents tab | Lost | Restored in sub-tab |
+| Dreams | In hidden Agents tab | Lost | Restored in sub-tab |
+| Boardroom | In hidden Agents tab | Lost | Restored with full functionality |
+| Memory/Hive Mind | In hidden Agents tab | Lost | Restored in sub-tab |
+
+---
+
+*Sessions 530-531 Complete - December 21, 2025*
