@@ -731,7 +731,9 @@ def get_knowledge_transfer_feed(request):
         feed_items = []
         for transfer in KnowledgeTransfer.objects.select_related(
             'connection__teacher_agent',
-            'connection__student_agent'
+            'connection__student_agent',
+            'source_knowledge',  # Session 532: Include source knowledge for full content
+            'source_knowledge__agent'
         ).order_by('-created_at')[:limit]:
             teacher = transfer.connection.teacher_agent
             student = transfer.connection.student_agent
@@ -744,15 +746,28 @@ def get_knowledge_transfer_feed(request):
                 source = 'knowledge_transfer'
                 description = f"{teacher.name} shared knowledge with {student.name}"
 
+            # Session 532: Include full knowledge content, not truncated
+            source_knowledge = transfer.source_knowledge
+            knowledge_data = {
+                'title': source_knowledge.title if source_knowledge else None,
+                'summary': source_knowledge.summary if source_knowledge else None,
+                'key_insights': source_knowledge.key_insights if source_knowledge else [],
+                'knowledge_type': source_knowledge.knowledge_type if source_knowledge else None,
+                'confidence': source_knowledge.confidence_score if source_knowledge else 0,
+            }
+
             feed_items.append({
                 'timestamp': transfer.created_at.isoformat(),
                 'type': source,
                 'source': 'Knowledge transfer',
                 'description': description,
-                'knowledge': transfer.transfer_summary[:100] if transfer.transfer_summary else 'Knowledge shared',
+                'knowledge': transfer.transfer_summary if transfer.transfer_summary else 'Knowledge shared',
+                'knowledge_full': knowledge_data,  # Session 532: Full knowledge details
+                'key_points': transfer.key_points or [],  # Session 532: Include key points
                 'teacher': teacher.name,
                 'student': student.name,
                 'was_useful': transfer.was_useful,
+                'usefulness_score': transfer.usefulness_score,  # Session 532: Include score
                 'effectiveness_gain': 0.0  # Could calculate if stored
             })
 

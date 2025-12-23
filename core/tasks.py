@@ -3905,24 +3905,31 @@ def run_agent_learning_cycle():
                 # Create knowledge transfer record
                 usefulness = random.uniform(0.6, 1.0)  # Simulate usefulness
 
+                # Session 532: Include actual knowledge content in transfer summary
+                knowledge_content = knowledge.summary[:500] if knowledge.summary else ""
+                transfer_summary = f"{teacher.name} shared '{clean_title}' with {student.name}.\n\n{knowledge_content}"
+
                 transfer = KnowledgeTransfer.objects.create(
                     connection=connection,
                     source_knowledge=knowledge,
-                    transfer_summary=f"{teacher.name} shared '{clean_title[:50]}' with {student.name}",
-                    key_points=knowledge.key_insights[:3] if knowledge.key_insights else [],
+                    transfer_summary=transfer_summary,
+                    key_points=knowledge.key_insights[:5] if knowledge.key_insights else [],
                     was_useful=usefulness > 0.7,
                     usefulness_score=usefulness,
                     was_applied=random.random() > 0.3,  # 70% chance of being applied
                 )
 
                 # Create new knowledge for student (adapted from teacher's)
+                # Session 532: Include full summary for richer knowledge transfer
+                student_summary = f"Learned from {teacher.name}:\n\n{knowledge.summary}" if knowledge.summary else f"Knowledge transferred from {teacher.name}"
+
                 new_knowledge = AgentKnowledgeSource.objects.create(
                     agent=student,
                     knowledge_type=knowledge.knowledge_type,
                     spider_category=knowledge.spider_category,
                     source_spider_names=knowledge.source_spider_names + [f'learned_from_{teacher.name}'],
                     title=f"[Learned] {clean_title}",
-                    summary=f"Learned from {teacher.name}: {knowledge.summary[:200]}",
+                    summary=student_summary,
                     key_insights=knowledge.key_insights,
                     data_points_count=knowledge.data_points_count,
                     confidence_score=knowledge.confidence_score * 0.9,  # Slightly lower confidence
