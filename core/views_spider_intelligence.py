@@ -1057,6 +1057,18 @@ def dashboard_stats(request):
             key=lambda x: -x[1]
         )[:10]
 
+        # Session 537: Build spider names grouped by category for ICC detail view
+        spiders_by_category = {}
+        for name, spider_class in registry._spiders.items():
+            config = registry.spider_configs.get(name, {})
+            category = config.get('category', 'Other')
+            if category not in spiders_by_category:
+                spiders_by_category[category] = []
+            spiders_by_category[category].append({
+                'name': name,
+                'display_name': name.replace('_', ' ').title(),
+            })
+
         return JsonResponse({
             'status': 'success',
             'stats': {
@@ -1064,6 +1076,7 @@ def dashboard_stats(request):
                     'total': spider_counts.get('total', 0),
                     'categories': len(spider_counts.get('by_category', {})),
                     'by_category': dict(top_categories),
+                    'spiders_by_category': spiders_by_category,  # Session 537: Individual spider names
                 },
                 'agents': {
                     'total': total_agents,

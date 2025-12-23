@@ -16,6 +16,7 @@ const ICCState = {
     // Data stores
     spiders: [],
     spiderCategories: {},
+    spidersByCategory: {},  // Session 537: Individual spider names by category
     agents: [],
     situations: [],
     events: [],
@@ -117,12 +118,14 @@ const ICCState = {
 
             if (data.status === 'success' || data.stats) {
                 const stats = data.stats || data;
-                this.flowCounts.spiders = stats.total_spiders || 75; // Session 536: Updated from 72
+                const spiderStats = stats.spiders || stats;
+                this.flowCounts.spiders = spiderStats.total || 75;
                 document.getElementById('icc-spider-count').textContent = this.flowCounts.spiders;
                 document.getElementById('icc-flow-spiders').textContent = this.flowCounts.spiders;
 
-                // Build spider categories from stats
-                this.spiderCategories = stats.categories || {};
+                // Session 537: Store individual spiders by category
+                this.spiderCategories = spiderStats.by_category || {};
+                this.spidersByCategory = spiderStats.spiders_by_category || {};
                 this.renderSpiderList();
             }
         } catch (error) {
@@ -521,38 +524,76 @@ const ICCState = {
     },
 
     /**
-     * Render spider list by category
+     * Session 537: Render spider list by category with individual clickable spiders
      */
     renderSpiderList() {
         const container = document.getElementById('icc-spider-list');
         let html = '';
 
-        // Session 536: Updated default categories to match actual 75 spider count
-        const categories = Object.keys(this.spiderCategories).length > 0
-            ? this.spiderCategories
-            : {
-                'Tech News': 10,
-                'Financial': 8,
-                'Jobs': 7,
-                'Social': 15,
-                'Creative': 6,
-                'Crypto': 7,
-                'Research': 6,
-                'Other': 16
-            };
+        // Session 537: Use individual spiders grouped by category
+        const spidersByCategory = Object.keys(this.spidersByCategory).length > 0
+            ? this.spidersByCategory
+            : null;
 
-        for (const [category, count] of Object.entries(categories)) {
-            html += `
-                <div class="icc-category-header">${category} (${count})</div>
-                <div class="icc-list-item" onclick="ICCState.showDetail('category', '${category}')">
-                    <span class="icc-status-dot active"></span>
-                    <span>${category} Spiders</span>
-                    <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">${count}</span>
-                </div>
-            `;
+        if (spidersByCategory) {
+            // Sort categories by spider count descending
+            const sortedCategories = Object.entries(spidersByCategory)
+                .sort((a, b) => b[1].length - a[1].length);
+
+            for (const [category, spiders] of sortedCategories) {
+                const categoryKey = `icc-cat-${category.replace(/\s+/g, '-').toLowerCase()}`;
+                html += `
+                    <div class="icc-category-header" onclick="ICCState.toggleCategory('${categoryKey}')" style="cursor: pointer;">
+                        <span id="${categoryKey}-icon">▶</span> ${category} (${spiders.length})
+                    </div>
+                    <div id="${categoryKey}" class="icc-category-spiders" style="display: none; padding-left: 10px;">
+                `;
+                for (const spider of spiders) {
+                    html += `
+                        <div class="icc-list-item" onclick="ICCState.showDetail('spider', '${spider.name}')" style="padding: 4px 8px;">
+                            <span class="icc-status-dot active" style="width: 6px; height: 6px;"></span>
+                            <span style="font-size: 0.75rem;">${spider.display_name}</span>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+        } else {
+            // Fallback to category counts
+            const categories = Object.keys(this.spiderCategories).length > 0
+                ? this.spiderCategories
+                : { 'Tech News': 10, 'Financial': 8, 'Jobs': 7, 'Social': 15, 'Creative': 6, 'Crypto': 7, 'Research': 6, 'Other': 16 };
+
+            for (const [category, count] of Object.entries(categories)) {
+                html += `
+                    <div class="icc-category-header">${category} (${count})</div>
+                    <div class="icc-list-item">
+                        <span class="icc-status-dot active"></span>
+                        <span>${category} Spiders</span>
+                        <span class="badge bg-secondary ms-auto" style="font-size: 0.65rem;">${count}</span>
+                    </div>
+                `;
+            }
         }
 
         container.innerHTML = html;
+    },
+
+    /**
+     * Session 537: Toggle category expansion
+     */
+    toggleCategory(categoryKey) {
+        const container = document.getElementById(categoryKey);
+        const icon = document.getElementById(`${categoryKey}-icon`);
+        if (container && icon) {
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                container.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
     },
 
     /**
