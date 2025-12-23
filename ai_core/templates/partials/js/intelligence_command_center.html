@@ -161,18 +161,23 @@ const ICCState = {
      * Load autonomous situations from API
      */
     async loadSituations() {
+        console.log('ICC: Loading autonomous situations...');
         try {
             const response = await fetch('/api/autonomous/situations/', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             const data = await response.json();
+            console.log('ICC: Situations API response:', { success: data.success, count: (data.situations || data || []).length });
 
             if (data.success !== false) {
                 this.situations = data.situations || data || [];
                 this.flowCounts.situations = this.situations.length;
                 document.getElementById('icc-situation-count').textContent = this.situations.length;
                 document.getElementById('icc-flow-situations').textContent = this.situations.length;
+                console.log('ICC: Loaded', this.situations.length, 'situations:', this.situations.map(s => s.name || s.type).join(', '));
                 this.renderSituationsList();
+            } else {
+                console.warn('ICC: Situations API returned success=false');
             }
         } catch (error) {
             console.error('ICC: Failed to load situations:', error);
@@ -184,11 +189,13 @@ const ICCState = {
      * Load recent trigger fires
      */
     async loadTriggerFires() {
+        console.log('ICC: Loading trigger fires (last 24h)...');
         try {
             const response = await fetch('/api/autonomous/trigger-events/?hours=24', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             const data = await response.json();
+            console.log('ICC: Trigger fires API response:', { eventCount: (data.events || data || []).length });
 
             if (data.events || Array.isArray(data)) {
                 this.triggerFires = data.events || data || [];
@@ -197,6 +204,15 @@ const ICCState = {
                 document.getElementById('icc-trigger-count').textContent = this.triggerFires.length;
                 document.getElementById('icc-flow-triggers').textContent = this.triggerFires.length;
                 document.getElementById('icc-flow-events').textContent = this.triggerFires.length;
+
+                // Log trigger breakdown by situation type
+                const bySituation = {};
+                this.triggerFires.forEach(t => {
+                    const sit = t.situation_type || 'unknown';
+                    bySituation[sit] = (bySituation[sit] || 0) + 1;
+                });
+                console.log('ICC: Trigger fires by situation:', bySituation);
+
                 this.renderTriggerFeed();
 
                 // Also populate the main Live Intelligence Flow with trigger events
@@ -670,6 +686,7 @@ const ICCState = {
      * Render situations list
      */
     renderSituationsList() {
+        console.log('ICC: Rendering situations list...', this.situations.length, 'situations');
         const container = document.getElementById('icc-situations-list');
         let html = '';
 
@@ -681,6 +698,10 @@ const ICCState = {
             'research': 'research',
             'legal': 'legal'
         };
+
+        // Log situation details
+        const activeCount = this.situations.filter(s => s.is_active || s.status === 'active').length;
+        console.log('ICC: Situation breakdown - Active:', activeCount, '| Inactive:', this.situations.length - activeCount);
 
         for (const sit of this.situations) {
             // Session 538: API returns 'type' not 'situation_type'
@@ -936,6 +957,7 @@ const ICCState = {
 
             case 'situation':
                 // Session 537: Show loading, then fetch real situation data
+                console.log('ICC: Loading situation detail:', id);
                 panel.innerHTML = `
                     <h6>&#128736; Situation: ${id.replace(/_/g, ' ')}</h6>
                     <p style="color: #9ca3af; font-size: 0.8rem;">Loading situation details...</p>
@@ -946,6 +968,7 @@ const ICCState = {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const sitData = await sitResponse.json();
+                    console.log('ICC: Situation detail response:', { success: sitData.success, name: sitData.situation?.name, triggers: sitData.situation?.triggers?.length || 0 });
 
                     // Session 538: Fixed field names to match API response
                     if (sitData.success && sitData.situation) {
@@ -1126,6 +1149,7 @@ const ICCState = {
      * Toggle situation active status
      */
     async toggleSituation(situationType, active) {
+        console.log('ICC: Toggling situation:', situationType, '→', active ? 'ACTIVE' : 'PAUSED');
         try {
             const response = await fetch(`/api/autonomous/situations/${situationType}/toggle/`, {
                 method: 'POST',
@@ -1138,12 +1162,15 @@ const ICCState = {
             });
 
             if (response.ok) {
+                console.log('ICC: Situation toggle SUCCESS:', situationType, '→', active ? 'ACTIVE' : 'PAUSED');
                 this.addEvent({
                     type: 'situation',
                     icon: active ? '&#9989;' : '&#10060;',
                     title: `${situationType.replace(/_/g, ' ')} ${active ? 'activated' : 'paused'}`,
                     timestamp: new Date()
                 });
+            } else {
+                console.warn('ICC: Situation toggle FAILED:', response.status, response.statusText);
             }
         } catch (error) {
             console.error('ICC: Failed to toggle situation:', error);
@@ -1240,11 +1267,15 @@ const ICCState = {
      * Start auto-refresh timer
      */
     startAutoRefresh() {
+        console.log('ICC: Auto-refresh started (30s interval)');
         // Refresh situations and triggers every 30 seconds
         setInterval(() => {
             if (!this.isPaused) {
+                console.log('ICC: Auto-refresh tick - refreshing situations & triggers');
                 this.loadSituations();
                 this.loadTriggerFires();
+            } else {
+                console.log('ICC: Auto-refresh skipped (paused)');
             }
         }, 30000);
     },
