@@ -288,13 +288,22 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
     transform: translateX(20px);
 }
 
-/* Detail Panel */
+/* Detail Panel - Fixed overlay at bottom center */
 .icc-detail-panel {
-    background: rgba(30, 41, 59, 0.95);
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    background: rgba(30, 41, 59, 0.98);
     border: 2px solid #ec4899;
     border-radius: 10px;
     padding: 16px;
-    margin-top: 12px;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    max-height: 50vh;
+    overflow-y: auto;
 }
 
 .icc-detail-panel h6 {
