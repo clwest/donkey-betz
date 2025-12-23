@@ -1,8 +1,8 @@
 # API Documentation
 
-**Generated:** December 21, 2025
-**Session:** 528
-**Status:** Security Hardened
+**Generated:** December 23, 2025
+**Session:** 538
+**Status:** Security Hardened + Intelligence APIs Public
 
 ---
 
@@ -48,6 +48,11 @@ curl -X POST /api/v1/auth/login/ \
 | `/api/v1/auth/forgot-password/` | POST | Password reset request |
 | `/api/v1/auth/reset-password/` | POST | Password reset confirmation |
 | `/api/public-stats/` | GET | Public platform statistics |
+| `/api/spider-intelligence/dashboard-stats/` | GET | Spider network statistics |
+| `/api/spider-intelligence/detail/<name>/` | GET | Spider detail with articles |
+| `/api/agent-intelligence/detail/<name>/` | GET | Agent detail with stats/transfers |
+| `/api/situation-intelligence/detail/<type>/` | GET | Situation detail with triggers |
+| `/api/intelligence/cross-references/` | GET | Cross-reference mappings |
 
 ---
 
@@ -99,6 +104,39 @@ curl -X POST /api/v1/auth/login/ \
 | `/api/spider-dashboard/` | GET | Spider dashboard | Required |
 | `/api/spider-intelligence/` | GET | Spider intelligence | Required |
 | `/api/spider-data/` | GET | Raw spider data | Required |
+
+### Intelligence Command Center APIs (Session 537-538)
+
+| Endpoint | Method | Description | Auth |
+|----------|--------|-------------|------|
+| `/api/spider-intelligence/dashboard-stats/` | GET | Spider counts by category | Public |
+| `/api/spider-intelligence/detail/<name>/` | GET | Spider articles/data | Public |
+| `/api/agent-intelligence/detail/<name>/` | GET | Agent stats, knowledge, transfers | Public |
+| `/api/situation-intelligence/detail/<type>/` | GET | Situation triggers, fires, events | Public |
+| `/api/intelligence/cross-references/` | GET | Spider→Agent→Situation mappings | Public |
+
+**Response Examples:**
+
+Spider Detail:
+```json
+{
+  "status": "success",
+  "spider_name": "techcrunch",
+  "items": [
+    {"title": "...", "description": "...", "url": "https://..."}
+  ]
+}
+```
+
+Agent Detail:
+```json
+{
+  "status": "success",
+  "agent": {"name": "...", "effectiveness": 100, "total_executions": 5},
+  "knowledge": [...],
+  "transfers": {"taught": [...], "learned": [...]}
+}
+```
 
 ### Learning APIs
 
