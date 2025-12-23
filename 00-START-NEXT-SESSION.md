@@ -2,90 +2,88 @@
 
 **Previous Session:** 534
 **Date:** December 22, 2025
-**Status:** SPIDER NETWORK SYNC CONVERSION COMPLETE
+**Focus:** UI Reality Check - Ensure frontend reflects backend state
 
 ---
 
-## What Was Accomplished in Session 534
+## Priority 1: Fix Agent Count Mismatch
 
-### Spider Network Sync Interface Conversion (COMPLETE)
+**Problem:** UI shows 47 agents but database has 55 active agents.
 
-**Problem:** 60+ spiders in `ai_core/spiders/specialized/` were placeholders using old `BaseIntelligenceSpider` async pattern with empty `collect_data()` methods.
-
-**Solution:** Converted all placeholder spiders to simple synchronous interface:
-
-```python
-class ExampleSpider:
-    name = "example"
-
-    def __init__(self, spider_id=None, targets=None,
-                 subscribers=None, redis_config=None, **kwargs):
-        self.spider_id = spider_id or self.name
-
-    def fetch_data(self, max_results=50) -> List[Dict[str, Any]]:
-        # Fetch from RSS/API, fallback to curated topics
-        return items[:max_results]
-```
-
-**18 Commits** across 17 batches + final batch:
-- Batches 1-17: 5 spiders each
-- Final batch: 7 remaining spiders (udemy, unsplash, variety, verge, weworkremotely, wired, youtube)
-
-**Data Sources Implemented:**
-| Type | Count | Examples |
-|------|-------|----------|
-| RSS Feeds | ~200 | TechCrunch, Wired, Variety, WeWorkRemotely |
-| REST APIs | 5+ | YouTube Data API, Unsplash API, CoinGecko API |
-| Fallbacks | All | Curated topic links when sources fail |
-
-**Testing Verified:**
 ```bash
-# All spiders fetching real data
-WiredSpider().fetch_data(5)         # Real Wired articles
-TheVergeSpider().fetch_data(5)      # Real Verge articles
-WeWorkRemotelySpider().fetch_data(5) # Real job listings
-VarietySpider().fetch_data(5)       # Real entertainment news
-TechCrunchSpider().fetch_data(5)    # Real startup news
+# Verify current count
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.models_unified_system import Agent
+print(f'Active agents: {Agent.objects.filter(is_active=True).count()}')"
 ```
 
-**Handoff:** `docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md`
+**Files to update:**
+```bash
+# Find hardcoded agent counts
+grep -rn ">47<\|>42<" ai_core/templates/
+```
+
+---
+
+## Priority 2: Verify Dashboard Panels Load
+
+Test each panel in the Intelligence Command Center:
+
+| Panel | Check | Expected |
+|-------|-------|----------|
+| Spider Network | Left panel populates | 75 spiders by category |
+| Agent Roster | Shows all agents | 55 agents with status |
+| Live Feed | Events appear | Real-time spider/agent activity |
+| Situations | Right panel | 19 situation types |
+| Conversations | Sub-tab content | Agent discussions |
+| Dreams | Sub-tab content | Dream journal entries |
+| Learning Feed | Sub-tab content | LLM-synthesized summaries |
+
+**Test URL:** `http://localhost:8000/ai-studio/` → Intelligence Command Center tab
+
+---
+
+## Priority 3: End-to-End Data Flow Test
+
+1. **Trigger spider collection:**
+```bash
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from ai_core.spiders.specialized.techcrunch_spider import TechCrunchSpider
+spider = TechCrunchSpider()
+items = spider.fetch_data(max_results=5)
+print(f'Collected {len(items)} items')
+for item in items[:2]:
+    print(f'  - {item[\"title\"][:50]}...')"
+```
+
+2. **Check WebSocket connections work** (browser console)
+3. **Verify real-time updates appear in Live Feed**
+
+---
+
+## Priority 4: Template Audit for Stale Values
+
+```bash
+# Find potentially stale hardcoded values
+grep -rn ">102<\|>72<\|>66<\|>1000" ai_core/templates/ | grep -v ".pyc"
+```
 
 ---
 
 ## Current System State
 
-### Key Metrics
 | Metric | Value |
 |--------|-------|
-| Routable Agents | 47 (registered in DB) |
-| Agents with Intelligent Prompting | **ALL (100%)** |
-| Spiders | 72 (all with sync interface) |
-| Spider Data Records | 20,712 |
-| Discord Commands | 99+ |
-
-### Spider Network Status
-| Category | Spiders | Status |
-|----------|---------|--------|
-| Tech News | TechCrunch, Verge, Wired, Ars, MIT | RSS feeds working |
-| Jobs | WeWorkRemotely, RemoteOK, Indeed | RSS feeds working |
-| Entertainment | Variety, Billboard, RollingStone | RSS feeds working |
-| Finance | CoinGecko, Yahoo Finance, SEC | APIs working |
-| Creative | Dribbble, Behance, Unsplash | Mixed RSS/API |
-| E-Learning | Udemy, Coursera, Teachable | RSS feeds working |
-| Video | YouTube | API working |
-
-### Canonical Model Locations
-```python
-# User models - ALWAYS import from core.models
-from core.models import (
-    UserProfile,           # Main profile
-    ExtendedUserProfile,   # Job application data
-    EnhancedUserProfile,   # Power user/subscription
-    UserStatistics,        # Usage metrics
-    UserMemoryContext,     # Memory system
-    UserAgentLearning,     # Agent learning
-)
-```
+| Spiders (Registry) | 75 |
+| Spider Categories | 36 |
+| Agents (DB Active) | 55 |
+| Spider Data Records | 23,952 |
+| Knowledge Sources | 2,677 |
+| Knowledge Transfers | 932 |
+| Agent Conversations | 4,775 |
+| LLM Summaries | 2,626 (98%) |
 
 ---
 
@@ -98,24 +96,27 @@ make start && make celery
 # 2. Access UI
 open http://localhost:8000/ai-studio/
 
-# 3. Health check
-curl http://localhost:8000/api/v1/health/
+# 3. Navigate to Intelligence Command Center tab
 
-# 4. Test spider network
-.venv/bin/python -c "from ai_core.spiders.specialized.wired_spider import WiredSpider; print(WiredSpider().fetch_data(3))"
+# 4. Check browser console for errors
+# Press F12 → Console tab
 ```
 
 ---
 
-## What's Next?
+## What Was Accomplished in Session 534
 
-Spider network is now fully functional with all spiders using sync interface. Options:
+### Spider Network Sync Conversion (COMPLETE)
 
-1. **Spider Registry Update** - Ensure all converted spiders are registered in `spider_registry.py`
-2. **Integration Testing** - Run full spider network collection cycle
-3. **Dashboard Stats** - Verify spider counts in Intelligence Command Center
-4. **Feature Development** - New capabilities on the unified platform
-5. **Revenue Activation** - Pipeline verified but $0 tracked
+- Converted 60+ placeholder spiders to working sync interface
+- 18 commits across 17 batches
+- All spiders now use `fetch_data()` method
+- RSS feeds, APIs, and fallback strategies implemented
+- Registered teachable + udemy spiders (73 → 75 total)
+- Updated UI placeholders to show 75 spiders
+- Full spider network test: 28/28 working
+
+**Handoff:** `docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md`
 
 ---
 
@@ -123,15 +124,26 @@ Spider network is now fully functional with all spiders using sync interface. Op
 
 | Session | Focus |
 |---------|-------|
-| 534 | **Spider Sync Conversion** - All 60+ placeholder spiders converted to working sync interface |
-| 533 | LLM Synthesis Fix - Fixed data extraction from raw_data, robust JSON parsing |
-| 532 | Enhanced Content Display - Full knowledge/dreams/conversations content |
-| 531 | Sub-tabs Added - Conversations, Dreams, Boardroom, Memory in Command Center |
-| 530 | Intelligence Command Center - Unified frontend replacing 3 siloed tabs |
-| 529 | Intelligent Prompting Completion - All 38 remaining agents upgraded |
-| 528 | System Audit Remediation (4 Sprints) + User Model Cleanup |
+| 534 | **Spider Sync Conversion** - 60+ spiders converted, UI updated to 75 |
+| 533 | LLM Synthesis Fix - Data extraction from raw_data |
+| 532 | Enhanced Content Display - Full knowledge in sub-tabs |
+| 531 | Sub-tabs Added - Conversations, Dreams, Boardroom, Memory |
+| 530 | Intelligence Command Center - Unified frontend |
+| 529 | Intelligent Prompting - All agents upgraded |
 
 For full history, see `docs/handoffs/` directory.
+
+---
+
+## Success Criteria for Session 535
+
+- [ ] Agent count in UI matches DB (55)
+- [ ] All Command Center panels load without errors
+- [ ] Spider list shows 75 spiders grouped by category
+- [ ] Learning Feed shows LLM-synthesized content
+- [ ] No JavaScript errors in browser console
+- [ ] WebSocket connections established
+- [ ] Real-time updates visible in Live Feed
 
 ---
 
