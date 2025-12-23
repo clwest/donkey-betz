@@ -762,7 +762,7 @@ const ICCState = {
             const name = trigger.trigger_name || trigger.name || 'Trigger';
             const time = trigger.fired_at || trigger.created_at;
             html += `
-                <div class="icc-list-item" onclick="ICCState.showDetail('trigger', '${name}')">
+                <div class="icc-list-item" onclick="ICCState.showDetail('trigger', '${trigger.id}')">
                     <span style="color: #fbbf24;">&#9889;</span>
                     <span style="flex: 1; font-size: 0.8rem;">${name}</span>
                     <span style="font-size: 0.65rem; color: #6b7280;">${this.formatTimeAgo(new Date(time))}</span>

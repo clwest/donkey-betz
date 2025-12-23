@@ -39,6 +39,7 @@ Trigger events now link directly to source articles:
 | Trigger Patterns | Refined to prevent false positives |
 | Schedule Display | Shows correct "Every hour" text |
 | Console Logging | Added ICC debugging logs |
+| Trigger Click | Fixed click to pass ID instead of name |
 
 ---
 
