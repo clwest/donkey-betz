@@ -1,65 +1,52 @@
-# Session 539 - Start Here
+# Session 540 - Start Here
 
-**Previous Session:** 538
+**Previous Session:** 539
 **Date:** December 23, 2025
-**Focus:** Continue UI Improvements / Discord Parity
+**Focus:** Monitor Hourly Situations / Discord-Web Parity
 
 ---
 
-## Session 538 Accomplishments
+## Session 539 Accomplishments
 
-### Fixed Authentication for Intelligence APIs
+### Fixed Live Intelligence Flow
 
-Session 537 created the detail panel APIs, but they were blocked by auth middleware when accessed from the browser without a session.
+| Issue | Fix |
+|-------|-----|
+| Feed not updating after page load | Removed blocking condition, clear/rebuild on each refresh |
+| Wrong event in detail panel | Lookup by unique ID instead of trigger name |
+| Events sorted incorrectly | Use appendChild instead of insertBefore |
+| Added search button | Google News link for trigger headlines |
 
-| Fix | File | Details |
-|-----|------|---------|
-| **Auth Middleware** | `core/auth_middleware.py` | Added 5 intelligence API paths to PUBLIC_PATHS |
-| **Agent Detail API** | `core/views_spider_intelligence.py` | Fixed `AgentKnowledgeSource` field names (`created_at` → `first_discovered_at`) |
-| **Knowledge Transfers** | `core/views_spider_intelligence.py` | Fixed `KnowledgeTransfer` field names (`source_agent` → `connection__teacher_agent`) |
-| **Situation Detail Panel** | `intelligence_command_center.html` | Fixed JS field names to match API (`success`, `situation.triggers`, `situation.name`) |
+### Increased Autonomous Situation Frequency
 
-### Situation Detail Now Shows Real Data
+| Situation | Before | After |
+|-----------|--------|-------|
+| Content Studio | 4h | 1h |
+| Blockchain Security | 2h | 1h |
+| Stock Market Intelligence | 4h | 1h |
+| Viral Content Predictor | 4h | 1h |
+| Crypto Sentiment | 3h | 1h |
+| Design Trends | 6h | 2h |
+| AI Model Monitor | 6h | 2h |
+| Tech Stack Tracker | 8h | 4h |
 
-- Status indicator (active/inactive with color)
-- Schedule and domain badges
-- 3-stat grid: Triggers, Total Fires, 24h Fires
-- Active triggers list with severity colors
-- Recent sessions with items/alerts/duration
+### Fixed Overly Broad Trigger Patterns
 
-### APIs Now Public (No Session Required)
-
-```
-/api/spider-intelligence/dashboard-stats/
-/api/spider-intelligence/detail/<name>/
-/api/agent-intelligence/detail/<name>/
-/api/situation-intelligence/detail/<type>/
-/api/intelligence/cross-references/
-```
+| Trigger | Issue | Fix |
+|---------|-------|-----|
+| Breaking Market News | `crash` matched plane crashes | `market crash\|stock crash` |
+| Exploit/Hack Keywords | `hack` matched hackathon | `hacked\|hacker` |
 
 ---
 
-## Session 537 Accomplishments (MAJOR)
+## Commits from Session 539
 
-### All 3 Detail Panels Now Show Real Data!
-
-| Panel | API Endpoint | What It Shows |
-|-------|--------------|---------------|
-| **Spider** | `/api/spider-intelligence/detail/<name>/` | Actual articles with clickable links |
-| **Agent** | `/api/agent-intelligence/detail/<name>/` | Stats, knowledge, transfers |
-| **Situation** | `/api/situation-intelligence/detail/<type>/` | Triggers, fires, recent events |
-
-### Complete Feature List
-
-| Task | Status |
-|------|--------|
-| Spider Detail API | ✅ Returns actual news articles |
-| Collapsible Spider Categories | ✅ Click ▶ to expand, individual spiders clickable |
-| Agent Detail API | ✅ Shows stats, knowledge, transfers |
-| Situation Detail API | ✅ Shows triggers, fires, events |
-| Dynamic Cross-References API | ✅ Real DB relationships |
-| Detail Panel Overlay | ✅ Fixed position, no layout shift |
-| Bug Fixes | ✅ 4 API fixes (attributes, dict iteration, strings) |
+```
+15ccd38 fix(Session 539): Fix event sorting and trigger pattern
+1191fdf fix(Session 539): Improve trigger event detail panel
+aabfe67 feat(Session 539): Increase autonomous situation frequency
+968c8b1 fix(Session 539): Live Intelligence Flow refreshes properly
+```
 
 ---
 
@@ -67,17 +54,17 @@ Session 537 created the detail panel APIs, but they were blocked by auth middlew
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Visible Tabs** | 9 | ✅ Consolidated |
-| **Hidden Tabs** | 15 | ✅ |
-| Spiders (Registry) | 75 | ✅ |
-| Agents (Active) | 55 | ✅ |
-| Spider Data Records | 24,027+ | ✅ |
-| Knowledge Sources | 2,682 | ✅ |
-| LLM Summaries | 98% | ✅ |
+| **Visible Tabs** | 9 | Consolidated |
+| **Hidden Tabs** | 15 | Available if needed |
+| Spiders (Registry) | 75 | Active |
+| Agents (Active) | 55 | Active |
+| Spider Data Records | 24,027+ | Growing |
+| Knowledge Sources | 2,682 | 98% with LLM summaries |
+| Trigger Events | 19 | Firing hourly |
 
 ---
 
-## How to Test All Features
+## How to Test
 
 ```bash
 # Open AI Studio
@@ -85,20 +72,18 @@ open http://localhost:8000/ai-studio/
 
 # Go to Command Center tab
 
-# Test Spider Detail:
-# 1. Click "▶ Tech News (10)" to expand
-# 2. Click "Techcrunch" spider
-# 3. See actual news articles with blue clickable links
+# Test Live Feed:
+# 1. Watch for new events appearing (hourly triggers)
+# 2. Click any trigger event
+# 3. See correct details + "Search for this article" button
+# 4. Events should be sorted newest first
 
-# Test Agent Detail:
-# 1. Click any agent in Agent Roster (left panel)
-# 2. See stats (executions, success, effectiveness)
-# 3. See knowledge sources and transfer relationships
-
-# Test Situation Detail:
-# 1. Click any situation in Autonomous Situations (right panel)
-# 2. See stats (triggers, total fires, 24h fires)
-# 3. See active triggers and recent events
+# Check hourly situations ran:
+curl -s http://localhost:8000/api/autonomous/trigger-events/ | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+for e in d.get('events',[])[:5]:
+    print(f\"{e['fired_at'][:16]} | {e['trigger_name']}\")"
 ```
 
 ---
@@ -107,53 +92,44 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus | Key Outcome |
 |---------|-------|-------------|
-| **538** | **Auth + Field Fixes** | **All detail panels work without login** |
-| 537 | All 3 Detail Panels | Spider, Agent, Situation all show real data |
-| 536 | UI Tab Consolidation + Analytics + Command Center | 3 major fixes |
+| **539** | **Live Feed + Triggers** | **Refresh fix, hourly schedules, pattern refinement** |
+| 538 | Auth + Field Fixes | All detail panels work without login |
+| 537 | All 3 Detail Panels | Spider, Agent, Situation show real data |
+| 536 | UI Tab Consolidation | Command Center improvements |
 | 535 | UI Reality Check | WebSockets verified |
 | 534 | Spider Sync Conversion | 60+ spiders converted |
 
 ---
 
-## APIs Created in Session 537
+## APIs Working (Public)
 
-### 1. Spider Detail
 ```
-GET /api/spider-intelligence/detail/<spider_name>/
-Returns: articles with title, description, URL, price/change, etc.
-```
-
-### 2. Agent Detail
-```
-GET /api/agent-intelligence/detail/<agent_name>/
-Returns: agent info, stats, knowledge sources, transfers
-```
-
-### 3. Situation Detail
-```
-GET /api/situation-intelligence/detail/<situation_type>/
-Returns: situation stats, triggers, recent events
-```
-
-### 4. Cross-References (Session 536)
-```
-GET /api/intelligence/cross-references/
-Returns: spider→agent, agent→situation, situation→spider mappings
+/api/spider-intelligence/dashboard-stats/
+/api/spider-intelligence/detail/<name>/
+/api/agent-intelligence/detail/<name>/
+/api/situation-intelligence/detail/<type>/
+/api/intelligence/cross-references/
+/api/autonomous/situations/
+/api/autonomous/trigger-events/
 ```
 
 ---
 
-## Future Improvements
+## Potential Session 540 Tasks
 
-| Task | Status | Notes |
-|------|--------|-------|
-| Spider detail content | ✅ Done | Session 537 |
-| Agent detail content | ✅ Done | Session 537 |
-| Situation detail content | ✅ Done | Session 537 |
-| Collapsible spider list | ✅ Done | Session 537 |
-| Detail panel overlay | ✅ Done | Session 537 |
-| Auth fix for APIs | ✅ Done | Session 538 |
-| Discord/Web parity | Pending | Some features only on one platform |
+### Priority 1: Monitor Hourly Runs
+- Verify all 8 situations running on schedule
+- Check trigger event volume with increased frequency
+- Watch for API rate limiting issues
+
+### Priority 2: Discord/Web Feature Parity
+- Some features only on Discord (studio commands)
+- Some features only on Web (Command Center)
+- Review and align capabilities
+
+### Priority 3: Additional Trigger Refinement
+- Review remaining trigger patterns for false positives
+- Test edge cases with current patterns
 
 ---
 
@@ -168,9 +144,9 @@ make start && make celery  # If not running
 # 3. Open UI
 open http://localhost:8000/ai-studio/
 
-# 4. Test Command Center - all detail panels now work!
+# 4. Check Command Center Live Feed for recent events
 ```
 
 ---
 
-*Last updated: Session 538 - December 23, 2025*
+*Last updated: Session 539 - December 23, 2025*
