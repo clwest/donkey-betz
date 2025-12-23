@@ -1,21 +1,23 @@
 """
-CNN Spider - Cable News Network Intelligence
-=============================================
+CNN Spider - Cable News Network RSS Feed
+=========================================
 
-Session 343: Phase 1 RSS Expansion
+Session 534: Simplified to work with spider network interface.
 CNN provides news coverage via free RSS feeds.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class CNNSpider(BaseIntelligenceSpider):
-    """CNN news spider - breaking news and analysis"""
+class CNNSpider:
+    """CNN news spider - breaking news via RSS"""
+
+    name = "cnn"
 
     RSS_FEEDS = {
         'top_stories': 'http://rss.cnn.com/rss/cnn_topstories.rss',
@@ -25,78 +27,71 @@ class CNNSpider(BaseIntelligenceSpider):
         'politics': 'http://rss.cnn.com/rss/cnn_allpolitics.rss',
         'tech': 'http://rss.cnn.com/rss/cnn_tech.rss',
         'health': 'http://rss.cnn.com/rss/cnn_health.rss',
-        'entertainment': 'http://rss.cnn.com/rss/cnn_showbiz.rss',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from CNN"""
-        try:
-            all_articles = []
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:10]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', ''),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'feed_source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name}: {e}")
-            return {'articles': all_articles, 'source': 'cnn'}
-        except Exception as e:
-            self.logger.error(f"Error fetching CNN data: {e}")
-            return None
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch news articles from CNN RSS feeds.
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process CNN articles"""
-        try:
-            articles = raw_data.get('articles', [])
-            processed = [self._process_article(a) for a in articles if a]
-            processed = [p for p in processed if p]
+        Args:
+            max_results: Maximum number of articles to fetch
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='cnn.com',
-                data_type='news',
-                content={'articles': processed, 'count': len(processed)},
-                metadata={'source': 'cnn', 'feeds': list(self.RSS_FEEDS.keys())},
-                quality_score=min(1.0, len(processed) / 40 + 0.3),
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['news', 'politics', 'business', 'world'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['news_analyst']
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing CNN data: {e}")
-            return None
+        Returns:
+            List of article dictionaries
+        """
+        all_articles = []
+        seen_urls = set()
 
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            blob = TextBlob(f"{title} {summary}")
-            return {
-                'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'feed_source': article.get('feed_source', ''),
-                'sentiment': blob.sentiment.polarity,
-            }
-        except:
-            return None
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                feed = feedparser.parse(feed_url)
 
-    def get_required_fields(self) -> List[str]:
-        return ['title']
+                for entry in feed.entries[:10]:
+                    url = entry.get('link', '')
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['news', 'politics', 'business', 'breaking']
+                    # Skip duplicates
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+
+                    title = entry.get('title', '')
+                    if not title:
+                        continue
+
+                    summary = entry.get('summary', entry.get('description', ''))
+                    # Clean HTML from summary
+                    if summary:
+                        import re
+                        summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                    article = {
+                        'title': title,
+                        'url': url,
+                        'summary': summary,
+                        'description': summary,
+                        'published': entry.get('published', ''),
+                        'category': feed_name,
+                        'source': 'CNN',
+                        'data_type': 'news_article',
+                        'tags': ['news', 'cnn', feed_name.replace('_', ' ')],
+                        'timestamp': datetime.now().isoformat(),
+                    }
+                    all_articles.append(article)
+
+                    if len(all_articles) >= max_results:
+                        break
+
+            except Exception as e:
+                logger.warning(f"Error fetching CNN {feed_name} feed: {e}")
+                continue
+
+            if len(all_articles) >= max_results:
+                break
+
+        logger.info(f"CNN spider collected {len(all_articles)} articles")
+        return all_articles[:max_results]
