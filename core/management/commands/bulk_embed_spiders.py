@@ -110,7 +110,21 @@ class Command(BaseCommand):
                 # Single item stored directly (not wrapped in 'items')
                 items = [raw_data]
 
+            # Session 534: Check for nested article structures (VentureBeat, etc.)
+            has_content = False
             if items:
+                for item in items:
+                    if isinstance(item, dict):
+                        # Check if nested articles exist
+                        if item.get('articles') or item.get('ai_highlights'):
+                            has_content = True
+                            break
+                        # Or direct title/name
+                        if item.get('title') or item.get('name'):
+                            has_content = True
+                            break
+
+            if has_content:
                 # Has items - can be embedded
                 text = self._build_embedding_text(entry)
                 if text and len(text) > 20:
@@ -230,8 +244,22 @@ class Command(BaseCommand):
         # Include spider/source context
         parts.append(f"Source: {entry.spider_name}")
 
-        # Include up to 10 items
+        # Session 534: Handle nested structures (e.g., VentureBeat with 'articles' key)
+        # Flatten nested article lists into items
+        flat_items = []
         for item in items[:10]:
+            # Check if item has nested article lists (VentureBeat, etc.)
+            if isinstance(item, dict) and 'articles' in item:
+                flat_items.extend(item.get('articles', [])[:10])
+            elif isinstance(item, dict) and 'ai_highlights' in item:
+                flat_items.extend(item.get('ai_highlights', [])[:5])
+            else:
+                flat_items.append(item)
+
+        # Include up to 15 items from flattened list
+        for item in flat_items[:15]:
+            if not isinstance(item, dict):
+                continue
             title = item.get('title') or item.get('name') or ''
             desc = item.get('description') or item.get('summary') or item.get('snippet') or ''
 
