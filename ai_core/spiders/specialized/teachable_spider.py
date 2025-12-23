@@ -2,40 +2,54 @@
 Teachable Spider - Online Course & Creator Economy Intelligence
 ================================================================
 
-Session 218: Specialized spider for Teachable and online course ecosystem.
-Focuses on course creation trends, pricing, and creator opportunities.
+Session 534: Simplified to work with spider network interface.
+Aggregates online course and creator economy content via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class TeachableSpider(BaseIntelligenceSpider):
+class TeachableSpider:
     """Teachable spider - online course and creator economy intelligence"""
 
-    # Course creation and creator economy RSS feeds
+    name = "teachable"
+
+    # Online course and creator economy RSS feeds
     RSS_FEEDS = {
         'teachable_blog': 'https://teachable.com/blog/feed',
-        'coursecreator': 'https://www.onlinecoursehow.com/feed/',
+        'thinkific_blog': 'https://www.thinkific.com/blog/feed/',
+        'kajabi_blog': 'https://kajabi.com/blog/rss.xml',
+        'podia_blog': 'https://www.podia.com/articles/feed',
+        'creatoreconomy': 'https://newsletter.creatoreconomy.so/feed',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Course categories
+    CATEGORIES = [
+        ('Business Courses', 'business', 'Entrepreneurship and business education.'),
+        ('Tech & Coding', 'tech', 'Programming and technical skills.'),
+        ('Creative Skills', 'creative', 'Design, video, and artistic courses.'),
+        ('Personal Development', 'personal', 'Productivity and mindset courses.'),
+        ('Marketing', 'marketing', 'Digital marketing and growth.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.course_categories = {
             'business': ['business', 'entrepreneurship', 'marketing', 'sales', 'startup'],
             'tech': ['programming', 'coding', 'web development', 'software', 'tech', 'ai', 'data'],
             'creative': ['design', 'photography', 'video', 'music', 'art', 'writing'],
             'health': ['health', 'fitness', 'nutrition', 'wellness', 'yoga', 'meditation'],
-            'personal_development': ['productivity', 'mindset', 'leadership', 'communication', 'personal'],
+            'personal': ['productivity', 'mindset', 'leadership', 'communication', 'personal'],
             'finance': ['investing', 'trading', 'money', 'finance', 'wealth', 'crypto'],
         }
-
         self.monetization_models = {
             'one_time': ['one-time', 'single payment', 'lifetime access'],
             'subscription': ['membership', 'subscription', 'monthly', 'recurring'],
@@ -43,198 +57,167 @@ class TeachableSpider(BaseIntelligenceSpider):
             'freemium': ['free', 'freemium', 'lead magnet', 'free course'],
         }
 
-        self.success_indicators = {
-            'revenue': ['revenue', 'income', 'earnings', 'sales', '$', 'money'],
-            'students': ['students', 'enrollments', 'members', 'learners'],
-            'launch': ['launch', 'launched', 'releasing', 'new course'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch online course and creator economy content from RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch course creation ecosystem data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of course/creator content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting course categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'teachable_ecosystem'}
+        logger.info(f"Teachable spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch creator economy content from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Analysis
+                text = f"{title} {description}".lower()
+                category = self._detect_category(text)
+                monetization = self._detect_monetization(text)
+                is_success_story = self._is_success_story(text)
+                sentiment = self._analyze_sentiment(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'category': category,
+                    'monetization_model': monetization,
+                    'is_success_story': is_success_story,
+                    'sentiment': sentiment,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'creator_economy',
+                    'platform': 'teachable',
+                    'tags': ['courses', 'creator economy', 'online learning', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Teachable data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process course creation data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect course category from text."""
+        for category, keywords in self.course_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            insights = self._generate_creator_insights(processed_items)
+    def _detect_monetization(self, text: str) -> str:
+        """Detect monetization model from text."""
+        for model, keywords in self.monetization_models.items():
+            if any(kw in text for kw in keywords):
+                return model
+        return 'unknown'
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'monetization_trends': self._analyze_monetization(processed_items),
-                'success_stories': self._extract_success_stories(processed_items),
-                'launch_opportunities': self._identify_opportunities(processed_items),
+    def _is_success_story(self, text: str) -> bool:
+        """Check if content is a success story."""
+        success_keywords = ['revenue', 'income', 'earnings', 'sales', '$', 'students', 'enrollments', 'launch']
+        return any(kw in text for kw in success_keywords)
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze content sentiment."""
+        positive = ['success', 'grow', 'launch', 'revenue', 'students', 'amazing', 'best']
+        negative = ['fail', 'mistake', 'avoid', 'problem', 'struggle', 'difficult']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return course category links."""
+        return [
+            {
+                'title': f"Teachable: {name}",
+                'url': f'https://teachable.com/blog/category/{slug}',
+                'link': f'https://teachable.com/blog/category/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Teachable',
+                'data_type': 'course_category',
+                'platform': 'teachable',
+                'tags': ['courses', 'online learning', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Course Creation Guide', 'creation', 'How to create online courses.'),
+            ('Marketing Your Course', 'marketing', 'Promote and sell your courses.'),
+            ('Building Community', 'community', 'Engage and retain students.'),
+            ('Pricing Strategies', 'pricing', 'How to price your courses.'),
+            ('Creator Success Stories', 'success', 'Inspiring creator journeys.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='teachable.com',
-                data_type='course_creation',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'teachable_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['courses', 'education', 'creator', 'monetization', 'online learning'],
-                target_agents=['education_agent', 'income_agent', 'content_agent'],
-                target_advisors=['creator_advisor', 'monetization_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Teachable data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify category
-            category = 'general'
-            for cat, keywords in self.course_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify monetization model mentions
-            monetization = []
-            for model, keywords in self.monetization_models.items():
-                if any(kw in text for kw in keywords):
-                    monetization.append(model)
-
-            # Check for success indicators
-            has_revenue_mention = any(kw in text for kw in self.success_indicators['revenue'])
-            has_student_mention = any(kw in text for kw in self.success_indicators['students'])
-            is_launch_related = any(kw in text for kw in self.success_indicators['launch'])
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://teachable.com/blog/{category}',
+                'link': f'https://teachable.com/blog/{category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'monetization_mentions': monetization,
-                'has_revenue_mention': has_revenue_mention,
-                'has_student_mention': has_student_mention,
-                'is_launch_related': is_launch_related,
-                'sentiment': sentiment,
+                'source': 'Teachable',
+                'data_type': 'course_topic',
+                'platform': 'teachable',
+                'tags': ['courses', 'online learning', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_creator_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate creator economy insights"""
-        if not items:
-            return {}
-
-        revenue_items = [i for i in items if i.get('has_revenue_mention')]
-        launch_items = [i for i in items if i.get('is_launch_related')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'revenue_focused': len(revenue_items),
-            'launch_related': len(launch_items),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'creator_sentiment': 'bullish' if sum(i.get('sentiment', 0) for i in items) / len(items) > 0.1 else 'neutral',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by course category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_monetization(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze monetization model mentions"""
-        model_counts = {}
-        for item in items:
-            for model in item.get('monetization_mentions', []):
-                model_counts[model] = model_counts.get(model, 0) + 1
-        return dict(sorted(model_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_success_stories(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract success story content"""
-        stories = []
-        for item in items:
-            if item.get('has_revenue_mention') or item.get('has_student_mention'):
-                stories.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'link': item.get('link'),
-                })
-        return stories[:5]
-
-    def _identify_opportunities(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Identify course creation opportunities"""
-        opportunities = []
-        for item in items:
-            if item.get('is_launch_related') and item.get('sentiment', 0) > 0:
-                opportunities.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'monetization': item.get('monetization_mentions'),
-                    'link': item.get('link'),
-                })
-        return opportunities[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['course', 'teachable', 'online learning', 'creator', 'education']
+            for title, category, desc in topics
+        ]

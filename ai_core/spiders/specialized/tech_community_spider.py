@@ -1,272 +1,238 @@
 """
-Tech Community Spider - Generic Technical Intelligence
-=======================================================
+Tech Community Spider - Developer & Tech Community Intelligence
+================================================================
 
-Generic spider for technical community sites (HuggingFace, Kaggle, GitHub, StackOverflow)
-Provides basic intelligence gathering for technical agents.
+Session 534: Simplified to work with spider network interface.
+Aggregates developer community news and trends via RSS feeds.
 """
 
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timezone
-from bs4 import BeautifulSoup
+import feedparser
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class TechCommunitySpider(BaseIntelligenceSpider):
-    """Generic technical community intelligence spider"""
+class TechCommunitySpider:
+    """Tech community spider - developer forums, tech news, and community trends"""
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    name = "tech_community"
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
+    # Developer and tech community RSS feeds
+    RSS_FEEDS = {
+        'dev_to': 'https://dev.to/feed',
+        'hashnode': 'https://hashnode.com/feed',
+        'freecodecamp': 'https://www.freecodecamp.org/news/rss/',
+        'lobsters': 'https://lobste.rs/rss',
+        'slashdot': 'https://rss.slashdot.org/Slashdot/slashdotMain',
+    }
+
+    # Tech community categories
+    CATEGORIES = [
+        ('Web Development', 'webdev', 'Frontend and backend web development.'),
+        ('DevOps', 'devops', 'CI/CD, containers, and infrastructure.'),
+        ('Data Science', 'datascience', 'ML, AI, and data engineering.'),
+        ('Mobile', 'mobile', 'iOS, Android, and cross-platform.'),
+        ('Career', 'career', 'Developer career and job advice.'),
+    ]
+
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.tech_topics = {
+            'webdev': ['javascript', 'react', 'vue', 'node', 'css', 'html', 'frontend', 'backend', 'fullstack'],
+            'devops': ['docker', 'kubernetes', 'ci/cd', 'aws', 'cloud', 'terraform', 'devops', 'infrastructure'],
+            'datascience': ['python', 'machine learning', 'ai', 'data', 'ml', 'neural', 'tensorflow', 'pytorch'],
+            'mobile': ['ios', 'android', 'swift', 'kotlin', 'react native', 'flutter', 'mobile'],
+            'career': ['career', 'job', 'interview', 'salary', 'remote', 'freelance', 'hiring'],
+            'security': ['security', 'cybersecurity', 'hacking', 'vulnerability', 'encryption'],
+        }
+        self.content_types = {
+            'tutorial': ['tutorial', 'how to', 'guide', 'learn', 'step by step'],
+            'news': ['release', 'launch', 'announce', 'update', 'new'],
+            'discussion': ['opinion', 'thoughts', 'debate', 'why', 'should'],
+            'showcase': ['built', 'created', 'project', 'portfolio', 'show'],
+        }
+
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
         """
-        Process technical community data
+        Fetch tech community content from RSS feeds.
 
-        Extracts:
-        - Projects/models/competitions
-        - Descriptions and metadata
-        - Tags and categories
-        - Popularity metrics
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of tech community content dictionaries
         """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            platform = self._detect_platform(target.url)
-
-            if platform == 'huggingface':
-                return await self._process_huggingface(raw_data, target)
-            elif platform == 'kaggle':
-                return await self._process_kaggle(raw_data, target)
-            elif platform == 'github':
-                return await self._process_github(raw_data, target)
-            elif platform == 'stackoverflow':
-                return await self._process_stackoverflow(raw_data, target)
-            else:
-                return await self._process_generic(raw_data, target)
-
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error processing tech community data: {e}")
-            return None
+            logger.warning(f"Error getting tech categories: {e}")
 
-    def _detect_platform(self, url: str) -> str:
-        """Detect which platform based on URL"""
-        url_lower = url.lower()
-        if 'huggingface' in url_lower:
-            return 'huggingface'
-        elif 'kaggle' in url_lower:
-            return 'kaggle'
-        elif 'github' in url_lower:
-            return 'github'
-        elif 'stackoverflow' in url_lower:
-            return 'stackoverflow'
-        return 'generic'
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-    async def _process_huggingface(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process HuggingFace models/datasets"""
+        logger.info(f"Tech community spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch tech community content from RSS feed."""
+        items = []
+
         try:
-            soup = BeautifulSoup(data.get('content', ''), 'html.parser')
+            feed = feedparser.parse(feed_url)
 
-            items = []
-            # Look for model cards, dataset cards, etc.
-            cards = soup.find_all(['article', 'div'], class_=lambda x: x and ('model' in x.lower() or 'dataset' in x.lower()))
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            for card in cards[:20]:  # Limit to 20 items
-                title_elem = card.find(['h2', 'h3', 'h4', 'a'])
-                if title_elem:
-                    item = {
-                        'title': title_elem.get_text(strip=True),
-                        'type': 'model' if 'model' in str(card.get('class', '')).lower() else 'dataset',
-                        'url': title_elem.get('href', ''),
-                        'platform': 'huggingface'
-                    }
-                    items.append(item)
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type="tech_intelligence",
-                content={
-                    'platform': 'huggingface',
-                    'items': items,
-                    'total_found': len(items)
-                },
-                quality_score=0.75,
-                timestamp=datetime.now(timezone.utc),
-                metadata={
-                    'source': target.url,
-                    'platform_type': 'ml_models',
-                    'priority': 2,
-                    'collection_time': datetime.now(timezone.utc).isoformat()
-                },
-                target_agents=self.subscribers
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing HuggingFace data: {e}")
-            return None
+                # Analysis
+                text = f"{title} {description}".lower()
+                topic = self._detect_topic(text)
+                content_type = self._detect_content_type(text)
+                engagement = self._estimate_engagement(entry)
+                sentiment = self._analyze_sentiment(text)
 
-    async def _process_kaggle(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Kaggle competitions/datasets"""
-        try:
-            soup = BeautifulSoup(data.get('content', ''), 'html.parser')
+                # Extract tags from entry if available
+                tags = []
+                if hasattr(entry, 'tags') and entry.tags:
+                    tags = [tag.term for tag in entry.tags[:5]]
 
-            items = []
-            # Look for competition or dataset listings
-            listings = soup.find_all(['div', 'article'], class_=lambda x: x and ('competition' in x.lower() or 'dataset' in x.lower()))
-
-            for listing in listings[:20]:
-                title_elem = listing.find(['h2', 'h3', 'h4', 'a'])
-                if title_elem:
-                    item = {
-                        'title': title_elem.get_text(strip=True),
-                        'type': 'competition' if 'competition' in target.url else 'dataset',
-                        'url': title_elem.get('href', ''),
-                        'platform': 'kaggle'
-                    }
-                    items.append(item)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type="tech_intelligence",
-                content={
-                    'platform': 'kaggle',
-                    'items': items,
-                    'total_found': len(items)
-                },
-                quality_score=0.75,
-                timestamp=datetime.now(timezone.utc),
-                metadata={
-                    'source': target.url,
-                    'platform_type': 'data_science',
-                    'priority': 2,
-                    'collection_time': datetime.now(timezone.utc).isoformat()
-                },
-                target_agents=self.subscribers
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing Kaggle data: {e}")
-            return None
-
-    async def _process_github(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process GitHub trending/topics"""
-        try:
-            soup = BeautifulSoup(data.get('content', ''), 'html.parser')
-
-            items = []
-            # Look for repository listings
-            repos = soup.find_all(['article', 'div'], class_=lambda x: x and 'repo' in x.lower())
-
-            for repo in repos[:20]:
-                title_elem = repo.find(['h2', 'h3', 'a'])
-                if title_elem:
-                    item = {
-                        'title': title_elem.get_text(strip=True),
-                        'type': 'repository',
-                        'url': title_elem.get('href', ''),
-                        'platform': 'github'
-                    }
-                    items.append(item)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type="tech_intelligence",
-                content={
-                    'platform': 'github',
-                    'items': items,
-                    'total_found': len(items)
-                },
-                quality_score=0.75,
-                timestamp=datetime.now(timezone.utc),
-                metadata={
-                    'source': target.url,
-                    'platform_type': 'code_repositories',
-                    'priority': 2,
-                    'collection_time': datetime.now(timezone.utc).isoformat()
-                },
-                target_agents=self.subscribers
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing GitHub data: {e}")
-            return None
-
-    async def _process_stackoverflow(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process StackOverflow jobs/questions"""
-        try:
-            soup = BeautifulSoup(data.get('content', ''), 'html.parser')
-
-            items = []
-            # Look for question or job listings
-            listings = soup.find_all(['div', 'article'], class_=lambda x: x and ('question' in x.lower() or 'job' in x.lower()))
-
-            for listing in listings[:20]:
-                title_elem = listing.find(['h2', 'h3', 'a'])
-                if title_elem:
-                    item = {
-                        'title': title_elem.get_text(strip=True),
-                        'type': 'job' if 'job' in target.url else 'question',
-                        'url': title_elem.get('href', ''),
-                        'platform': 'stackoverflow'
-                    }
-                    items.append(item)
-
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type="tech_intelligence",
-                content={
-                    'platform': 'stackoverflow',
-                    'items': items,
-                    'total_found': len(items)
-                },
-                quality_score=0.75,
-                timestamp=datetime.now(timezone.utc),
-                metadata={
-                    'source': target.url,
-                    'platform_type': 'developer_community',
-                    'priority': 2,
-                    'collection_time': datetime.now(timezone.utc).isoformat()
-                },
-                target_agents=self.subscribers
-            )
-        except Exception as e:
-            self.logger.error(f"Error processing StackOverflow data: {e}")
-            return None
-
-    async def _process_generic(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Generic processing for unknown platforms"""
-        try:
-            soup = BeautifulSoup(data.get('content', ''), 'html.parser')
-
-            # Extract headings and links as generic content
-            items = []
-            for elem in soup.find_all(['h2', 'h3', 'h4'])[:20]:
-                link = elem.find('a')
                 items.append({
-                    'title': elem.get_text(strip=True),
-                    'url': link.get('href', '') if link else '',
-                    'type': 'generic',
-                    'platform': 'unknown'
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', ''),
+                    'topic': topic,
+                    'category': topic,
+                    'content_type': content_type,
+                    'engagement': engagement,
+                    'sentiment': sentiment,
+                    'entry_tags': tags,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'tech_community',
+                    'platform': 'tech_community',
+                    'tags': ['tech', 'developer', 'community', topic],
+                    'timestamp': datetime.now().isoformat(),
                 })
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url=target.url,
-                data_type="tech_intelligence",
-                content={
-                    'platform': 'generic',
-                    'items': items,
-                    'total_found': len(items)
-                },
-                quality_score=0.60,
-                timestamp=datetime.now(timezone.utc),
-                metadata={
-                    'source': target.url,
-                    'platform_type': 'generic',
-                    'priority': 3,
-                    'collection_time': datetime.now(timezone.utc).isoformat()
-                },
-                target_agents=self.subscribers
-            )
         except Exception as e:
-            self.logger.error(f"Error processing generic data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
+
+        return items
+
+    def _detect_topic(self, text: str) -> str:
+        """Detect tech topic from text."""
+        for topic, keywords in self.tech_topics.items():
+            if any(kw in text for kw in keywords):
+                return topic
+        return 'general'
+
+    def _detect_content_type(self, text: str) -> str:
+        """Detect content type from text."""
+        for ctype, keywords in self.content_types.items():
+            if any(kw in text for kw in keywords):
+                return ctype
+        return 'article'
+
+    def _estimate_engagement(self, entry: Any) -> str:
+        """Estimate engagement level from entry metadata."""
+        # Simple heuristic based on available metadata
+        if hasattr(entry, 'slash_comments'):
+            comments = int(entry.slash_comments) if entry.slash_comments else 0
+            if comments > 50:
+                return 'high'
+            elif comments > 10:
+                return 'medium'
+        return 'normal'
+
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyze content sentiment."""
+        positive = ['awesome', 'amazing', 'love', 'great', 'best', 'powerful', 'useful']
+        negative = ['bad', 'problem', 'issue', 'hate', 'worst', 'deprecated', 'avoid']
+
+        pos_count = sum(1 for word in positive if word in text)
+        neg_count = sum(1 for word in negative if word in text)
+
+        if pos_count > neg_count:
+            return 'positive'
+        elif neg_count > pos_count:
+            return 'negative'
+        return 'neutral'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return tech community category links."""
+        return [
+            {
+                'title': f"Tech: {name}",
+                'url': f'https://dev.to/t/{slug}',
+                'link': f'https://dev.to/t/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'topic': slug,
+                'source': 'Dev.to',
+                'data_type': 'tech_category',
+                'platform': 'tech_community',
+                'tags': ['tech', 'developer', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Web Development Trends', 'webdev', 'Frontend and backend trends.'),
+            ('DevOps Best Practices', 'devops', 'CI/CD and infrastructure.'),
+            ('AI & Machine Learning', 'datascience', 'ML and data science.'),
+            ('Developer Career Tips', 'career', 'Job hunting and career growth.'),
+            ('Open Source Projects', 'opensource', 'Community projects and contributions.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://dev.to/t/{category}',
+                'link': f'https://dev.to/t/{category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'topic': category,
+                'source': 'Dev.to',
+                'data_type': 'tech_topic',
+                'platform': 'tech_community',
+                'tags': ['tech', 'developer', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
