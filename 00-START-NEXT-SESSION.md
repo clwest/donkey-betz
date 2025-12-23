@@ -1,74 +1,75 @@
-# Session 535 - Start Here
+# Session 536 - Start Here
 
-**Previous Session:** 534
+**Previous Session:** 535
 **Date:** December 22, 2025
-**Focus:** UI Reality Check - Ensure frontend reflects backend state
+**Focus:** Browser Console Verification & Real-Time Testing
 
 ---
 
-## Priority 1: Fix Agent Count Mismatch
+## What Was Verified in Session 535
 
-**Problem:** UI shows 47 agents but database has 55 active agents.
+| Check | Result |
+|-------|--------|
+| Agent count (UI vs DB) | ✅ 55 matches |
+| Spider count (UI vs Registry) | ✅ 75 matches |
+| LLM Summaries in Learning Feed | ✅ 98% coverage (2,626/2,677) |
+| WebSocket connections | ✅ 7/7 endpoints working |
+
+**Handoff:** `docs/handoffs/SESSION_535_UI_REALITY_CHECK.md`
+
+---
+
+## Priority 1: Browser Console Check
+
+Open DevTools and look for errors:
 
 ```bash
-# Verify current count
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-import django; django.setup()
-from core.models_unified_system import Agent
-print(f'Active agents: {Agent.objects.filter(is_active=True).count()}')"
+# Start services
+make start && make celery
+
+# Open browser
+open http://localhost:8000/ai-studio/
+
+# Then press F12 → Console tab
+# Look for: red errors, 404s, WebSocket failures
 ```
 
-**Files to update:**
-```bash
-# Find hardcoded agent counts
-grep -rn ">47<\|>42<" ai_core/templates/
-```
+**Expected in Console:**
+- No red errors
+- WebSocket connections to `/ws/intelligence/`, `/ws/spider-updates/`, etc.
 
 ---
 
-## Priority 2: Verify Dashboard Panels Load
+## Priority 2: Real-Time Update Test
 
-Test each panel in the Intelligence Command Center:
+Trigger a spider and watch Live Feed update:
 
-| Panel | Check | Expected |
-|-------|-------|----------|
-| Spider Network | Left panel populates | 75 spiders by category |
-| Agent Roster | Shows all agents | 55 agents with status |
-| Live Feed | Events appear | Real-time spider/agent activity |
-| Situations | Right panel | 19 situation types |
-| Conversations | Sub-tab content | Agent discussions |
-| Dreams | Sub-tab content | Dream journal entries |
-| Learning Feed | Sub-tab content | LLM-synthesized summaries |
-
-**Test URL:** `http://localhost:8000/ai-studio/` → Intelligence Command Center tab
-
----
-
-## Priority 3: End-to-End Data Flow Test
-
-1. **Trigger spider collection:**
 ```bash
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
-from ai_core.spiders.specialized.techcrunch_spider import TechCrunchSpider
-spider = TechCrunchSpider()
+from ai_core.spiders.specialized.hackernews_spider import HackerNewsSpider
+spider = HackerNewsSpider()
 items = spider.fetch_data(max_results=5)
 print(f'Collected {len(items)} items')
 for item in items[:2]:
-    print(f'  - {item[\"title\"][:50]}...')"
+    print(f'  - {item[\"title\"][:60]}...')"
 ```
 
-2. **Check WebSocket connections work** (browser console)
-3. **Verify real-time updates appear in Live Feed**
+Watch the Intelligence Command Center → Live Feed for new events.
 
 ---
 
-## Priority 4: Template Audit for Stale Values
+## Priority 3: Panel Data Verification
 
-```bash
-# Find potentially stale hardcoded values
-grep -rn ">102<\|>72<\|>66<\|>1000" ai_core/templates/ | grep -v ".pyc"
-```
+Navigate to Intelligence Command Center and verify:
+
+| Panel | Expected |
+|-------|----------|
+| **Left - Spider Network** | 75 spiders grouped by 36 categories |
+| **Left - Agent Roster** | 55 agents with status dots |
+| **Center - Live Feed** | Real-time events (spider/agent/trigger) |
+| **Right - Situations** | 19 autonomous situation types |
+| **Memory - Learning Feed** | Transfers with LLM summaries |
 
 ---
 
@@ -81,42 +82,32 @@ grep -rn ">102<\|>72<\|>66<\|>1000" ai_core/templates/ | grep -v ".pyc"
 | Agents (DB Active) | 55 |
 | Spider Data Records | 23,952 |
 | Knowledge Sources | 2,677 |
+| LLM Summaries | 2,626 (98%) |
 | Knowledge Transfers | 932 |
 | Agent Conversations | 4,775 |
-| LLM Summaries | 2,626 (98%) |
 
 ---
 
-## Quick Start
+## Quick Health Check
 
 ```bash
-# 1. Start services
-make start && make celery
+# 1. Services running?
+pgrep -f daphne && echo "Daphne: OK" || echo "Daphne: NOT RUNNING"
+pgrep -f celery && echo "Celery: OK" || echo "Celery: NOT RUNNING"
 
-# 2. Access UI
-open http://localhost:8000/ai-studio/
+# 2. API responding?
+curl -s http://localhost:8000/health/ping/ | head -1
 
-# 3. Navigate to Intelligence Command Center tab
-
-# 4. Check browser console for errors
-# Press F12 → Console tab
+# 3. Database counts
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.models_unified_system import Agent
+from core.models import AgentKnowledgeSource
+from ai_core.spiders.spider_registry import SpiderRegistry
+print(f'Agents: {Agent.objects.filter(is_active=True).count()}')
+print(f'Spiders: {len(SpiderRegistry().get_all_spiders())}')
+print(f'Knowledge: {AgentKnowledgeSource.objects.filter(is_active=True).count()}')"
 ```
-
----
-
-## What Was Accomplished in Session 534
-
-### Spider Network Sync Conversion (COMPLETE)
-
-- Converted 60+ placeholder spiders to working sync interface
-- 18 commits across 17 batches
-- All spiders now use `fetch_data()` method
-- RSS feeds, APIs, and fallback strategies implemented
-- Registered teachable + udemy spiders (73 → 75 total)
-- Updated UI placeholders to show 75 spiders
-- Full spider network test: 28/28 working
-
-**Handoff:** `docs/handoffs/SESSION_534_SPIDER_SYNC_CONVERSION.md`
 
 ---
 
@@ -124,27 +115,25 @@ open http://localhost:8000/ai-studio/
 
 | Session | Focus |
 |---------|-------|
-| 534 | **Spider Sync Conversion** - 60+ spiders converted, UI updated to 75 |
+| 535 | **UI Reality Check** - WebSocket testing, LLM summary verification |
+| 534 | Spider Sync Conversion - 60+ spiders converted, UI counts fixed |
 | 533 | LLM Synthesis Fix - Data extraction from raw_data |
 | 532 | Enhanced Content Display - Full knowledge in sub-tabs |
 | 531 | Sub-tabs Added - Conversations, Dreams, Boardroom, Memory |
 | 530 | Intelligence Command Center - Unified frontend |
-| 529 | Intelligent Prompting - All agents upgraded |
 
 For full history, see `docs/handoffs/` directory.
 
 ---
 
-## Success Criteria for Session 535
+## Success Criteria for Session 536
 
-- [ ] Agent count in UI matches DB (55)
-- [ ] All Command Center panels load without errors
-- [ ] Spider list shows 75 spiders grouped by category
-- [ ] Learning Feed shows LLM-synthesized content
 - [ ] No JavaScript errors in browser console
-- [ ] WebSocket connections established
-- [ ] Real-time updates visible in Live Feed
+- [ ] WebSocket connections visible in Network tab (WS filter)
+- [ ] Live Feed shows events when spider runs
+- [ ] All 3 Command Center columns populate with data
+- [ ] Click-through from spider → agents works
 
 ---
 
-*Last updated: Session 534 - December 22, 2025*
+*Last updated: Session 535 - December 22, 2025*
