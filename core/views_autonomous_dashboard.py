@@ -44,7 +44,7 @@ SITUATION_CATALOG = {
         'name': 'Autonomous Content Studio',
         'domain': 'content',
         'description': 'Auto-generates content for channels with 3-agent debates',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'autonomous_studio.run_main_loop',
         'model': 'ContentChannel',
     },
@@ -52,7 +52,7 @@ SITUATION_CATALOG = {
         'name': 'Narrative Drift Detector',
         'domain': 'content',
         'description': 'Detects significant narrative shifts in news topics',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_narrative_drift_detection',
         'model': 'NarrativeDriftTopic',
     },
@@ -60,7 +60,7 @@ SITUATION_CATALOG = {
         'name': 'Viral Content Predictor',
         'domain': 'content',
         'description': 'Scores content ideas by viral potential',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_viral_prediction',
         'model': 'ViralContentPrediction',
     },
@@ -70,7 +70,7 @@ SITUATION_CATALOG = {
         'name': 'Design Trends Monitor',
         'domain': 'creative',
         'description': 'Tracks design trends from Dribbble, Behance, Awwwards',
-        'schedule': 'Every 6 hours',
+        'schedule': 'Every 2 hours',  # Session 539: Updated from 6h to 2h
         'celery_task': 'core.tasks.run_design_trend_analysis',
         'model': 'DesignTrend',
     },
@@ -96,7 +96,7 @@ SITUATION_CATALOG = {
         'name': 'Freelance Opportunity Scout',
         'domain': 'income',
         'description': 'Tracks freelance gigs across platforms',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_freelance_scout',
         'model': 'FreelanceOpportunity',
     },
@@ -104,7 +104,7 @@ SITUATION_CATALOG = {
         'name': 'Side Hustle Detector',
         'domain': 'income',
         'description': 'Finds trending micro-opportunities',
-        'schedule': 'Every 8 hours',
+        'schedule': 'Every 4 hours',  # Session 539: Updated from 8h to 4h
         'celery_task': 'core.tasks.run_side_hustle_detection',
         'model': 'SideHustle',
     },
@@ -114,7 +114,7 @@ SITUATION_CATALOG = {
         'name': 'Market Intelligence Desk',
         'domain': 'financial',
         'description': 'Creates market intelligence briefs',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_market_intelligence',
         'model': 'MarketIntelligenceBrief',
     },
@@ -122,7 +122,7 @@ SITUATION_CATALOG = {
         'name': 'SEC Filing Analyzer',
         'domain': 'financial',
         'description': 'Deep analysis of institutional filings',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_sec_filing_analysis',
         'model': 'SECFilingAnalysis',
     },
@@ -130,7 +130,7 @@ SITUATION_CATALOG = {
         'name': 'Earnings Surprise Predictor',
         'domain': 'financial',
         'description': 'Pre-earnings analysis with predictions',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'core.tasks.run_earnings_prediction',
         'model': 'EarningsPrediction',
     },
@@ -138,7 +138,7 @@ SITUATION_CATALOG = {
         'name': 'Crypto Sentiment Monitor',
         'domain': 'financial',
         'description': 'Tracks sentiment across crypto communities',
-        'schedule': 'Every 2 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 2h to 1h
         'celery_task': 'core.tasks.run_crypto_sentiment',
         'model': 'CryptoSentiment',
     },
@@ -146,7 +146,7 @@ SITUATION_CATALOG = {
         'name': 'Blockchain Security Monitor',
         'domain': 'financial',
         'description': 'Monitors whale movements and security events',
-        'schedule': 'Every 2 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 2h to 1h
         'celery_task': 'autonomous.blockchain_security_monitor',
         'model': 'BlockchainSecurityAlert',
     },
@@ -154,7 +154,7 @@ SITUATION_CATALOG = {
         'name': 'Stock Market Intelligence',
         'domain': 'financial',
         'description': 'Analyzes stock market with Bull vs Bear debate',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every hour',  # Session 539: Updated from 4h to 1h
         'celery_task': 'autonomous.stock_market_intelligence',
         'model': 'StockMarketAlert',
     },
@@ -164,7 +164,7 @@ SITUATION_CATALOG = {
         'name': 'Tech Stack Evolution Tracker',
         'domain': 'research',
         'description': 'Monitors rising/falling technologies',
-        'schedule': 'Every 6 hours',
+        'schedule': 'Every 4 hours',  # Session 539: Updated from 8h to 4h
         'celery_task': 'core.tasks.run_tech_stack_analysis',
         'model': 'TechStackTrend',
     },
@@ -172,7 +172,7 @@ SITUATION_CATALOG = {
         'name': 'AI Model Release Monitor',
         'domain': 'research',
         'description': 'Alerts on new AI model releases',
-        'schedule': 'Every 4 hours',
+        'schedule': 'Every 2 hours',  # Session 539: Updated from 6h to 2h
         'celery_task': 'core.tasks.run_ai_model_monitoring',
         'model': 'AIModelRelease',
     },
