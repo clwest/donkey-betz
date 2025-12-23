@@ -2,31 +2,46 @@
 Midjourney Spider - AI Art & Prompt Intelligence
 ==================================================
 
-Session 218: Specialized spider for Midjourney AI art community.
-Focuses on AI art trends, prompts, techniques, and creative workflows.
+Session 534: Simplified to work with spider network interface.
+Aggregates AI art and generative AI content via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class MidjourneySpider(BaseIntelligenceSpider):
+class MidjourneySpider:
     """Midjourney spider - AI art and prompt intelligence"""
 
+    name = "midjourney"
+
+    # AI art and generative AI RSS feeds
     RSS_FEEDS = {
         'ai_art_news': 'https://80.lv/feed/',
         'creative_ai': 'https://www.unite.ai/feed/',
         'digital_arts': 'https://www.digitalartsonline.co.uk/rss/',
+        'the_verge_ai': 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
+        'ars_technica_ai': 'https://feeds.arstechnica.com/arstechnica/technology-lab',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # AI art categories
+    CATEGORIES = [
+        ('Midjourney', 'midjourney', 'Midjourney AI art generation.'),
+        ('Stable Diffusion', 'stable_diffusion', 'Stable Diffusion models.'),
+        ('DALL-E', 'dalle', 'OpenAI DALL-E image generation.'),
+        ('Prompts', 'prompts', 'AI art prompts and techniques.'),
+        ('Tutorials', 'tutorials', 'AI art tutorials and guides.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.art_styles = {
             'photorealistic': ['photorealistic', 'realistic', 'hyperreal', 'lifelike', 'photograph'],
             'fantasy': ['fantasy', 'magical', 'mythical', 'ethereal', 'enchanted'],
@@ -35,181 +50,146 @@ class MidjourneySpider(BaseIntelligenceSpider):
             'abstract': ['abstract', 'surreal', 'conceptual', 'experimental'],
             'painterly': ['painting', 'oil', 'watercolor', 'impressionist', 'brushwork'],
         }
+        self.ai_art_keywords = ['ai', 'midjourney', 'stable diffusion', 'dall-e', 'generative',
+                                'prompt', 'image generation', 'text to image', 'ai art']
 
-        self.prompt_techniques = {
-            'style_reference': ['style of', 'in the style', 'inspired by', 'like'],
-            'quality_modifiers': ['4k', '8k', 'detailed', 'high quality', 'masterpiece'],
-            'lighting': ['lighting', 'dramatic light', 'golden hour', 'volumetric'],
-            'composition': ['composition', 'rule of thirds', 'cinematic', 'wide angle'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch AI art and generative AI content from RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Midjourney community data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of AI art content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting AI art categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'midjourney'}
+        logger.info(f"Midjourney spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from AI art RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect art style and AI relevance
+                text = f"{title} {summary}".lower()
+                art_style = self._detect_art_style(text)
+                is_ai_art = self._is_ai_art_relevant(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'art_style': art_style,
+                    'category': art_style,
+                    'is_ai_art_relevant': is_ai_art,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'ai_art',
+                    'platform': 'midjourney',
+                    'tags': ['midjourney', 'ai_art', art_style],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Midjourney data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Midjourney community data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_art_style(self, text: str) -> str:
+        """Detect art style from text."""
+        for style, keywords in self.art_styles.items():
+            if any(kw in text for kw in keywords):
+                return style
+        return 'general'
 
-            # Filter for AI art relevant content
-            ai_art_items = [i for i in processed_items if i.get('is_ai_art_relevant')]
+    def _is_ai_art_relevant(self, text: str) -> bool:
+        """Check if content is AI art relevant."""
+        return any(kw in text for kw in self.ai_art_keywords)
 
-            insights = self._generate_insights(ai_art_items)
-
-            content = {
-                'items': ai_art_items,
-                'insights': insights,
-                'by_style': self._group_by_style(ai_art_items),
-                'prompt_techniques': self._analyze_techniques(ai_art_items),
-                'trending_styles': self._extract_trending(ai_art_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return AI art category links."""
+        return [
+            {
+                'title': f"AI Art: {name}",
+                'url': f'https://www.midjourney.com/explore?tab={slug}',
+                'link': f'https://www.midjourney.com/explore?tab={slug}',
+                'summary': desc,
+                'description': desc,
+                'art_style': slug,
+                'category': slug,
+                'source': 'Midjourney',
+                'data_type': 'ai_art_category',
+                'platform': 'midjourney',
+                'tags': ['midjourney', 'ai_art', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(ai_art_items) / 15 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Midjourney Prompts', 'prompts', 'AI art prompt engineering.'),
+            ('Stable Diffusion', 'stable_diffusion', 'Open source image generation.'),
+            ('DALL-E Art', 'dalle', 'OpenAI image generation.'),
+            ('AI Art Styles', 'styles', 'Art style exploration.'),
+            ('Generative AI', 'generative', 'Latest in generative AI.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='midjourney.com',
-                data_type='ai_art',
-                content=content,
-                metadata={
-                    'item_count': len(ai_art_items),
-                    'source': 'midjourney',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['midjourney', 'ai art', 'prompts', 'generative', 'creative ai'],
-                target_agents=['creative_agent', 'ai_art_agent', 'prompt_agent'],
-                target_advisors=['ai_art_director', 'creative_technologist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Midjourney data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Check if AI art relevant
-            ai_keywords = ['ai', 'midjourney', 'stable diffusion', 'dall-e', 'generative',
-                          'prompt', 'image generation', 'text to image', 'ai art']
-            is_ai_art_relevant = any(kw in text for kw in ai_keywords)
-
-            # Identify art style
-            art_style = 'general'
-            for style, keywords in self.art_styles.items():
-                if any(kw in text for kw in keywords):
-                    art_style = style
-                    break
-
-            # Identify prompt techniques mentioned
-            techniques = []
-            for technique, keywords in self.prompt_techniques.items():
-                if any(kw in text for kw in keywords):
-                    techniques.append(technique)
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'art_style': art_style,
-                'techniques': techniques,
-                'is_ai_art_relevant': is_ai_art_relevant,
-                'sentiment': sentiment,
+                'url': f'https://www.reddit.com/r/midjourney/search?q={category}',
+                'link': f'https://www.reddit.com/r/midjourney/search?q={category}',
+                'summary': desc,
+                'description': desc,
+                'art_style': category,
+                'category': category,
+                'source': 'Midjourney',
+                'data_type': 'ai_art_topic',
+                'platform': 'midjourney',
+                'tags': ['midjourney', 'ai_art', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate AI art insights"""
-        if not items:
-            return {}
-
-        style_counts = {}
-        for item in items:
-            style = item.get('art_style', 'general')
-            style_counts[style] = style_counts.get(style, 0) + 1
-
-        technique_counts = {}
-        for item in items:
-            for tech in item.get('techniques', []):
-                technique_counts[tech] = technique_counts.get(tech, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'trending_styles': sorted(style_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'popular_techniques': sorted(technique_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'ai_art_pulse': 'vibrant' if len(items) > 10 else 'steady',
-        }
-
-    def _group_by_style(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by art style"""
-        groups = {}
-        for item in items:
-            style = item.get('art_style', 'general')
-            if style not in groups:
-                groups[style] = []
-            groups[style].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_techniques(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze prompt techniques"""
-        technique_counts = {}
-        for item in items:
-            for tech in item.get('techniques', []):
-                technique_counts[tech] = technique_counts.get(tech, 0) + 1
-        return dict(sorted(technique_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending AI art content"""
-        sorted_items = sorted(items, key=lambda x: x.get('sentiment', 0), reverse=True)
-        return [{'title': i.get('title'), 'style': i.get('art_style'), 'link': i.get('link')}
-                for i in sorted_items[:5]]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['midjourney', 'ai art', 'prompt', 'generative', 'text to image']
+            for title, category, desc in topics
+        ]
