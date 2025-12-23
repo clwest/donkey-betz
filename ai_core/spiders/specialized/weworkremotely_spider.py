@@ -2,23 +2,25 @@
 WeWorkRemotely Spider - Remote Job Intelligence
 ================================================
 
-Session 218: Specialized spider for WeWorkRemotely job board.
-Focuses on remote job opportunities across tech, design, and business.
+Session 534: Simplified to work with spider network interface.
+Aggregates remote job opportunities via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class WeWorkRemotelySpider(BaseIntelligenceSpider):
+class WeWorkRemotelySpider:
     """WeWorkRemotely spider - remote job opportunities"""
 
-    # RSS Feed URLs
+    name = "weworkremotely"
+
+    # Remote job RSS feeds
     RSS_FEEDS = {
         'programming': 'https://weworkremotely.com/categories/remote-programming-jobs.rss',
         'design': 'https://weworkremotely.com/categories/remote-design-jobs.rss',
@@ -28,9 +30,19 @@ class WeWorkRemotelySpider(BaseIntelligenceSpider):
         'sales_marketing': 'https://weworkremotely.com/categories/remote-sales-marketing-jobs.rss',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Job categories
+    CATEGORIES = [
+        ('Programming', 'programming', 'Software development and engineering.'),
+        ('Design', 'design', 'UI/UX and graphic design.'),
+        ('DevOps', 'devops', 'System administration and cloud.'),
+        ('Management', 'management', 'Leadership and management roles.'),
+        ('Marketing', 'marketing', 'Sales and digital marketing.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.job_categories = {
             'programming': ['developer', 'engineer', 'programmer', 'software', 'backend', 'frontend', 'fullstack'],
             'design': ['designer', 'ui', 'ux', 'graphic', 'product design', 'visual'],
@@ -39,211 +51,178 @@ class WeWorkRemotelySpider(BaseIntelligenceSpider):
             'management': ['manager', 'lead', 'director', 'head of', 'vp', 'chief'],
             'marketing': ['marketing', 'growth', 'seo', 'content', 'social media'],
         }
-
         self.seniority_levels = {
             'senior': ['senior', 'sr.', 'lead', 'principal', 'staff'],
             'mid': ['mid-level', 'intermediate', '3+ years', '5+ years'],
             'junior': ['junior', 'jr.', 'entry', 'associate', 'trainee'],
         }
-
         self.tech_stacks = {
             'python': ['python', 'django', 'flask', 'fastapi'],
             'javascript': ['javascript', 'react', 'vue', 'angular', 'node', 'typescript'],
             'ruby': ['ruby', 'rails', 'ruby on rails'],
             'java': ['java', 'spring', 'kotlin'],
             'go': ['golang', 'go '],
-            'rust': ['rust'],
             'mobile': ['ios', 'android', 'swift', 'react native', 'flutter'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from WeWorkRemotely"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch remote job listings from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of job listing dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_jobs = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting job categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:15]:
-                            job = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'company': self._extract_company(entry),
-                                'feed_category': feed_name,
-                            }
-                            if job['title']:
-                                all_jobs.append(job)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'jobs': all_jobs, 'source': 'weworkremotely'}
+        logger.info(f"WeWorkRemotely spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch remote job listings from RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Extract company from title
+                company = self._extract_company(title)
+
+                # Analysis
+                text = f"{title} {description}".lower()
+                category = self._detect_category(text, feed_name)
+                seniority = self._detect_seniority(text)
+                tech_stack = self._detect_tech_stack(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'company': company,
+                    'category': category,
+                    'seniority': seniority,
+                    'tech_stack': tech_stack,
+                    'is_remote': True,
+                    'source': 'WeWorkRemotely',
+                    'data_type': 'remote_job',
+                    'platform': 'weworkremotely',
+                    'tags': ['remote', 'jobs', category] + tech_stack[:2],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching WeWorkRemotely data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def _extract_company(self, entry) -> str:
-        """Extract company name from entry"""
-        title = entry.get('title', '')
+        return items
+
+    def _extract_company(self, title: str) -> str:
+        """Extract company name from job title."""
         if ':' in title:
             return title.split(':')[0].strip()
         return 'Remote Company'
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process WeWorkRemotely jobs"""
-        try:
-            jobs = raw_data.get('jobs', [])
-            processed_jobs = []
+    def _detect_category(self, text: str, feed_name: str) -> str:
+        """Detect job category from text."""
+        for category, keywords in self.job_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return feed_name
 
-            for job in jobs:
-                processed = self._process_job(job)
-                if processed:
-                    processed_jobs.append(processed)
+    def _detect_seniority(self, text: str) -> str:
+        """Detect seniority level from text."""
+        for level, keywords in self.seniority_levels.items():
+            if any(kw in text for kw in keywords):
+                return level
+        return 'mid'
 
-            insights = self._generate_job_insights(processed_jobs)
+    def _detect_tech_stack(self, text: str) -> List[str]:
+        """Detect tech stack from text."""
+        tech_stack = []
+        for tech, keywords in self.tech_stacks.items():
+            if any(kw in text for kw in keywords):
+                tech_stack.append(tech)
+        return tech_stack
 
-            content = {
-                'jobs': processed_jobs,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_jobs),
-                'by_seniority': self._group_by_seniority(processed_jobs),
-                'tech_demand': self._analyze_tech_demand(processed_jobs),
-                'top_companies': self._extract_top_companies(processed_jobs),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return job category links."""
+        return [
+            {
+                'title': f"Remote: {name} Jobs",
+                'url': f'https://weworkremotely.com/categories/remote-{slug}-jobs',
+                'link': f'https://weworkremotely.com/categories/remote-{slug}-jobs',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'WeWorkRemotely',
+                'data_type': 'job_category',
+                'platform': 'weworkremotely',
+                'tags': ['remote', 'jobs', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_jobs) / 40 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Remote Programming Jobs', 'programming', 'Software development roles.'),
+            ('Remote Design Jobs', 'design', 'Design and creative roles.'),
+            ('Remote DevOps Jobs', 'devops', 'Infrastructure and cloud roles.'),
+            ('Remote Management Jobs', 'management', 'Leadership positions.'),
+            ('Remote Marketing Jobs', 'marketing', 'Sales and marketing roles.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='weworkremotely.com',
-                data_type='remote_jobs',
-                content=content,
-                metadata={
-                    'job_count': len(processed_jobs),
-                    'source': 'weworkremotely',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['remote', 'jobs', 'programming', 'design', 'tech'],
-                target_agents=['job_agent', 'career_agent', 'income_agent'],
-                target_advisors=['career_advisor', 'income_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing WeWorkRemotely data: {e}")
-            return None
-
-    def _process_job(self, job: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual job listing"""
-        try:
-            title = job.get('title', '')
-            description = job.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify job category
-            category = job.get('feed_category', 'general')
-            for cat, keywords in self.job_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify seniority level
-            seniority = 'mid'
-            for level, keywords in self.seniority_levels.items():
-                if any(kw in text for kw in keywords):
-                    seniority = level
-                    break
-
-            # Identify tech stack
-            tech_stack = []
-            for tech, keywords in self.tech_stacks.items():
-                if any(kw in text for kw in keywords):
-                    tech_stack.append(tech)
-
-            return {
+        return [
+            {
                 'title': title,
-                'company': job.get('company', ''),
-                'description': description[:300],
-                'link': job.get('link', ''),
-                'published': job.get('published', ''),
+                'url': f'https://weworkremotely.com/categories/remote-{category}-jobs',
+                'link': f'https://weworkremotely.com/categories/remote-{category}-jobs',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'seniority': seniority,
-                'tech_stack': tech_stack,
-                'is_fully_remote': True,
+                'source': 'WeWorkRemotely',
+                'data_type': 'job_topic',
+                'platform': 'weworkremotely',
+                'tags': ['remote', 'jobs', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing job: {e}")
-            return None
-
-    def _generate_job_insights(self, jobs: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate job market insights"""
-        if not jobs:
-            return {}
-
-        cat_counts = {}
-        for job in jobs:
-            cat = job.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        seniority_counts = {}
-        for job in jobs:
-            level = job.get('seniority', 'mid')
-            seniority_counts[level] = seniority_counts.get(level, 0) + 1
-
-        return {
-            'total_jobs': len(jobs),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'seniority_distribution': seniority_counts,
-            'market_health': 'strong' if len(jobs) > 30 else 'moderate' if len(jobs) > 15 else 'quiet',
-        }
-
-    def _group_by_category(self, jobs: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group jobs by category"""
-        groups = {}
-        for job in jobs:
-            cat = job.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({'title': job.get('title'), 'company': job.get('company'), 'link': job.get('link')})
-        return groups
-
-    def _group_by_seniority(self, jobs: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count jobs by seniority level"""
-        counts = {}
-        for job in jobs:
-            level = job.get('seniority', 'mid')
-            counts[level] = counts.get(level, 0) + 1
-        return counts
-
-    def _analyze_tech_demand(self, jobs: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze tech stack demand"""
-        tech_counts = {}
-        for job in jobs:
-            for tech in job.get('tech_stack', []):
-                tech_counts[tech] = tech_counts.get(tech, 0) + 1
-        return dict(sorted(tech_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_top_companies(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract companies with most listings"""
-        company_counts = {}
-        for job in jobs:
-            company = job.get('company', 'Unknown')
-            if company not in company_counts:
-                company_counts[company] = {'count': 0, 'jobs': []}
-            company_counts[company]['count'] += 1
-            if len(company_counts[company]['jobs']) < 2:
-                company_counts[company]['jobs'].append(job.get('title'))
-
-        sorted_companies = sorted(company_counts.items(), key=lambda x: x[1]['count'], reverse=True)
-        return [{'name': c[0], **c[1]} for c in sorted_companies[:5]]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['remote', 'job', 'developer', 'designer', 'engineer', 'work from home']
+            for title, category, desc in topics
+        ]
