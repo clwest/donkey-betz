@@ -258,7 +258,8 @@ const ICCState = {
             const eventEl = document.createElement('div');
             eventEl.className = `icc-feed-event trigger`;
             eventEl.style.borderLeftColor = severityColors[trigger.severity] || '#fbbf24';
-            eventEl.onclick = () => this.showDetail('trigger', trigger.trigger_name);
+            // Session 539: Pass event ID instead of trigger_name for unique lookup
+            eventEl.onclick = () => this.showDetail('trigger', trigger.id);
 
             eventEl.innerHTML = `
                 <div class="icc-feed-event-icon">${event.icon}</div>
@@ -1061,8 +1062,8 @@ const ICCState = {
                 break;
 
             case 'trigger':
-                // Find the full trigger data
-                const trigger = this.triggerFires.find(t => t.trigger_name === id) || {};
+                // Session 539: Find trigger by ID for unique lookup (not by name)
+                const trigger = this.triggerFires.find(t => t.id === id) || {};
                 const severityColors = {
                     'critical': '#ef4444',
                     'high': '#f97316',
@@ -1070,9 +1071,12 @@ const ICCState = {
                     'low': '#22c55e'
                 };
                 const severityColor = severityColors[trigger.severity] || '#fbbf24';
+                // Create a Google News search URL for the headline
+                const searchQuery = encodeURIComponent(trigger.matched_value || '');
+                const searchUrl = `https://news.google.com/search?q=${searchQuery}`;
 
                 html = `
-                    <h6 style="color: ${severityColor};">⚡ Trigger: ${id}</h6>
+                    <h6 style="color: ${severityColor};">⚡ ${trigger.trigger_name || 'Trigger'}</h6>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0;">
                         <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
                             <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase;">Severity</div>
@@ -1092,15 +1096,12 @@ const ICCState = {
                         </div>
                     </div>
                     <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; margin-top: 8px;">
-                        <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Matched Value</div>
-                        <div style="color: #e5e7eb; font-size: 0.85rem; word-break: break-word;">${trigger.matched_value || 'N/A'}</div>
+                        <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Headline</div>
+                        <div style="color: #e5e7eb; font-size: 0.9rem; word-break: break-word; line-height: 1.4;">${trigger.matched_value || 'N/A'}</div>
                     </div>
-                    ${trigger.trigger_data ? `
-                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; margin-top: 8px;">
-                        <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px;">Trigger Data</div>
-                        <pre style="color: #e5e7eb; font-size: 0.75rem; margin: 0; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">${JSON.stringify(trigger.trigger_data, null, 2)}</pre>
-                    </div>
-                    ` : ''}
+                    <a href="${searchUrl}" target="_blank" rel="noopener" style="display: block; margin-top: 10px; padding: 8px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; text-align: center; font-size: 0.85rem;">
+                        🔍 Search for this article
+                    </a>
                 `;
                 break;
 
