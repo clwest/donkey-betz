@@ -1,215 +1,173 @@
 """
 CivitAI Spider - Stable Diffusion Models & LoRA Intelligence
-===============================================================
+=============================================================
 
-Session 218: Specialized spider for CivitAI community.
-Focuses on Stable Diffusion models, LoRAs, embeddings, and AI art resources.
+Session 534: Simplified to work with spider network interface.
+Uses Civitai public API to fetch trending models, LoRAs, and embeddings.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
-import feedparser
-from textblob import TextBlob
+import requests
+import logging
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class CivitAISpider(BaseIntelligenceSpider):
-    """CivitAI spider - Stable Diffusion models and LoRA intelligence"""
+class CivitAISpider:
+    """CivitAI spider - trending SD models, LoRAs, and embeddings"""
 
-    RSS_FEEDS = {
-        'stability_blog': 'https://stability.ai/blog/rss.xml',
-        'huggingface_blog': 'https://huggingface.co/blog/feed.xml',
-        'the_decoder': 'https://the-decoder.com/feed/',
-    }
+    name = "civitai"
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    BASE_URL = "https://civitai.com/api/v1"
 
-        self.model_types = {
-            'checkpoint': ['checkpoint', 'base model', 'sdxl', 'sd 1.5', 'sd 2.1'],
-            'lora': ['lora', 'lycoris', 'loha', 'locon', 'fine-tune'],
-            'embedding': ['embedding', 'textual inversion', 'ti', 'negative embedding'],
-            'controlnet': ['controlnet', 'control', 'pose', 'depth', 'canny'],
-            'vae': ['vae', 'variational', 'encoder', 'decoder'],
-        }
+    # Model types to fetch
+    MODEL_TYPES = [
+        'Checkpoint',
+        'LORA',
+        'TextualInversion',
+        'Controlnet',
+    ]
 
-        self.use_cases = {
-            'characters': ['character', 'portrait', 'face', 'person', 'anime girl'],
-            'landscapes': ['landscape', 'scenery', 'environment', 'nature', 'background'],
-            'styles': ['style', 'artistic', 'painterly', 'anime', 'realistic'],
-            'objects': ['object', 'product', 'item', 'vehicle', 'architecture'],
-        }
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch CivitAI community data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch trending models from Civitai API.
+
+        Args:
+            max_results: Maximum number of models to fetch
+
+        Returns:
+            List of model dictionaries
+        """
+        all_items = []
+
+        # Fetch trending models
         try:
-            all_items = []
-
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
-
-            return {'items': all_items, 'source': 'civitai'}
-
+            models = self._fetch_models(limit=max_results)
+            all_items.extend(models)
         except Exception as e:
-            self.logger.error(f"Error fetching CivitAI data: {e}")
-            return None
+            logger.warning(f"Error fetching Civitai models: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process CivitAI community data"""
+        # If API fails, return curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Civitai spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_models(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Fetch trending models from Civitai API."""
+        items = []
+
         try:
-            items = raw_data.get('items', [])
-            processed_items = []
-
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
-
-            # Filter for SD/model relevant content
-            model_items = [i for i in processed_items if i.get('is_model_relevant')]
-
-            insights = self._generate_insights(model_items)
-
-            content = {
-                'items': model_items,
-                'insights': insights,
-                'by_model_type': self._group_by_type(model_items),
-                'use_case_analysis': self._analyze_use_cases(model_items),
-                'trending_models': self._extract_trending(model_items),
+            # Fetch models sorted by rating/downloads
+            url = f"{self.BASE_URL}/models"
+            params = {
+                'limit': min(limit, 100),  # API max is 100
+                'sort': 'Highest Rated',
+                'period': 'Week',
+                'nsfw': 'false',  # SFW only
             }
 
-            quality_score = min(1.0, len(model_items) / 15 + 0.35)
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='civitai.com',
-                data_type='sd_models',
-                content=content,
-                metadata={
-                    'item_count': len(model_items),
-                    'source': 'civitai',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['civitai', 'stable diffusion', 'lora', 'models', 'ai art'],
-                target_agents=['ai_art_agent', 'model_agent', 'creative_agent'],
-                target_advisors=['ai_art_director', 'ml_advisor']
-            )
+            models = data.get('items', [])
+
+            for model in models:
+                model_id = model.get('id')
+                name = model.get('name', '')
+                if not name:
+                    continue
+
+                model_type = model.get('type', 'Model')
+                creator = model.get('creator', {}).get('username', 'Unknown')
+                description = model.get('description', '') or ''
+
+                # Get stats
+                stats = model.get('stats', {})
+                downloads = stats.get('downloadCount', 0)
+                rating = stats.get('rating', 0)
+                favorites = stats.get('favoriteCount', 0)
+
+                # Build description
+                desc = f"{model_type}: {name}. "
+                if description:
+                    # Clean HTML from description
+                    import re
+                    clean_desc = re.sub(r'<[^>]+>', '', description)[:300]
+                    desc += f"{clean_desc} "
+                desc += f"Downloads: {downloads:,}. Rating: {rating:.1f}/5."
+
+                # Get tags
+                tags = model.get('tags', [])
+
+                # Get preview image
+                model_versions = model.get('modelVersions', [])
+                preview_url = ''
+                if model_versions:
+                    images = model_versions[0].get('images', [])
+                    if images:
+                        preview_url = images[0].get('url', '')
+
+                items.append({
+                    'title': name,
+                    'name': name,
+                    'url': f"https://civitai.com/models/{model_id}",
+                    'link': f"https://civitai.com/models/{model_id}",
+                    'summary': desc,
+                    'description': desc,
+                    'author': creator,
+                    'model_type': model_type,
+                    'downloads': downloads,
+                    'rating': rating,
+                    'favorites': favorites,
+                    'image_url': preview_url,
+                    'category': model_type.lower(),
+                    'source': 'Civitai',
+                    'data_type': 'sd_model',
+                    'tags': ['ai', 'stable-diffusion', model_type.lower()] + tags[:5],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error processing CivitAI data: {e}")
-            return None
+            logger.warning(f"Error fetching Civitai models: {e}")
 
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
+        return items
 
-            # Check if model/SD relevant
-            model_keywords = ['stable diffusion', 'sd', 'lora', 'checkpoint', 'model',
-                            'embedding', 'controlnet', 'diffusion', 'civitai']
-            is_model_relevant = any(kw in text for kw in model_keywords)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated SD/AI art topics when API fails."""
+        topics = [
+            ('SDXL Checkpoints', 'checkpoint', 'Base models for SDXL image generation.'),
+            ('Realistic LoRAs', 'lora', 'Fine-tuned LoRAs for realistic portraits and photos.'),
+            ('Anime LoRAs', 'lora', 'LoRAs for anime and manga-style generation.'),
+            ('Character LoRAs', 'lora', 'LoRAs trained on specific characters.'),
+            ('Style LoRAs', 'lora', 'LoRAs for artistic styles and aesthetics.'),
+            ('ControlNet Models', 'controlnet', 'Models for pose, depth, and edge control.'),
+            ('Textual Inversions', 'embedding', 'Embeddings for concepts and styles.'),
+            ('Negative Embeddings', 'embedding', 'Embeddings for quality improvement.'),
+            ('Pony Diffusion', 'checkpoint', 'Specialized anime/furry base models.'),
+            ('Flux Models', 'checkpoint', 'Next-generation diffusion models.'),
+        ]
 
-            # Identify model type
-            model_type = 'general'
-            for mtype, keywords in self.model_types.items():
-                if any(kw in text for kw in keywords):
-                    model_type = mtype
-                    break
-
-            # Identify use case
-            use_case = 'general'
-            for uc, keywords in self.use_cases.items():
-                if any(kw in text for kw in keywords):
-                    use_case = uc
-                    break
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'model_type': model_type,
-                'use_case': use_case,
-                'is_model_relevant': is_model_relevant,
-                'sentiment': sentiment,
+                'url': f'https://civitai.com/models?types={category}',
+                'link': f'https://civitai.com/models?types={category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Civitai',
+                'data_type': 'sd_topic',
+                'tags': ['ai', 'stable-diffusion', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate model intelligence insights"""
-        if not items:
-            return {}
-
-        type_counts = {}
-        for item in items:
-            mtype = item.get('model_type', 'general')
-            type_counts[mtype] = type_counts.get(mtype, 0) + 1
-
-        use_case_counts = {}
-        for item in items:
-            uc = item.get('use_case', 'general')
-            use_case_counts[uc] = use_case_counts.get(uc, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'top_model_types': sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'popular_use_cases': sorted(use_case_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'model_ecosystem': 'active' if len(items) > 10 else 'steady',
-        }
-
-    def _group_by_type(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by model type"""
-        groups = {}
-        for item in items:
-            mtype = item.get('model_type', 'general')
-            if mtype not in groups:
-                groups[mtype] = []
-            groups[mtype].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_use_cases(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze use case distribution"""
-        use_case_counts = {}
-        for item in items:
-            uc = item.get('use_case', 'general')
-            use_case_counts[uc] = use_case_counts.get(uc, 0) + 1
-        return dict(sorted(use_case_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending model content"""
-        sorted_items = sorted(items, key=lambda x: x.get('sentiment', 0), reverse=True)
-        return [{'title': i.get('title'), 'type': i.get('model_type'), 'link': i.get('link')}
-                for i in sorted_items[:5]]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['civitai', 'stable diffusion', 'lora', 'checkpoint', 'embedding', 'model']
+            for title, category, desc in topics
+        ]

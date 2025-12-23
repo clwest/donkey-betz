@@ -1,159 +1,197 @@
 """
-Gumroad Intelligence Spider - Digital Products Platform
-======================================================
+Gumroad Spider - Digital Products & Creator Economy Intelligence
+================================================================
 
-Specialized spider for gathering digital product opportunities from Gumroad.
+Session 534: Simplified to work with spider network interface.
+Uses creator economy RSS feeds and curated digital product categories.
 """
 
+import feedparser
+import logging
 import re
-import json
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
-from bs4 import BeautifulSoup
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
-from ..revenue_tracker import create_project_revenue
+logger = logging.getLogger(__name__)
 
 
-class GumroadIntelligenceSpider(BaseIntelligenceSpider):
-    """Gumroad digital products intelligence spider."""
+class GumroadSpider:
+    """Gumroad spider - digital products and creator economy trends"""
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
-        self.product_categories = ['templates', 'courses', 'ebooks', 'software', 'graphics']
+    name = "gumroad"
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Gumroad data"""
-        try:
-            if 'gumroad.com' in target.url:
-                return await self._process_gumroad_product(raw_data, target)
-            return None
-        except Exception as e:
-            self.logger.error(f"Error processing Gumroad data: {e}")
-            return None
+    # Creator economy RSS feeds
+    RSS_FEEDS = {
+        'creator_economy': 'https://newsletter.creatoreconomy.so/feed',
+        'simon_owens': 'https://simonowens.substack.com/feed',
+    }
 
-    async def _process_gumroad_product(self, data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Gumroad product"""
-        if 'content' not in data:
-            return None
+    # Digital product categories on Gumroad
+    CATEGORIES = [
+        ('3D', '3d', 'Blender assets, 3D models, and game assets.'),
+        ('Design', 'design', 'UI kits, icons, fonts, and design resources.'),
+        ('Drawing & Painting', 'drawing-painting', 'Brushes, tutorials, and art resources.'),
+        ('Software', 'software', 'Apps, plugins, and developer tools.'),
+        ('Self-improvement', 'self-improvement', 'Productivity and personal development.'),
+        ('Fiction Books', 'fiction', 'eBooks, novels, and short stories.'),
+        ('Comics & Graphic Novels', 'comics', 'Webcomics and graphic novels.'),
+        ('Audio', 'audio', 'Music, sound effects, and audio tools.'),
+        ('Recorded Music', 'music', 'Albums, singles, and music packs.'),
+        ('Films', 'films', 'Short films, documentaries, and video content.'),
+        ('Courses', 'courses', 'Online courses and educational content.'),
+        ('Tutorials', 'tutorials', 'Step-by-step guides and how-tos.'),
+        ('Photography', 'photography', 'Photo presets, lightroom, and photography guides.'),
+        ('Business & Money', 'business', 'Business templates and finance guides.'),
+    ]
 
-        soup = BeautifulSoup(data['content'], 'html.parser')
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
 
-        product_info = {
-            'id': f"gumroad_{int(datetime.now().timestamp())}",
-            'title': self._extract_title(soup),
-            'creator': self._extract_creator(soup),
-            'price': self._extract_price(soup),
-            'sales_count': self._extract_sales(soup),
-            'rating': self._extract_rating(soup),
-            'category': self._extract_category(soup),
-            'tags': self._extract_tags(soup),
-            'source': 'gumroad'
-        }
-
-        return IntelligenceData(
-            spider_id=self.spider_id,
-            source_url=target.url,
-            data_type='digital_product_opportunity',
-            content=product_info,
-            metadata={'platform': 'gumroad', 'product_type': 'digital'},
-            quality_score=0.7,
-            timestamp=datetime.now(timezone.utc),
-            relevance_tags=['digital_products', 'gumroad', 'monetization'],
-            target_agents=['income_builder', 'digital_product_creator'],
-            target_advisors=['creator_economy_expert']
-        )
-
-    def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract product title"""
-        for selector in ['h1', '.product-title', '[data-testid="title"]']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Gumroad Product"
-
-    def _extract_creator(self, soup: BeautifulSoup) -> str:
-        """Extract creator name"""
-        for selector in ['.creator-name', '.author', '[data-testid="creator"]']:
-            elem = soup.select_one(selector)
-            if elem:
-                return elem.get_text().strip()
-        return "Unknown Creator"
-
-    def _extract_price(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract product price"""
-        text = soup.get_text()
-        price_match = re.search(r'\$[\d,]+(?:\.\d{2})?', text)
-        return price_match.group() if price_match else None
-
-    def _extract_sales(self, soup: BeautifulSoup) -> Optional[int]:
-        """Extract sales count"""
-        text = soup.get_text()
-        sales_match = re.search(r'(\d+(?:,\d{3})*)\s*sales?', text, re.IGNORECASE)
-        return int(sales_match.group(1).replace(',', '')) if sales_match else None
-
-    def _extract_rating(self, soup: BeautifulSoup) -> Optional[float]:
-        """Extract product rating"""
-        text = soup.get_text()
-        rating_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:stars?|rating)', text, re.IGNORECASE)
-        return float(rating_match.group(1)) if rating_match else None
-
-    def _extract_category(self, soup: BeautifulSoup) -> str:
-        """Extract product category"""
-        for category in self.product_categories:
-            if category in soup.get_text().lower():
-                return category
-        return 'digital'
-
-    def _extract_tags(self, soup: BeautifulSoup) -> List[str]:
-        """Extract product tags"""
-        tags = []
-        for elem in soup.select('.tag, .category, .label'):
-            tag = elem.get_text().strip()
-            if tag and len(tag) < 30:
-                tags.append(tag)
-        return tags[:10]
-
-    async def track_revenue_conversion(
-        self,
-        application_id: str,
-        user_id: str,
-        product_title: str,
-        sale_amount: float,
-        client_name: str = "Gumroad Marketplace",
-        **kwargs
-    ) -> Optional[str]:
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
         """
-        Track revenue when a Gumroad product makes a sale.
-        Called when product sales occur.
+        Fetch digital product trends and creator economy news.
 
         Args:
-            application_id: Unique identifier for this product opportunity
-            user_id: User who created/sold the product
-            product_title: Title of the product that generated revenue
-            sale_amount: Amount earned from the sale
-            client_name: Platform or buyer name (defaults to Gumroad)
-            **kwargs: Additional metadata (product_category, buyer_info, etc.)
+            max_results: Maximum number of items to fetch
 
         Returns:
-            Revenue record ID if successful, None otherwise
+            List of digital product/creator economy dictionaries
         """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name, max_per_feed=15)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add Gumroad category links
         try:
-            record_id = await create_project_revenue(
-                application_id=application_id,
-                user_id=user_id,
-                client_name=client_name,
-                project_title=product_title,
-                contract_value=sale_amount,
-                **kwargs
-            )
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting Gumroad categories: {e}")
 
-            if record_id:
-                self.logger.info(f"💰 Tracked Gumroad revenue: ${sale_amount} for '{product_title}'")
+        # If feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return record_id
+        logger.info(f"Gumroad spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str, max_per_feed: int = 15) -> List[Dict[str, Any]]:
+        """Fetch items from an RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:max_per_feed]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                description = entry.get('summary', entry.get('description', ''))
+                if description:
+                    description = re.sub(r'<[^>]+>', '', description)[:500]
+
+                # Detect category
+                category = self._detect_category(f"{title} {description}".lower())
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': description,
+                    'description': description,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name),
+                    'category': category,
+                    'feed_source': feed_name,
+                    'source': 'Creator Economy',
+                    'data_type': 'creator_economy_news',
+                    'tags': ['digital-products', 'creator-economy', 'gumroad', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error tracking Gumroad revenue conversion: {e}")
-            return None
+            logger.warning(f"Error parsing RSS feed {feed_url}: {e}")
+
+        return items
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Gumroad category exploration links."""
+        return [
+            {
+                'title': f"Gumroad: {name}",
+                'url': f'https://gumroad.com/discover?query={slug}',
+                'link': f'https://gumroad.com/discover?query={slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Gumroad',
+                'data_type': 'digital_product_category',
+                'tags': ['digital-products', 'gumroad', slug],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for name, slug, desc in self.CATEGORIES
+        ]
+
+    def _detect_category(self, text: str) -> str:
+        """Detect product category from text."""
+        categories = {
+            'design': ['design', 'ui', 'icon', 'font', 'template'],
+            'software': ['software', 'app', 'plugin', 'tool', 'code'],
+            'courses': ['course', 'learn', 'tutorial', 'class', 'lesson'],
+            'ebook': ['book', 'ebook', 'pdf', 'guide', 'manual'],
+            'audio': ['audio', 'music', 'sound', 'beat', 'sample'],
+            '3d': ['3d', 'blender', 'model', 'asset', 'render'],
+            'art': ['art', 'illustration', 'drawing', 'brush', 'paint'],
+            'photo': ['photo', 'preset', 'lightroom', 'photography'],
+            'business': ['business', 'notion', 'template', 'spreadsheet'],
+        }
+
+        for cat, keywords in categories.items():
+            if any(kw in text for kw in keywords):
+                return cat
+        return 'digital-product'
+
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated digital product topics when feeds fail."""
+        topics = [
+            ('Design Templates', 'design', 'UI kits, icons, and design resources.'),
+            ('Online Courses', 'courses', 'Educational content and tutorials.'),
+            ('eBooks & Guides', 'ebook', 'Digital books and comprehensive guides.'),
+            ('Software & Tools', 'software', 'Apps, plugins, and developer tools.'),
+            ('Music & Audio', 'audio', 'Sound packs, beats, and audio resources.'),
+            ('3D Assets', '3d', 'Blender models and game assets.'),
+            ('Art Resources', 'art', 'Brushes, tutorials, and art packs.'),
+            ('Notion Templates', 'business', 'Productivity and business templates.'),
+            ('Photo Presets', 'photo', 'Lightroom presets and photography tools.'),
+            ('Creator Tools', 'creator', 'Resources for content creators.'),
+        ]
+
+        return [
+            {
+                'title': title,
+                'url': f'https://gumroad.com/discover?query={category}',
+                'link': f'https://gumroad.com/discover?query={category}',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Gumroad',
+                'data_type': 'digital_product_topic',
+                'tags': ['digital-products', 'gumroad', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
