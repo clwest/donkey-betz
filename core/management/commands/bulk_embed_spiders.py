@@ -110,13 +110,21 @@ class Command(BaseCommand):
                 # Single item stored directly (not wrapped in 'items')
                 items = [raw_data]
 
-            # Session 534: Check for nested article structures (VentureBeat, etc.)
+            # Session 534: Check for nested article structures (VentureBeat, Kickstarter, etc.)
             has_content = False
             if items:
                 for item in items:
                     if isinstance(item, dict):
-                        # Check if nested articles exist
+                        # Check if nested articles exist (VentureBeat)
                         if item.get('articles') or item.get('ai_highlights'):
+                            has_content = True
+                            break
+                        # Check for Kickstarter nested items
+                        if 'items' in item and isinstance(item.get('items'), list) and item.get('items'):
+                            has_content = True
+                            break
+                        # Check for Kickstarter by_category
+                        if 'by_category' in item:
                             has_content = True
                             break
                         # Or direct title/name
@@ -244,15 +252,26 @@ class Command(BaseCommand):
         # Include spider/source context
         parts.append(f"Source: {entry.spider_name}")
 
-        # Session 534: Handle nested structures (e.g., VentureBeat with 'articles' key)
-        # Flatten nested article lists into items
+        # Session 534: Handle nested structures (VentureBeat, Kickstarter, etc.)
+        # Flatten nested article/item lists into items
         flat_items = []
         for item in items[:10]:
-            # Check if item has nested article lists (VentureBeat, etc.)
-            if isinstance(item, dict) and 'articles' in item:
+            if not isinstance(item, dict):
+                continue
+            # VentureBeat: articles key
+            if 'articles' in item:
                 flat_items.extend(item.get('articles', [])[:10])
-            elif isinstance(item, dict) and 'ai_highlights' in item:
+            # VentureBeat: ai_highlights key
+            elif 'ai_highlights' in item:
                 flat_items.extend(item.get('ai_highlights', [])[:5])
+            # Kickstarter: nested items key
+            elif 'items' in item and isinstance(item.get('items'), list):
+                flat_items.extend(item.get('items', [])[:15])
+            # Kickstarter: by_category dict with category lists
+            elif 'by_category' in item:
+                for cat_items in item.get('by_category', {}).values():
+                    if isinstance(cat_items, list):
+                        flat_items.extend(cat_items[:5])
             else:
                 flat_items.append(item)
 
