@@ -1,120 +1,193 @@
 """
-Indie Hackers Spider - Maker/Founder Community Intelligence
-============================================================
+Indie Hackers Spider - Maker & Founder Community Intelligence
+==============================================================
 
-Session 294: Customer research spider for Indie Hackers community.
-Collects discussions about tools, pain points, and business challenges.
-
-No API key required - uses public RSS feeds.
+Session 534: Simplified to work with spider network interface.
+Aggregates maker/founder discussions via RSS feeds.
 """
 
-import aiohttp
-import asyncio
 import feedparser
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class IndieHackersSpider(BaseIntelligenceSpider):
+class IndieHackersSpider:
     """Indie Hackers spider - maker/founder discussions and pain points"""
 
-    # RSS feeds for different categories
-    FEEDS = {
-        'popular': 'https://www.indiehackers.com/feed.xml',
-        'interviews': 'https://www.indiehackers.com/interviews/feed.xml',
+    name = "indiehackers"
+
+    # Indie Hackers and maker RSS feeds
+    RSS_FEEDS = {
+        'indiehackers': 'https://www.indiehackers.com/feed.xml',
+        'product_hunt': 'https://www.producthunt.com/feed',
+        'bootstrapped_fm': 'https://bootstrapped.fm/feed/',
+        'microconf': 'https://www.microconf.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
-        self.headers = {
-            'User-Agent': 'DonkeyBetz-Spider/1.0 (AI Content Studio; Research)'
+    # Community categories
+    CATEGORIES = [
+        ('SaaS', 'saas', 'SaaS products and tools.'),
+        ('Marketing', 'marketing', 'Marketing and growth tactics.'),
+        ('Revenue', 'revenue', 'Revenue milestones and strategies.'),
+        ('Launch', 'launch', 'Product launches and validation.'),
+        ('Growth', 'growth', 'Growth hacking and scaling.'),
+    ]
+
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
+        self.maker_topics = {
+            'saas': ['saas', 'subscription', 'mrr', 'arr', 'recurring', 'churn'],
+            'marketing': ['marketing', 'seo', 'content', 'social', 'ads', 'growth'],
+            'revenue': ['revenue', 'profit', 'income', 'monetize', 'pricing', 'sales'],
+            'launch': ['launch', 'product hunt', 'mvp', 'beta', 'validate', 'ship'],
+            'growth': ['growth', 'scale', 'users', 'customers', 'traction', 'viral'],
+            'pain_point': ['struggle', 'problem', 'issue', 'frustrat', 'difficult', 'challenge'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch data from Indie Hackers RSS feeds"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch maker/founder content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of maker content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_posts = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting maker categories: {e}")
 
-            async with aiohttp.ClientSession(headers=self.headers) as session:
-                for feed_name, feed_url in self.FEEDS.items():
-                    try:
-                        async with session.get(feed_url, timeout=15) as response:
-                            if response.status == 200:
-                                content = await response.text()
-                                feed = feedparser.parse(content)
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-                                for entry in feed.entries[:20]:
-                                    all_posts.append({
-                                        'title': entry.get('title', ''),
-                                        'description': entry.get('summary', '')[:500] if entry.get('summary') else '',
-                                        'link': entry.get('link', ''),
-                                        'author': entry.get('author', ''),
-                                        'published': entry.get('published', ''),
-                                        'category': feed_name,
-                                        'source': 'indiehackers',
-                                        'type': 'discussion',
-                                    })
+        logger.info(f"Indie Hackers spider collected {len(all_items)} items")
+        return all_items[:max_results]
 
-                        await asyncio.sleep(0.5)
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from maker RSS feed."""
+        items = []
 
-                    except Exception as e:
-                        self.logger.warning(f"Error fetching {feed_name}: {e}")
+        try:
+            feed = feedparser.parse(feed_url)
 
-            return {'posts': all_posts, 'source': 'indiehackers'}
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect maker topic
+                text = f"{title} {summary}".lower()
+                topic = self._detect_topic(text)
+                is_pain_point = self._is_pain_point(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', 'Indie Hacker'),
+                    'topic': topic,
+                    'category': topic,
+                    'is_pain_point': is_pain_point,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'maker_content',
+                    'platform': 'indiehackers',
+                    'tags': ['indiehackers', 'makers', topic],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Indie Hackers data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Indie Hackers posts into intelligence"""
-        try:
-            posts = raw_data.get('posts', [])
+        return items
 
-            # Extract pain points keywords
-            pain_keywords = ['struggle', 'problem', 'issue', 'frustrat', 'difficult', 'challenge',
-                           'fail', 'stuck', 'help', 'advice', 'how do', 'anyone else']
+    def _detect_topic(self, text: str) -> str:
+        """Detect maker topic from text."""
+        for topic, keywords in self.maker_topics.items():
+            if topic != 'pain_point' and any(kw in text for kw in keywords):
+                return topic
+        return 'general'
 
-            pain_point_posts = []
-            for post in posts:
-                text = f"{post.get('title', '')} {post.get('description', '')}".lower()
-                if any(kw in text for kw in pain_keywords):
-                    pain_point_posts.append(post)
+    def _is_pain_point(self, text: str) -> bool:
+        """Check if content discusses a pain point."""
+        return any(kw in text for kw in self.maker_topics['pain_point'])
 
-            content = {
-                'posts': posts,
-                'pain_point_discussions': pain_point_posts,
-                'total_posts': len(posts),
-                'pain_points_found': len(pain_point_posts),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return maker category links."""
+        return [
+            {
+                'title': f"Makers: {name}",
+                'url': f'https://www.indiehackers.com/groups/{slug}',
+                'link': f'https://www.indiehackers.com/groups/{slug}',
+                'summary': desc,
+                'description': desc,
+                'topic': slug,
+                'category': slug,
+                'source': 'Indie Hackers',
+                'data_type': 'maker_category',
+                'platform': 'indiehackers',
+                'tags': ['indiehackers', 'makers', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(posts) / 30 + 0.3)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('SaaS Discussions', 'saas', 'Building and growing SaaS.'),
+            ('Marketing Tips', 'marketing', 'Growth and marketing strategies.'),
+            ('Revenue Milestones', 'revenue', 'Revenue stories and advice.'),
+            ('Product Launches', 'launch', 'Launch strategies and validation.'),
+            ('Growth Tactics', 'growth', 'Scaling and user acquisition.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='indiehackers.com',
-                data_type='community_intelligence',
-                content=content,
-                metadata={
-                    'post_count': len(posts),
-                    'pain_points': len(pain_point_posts),
-                    'source': 'indiehackers',
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['indiehackers', 'makers', 'founders', 'pain_points', 'startups', 'saas'],
-                target_agents=['customer_research_agent', 'trend_analysis_agent', 'content_strategy_agent'],
-                target_advisors=['business_advisor', 'market_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Indie Hackers data: {e}")
-            return None
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['indiehackers', 'makers', 'founders', 'startup', 'saas', 'bootstrap', 'indie']
+        return [
+            {
+                'title': title,
+                'url': f'https://www.indiehackers.com/groups/{category}',
+                'link': f'https://www.indiehackers.com/groups/{category}',
+                'summary': desc,
+                'description': desc,
+                'topic': category,
+                'category': category,
+                'source': 'Indie Hackers',
+                'data_type': 'maker_topic',
+                'platform': 'indiehackers',
+                'tags': ['indiehackers', 'makers', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]

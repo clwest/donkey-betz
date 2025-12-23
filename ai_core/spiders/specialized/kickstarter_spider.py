@@ -1,32 +1,46 @@
 """
-Kickstarter Spider - Creative Crowdfunding & Project Intelligence
-===================================================================
+Kickstarter Spider - Creative Crowdfunding Intelligence
+========================================================
 
-Session 218: Specialized spider for Kickstarter crowdfunding platform.
-Focuses on creative projects, innovative products, and backer trends.
+Session 534: Simplified to work with spider network interface.
+Aggregates crowdfunding content via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class KickstarterSpider(BaseIntelligenceSpider):
+class KickstarterSpider:
     """Kickstarter spider - creative crowdfunding and project intelligence"""
+
+    name = "kickstarter"
 
     # Kickstarter and crowdfunding RSS feeds
     RSS_FEEDS = {
         'kickstarter_blog': 'https://www.kickstarter.com/blog.atom',
         'product_hunt': 'https://www.producthunt.com/feed',
+        'indiegogo_blog': 'https://entrepreneur.indiegogo.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Project categories
+    CATEGORIES = [
+        ('Games', 'games', 'Board games and video games.'),
+        ('Technology', 'technology', 'Tech gadgets and devices.'),
+        ('Design', 'design', 'Product design and fashion.'),
+        ('Film', 'film', 'Movies and documentaries.'),
+        ('Music', 'music', 'Albums and music projects.'),
+        ('Publishing', 'publishing', 'Books and comics.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.project_categories = {
             'games': ['game', 'board game', 'video game', 'tabletop', 'rpg', 'card game'],
             'technology': ['tech', 'gadget', 'device', 'app', 'software', 'hardware'],
@@ -37,223 +51,159 @@ class KickstarterSpider(BaseIntelligenceSpider):
             'art': ['art', 'illustration', 'painting', 'sculpture', 'photography'],
             'food': ['food', 'drink', 'restaurant', 'cookbook', 'beverage'],
         }
-
-        self.campaign_stages = {
+        self.campaign_signals = {
             'launching': ['launching', 'live now', 'just launched', 'new campaign'],
             'funded': ['funded', 'reached goal', 'successful', 'backed'],
             'ending_soon': ['ending soon', 'final hours', 'last chance', 'ends'],
             'staff_pick': ['staff pick', 'featured', 'project we love'],
+            'trending': ['popular', 'trending', 'viral', 'hot', 'top'],
         }
 
-        self.backer_signals = {
-            'popular': ['popular', 'trending', 'viral', 'hot', 'top'],
-            'milestone': ['milestone', 'stretch goal', 'unlocked', 'achievement'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch crowdfunding content from RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Kickstarter data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of crowdfunding content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting crowdfunding categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'kickstarter_ecosystem'}
+        logger.info(f"Kickstarter spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from crowdfunding RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect category and signals
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                signals = self._detect_signals(text)
+                is_staff_pick = 'staff_pick' in signals
+                is_funded = 'funded' in signals
+                is_trending = 'trending' in signals
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'category': category,
+                    'project_category': category,
+                    'signals': signals,
+                    'is_staff_pick': is_staff_pick,
+                    'is_funded': is_funded,
+                    'is_trending': is_trending,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'crowdfunding',
+                    'platform': 'kickstarter',
+                    'tags': ['kickstarter', 'crowdfunding', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Kickstarter data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Kickstarter data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_category(self, text: str) -> str:
+        """Detect project category from text."""
+        for category, keywords in self.project_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            insights = self._generate_kickstarter_insights(processed_items)
+    def _detect_signals(self, text: str) -> List[str]:
+        """Detect campaign signals from text."""
+        signals = []
+        for signal, keywords in self.campaign_signals.items():
+            if any(kw in text for kw in keywords):
+                signals.append(signal)
+        return signals
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_category': self._group_by_category(processed_items),
-                'staff_picks': self._extract_staff_picks(processed_items),
-                'trending_projects': self._extract_trending(processed_items),
-                'successful_campaigns': self._extract_successful(processed_items),
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return crowdfunding category links."""
+        return [
+            {
+                'title': f"Kickstarter: {name}",
+                'url': f'https://www.kickstarter.com/discover/categories/{slug}',
+                'link': f'https://www.kickstarter.com/discover/categories/{slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Kickstarter',
+                'data_type': 'crowdfunding_category',
+                'platform': 'kickstarter',
+                'tags': ['kickstarter', 'crowdfunding', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Trending Projects', 'trending', 'Most popular campaigns.'),
+            ('Staff Picks', 'staff_picks', 'Kickstarter staff picks.'),
+            ('New & Noteworthy', 'new', 'Recently launched projects.'),
+            ('Most Funded', 'most_funded', 'Successfully funded projects.'),
+            ('Ending Soon', 'ending_soon', 'Campaigns ending soon.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='kickstarter.com',
-                data_type='creative_crowdfunding',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'kickstarter_ecosystem',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['kickstarter', 'crowdfunding', 'creative', 'projects', 'innovation'],
-                target_agents=['creative_agent', 'product_agent', 'innovation_agent'],
-                target_advisors=['creative_strategist', 'product_advisor']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Kickstarter data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify project category
-            category = 'general'
-            for cat, keywords in self.project_categories.items():
-                if any(kw in text for kw in keywords):
-                    category = cat
-                    break
-
-            # Identify campaign stage
-            stage = 'active'
-            for stg, keywords in self.campaign_stages.items():
-                if any(kw in text for kw in keywords):
-                    stage = stg
-                    break
-
-            # Check for backer signals
-            signals = []
-            for signal, keywords in self.backer_signals.items():
-                if any(kw in text for kw in keywords):
-                    signals.append(signal)
-
-            # Special flags
-            is_staff_pick = stage == 'staff_pick'
-            is_funded = stage == 'funded'
-            is_trending = 'popular' in signals
-
-            # Sentiment
-            blob = TextBlob(f"{title} {description}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
+                'url': f'https://www.kickstarter.com/discover/{category}',
+                'link': f'https://www.kickstarter.com/discover/{category}',
+                'summary': desc,
+                'description': desc,
                 'category': category,
-                'stage': stage,
-                'signals': signals,
-                'is_staff_pick': is_staff_pick,
-                'is_funded': is_funded,
-                'is_trending': is_trending,
-                'sentiment': sentiment,
+                'source': 'Kickstarter',
+                'data_type': 'crowdfunding_topic',
+                'platform': 'kickstarter',
+                'tags': ['kickstarter', 'crowdfunding', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_kickstarter_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate Kickstarter insights"""
-        if not items:
-            return {}
-
-        staff_picks = [i for i in items if i.get('is_staff_pick')]
-        funded = [i for i in items if i.get('is_funded')]
-        trending = [i for i in items if i.get('is_trending')]
-
-        cat_counts = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            cat_counts[cat] = cat_counts.get(cat, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'staff_picks': len(staff_picks),
-            'funded_projects': len(funded),
-            'trending_count': len(trending),
-            'hot_categories': sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'creative_pulse': 'vibrant' if len(staff_picks) > 2 else 'steady',
-        }
-
-    def _group_by_category(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by project category"""
-        groups = {}
-        for item in items:
-            cat = item.get('category', 'general')
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append({
-                'title': item.get('title'),
-                'stage': item.get('stage'),
-                'link': item.get('link'),
-            })
-        return groups
-
-    def _extract_staff_picks(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract staff pick projects"""
-        picks = []
-        for item in items:
-            if item.get('is_staff_pick'):
-                picks.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'link': item.get('link'),
-                })
-        return picks[:5]
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending projects"""
-        trending = []
-        for item in items:
-            if item.get('is_trending'):
-                trending.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'sentiment': item.get('sentiment'),
-                    'link': item.get('link'),
-                })
-        return trending[:5]
-
-    def _extract_successful(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract successful campaigns"""
-        successful = []
-        for item in items:
-            if item.get('is_funded'):
-                successful.append({
-                    'title': item.get('title'),
-                    'category': item.get('category'),
-                    'link': item.get('link'),
-                })
-        return successful[:5]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['kickstarter', 'crowdfunding', 'campaign', 'backer', 'creative', 'project']
+            for title, category, desc in topics
+        ]
