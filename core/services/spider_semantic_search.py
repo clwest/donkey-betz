@@ -217,7 +217,24 @@ class SpiderSemanticSearch:
             if not items and isinstance(raw_data, dict) and raw_data.get('title'):
                 # Single item stored directly (not wrapped in 'items')
                 items = [raw_data]
-            for item in items:
+
+            # Session 534: Flatten nested structures (VentureBeat, Kickstarter, etc.)
+            flat_items = []
+            for item in items[:10]:
+                if not isinstance(item, dict):
+                    continue
+                if 'articles' in item:
+                    flat_items.extend(item.get('articles', [])[:10])
+                elif 'items' in item and isinstance(item.get('items'), list):
+                    flat_items.extend(item.get('items', [])[:10])
+                elif 'by_category' in item:
+                    for cat_items in item.get('by_category', {}).values():
+                        if isinstance(cat_items, list):
+                            flat_items.extend(cat_items[:3])
+                else:
+                    flat_items.append(item)
+
+            for item in flat_items:
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
                     continue
@@ -516,8 +533,27 @@ class SpiderSemanticSearch:
             items = raw_data.get('items', []) if isinstance(raw_data, dict) else []
             if not items and isinstance(raw_data, dict) and raw_data.get('title'):
                 items = [raw_data]
-            items = items[:5]  # Limit for performance
-            for item in items:
+
+            # Session 534: Flatten nested structures (VentureBeat, Kickstarter, etc.)
+            flat_items = []
+            for item in items[:5]:
+                if not isinstance(item, dict):
+                    continue
+                # VentureBeat: articles key
+                if 'articles' in item:
+                    flat_items.extend(item.get('articles', [])[:10])
+                # Kickstarter: nested items key
+                elif 'items' in item and isinstance(item.get('items'), list):
+                    flat_items.extend(item.get('items', [])[:10])
+                # Kickstarter: by_category dict
+                elif 'by_category' in item:
+                    for cat_items in item.get('by_category', {}).values():
+                        if isinstance(cat_items, list):
+                            flat_items.extend(cat_items[:3])
+                else:
+                    flat_items.append(item)
+
+            for item in flat_items[:10]:
                 title = item.get('title', '') or item.get('name', '')
                 if not title:
                     continue
