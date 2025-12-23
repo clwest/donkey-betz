@@ -423,7 +423,7 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
     <div class="container-fluid p-3">
 
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h3 style="color: #f9a8d4; margin-bottom: 4px;">&#129504; Intelligence Command Center</h3>
                 <p class="text-muted mb-0" style="font-size: 0.85rem;">
@@ -434,32 +434,66 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
                 </p>
             </div>
             <div class="icc-controls">
-                <select id="icc-flow-filter" onchange="ICCState.setFilter(this.value)">
-                    <option value="all">All Events</option>
-                    <option value="spider">Spiders Only</option>
-                    <option value="trigger">Triggers Only</option>
-                    <option value="situation">Situations Only</option>
-                    <option value="agent">Agents Only</option>
-                </select>
-                <button onclick="ICCState.togglePause()" id="icc-pause-btn" title="Pause/Resume feed">
-                    <span id="icc-pause-icon">&#9208;</span> <span id="icc-pause-text">Pause</span>
-                </button>
                 <button onclick="ICCState.refresh()" title="Refresh all data">
                     &#8635; Refresh
                 </button>
             </div>
         </div>
 
-        <!-- Loading State -->
-        <div id="icc-loading" class="text-center py-5">
-            <div class="spinner-border" style="color: #ec4899;" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2 text-muted">Initializing Intelligence Command Center...</p>
-        </div>
+        <!-- Sub-tabs for different sections -->
+        <ul class="nav nav-pills mb-3" id="icc-subtabs" role="tablist" style="border-bottom: 1px solid rgba(236, 72, 153, 0.3); padding-bottom: 10px;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="icc-overview-tab" data-bs-toggle="pill" data-bs-target="#icc-overview" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(236, 72, 153, 0.3); margin-right: 8px;">
+                    &#128202; Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icc-conversations-tab" data-bs-toggle="pill" data-bs-target="#icc-conversations" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(139, 92, 246, 0.3); margin-right: 8px;">
+                    &#128172; Conversations
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icc-dreams-tab" data-bs-toggle="pill" data-bs-target="#icc-dreams" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(236, 72, 153, 0.3); margin-right: 8px;">
+                    &#128173; Dreams
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icc-boardroom-tab" data-bs-toggle="pill" data-bs-target="#icc-boardroom" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(245, 158, 11, 0.3); margin-right: 8px;">
+                    &#127963; Boardroom
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icc-memory-tab" data-bs-toggle="pill" data-bs-target="#icc-memory" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(6, 182, 212, 0.3);">
+                    &#129504; Memory
+                </button>
+            </li>
+        </ul>
+        <style>
+            #icc-subtabs .nav-link.active {
+                background: rgba(236, 72, 153, 0.2) !important;
+                border-color: #ec4899 !important;
+                color: #f9a8d4 !important;
+            }
+            #icc-subtabs .nav-link:hover:not(.active) {
+                background: rgba(255, 255, 255, 0.05) !important;
+            }
+        </style>
 
-        <!-- Main Grid (hidden until loaded) -->
-        <div id="icc-container" class="icc-grid" style="display: none;">
+        <!-- Sub-tab Content -->
+        <div class="tab-content" id="icc-subtabs-content">
+
+        <!-- ========== OVERVIEW SUB-TAB ========== -->
+        <div class="tab-pane fade show active" id="icc-overview" role="tabpanel">
+            <!-- Loading State -->
+            <div id="icc-loading" class="text-center py-5">
+                <div class="spinner-border" style="color: #ec4899;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Initializing Intelligence Command Center...</p>
+            </div>
+
+            <!-- Main Grid (hidden until loaded) -->
+            <div id="icc-container" class="icc-grid" style="display: none;">
 
             <!-- LEFT PANEL: System Roster -->
             <div class="icc-left-panel">
@@ -468,7 +502,7 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
                 <div class="icc-panel-card">
                     <div class="icc-panel-header">
                         <h6>&#128375; Spider Network</h6>
-                        <span class="badge" id="icc-spider-count">72</span>
+                        <span class="badge" id="icc-spider-count">75</span>
                     </div>
                     <div class="icc-list-container" id="icc-spider-list">
                         <!-- Populated by JS -->
@@ -615,5 +649,173 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
             </div>
 
         </div>
+        </div>
+        <!-- END OVERVIEW SUB-TAB -->
+
+        <!-- ========== CONVERSATIONS SUB-TAB ========== -->
+        <div class="tab-pane fade" id="icc-conversations" role="tabpanel">
+            <div class="card" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                    <h5 class="mb-0" style="color: #8b5cf6;">&#128172; Agent Conversations</h5>
+                    <div>
+                        <span class="badge me-2" id="icc-conv-ws-status" style="background: #6b7280;">Connecting...</span>
+                        <span class="badge me-2" style="background: #8b5cf6;" id="icc-conversations-today">0 today</span>
+                        <button class="btn btn-sm" onclick="ICCState.startConversation()" style="border-color: #8b5cf6; color: #8b5cf6; background: transparent;">
+                            Start Chat
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    <div id="icc-typing-indicator" class="d-none mb-3 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                        <span id="icc-typing-agent" style="color: #a78bfa;"></span>
+                        <span class="typing-dots" style="color: #8b5cf6;"><span>.</span><span>.</span><span>.</span></span>
+                    </div>
+                    <div id="icc-conversations-list">
+                        <p class="text-muted text-center">Loading conversations...</p>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Agents discuss topics every 5 minutes - watch live or trigger a new chat!</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END CONVERSATIONS SUB-TAB -->
+
+        <!-- ========== DREAMS SUB-TAB ========== -->
+        <div class="tab-pane fade" id="icc-dreams" role="tabpanel">
+            <div class="card" style="background: #1a1a1a; border: 2px solid #ec4899;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                    <h5 class="mb-0" style="color: #ec4899;">
+                        <span style="display: inline-block; animation: float 3s ease-in-out infinite;">&#128173;</span>
+                        Dream Journal
+                    </h5>
+                    <div>
+                        <span class="badge me-2" style="background: #ec4899;" id="icc-dreams-unread">0 new</span>
+                        <span class="badge bg-secondary me-2" id="icc-dreams-today">0 today</span>
+                        <button class="btn btn-sm" onclick="ICCState.triggerDream()" style="border-color: #ec4899; color: #ec4899; background: transparent;">
+                            Trigger Dream
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "While you were away, your agents were dreaming up creative ideas..."
+                    </p>
+                    <div id="icc-dreams-list">
+                        <p class="text-muted text-center">Loading dreams...</p>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Agents dream every 15 minutes when idle - generating creative ideas, predictions, and wild thoughts!</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END DREAMS SUB-TAB -->
+
+        <!-- ========== BOARDROOM SUB-TAB ========== -->
+        <div class="tab-pane fade" id="icc-boardroom" role="tabpanel">
+            <!-- Boardroom Decisions -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                    <h5 class="mb-0" style="color: #f59e0b;">
+                        <span style="font-size: 24px;">&#127963;</span> Boardroom Decisions
+                    </h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" style="background: #f59e0b;" id="icc-canonical-count">0 Policies</span>
+                        <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" id="icc-decision-filter" onchange="ICCState.loadBoardroomDecisions(this.value)">
+                            <option value="">All Decisions</option>
+                            <option value="canonical">✅ Adopted Policies</option>
+                            <option value="guideline">📖 Guideline</option>
+                            <option value="product">🎯 Product</option>
+                            <option value="experiment">🧪 Experiment</option>
+                            <option value="architecture">🏗️ Architecture</option>
+                            <option value="pipeline">⚡ Pipeline</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "Agent conversations generate governance decisions. Promote valuable insights to canonical policies."
+                    </p>
+                    <div id="icc-boardroom-decisions">
+                        <p class="text-muted text-center">Loading decisions...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boardroom Dreams (Pending Approval) -->
+            <div class="card" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.15); border-bottom: 1px solid #f59e0b;">
+                    <h5 class="mb-0" style="color: #f59e0b;">
+                        &#128173; Dreams Awaiting Decision
+                    </h5>
+                    <div>
+                        <span class="badge" style="background: #f59e0b;" id="icc-dreams-pending">0 pending</span>
+                        <span class="badge bg-success ms-1" id="icc-dreams-approved">0 approved</span>
+                    </div>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "High-scoring dreams are promoted here for your approval. Approve to implement, defer to review later, or reject."
+                    </p>
+                    <div id="icc-boardroom-dreams">
+                        <p class="text-muted text-center">Loading pending dreams...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END BOARDROOM SUB-TAB -->
+
+        <!-- ========== MEMORY SUB-TAB ========== -->
+        <div class="tab-pane fade" id="icc-memory" role="tabpanel">
+            <!-- Hive Mind Mode -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                    <h5 class="mb-0" style="color: #06b6d4;">
+                        <span style="display: inline-block; animation: pulse 2s ease-in-out infinite;">&#129504;</span>
+                        Hive Mind Mode
+                    </h5>
+                    <div>
+                        <span class="badge me-2" id="icc-hive-status" style="background: #06b6d4;">Ready</span>
+                        <span class="badge bg-secondary" id="icc-hive-agents">0 agents</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "Pose a question to the collective intelligence - all agents work together to solve it!"
+                    </p>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text" style="background: #2a2a2a; border: 1px solid #06b6d4; color: #06b6d4;">&#128161;</span>
+                        <input type="text" id="icc-hive-question" class="form-control" placeholder="Ask the hive mind..." style="background: #1a1a1a; border-color: #06b6d4; color: #fff;">
+                        <button class="btn" onclick="ICCState.askHiveMind()" style="background: #06b6d4; color: #000;">Ask</button>
+                    </div>
+                    <div id="icc-hive-response" class="d-none p-3" style="background: rgba(6, 182, 212, 0.1); border-radius: 8px; border-left: 3px solid #06b6d4;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Feed -->
+            <div class="card" style="background: #1a1a1a; border: 2px solid #22c55e;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid #22c55e;">
+                    <h5 class="mb-0" style="color: #22c55e;">
+                        &#127793; Learning Feed
+                    </h5>
+                    <span class="badge" style="background: #22c55e;" id="icc-learning-count">0 transfers</span>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <div id="icc-learning-feed">
+                        <p class="text-muted text-center">Waiting for learning activity...</p>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">Agents learn from each other every 10 minutes. Synthesis happens every 30 minutes.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END MEMORY SUB-TAB -->
+
+        </div>
+        <!-- END Sub-tab Content -->
+
     </div>
 </div>
