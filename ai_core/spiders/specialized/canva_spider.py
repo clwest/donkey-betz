@@ -1,212 +1,202 @@
 """
 Canva Spider - Design Platform & Templates Intelligence
-==========================================================
+========================================================
 
-Session 218: Specialized spider for Canva design platform.
-Focuses on design templates, brand kits, and design education.
+Session 534: Simplified to work with spider network interface.
+Uses design RSS feeds for templates, tutorials, and design education.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class CanvaSpider(BaseIntelligenceSpider):
+class CanvaSpider:
     """Canva spider - design platform and templates intelligence"""
 
+    name = "canva"
+
+    # Design education RSS feeds
     RSS_FEEDS = {
         'canva_design_school': 'https://www.canva.com/designschool/feed/',
         'design_shack': 'https://designshack.net/feed/',
         'speckyboy': 'https://speckyboy.com/feed/',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Template type categories
+    CATEGORIES = [
+        ('Social Media', 'social-media', 'Social media templates and tips.'),
+        ('Presentations', 'presentations', 'Slide deck and presentation design.'),
+        ('Marketing', 'marketing', 'Marketing materials and graphics.'),
+        ('Documents', 'documents', 'Business document templates.'),
+        ('Videos', 'videos', 'Video and animation templates.'),
+        ('Branding', 'branding', 'Brand kit and identity design.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.template_types = {
             'social_media': ['instagram', 'facebook', 'twitter', 'linkedin', 'tiktok', 'social'],
             'presentations': ['presentation', 'slides', 'pitch deck', 'keynote', 'powerpoint'],
             'marketing': ['flyer', 'poster', 'brochure', 'banner', 'ad', 'marketing'],
             'documents': ['resume', 'letterhead', 'invoice', 'proposal', 'report'],
             'videos': ['video', 'animation', 'intro', 'outro', 'reel'],
-            'brand': ['logo', 'brand kit', 'brand guide', 'identity', 'branding'],
+            'branding': ['logo', 'brand kit', 'brand guide', 'identity', 'branding'],
         }
 
-        self.design_skills = {
-            'beginner': ['beginner', 'basic', 'simple', 'easy', 'start'],
-            'intermediate': ['intermediate', 'improve', 'better', 'enhance'],
-            'advanced': ['advanced', 'pro', 'professional', 'expert', 'master'],
-        }
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch design content from RSS feeds.
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch Canva data"""
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting Canva categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'canva'}
+        logger.info(f"Canva spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from design RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:400]
+
+                # Detect template type and if it's a tutorial
+                text = f"{title} {summary}".lower()
+                template_type = self._detect_template_type(text)
+                is_tutorial = self._is_tutorial(text)
+                skill_level = self._detect_skill_level(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', feed_name.replace('_', ' ').title()),
+                    'category': template_type,
+                    'template_type': template_type,
+                    'skill_level': skill_level,
+                    'is_tutorial': is_tutorial,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'design_content',
+                    'platform': 'canva',
+                    'tags': ['design', 'canva', 'templates', template_type],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching Canva data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process Canva data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_template_type(self, text: str) -> str:
+        """Detect template type from text."""
+        for ttype, keywords in self.template_types.items():
+            if any(kw in text for kw in keywords):
+                return ttype
+        return 'general'
 
-            insights = self._generate_insights(processed_items)
+    def _is_tutorial(self, text: str) -> bool:
+        """Check if content is a tutorial."""
+        tutorial_words = ['how to', 'tutorial', 'guide', 'step', 'learn', 'tips']
+        return any(word in text for word in tutorial_words)
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_template_type': self._group_by_type(processed_items),
-                'skill_level_content': self._analyze_skill_levels(processed_items),
-                'design_tutorials': self._extract_tutorials(processed_items),
+    def _detect_skill_level(self, text: str) -> str:
+        """Detect skill level from text."""
+        if any(w in text for w in ['beginner', 'basic', 'simple', 'easy', 'start']):
+            return 'beginner'
+        if any(w in text for w in ['advanced', 'pro', 'professional', 'expert']):
+            return 'advanced'
+        return 'intermediate'
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return Canva category links."""
+        return [
+            {
+                'title': f"Canva: {name}",
+                'url': f'https://www.canva.com/templates/?query={slug}',
+                'link': f'https://www.canva.com/templates/?query={slug}',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Canva',
+                'data_type': 'design_category',
+                'platform': 'canva',
+                'tags': ['design', 'canva', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Social Media Templates', 'social-media', 'Instagram, Facebook, TikTok templates.'),
+            ('Presentation Design', 'presentations', 'Pitch decks and slides.'),
+            ('Marketing Materials', 'marketing', 'Flyers, posters, and ads.'),
+            ('Brand Identity', 'branding', 'Logo and brand kit design.'),
+            ('Design Tutorials', 'tutorials', 'Learn design skills.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='canva.com',
-                data_type='design_platform',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'canva',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['canva', 'design', 'templates', 'social media', 'branding'],
-                target_agents=['design_agent', 'social_media_agent', 'marketing_agent'],
-                target_advisors=['design_educator', 'brand_strategist']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing Canva data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify template type
-            template_type = 'general'
-            for ttype, keywords in self.template_types.items():
-                if any(kw in text for kw in keywords):
-                    template_type = ttype
-                    break
-
-            # Identify skill level
-            skill_level = 'all_levels'
-            for level, keywords in self.design_skills.items():
-                if any(kw in text for kw in keywords):
-                    skill_level = level
-                    break
-
-            # Check if it's a tutorial
-            is_tutorial = any(word in text for word in ['how to', 'tutorial', 'guide', 'step', 'learn'])
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'template_type': template_type,
-                'skill_level': skill_level,
-                'is_tutorial': is_tutorial,
-                'sentiment': sentiment,
+                'url': f'https://www.canva.com/designschool/{category}/',
+                'link': f'https://www.canva.com/designschool/{category}/',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Canva',
+                'data_type': 'design_topic',
+                'platform': 'canva',
+                'tags': ['design', 'canva', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate design platform insights"""
-        if not items:
-            return {}
-
-        tutorials = [i for i in items if i.get('is_tutorial')]
-
-        type_counts = {}
-        for item in items:
-            ttype = item.get('template_type', 'general')
-            type_counts[ttype] = type_counts.get(ttype, 0) + 1
-
-        level_counts = {}
-        for item in items:
-            level = item.get('skill_level', 'all_levels')
-            level_counts[level] = level_counts.get(level, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'tutorials_count': len(tutorials),
-            'top_template_types': sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'skill_distribution': level_counts,
-            'learning_focus': 'educational' if len(tutorials) > len(items) // 3 else 'mixed',
-        }
-
-    def _group_by_type(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by template type"""
-        groups = {}
-        for item in items:
-            ttype = item.get('template_type', 'general')
-            if ttype not in groups:
-                groups[ttype] = []
-            groups[ttype].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_skill_levels(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze skill level distribution"""
-        level_counts = {}
-        for item in items:
-            level = item.get('skill_level', 'all_levels')
-            level_counts[level] = level_counts.get(level, 0) + 1
-        return level_counts
-
-    def _extract_tutorials(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract tutorial content"""
-        return [{'title': i.get('title'), 'type': i.get('template_type'), 'level': i.get('skill_level'), 'link': i.get('link')}
-                for i in items if i.get('is_tutorial')][:8]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['canva', 'design', 'templates', 'social media', 'graphic design', 'brand']
+            for title, category, desc in topics
+        ]
