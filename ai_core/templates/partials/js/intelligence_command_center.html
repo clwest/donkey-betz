@@ -937,27 +937,37 @@ const ICCState = {
                     });
                     const sitData = await sitResponse.json();
 
-                    if (sitData.status === 'success' && sitData.found) {
+                    // Session 538: Fixed field names to match API response
+                    if (sitData.success && sitData.situation) {
                         const sit = sitData.situation;
-                        const triggers = sitData.triggers || [];
-                        const events = sitData.recent_events || [];
+                        const triggers = sit.triggers || [];
+                        const events = sit.recent_sessions || [];
 
+                        // Calculate total fires from triggers
+                        const totalFires = triggers.reduce((sum, t) => sum + (t.total_fires || 0), 0);
+
+                        const statusColor = sit.status === 'active' ? '#22c55e' : '#ef4444';
                         html = `
-                            <h6 style="margin-bottom: 8px;">&#128736; ${sit.display_name}</h6>
+                            <h6 style="margin-bottom: 8px;">&#128736; ${sit.name}</h6>
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px; font-size: 0.75rem;">
+                                <span style="color: ${statusColor};">● ${sit.status || 'inactive'}</span>
+                                <span style="color: #6b7280;">${sit.schedule || ''}</span>
+                                <span style="color: #a855f7;">${sit.domain || ''}</span>
+                            </div>
 
                             <!-- Stats Grid -->
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
                                 <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
                                     <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Triggers</div>
-                                    <div style="color: #a855f7; font-weight: 600;">${sit.trigger_count}</div>
+                                    <div style="color: #a855f7; font-weight: 600;">${sit.trigger_count || triggers.length}</div>
                                 </div>
                                 <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
                                     <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Total Fires</div>
-                                    <div style="color: #f97316; font-weight: 600;">${sit.total_fires}</div>
+                                    <div style="color: #f97316; font-weight: 600;">${totalFires}</div>
                                 </div>
                                 <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
                                     <div style="color: #9ca3af; font-size: 0.65rem; text-transform: uppercase;">Last 24h</div>
-                                    <div style="color: #22c55e; font-weight: 600;">${sit.fires_24h}</div>
+                                    <div style="color: #22c55e; font-weight: 600;">${sit.trigger_fires_24h || 0}</div>
                                 </div>
                             </div>
 
@@ -987,18 +997,21 @@ const ICCState = {
 
                             ${events.length > 0 ? `
                             <div>
-                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Recent Events</div>
+                                <div style="color: #9ca3af; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px;">Recent Sessions</div>
                                 ${events.slice(0, 4).map(e => {
-                                    const sevColors = { 'critical': '#ef4444', 'high': '#f97316', 'medium': '#fbbf24', 'low': '#22c55e' };
-                                    const sevColor = sevColors[e.severity] || '#fbbf24';
-                                    const time = e.fired_at ? new Date(e.fired_at).toLocaleString() : 'Unknown';
+                                    const statusColors = { 'completed': '#22c55e', 'running': '#3b82f6', 'failed': '#ef4444', 'pending': '#fbbf24' };
+                                    const statusColor = statusColors[e.status] || '#fbbf24';
+                                    const time = e.started_at ? new Date(e.started_at).toLocaleString() : 'Unknown';
+                                    const duration = e.duration_seconds ? `${e.duration_seconds.toFixed(1)}s` : '';
                                     return `
-                                    <div style="background: rgba(249, 115, 22, 0.1); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;">
+                                    <div style="background: rgba(34, 197, 94, 0.1); padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;">
                                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="color: ${sevColor}; font-size: 0.75rem;">⚡ ${e.trigger_name}</span>
+                                            <span style="color: ${statusColor}; font-size: 0.75rem;">● ${e.status}</span>
                                             <span style="color: #6b7280; font-size: 0.65rem;">${time}</span>
                                         </div>
-                                        <div style="color: #9ca3af; font-size: 0.7rem; margin-top: 2px;">${e.matched_value || 'No value'}</div>
+                                        <div style="color: #9ca3af; font-size: 0.7rem; margin-top: 2px;">
+                                            ${e.items_processed || 0} items • ${e.alerts_generated || 0} alerts ${duration ? '• ' + duration : ''}
+                                        </div>
                                     </div>
                                 `}).join('')}
                             </div>
