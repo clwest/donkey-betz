@@ -2,31 +2,46 @@
 LemonSqueezy Spider - SaaS & Digital Product Sales Intelligence
 ==================================================================
 
-Session 218: Specialized spider for LemonSqueezy platform.
-Focuses on SaaS products, digital downloads, and creator economy.
+Session 534: Simplified to work with spider network interface.
+Aggregates SaaS and creator economy content via RSS feeds.
 """
 
-import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class LemonSqueezySpider(BaseIntelligenceSpider):
+class LemonSqueezySpider:
     """LemonSqueezy spider - SaaS and digital product sales intelligence"""
 
+    name = "lemonsqueezy"
+
+    # SaaS and creator economy RSS feeds
     RSS_FEEDS = {
         'indie_hackers': 'https://www.indiehackers.com/feed.xml',
         'saas_weekly': 'https://saasweekly.com/feed/',
         'bootstrapped_founder': 'https://thebootstrappedfounder.com/feed/',
+        'microconf': 'https://www.microconf.com/feed/',
+        'product_hunt': 'https://www.producthunt.com/feed',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Product categories
+    CATEGORIES = [
+        ('SaaS', 'saas', 'Software as a service products.'),
+        ('Courses', 'courses', 'Online courses and education.'),
+        ('Templates', 'templates', 'Digital templates and assets.'),
+        ('Memberships', 'memberships', 'Subscription communities.'),
+        ('Ebooks', 'ebooks', 'Digital books and guides.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.product_types = {
             'saas': ['saas', 'software', 'app', 'tool', 'platform', 'subscription'],
             'courses': ['course', 'workshop', 'bootcamp', 'training', 'education'],
@@ -35,7 +50,6 @@ class LemonSqueezySpider(BaseIntelligenceSpider):
             'memberships': ['membership', 'community', 'access', 'exclusive'],
             'licenses': ['license', 'commercial', 'extended', 'lifetime'],
         }
-
         self.business_topics = {
             'monetization': ['monetization', 'revenue', 'income', 'profit', 'mrr'],
             'marketing': ['marketing', 'launch', 'promotion', 'audience', 'growth'],
@@ -43,172 +57,154 @@ class LemonSqueezySpider(BaseIntelligenceSpider):
             'analytics': ['analytics', 'metrics', 'conversion', 'churn', 'retention'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch LemonSqueezy ecosystem data"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch SaaS and creator economy content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of SaaS/creator content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_items = []
+            categories = self._get_category_links()
+            all_items.extend(categories)
+        except Exception as e:
+            logger.warning(f"Error getting SaaS categories: {e}")
 
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:20]:
-                            item = {
-                                'title': entry.get('title', ''),
-                                'description': entry.get('summary', entry.get('description', ''))[:500],
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if item['title']:
-                                all_items.append(item)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name} feed: {e}")
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
 
-            return {'items': all_items, 'source': 'lemonsqueezy'}
+        logger.info(f"LemonSqueezy spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from SaaS/creator RSS feed."""
+        items = []
+
+        try:
+            feed = feedparser.parse(feed_url)
+
+            for entry in feed.entries[:15]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
+
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
+
+                # Detect product type and business topics
+                text = f"{title} {summary}".lower()
+                product_type = self._detect_product_type(text)
+                topics = self._detect_business_topics(text)
+                is_digital_product = self._is_digital_product(text)
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'product_type': product_type,
+                    'category': product_type,
+                    'business_topics': topics,
+                    'is_digital_product': is_digital_product,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'digital_sales',
+                    'platform': 'lemonsqueezy',
+                    'tags': ['lemonsqueezy', 'saas', product_type],
+                    'timestamp': datetime.now().isoformat(),
+                })
 
         except Exception as e:
-            self.logger.error(f"Error fetching LemonSqueezy data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process LemonSqueezy ecosystem data"""
-        try:
-            items = raw_data.get('items', [])
-            processed_items = []
+        return items
 
-            for item in items:
-                processed = self._process_item(item)
-                if processed:
-                    processed_items.append(processed)
+    def _detect_product_type(self, text: str) -> str:
+        """Detect product type from text."""
+        for ptype, keywords in self.product_types.items():
+            if any(kw in text for kw in keywords):
+                return ptype
+        return 'general'
 
-            insights = self._generate_insights(processed_items)
+    def _detect_business_topics(self, text: str) -> List[str]:
+        """Detect business topics from text."""
+        topics = []
+        for topic, keywords in self.business_topics.items():
+            if any(kw in text for kw in keywords):
+                topics.append(topic)
+        return topics
 
-            content = {
-                'items': processed_items,
-                'insights': insights,
-                'by_product_type': self._group_by_type(processed_items),
-                'business_focus': self._analyze_business_topics(processed_items),
-                'trending_products': self._extract_trending(processed_items),
+    def _is_digital_product(self, text: str) -> bool:
+        """Check if content discusses digital products."""
+        digital_keywords = ['digital', 'product', 'saas', 'subscription', 'download', 'online']
+        return any(kw in text for kw in digital_keywords)
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return SaaS category links."""
+        return [
+            {
+                'title': f"LemonSqueezy: {name}",
+                'url': f'https://www.lemonsqueezy.com/discover/{slug}',
+                'link': f'https://www.lemonsqueezy.com/discover/{slug}',
+                'summary': desc,
+                'description': desc,
+                'product_type': slug,
+                'category': slug,
+                'source': 'LemonSqueezy',
+                'data_type': 'saas_category',
+                'platform': 'lemonsqueezy',
+                'tags': ['lemonsqueezy', 'saas', slug],
+                'timestamp': datetime.now().isoformat(),
             }
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-            quality_score = min(1.0, len(processed_items) / 20 + 0.35)
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('SaaS Products', 'saas', 'Software subscription products.'),
+            ('Digital Courses', 'courses', 'Online learning and education.'),
+            ('Templates & Assets', 'templates', 'Digital templates and resources.'),
+            ('Membership Sites', 'memberships', 'Community subscriptions.'),
+            ('Creator Economy', 'creator', 'Creator monetization strategies.'),
+        ]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='lemonsqueezy.com',
-                data_type='digital_sales',
-                content=content,
-                metadata={
-                    'item_count': len(processed_items),
-                    'source': 'lemonsqueezy',
-                    'feeds_scraped': list(self.RSS_FEEDS.keys()),
-                },
-                quality_score=quality_score,
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['lemonsqueezy', 'saas', 'digital products', 'indie', 'creator economy'],
-                target_agents=['product_agent', 'saas_agent', 'revenue_agent'],
-                target_advisors=['saas_advisor', 'indie_hacker_mentor']
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error processing LemonSqueezy data: {e}")
-            return None
-
-    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process individual item"""
-        try:
-            title = item.get('title', '')
-            description = item.get('description', '')
-            text = f"{title} {description}".lower()
-
-            # Identify product type
-            product_type = 'general'
-            for ptype, keywords in self.product_types.items():
-                if any(kw in text for kw in keywords):
-                    product_type = ptype
-                    break
-
-            # Identify business topics
-            topics = []
-            for topic, keywords in self.business_topics.items():
-                if any(kw in text for kw in keywords):
-                    topics.append(topic)
-
-            # Check if digital product focused
-            is_digital_product = any(word in text for word in ['digital', 'product', 'saas', 'subscription', 'download'])
-
-            blob = TextBlob(f"{title}")
-            sentiment = blob.sentiment.polarity
-
-            return {
+        return [
+            {
                 'title': title,
-                'description': description[:300],
-                'link': item.get('link', ''),
-                'published': item.get('published', ''),
-                'source': item.get('source', ''),
-                'product_type': product_type,
-                'business_topics': topics,
-                'is_digital_product': is_digital_product,
-                'sentiment': sentiment,
+                'url': f'https://www.indiehackers.com/groups/{category}',
+                'link': f'https://www.indiehackers.com/groups/{category}',
+                'summary': desc,
+                'description': desc,
+                'product_type': category,
+                'category': category,
+                'source': 'LemonSqueezy',
+                'data_type': 'saas_topic',
+                'platform': 'lemonsqueezy',
+                'tags': ['lemonsqueezy', 'saas', category],
+                'timestamp': datetime.now().isoformat(),
             }
-
-        except Exception as e:
-            self.logger.warning(f"Error processing item: {e}")
-            return None
-
-    def _generate_insights(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate digital sales insights"""
-        if not items:
-            return {}
-
-        digital_items = [i for i in items if i.get('is_digital_product')]
-
-        type_counts = {}
-        for item in items:
-            ptype = item.get('product_type', 'general')
-            type_counts[ptype] = type_counts.get(ptype, 0) + 1
-
-        topic_counts = {}
-        for item in items:
-            for topic in item.get('business_topics', []):
-                topic_counts[topic] = topic_counts.get(topic, 0) + 1
-
-        return {
-            'total_items': len(items),
-            'digital_product_focus': len(digital_items),
-            'top_product_types': sorted(type_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'business_focus': sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:3],
-            'indie_pulse': 'thriving' if len(digital_items) > 10 else 'growing',
-        }
-
-    def _group_by_type(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Group items by product type"""
-        groups = {}
-        for item in items:
-            ptype = item.get('product_type', 'general')
-            if ptype not in groups:
-                groups[ptype] = []
-            groups[ptype].append({'title': item.get('title'), 'link': item.get('link')})
-        return groups
-
-    def _analyze_business_topics(self, items: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze business topic mentions"""
-        topic_counts = {}
-        for item in items:
-            for topic in item.get('business_topics', []):
-                topic_counts[topic] = topic_counts.get(topic, 0) + 1
-        return dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True))
-
-    def _extract_trending(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract trending products"""
-        digital_items = [i for i in items if i.get('is_digital_product')]
-        sorted_items = sorted(digital_items, key=lambda x: x.get('sentiment', 0), reverse=True)
-        return [{'title': i.get('title'), 'type': i.get('product_type'), 'link': i.get('link')}
-                for i in sorted_items[:5]]
-
-    def get_required_fields(self) -> List[str]:
-        return ['title']
-
-    def get_relevance_keywords(self) -> List[str]:
-        return ['lemonsqueezy', 'saas', 'digital product', 'subscription', 'indie hacker']
+            for title, category, desc in topics
+        ]

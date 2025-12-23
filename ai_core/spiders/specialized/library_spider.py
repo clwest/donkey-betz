@@ -2,40 +2,48 @@
 Library Spider - Library & Archive Resources
 =============================================
 
-Session 343: Phase 1 RSS Expansion
+Session 534: Simplified to work with spider network interface.
 Aggregates library news, digital archives, and research resources.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
 import feedparser
-from textblob import TextBlob
+import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Any
 
-from ..base_spider import BaseIntelligenceSpider, SpiderTarget, IntelligenceData
+logger = logging.getLogger(__name__)
 
 
-class LibrarySpider(BaseIntelligenceSpider):
+class LibrarySpider:
     """Library spider - library news, digital archives, and open access resources"""
 
+    name = "library"
+
+    # Library and archive RSS feeds
     RSS_FEEDS = {
-        # Library associations
         'ala_news': 'https://www.ala.org/news/rss',
         'library_journal': 'https://www.libraryjournal.com/feed',
         'american_libraries': 'https://americanlibrariesmagazine.org/feed/',
-
-        # Digital archives and open access
         'internet_archive': 'https://blog.archive.org/feed/',
         'open_culture': 'https://www.openculture.com/feed',
         'project_gutenberg': 'https://www.gutenberg.org/cache/epub/feeds/today.rss',
-
-        # Research & academia
         'arxiv_cs': 'https://rss.arxiv.org/rss/cs',
-        'plos_one': 'https://journals.plos.org/plosone/feed/atom',
     }
 
-    def __init__(self, spider_id: str, targets: List[SpiderTarget], subscribers: List[str], redis_config: Dict[str, Any]):
-        super().__init__(spider_id, targets, subscribers, redis_config)
+    # Library categories
+    CATEGORIES = [
+        ('Digital Archives', 'archives', 'Digital preservation and collections.'),
+        ('Open Access', 'open_access', 'Free and public domain resources.'),
+        ('Research', 'research', 'Academic research and publications.'),
+        ('Technology', 'technology', 'Library technology and systems.'),
+        ('Community', 'community', 'Library programs and outreach.'),
+    ]
 
+    def __init__(self, spider_id: str = None, targets: list = None,
+                 subscribers: list = None, redis_config: dict = None, **kwargs):
+        """Initialize spider with optional network parameters."""
+        self.spider_id = spider_id or self.name
         self.library_categories = {
             'digital_archives': ['archive', 'digitization', 'digital collection', 'preservation'],
             'open_access': ['open access', 'free', 'public domain', 'creative commons'],
@@ -45,95 +53,156 @@ class LibrarySpider(BaseIntelligenceSpider):
             'policy': ['policy', 'funding', 'legislation', 'copyright', 'intellectual property'],
         }
 
-    async def fetch_data(self, target: SpiderTarget) -> Optional[Dict[str, Any]]:
-        """Fetch RSS feeds from library sources"""
+    def fetch_data(self, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch library and archive content from RSS feeds.
+
+        Args:
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of library content dictionaries
+        """
+        all_items = []
+        seen_urls = set()
+
+        # Fetch from RSS feeds
+        for feed_name, feed_url in self.RSS_FEEDS.items():
+            try:
+                items = self._fetch_rss(feed_url, feed_name)
+                for item in items:
+                    if item['url'] not in seen_urls:
+                        seen_urls.add(item['url'])
+                        all_items.append(item)
+            except Exception as e:
+                logger.warning(f"Error fetching {feed_name} feed: {e}")
+
+        # Add category links
         try:
-            all_articles = []
-            for feed_name, feed_url in self.RSS_FEEDS.items():
-                try:
-                    feed = feedparser.parse(feed_url)
-                    if feed.entries:
-                        for entry in feed.entries[:10]:
-                            article = {
-                                'title': entry.get('title', ''),
-                                'summary': entry.get('summary', entry.get('description', '')),
-                                'link': entry.get('link', ''),
-                                'published': entry.get('published', ''),
-                                'source': feed_name,
-                            }
-                            if article['title']:
-                                all_articles.append(article)
-                except Exception as e:
-                    self.logger.warning(f"Error fetching {feed_name}: {e}")
-            return {'articles': all_articles, 'source': 'library_aggregator'}
+            categories = self._get_category_links()
+            all_items.extend(categories)
         except Exception as e:
-            self.logger.error(f"Error fetching library data: {e}")
-            return None
+            logger.warning(f"Error getting library categories: {e}")
 
-    async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
-        """Process library articles"""
+        # If all feeds fail, use curated topics
+        if len(all_items) == 0:
+            all_items = self._get_curated_topics()
+
+        logger.info(f"Library spider collected {len(all_items)} items")
+        return all_items[:max_results]
+
+    def _fetch_rss(self, feed_url: str, feed_name: str) -> List[Dict[str, Any]]:
+        """Fetch articles from library RSS feed."""
+        items = []
+
         try:
-            articles = raw_data.get('articles', [])
-            processed = []
+            feed = feedparser.parse(feed_url)
 
-            for article in articles:
-                p = self._process_article(article)
-                if p:
-                    processed.append(p)
+            for entry in feed.entries[:12]:
+                title = entry.get('title', '')
+                if not title:
+                    continue
 
-            # Separate by source type
-            archives = [a for a in processed if a.get('source') in ['internet_archive', 'open_culture', 'project_gutenberg']]
-            research = [a for a in processed if a.get('source') in ['arxiv_cs', 'plos_one']]
-            library_news = [a for a in processed if a.get('source') in ['ala_news', 'library_journal', 'american_libraries']]
+                url = entry.get('link', '')
+                summary = entry.get('summary', entry.get('description', ''))
+                if summary:
+                    summary = re.sub(r'<[^>]+>', '', summary)[:500]
 
-            return IntelligenceData(
-                spider_id=self.spider_id,
-                source_url='library_aggregator',
-                data_type='library_resources',
-                content={
-                    'articles': processed,
-                    'archives': archives,
-                    'research': research,
-                    'library_news': library_news,
-                    'count': len(processed),
-                },
-                metadata={'source': 'library_aggregator', 'feeds': list(self.RSS_FEEDS.keys())},
-                quality_score=min(1.0, len(processed) / 40 + 0.3),
-                timestamp=datetime.now(timezone.utc),
-                relevance_tags=['library', 'archives', 'research', 'open access', 'books'],
-                target_agents=['research_agent', 'trend_analysis_agent'],
-                target_advisors=['research_analyst']
-            )
+                # Detect library category
+                text = f"{title} {summary}".lower()
+                category = self._detect_category(text)
+                is_research = self._is_research_paper(text)
+                is_open_access = self._is_open_access(text)
+
+                # Determine source type
+                source_type = 'library_news'
+                if feed_name in ['internet_archive', 'open_culture', 'project_gutenberg']:
+                    source_type = 'digital_archive'
+                elif feed_name in ['arxiv_cs']:
+                    source_type = 'research'
+
+                items.append({
+                    'title': title,
+                    'url': url,
+                    'link': url,
+                    'summary': summary,
+                    'description': summary,
+                    'published': entry.get('published', ''),
+                    'category': category,
+                    'source_type': source_type,
+                    'is_research': is_research,
+                    'is_open_access': is_open_access,
+                    'source': feed_name.replace('_', ' ').title(),
+                    'data_type': 'library_resources',
+                    'platform': 'library',
+                    'tags': ['library', 'archives', category],
+                    'timestamp': datetime.now().isoformat(),
+                })
+
         except Exception as e:
-            self.logger.error(f"Error processing library data: {e}")
-            return None
+            logger.warning(f"Error parsing RSS: {e}")
 
-    def _process_article(self, article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        try:
-            title = article.get('title', '')
-            summary = article.get('summary', '')
-            text = f"{title} {summary}".lower()
+        return items
 
-            categories = []
-            for cat, keywords in self.library_categories.items():
-                if any(kw in text for kw in keywords):
-                    categories.append(cat)
+    def _detect_category(self, text: str) -> str:
+        """Detect library category from text."""
+        for category, keywords in self.library_categories.items():
+            if any(kw in text for kw in keywords):
+                return category
+        return 'general'
 
-            blob = TextBlob(f"{title} {summary}")
-            return {
-                'title': title,
-                'summary': summary[:500] if summary else '',
-                'link': article.get('link', ''),
-                'published': article.get('published', ''),
-                'source': article.get('source', ''),
-                'categories': categories or ['general'],
-                'sentiment': blob.sentiment.polarity,
+    def _is_research_paper(self, text: str) -> bool:
+        """Check if content is a research paper."""
+        research_keywords = ['research', 'study', 'paper', 'arxiv', 'journal', 'findings']
+        return any(kw in text for kw in research_keywords)
+
+    def _is_open_access(self, text: str) -> bool:
+        """Check if content is open access."""
+        open_keywords = ['open access', 'free', 'public domain', 'creative commons', 'open source']
+        return any(kw in text for kw in open_keywords)
+
+    def _get_category_links(self) -> List[Dict[str, Any]]:
+        """Return library category links."""
+        return [
+            {
+                'title': f"Library: {name}",
+                'url': f'https://blog.archive.org/category/{slug}/',
+                'link': f'https://blog.archive.org/category/{slug}/',
+                'summary': desc,
+                'description': desc,
+                'category': slug,
+                'source': 'Library',
+                'data_type': 'library_category',
+                'platform': 'library',
+                'tags': ['library', 'archives', slug],
+                'timestamp': datetime.now().isoformat(),
             }
-        except:
-            return None
+            for name, slug, desc in self.CATEGORIES
+        ]
 
-    def get_required_fields(self) -> List[str]:
-        return ['title']
+    def _get_curated_topics(self) -> List[Dict[str, Any]]:
+        """Return curated topics when feeds fail."""
+        topics = [
+            ('Digital Archives', 'archives', 'Digital preservation projects.'),
+            ('Open Access', 'open_access', 'Free and open resources.'),
+            ('Research Papers', 'research', 'Academic publications.'),
+            ('Library Tech', 'technology', 'Library technology news.'),
+            ('Community Programs', 'community', 'Library outreach and events.'),
+        ]
 
-    def get_relevance_keywords(self) -> List[str]:
-        return ['library', 'archive', 'books', 'research', 'open access']
+        return [
+            {
+                'title': title,
+                'url': f'https://blog.archive.org/category/{category}/',
+                'link': f'https://blog.archive.org/category/{category}/',
+                'summary': desc,
+                'description': desc,
+                'category': category,
+                'source': 'Library',
+                'data_type': 'library_topic',
+                'platform': 'library',
+                'tags': ['library', 'archives', category],
+                'timestamp': datetime.now().isoformat(),
+            }
+            for title, category, desc in topics
+        ]
