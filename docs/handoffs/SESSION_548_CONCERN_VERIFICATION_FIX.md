@@ -1,73 +1,94 @@
-# Session 548: Concern Verification Bug Fix
+# Session 548: ThinkingAgent Data Query Fixes
 
 **Date:** December 24, 2025
-**Focus:** Fixed execution_failure verification and tested complete feedback loop
+**Focus:** Fixed critical bugs in ThinkingAgent data collection
 
 ---
 
-## Problem Identified
+## Problems Identified
 
-The `execution_failure` concern category had a verification metric defined (`action_success_rate`) but **no actual verification logic**. It was falling through to the general `else` block, which checks if the concern appears in recent thinking cycles - not the actual metric.
+### 1. execution_failure Verification Missing
+The `execution_failure` concern category had no verification logic - falling through to general category.
 
-This meant concerns like "Resource-allocation conflict between Financial Intelligence" never resolved despite having 89.3% action success rate (above the 80% threshold).
+### 2. Wrong SpiderData Model Import
+`thinking_agent.py` line 326 imported:
+```python
+from persistence.models import SpiderData  # 0 records!
+```
+Instead of:
+```python
+from core.models_unified_system import SpiderData  # 26,513 records!
+```
+
+### 3. Wrong Field Names
+- Used `discovered_at` instead of `created_at` for SpiderData
+- Used `final_recommendation` instead of `recommended_stance` for AgentDecisionSummary
+
+### 4. Hardcoded Boardroom Stats
+```python
+# Old code - hardcoded zeros!
+context['boardroom_stats'] = {'total': 0, 'count_24h': 0, 'recent_decisions': []}
+```
 
 ---
 
-## Fix Applied
+## Fixes Applied
 
-Added missing verification logic for `execution_failure` category in `core/services/concern_tracker.py`:
-
+### Fix 1: execution_failure Verification (concern_tracker.py)
 ```python
 elif concern.category == 'execution_failure':
-    # Session 548: Check action success rate for execution failures
-    from core.models_unified_system import AutonomousAction
-    total_actions = AutonomousAction.objects.filter(
-        created_at__gte=last_24h
-    ).count()
-    successful = AutonomousAction.objects.filter(
-        created_at__gte=last_24h,
-        status='completed'
-    ).count()
-    success_rate = (successful / total_actions * 100) if total_actions > 0 else 0
-    result['metrics']['action_success_rate'] = success_rate
-    result['metrics']['total_actions'] = total_actions
-    result['metrics']['successful_actions'] = successful
+    success_rate = (successful / total_actions * 100)
     result['is_resolved'] = success_rate >= 80
 ```
 
----
-
-## Results After Fix
-
-| Before Fix | After Fix |
-|------------|-----------|
-| 3 active concerns | 40 resolved, 3 new (healthy churn) |
-| execution_failure not resolving | Resolved immediately (89.3% > 80%) |
-| General concerns stuck | Properly verified via thinking cycles |
-
----
-
-## Thinking Cycles Run
-
-| Cycle | Concerns Registered | Resolved | Still Active |
-|-------|---------------------|----------|--------------|
-| #19 | 4 (all new) | 4 | 3 |
-| #21 | 3 (all new) | 2 | 3 |
-
----
-
-## Current Concern State
-
+### Fix 2: Correct SpiderData Import (thinking_agent.py)
+```python
+from core.models_unified_system import (
+    Agent, AgentKnowledgeSource, AgentLearningConnection,
+    KnowledgeTransfer, ThoughtRecord,
+    AgentConversation, AgentDream, SpiderData  # Added here!
+)
 ```
-✅ Resolved: 40
-🔵 In Progress: 2
-🔴 Active: 1
 
-Active Concerns (newly discovered):
-1. Knowledge-teaching concentration (in_progress)
-2. Topic duplication and echo chambers (in_progress)
-3. High dream/ideation volume (active)
+### Fix 3: Correct Field Names (thinking_agent.py)
+```python
+# Spider queries use created_at (not discovered_at)
+SpiderData.objects.filter(created_at__gte=cutoff)
+
+# Boardroom queries use recommended_stance (not final_recommendation)
+.values('topic', 'recommended_stance', 'created_at')
 ```
+
+### Fix 4: Actual Boardroom Stats (thinking_agent.py)
+```python
+from core.models_unified_system import AgentDecisionSummary
+decisions_24h = AgentDecisionSummary.objects.filter(created_at__gte=cutoff).count()
+```
+
+---
+
+## Results
+
+| Metric | Before (Broken) | After (Fixed) |
+|--------|-----------------|---------------|
+| Active Spiders | 0 | **75** |
+| Spider Data (24h) | 0 | **2,486** |
+| Boardroom Decisions (24h) | 0 | **352** |
+| Concerns Resolved | 32 | **40** |
+
+---
+
+## Why This Matters
+
+The ThinkingAgent was reporting "zero spiders" and "zero decisions" in EVERY thinking cycle, causing it to repeatedly identify the same phantom concerns:
+- "No active spiders" (FALSE - there are 75!)
+- "Zero boardroom decisions" (FALSE - there are 352!)
+
+With accurate data, the ThinkingAgent will now:
+1. Correctly assess system health
+2. Stop reporting phantom concerns
+3. Focus on actual issues
+4. Make better decisions
 
 ---
 
@@ -75,40 +96,48 @@ Active Concerns (newly discovered):
 
 | File | Changes |
 |------|---------|
-| `core/services/concern_tracker.py` | Added execution_failure verification logic (~14 lines) |
+| `core/services/concern_tracker.py` | Added execution_failure verification |
+| `core/agents/thinking_agent.py` | Fixed SpiderData import, field names, boardroom stats |
 
 ---
 
-## Complete Verification Metrics by Category
+## Testing
 
-| Category | Metric | Threshold | Verification Logic |
-|----------|--------|-----------|-------------------|
-| `spider_activity` | spider_data_24h | > 100 records | Checks SpiderData count |
-| `decision_bottleneck` | decisions_24h | > 0 | Checks AgentDecisionSummary |
-| `knowledge_silos` | unique_teachers_24h | >= 5 | Distinct teacher agents |
-| `action_gap` | action_success_rate | >= 80% | Successful/total actions |
-| `execution_failure` | action_success_rate | >= 80% | **FIXED** - Same as action_gap |
-| `general` | still_detected | False | Checks if concern appears in recent cycles |
+```bash
+# Verify the fix works
+DJANGO_SETTINGS_MODULE=core.settings python -c "
+import django; django.setup()
+from core.agents.thinking_agent import ThinkingAgent
+agent = ThinkingAgent()
+context = agent.gather_context()
+print('Spider Stats:', context['spider_stats'])
+print('Boardroom Stats:', context['boardroom_stats'])
+"
+```
+
+Expected output:
+```
+Spider Stats: {'active_count': 75, 'data_24h': 2486, 'total_data': 26513, ...}
+Boardroom Stats: {'total': 2757, 'count_24h': 352, 'recent_decisions': [...]}
+```
 
 ---
 
 ## Session 549 Priorities
 
-1. **Monitor New Concerns** - 3 newly identified concerns need attention
-2. **Topic Deduplication** - Address "echo chambers" concern
-3. **Dream Prioritization** - Address "high dream volume without follow-up" concern
-4. **Consider Continuous Mode** - Faster feedback loops (15 min intervals)
+1. **Run a thinking cycle** with the fixed data to see accurate insights
+2. **Monitor concern quality** - should see fewer phantom concerns
+3. **Consider topic deduplication** if still seeing echo chamber concern
+4. **Dream prioritization** if ideation volume concern persists
 
 ---
 
-## The Feedback Loop is Working
+## The Root Cause
 
-The system is now:
-1. Identifying concerns autonomously
-2. Registering them for tracking
-3. Taking actions to address them
-4. Linking actions to concerns
-5. Verifying resolution based on real metrics
-6. Discovering new concerns as old ones resolve
+This is a classic "wrong import" bug that's hard to catch:
+- Both `persistence.models.SpiderData` and `core.models_unified_system.SpiderData` exist
+- One has 0 records (persistence), one has 26,513 (core)
+- No error was thrown - just wrong data returned
+- Exception handlers masked the field name errors
 
-This is true autonomous self-improvement!
+Lesson: When queries return unexpected zeros, check both the model import AND the field names!
