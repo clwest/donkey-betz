@@ -17762,6 +17762,25 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
         logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Generated {len(thought.insights)} insights, "
                    f"{len(thought.decisions)} decisions")
 
+        # Session 547: Initialize concern tracker for feedback loop
+        from core.services.concern_tracker import get_concern_tracker
+        tracker = get_concern_tracker()
+
+        # Auto-register concerns for tracking
+        concerns_registered = {'total_concerns': 0, 'new_concerns': 0}
+        if thought.concerns:
+            try:
+                registered = tracker.register_concerns_from_cycle(thought)
+                concerns_registered = {
+                    'total_concerns': len(registered),
+                    'new_concerns': sum(1 for r in registered if r.get('is_new')),
+                    'recurring': sum(1 for r in registered if not r.get('is_new'))
+                }
+                logger.info(f"🔍 [CONCERNS] Registered {concerns_registered['total_concerns']} concerns "
+                           f"({concerns_registered['new_concerns']} new)")
+            except Exception as e:
+                logger.warning(f"Error registering concerns: {e}")
+
         # Execute actions if priority is high enough
         actions_executed = []
         if thought.priority_score >= config.min_priority_to_act and thought.decisions:
@@ -17806,6 +17825,14 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
                     'success': exec_result.get('success', False)
                 })
 
+                # Session 547: Link action to relevant concerns
+                try:
+                    linked = tracker.link_action_to_concerns(action, thought)
+                    if linked:
+                        logger.info(f"🔗 [CONCERNS] Action '{action.action_type}' linked to {len(linked)} concern(s)")
+                except Exception as e:
+                    logger.warning(f"Error linking action to concerns: {e}")
+
             thought.actions_executed = actions_executed
         else:
             logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Priority {thought.priority_score} below threshold "
@@ -17821,6 +17848,16 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
         logger.info(f"🧠 [THINKING] Cycle #{cycle_number} COMPLETE in {thought.thinking_duration_seconds:.1f}s - "
                    f"{len(thought.insights)} insights, {len(actions_executed)} actions executed")
 
+        # Session 547: Verify concerns after actions are taken
+        verification_result = {'total_checked': 0, 'resolved': 0}
+        if actions_executed:
+            try:
+                verification_result = tracker.verify_all_active_concerns()
+                if verification_result.get('resolved', 0) > 0:
+                    logger.info(f"✅ [CONCERNS] Verified: {verification_result['resolved']} concerns resolved!")
+            except Exception as e:
+                logger.warning(f"Error verifying concerns: {e}")
+
         return {
             'success': True,
             'cycle_number': cycle_number,
@@ -17830,7 +17867,9 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
             'decisions_count': len(thought.decisions),
             'actions_executed': len(actions_executed),
             'priority_score': thought.priority_score,
-            'duration_seconds': thought.thinking_duration_seconds
+            'duration_seconds': thought.thinking_duration_seconds,
+            'concerns_registered': concerns_registered,
+            'concerns_verified': verification_result
         }
 
     except Exception as e:
