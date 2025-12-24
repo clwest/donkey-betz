@@ -218,7 +218,8 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             if stats.get('recent_decisions'):
                 prompt_parts.append("\n**Recent Decisions:**\n")
                 for decision in stats['recent_decisions'][:3]:
-                    prompt_parts.append(f"- {decision['topic']}: {decision['outcome']}\n")
+                    stance = decision.get('recommended_stance', decision.get('outcome', 'N/A'))
+                    prompt_parts.append(f"- {decision['topic']}: {stance}\n")
             prompt_parts.append("\n")
 
         # Add spider data
@@ -402,11 +403,15 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             from core.models_unified_system import AgentDecisionSummary
             decisions_24h = AgentDecisionSummary.objects.filter(created_at__gte=cutoff).count()
             total_decisions = AgentDecisionSummary.objects.count()
-            recent_decisions = list(
-                AgentDecisionSummary.objects.filter(created_at__gte=cutoff)
-                .order_by('-created_at')[:5]
-                .values('topic', 'recommended_stance', 'created_at')
-            )
+            recent_decisions_raw = AgentDecisionSummary.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:5]
+            recent_decisions = [
+                {
+                    'topic': d.topic,
+                    'recommended_stance': d.recommended_stance,
+                    'created_at': d.created_at.isoformat() if d.created_at else None
+                }
+                for d in recent_decisions_raw
+            ]
             context['boardroom_stats'] = {
                 'total': total_decisions,
                 'count_24h': decisions_24h,
