@@ -17296,17 +17296,17 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
 
         # ========== CONVERSATION STATS ==========
         total_conversations = AgentConversation.objects.count()
-        conversations_24h = AgentConversation.objects.filter(created_at__gte=last_24h).count()
+        conversations_24h = AgentConversation.objects.filter(started_at__gte=last_24h).count()
         recent_conversations = list(
-            AgentConversation.objects.order_by('-created_at')[:3]
-            .values('agent1__name', 'agent2__name', 'topic', 'mood')
+            AgentConversation.objects.order_by('-started_at')[:3]
+            .values('initiator__name', 'topic', 'status', 'conversation_type')
         )
 
         # ========== DREAM STATS ==========
         total_dreams = AgentDream.objects.count()
-        dreams_24h = AgentDream.objects.filter(created_at__gte=last_24h).count()
+        dreams_24h = AgentDream.objects.filter(dreamed_at__gte=last_24h).count()
         recent_dreams = list(
-            AgentDream.objects.order_by('-created_at')[:3]
+            AgentDream.objects.order_by('-dreamed_at')[:3]
             .values('agent__name', 'dream_type', 'title')
         )
 
@@ -17354,29 +17354,31 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
             .order_by('-count')[:3]
         )
 
-        # Top conversationalists
+        # Top conversationalists (by initiator)
         top_talkers = list(
-            AgentConversation.objects.values('agent1__name')
+            AgentConversation.objects.values('initiator__name')
             .annotate(count=Count('id'))
             .order_by('-count')[:3]
         )
-        
+
         # Build research context - Capture the FULL amazingness of the system!
         # Format recent conversations for display
         conversations_text = ""
         for c in recent_conversations[:3]:
-            conversations_text += f"- {c.get('agent1__name', 'Agent')} discussed '{c.get('topic', 'topic')[:40]}' with {c.get('agent2__name', 'Agent')} (mood: {c.get('mood', 'neutral')})\n"
+            topic = c.get('topic', 'topic') or 'general discussion'
+            conversations_text += f"- {c.get('initiator__name', 'Agent')} initiated '{topic[:40]}' ({c.get('conversation_type', 'discussion')})\n"
 
         # Format recent dreams for display
         dreams_text = ""
         for d in recent_dreams[:3]:
-            dreams_text += f"- {d.get('agent__name', 'Agent')} dreamed: '{d.get('title', 'dream')[:50]}' ({d.get('dream_type', 'synthesis')})\n"
+            title = d.get('title', 'dream') or 'creative synthesis'
+            dreams_text += f"- {d.get('agent__name', 'Agent')} dreamed: '{title[:50]}' ({d.get('dream_type', 'synthesis')})\n"
 
         # Format top dreamers
         dreamers_text = chr(10).join([f"- {d['agent__name']}: {d['count']} dreams" for d in top_dreamers]) if top_dreamers else "- No dream data yet"
 
         # Format top conversationalists
-        talkers_text = chr(10).join([f"- {t['agent1__name']}: {t['count']} conversations" for t in top_talkers]) if top_talkers else "- No conversation data yet"
+        talkers_text = chr(10).join([f"- {t['initiator__name']}: {t['count']} conversations" for t in top_talkers]) if top_talkers else "- No conversation data yet"
 
         system_research = f"""
 # The Self-Evolving AI Ecosystem: A Digital Society of Learning Machines
