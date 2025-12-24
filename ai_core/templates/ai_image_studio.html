@@ -74697,7 +74697,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        const dashboard = data.dashboard;
+                        // Session 548: API returns data at root level, not nested under 'dashboard'
+                        const dashboard = data;
 
                         // Update stat counters
                         document.getElementById('concern-active-count').textContent = dashboard.by_status?.active || 0;
