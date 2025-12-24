@@ -1153,6 +1153,9 @@ from core import views_partnership
 # Session 542: Research Demo API
 from core import views_research_demo
 
+# Session 544: Autonomous Reasoning Engine API
+from core import views_autonomous_reasoning
+
 # Import enhanced learning workflow API
 try:
     from enhanced_learning_workflow_api import learning_workflow_api
@@ -2453,6 +2456,16 @@ urlpatterns = [
     path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
     path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
     path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
+
+    # Session 544: Autonomous Reasoning Engine APIs
+    path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
+    path('api/v1/reasoning/thoughts/<uuid:thought_id>/', views_autonomous_reasoning.thought_detail_api, name='reasoning-thought-detail'),
+    path('api/v1/reasoning/actions/', views_autonomous_reasoning.actions_api, name='reasoning-actions'),
+    path('api/v1/reasoning/trigger/', views_autonomous_reasoning.trigger_thinking_api, name='reasoning-trigger'),
+    path('api/v1/reasoning/task/<str:task_id>/', views_autonomous_reasoning.thinking_task_status_api, name='reasoning-task-status'),
+    path('api/v1/reasoning/config/', views_autonomous_reasoning.reasoning_config_api, name='reasoning-config'),
+    path('api/v1/reasoning/config/update/', views_autonomous_reasoning.update_reasoning_config_api, name='reasoning-config-update'),
+    path('api/v1/reasoning/dashboard/', views_autonomous_reasoning.reasoning_dashboard_api, name='reasoning-dashboard'),
 
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution

@@ -17657,3 +17657,215 @@ capabilities being described.*
             'success': False,
             'error': str(e),
         }
+
+
+# =============================================================================
+# SESSION 544: AUTONOMOUS REASONING ENGINE - THE THINKING LOOP
+# =============================================================================
+
+@shared_task(bind=True)
+def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
+    """
+    The Autonomous Reasoning Engine's thinking loop.
+
+    This task runs periodically (or on-demand) to:
+    1. Gather context from recent system activity
+    2. Reflect on patterns and generate insights
+    3. Decide what actions to take
+    4. Execute those actions
+    5. Record everything for learning
+
+    This is the system becoming self-aware and proactive.
+
+    Args:
+        cycle_type: 'scheduled', 'triggered', 'manual', or 'continuous'
+        lookback_hours: How far back to analyze (default 24h)
+
+    Returns:
+        dict with thinking results and actions taken
+    """
+    import time
+    from datetime import timedelta
+    from django.utils import timezone
+
+    logger.info(f"🧠 [THINKING] Starting autonomous thinking cycle (type={cycle_type})")
+    start_time = time.time()
+
+    try:
+        from core.models_unified_system import (
+            ThoughtRecord, AutonomousAction, ReasoningConfiguration
+        )
+        from core.agents.thinking_agent import ThinkingAgent
+        from core.services.autonomous_action_executor import AutonomousActionExecutor
+
+        # Get configuration
+        config = ReasoningConfiguration.get_active_config()
+        if not config.is_active:
+            logger.info("🧠 [THINKING] Reasoning engine is disabled")
+            return {'success': False, 'reason': 'Reasoning engine is disabled'}
+
+        # Get the next cycle number
+        last_thought = ThoughtRecord.objects.order_by('-cycle_number').first()
+        cycle_number = (last_thought.cycle_number + 1) if last_thought else 1
+
+        # Create the thought record (status: thinking)
+        thought = ThoughtRecord.objects.create(
+            cycle_number=cycle_number,
+            cycle_type=cycle_type,
+            context_summary="Gathering context...",
+            context_data={},
+            reflection="",
+            execution_status='thinking'
+        )
+
+        logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Gathering context...")
+
+        # Initialize the ThinkingAgent
+        agent = ThinkingAgent()
+
+        # Gather context
+        context = agent.gather_context(lookback_hours=lookback_hours)
+        thought.context_data = context
+        thought.context_summary = f"Analyzed {context.get('lookback_hours', 24)}h of activity: " \
+                                  f"{context.get('learning_stats', {}).get('transfers_24h', 0)} knowledge transfers, " \
+                                  f"{context.get('conversation_stats', {}).get('count_24h', 0)} conversations, " \
+                                  f"{context.get('dream_stats', {}).get('count_24h', 0)} dreams"
+        thought.save()
+
+        logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Thinking...")
+        thought.execution_status = 'thinking'
+        thought.save()
+
+        # Run the thinking process
+        thinking_result = agent.execute(lookback_hours=lookback_hours)
+
+        if not thinking_result.get('success'):
+            thought.execution_status = 'failed'
+            thought.reflection = f"Thinking failed: {thinking_result.get('error', 'Unknown error')}"
+            thought.save()
+            return {'success': False, 'error': thinking_result.get('error')}
+
+        # Extract thinking results
+        result = thinking_result.get('thinking_result', {})
+
+        thought.reflection = result.get('reflection', '')
+        thought.insights = result.get('insights', [])
+        thought.patterns = result.get('patterns', [])
+        thought.opportunities = result.get('opportunities', [])
+        thought.concerns = result.get('concerns', [])
+        thought.decisions = result.get('decisions', [])
+        thought.actions_planned = result.get('decisions', [])
+        thought.priority_score = float(result.get('priority_score', 0.0))
+        thought.execution_status = 'deciding'
+        thought.save()
+
+        logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Generated {len(thought.insights)} insights, "
+                   f"{len(thought.decisions)} decisions")
+
+        # Execute actions if priority is high enough
+        actions_executed = []
+        if thought.priority_score >= config.min_priority_to_act and thought.decisions:
+            logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Executing actions...")
+            thought.execution_status = 'executing'
+            thought.save()
+
+            # Filter to allowed actions
+            allowed_decisions = [
+                d for d in thought.decisions
+                if d.get('action_type') in config.allowed_actions
+            ]
+
+            # Execute up to max_actions
+            executor = AutonomousActionExecutor()
+            execution_results = executor.execute_actions(
+                allowed_decisions,
+                max_actions=config.max_actions_per_cycle
+            )
+
+            # Create AutonomousAction records
+            for i, (decision, exec_result) in enumerate(zip(allowed_decisions, execution_results)):
+                action = AutonomousAction.objects.create(
+                    thought_record=thought,
+                    action_type=decision.get('action_type', 'unknown'),
+                    action_name=decision.get('action_name', f'Action {i+1}'),
+                    action_params=decision.get('params', {}),
+                    reasoning=decision.get('reasoning', ''),
+                    expected_outcome=decision.get('expected_outcome', ''),
+                    priority=decision.get('priority', 'medium'),
+                    status='completed' if exec_result.get('success') else 'failed',
+                    result=exec_result.get('result', {}),
+                    result_summary=str(exec_result.get('result', ''))[:500],
+                    error_message=exec_result.get('error', '') if not exec_result.get('success') else '',
+                    started_at=timezone.now(),
+                    completed_at=timezone.now()
+                )
+                actions_executed.append({
+                    'action_id': str(action.id),
+                    'type': action.action_type,
+                    'name': action.action_name,
+                    'success': exec_result.get('success', False)
+                })
+
+            thought.actions_executed = actions_executed
+        else:
+            logger.info(f"🧠 [THINKING] Cycle #{cycle_number} - Priority {thought.priority_score} below threshold "
+                       f"{config.min_priority_to_act}, no actions taken")
+
+        # Finalize
+        end_time = time.time()
+        thought.thinking_duration_seconds = end_time - start_time
+        thought.execution_status = 'completed'
+        thought.completed_at = timezone.now()
+        thought.save()
+
+        logger.info(f"🧠 [THINKING] Cycle #{cycle_number} COMPLETE in {thought.thinking_duration_seconds:.1f}s - "
+                   f"{len(thought.insights)} insights, {len(actions_executed)} actions executed")
+
+        return {
+            'success': True,
+            'cycle_number': cycle_number,
+            'thought_id': str(thought.id),
+            'insights_count': len(thought.insights),
+            'patterns_count': len(thought.patterns),
+            'decisions_count': len(thought.decisions),
+            'actions_executed': len(actions_executed),
+            'priority_score': thought.priority_score,
+            'duration_seconds': thought.thinking_duration_seconds
+        }
+
+    except Exception as e:
+        logger.error(f"🧠 [THINKING] Cycle failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def trigger_thinking_on_event(event_type: str, event_data: dict):
+    """
+    Trigger a thinking cycle in response to a significant event.
+
+    This allows the system to think reactively when something important happens,
+    rather than waiting for the scheduled cycle.
+
+    Args:
+        event_type: Type of event ('knowledge_spike', 'conversation_cluster', etc.)
+        event_data: Data about the event
+
+    Returns:
+        Task ID of the triggered thinking cycle
+    """
+    logger.info(f"🧠 [THINKING] Event trigger: {event_type}")
+
+    # Queue a thinking cycle with event context
+    task = run_autonomous_thinking_cycle.delay(
+        cycle_type='triggered',
+        lookback_hours=6  # Shorter lookback for reactive thinking
+    )
+
+    return {
+        'triggered': True,
+        'event_type': event_type,
+        'task_id': str(task.id)
+    }

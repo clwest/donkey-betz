@@ -1011,6 +1011,19 @@ app.conf.beat_schedule = {
             'expires': 86400,  # 24 hours
         }
     },
+
+    # ==========================================================================
+    # SESSION 544: AUTONOMOUS REASONING ENGINE - THE THINKING LOOP
+    # The system that thinks, decides, and acts on its own
+    # ==========================================================================
+    'autonomous-thinking-cycle': {
+        'task': 'core.tasks.run_autonomous_thinking_cycle',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+        'kwargs': {'cycle_type': 'scheduled', 'lookback_hours': 24},
+        'options': {
+            'expires': 7200,  # 2 hours
+        }
+    },
 }
 
 # Spider-specific task routing configuration
