@@ -7138,6 +7138,8 @@
                                                 <p class="mt-2">Loading network graph...</p>
                                             </div>
                                         </div>
+                                        <!-- Edge hover tooltip -->
+                                        <div id="edge-tooltip" style="position: fixed; background: rgba(15, 23, 42, 0.95); border: 1px solid #22d3ee; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #e2e8f0; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 1000; max-width: 250px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"></div>
                                     </div>
                                 </div>
 
@@ -73472,7 +73474,40 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 .attr('stroke-opacity', 0.6)
                 .attr('stroke-width', d => Math.max(1, d.strength * 3))
                 .attr('stroke-dasharray', d => d.mythology_blocks > 0 ? '5,5' : 'none')
-                .attr('marker-end', 'url(#arrowhead)');
+                .attr('marker-end', 'url(#arrowhead)')
+                .style('cursor', 'pointer')
+                .style('transition', 'all 0.2s ease')
+                .on('mouseover', function(event, d) {
+                    // Highlight the edge
+                    d3.select(this)
+                        .attr('stroke', d.mythology_blocks > 0 ? '#ff6b6b' : '#22d3ee')
+                        .attr('stroke-opacity', 1)
+                        .attr('stroke-width', Math.max(3, d.strength * 5));
+
+                    // Show tooltip
+                    const tooltip = d3.select('#edge-tooltip');
+                    const sourceName = typeof d.source === 'object' ? d.source.name : researchNodes.find(n => n.id === d.source)?.name || 'Unknown';
+                    const targetName = typeof d.target === 'object' ? d.target.name : researchNodes.find(n => n.id === d.target)?.name || 'Unknown';
+                    tooltip.html(`
+                        <strong>${sourceName}</strong> → <strong>${targetName}</strong><br>
+                        <span style="color: #22d3ee;">Transfers:</span> ${d.total_transfers}<br>
+                        <span style="color: #22d3ee;">Strength:</span> ${(d.strength * 100).toFixed(0)}%
+                        ${d.mythology_blocks > 0 ? `<br><span style="color: #ef4444;">Blocks:</span> ${d.mythology_blocks}` : ''}
+                    `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px')
+                    .style('opacity', 1);
+                })
+                .on('mouseout', function(event, d) {
+                    // Restore original style
+                    d3.select(this)
+                        .attr('stroke', d.mythology_blocks > 0 ? '#ef4444' : '#06b6d4')
+                        .attr('stroke-opacity', 0.6)
+                        .attr('stroke-width', Math.max(1, d.strength * 3));
+
+                    // Hide tooltip
+                    d3.select('#edge-tooltip').style('opacity', 0);
+                });
 
             // Create nodes
             const node = g.append('g')
