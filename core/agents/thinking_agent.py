@@ -321,9 +321,8 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         from core.models_unified_system import (
             Agent, AgentKnowledgeSource, AgentLearningConnection,
             KnowledgeTransfer, ThoughtRecord,
-            AgentConversation, AgentDream
+            AgentConversation, AgentDream, SpiderData
         )
-        from persistence.models import SpiderData
 
         cutoff = timezone.now() - timedelta(hours=lookback_hours)
         context = {"lookback_hours": lookback_hours}
@@ -398,18 +397,33 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             logger.warning(f"Error gathering dream stats: {e}")
             context['dream_stats'] = {}
 
-        # Boardroom stats - placeholder for future implementation
-        # BoardroomDecision model not yet implemented
-        context['boardroom_stats'] = {'total': 0, 'count_24h': 0, 'recent_decisions': []}
+        # Boardroom stats - Session 548: Use AgentDecisionSummary model
+        try:
+            from core.models_unified_system import AgentDecisionSummary
+            decisions_24h = AgentDecisionSummary.objects.filter(created_at__gte=cutoff).count()
+            total_decisions = AgentDecisionSummary.objects.count()
+            recent_decisions = list(
+                AgentDecisionSummary.objects.filter(created_at__gte=cutoff)
+                .order_by('-created_at')[:5]
+                .values('topic', 'recommended_stance', 'created_at')
+            )
+            context['boardroom_stats'] = {
+                'total': total_decisions,
+                'count_24h': decisions_24h,
+                'recent_decisions': recent_decisions
+            }
+        except Exception as e:
+            logger.warning(f"Error gathering boardroom stats: {e}")
+            context['boardroom_stats'] = {'total': 0, 'count_24h': 0, 'recent_decisions': []}
 
-        # Gather spider stats
+        # Gather spider stats - Session 548: Use created_at (not discovered_at)
         try:
             # Count unique spiders with recent activity
             active_spiders = SpiderData.objects.filter(
-                discovered_at__gte=cutoff
+                created_at__gte=cutoff
             ).values('spider_name').distinct().count()
 
-            data_24h = SpiderData.objects.filter(discovered_at__gte=cutoff).count()
+            data_24h = SpiderData.objects.filter(created_at__gte=cutoff).count()
             total_data = SpiderData.objects.count()
 
             context['spider_stats'] = {
