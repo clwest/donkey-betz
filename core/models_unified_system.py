@@ -19073,3 +19073,42 @@ class ResolveRenderJob(models.Model):
         revenue_factor = 1.0 + (float(self.revenue_generated or 0) / 100)
 
         return base_score * usage_factor * revenue_factor
+
+
+# =============================================================================
+# SELF-AWARE BLOG - Session 543
+# =============================================================================
+
+class SelfBlog(models.Model):
+    """
+    Stores blog posts written by the system about itself.
+    A meta-demonstration of the platform's capabilities.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    meta_description = models.TextField(blank=True)
+    intro = models.TextField()
+    sections = models.JSONField(default=list, help_text="List of {header, content} sections")
+    conclusion = models.TextField()
+    tags = models.JSONField(default=list)
+    full_text = models.TextField(help_text="Complete blog as markdown")
+    
+    # Generation metadata
+    tone = models.CharField(max_length=50, default="professional")
+    word_count = models.IntegerField(default=0)
+    
+    # System stats at generation time
+    stats_snapshot = models.JSONField(default=dict, help_text="System stats when blog was generated")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Self Blog"
+        verbose_name_plural = "Self Blogs"
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"{self.title} ({self.created_at.strftime('%Y-%m-%d')})"
+

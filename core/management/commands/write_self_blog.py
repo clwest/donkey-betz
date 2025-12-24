@@ -48,7 +48,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer, SpiderData
+        from core.models_unified_system import Agent, AgentKnowledgeSource, AgentLearningConnection, KnowledgeTransfer, SpiderData, SelfBlog
         from core.agents.content_writer_agent import ContentWriterAgent
 
         self.stdout.write(self.style.SUCCESS('\n🤖 SELF-AWARE BLOG GENERATION'))
@@ -201,23 +201,54 @@ describing itself using its own capabilities.
                 self.stdout.write(self.style.SUCCESS('\n✅ BLOG POST GENERATED SUCCESSFULLY!\n'))
                 self.stdout.write('=' * 60)
 
-                # Extract and display the blog content
-                content = result.data if isinstance(result.data, str) else json.dumps(result.data, indent=2)
-                self.stdout.write(content)
+                # Extract blog content
+                blog_data = result.data if isinstance(result.data, dict) else {}
+                content_data = blog_data.get('content', blog_data)
+
+                # Display the blog
+                content_str = json.dumps(result.data, indent=2) if isinstance(result.data, dict) else str(result.data)
+                self.stdout.write(content_str)
 
                 self.stdout.write('\n' + '=' * 60)
                 self.stdout.write(self.style.SUCCESS('\n🎉 The system has written about itself!'))
                 self.stdout.write(f'   Tone: {options["tone"]}')
                 self.stdout.write(f'   Target word count: {options["word_count"]}')
 
-                # Save to a file for reference
+                # Save to database
+                stats_snapshot = {
+                    'agents': total_agents,
+                    'agents_with_knowledge': agents_with_knowledge,
+                    'knowledge_sources': total_knowledge,
+                    'knowledge_24h': knowledge_24h,
+                    'connections': total_connections,
+                    'transfers': total_transfers,
+                    'transfers_24h': transfers_24h,
+                    'spiders': total_spiders,
+                }
+
+                blog = SelfBlog.objects.create(
+                    title=content_data.get('title', 'AI Content Studio Self-Blog'),
+                    meta_description=content_data.get('meta_description', ''),
+                    intro=content_data.get('intro', ''),
+                    sections=content_data.get('sections', []),
+                    conclusion=content_data.get('conclusion', ''),
+                    tags=content_data.get('tags', []),
+                    full_text=content_data.get('full_text', content_str),
+                    tone=options['tone'],
+                    word_count=blog_data.get('metadata', {}).get('actual_word_count', 0),
+                    stats_snapshot=stats_snapshot,
+                )
+
+                self.stdout.write(self.style.SUCCESS(f'\n💾 Saved to database: {blog.id}'))
+
+                # Also save to file for reference
                 output_file = f'/tmp/self_blog_{now.strftime("%Y%m%d_%H%M%S")}.md'
                 with open(output_file, 'w') as f:
-                    f.write(f"# AI-Generated Self-Blog\n")
+                    f.write(f"# {content_data.get('title', 'AI Self-Blog')}\n\n")
                     f.write(f"Generated: {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-                    f.write(content if isinstance(content, str) else str(content))
+                    f.write(content_data.get('full_text', content_str))
 
-                self.stdout.write(self.style.SUCCESS(f'\n📁 Saved to: {output_file}'))
+                self.stdout.write(self.style.SUCCESS(f'📁 Also saved to: {output_file}'))
 
             else:
                 self.stdout.write(self.style.ERROR(f'\n❌ Failed to generate blog: {result.error}'))

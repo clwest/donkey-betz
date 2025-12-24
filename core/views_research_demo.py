@@ -593,3 +593,124 @@ def mythology_gate_api(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# =============================================================================
+# SELF-BLOG API - Session 543
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def self_blog_api(request):
+    """
+    Get the latest self-blog written by the system about itself.
+    
+    Returns:
+        - Latest blog post content
+        - System stats at generation time
+        - All available blogs list
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+        
+        # Get latest blog
+        latest = SelfBlog.objects.first()
+        
+        # Get list of all blogs
+        all_blogs = list(
+            SelfBlog.objects.values('id', 'title', 'tone', 'word_count', 'created_at')[:10]
+        )
+        
+        if latest:
+            return Response({
+                'success': True,
+                'has_blog': True,
+                'latest': {
+                    'id': str(latest.id),
+                    'title': latest.title,
+                    'meta_description': latest.meta_description,
+                    'intro': latest.intro,
+                    'sections': latest.sections,
+                    'conclusion': latest.conclusion,
+                    'tags': latest.tags,
+                    'full_text': latest.full_text,
+                    'tone': latest.tone,
+                    'word_count': latest.word_count,
+                    'stats_snapshot': latest.stats_snapshot,
+                    'created_at': latest.created_at.isoformat(),
+                },
+                'all_blogs': [
+                    {
+                        'id': str(b['id']),
+                        'title': b['title'],
+                        'tone': b['tone'],
+                        'word_count': b['word_count'],
+                        'created_at': b['created_at'].isoformat(),
+                    }
+                    for b in all_blogs
+                ],
+            })
+        else:
+            return Response({
+                'success': True,
+                'has_blog': False,
+                'message': 'No self-blogs generated yet. Run: python manage.py write_self_blog',
+                'all_blogs': [],
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in self_blog_api: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def generate_self_blog_api(request):
+    """
+    Trigger generation of a new self-blog.
+    This runs the ContentWriterAgent to write about the system.
+    
+    Body params:
+        - tone: professional/casual/technical/enthusiastic (default: enthusiastic)
+        - word_count: target word count (default: 1500)
+    """
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+        
+        tone = request.data.get('tone', 'enthusiastic')
+        word_count = request.data.get('word_count', 1500)
+        
+        # Capture command output
+        out = StringIO()
+        call_command('write_self_blog', tone=tone, word_count=word_count, stdout=out)
+        
+        output = out.getvalue()
+        
+        # Check if successful
+        if 'BLOG POST GENERATED SUCCESSFULLY' in output or 'Saved to database' in output:
+            from core.models_unified_system import SelfBlog
+            latest = SelfBlog.objects.first()
+            
+            return Response({
+                'success': True,
+                'message': 'Blog generated successfully!',
+                'blog_id': str(latest.id) if latest else None,
+                'title': latest.title if latest else None,
+            })
+        else:
+            return Response({
+                'success': False,
+                'message': 'Blog generation may have failed',
+                'output': output[-1000:],  # Last 1000 chars
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in generate_self_blog_api: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)

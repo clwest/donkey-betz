@@ -6972,6 +6972,11 @@
                             🛡️ Mythology Gate
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-selfblog-tab" data-bs-toggle="pill" data-bs-target="#research-selfblog" type="button" role="tab">
+                            ✍️ Self Blog
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Sub-tab Content -->
@@ -7277,6 +7282,27 @@
                                         <div id="trust-decay-list">
                                             <p class="text-success text-center py-3">✅ No trust decay - all connections healthy!</p>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SELF BLOG SUB-TAB -->
+                    <div class="tab-pane fade" id="research-selfblog" role="tabpanel">
+                        <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(236,72,153,0.3); border-radius: 15px;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="card-title mb-0">✍️ AI Self-Blog: The System Writing About Itself</h5>
+                                    <button class="btn btn-outline-pink btn-sm" id="generate-selfblog-btn" onclick="generateSelfBlog()" style="border-color: #ec4899; color: #ec4899;">
+                                        🤖 Generate New Blog
+                                    </button>
+                                </div>
+
+                                <div id="selfblog-content">
+                                    <div class="text-center py-5 text-secondary">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading self-blog...
                                     </div>
                                 </div>
                             </div>
@@ -73853,6 +73879,165 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 loadResearchStats();
             }
         }, 30000);
+
+        // ====================================================================
+        // SESSION 543: SELF-BLOG FUNCTIONS
+        // ====================================================================
+
+        // Load self-blog when tab is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const selfblogTab = document.getElementById('research-selfblog-tab');
+            if (selfblogTab) {
+                selfblogTab.addEventListener('shown.bs.tab', loadSelfBlog);
+            }
+        });
+
+        function loadSelfBlog() {
+            const container = document.getElementById('selfblog-content');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-center py-5 text-secondary"><div class="spinner-border spinner-border-sm me-2"></div>Loading self-blog...</div>';
+
+            fetch('/api/v1/research/self-blog/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.has_blog) {
+                        renderSelfBlog(container, data.latest, data.all_blogs);
+                    } else {
+                        container.innerHTML = `
+                            <div class="text-center py-5">
+                                <h4 class="text-secondary mb-3">No Self-Blog Generated Yet</h4>
+                                <p class="text-muted mb-4">Click the button below to have the AI write about itself!</p>
+                                <button class="btn btn-lg" onclick="generateSelfBlog()" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; padding: 12px 30px;">
+                                    🤖 Generate First Self-Blog
+                                </button>
+                                <p class="text-muted mt-3 small">Or run: <code>python manage.py write_self_blog</code></p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    container.innerHTML = '<div class="text-center text-danger py-5">Failed to load self-blog</div>';
+                    console.error('Self-blog error:', err);
+                });
+        }
+
+        function renderSelfBlog(container, blog, allBlogs) {
+            const statsHtml = blog.stats_snapshot ? `
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <span class="badge" style="background: #8b5cf6;">${blog.stats_snapshot.agents || 0} Agents</span>
+                    <span class="badge" style="background: #06b6d4;">${(blog.stats_snapshot.knowledge_sources || 0).toLocaleString()} Knowledge</span>
+                    <span class="badge" style="background: #22c55e;">${blog.stats_snapshot.connections || 0} Connections</span>
+                    <span class="badge" style="background: #f59e0b;">${(blog.stats_snapshot.transfers || 0).toLocaleString()} Transfers</span>
+                </div>
+            ` : '';
+
+            const sectionsHtml = (blog.sections || []).map(section => `
+                <div class="mb-4">
+                    <h5 style="color: #ec4899; font-weight: 600;">${section.header}</h5>
+                    <p style="color: #cbd5e1; line-height: 1.7;">${section.content}</p>
+                </div>
+            `).join('');
+
+            const tagsHtml = (blog.tags || []).map(tag =>
+                `<span class="badge me-1 mb-1" style="background: rgba(139, 92, 246, 0.3); color: #a78bfa;">${tag}</span>`
+            ).join('');
+
+            container.innerHTML = `
+                <div class="mb-4 p-3 rounded" style="background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(139,92,246,0.1)); border-left: 4px solid #ec4899;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h3 style="color: #f9fafb; font-weight: 700; margin-bottom: 8px;">${blog.title}</h3>
+                            <p class="text-muted mb-2" style="font-style: italic;">${blog.meta_description}</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge" style="background: #ec4899;">${blog.tone}</span>
+                            <div class="small text-muted mt-1">${new Date(blog.created_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${statsHtml}
+
+                <div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.2);">
+                    <h5 style="color: #22d3ee;">Introduction</h5>
+                    <p style="color: #e2e8f0; line-height: 1.8; font-size: 15px;">${blog.intro}</p>
+                </div>
+
+                ${sectionsHtml}
+
+                <div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.2);">
+                    <h5 style="color: #22d3ee;">Conclusion</h5>
+                    <p style="color: #e2e8f0; line-height: 1.8;">${blog.conclusion}</p>
+                </div>
+
+                <div class="mb-3">
+                    <strong class="text-muted">Tags:</strong> ${tagsHtml}
+                </div>
+
+                ${allBlogs.length > 1 ? `
+                    <hr style="border-color: rgba(255,255,255,0.1);">
+                    <div class="mt-3">
+                        <h6 class="text-muted">Previous Blogs:</h6>
+                        <div class="list-group" style="max-height: 200px; overflow-y: auto;">
+                            ${allBlogs.slice(1).map(b => `
+                                <div class="list-group-item" style="background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1);">
+                                    <div class="d-flex justify-content-between">
+                                        <span style="color: #e2e8f0;">${b.title}</span>
+                                        <span class="badge" style="background: #64748b;">${new Date(b.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function generateSelfBlog() {
+            const btn = document.getElementById('generate-selfblog-btn');
+            const container = document.getElementById('selfblog-content');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+            }
+
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-pink mb-3" style="width: 3rem; height: 3rem; color: #ec4899;"></div>
+                    <h5 class="text-secondary">The AI is writing about itself...</h5>
+                    <p class="text-muted">This may take 30-60 seconds</p>
+                </div>
+            `;
+
+            fetch('/api/v1/research/self-blog/generate/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tone: 'enthusiastic', word_count: 1500 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadSelfBlog();  // Reload to show new blog
+                } else {
+                    container.innerHTML = `
+                        <div class="alert alert-danger">
+                            Failed to generate blog: ${data.error || data.message || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => {
+                container.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '🤖 Generate New Blog';
+                }
+            });
+        }
 
         // END SESSION 542: RESEARCH DEMO
         // ====================================================================
