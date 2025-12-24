@@ -17908,3 +17908,60 @@ def trigger_thinking_on_event(event_type: str, event_data: dict):
         'event_type': event_type,
         'task_id': str(task.id)
     }
+
+
+@shared_task
+def scan_concerns_for_human_action():
+    """
+    Session 549: Periodic task to scan for concerns requiring human action.
+
+    Scans active concerns that cannot be auto-verified and creates
+    action-required notifications for them.
+
+    Returns:
+        Summary of notifications created
+    """
+    from core.services.human_action_service import get_human_action_service
+
+    logger.info("🔔 [HUMAN ACTION] Scanning for concerns requiring human action...")
+
+    try:
+        service = get_human_action_service()
+        result = service.create_notifications_for_active_concerns()
+
+        if result['notifications_created'] > 0:
+            logger.info(f"🔔 [HUMAN ACTION] Created {result['notifications_created']} action notifications")
+
+            # Optionally notify via Discord for urgent concerns
+            try:
+                from core.services.discord_notifications import get_discord_service
+                discord = get_discord_service()
+
+                for concern in result.get('concerns', []):
+                    if concern.get('severity') in ['critical', 'high']:
+                        discord.send_notification(
+                            channel='system-status',
+                            title='⚠️ Human Action Required',
+                            message=f"**{concern['severity'].upper()}**: {concern['text'][:100]}...\n\n"
+                                   f"[Review in AI Studio](http://localhost:8000/ai-studio/#research-concerns)",
+                            color='#dc2626'  # Red
+                        )
+            except Exception as e:
+                logger.warning(f"Discord notification failed: {e}")
+        else:
+            logger.info(f"🔔 [HUMAN ACTION] No new action notifications needed "
+                       f"({result['already_notified']} already exist)")
+
+        return {
+            'success': True,
+            'notifications_created': result['notifications_created'],
+            'already_notified': result['already_notified'],
+            'total_concerns': result['total_concerns']
+        }
+
+    except Exception as e:
+        logger.error(f"🔔 [HUMAN ACTION] Scan failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }

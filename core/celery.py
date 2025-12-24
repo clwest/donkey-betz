@@ -1024,6 +1024,15 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+    # SESSION 549: HUMAN ACTION NOTIFICATIONS
+    # Scan for concerns requiring human policy decisions and create alerts
+    'scan-human-action-notifications': {
+        'task': 'core.tasks.scan_concerns_for_human_action',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
 }
 
 # Spider-specific task routing configuration
