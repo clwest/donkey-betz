@@ -17315,44 +17315,123 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
             .values('teacher_agent__name', 'student_agent__name', 'total_transfers')
         )
         
-        # Build research context
+        # Build research context - Capture the FULL amazingness of the system!
         system_research = f"""
-# AI Content Studio - Self-Aware Intelligence Platform
+# The Self-Evolving AI Ecosystem: Where Machines Teach Machines
 
-## System Overview (Live Data as of {now.strftime('%B %d, %Y at %I:%M %p')})
+## A Revolutionary Breakthrough in Artificial Intelligence
 
-### The Numbers
+**Live System Snapshot: {now.strftime('%B %d, %Y at %I:%M %p')}**
 
-**Agent Ecosystem:**
-- {total_agents} AI agents actively running
-- {agents_with_knowledge} agents have acquired knowledge
-- {total_knowledge:,} total knowledge sources
-- {knowledge_24h} new knowledge items in last 24 hours
+This isn't just another AI platform. This is a **living, breathing ecosystem** where {total_agents} AI agents
+don't just work - they **teach each other**. They share knowledge, learn from mistakes, and evolve together
+in ways that push the boundaries of what we thought possible in artificial intelligence.
 
-**Learning Network:**
-- {total_connections} active learning connections
-- {total_transfers:,} total knowledge transfers
-- {transfers_24h} transfers in last 24 hours
-- {transfers_7d} transfers in last 7 days
+---
 
-**Spider Network:**
-- {total_spiders} data spiders crawling the web
+## The Core Innovation: AI Teaching AI
 
-### Top Knowledge Holders
-{chr(10).join([f"- {a['agent__name']}: {a['count']} items" for a in top_agents])}
+What makes this system revolutionary isn't the individual agents - it's what happens **between** them.
 
-### Most Active Teaching Relationships
-{chr(10).join([f"- {c['teacher_agent__name']} teaches {c['student_agent__name']}: {c['total_transfers']} transfers" for c in top_connections])}
+**The Numbers Tell the Story:**
+- **{total_connections} learning connections** link agents in a dynamic teaching network
+- **{total_transfers:,} knowledge transfers** have occurred as agents teach each other
+- **{transfers_24h} transfers in the last 24 hours alone** - learning never stops
+- **{transfers_7d} transfers this week** - exponential knowledge growth
 
-### Key Capabilities
-1. Collective Intelligence - Agents share knowledge through mythology-gated quality system
-2. Autonomous Learning - System learns 24/7 without human intervention
-3. Real-time Visualization - D3.js network graph shows knowledge flow
-4. Quality Control - Mythology quarantine prevents hallucinations
-5. Multi-modal Creation - Images, videos, audio, 3D models, and text
+Think about that: AI entities are actively teaching other AI entities. The ResearchAgent discovers
+something new, and within minutes, that knowledge flows to the ContentStrategyAgent, the
+OpportunityScoringAgent, and others who can use it. It's collective intelligence in action.
 
-### The Meta Moment
-This blog was written by ContentWriterAgent about its own platform!
+---
+
+## The Living Agent Ecosystem
+
+**{total_agents} Specialized Agents** work as a unified intelligence:
+
+{chr(10).join([f"- **{a['agent__name']}**: Holds {a['count']} knowledge items" for a in top_agents])}
+
+Each agent has its specialty, but they don't work in isolation. They form a **neural network of
+expertise** where knowledge flows freely between specialists.
+
+### Most Active Teaching Relationships (Real Data)
+{chr(10).join([f"- {c['teacher_agent__name']} → {c['student_agent__name']}: {c['total_transfers']} teaching sessions" for c in top_connections])}
+
+---
+
+## The Spider Intelligence Network
+
+Feeding this ecosystem are **{total_spiders} autonomous web spiders** that crawl:
+- Tech news: TechCrunch, The Verge, Wired, MIT Technology Review
+- Developer communities: HackerNews, GitHub, Stack Overflow
+- Financial data: CoinGecko, Yahoo Finance, Etherscan blockchain
+- Job markets: RemoteOK, WeWorkRemotely, Adzuna
+- Creative platforms: Dribbble, Behance, Unsplash
+- Social signals: Reddit across 20+ subreddits
+
+The spiders gather. The agents learn. The knowledge transfers. The system evolves.
+
+---
+
+## The Mythology Quality Gate
+
+Not all knowledge is good knowledge. This system has a built-in **mythology quarantine** that:
+- Catches potential hallucinations before they spread
+- Validates knowledge against trusted sources
+- Prevents misinformation from infecting the collective
+- Maintains knowledge integrity across the network
+
+It's like an immune system for AI - protecting the collective from bad data.
+
+---
+
+## Knowledge Statistics
+
+**{agents_with_knowledge} agents** have acquired knowledge from **{total_knowledge:,} sources**:
+- {knowledge_24h} new items learned in the last 24 hours
+- Knowledge persists and accumulates over time
+- Agents remember what they learn and build upon it
+
+---
+
+## Multi-Modal Creation Capabilities
+
+The system doesn't just think - it creates:
+- **Images** via DALL-E, Midjourney, Stable Diffusion integration
+- **Videos** with DaVinci Resolve automation
+- **Audio** including voice cloning and music generation
+- **3D Models** for spatial content
+- **Written Content** like this very blog post
+
+---
+
+## The Meta Moment: AI Describing Itself
+
+Here's the mind-bending part: **You are reading words written by an AI about a system that
+contains that AI.** The ContentWriterAgent is describing its own ecosystem, using knowledge
+gathered by the ResearchAgent, in a platform where both agents regularly teach each other.
+
+This isn't science fiction. This is happening right now, with real data, in a real system.
+
+---
+
+## Why This Matters
+
+Traditional AI systems are siloed. One model, one task, no learning.
+
+This system is different:
+1. **Agents teach each other** - Knowledge multiplies as it spreads
+2. **The system evolves 24/7** - No human intervention required
+3. **Quality gates prevent hallucinations** - Truth is protected
+4. **Spiders feed real-world data** - Always current, always learning
+5. **Collective intelligence emerges** - The whole exceeds the sum of its parts
+
+We're not just building AI. We're building an AI society that teaches itself to be better.
+
+---
+
+*This blog was autonomously generated by the system about itself - a recursive demonstration of
+self-aware artificial intelligence.*
 """
         
         logger.info(f"🤖 [SELF-BLOG] Gathered stats, invoking ContentWriterAgent...")
@@ -17360,14 +17439,24 @@ This blog was written by ContentWriterAgent about its own platform!
         # Generate blog
         agent = ContentWriterAgent(user=None)
         result = agent.execute(
-            task="Write an engaging blog post about our AI platform. This is a meta-demonstration: you are writing about your own system.",
+            task=(
+                "Write a compelling blog post about this revolutionary AI ecosystem where machines teach machines. "
+                "Focus on the CORE INNOVATION: AI agents that learn from each other and share knowledge autonomously. "
+                "This is a meta-demonstration: YOU are an AI writing about the very system you're part of. "
+                "Make it exciting - this is groundbreaking technology! Emphasize the agent-to-agent learning, "
+                "the collective intelligence, and how the system evolves 24/7 without human intervention."
+            ),
             context={
                 'content_type': 'blog_post',
                 'research': system_research,
                 'tone': tone,
-                'target_audience': 'tech enthusiasts, AI researchers, investors',
+                'target_audience': 'tech enthusiasts, AI researchers, investors, and anyone fascinated by the future of AI',
                 'word_count': word_count,
-                'seo_keywords': ['AI platform', 'collective intelligence', 'autonomous learning'],
+                'seo_keywords': [
+                    'AI teaching AI', 'machine learning ecosystem', 'collective AI intelligence',
+                    'autonomous learning agents', 'self-evolving AI', 'multi-agent systems',
+                    'knowledge transfer', 'AI society'
+                ],
             },
             scifi_context={'collective_intelligence': True, 'self_aware': True},
             spider_context={}
@@ -17389,7 +17478,7 @@ This blog was written by ContentWriterAgent about its own platform!
             }
             
             blog = SelfBlog.objects.create(
-                title=content_data.get('title', 'AI Content Studio Self-Blog'),
+                title=content_data.get('title', 'The Self-Evolving AI Ecosystem'),
                 meta_description=content_data.get('meta_description', ''),
                 intro=content_data.get('intro', ''),
                 sections=content_data.get('sections', []),
