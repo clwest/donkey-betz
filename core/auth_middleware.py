@@ -71,6 +71,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/research/self-blog/',  # Get latest self-blog
         '/api/v1/research/self-blog/generate/',  # Generate new self-blog
         '/api/v1/research/self-blog/task/',  # Check task status (prefix match)
+
+        # Session 544: Autonomous Reasoning Engine APIs
+        '/api/v1/reasoning/thoughts/',  # View thought records
+        '/api/v1/reasoning/actions/',  # View autonomous actions
+        '/api/v1/reasoning/trigger/',  # Trigger thinking cycle
+        '/api/v1/reasoning/task/',  # Check task status
+        '/api/v1/reasoning/config/',  # View/update config
+        '/api/v1/reasoning/dashboard/',  # Dashboard data
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

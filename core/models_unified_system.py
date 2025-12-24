@@ -19092,23 +19092,300 @@ class SelfBlog(models.Model):
     conclusion = models.TextField()
     tags = models.JSONField(default=list)
     full_text = models.TextField(help_text="Complete blog as markdown")
-    
+
     # Generation metadata
     tone = models.CharField(max_length=50, default="professional")
     word_count = models.IntegerField(default=0)
-    
+
     # System stats at generation time
     stats_snapshot = models.JSONField(default=dict, help_text="System stats when blog was generated")
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         app_label = 'core'
         verbose_name = "Self Blog"
         verbose_name_plural = "Self Blogs"
         ordering = ["-created_at"]
-    
+
     def __str__(self):
         return f"{self.title} ({self.created_at.strftime('%Y-%m-%d')})"
+
+
+# =============================================================================
+# AUTONOMOUS REASONING ENGINE - Session 544
+# The system that thinks, decides, and acts based on accumulated knowledge
+# =============================================================================
+
+class ThoughtRecord(models.Model):
+    """
+    Records of the system's thinking process.
+    Each record represents one thinking cycle where the system:
+    1. Gathered context from recent learning
+    2. Reflected and identified patterns
+    3. Made decisions about actions to take
+    4. Executed those actions
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Thinking cycle identification
+    cycle_number = models.IntegerField(help_text="Sequential thinking cycle number")
+    cycle_type = models.CharField(
+        max_length=50,
+        default="scheduled",
+        choices=[
+            ("scheduled", "Scheduled Cycle"),
+            ("triggered", "Event Triggered"),
+            ("manual", "Manual Request"),
+            ("continuous", "Continuous Mode"),
+        ]
+    )
+
+    # Context gathered for this thinking cycle
+    context_summary = models.TextField(help_text="Summary of data considered")
+    context_data = models.JSONField(default=dict, help_text="Raw context data snapshot")
+
+    # The thinking process
+    reflection = models.TextField(help_text="System's reflection on the context")
+    insights = models.JSONField(default=list, help_text="Key insights identified")
+    patterns = models.JSONField(default=list, help_text="Patterns noticed across data")
+    opportunities = models.JSONField(default=list, help_text="Opportunities identified")
+    concerns = models.JSONField(default=list, help_text="Risks or concerns noted")
+
+    # Decision making
+    decisions = models.JSONField(default=list, help_text="Decisions made and reasoning")
+    priority_score = models.FloatField(
+        default=0.0,
+        validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
+        help_text="Overall priority/importance of this cycle's insights"
+    )
+
+    # Actions
+    actions_planned = models.JSONField(default=list, help_text="Actions planned to take")
+    actions_executed = models.JSONField(default=list, help_text="Actions actually executed")
+
+    # Outcome tracking
+    execution_status = models.CharField(
+        max_length=20,
+        default="pending",
+        choices=[
+            ("pending", "Pending"),
+            ("thinking", "Thinking"),
+            ("deciding", "Deciding"),
+            ("executing", "Executing"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
+        ]
+    )
+
+    # Metadata
+    thinking_duration_seconds = models.FloatField(default=0.0)
+    model_used = models.CharField(max_length=50, default="gpt-5-mini")
+    token_usage = models.JSONField(default=dict)
+
+    # Timestamps
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Thought Record"
+        verbose_name_plural = "Thought Records"
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"Thought #{self.cycle_number} ({self.execution_status}) - {self.started_at.strftime('%Y-%m-%d %H:%M')}"
+
+    @property
+    def insights_count(self):
+        return len(self.insights) if self.insights else 0
+
+    @property
+    def actions_count(self):
+        return len(self.actions_executed) if self.actions_executed else 0
+
+
+class AutonomousAction(models.Model):
+    """
+    Individual actions taken by the Autonomous Reasoning Engine.
+    Each action is linked to a ThoughtRecord that spawned it.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to the thinking that spawned this action
+    thought_record = models.ForeignKey(
+        ThoughtRecord,
+        on_delete=models.CASCADE,
+        related_name="actions"
+    )
+
+    # Action definition
+    action_type = models.CharField(
+        max_length=50,
+        choices=[
+            ("spawn_spider", "Spawn Spider Crawl"),
+            ("generate_content", "Generate Content"),
+            ("trigger_debate", "Trigger Agent Debate"),
+            ("create_report", "Create Report"),
+            ("send_alert", "Send Alert/Notification"),
+            ("request_research", "Request Deep Research"),
+            ("schedule_followup", "Schedule Follow-up"),
+            ("trigger_conversation", "Trigger Agent Conversation"),
+            ("update_strategy", "Update Strategy"),
+            ("archive_insight", "Archive Important Insight"),
+        ]
+    )
+    action_name = models.CharField(max_length=200, help_text="Human-readable action name")
+    action_params = models.JSONField(default=dict, help_text="Parameters for the action")
+
+    # Reasoning
+    reasoning = models.TextField(help_text="Why this action was chosen")
+    expected_outcome = models.TextField(blank=True, help_text="What we expect to happen")
+
+    # Priority and urgency
+    priority = models.CharField(
+        max_length=20,
+        default="medium",
+        choices=[
+            ("critical", "Critical - Execute Immediately"),
+            ("high", "High Priority"),
+            ("medium", "Medium Priority"),
+            ("low", "Low Priority"),
+            ("background", "Background Task"),
+        ]
+    )
+
+    # Execution status
+    status = models.CharField(
+        max_length=20,
+        default="pending",
+        choices=[
+            ("pending", "Pending"),
+            ("queued", "Queued"),
+            ("executing", "Executing"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
+            ("cancelled", "Cancelled"),
+        ]
+    )
+
+    # Results
+    result = models.JSONField(default=dict, help_text="Result of the action")
+    result_summary = models.TextField(blank=True, help_text="Human-readable result summary")
+    error_message = models.TextField(blank=True, help_text="Error message if failed")
+
+    # Outcome evaluation (for learning)
+    outcome_rating = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="1-5 rating of how well the action worked"
+    )
+    outcome_notes = models.TextField(blank=True, help_text="Notes on the outcome")
+
+    # Celery task tracking
+    celery_task_id = models.CharField(max_length=100, blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Autonomous Action"
+        verbose_name_plural = "Autonomous Actions"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.action_type}: {self.action_name} ({self.status})"
+
+    @property
+    def duration_seconds(self):
+        if self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds()
+        return None
+
+
+class ReasoningConfiguration(models.Model):
+    """
+    Configuration for the Autonomous Reasoning Engine.
+    Controls how often and how aggressively the system thinks and acts.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Enable/disable
+    is_active = models.BooleanField(default=True, help_text="Whether the reasoning engine is active")
+
+    # Timing
+    thinking_interval_minutes = models.IntegerField(
+        default=60,
+        help_text="How often to run thinking cycles (in minutes)"
+    )
+
+    # Thresholds
+    min_insights_to_act = models.IntegerField(
+        default=1,
+        help_text="Minimum insights needed before taking action"
+    )
+    min_priority_to_act = models.FloatField(
+        default=3.0,
+        help_text="Minimum priority score to execute actions"
+    )
+    max_actions_per_cycle = models.IntegerField(
+        default=5,
+        help_text="Maximum actions to take per thinking cycle"
+    )
+
+    # Action permissions
+    allowed_actions = models.JSONField(
+        default=list,
+        help_text="List of action types the engine is allowed to perform"
+    )
+
+    # Safety
+    require_approval_above_priority = models.FloatField(
+        default=8.0,
+        help_text="Priority threshold above which human approval is required"
+    )
+
+    # Context gathering
+    lookback_hours = models.IntegerField(
+        default=24,
+        help_text="How far back to look for context data"
+    )
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Reasoning Configuration"
+        verbose_name_plural = "Reasoning Configurations"
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"Reasoning Config ({status}) - Every {self.thinking_interval_minutes}min"
+
+    @classmethod
+    def get_active_config(cls):
+        """Get the active configuration, creating default if needed"""
+        config = cls.objects.filter(is_active=True).first()
+        if not config:
+            config = cls.objects.create(
+                is_active=True,
+                allowed_actions=[
+                    "spawn_spider",
+                    "generate_content",
+                    "trigger_debate",
+                    "create_report",
+                    "send_alert",
+                    "request_research",
+                    "trigger_conversation",
+                    "archive_insight",
+                ]
+            )
+        return config
 

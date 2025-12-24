@@ -6977,6 +6977,11 @@
                             ✍️ Self Blog
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-thinking-tab" data-bs-toggle="pill" data-bs-target="#research-thinking" type="button" role="tab">
+                            🧠 Thinking Engine
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Sub-tab Content -->
@@ -7303,6 +7308,113 @@
                                     <div class="text-center py-5 text-secondary">
                                         <div class="spinner-border spinner-border-sm me-2"></div>
                                         Loading self-blog...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- THINKING ENGINE SUB-TAB (Session 544) -->
+                    <div class="tab-pane fade" id="research-thinking" role="tabpanel">
+                        <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(139,92,246,0.3); border-radius: 15px;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="card-title mb-0">🧠 Autonomous Reasoning Engine</h5>
+                                    <div>
+                                        <span id="thinking-status-badge" class="badge bg-secondary me-2">Checking...</span>
+                                        <button class="btn btn-outline-purple btn-sm" id="trigger-thinking-btn" onclick="triggerThinking()" style="border-color: #8b5cf6; color: #8b5cf6;">
+                                            ⚡ Trigger Thinking
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="text-secondary mb-4">
+                                    The Autonomous Reasoning Engine analyzes system activity, identifies patterns,
+                                    generates insights, and decides what actions to take - all on its own.
+                                </p>
+
+                                <!-- Engine Stats -->
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(139,92,246,0.1); border-radius: 10px; border-left: 3px solid #8b5cf6;">
+                                            <h6>💭 Thoughts</h6>
+                                            <h3 class="mb-0" id="thinking-total-thoughts">0</h3>
+                                            <small class="text-muted">Total cycles</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(236,72,153,0.1); border-radius: 10px; border-left: 3px solid #ec4899;">
+                                            <h6>💡 Insights</h6>
+                                            <h3 class="mb-0" id="thinking-total-insights">0</h3>
+                                            <small class="text-muted">Generated</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(6,182,212,0.1); border-radius: 10px; border-left: 3px solid #06b6d4;">
+                                            <h6>⚡ Actions</h6>
+                                            <h3 class="mb-0" id="thinking-total-actions">0</h3>
+                                            <small class="text-muted">Executed</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(34,197,94,0.1); border-radius: 10px; border-left: 3px solid #22c55e;">
+                                            <h6>✅ Success</h6>
+                                            <h3 class="mb-0" id="thinking-success-rate">0%</h3>
+                                            <small class="text-muted">Action rate</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recent Thoughts -->
+                                <h6 class="mb-3">📜 Recent Thinking Cycles</h6>
+                                <div id="thinking-recent-thoughts" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="text-center py-3 text-secondary">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading thoughts...
+                                    </div>
+                                </div>
+
+                                <!-- Top Insights -->
+                                <h6 class="mt-4 mb-3">💡 Top Insights</h6>
+                                <div id="thinking-top-insights" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-secondary">No insights yet. Trigger a thinking cycle!</p>
+                                </div>
+
+                                <!-- Action Feed & Breakdown Row -->
+                                <div class="row mt-4">
+                                    <!-- Action Feed -->
+                                    <div class="col-md-7">
+                                        <h6 class="mb-3">⚡ Action Feed <span class="badge bg-secondary" id="action-feed-count">0</span></h6>
+                                        <div id="thinking-action-feed" style="max-height: 350px; overflow-y: auto;">
+                                            <p class="text-secondary text-center py-3">No actions yet.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action Breakdown by Type -->
+                                    <div class="col-md-5">
+                                        <h6 class="mb-3">📊 Action Breakdown</h6>
+                                        <div id="thinking-action-breakdown">
+                                            <p class="text-secondary text-center py-3">No action data.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Configuration -->
+                                <div class="mt-4 p-3" style="background: rgba(255,255,255,0.03); border-radius: 10px;">
+                                    <h6 class="mb-3">⚙️ Engine Configuration</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Interval</small>
+                                            <p class="mb-0" id="thinking-config-interval">Every 2 hours</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Min Priority to Act</small>
+                                            <p class="mb-0" id="thinking-config-priority">3.0</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Max Actions/Cycle</small>
+                                            <p class="mb-0" id="thinking-config-actions">5</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -74167,7 +74279,275 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             `;
         }
 
-        // END SESSION 542: RESEARCH DEMO
+        // ====================================================================
+        // SESSION 544: AUTONOMOUS REASONING ENGINE UI
+        // ====================================================================
+
+        // Load thinking engine dashboard
+        function loadThinkingDashboard() {
+            fetch('/api/v1/reasoning/dashboard/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update stats
+                        document.getElementById('thinking-total-thoughts').textContent = data.thought_stats.total || 0;
+                        document.getElementById('thinking-total-insights').textContent = data.action_stats.total || 0;
+                        document.getElementById('thinking-total-actions').textContent = data.action_stats.total || 0;
+                        document.getElementById('thinking-success-rate').textContent = (data.action_stats.success_rate || 0) + '%';
+
+                        // Update status badge
+                        const statusBadge = document.getElementById('thinking-status-badge');
+                        if (data.engine_status.is_active) {
+                            statusBadge.className = 'badge bg-success me-2';
+                            statusBadge.textContent = 'Active';
+                        } else {
+                            statusBadge.className = 'badge bg-secondary me-2';
+                            statusBadge.textContent = 'Inactive';
+                        }
+
+                        // Update config
+                        document.getElementById('thinking-config-interval').textContent = `Every ${data.engine_status.thinking_interval_minutes || 120} min`;
+                        document.getElementById('thinking-config-priority').textContent = data.engine_status.min_priority_to_act || 3.0;
+                        document.getElementById('thinking-config-actions').textContent = '5';
+
+                        // Render recent thoughts
+                        const thoughtsContainer = document.getElementById('thinking-recent-thoughts');
+                        if (data.recent_thoughts && data.recent_thoughts.length > 0) {
+                            thoughtsContainer.innerHTML = data.recent_thoughts.map(t => `
+                                <div class="p-3 mb-2" style="background: rgba(139,92,246,0.1); border-radius: 8px; border-left: 3px solid ${getStatusColor(t.status)};">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>Cycle #${t.cycle_number}</strong>
+                                            <span class="badge bg-${t.cycle_type === 'manual' ? 'warning' : 'info'} ms-2">${t.cycle_type}</span>
+                                            <span class="badge bg-${getStatusBadge(t.status)} ms-1">${t.status}</span>
+                                        </div>
+                                        <small class="text-muted">${new Date(t.started_at).toLocaleString()}</small>
+                                    </div>
+                                    <p class="mb-0 mt-1 text-secondary" style="font-size: 0.9em;">
+                                        ${t.context_summary || 'No summary'}
+                                    </p>
+                                    <small class="text-muted">Priority: ${t.priority_score.toFixed(1)}</small>
+                                </div>
+                            `).join('');
+                        } else {
+                            thoughtsContainer.innerHTML = '<p class="text-secondary text-center py-3">No thinking cycles yet. Click "Trigger Thinking" to start!</p>';
+                        }
+
+                        // Render top insights
+                        const insightsContainer = document.getElementById('thinking-top-insights');
+                        if (data.top_insights && data.top_insights.length > 0) {
+                            insightsContainer.innerHTML = data.top_insights.map(i => `
+                                <div class="p-2 mb-2" style="background: rgba(236,72,153,0.1); border-radius: 6px;">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge bg-${getCategoryColor(i.category)}">${i.category}</span>
+                                        <small class="text-muted">Cycle #${i.cycle}</small>
+                                    </div>
+                                    <p class="mb-0 mt-1" style="font-size: 0.9em;">${i.insight}</p>
+                                </div>
+                            `).join('');
+                        } else {
+                            insightsContainer.innerHTML = '<p class="text-secondary">No insights yet. Trigger a thinking cycle!</p>';
+                        }
+
+                        // Render action breakdown
+                        const breakdownContainer = document.getElementById('thinking-action-breakdown');
+                        if (data.action_breakdown && data.action_breakdown.length > 0) {
+                            breakdownContainer.innerHTML = data.action_breakdown.map(ab => `
+                                <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(6,182,212,0.1); border-radius: 6px;">
+                                    <div>
+                                        <span style="font-size: 1.2em;">${getActionIcon(ab.action_type)}</span>
+                                        <span class="ms-2">${formatActionType(ab.action_type)}</span>
+                                    </div>
+                                    <span class="badge" style="background: linear-gradient(135deg, #06b6d4, #8b5cf6);">
+                                        ${ab.count}
+                                    </span>
+                                </div>
+                            `).join('');
+                        } else {
+                            breakdownContainer.innerHTML = '<p class="text-secondary text-center py-3">No action data.</p>';
+                        }
+                    }
+
+                    // Fetch and render action feed
+                    return fetch('/api/v1/reasoning/actions/?limit=20');
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('action-feed-count').textContent = data.stats.total_actions || 0;
+
+                        const feedContainer = document.getElementById('thinking-action-feed');
+                        if (data.actions && data.actions.length > 0) {
+                            feedContainer.innerHTML = data.actions.map(a => `
+                                <div class="p-2 mb-2" style="background: rgba(${a.status === 'completed' ? '34,197,94' : a.status === 'failed' ? '239,68,68' : '107,114,128'},0.15); border-radius: 8px; border-left: 3px solid ${a.status === 'completed' ? '#22c55e' : a.status === 'failed' ? '#ef4444' : '#6b7280'};">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span style="font-size: 1.1em;">${getActionIcon(a.action_type)}</span>
+                                            <strong class="ms-1">${a.action_name}</strong>
+                                        </div>
+                                        <span class="badge bg-${a.status === 'completed' ? 'success' : a.status === 'failed' ? 'danger' : 'secondary'}">${a.status}</span>
+                                    </div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">${formatActionType(a.action_type)}</small>
+                                        <small class="text-muted ms-2">• Cycle #${a.thought_cycle}</small>
+                                        <small class="text-muted ms-2">• ${new Date(a.created_at).toLocaleTimeString()}</small>
+                                    </div>
+                                    ${a.result_summary ? `<p class="mb-0 mt-1 text-secondary" style="font-size: 0.85em;">${a.result_summary}</p>` : ''}
+                                </div>
+                            `).join('');
+                        } else {
+                            feedContainer.innerHTML = '<p class="text-secondary text-center py-3">No actions yet. Trigger a thinking cycle!</p>';
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading thinking dashboard:', err);
+                    document.getElementById('thinking-status-badge').textContent = 'Error';
+                    document.getElementById('thinking-status-badge').className = 'badge bg-danger me-2';
+                });
+        }
+
+        // Get icon for action type
+        function getActionIcon(actionType) {
+            const icons = {
+                'spawn_spider': '🕷️',
+                'generate_content': '✍️',
+                'trigger_debate': '💬',
+                'create_report': '📄',
+                'send_alert': '🔔',
+                'request_research': '🔬',
+                'trigger_conversation': '🗣️',
+                'archive_insight': '💾',
+                'update_strategy': '🎯',
+                'schedule_followup': '📅'
+            };
+            return icons[actionType] || '⚡';
+        }
+
+        // Format action type for display
+        function formatActionType(actionType) {
+            const names = {
+                'spawn_spider': 'Spawn Spider',
+                'generate_content': 'Generate Content',
+                'trigger_debate': 'Trigger Debate',
+                'create_report': 'Create Report',
+                'send_alert': 'Send Alert',
+                'request_research': 'Request Research',
+                'trigger_conversation': 'Trigger Conversation',
+                'archive_insight': 'Archive Insight',
+                'update_strategy': 'Update Strategy',
+                'schedule_followup': 'Schedule Follow-up'
+            };
+            return names[actionType] || actionType;
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'completed': '#22c55e',
+                'thinking': '#8b5cf6',
+                'executing': '#06b6d4',
+                'failed': '#ef4444',
+                'pending': '#6b7280'
+            };
+            return colors[status] || '#6b7280';
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'completed': 'success',
+                'thinking': 'primary',
+                'executing': 'info',
+                'failed': 'danger',
+                'pending': 'secondary'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getCategoryColor(category) {
+            const colors = {
+                'pattern': 'info',
+                'opportunity': 'success',
+                'concern': 'warning',
+                'trend': 'primary'
+            };
+            return colors[category] || 'secondary';
+        }
+
+        // Trigger a manual thinking cycle
+        function triggerThinking() {
+            const btn = document.getElementById('trigger-thinking-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Thinking...';
+
+            fetch('/api/v1/reasoning/trigger/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cycle_type: 'manual', lookback_hours: 24 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Poll for completion
+                    const taskId = data.task_id;
+                    let pollCount = 0;
+                    const maxPolls = 120; // 2 minutes max
+
+                    const pollInterval = setInterval(() => {
+                        pollCount++;
+
+                        fetch(`/api/v1/reasoning/task/${taskId}/`)
+                            .then(res => res.json())
+                            .then(statusData => {
+                                if (statusData.status === 'completed') {
+                                    clearInterval(pollInterval);
+                                    btn.disabled = false;
+                                    btn.innerHTML = '⚡ Trigger Thinking';
+                                    loadThinkingDashboard();
+
+                                    // Show success message
+                                    const result = statusData.result;
+                                    if (result && result.success) {
+                                        alert(`Thinking cycle #${result.cycle_number} completed!\n\n` +
+                                              `- ${result.insights_count} insights generated\n` +
+                                              `- ${result.decisions_count} decisions made\n` +
+                                              `- ${result.actions_executed} actions executed\n` +
+                                              `- Priority score: ${result.priority_score.toFixed(1)}`);
+                                    }
+                                } else if (statusData.status === 'failed') {
+                                    clearInterval(pollInterval);
+                                    btn.disabled = false;
+                                    btn.innerHTML = '⚡ Trigger Thinking';
+                                    alert('Thinking failed: ' + (statusData.error || 'Unknown error'));
+                                }
+                            });
+
+                        if (pollCount >= maxPolls) {
+                            clearInterval(pollInterval);
+                            btn.disabled = false;
+                            btn.innerHTML = '⚡ Trigger Thinking';
+                            alert('Thinking cycle is taking longer than expected. Check back soon!');
+                        }
+                    }, 1000);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '⚡ Trigger Thinking';
+                    alert('Failed to trigger thinking: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Trigger Thinking';
+                alert('Error: ' + err.message);
+            });
+        }
+
+        // Load dashboard when thinking tab is shown
+        const thinkingTab = document.getElementById('research-thinking-tab');
+        if (thinkingTab) {
+            thinkingTab.addEventListener('shown.bs.tab', loadThinkingDashboard);
+        }
+
+        // END SESSION 542 + 544: RESEARCH DEMO + THINKING ENGINE
         // ====================================================================
     </script>
 
