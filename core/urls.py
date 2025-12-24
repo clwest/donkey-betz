@@ -2473,6 +2473,11 @@ urlpatterns = [
     path('api/v1/reasoning/concerns/register-historical/', views_autonomous_reasoning.register_historical_concerns_api, name='concerns-register-historical'),
     path('api/v1/reasoning/concerns/<uuid:concern_id>/', views_autonomous_reasoning.concern_detail_api, name='concern-detail'),
 
+    # Session 549: Human Action Required APIs
+    path('api/v1/reasoning/actions/pending/', views_autonomous_reasoning.pending_human_actions_api, name='pending-actions'),
+    path('api/v1/reasoning/actions/create/', views_autonomous_reasoning.create_action_notifications_api, name='create-actions'),
+    path('api/v1/reasoning/actions/<uuid:notification_id>/respond/', views_autonomous_reasoning.handle_human_action_api, name='handle-action'),
+
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
     path('api/v1/persistence/', include('persistence.urls')),  # Data Persistence Infrastructure

@@ -7057,6 +7057,7 @@ class ProactiveNotification(models.Model):
         ('celebration', 'Celebration'),
         ('warning', 'Warning'),
         ('update', 'System Update'),
+        ('action_required', 'Human Action Required'),  # Session 549
     ])
     priority = models.CharField(max_length=20, choices=[
         ('urgent', 'Urgent'),
