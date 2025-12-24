@@ -367,12 +367,36 @@ def stats_api(request):
         transfers_per_hour = round(transfers_24h / 24, 1) if transfers_24h else 0
 
         # Top knowledge topics (most shared across agents)
-        top_topics = list(
+        # Filter out empty titles and get top 5
+        top_topics_raw = list(
             AgentKnowledgeSource.objects.filter(is_active=True)
+            .exclude(title='')
+            .exclude(title__isnull=True)
+            .exclude(title__startswith='[Learned]')  # Skip pure "[Learned]" entries
             .values('title')
             .annotate(agent_count=Count('agent_id', distinct=True))
-            .order_by('-agent_count')[:5]
+            .order_by('-agent_count')[:10]  # Get more to filter
         )
+
+        # Clean "[Learned]" prefix from titles
+        top_topics = []
+        for item in top_topics_raw:
+            title = item['title']
+            # Strip "[Learned]" prefix if present
+            if title.startswith('[Learned] '):
+                title = title[10:]  # Remove "[Learned] " (10 chars)
+            elif title.startswith('[Learned]'):
+                title = title[9:]  # Remove "[Learned]" (9 chars)
+
+            # Skip if title is now empty or too short
+            if title and len(title) > 2:
+                top_topics.append({
+                    'title': title,
+                    'agent_count': item['agent_count']
+                })
+
+            if len(top_topics) >= 5:
+                break
 
         # Most knowledgeable agents
         top_knowledgeable = list(
