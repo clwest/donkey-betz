@@ -7117,9 +7117,16 @@
                                 </div>
 
                                 <div class="text-center mt-4">
-                                    <button class="btn btn-outline-info" onclick="loadResearchStats()">
-                                        🔄 Refresh Statistics
-                                    </button>
+                                    <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-success" style="animation: pulse 2s infinite;">● LIVE</span>
+                                            <span class="text-secondary small">Auto-refresh every 10s</span>
+                                        </div>
+                                        <span class="text-secondary small">Last updated: <span id="last-refresh-time" class="text-info">--:--:--</span></span>
+                                        <button class="btn btn-outline-info btn-sm" onclick="loadResearchStats(); updateLastRefreshTime();">
+                                            🔄 Refresh Now
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -73277,9 +73284,56 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // Initialize all Research Demo components
+        let researchAutoRefreshInterval = null;
+        const RESEARCH_REFRESH_INTERVAL = 10000; // 10 seconds for OBS recording
+
         function initResearchDemo() {
             loadResearchStats();
+            startResearchAutoRefresh();
             // Overview tab is shown by default
+        }
+
+        function startResearchAutoRefresh() {
+            // Clear any existing interval
+            if (researchAutoRefreshInterval) {
+                clearInterval(researchAutoRefreshInterval);
+            }
+
+            // Start auto-refresh
+            researchAutoRefreshInterval = setInterval(() => {
+                // Only refresh if Research tab is visible
+                const researchTab = document.getElementById('research-demo');
+                if (researchTab && researchTab.classList.contains('active')) {
+                    loadResearchStats();
+                    updateLastRefreshTime();
+
+                    // Also refresh live feed if that sub-tab is active
+                    const liveFeedTab = document.getElementById('research-feed');
+                    if (liveFeedTab && liveFeedTab.classList.contains('active')) {
+                        loadLiveFeed();
+                    }
+                }
+            }, RESEARCH_REFRESH_INTERVAL);
+
+            // Initial timestamp
+            updateLastRefreshTime();
+            console.log('Research Demo auto-refresh started (every 10s)');
+        }
+
+        function updateLastRefreshTime() {
+            const el = document.getElementById('last-refresh-time');
+            if (el) {
+                const now = new Date();
+                el.textContent = now.toLocaleTimeString();
+            }
+        }
+
+        function stopResearchAutoRefresh() {
+            if (researchAutoRefreshInterval) {
+                clearInterval(researchAutoRefreshInterval);
+                researchAutoRefreshInterval = null;
+                console.log('Research Demo auto-refresh stopped');
+            }
         }
 
         // Load pipeline statistics for Overview tab
