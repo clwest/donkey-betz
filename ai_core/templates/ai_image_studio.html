@@ -1588,6 +1588,16 @@
             }
         }
 
+        /* Session 549: Action Required Pulse Animation */
+        @keyframes pulse-action {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 10px 3px rgba(220, 38, 38, 0.3);
+            }
+        }
+
         /* Session 542: Research Demo Styles */
         .text-cyan { color: #06b6d4 !important; }
 
@@ -1922,8 +1932,37 @@
                 </button>
             </li>
 
+            <!-- Session 549: Human Action Required Alert -->
+            <li class="nav-item ms-auto" role="presentation" id="actionRequiredContainer" style="display: none;">
+                <div class="dropdown">
+                    <button class="btn position-relative" type="button" id="actionRequiredDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; color: #fca5a5; padding: 8px 12px; border-radius: 8px; animation: pulse-action 2s infinite;" title="Human Action Required">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.1rem;"></i>
+                        <span class="ms-1" style="font-size: 0.85rem; font-weight: 600;">Action Required</span>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="actionRequiredBadge" style="font-size: 0.65rem;">
+                            0
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionRequiredDropdown" style="width: 420px; max-height: 500px; overflow-y: auto; background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(220, 38, 38, 0.5);">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center" style="color: #dc2626;">
+                            <span><i class="fas fa-exclamation-triangle me-2"></i>Human Action Required</span>
+                            <small style="color: #fca5a5;">Policy decisions needed</small>
+                        </li>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(220, 38, 38, 0.3);"></li>
+                        <div id="actionRequiredList">
+                            <li class="px-3 py-4 text-center text-muted">
+                                <small>Loading...</small>
+                            </li>
+                        </div>
+                        <li><hr class="dropdown-divider" style="border-color: rgba(220, 38, 38, 0.3);"></li>
+                        <li class="text-center py-2">
+                            <a href="#" onclick="document.getElementById('research-demo-tab').click(); setTimeout(() => document.getElementById('research-concerns-tab').click(), 100); return false;" class="dropdown-item" style="color: #dc2626;">View all concerns</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <!-- Session 235: Notification Bell -->
-            <li class="nav-item ms-auto" role="presentation">
+            <li class="nav-item" role="presentation">
                 <div class="dropdown">
                     <button class="btn position-relative" type="button" id="notificationBellDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; border: none; color: #f9a8d4; padding: 8px 12px;" title="Notifications">
                         <i class="fas fa-bell" style="font-size: 1.2rem;"></i>
@@ -74859,7 +74898,103 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             concernsTab.addEventListener('shown.bs.tab', loadConcernsDashboard);
         }
 
-        // END SESSION 542 + 544 + 546: RESEARCH DEMO + THINKING ENGINE + CONCERN TRACKING
+        // ====================================================================
+        // SESSION 549: HUMAN ACTION REQUIRED SYSTEM
+        // ====================================================================
+
+        // Load pending human actions
+        function loadPendingActions() {
+            fetch('/api/v1/reasoning/actions/pending/')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('actionRequiredContainer');
+                    const badge = document.getElementById('actionRequiredBadge');
+                    const list = document.getElementById('actionRequiredList');
+
+                    if (data.success && data.total > 0) {
+                        container.style.display = 'block';
+                        badge.textContent = data.total;
+
+                        list.innerHTML = data.notifications.map(n => `
+                            <li class="px-3 py-3" style="border-bottom: 1px solid rgba(220, 38, 38, 0.2);">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge" style="background: ${n.color || '#dc2626'}; font-size: 0.7rem;">
+                                        ${n.severity?.toUpperCase() || 'HIGH'}
+                                    </span>
+                                    <small class="text-muted">${new Date(n.created_at).toLocaleDateString()}</small>
+                                </div>
+                                <p class="mb-2" style="color: #e2e8f0; font-size: 0.85rem; line-height: 1.4;">
+                                    ${n.message.substring(0, 100)}${n.message.length > 100 ? '...' : ''}
+                                </p>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    ${(n.quick_actions || []).map(qa => `
+                                        <button class="btn btn-sm btn-${qa.style === 'success' ? 'success' : qa.style === 'danger' ? 'danger' : 'secondary'}"
+                                            onclick="handleActionRequired('${n.id}', '${qa.action}')"
+                                            style="font-size: 0.7rem; padding: 2px 8px;">
+                                            ${qa.label}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </li>
+                        `).join('');
+                    } else {
+                        container.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading pending actions:', err);
+                });
+        }
+
+        // Handle action response
+        function handleActionRequired(notificationId, action) {
+            if (!confirm(`Are you sure you want to "${action}" this concern?`)) return;
+
+            fetch(`/api/v1/reasoning/actions/${notificationId}/respond/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                },
+                body: JSON.stringify({ action: action })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Concern ${data.new_status}: ${data.resolution_note}`, 'success');
+                    loadPendingActions();  // Refresh the list
+                    loadConcernsDashboard();  // Refresh concerns
+                } else {
+                    showToast('Error: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(err => {
+                console.error('Error handling action:', err);
+                showToast('Failed to process action', 'danger');
+            });
+        }
+
+        // Create action notifications for active concerns
+        function createActionNotifications() {
+            fetch('/api/v1/reasoning/actions/create/', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Created ${data.notifications_created} action notifications`);
+                        loadPendingActions();
+                    }
+                })
+                .catch(err => console.error('Error creating notifications:', err));
+        }
+
+        // Initialize action required system
+        loadPendingActions();
+        createActionNotifications();  // Create notifications for any unnotified concerns
+
+        // Refresh every 60 seconds
+        setInterval(loadPendingActions, 60000);
+
+        // END SESSION 542 + 544 + 546 + 549: RESEARCH DEMO + THINKING ENGINE + CONCERN TRACKING + HUMAN ACTIONS
         // ====================================================================
     </script>
 

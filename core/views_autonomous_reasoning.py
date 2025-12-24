@@ -600,3 +600,102 @@ def concern_detail_api(request, concern_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============= Human Action Required APIs (Session 549) =============
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def pending_human_actions_api(request):
+    """
+    Get all pending human action required notifications.
+
+    These are concerns that need human policy decisions.
+    """
+    try:
+        from core.services.human_action_service import get_human_action_service
+
+        service = get_human_action_service()
+        result = service.get_pending_actions()
+
+        return JsonResponse({
+            'success': True,
+            **result
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching pending actions: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_action_notifications_api(request):
+    """
+    Create action-required notifications for all active concerns.
+
+    This triggers the system to generate notifications for concerns
+    that need human review.
+    """
+    try:
+        from core.services.human_action_service import get_human_action_service
+
+        service = get_human_action_service()
+        result = service.create_notifications_for_active_concerns()
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Created {result['notifications_created']} notifications",
+            **result
+        })
+
+    except Exception as e:
+        logger.error(f"Error creating action notifications: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def handle_human_action_api(request, notification_id):
+    """
+    Handle a user's response to an action-required notification.
+
+    Request body:
+        action: str - The action taken (approve, reject, defer, etc.)
+        notes: str (optional) - User's notes
+    """
+    try:
+        from core.services.human_action_service import get_human_action_service
+        import json
+
+        data = json.loads(request.body) if request.body else {}
+        action = data.get('action')
+        notes = data.get('notes', '')
+
+        if not action:
+            return JsonResponse({
+                'success': False,
+                'error': 'Action is required'
+            }, status=400)
+
+        service = get_human_action_service()
+        result = service.handle_action_response(
+            notification_id=str(notification_id),
+            action=action,
+            notes=notes
+        )
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error handling action: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
