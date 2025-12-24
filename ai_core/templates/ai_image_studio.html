@@ -73299,8 +73299,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 .scaleExtent([0.3, 3])
                 .on('zoom', (event) => g.attr('transform', event.transform)));
 
+            // Defs for markers and filters
+            const defs = researchSvg.append('defs');
+
             // Arrow marker for directed edges
-            researchSvg.append('defs').append('marker')
+            defs.append('marker')
                 .attr('id', 'arrowhead')
                 .attr('viewBox', '-0 -5 10 10')
                 .attr('refX', 25)
@@ -73311,6 +73314,20 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 .append('path')
                 .attr('d', 'M0,-5L10,0L0,5')
                 .attr('fill', '#06b6d4');
+
+            // Glow filter for particles
+            const glowFilter = defs.append('filter')
+                .attr('id', 'particle-glow')
+                .attr('x', '-50%')
+                .attr('y', '-50%')
+                .attr('width', '200%')
+                .attr('height', '200%');
+            glowFilter.append('feGaussianBlur')
+                .attr('stdDeviation', '3')
+                .attr('result', 'coloredBlur');
+            const feMerge = glowFilter.append('feMerge');
+            feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+            feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
 
             // Create force simulation
             researchSimulation = d3.forceSimulation(researchNodes)
@@ -73380,6 +73397,66 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             // Legend
             addGraphLegend(researchSvg, width);
+
+            // Particle layer (on top of everything)
+            const particleLayer = g.append('g').attr('class', 'particle-layer');
+
+            // Start particle animation
+            startParticleAnimation(particleLayer, link);
+        }
+
+        // Particle animation system
+        let particleAnimationId = null;
+
+        function startParticleAnimation(particleLayer, links) {
+            // Cancel any existing animation
+            if (particleAnimationId) {
+                cancelAnimationFrame(particleAnimationId);
+            }
+
+            // Spawn particles periodically
+            function spawnParticle() {
+                if (researchEdges.length === 0) return;
+
+                // Pick a random edge
+                const edge = researchEdges[Math.floor(Math.random() * researchEdges.length)];
+                if (!edge.source.x || !edge.target.x) return;
+
+                // Create particle
+                const particle = particleLayer.append('circle')
+                    .attr('r', 4)
+                    .attr('fill', edge.mythology_blocks > 0 ? '#ef4444' : '#22d3ee')
+                    .attr('filter', 'url(#particle-glow)')
+                    .attr('cx', edge.source.x)
+                    .attr('cy', edge.source.y)
+                    .style('opacity', 0.9);
+
+                // Animate particle along edge
+                const duration = 1500 + Math.random() * 1000;
+                particle.transition()
+                    .duration(duration)
+                    .ease(d3.easeLinear)
+                    .attr('cx', edge.target.x)
+                    .attr('cy', edge.target.y)
+                    .style('opacity', 0)
+                    .on('end', function() {
+                        d3.select(this).remove();
+                    });
+            }
+
+            // Spawn particles at intervals
+            let lastSpawn = 0;
+            const spawnInterval = 200; // ms between spawns
+
+            function animate(timestamp) {
+                if (timestamp - lastSpawn > spawnInterval) {
+                    spawnParticle();
+                    lastSpawn = timestamp;
+                }
+                particleAnimationId = requestAnimationFrame(animate);
+            }
+
+            particleAnimationId = requestAnimationFrame(animate);
         }
 
         function addGraphLegend(svg, width) {
