@@ -1587,6 +1587,23 @@
                 opacity: 0.3;
             }
         }
+
+        /* Session 542: Research Demo Styles */
+        .text-cyan { color: #06b6d4 !important; }
+
+        .research-node circle {
+            transition: all 0.2s ease;
+        }
+
+        .research-node:hover circle {
+            filter: brightness(1.3);
+            cursor: pointer;
+        }
+
+        #research-network-container svg {
+            border-radius: 12px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -1874,6 +1891,13 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab" title="Your creative workspace - all tools in one place!">
                     📁 Projects
+                </button>
+            </li>
+
+            <!-- Session 542: Research Demo - Interactive Knowledge Pipeline Visualization -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="research-demo-tab" data-bs-toggle="tab" data-bs-target="#research-demo" type="button" role="tab" title="Research Demo - Visualize agents teaching each other with D3.js">
+                    🔬 Research
                 </button>
             </li>
 
@@ -6918,6 +6942,270 @@
 
             </div>
             <!-- END PROJECTS TAB -->
+
+            <!-- ============================================================ -->
+            <!-- Session 542: RESEARCH DEMO TAB - Interactive Knowledge Pipeline -->
+            <!-- D3.js Force-Directed Graph showing agents teaching each other -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="research-demo" role="tabpanel" aria-labelledby="research-demo-tab">
+                <h3 class="mb-4">🔬 Research Demo: Knowledge Pipeline Visualization</h3>
+
+                <!-- Sub-tab Navigation -->
+                <ul class="nav nav-pills nav-fill mb-4" id="research-subtabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="research-overview-tab" data-bs-toggle="pill" data-bs-target="#research-overview" type="button" role="tab">
+                            📊 Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-graph-tab" data-bs-toggle="pill" data-bs-target="#research-graph" type="button" role="tab">
+                            🕸️ Network Graph
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-feed-tab" data-bs-toggle="pill" data-bs-target="#research-feed" type="button" role="tab">
+                            📡 Live Feed
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-mythology-tab" data-bs-toggle="pill" data-bs-target="#research-mythology" type="button" role="tab">
+                            🛡️ Mythology Gate
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Sub-tab Content -->
+                <div class="tab-content" id="research-subtabs-content">
+
+                    <!-- OVERVIEW SUB-TAB -->
+                    <div class="tab-pane fade show active" id="research-overview" role="tabpanel">
+                        <div class="card mb-4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(6,182,212,0.3); border-radius: 15px;">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">🔄 Knowledge Pipeline Flow</h5>
+
+                                <!-- Pipeline Visualization -->
+                                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap" style="gap: 10px;">
+                                    <div class="text-center p-3" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; min-width: 120px;">
+                                        <h3 class="mb-0" id="pipeline-spiders">72</h3>
+                                        <small>🕷️ Spiders</small>
+                                    </div>
+                                    <div style="font-size: 24px; color: #06b6d4;">→</div>
+                                    <div class="text-center p-3" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 12px; min-width: 120px;">
+                                        <h3 class="mb-0" id="pipeline-agents">55</h3>
+                                        <small>🤖 Agents</small>
+                                    </div>
+                                    <div style="font-size: 24px; color: #06b6d4;">→</div>
+                                    <div class="text-center p-3" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 12px; min-width: 120px;">
+                                        <h3 class="mb-0" id="pipeline-connections">114</h3>
+                                        <small>🔗 Connections</small>
+                                    </div>
+                                    <div style="font-size: 24px; color: #06b6d4;">→</div>
+                                    <div class="text-center p-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; min-width: 120px;">
+                                        <h3 class="mb-0" id="pipeline-mythology">0</h3>
+                                        <small>🛡️ Blocked</small>
+                                    </div>
+                                    <div style="font-size: 24px; color: #06b6d4;">→</div>
+                                    <div class="text-center p-3" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 12px; min-width: 120px;">
+                                        <h3 class="mb-0" id="pipeline-knowledge">2,874</h3>
+                                        <small>📚 Knowledge</small>
+                                    </div>
+                                </div>
+
+                                <!-- Detailed Stats -->
+                                <div class="row mt-4">
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(139,92,246,0.1); border-radius: 10px; border-left: 3px solid #8b5cf6;">
+                                            <h6>🕷️ Spider Network</h6>
+                                            <p class="mb-1">Active: <strong id="stat-spiders-active">72</strong></p>
+                                            <p class="mb-0">Data/24h: <strong id="stat-spiders-data">1,250</strong></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(236,72,153,0.1); border-radius: 10px; border-left: 3px solid #ec4899;">
+                                            <h6>🤖 Agent Ecosystem</h6>
+                                            <p class="mb-1">Total: <strong id="stat-agents-total">55</strong></p>
+                                            <p class="mb-0">With Knowledge: <strong id="stat-agents-knowledge">42</strong></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(6,182,212,0.1); border-radius: 10px; border-left: 3px solid #06b6d4;">
+                                            <h6>🔗 Learning Network</h6>
+                                            <p class="mb-1">Connections: <strong id="stat-network-connections">114</strong></p>
+                                            <p class="mb-1">Transfers: <strong id="stat-network-transfers">1,120</strong></p>
+                                            <p class="mb-0">Avg Strength: <strong id="stat-network-strength">0.72</strong></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-3" style="background: rgba(245,158,11,0.1); border-radius: 10px; border-left: 3px solid #f59e0b;">
+                                            <h6>🛡️ Mythology Gate</h6>
+                                            <p class="mb-1">Quarantined: <strong id="stat-mythology-total">0</strong></p>
+                                            <p class="mb-1">Pending: <strong id="stat-mythology-pending">0</strong></p>
+                                            <p class="mb-0">Trust Decays: <strong id="stat-mythology-decays">0</strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-center mt-4">
+                                    <button class="btn btn-outline-info" onclick="loadResearchStats()">
+                                        🔄 Refresh Statistics
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NETWORK GRAPH SUB-TAB -->
+                    <div class="tab-pane fade" id="research-graph" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-9">
+                                <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(6,182,212,0.3); border-radius: 15px;">
+                                    <div class="card-body p-0">
+                                        <div id="research-network-graph" style="width: 100%; height: 600px; position: relative;">
+                                            <!-- D3.js graph will render here -->
+                                            <div id="graph-loading" class="text-center py-5">
+                                                <div class="spinner-border text-info" role="status"></div>
+                                                <p class="mt-2">Loading network graph...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Legend -->
+                                <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                    <span class="badge" style="background: #ec4899;">Creation</span>
+                                    <span class="badge" style="background: #8b5cf6;">Research</span>
+                                    <span class="badge" style="background: #06b6d4;">Strategy</span>
+                                    <span class="badge" style="background: #f59e0b;">Executive</span>
+                                    <span class="badge" style="background: #22c55e;">Development</span>
+                                    <span class="badge" style="background: #ef4444;">Orchestration</span>
+                                    <span class="badge" style="background: #a855f7;">Content Studio</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <!-- Agent Details Panel -->
+                                <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(6,182,212,0.3); border-radius: 15px;">
+                                    <div class="card-header" style="border-bottom: 1px solid rgba(6,182,212,0.2);">
+                                        <h6 class="mb-0">📋 Agent Details</h6>
+                                    </div>
+                                    <div class="card-body" id="agent-details-panel">
+                                        <p class="text-muted">Click on an agent node to see details</p>
+                                    </div>
+                                </div>
+
+                                <!-- Controls -->
+                                <div class="card mt-3" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(6,182,212,0.3); border-radius: 15px;">
+                                    <div class="card-header" style="border-bottom: 1px solid rgba(6,182,212,0.2);">
+                                        <h6 class="mb-0">🎮 Controls</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <button class="btn btn-outline-info btn-sm w-100 mb-2" onclick="loadNetworkGraph()">
+                                            🔄 Refresh Graph
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="triggerLearningCycle()">
+                                            ⚡ Trigger Learning
+                                        </button>
+                                        <div class="form-check form-switch mt-3">
+                                            <input class="form-check-input" type="checkbox" id="auto-refresh-graph" checked>
+                                            <label class="form-check-label" for="auto-refresh-graph">Auto-refresh (30s)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LIVE FEED SUB-TAB -->
+                    <div class="tab-pane fade" id="research-feed" role="tabpanel">
+                        <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(6,182,212,0.3); border-radius: 15px;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid rgba(6,182,212,0.2);">
+                                <h6 class="mb-0">📡 Live Learning Events (Last 24h)</h6>
+                                <div>
+                                    <select class="form-select form-select-sm" id="feed-filter" style="background: #1a1a1a; border-color: #333; color: white; width: auto;">
+                                        <option value="all">All Events</option>
+                                        <option value="transfer">Transfers Only</option>
+                                        <option value="block">Blocks Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                <div id="live-feed-container">
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border text-info" role="status"></div>
+                                        <p class="mt-2">Loading live feed...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MYTHOLOGY GATE SUB-TAB -->
+                    <div class="tab-pane fade" id="research-mythology" role="tabpanel">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px;">
+                                    <div class="card-body py-3">
+                                        <h2 class="mb-0" id="myth-pending">0</h2>
+                                        <small>Pending Review</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 12px;">
+                                    <div class="card-body py-3">
+                                        <h2 class="mb-0" id="myth-total">0</h2>
+                                        <small>Total Quarantined</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 12px;">
+                                    <div class="card-body py-3">
+                                        <h2 class="mb-0" id="myth-approved">0</h2>
+                                        <small>Approved (False+)</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px;">
+                                    <div class="card-body py-3">
+                                        <h2 class="mb-0" id="myth-rejected">0</h2>
+                                        <small>Rejected (Myths)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(245,158,11,0.3); border-radius: 15px;">
+                                    <div class="card-header" style="border-bottom: 1px solid rgba(245,158,11,0.2);">
+                                        <h6 class="mb-0">🚨 Quarantine Queue</h6>
+                                    </div>
+                                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                        <div id="quarantine-list">
+                                            <p class="text-success text-center py-3">✅ Quarantine is empty - all knowledge is clean!</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(239,68,68,0.3); border-radius: 15px;">
+                                    <div class="card-header" style="border-bottom: 1px solid rgba(239,68,68,0.2);">
+                                        <h6 class="mb-0">📉 Trust Decay Leaderboard</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="trust-decay-list">
+                                            <p class="text-success text-center py-3">✅ No trust decay - all connections healthy!</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- END RESEARCH DEMO TAB -->
 
                 <!-- Chain Videos Modal (Session 67) -->
                 <div class="modal" id="chain-videos-modal" tabindex="-1" style="z-index: 9999; display: none;">
@@ -16176,6 +16464,9 @@
 
     <!-- Session 217: Chart.js for Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Session 542: D3.js for Research Demo Network Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script>
 
     <!-- Google Model Viewer for 3D Models -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
@@ -72857,6 +73148,443 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         });
 
         // END SESSION 541: MYTHOLOGY QUARANTINE PANEL
+        // ====================================================================
+
+        // ====================================================================
+        // SESSION 542: RESEARCH DEMO - INTERACTIVE KNOWLEDGE PIPELINE
+        // ====================================================================
+
+        // Category colors for agent nodes
+        const CATEGORY_COLORS = {
+            'creation': '#ec4899',
+            'research': '#8b5cf6',
+            'strategy': '#06b6d4',
+            'executive': '#f59e0b',
+            'development': '#22c55e',
+            'orchestration': '#ef4444',
+            'business': '#3b82f6',
+            'content_studio': '#a855f7',
+            'specialized': '#14b8a6',
+            'training': '#f97316',
+            'default': '#64748b'
+        };
+
+        // Global variables for D3 graph
+        let researchSimulation = null;
+        let researchSvg = null;
+        let researchNodes = [];
+        let researchEdges = [];
+
+        // Initialize Research Demo when tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            const researchTab = document.getElementById('research-demo-tab');
+            if (researchTab) {
+                researchTab.addEventListener('shown.bs.tab', function() {
+                    initResearchDemo();
+                });
+            }
+
+            // Sub-tab handlers
+            const networkTab = document.getElementById('research-graph-tab');
+            if (networkTab) {
+                networkTab.addEventListener('shown.bs.tab', function() {
+                    setTimeout(initNetworkGraph, 100);
+                });
+            }
+
+            const liveFeedTab = document.getElementById('research-feed-tab');
+            if (liveFeedTab) {
+                liveFeedTab.addEventListener('shown.bs.tab', loadLiveFeed);
+            }
+
+            const mythologyTab = document.getElementById('research-mythology-tab');
+            if (mythologyTab) {
+                mythologyTab.addEventListener('shown.bs.tab', loadMythologyGate);
+            }
+        });
+
+        // Initialize all Research Demo components
+        function initResearchDemo() {
+            loadResearchStats();
+            // Overview tab is shown by default
+        }
+
+        // Load pipeline statistics for Overview tab
+        function loadResearchStats() {
+            fetch('/api/v1/research/stats/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.pipeline) {
+                        const p = data.pipeline;
+
+                        // Update pipeline flow numbers
+                        updateElement('pipeline-spiders', p.spiders.total);
+                        updateElement('pipeline-agents', p.agents.total);
+                        updateElement('pipeline-connections', p.network.connections);
+                        updateElement('pipeline-mythology', p.mythology_gate.quarantined);
+                        updateElement('pipeline-knowledge', p.outcomes.total_knowledge.toLocaleString());
+
+                        // Update detailed stats
+                        updateElement('stat-spiders-active', p.spiders.total);
+                        updateElement('stat-spiders-data', p.spiders.data_points_24h.toLocaleString());
+                        updateElement('stat-agents-total', p.agents.total);
+                        updateElement('stat-agents-knowledge', p.agents.with_knowledge);
+                        updateElement('stat-network-connections', p.network.connections);
+                        updateElement('stat-network-transfers', p.network.total_transfers.toLocaleString());
+                        updateElement('stat-network-strength', p.network.avg_strength);
+                        updateElement('stat-mythology-total', p.mythology_gate.quarantined);
+                        updateElement('stat-mythology-pending', p.mythology_gate.pending);
+                        updateElement('stat-mythology-decays', p.mythology_gate.connections_with_blocks);
+                    }
+                })
+                .catch(err => console.error('Failed to load research stats:', err));
+        }
+
+        function updateElement(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function updateStatCard(elementId, value, total) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                if (total !== null) {
+                    element.textContent = value + '/' + total;
+                } else {
+                    element.textContent = value.toLocaleString();
+                }
+            }
+        }
+
+        // Initialize D3.js Network Graph
+        function initNetworkGraph() {
+            const container = document.getElementById('research-network-graph');
+            if (!container) return;
+
+            // Clear previous graph
+            container.innerHTML = '<div class="text-center text-secondary py-5"><div class="spinner-border spinner-border-sm me-2"></div>Loading network graph...</div>';
+
+            fetch('/api/v1/research/network-graph/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        researchNodes = data.data.nodes;
+                        researchEdges = data.data.edges;
+                        renderNetworkGraph(container);
+                    }
+                })
+                .catch(err => {
+                    container.innerHTML = '<div class="text-center text-danger py-5">Failed to load network graph</div>';
+                    console.error('Network graph error:', err);
+                });
+        }
+
+        function renderNetworkGraph(container) {
+            // Clear container
+            container.innerHTML = '';
+
+            const width = container.clientWidth || 900;
+            const height = 600;
+
+            // Create SVG
+            researchSvg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .style('background', 'radial-gradient(circle at center, rgba(15, 23, 42, 1) 0%, rgba(2, 6, 23, 1) 100%)');
+
+            // Add zoom behavior
+            const g = researchSvg.append('g');
+            researchSvg.call(d3.zoom()
+                .scaleExtent([0.3, 3])
+                .on('zoom', (event) => g.attr('transform', event.transform)));
+
+            // Arrow marker for directed edges
+            researchSvg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 25)
+                .attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', '#06b6d4');
+
+            // Create force simulation
+            researchSimulation = d3.forceSimulation(researchNodes)
+                .force('link', d3.forceLink(researchEdges)
+                    .id(d => d.id)
+                    .distance(120)
+                    .strength(d => d.strength * 0.3))
+                .force('charge', d3.forceManyBody().strength(-400))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(40));
+
+            // Create edges
+            const link = g.append('g')
+                .selectAll('line')
+                .data(researchEdges)
+                .join('line')
+                .attr('stroke', d => d.mythology_blocks > 0 ? '#ef4444' : '#06b6d4')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', d => Math.max(1, d.strength * 3))
+                .attr('stroke-dasharray', d => d.mythology_blocks > 0 ? '5,5' : 'none')
+                .attr('marker-end', 'url(#arrowhead)');
+
+            // Create nodes
+            const node = g.append('g')
+                .selectAll('g')
+                .data(researchNodes)
+                .join('g')
+                .attr('class', 'research-node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // Node circles
+            node.append('circle')
+                .attr('r', d => 15 + Math.min(d.knowledge_count / 20, 15))
+                .attr('fill', d => CATEGORY_COLORS[d.category] || CATEGORY_COLORS.default)
+                .attr('stroke', d => d.mythology_blocks > 0 ? '#ef4444' : '#fff')
+                .attr('stroke-width', d => d.mythology_blocks > 0 ? 3 : 1.5)
+                .style('cursor', 'pointer')
+                .on('click', (event, d) => showAgentDetails(d));
+
+            // Node labels
+            node.append('text')
+                .text(d => d.name.length > 12 ? d.name.substring(0, 10) + '...' : d.name)
+                .attr('dy', 35)
+                .attr('text-anchor', 'middle')
+                .attr('fill', '#cbd5e1')
+                .attr('font-size', '10px')
+                .style('pointer-events', 'none');
+
+            // Pulse animation for active nodes
+            node.filter(d => d.is_active)
+                .select('circle')
+                .style('animation', 'pulse 2s ease-in-out infinite');
+
+            // Update positions on tick
+            researchSimulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            // Legend
+            addGraphLegend(researchSvg, width);
+        }
+
+        function addGraphLegend(svg, width) {
+            const legend = svg.append('g')
+                .attr('transform', `translate(${width - 150}, 20)`);
+
+            const categories = [
+                { name: 'Creation', color: CATEGORY_COLORS.creation },
+                { name: 'Research', color: CATEGORY_COLORS.research },
+                { name: 'Strategy', color: CATEGORY_COLORS.strategy },
+                { name: 'Executive', color: CATEGORY_COLORS.executive },
+                { name: 'Development', color: CATEGORY_COLORS.development }
+            ];
+
+            categories.forEach((cat, i) => {
+                const g = legend.append('g').attr('transform', `translate(0, ${i * 20})`);
+                g.append('circle').attr('r', 6).attr('fill', cat.color);
+                g.append('text').attr('x', 12).attr('dy', 4).attr('fill', '#cbd5e1').attr('font-size', '11px').text(cat.name);
+            });
+        }
+
+        // Wrapper for button onclick
+        function loadNetworkGraph() {
+            initNetworkGraph();
+        }
+
+        // Trigger a learning cycle
+        function triggerLearningCycle() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+
+            fetch('/api/v1/learning/run-cycle/', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    btn.textContent = '✓ Complete!';
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        initNetworkGraph();  // Refresh graph after learning
+                        loadResearchStats();
+                    }, 2000);
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    console.error('Learning cycle error:', err);
+                });
+        }
+
+        // Drag functions for D3
+        function dragstarted(event, d) {
+            if (!event.active) researchSimulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) researchSimulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Show agent details panel
+        function showAgentDetails(agent) {
+            const detailsDiv = document.getElementById('agent-details-panel');
+            if (!detailsDiv) return;
+
+            detailsDiv.innerHTML = `
+                <h6 class="mb-2" style="color: ${CATEGORY_COLORS[agent.category] || CATEGORY_COLORS.default}">
+                    ${agent.name}
+                </h6>
+                <div class="small">
+                    <p class="mb-1"><span class="text-secondary">Category:</span> ${agent.category}</p>
+                    <p class="mb-1"><span class="text-secondary">Knowledge:</span> ${agent.knowledge_count} items</p>
+                    <p class="mb-1"><span class="text-secondary">Mythology Blocks:</span> ${agent.mythology_blocks}</p>
+                    <p class="mb-0"><span class="text-secondary">Active:</span> ${agent.is_active ? '✓ Yes' : '✗ No'}</p>
+                </div>
+            `;
+            detailsDiv.style.display = 'block';
+        }
+
+        // Load Live Feed data
+        function loadLiveFeed() {
+            const container = document.getElementById('live-feed-container');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+
+            fetch('/api/v1/research/live-feed/?limit=50&hours=24')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data && data.data.events) {
+                        renderLiveFeed(container, data.data.events);
+                    }
+                })
+                .catch(err => {
+                    container.innerHTML = '<div class="text-danger">Failed to load live feed</div>';
+                });
+        }
+
+        function renderLiveFeed(container, events) {
+            if (events.length === 0) {
+                container.innerHTML = '<div class="text-secondary text-center py-5">No events in the last 24 hours</div>';
+                return;
+            }
+
+            const html = events.map(event => {
+                const isBlock = event.event_type === 'mythology_block';
+                const icon = isBlock ? '🚨' : '📚';
+                const color = isBlock ? 'text-danger' : 'text-cyan';
+                const time = new Date(event.timestamp).toLocaleTimeString();
+                const borderColor = isBlock ? '#ef4444' : '#06b6d4';
+
+                return `
+                    <div class="d-flex align-items-start gap-2 p-2 mb-2" style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; border-left: 3px solid ${borderColor};">
+                        <span style="font-size: 1.2em;">${icon}</span>
+                        <div class="flex-grow-1">
+                            <div class="small ${color}">${event.title}</div>
+                            <div class="small text-secondary">${event.teacher.name} → ${event.student.name}</div>
+                        </div>
+                        <small class="text-secondary">${time}</small>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Load Mythology Gate data
+        function loadMythologyGate() {
+            fetch('/api/v1/research/mythology-gate/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        renderMythologyGate(data);
+                    }
+                })
+                .catch(err => console.error('Failed to load mythology gate:', err));
+        }
+
+        function renderMythologyGate(data) {
+            const stats = data.stats || {};
+            const byStatus = stats.by_status || {};
+            const quarantine = data.quarantine || [];
+            const trustDecay = data.trust_decay_leaderboard || [];
+
+            // Update stats cards
+            updateElement('myth-pending', byStatus.pending || 0);
+            updateElement('myth-total', stats.total || 0);
+            updateElement('myth-approved', byStatus.approved || 0);
+            updateElement('myth-rejected', byStatus.rejected || 0);
+
+            // Update quarantine list
+            const quarantineList = document.getElementById('quarantine-list');
+            if (quarantineList) {
+                if (quarantine.length === 0) {
+                    quarantineList.innerHTML = '<p class="text-success text-center py-3">✅ Quarantine is empty - all knowledge is clean!</p>';
+                } else {
+                    quarantineList.innerHTML = quarantine.map(item => `
+                        <div class="p-2 mb-2 rounded" style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444;">
+                            <strong class="text-danger">${item.violation_type}</strong>
+                            <div class="small text-secondary">${item.teacher.name} → ${item.student.name}</div>
+                            <div class="small text-light">"${item.blocked_title}"</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Update trust decay list
+            const trustDecayList = document.getElementById('trust-decay-list');
+            if (trustDecayList) {
+                if (trustDecay.length === 0) {
+                    trustDecayList.innerHTML = '<p class="text-success text-center py-3">✅ No trust decay - all connections healthy!</p>';
+                } else {
+                    trustDecayList.innerHTML = trustDecay.map(item => `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                            <div class="small">
+                                ${item.teacher} → ${item.student}
+                            </div>
+                            <div>
+                                <span class="badge bg-danger">${item.mythology_blocks} blocks</span>
+                                <span class="badge bg-warning text-dark">${(item.strength * 100).toFixed(0)}%</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        // Auto-refresh for Research Demo (every 30 seconds when visible)
+        setInterval(() => {
+            const researchTab = document.getElementById('research-demo');
+            if (researchTab && researchTab.classList.contains('show') && researchTab.classList.contains('active')) {
+                loadResearchStats();
+            }
+        }, 30000);
+
+        // END SESSION 542: RESEARCH DEMO
         // ====================================================================
     </script>
 

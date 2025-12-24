@@ -61,6 +61,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/intelligence/cross-references/',  # Cross-reference mappings
         '/api/autonomous/situations/',  # Situations list for Command Center
         '/api/autonomous/trigger-events/',  # Trigger events for Command Center
+
+        # Session 542: Research Demo APIs (read-only visualization for research presentations)
+        '/api/v1/research/network-graph/',  # D3.js graph data
+        '/api/v1/research/live-feed/',  # Learning event feed
+        '/api/v1/research/stats/',  # Pipeline statistics
+        '/api/v1/research/mythology-gate/',  # Quarantine visualization
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
