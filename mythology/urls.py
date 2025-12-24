@@ -26,4 +26,11 @@ urlpatterns = [
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('notifications/<uuid:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+
+    # Session 541: Mythology Quarantine API
+    path('quarantine/', views.quarantine_list, name='quarantine_list'),
+    path('quarantine/stats/', views.quarantine_stats, name='quarantine_stats'),
+    path('quarantine/<uuid:quarantine_id>/', views.quarantine_detail, name='quarantine_detail'),
+    path('quarantine/<uuid:quarantine_id>/approve/', views.quarantine_approve, name='quarantine_approve'),
+    path('quarantine/<uuid:quarantine_id>/reject/', views.quarantine_reject, name='quarantine_reject'),
 ]
