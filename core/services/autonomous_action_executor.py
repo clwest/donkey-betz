@@ -490,3 +490,83 @@ class AutonomousActionExecutor:
             'delay_hours': delay_hours,
             'message': f"Follow-up scheduled on '{topic}' in {delay_hours} hours"
         }
+
+    def register_concerns_from_thought(self, thought_record) -> Dict[str, Any]:
+        """
+        Register all concerns from a thinking cycle for tracking.
+
+        Args:
+            thought_record: The ThoughtRecord containing concerns
+
+        Returns:
+            Summary of registered concerns
+        """
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        registered = tracker.register_concerns_from_cycle(thought_record)
+
+        return {
+            'total_concerns': len(registered),
+            'new_concerns': sum(1 for r in registered if r.get('is_new')),
+            'recurring_concerns': sum(1 for r in registered if not r.get('is_new')),
+            'concerns': [
+                {
+                    'text': r['concern'].concern_text[:50],
+                    'status': r['status'],
+                    'is_new': r['is_new']
+                }
+                for r in registered
+            ]
+        }
+
+    def link_action_to_concerns(self, action) -> Dict[str, Any]:
+        """
+        Link an executed action to concerns it might address.
+
+        Args:
+            action: The AutonomousAction that was executed
+
+        Returns:
+            Summary of linked concerns
+        """
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        linked = tracker.link_action_to_concerns(action)
+
+        return {
+            'linked_count': len(linked),
+            'concerns': [
+                {
+                    'id': str(c.id),
+                    'text': c.concern_text[:50],
+                    'status': c.status
+                }
+                for c in linked
+            ]
+        }
+
+    def verify_concerns(self) -> Dict[str, Any]:
+        """
+        Run verification on all active concerns.
+
+        Returns:
+            Verification summary
+        """
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        return tracker.verify_all_active_concerns()
+
+    def get_concern_dashboard(self) -> Dict[str, Any]:
+        """
+        Get concern tracking dashboard data.
+
+        Returns:
+            Dashboard data for UI
+        """
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        return tracker.get_concern_dashboard()

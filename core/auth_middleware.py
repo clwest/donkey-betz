@@ -79,6 +79,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/reasoning/task/',  # Check task status
         '/api/v1/reasoning/config/',  # View/update config
         '/api/v1/reasoning/dashboard/',  # Dashboard data
+
+        # Session 546: Concern Tracking APIs
+        '/api/v1/reasoning/concerns/',  # Concern dashboard
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

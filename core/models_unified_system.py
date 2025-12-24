@@ -19307,6 +19307,117 @@ class AutonomousAction(models.Model):
         return None
 
 
+class TrackedConcern(models.Model):
+    """
+    Tracks concerns across thinking cycles to ensure they are addressed.
+
+    Each concern identified by the ThinkingAgent is tracked here to create
+    a feedback loop that verifies whether concerns are actually resolved.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Concern identification
+    concern_hash = models.CharField(
+        max_length=64,
+        unique=True,
+        help_text="Hash of concern text for deduplication"
+    )
+    concern_text = models.TextField(help_text="The concern description")
+    category = models.CharField(
+        max_length=50,
+        default="general",
+        help_text="Category of concern (e.g., spider_activity, knowledge_silos, decision_bottleneck)"
+    )
+    severity = models.CharField(
+        max_length=20,
+        default="medium",
+        choices=[
+            ("critical", "Critical"),
+            ("high", "High"),
+            ("medium", "Medium"),
+            ("low", "Low"),
+        ]
+    )
+
+    # Lifecycle tracking
+    status = models.CharField(
+        max_length=20,
+        default="active",
+        choices=[
+            ("active", "Active - Not yet addressed"),
+            ("in_progress", "In Progress - Actions taken"),
+            ("monitoring", "Monitoring - Awaiting verification"),
+            ("resolved", "Resolved - Verified fixed"),
+            ("recurring", "Recurring - Came back after resolution"),
+            ("accepted", "Accepted - Known limitation"),
+        ]
+    )
+
+    # Origin tracking
+    first_seen_cycle = models.ForeignKey(
+        ThoughtRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="concerns_first_seen",
+        help_text="Thinking cycle where this concern first appeared"
+    )
+    last_seen_cycle = models.ForeignKey(
+        ThoughtRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="concerns_last_seen",
+        help_text="Most recent cycle where this concern was detected"
+    )
+    times_detected = models.IntegerField(default=1, help_text="How many cycles detected this concern")
+
+    # Actions taken to address it
+    actions_taken = models.ManyToManyField(
+        AutonomousAction,
+        blank=True,
+        related_name="addressed_concerns",
+        help_text="Actions taken to address this concern"
+    )
+
+    # Verification
+    verification_metric = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="What metric to check to verify resolution (e.g., 'spider_data_24h > 0')"
+    )
+    last_verification_at = models.DateTimeField(null=True, blank=True)
+    last_verification_result = models.JSONField(
+        default=dict,
+        help_text="Result of the last verification check"
+    )
+    resolution_notes = models.TextField(blank=True, help_text="Notes on how it was resolved")
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Tracked Concern"
+        verbose_name_plural = "Tracked Concerns"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.status}] {self.concern_text[:50]}..."
+
+    @property
+    def days_active(self):
+        """How many days this concern has been active."""
+        if self.resolved_at:
+            return (self.resolved_at - self.created_at).days
+        return (timezone.now() - self.created_at).days
+
+    @property
+    def is_stale(self):
+        """Concern is stale if active for more than 7 days without resolution."""
+        return self.status == 'active' and self.days_active > 7
+
+
 class ReasoningConfiguration(models.Model):
     """
     Configuration for the Autonomous Reasoning Engine.
