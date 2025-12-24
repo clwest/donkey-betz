@@ -73947,11 +73947,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         function renderSelfBlog(container, blog, allBlogs) {
             const statsHtml = blog.stats_snapshot ? `
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge" style="background: #8b5cf6;" title="Active AI Agents">🤖 ${blog.stats_snapshot.agents || 0} Agents</span>
+                    <span class="badge" style="background: #06b6d4;" title="Knowledge Sources">📚 ${(blog.stats_snapshot.knowledge_sources || 0).toLocaleString()} Knowledge</span>
+                    <span class="badge" style="background: #22c55e;" title="Learning Connections">🔗 ${blog.stats_snapshot.connections || 0} Connections</span>
+                    <span class="badge" style="background: #f59e0b;" title="Knowledge Transfers">📤 ${(blog.stats_snapshot.transfers || 0).toLocaleString()} Transfers</span>
+                </div>
                 <div class="d-flex flex-wrap gap-2 mb-4">
-                    <span class="badge" style="background: #8b5cf6;">${blog.stats_snapshot.agents || 0} Agents</span>
-                    <span class="badge" style="background: #06b6d4;">${(blog.stats_snapshot.knowledge_sources || 0).toLocaleString()} Knowledge</span>
-                    <span class="badge" style="background: #22c55e;">${blog.stats_snapshot.connections || 0} Connections</span>
-                    <span class="badge" style="background: #f59e0b;">${(blog.stats_snapshot.transfers || 0).toLocaleString()} Transfers</span>
+                    <span class="badge" style="background: #ec4899;" title="Agent Conversations">💬 ${(blog.stats_snapshot.conversations || 0).toLocaleString()} Conversations</span>
+                    <span class="badge" style="background: #a855f7;" title="Agent Dreams">💭 ${(blog.stats_snapshot.dreams || 0).toLocaleString()} Dreams</span>
+                    <span class="badge" style="background: #14b8a6;" title="Boardroom Decisions">🏛️ ${blog.stats_snapshot.decisions || 0} Decisions</span>
+                    <span class="badge" style="background: #64748b;" title="Spider Data Points">🕷️ ${(blog.stats_snapshot.spider_data_total || 0).toLocaleString()} Spider Data</span>
                 </div>
             ` : '';
 
