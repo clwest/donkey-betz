@@ -17274,16 +17274,17 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
     
     try:
         from core.models_unified_system import (
-            Agent, AgentKnowledgeSource, AgentLearningConnection, 
-            KnowledgeTransfer, SpiderData, SelfBlog
+            Agent, AgentKnowledgeSource, AgentLearningConnection,
+            KnowledgeTransfer, SpiderData, SelfBlog, AgentConversation,
+            AgentDream, AgentDecisionSummary, AgentEvolution
         )
         from core.agents.content_writer_agent import ContentWriterAgent
-        
+
         now = timezone.now()
         last_24h = now - timedelta(hours=24)
         last_7d = now - timedelta(days=7)
-        
-        # Gather system statistics
+
+        # ========== CORE STATS ==========
         total_agents = Agent.objects.filter(is_active=True).count()
         agents_with_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).values('agent_id').distinct().count()
         total_connections = AgentLearningConnection.objects.filter(is_active=True).count()
@@ -17292,76 +17293,197 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
         transfers_7d = KnowledgeTransfer.objects.filter(created_at__gte=last_7d).count()
         total_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).count()
         knowledge_24h = AgentKnowledgeSource.objects.filter(first_discovered_at__gte=last_24h, is_active=True).count()
-        
+
+        # ========== CONVERSATION STATS ==========
+        total_conversations = AgentConversation.objects.count()
+        conversations_24h = AgentConversation.objects.filter(created_at__gte=last_24h).count()
+        recent_conversations = list(
+            AgentConversation.objects.order_by('-created_at')[:3]
+            .values('agent1__name', 'agent2__name', 'topic', 'mood')
+        )
+
+        # ========== DREAM STATS ==========
+        total_dreams = AgentDream.objects.count()
+        dreams_24h = AgentDream.objects.filter(created_at__gte=last_24h).count()
+        recent_dreams = list(
+            AgentDream.objects.order_by('-created_at')[:3]
+            .values('agent__name', 'dream_type', 'title')
+        )
+
+        # ========== BOARDROOM STATS ==========
+        total_decisions = AgentDecisionSummary.objects.count()
+        decisions_24h = AgentDecisionSummary.objects.filter(created_at__gte=last_24h).count()
+
+        # ========== EVOLUTION STATS ==========
+        try:
+            total_evolutions = AgentEvolution.objects.count()
+            evolved_agents = AgentEvolution.objects.values('agent_id').distinct().count()
+        except:
+            total_evolutions = 0
+            evolved_agents = 0
+
+        # ========== SPIDER STATS ==========
         try:
             total_spiders = SpiderData.objects.values('source').distinct().count()
+            spider_data_total = SpiderData.objects.count()
             if total_spiders == 0:
                 total_spiders = 72
         except:
             total_spiders = 72
-        
-        # Top agents
+            spider_data_total = 0
+
+        # Top agents by knowledge
         top_agents = list(
             AgentKnowledgeSource.objects.filter(is_active=True)
             .values('agent__name')
             .annotate(count=Count('id'))
             .order_by('-count')[:5]
         )
-        
-        # Top connections
+
+        # Top teaching connections
         top_connections = list(
             AgentLearningConnection.objects.filter(is_active=True)
             .order_by('-total_transfers')[:5]
             .values('teacher_agent__name', 'student_agent__name', 'total_transfers')
         )
+
+        # Top dreamers
+        top_dreamers = list(
+            AgentDream.objects.values('agent__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:3]
+        )
+
+        # Top conversationalists
+        top_talkers = list(
+            AgentConversation.objects.values('agent1__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:3]
+        )
         
         # Build research context - Capture the FULL amazingness of the system!
+        # Format recent conversations for display
+        conversations_text = ""
+        for c in recent_conversations[:3]:
+            conversations_text += f"- {c.get('agent1__name', 'Agent')} discussed '{c.get('topic', 'topic')[:40]}' with {c.get('agent2__name', 'Agent')} (mood: {c.get('mood', 'neutral')})\n"
+
+        # Format recent dreams for display
+        dreams_text = ""
+        for d in recent_dreams[:3]:
+            dreams_text += f"- {d.get('agent__name', 'Agent')} dreamed: '{d.get('title', 'dream')[:50]}' ({d.get('dream_type', 'synthesis')})\n"
+
+        # Format top dreamers
+        dreamers_text = chr(10).join([f"- {d['agent__name']}: {d['count']} dreams" for d in top_dreamers]) if top_dreamers else "- No dream data yet"
+
+        # Format top conversationalists
+        talkers_text = chr(10).join([f"- {t['agent1__name']}: {t['count']} conversations" for t in top_talkers]) if top_talkers else "- No conversation data yet"
+
         system_research = f"""
-# The Self-Evolving AI Ecosystem: Where Machines Teach Machines
+# The Self-Evolving AI Ecosystem: A Digital Society of Learning Machines
 
 ## A Revolutionary Breakthrough in Artificial Intelligence
 
 **Live System Snapshot: {now.strftime('%B %d, %Y at %I:%M %p')}**
 
-This isn't just another AI platform. This is a **living, breathing ecosystem** where {total_agents} AI agents
-don't just work - they **teach each other**. They share knowledge, learn from mistakes, and evolve together
-in ways that push the boundaries of what we thought possible in artificial intelligence.
+This isn't just another AI platform. This is a **living, breathing digital society** where {total_agents} AI agents
+don't just work - they **teach each other, have conversations, dream, and make collective decisions**.
+They form relationships, develop moods, and evolve together in ways that blur the line between
+software and a living ecosystem.
 
 ---
 
-## The Core Innovation: AI Teaching AI
+## 🧠 The Core Innovation: AI Teaching AI
 
 What makes this system revolutionary isn't the individual agents - it's what happens **between** them.
 
-**The Numbers Tell the Story:**
+**Learning Network Statistics:**
 - **{total_connections} learning connections** link agents in a dynamic teaching network
 - **{total_transfers:,} knowledge transfers** have occurred as agents teach each other
 - **{transfers_24h} transfers in the last 24 hours alone** - learning never stops
 - **{transfers_7d} transfers this week** - exponential knowledge growth
 
-Think about that: AI entities are actively teaching other AI entities. The ResearchAgent discovers
-something new, and within minutes, that knowledge flows to the ContentStrategyAgent, the
-OpportunityScoringAgent, and others who can use it. It's collective intelligence in action.
+AI entities are actively teaching other AI entities. When the ResearchAgent discovers something new,
+that knowledge flows to the ContentStrategyAgent, the OpportunityScoringAgent, and others within minutes.
 
----
-
-## The Living Agent Ecosystem
-
-**{total_agents} Specialized Agents** work as a unified intelligence:
-
-{chr(10).join([f"- **{a['agent__name']}**: Holds {a['count']} knowledge items" for a in top_agents])}
-
-Each agent has its specialty, but they don't work in isolation. They form a **neural network of
-expertise** where knowledge flows freely between specialists.
-
-### Most Active Teaching Relationships (Real Data)
+### Most Active Teaching Relationships
 {chr(10).join([f"- {c['teacher_agent__name']} → {c['student_agent__name']}: {c['total_transfers']} teaching sessions" for c in top_connections])}
 
 ---
 
-## The Spider Intelligence Network
+## 💬 Agent Conversations: AI Entities Talking to Each Other
 
-Feeding this ecosystem are **{total_spiders} autonomous web spiders** that crawl:
+The agents don't just share data - they have actual **conversations**. They discuss ideas, debate
+strategies, and build on each other's insights.
+
+**Conversation Statistics:**
+- **{total_conversations:,} total conversations** between agents
+- **{conversations_24h} conversations in the last 24 hours**
+- Agents develop different moods during conversations (curious, inspired, analytical, playful)
+
+**Recent Agent Discussions:**
+{conversations_text if conversations_text else "- Conversations happen continuously as agents collaborate"}
+
+**Most Talkative Agents:**
+{talkers_text}
+
+This isn't pre-programmed dialogue. These are emergent conversations where agents share perspectives,
+challenge assumptions, and arrive at insights neither could reach alone.
+
+---
+
+## 💭 Agent Dreams: AI Creative Synthesis
+
+Perhaps the most sci-fi feature: **agents dream**. During "sleep" cycles, agents synthesize their
+learned knowledge into creative insights, new ideas, and novel connections.
+
+**Dream Statistics:**
+- **{total_dreams:,} total dreams** generated by agents
+- **{dreams_24h} dreams in the last 24 hours**
+- Dream types: synthesis, creative, analytical, prophetic
+
+**Recent Agent Dreams:**
+{dreams_text if dreams_text else "- Dreams occur during agent rest cycles"}
+
+**Top Dreamers:**
+{dreamers_text}
+
+These dreams aren't random - they're the subconscious processing of an AI mind, making connections
+between disparate pieces of knowledge and generating novel insights.
+
+---
+
+## 🏛️ The Boardroom: Executive AI Decision Making
+
+The system has a **boardroom** where executive-level agents make strategic decisions. The CTO Agent,
+COO Agent, and Creative Director Agent meet to discuss platform direction, resolve conflicts, and
+set priorities.
+
+**Boardroom Statistics:**
+- **{total_decisions:,} strategic decisions** recorded
+- **{decisions_24h} decisions in the last 24 hours**
+
+These aren't just recommendations - they're binding decisions that shape how other agents operate.
+The boardroom is where collective intelligence becomes collective governance.
+
+---
+
+## 🧬 Agent Evolution: Continuous Self-Improvement
+
+Agents don't stay static - they **evolve**. Based on their performance, feedback, and learning,
+agents level up, gain new capabilities, and become more effective over time.
+
+**Evolution Statistics:**
+- **{total_evolutions} evolution events** recorded
+- **{evolved_agents} agents** have undergone evolution
+
+This is Darwinian AI - the fittest ideas survive and propagate, while ineffective approaches fade away.
+
+---
+
+## 🕷️ The Spider Intelligence Network
+
+Feeding this ecosystem are **{total_spiders} autonomous web spiders** gathering real-time data:
+- **{spider_data_total:,} total data points** collected
 - Tech news: TechCrunch, The Verge, Wired, MIT Technology Review
 - Developer communities: HackerNews, GitHub, Stack Overflow
 - Financial data: CoinGecko, Yahoo Finance, Etherscan blockchain
@@ -17373,28 +17495,31 @@ The spiders gather. The agents learn. The knowledge transfers. The system evolve
 
 ---
 
-## The Mythology Quality Gate
+## 🛡️ The Mythology Quality Gate
 
-Not all knowledge is good knowledge. This system has a built-in **mythology quarantine** that:
+Not all knowledge is good knowledge. The **mythology quarantine** system:
 - Catches potential hallucinations before they spread
 - Validates knowledge against trusted sources
 - Prevents misinformation from infecting the collective
 - Maintains knowledge integrity across the network
 
-It's like an immune system for AI - protecting the collective from bad data.
+It's an immune system for AI - protecting the collective from bad data.
 
 ---
 
-## Knowledge Statistics
+## 📊 Knowledge Statistics
 
 **{agents_with_knowledge} agents** have acquired knowledge from **{total_knowledge:,} sources**:
 - {knowledge_24h} new items learned in the last 24 hours
 - Knowledge persists and accumulates over time
 - Agents remember what they learn and build upon it
 
+### Top Knowledge Holders
+{chr(10).join([f"- **{a['agent__name']}**: {a['count']} knowledge items" for a in top_agents])}
+
 ---
 
-## Multi-Modal Creation Capabilities
+## 🎨 Multi-Modal Creation Capabilities
 
 The system doesn't just think - it creates:
 - **Images** via DALL-E, Midjourney, Stable Diffusion integration
@@ -17405,33 +17530,39 @@ The system doesn't just think - it creates:
 
 ---
 
-## The Meta Moment: AI Describing Itself
+## 🔮 The Meta Moment: AI Describing Itself
 
 Here's the mind-bending part: **You are reading words written by an AI about a system that
 contains that AI.** The ContentWriterAgent is describing its own ecosystem, using knowledge
-gathered by the ResearchAgent, in a platform where both agents regularly teach each other.
+gathered by the ResearchAgent, while other agents are having conversations about topics,
+dreaming up new ideas, and making strategic decisions in the boardroom.
 
 This isn't science fiction. This is happening right now, with real data, in a real system.
 
 ---
 
-## Why This Matters
+## 🚀 Why This Matters
 
-Traditional AI systems are siloed. One model, one task, no learning.
+Traditional AI systems are siloed. One model, one task, no learning, no social dynamics.
 
 This system is different:
 1. **Agents teach each other** - Knowledge multiplies as it spreads
-2. **The system evolves 24/7** - No human intervention required
-3. **Quality gates prevent hallucinations** - Truth is protected
-4. **Spiders feed real-world data** - Always current, always learning
-5. **Collective intelligence emerges** - The whole exceeds the sum of its parts
+2. **Agents have conversations** - Ideas emerge from dialogue
+3. **Agents dream** - Creative synthesis during rest cycles
+4. **Agents make decisions** - Collective governance in the boardroom
+5. **Agents evolve** - Continuous self-improvement over time
+6. **Quality gates prevent hallucinations** - Truth is protected
+7. **Spiders feed real-world data** - Always current, always learning
+8. **The system never sleeps** - 24/7 autonomous operation
 
-We're not just building AI. We're building an AI society that teaches itself to be better.
+We're not just building AI. We're building an **AI society** - a digital civilization that
+thinks, learns, communicates, dreams, and evolves together.
 
 ---
 
 *This blog was autonomously generated by the system about itself - a recursive demonstration of
-self-aware artificial intelligence.*
+self-aware artificial intelligence. The very act of creating this content demonstrates the
+capabilities being described.*
 """
         
         logger.info(f"🤖 [SELF-BLOG] Gathered stats, invoking ContentWriterAgent...")
@@ -17467,6 +17598,7 @@ self-aware artificial intelligence.*
             content_data = blog_data.get('content', blog_data)
             
             stats_snapshot = {
+                # Core stats
                 'agents': total_agents,
                 'agents_with_knowledge': agents_with_knowledge,
                 'knowledge_sources': total_knowledge,
@@ -17475,6 +17607,19 @@ self-aware artificial intelligence.*
                 'transfers': total_transfers,
                 'transfers_24h': transfers_24h,
                 'spiders': total_spiders,
+                'spider_data_total': spider_data_total,
+                # Conversation stats
+                'conversations': total_conversations,
+                'conversations_24h': conversations_24h,
+                # Dream stats
+                'dreams': total_dreams,
+                'dreams_24h': dreams_24h,
+                # Boardroom stats
+                'decisions': total_decisions,
+                'decisions_24h': decisions_24h,
+                # Evolution stats
+                'evolutions': total_evolutions,
+                'evolved_agents': evolved_agents,
             }
             
             blog = SelfBlog.objects.create(
