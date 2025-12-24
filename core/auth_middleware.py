@@ -67,6 +67,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/research/live-feed/',  # Learning event feed
         '/api/v1/research/stats/',  # Pipeline statistics
         '/api/v1/research/mythology-gate/',  # Quarantine visualization
+        # Session 543: Self-Blog APIs
+        '/api/v1/research/self-blog/',  # Get latest self-blog
+        '/api/v1/research/self-blog/generate/',  # Generate new self-blog
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
