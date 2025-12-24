@@ -3839,6 +3839,7 @@ def run_agent_learning_cycle():
         ).select_related('teacher_agent', 'student_agent').order_by('?')[:10]  # Random 10
 
         transfers_made = 0
+        mythology_blocks = 0  # Session 541: Track mythology validation blocks
         learning_events = []
 
         for connection in connections:
@@ -3894,7 +3895,32 @@ def run_agent_learning_cycle():
                     if student_has_similar:
                         continue
 
-                # Knowledge is new - proceed with transfer
+                # Session 541: Mythology validation for knowledge transfers
+                # Prevents unrealistic claims from propagating through the learning network
+                try:
+                    from ai_core.agents.mythology_validator import mythology_enforcer
+
+                    # Validate the knowledge content before transfer
+                    knowledge_content = knowledge.summary or knowledge.title or ""
+                    validation = mythology_enforcer.enforce(
+                        f"{teacher.name}→{student.name}",
+                        knowledge_content
+                    )
+
+                    if validation.get('mythology_corrected'):
+                        # Knowledge contains unrealistic claims - skip transfer
+                        mythology_blocks += 1
+                        logger.warning(
+                            f"🚨 [MYTHOLOGY] Blocked transfer {teacher.name}→{student.name}: "
+                            f"'{knowledge.title[:50]}' contained {validation.get('violations', 0)} violations"
+                        )
+                        continue
+
+                except Exception as myth_err:
+                    # If mythology validation fails, log but continue (don't block learning)
+                    logger.warning(f"⚠️ [MYTHOLOGY] Validation error (continuing): {myth_err}")
+
+                # Knowledge is new and validated - proceed with transfer
                 # Session 350: Strip existing [Learned] prefixes to prevent accumulation
                 import re
                 clean_title = re.sub(r'^\[Learned\]\s*', '', knowledge.title).strip()
@@ -4041,14 +4067,17 @@ def run_agent_learning_cycle():
             except Exception as redis_err:
                 logger.warning(f"Redis broadcast failed: {redis_err}")
 
+        # Session 541: Include mythology blocks in log
+        mythology_msg = f", {mythology_blocks} blocked by mythology" if mythology_blocks > 0 else ""
         logger.info(
             f"🧠 [LEARNING] Cycle complete: {transfers_made} knowledge transfers made "
-            f"across {len(connections)} connections"
+            f"across {len(connections)} connections{mythology_msg}"
         )
 
         return {
             'status': 'success',
             'transfers_made': transfers_made,
+            'mythology_blocks': mythology_blocks,  # Session 541: Track quality gate blocks
             'connections_processed': len(connections),
             'learning_events': learning_events,
             'timestamp': timezone.now().isoformat()
