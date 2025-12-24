@@ -359,6 +359,53 @@ def stats_api(request):
             is_active=True
         ).aggregate(avg=Avg('confidence_score'))['avg'] or 0
 
+        # === NEW: Detailed Analytics ===
+
+        # Transfers per hour (last 24h)
+        last_1h = now - timedelta(hours=1)
+        transfers_1h = KnowledgeTransfer.objects.filter(created_at__gte=last_1h).count()
+        transfers_per_hour = round(transfers_24h / 24, 1) if transfers_24h else 0
+
+        # Top knowledge topics (most shared across agents)
+        top_topics = list(
+            AgentKnowledgeSource.objects.filter(is_active=True)
+            .values('title')
+            .annotate(agent_count=Count('agent_id', distinct=True))
+            .order_by('-agent_count')[:5]
+        )
+
+        # Most knowledgeable agents
+        top_knowledgeable = list(
+            AgentKnowledgeSource.objects.filter(is_active=True, agent__is_active=True)
+            .values('agent__name')
+            .annotate(knowledge_count=Count('id'))
+            .order_by('-knowledge_count')[:5]
+        )
+
+        # Top teachers (most outgoing transfers)
+        top_teachers = list(
+            KnowledgeTransfer.objects.filter(created_at__gte=last_24h)
+            .values('connection__teacher_agent__name')
+            .annotate(transfer_count=Count('id'))
+            .order_by('-transfer_count')[:5]
+        )
+
+        # Top students (most incoming transfers)
+        top_students = list(
+            KnowledgeTransfer.objects.filter(created_at__gte=last_24h)
+            .values('connection__student_agent__name')
+            .annotate(transfer_count=Count('id'))
+            .order_by('-transfer_count')[:5]
+        )
+
+        # Most active connections
+        top_connections = list(
+            AgentLearningConnection.objects.filter(is_active=True)
+            .select_related('teacher_agent', 'student_agent')
+            .order_by('-total_transfers')[:5]
+            .values('teacher_agent__name', 'student_agent__name', 'total_transfers', 'strength')
+        )
+
         return Response({
             'success': True,
             'pipeline': {
@@ -405,6 +452,15 @@ def stats_api(request):
                 'agents_learning': total_agents,
                 'knowledge_flowing': total_transfers,
                 'myths_blocked': quarantine_total,
+            },
+            'analytics': {
+                'transfers_per_hour': transfers_per_hour,
+                'transfers_last_hour': transfers_1h,
+                'top_topics': top_topics,
+                'top_knowledgeable': top_knowledgeable,
+                'top_teachers': top_teachers,
+                'top_students': top_students,
+                'top_connections': top_connections,
             }
         })
 
