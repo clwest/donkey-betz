@@ -821,3 +821,253 @@ def mark_all_notifications_read(request):
         return Response({'success': True}, status=200)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+# =============================================================================
+# Session 541: Mythology Quarantine API
+# =============================================================================
+
+@api_view(['GET'])
+def quarantine_list(request):
+    """
+    List quarantined knowledge transfers blocked by mythology validation.
+
+    GET /api/v1/mythology/quarantine/
+
+    Query params:
+        status: pending|approved|rejected|edited (default: all)
+        teacher: Filter by teacher agent name
+        limit: Max items to return (default: 50)
+    """
+    try:
+        from core.models import MythologyQuarantine
+
+        queryset = MythologyQuarantine.objects.all()
+
+        # Filter by status
+        status = request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+
+        # Filter by teacher
+        teacher = request.GET.get('teacher')
+        if teacher:
+            queryset = queryset.filter(teacher_agent__name__icontains=teacher)
+
+        # Limit results
+        limit = int(request.GET.get('limit', 50))
+        queryset = queryset.order_by('-created_at')[:limit]
+
+        items = []
+        for q in queryset:
+            items.append({
+                'id': str(q.id),
+                'teacher': q.teacher_agent.name,
+                'student': q.student_agent.name,
+                'blocked_title': q.blocked_title,
+                'blocked_content': q.blocked_content[:500] if q.blocked_content else '',
+                'violation_type': q.violation_type,
+                'violation_count': q.violation_count,
+                'violation_patterns': q.violation_patterns,
+                'mythology_warning': q.mythology_warning,
+                'spider_sources': q.spider_sources,
+                'status': q.status,
+                'created_at': q.created_at.isoformat(),
+                'reviewed_at': q.reviewed_at.isoformat() if q.reviewed_at else None,
+                'reviewed_by': q.reviewed_by,
+            })
+
+        # Get summary stats
+        total = MythologyQuarantine.objects.count()
+        pending = MythologyQuarantine.objects.filter(status='pending').count()
+
+        return Response({
+            'success': True,
+            'items': items,
+            'total': total,
+            'pending': pending,
+            'returned': len(items),
+        })
+    except Exception as e:
+        logger.exception(f"Quarantine list error: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def quarantine_detail(request, quarantine_id):
+    """
+    Get details of a specific quarantined item.
+
+    GET /api/v1/mythology/quarantine/<uuid>/
+    """
+    try:
+        from core.models import MythologyQuarantine
+
+        q = MythologyQuarantine.objects.select_related(
+            'teacher_agent', 'student_agent', 'connection', 'source_knowledge'
+        ).get(id=quarantine_id)
+
+        return Response({
+            'success': True,
+            'item': {
+                'id': str(q.id),
+                'teacher': {
+                    'name': q.teacher_agent.name,
+                    'id': str(q.teacher_agent.id),
+                },
+                'student': {
+                    'name': q.student_agent.name,
+                    'id': str(q.student_agent.id),
+                },
+                'connection': {
+                    'id': str(q.connection.id) if q.connection else None,
+                    'strength': q.connection.strength if q.connection else None,
+                    'mythology_blocks': q.connection.mythology_blocks if q.connection else 0,
+                },
+                'source_knowledge': {
+                    'id': str(q.source_knowledge.id) if q.source_knowledge else None,
+                    'title': q.source_knowledge.title if q.source_knowledge else None,
+                    'is_active': q.source_knowledge.is_active if q.source_knowledge else None,
+                },
+                'blocked_title': q.blocked_title,
+                'blocked_content': q.blocked_content,
+                'blocked_summary': q.blocked_summary,
+                'violation_type': q.violation_type,
+                'violation_count': q.violation_count,
+                'violation_patterns': q.violation_patterns,
+                'mythology_warning': q.mythology_warning,
+                'spider_sources': q.spider_sources,
+                'source_urls': q.source_urls,
+                'status': q.status,
+                'created_at': q.created_at.isoformat(),
+                'reviewed_at': q.reviewed_at.isoformat() if q.reviewed_at else None,
+                'reviewed_by': q.reviewed_by,
+                'review_notes': q.review_notes,
+            }
+        })
+    except MythologyQuarantine.DoesNotExist:
+        return Response({'error': 'Quarantine item not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Quarantine detail error: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+def quarantine_approve(request, quarantine_id):
+    """
+    Approve a quarantined item (mark as false positive).
+
+    POST /api/v1/mythology/quarantine/<uuid>/approve/
+    """
+    try:
+        from core.models import MythologyQuarantine
+
+        q = MythologyQuarantine.objects.get(id=quarantine_id)
+        reviewed_by = request.user.username if request.user.is_authenticated else 'anonymous'
+        q.approve(reviewed_by=reviewed_by)
+
+        logger.info(f"🟢 [QUARANTINE] Approved: {q.blocked_title[:50]} by {reviewed_by}")
+
+        return Response({
+            'success': True,
+            'message': f'Quarantine item approved as false positive',
+            'id': str(q.id),
+            'status': q.status,
+        })
+    except MythologyQuarantine.DoesNotExist:
+        return Response({'error': 'Quarantine item not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Quarantine approve error: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+def quarantine_reject(request, quarantine_id):
+    """
+    Reject a quarantined item (confirm as myth, optionally deactivate source).
+
+    POST /api/v1/mythology/quarantine/<uuid>/reject/
+    Body: { "notes": "optional review notes", "deactivate_source": true }
+    """
+    try:
+        from core.models import MythologyQuarantine
+
+        q = MythologyQuarantine.objects.get(id=quarantine_id)
+        reviewed_by = request.user.username if request.user.is_authenticated else 'anonymous'
+        notes = request.data.get('notes', '')
+
+        q.reject(reviewed_by=reviewed_by, notes=notes)
+
+        # Optionally deactivate the source knowledge
+        if request.data.get('deactivate_source') and q.source_knowledge:
+            q.source_knowledge.is_active = False
+            q.source_knowledge.save()
+
+        logger.info(f"🔴 [QUARANTINE] Rejected: {q.blocked_title[:50]} by {reviewed_by}")
+
+        return Response({
+            'success': True,
+            'message': f'Quarantine item rejected as confirmed myth',
+            'id': str(q.id),
+            'status': q.status,
+            'source_deactivated': request.data.get('deactivate_source', False),
+        })
+    except MythologyQuarantine.DoesNotExist:
+        return Response({'error': 'Quarantine item not found'}, status=404)
+    except Exception as e:
+        logger.exception(f"Quarantine reject error: {e}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def quarantine_stats(request):
+    """
+    Get quarantine statistics.
+
+    GET /api/v1/mythology/quarantine/stats/
+    """
+    try:
+        from core.models import MythologyQuarantine, AgentLearningConnection
+        from django.db.models import Count, Sum
+
+        # Basic counts
+        total = MythologyQuarantine.objects.count()
+        by_status = dict(MythologyQuarantine.objects.values('status').annotate(count=Count('id')).values_list('status', 'count'))
+
+        # By violation type
+        by_type = dict(MythologyQuarantine.objects.values('violation_type').annotate(count=Count('id')).values_list('violation_type', 'count'))
+
+        # Top teachers with blocks
+        top_teachers = list(
+            MythologyQuarantine.objects.values('teacher_agent__name')
+            .annotate(blocks=Count('id'))
+            .order_by('-blocks')[:10]
+        )
+
+        # Connection trust decay stats
+        connections_with_blocks = AgentLearningConnection.objects.filter(
+            mythology_blocks__gt=0
+        ).count()
+        total_connection_blocks = AgentLearningConnection.objects.aggregate(
+            total=Sum('mythology_blocks')
+        )['total'] or 0
+
+        return Response({
+            'success': True,
+            'stats': {
+                'total_quarantined': total,
+                'by_status': {
+                    'pending': by_status.get('pending', 0),
+                    'approved': by_status.get('approved', 0),
+                    'rejected': by_status.get('rejected', 0),
+                    'edited': by_status.get('edited', 0),
+                },
+                'by_violation_type': by_type,
+                'top_teachers_with_blocks': top_teachers,
+                'connections_with_blocks': connections_with_blocks,
+                'total_connection_blocks': total_connection_blocks,
+            }
+        })
+    except Exception as e:
+        logger.exception(f"Quarantine stats error: {e}")
+        return Response({'error': str(e)}, status=500)
