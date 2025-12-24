@@ -73406,29 +73406,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             initNetworkGraph();
         }
 
-        // Trigger a learning cycle
+        // Trigger a learning cycle (runs via Celery Beat every 20 mins)
         function triggerLearningCycle() {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = '⏳ Running...';
-
-            fetch('/api/v1/learning/run-cycle/', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    btn.textContent = '✓ Complete!';
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                        initNetworkGraph();  // Refresh graph after learning
-                        loadResearchStats();
-                    }, 2000);
-                })
-                .catch(err => {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                    console.error('Learning cycle error:', err);
-                });
+            alert('Learning cycles run automatically every 20 minutes via Celery Beat.\n\nTo trigger manually, run:\npython manage.py force_agent_cycle');
         }
 
         // Drag functions for D3
