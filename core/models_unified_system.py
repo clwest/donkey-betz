@@ -316,6 +316,10 @@ class AgentLearningConnection(models.Model):
     avg_improvement_score = models.FloatField(default=0.0, help_text="Average improvement from knowledge transfer")
     last_transfer_at = models.DateTimeField(null=True, blank=True)
 
+    # Session 541: Mythology tracking - quality gate for knowledge transfers
+    mythology_blocks = models.IntegerField(default=0, help_text="Transfers blocked by mythology validation")
+    last_mythology_block_at = models.DateTimeField(null=True, blank=True, help_text="Last time mythology blocked a transfer")
+
     # Status
     is_active = models.BooleanField(default=True)
     strength = models.FloatField(default=0.5, help_text="Connection strength 0.0-1.0")
@@ -336,6 +340,23 @@ class AgentLearningConnection(models.Model):
         if self.total_transfers == 0:
             return 0
         return (self.successful_transfers / self.total_transfers) * 100
+
+    @property
+    def mythology_block_rate(self):
+        """Session 541: Calculate what % of attempted transfers were blocked by mythology"""
+        total_attempted = self.total_transfers + self.mythology_blocks
+        if total_attempted == 0:
+            return 0
+        return (self.mythology_blocks / total_attempted) * 100
+
+    def apply_mythology_penalty(self):
+        """Session 541: Apply trust decay when mythology blocks a transfer"""
+        self.mythology_blocks += 1
+        # Decay strength by 5% per block (min 0.1)
+        self.strength = max(0.1, self.strength * 0.95)
+        from django.utils import timezone
+        self.last_mythology_block_at = timezone.now()
+        self.save()
 
 
 class KnowledgeTransfer(models.Model):
@@ -372,6 +393,90 @@ class KnowledgeTransfer(models.Model):
 
     def __str__(self):
         return f"Transfer: {self.connection} at {self.created_at}"
+
+
+class MythologyQuarantine(models.Model):
+    """
+    Session 541: Quarantine for knowledge blocked by mythology validation.
+
+    Instead of just logging blocked transfers, we store them here for:
+    1. Review - humans can approve/reject/edit
+    2. Analysis - understand where myths come from
+    3. Spider tuning - identify problematic sources
+    4. Teacher trust - track which agents produce unreliable knowledge
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The blocked transfer context
+    teacher_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='mythology_blocks_as_teacher')
+    student_agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='mythology_blocks_as_student')
+    connection = models.ForeignKey(AgentLearningConnection, on_delete=models.CASCADE, related_name='quarantined_transfers', null=True)
+    source_knowledge = models.ForeignKey(AgentKnowledgeSource, on_delete=models.SET_NULL, null=True, related_name='mythology_quarantines')
+
+    # The blocked content
+    blocked_title = models.CharField(max_length=500)
+    blocked_content = models.TextField(help_text="The content that was blocked")
+    blocked_summary = models.TextField(blank=True, help_text="Summary of what would have been transferred")
+
+    # Mythology details
+    violation_type = models.CharField(max_length=50, choices=[
+        ('financial_myth', 'Financial Myth'),
+        ('technical_myth', 'Technical Myth'),
+        ('time_myth', 'Time Myth'),
+        ('dangerous_myth', 'Dangerous Myth'),
+        ('spider_data_myth', 'Spider Data Myth'),
+    ])
+    violation_count = models.IntegerField(default=1)
+    violation_patterns = models.JSONField(default=list, help_text="Patterns that triggered the block")
+    mythology_warning = models.TextField(blank=True, help_text="Mythology's explanation")
+
+    # Spider traceability
+    spider_sources = models.JSONField(default=list, help_text="Spider names that contributed to this knowledge")
+    source_urls = models.JSONField(default=list, help_text="Original URLs if available")
+
+    # Review status
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved (false positive)'),
+        ('rejected', 'Rejected (confirmed myth)'),
+        ('edited', 'Edited and Released'),
+    ], default='pending')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.CharField(max_length=100, blank=True)
+    review_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-created_at']
+        verbose_name = 'Mythology Quarantine'
+        verbose_name_plural = 'Mythology Quarantines'
+
+    def __str__(self):
+        return f"🚨 {self.teacher_agent.name}→{self.student_agent.name}: {self.blocked_title[:50]}"
+
+    def approve(self, reviewed_by='system'):
+        """Release from quarantine - it was a false positive"""
+        from django.utils import timezone
+        self.status = 'approved'
+        self.reviewed_at = timezone.now()
+        self.reviewed_by = reviewed_by
+        self.save()
+
+    def reject(self, reviewed_by='system', notes=''):
+        """Confirm as myth - optionally flag the source knowledge"""
+        from django.utils import timezone
+        self.status = 'rejected'
+        self.reviewed_at = timezone.now()
+        self.reviewed_by = reviewed_by
+        self.review_notes = notes
+        self.save()
+
+        # Optionally mark source knowledge as flagged
+        if self.source_knowledge:
+            self.source_knowledge.is_active = False
+            self.source_knowledge.save()
 
 
 class Advisor(models.Model):
