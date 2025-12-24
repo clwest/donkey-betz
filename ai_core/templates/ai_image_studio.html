@@ -74000,17 +74000,21 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting...';
             }
 
             container.innerHTML = `
                 <div class="text-center py-5">
-                    <div class="spinner-border text-pink mb-3" style="width: 3rem; height: 3rem; color: #ec4899;"></div>
-                    <h5 class="text-secondary">The AI is writing about itself...</h5>
-                    <p class="text-muted">This may take 30-60 seconds</p>
+                    <div class="spinner-border mb-3" style="width: 3rem; height: 3rem; color: #ec4899;"></div>
+                    <h5 class="text-secondary" id="selfblog-status">Starting blog generation...</h5>
+                    <p class="text-muted" id="selfblog-substatus">Initializing AI agent</p>
+                    <div class="progress mt-3" style="height: 6px; max-width: 300px; margin: 0 auto; background: rgba(255,255,255,0.1);">
+                        <div id="selfblog-progress" class="progress-bar" style="width: 10%; background: linear-gradient(90deg, #ec4899, #8b5cf6);"></div>
+                    </div>
                 </div>
             `;
 
+            // Start the Celery task
             fetch('/api/v1/research/self-blog/generate/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74018,25 +74022,103 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
-                    loadSelfBlog();  // Reload to show new blog
+                if (data.success && data.task_id) {
+                    // Start polling for status
+                    pollSelfBlogTask(data.task_id);
                 } else {
-                    container.innerHTML = `
-                        <div class="alert alert-danger">
-                            Failed to generate blog: ${data.error || data.message || 'Unknown error'}
-                        </div>
-                    `;
+                    showSelfBlogError(data.error || 'Failed to start generation');
                 }
             })
             .catch(err => {
-                container.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
-            })
-            .finally(() => {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '🤖 Generate New Blog';
-                }
+                showSelfBlogError(err.message);
             });
+        }
+
+        function pollSelfBlogTask(taskId) {
+            const statusEl = document.getElementById('selfblog-status');
+            const substatusEl = document.getElementById('selfblog-substatus');
+            const progressEl = document.getElementById('selfblog-progress');
+            const btn = document.getElementById('generate-selfblog-btn');
+
+            let pollCount = 0;
+            const maxPolls = 120;  // 2 minutes max (1 poll/second)
+
+            const pollInterval = setInterval(() => {
+                pollCount++;
+
+                // Update progress bar
+                const progress = Math.min(10 + (pollCount * 0.75), 95);
+                if (progressEl) progressEl.style.width = progress + '%';
+
+                // Update status messages
+                if (pollCount < 5) {
+                    if (statusEl) statusEl.textContent = 'Gathering system statistics...';
+                    if (substatusEl) substatusEl.textContent = 'Counting agents, knowledge, and transfers';
+                } else if (pollCount < 15) {
+                    if (statusEl) statusEl.textContent = 'AI is analyzing the platform...';
+                    if (substatusEl) substatusEl.textContent = 'ContentWriterAgent is processing';
+                } else if (pollCount < 40) {
+                    if (statusEl) statusEl.textContent = 'Writing the blog post...';
+                    if (substatusEl) substatusEl.textContent = 'GPT is generating content';
+                } else {
+                    if (statusEl) statusEl.textContent = 'Finalizing the blog...';
+                    if (substatusEl) substatusEl.textContent = 'Almost done!';
+                }
+
+                // Check task status
+                fetch(`/api/v1/research/self-blog/task/${taskId}/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'completed') {
+                            clearInterval(pollInterval);
+                            if (progressEl) progressEl.style.width = '100%';
+                            if (statusEl) statusEl.textContent = 'Blog generated successfully!';
+                            if (substatusEl) substatusEl.textContent = data.title || 'Loading...';
+
+                            // Small delay then load the blog
+                            setTimeout(() => {
+                                loadSelfBlog();
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '🤖 Generate New Blog';
+                                }
+                            }, 1000);
+                        } else if (data.status === 'failed') {
+                            clearInterval(pollInterval);
+                            showSelfBlogError(data.error || 'Generation failed');
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.innerHTML = '🤖 Generate New Blog';
+                            }
+                        }
+                        // pending/started - keep polling
+                    })
+                    .catch(err => {
+                        console.error('Poll error:', err);
+                        // Don't stop polling on network hiccups
+                    });
+
+                // Timeout after max polls
+                if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    showSelfBlogError('Generation timed out. The task may still be running.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '🤖 Generate New Blog';
+                    }
+                }
+            }, 1000);  // Poll every second
+        }
+
+        function showSelfBlogError(message) {
+            const container = document.getElementById('selfblog-content');
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${message}
+                    <br><br>
+                    <button class="btn btn-outline-danger btn-sm" onclick="generateSelfBlog()">Try Again</button>
+                </div>
+            `;
         }
 
         // END SESSION 542: RESEARCH DEMO

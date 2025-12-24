@@ -70,6 +70,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 543: Self-Blog APIs
         '/api/v1/research/self-blog/',  # Get latest self-blog
         '/api/v1/research/self-blog/generate/',  # Generate new self-blog
+        '/api/v1/research/self-blog/task/',  # Check task status (prefix match)
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
