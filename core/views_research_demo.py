@@ -670,46 +670,94 @@ def self_blog_api(request):
 @permission_classes([AllowAny])
 def generate_self_blog_api(request):
     """
-    Trigger generation of a new self-blog.
-    This runs the ContentWriterAgent to write about the system.
-    
+    Trigger generation of a new self-blog as a background Celery task.
+    Returns task_id for polling status.
+
     Body params:
         - tone: professional/casual/technical/enthusiastic (default: enthusiastic)
         - word_count: target word count (default: 1500)
     """
     try:
-        from django.core.management import call_command
-        from io import StringIO
-        
+        from core.tasks import generate_self_blog_task
+
         tone = request.data.get('tone', 'enthusiastic')
         word_count = request.data.get('word_count', 1500)
-        
-        # Capture command output
-        out = StringIO()
-        call_command('write_self_blog', tone=tone, word_count=word_count, stdout=out)
-        
-        output = out.getvalue()
-        
-        # Check if successful
-        if 'BLOG POST GENERATED SUCCESSFULLY' in output or 'Saved to database' in output:
-            from core.models_unified_system import SelfBlog
-            latest = SelfBlog.objects.first()
-            
+
+        # Start Celery task
+        task = generate_self_blog_task.delay(tone=tone, word_count=word_count)
+
+        return Response({
+            'success': True,
+            'message': 'Blog generation started',
+            'task_id': task.id,
+            'status': 'pending',
+        })
+
+    except Exception as e:
+        logger.error(f"Error in generate_self_blog_api: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def self_blog_task_status_api(request, task_id):
+    """
+    Check status of a self-blog generation task.
+
+    Returns:
+        - status: pending/started/success/failure
+        - result: blog data on success
+    """
+    try:
+        from celery.result import AsyncResult
+
+        task = AsyncResult(task_id)
+
+        if task.state == 'PENDING':
             return Response({
                 'success': True,
-                'message': 'Blog generated successfully!',
-                'blog_id': str(latest.id) if latest else None,
-                'title': latest.title if latest else None,
+                'status': 'pending',
+                'message': 'Task is waiting to start...',
+            })
+        elif task.state == 'STARTED':
+            return Response({
+                'success': True,
+                'status': 'started',
+                'message': 'AI is writing the blog...',
+            })
+        elif task.state == 'SUCCESS':
+            result = task.result
+            if result and result.get('success'):
+                return Response({
+                    'success': True,
+                    'status': 'completed',
+                    'blog_id': result.get('blog_id'),
+                    'title': result.get('title'),
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'status': 'failed',
+                    'error': result.get('error', 'Unknown error'),
+                })
+        elif task.state == 'FAILURE':
+            return Response({
+                'success': False,
+                'status': 'failed',
+                'error': str(task.info),
             })
         else:
             return Response({
-                'success': False,
-                'message': 'Blog generation may have failed',
-                'output': output[-1000:],  # Last 1000 chars
+                'success': True,
+                'status': task.state.lower(),
+                'message': f'Task state: {task.state}',
             })
-            
+
     except Exception as e:
-        logger.error(f"Error in generate_self_blog_api: {e}")
+        logger.error(f"Error checking task status: {e}")
         return Response({
             'success': False,
             'error': str(e)

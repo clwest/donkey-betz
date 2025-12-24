@@ -17245,3 +17245,179 @@ Use the generate_podcast_script tool to create the full script with speaker labe
 
         return {'status': 'error', 'error': str(e)}
 
+
+
+# =============================================================================
+# SESSION 543: SELF-BLOG GENERATION TASK
+# =============================================================================
+
+@shared_task(bind=True)
+def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
+    """
+    Background task to generate a self-blog using ContentWriterAgent.
+    
+    This allows the UI to show progress while the LLM generates content.
+    
+    Args:
+        tone: Blog tone (professional/casual/technical/enthusiastic)
+        word_count: Target word count
+        
+    Returns:
+        dict with blog_id and title on success
+    """
+    import json
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db.models import Count, Avg
+    
+    logger.info(f"🤖 [SELF-BLOG] Starting generation with tone={tone}")
+    
+    try:
+        from core.models_unified_system import (
+            Agent, AgentKnowledgeSource, AgentLearningConnection, 
+            KnowledgeTransfer, SpiderData, SelfBlog
+        )
+        from core.agents.content_writer_agent import ContentWriterAgent
+        
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+        last_7d = now - timedelta(days=7)
+        
+        # Gather system statistics
+        total_agents = Agent.objects.filter(is_active=True).count()
+        agents_with_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).values('agent_id').distinct().count()
+        total_connections = AgentLearningConnection.objects.filter(is_active=True).count()
+        total_transfers = KnowledgeTransfer.objects.count()
+        transfers_24h = KnowledgeTransfer.objects.filter(created_at__gte=last_24h).count()
+        transfers_7d = KnowledgeTransfer.objects.filter(created_at__gte=last_7d).count()
+        total_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).count()
+        knowledge_24h = AgentKnowledgeSource.objects.filter(first_discovered_at__gte=last_24h, is_active=True).count()
+        
+        try:
+            total_spiders = SpiderData.objects.values('source').distinct().count()
+            if total_spiders == 0:
+                total_spiders = 72
+        except:
+            total_spiders = 72
+        
+        # Top agents
+        top_agents = list(
+            AgentKnowledgeSource.objects.filter(is_active=True)
+            .values('agent__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+        
+        # Top connections
+        top_connections = list(
+            AgentLearningConnection.objects.filter(is_active=True)
+            .order_by('-total_transfers')[:5]
+            .values('teacher_agent__name', 'student_agent__name', 'total_transfers')
+        )
+        
+        # Build research context
+        system_research = f"""
+# AI Content Studio - Self-Aware Intelligence Platform
+
+## System Overview (Live Data as of {now.strftime('%B %d, %Y at %I:%M %p')})
+
+### The Numbers
+
+**Agent Ecosystem:**
+- {total_agents} AI agents actively running
+- {agents_with_knowledge} agents have acquired knowledge
+- {total_knowledge:,} total knowledge sources
+- {knowledge_24h} new knowledge items in last 24 hours
+
+**Learning Network:**
+- {total_connections} active learning connections
+- {total_transfers:,} total knowledge transfers
+- {transfers_24h} transfers in last 24 hours
+- {transfers_7d} transfers in last 7 days
+
+**Spider Network:**
+- {total_spiders} data spiders crawling the web
+
+### Top Knowledge Holders
+{chr(10).join([f"- {a['agent__name']}: {a['count']} items" for a in top_agents])}
+
+### Most Active Teaching Relationships
+{chr(10).join([f"- {c['teacher_agent__name']} teaches {c['student_agent__name']}: {c['total_transfers']} transfers" for c in top_connections])}
+
+### Key Capabilities
+1. Collective Intelligence - Agents share knowledge through mythology-gated quality system
+2. Autonomous Learning - System learns 24/7 without human intervention
+3. Real-time Visualization - D3.js network graph shows knowledge flow
+4. Quality Control - Mythology quarantine prevents hallucinations
+5. Multi-modal Creation - Images, videos, audio, 3D models, and text
+
+### The Meta Moment
+This blog was written by ContentWriterAgent about its own platform!
+"""
+        
+        logger.info(f"🤖 [SELF-BLOG] Gathered stats, invoking ContentWriterAgent...")
+        
+        # Generate blog
+        agent = ContentWriterAgent(user=None)
+        result = agent.execute(
+            task="Write an engaging blog post about our AI platform. This is a meta-demonstration: you are writing about your own system.",
+            context={
+                'content_type': 'blog_post',
+                'research': system_research,
+                'tone': tone,
+                'target_audience': 'tech enthusiasts, AI researchers, investors',
+                'word_count': word_count,
+                'seo_keywords': ['AI platform', 'collective intelligence', 'autonomous learning'],
+            },
+            scifi_context={'collective_intelligence': True, 'self_aware': True},
+            spider_context={}
+        )
+        
+        if result.success:
+            blog_data = result.data if isinstance(result.data, dict) else {}
+            content_data = blog_data.get('content', blog_data)
+            
+            stats_snapshot = {
+                'agents': total_agents,
+                'agents_with_knowledge': agents_with_knowledge,
+                'knowledge_sources': total_knowledge,
+                'knowledge_24h': knowledge_24h,
+                'connections': total_connections,
+                'transfers': total_transfers,
+                'transfers_24h': transfers_24h,
+                'spiders': total_spiders,
+            }
+            
+            blog = SelfBlog.objects.create(
+                title=content_data.get('title', 'AI Content Studio Self-Blog'),
+                meta_description=content_data.get('meta_description', ''),
+                intro=content_data.get('intro', ''),
+                sections=content_data.get('sections', []),
+                conclusion=content_data.get('conclusion', ''),
+                tags=content_data.get('tags', []),
+                full_text=content_data.get('full_text', json.dumps(result.data)),
+                tone=tone,
+                word_count=blog_data.get('metadata', {}).get('actual_word_count', 0),
+                stats_snapshot=stats_snapshot,
+            )
+            
+            logger.info(f"🤖 [SELF-BLOG] Successfully generated: {blog.id}")
+            
+            return {
+                'success': True,
+                'blog_id': str(blog.id),
+                'title': blog.title,
+            }
+        else:
+            logger.error(f"🤖 [SELF-BLOG] Agent failed: {result.error}")
+            return {
+                'success': False,
+                'error': result.error or 'Agent execution failed',
+            }
+            
+    except Exception as e:
+        logger.error(f"🤖 [SELF-BLOG] Generation failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e),
+        }

@@ -2451,6 +2451,7 @@ urlpatterns = [
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
     path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
     path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
+    path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
 
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
