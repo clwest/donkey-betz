@@ -2,30 +2,36 @@
 
 **Previous Session:** 546
 **Date:** December 24, 2025
-**Focus:** Continue Autonomous Reasoning Engine improvements
+**Focus:** Address spider network inactivity and knowledge silos
 
 ---
 
 ## Session 546 Accomplishments
 
-### 1. Fixed Self Blog Report Rendering (COMPLETE)
+### 1. Concern Tracking Feedback Loop (COMPLETE)
 
-The Self Blog tab now properly displays ThinkingAgent reports:
+Created a complete feedback loop to verify if concerns are actually addressed:
 
-| Fix | Description |
-|-----|-------------|
-| **full_text rendering** | UI now renders markdown from `full_text` when `sections` is empty |
-| **Expandable evidence** | Click `📋 Evidence ▶` to see full pattern evidence |
-| **Auto-report stats** | Shows Insights/Patterns/Opportunities/Concerns counts |
-| **Intro markdown** | Bold text in intro now renders properly |
-| **Full evidence** | Backend no longer truncates evidence to 150 chars |
+| Component | Description |
+|-----------|-------------|
+| **TrackedConcern Model** | Persists concerns across cycles with status lifecycle |
+| **ConcernTrackerService** | Register, link actions, verify resolution |
+| **4 API Endpoints** | Dashboard, verify, register-historical, detail |
+| **Concern Tracking UI Tab** | New tab in Research Demo with stats and verification |
 
-### 2. Files Changed
+### 2. Verification Results
 
-| File | Changes |
-|------|---------|
-| `core/services/autonomous_action_executor.py` | Removed evidence truncation |
-| `ai_core/templates/ai_image_studio.html` | Added markdown rendering, expandable evidence, auto-report stats |
+After running verification on 32 historical concerns:
+
+| Status | Count | Details |
+|--------|-------|---------|
+| **Resolved** | 17 | decision_bottleneck (7), general concerns |
+| **Active** | 15 | Mostly spider_activity (10) |
+| **Recurring** | 0 | None came back after resolution |
+
+### 3. Key Finding
+
+The spider network is the #1 unresolved concern - 10 concerns about inactive spiders need action.
 
 ---
 
@@ -33,29 +39,33 @@ The Self Blog tab now properly displays ThinkingAgent reports:
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 75 | Active |
+| **Spiders** | 75 | Registered but INACTIVE |
 | **Agents** | 55 | All learning |
 | **Learning Connections** | 115 | Active |
 | **Knowledge Transfers** | 1,200+ | Growing |
-| **Knowledge Sources** | 2,991 | Growing |
 | **Thought Records** | 18+ | Active |
-| **Autonomous Actions** | 40+ | ~86% success |
+| **Tracked Concerns** | 32 | 15 active, 17 resolved |
 
 ---
 
 ## Priority Tasks for Session 547
 
-### 1. Address ThinkingAgent Concerns (HIGH)
-The latest cycle identified:
-- **No active spiders** despite need for external data
-- **Insight-to-decision bottleneck** - 0 boardroom decisions despite high activity
-- **Knowledge silos** - heavy teaching by few agents (ResearchAgent, TrendAnalysisAgent)
+### 1. Activate Spider Network (HIGH)
+10 concerns about inactive spiders. Need to:
+- Run spider crawl cycles
+- Verify data is being collected
+- Check spider health status
 
-### 2. Improve Decision-Making Flow (MEDIUM)
-Convert high-volume dreams and debates into prioritized actions.
+### 2. Address Knowledge Silos (MEDIUM)
+2 concerns about teaching concentration:
+- ResearchAgent and TrendAnalysisAgent do most teaching
+- Need to encourage more agents to share knowledge
 
-### 3. Spider Network Activation (MEDIUM)
-Ensure spiders are collecting fresh data to validate internal hypotheses.
+### 3. Integrate Concern Tracking with ThinkingAgent (MEDIUM)
+Currently concerns need manual registration. Should:
+- Auto-register concerns after each thinking cycle
+- Auto-link actions to concerns they address
+- Run verification after action completion
 
 ---
 
@@ -65,17 +75,15 @@ Ensure spiders are collecting fresh data to validate internal hypotheses.
 # 1. Start services
 make start && make celery
 
-# 2. Trigger a thinking cycle
-curl -X POST http://localhost:8000/api/v1/reasoning/trigger/ \
-  -H "Content-Type: application/json" \
-  -d '{"cycle_type": "manual"}'
+# 2. View concern tracking dashboard
+curl http://localhost:8000/api/v1/reasoning/concerns/
 
-# 3. Check dashboard
-curl http://localhost:8000/api/v1/reasoning/dashboard/
+# 3. Run verification
+curl -X POST http://localhost:8000/api/v1/reasoning/concerns/verify/
 
-# 4. View UI
+# 4. View in UI
 open http://localhost:8000/ai-studio/
-# Navigate to: Research Demo -> Self Blog
+# Navigate to: Research Demo -> Concern Tracking
 ```
 
 ---
@@ -84,29 +92,26 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `core/agents/thinking_agent.py` | ThinkingAgent brain |
-| `core/services/autonomous_action_executor.py` | Action execution |
-| `core/views_autonomous_reasoning.py` | API endpoints |
-| `ai_core/templates/ai_image_studio.html` | UI (Self Blog fixed Session 546) |
-| `docs/handoffs/SESSION_546_SELF_BLOG_REPORT_RENDERING.md` | Detailed handoff |
+| `core/models_unified_system.py` | TrackedConcern model |
+| `core/services/concern_tracker.py` | Concern tracking service |
+| `core/views_autonomous_reasoning.py` | Concern API endpoints |
+| `ai_core/templates/ai_image_studio.html` | Concern Tracking UI tab |
+| `docs/handoffs/SESSION_546_CONCERN_TRACKING_FEEDBACK_LOOP.md` | Detailed handoff |
 
 ---
 
 ## The Vision
 
-The Autonomous Reasoning Engine is now producing readable, actionable reports:
+The Concern Tracking system closes the loop on autonomous reasoning:
 
 ```
-ThinkingAgent observes system → Generates insights → Creates reports
-     ↓                              ↓                    ↓
-Spawns spiders              Triggers debates       Archives knowledge
-     ↓                              ↓                    ↓
-Fresh data                  Agent collaboration    Persistent memory
+ThinkingAgent observes → Identifies concerns → Registers in tracker
+                                                      ↓
+Actions taken ←──────── Links to concerns ←────── Triggers actions
+      ↓
+Verification runs → Checks real metrics → Updates status
+      ↓
+Resolved OR Recurring (if problem returns)
 ```
 
-Reports now show:
-- Full context and executive summary
-- Categorized insights with confidence scores
-- Patterns with expandable evidence
-- Opportunities with impact ratings
-- Concerns with severity levels
+This ensures the system doesn't just identify problems - it tracks whether solutions work.

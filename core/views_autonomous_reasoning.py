@@ -445,3 +445,158 @@ def reasoning_dashboard_api(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============= Concern Tracking APIs (Session 546) =============
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def concerns_dashboard_api(request):
+    """
+    Get concern tracking dashboard data.
+
+    Shows all tracked concerns with their status, actions taken, and verification results.
+    """
+    try:
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        dashboard = tracker.get_concern_dashboard()
+
+        return JsonResponse({
+            'success': True,
+            **dashboard
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching concerns dashboard: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_concerns_api(request):
+    """
+    Run verification on all active concerns.
+
+    Checks if concerns have been resolved based on system metrics.
+    """
+    try:
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+        results = tracker.verify_all_active_concerns()
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Verified {results['total_checked']} concerns",
+            **results
+        })
+
+    except Exception as e:
+        logger.error(f"Error verifying concerns: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_historical_concerns_api(request):
+    """
+    Register concerns from existing thought records.
+
+    Backfills concern tracking for historical data.
+    """
+    try:
+        from core.models_unified_system import ThoughtRecord
+        from core.services.concern_tracker import get_concern_tracker
+
+        tracker = get_concern_tracker()
+
+        # Get thought records that have concerns
+        thoughts_with_concerns = ThoughtRecord.objects.exclude(
+            concerns=[]
+        ).order_by('-started_at')[:20]
+
+        total_registered = 0
+        new_concerns = 0
+
+        for thought in thoughts_with_concerns:
+            results = tracker.register_concerns_from_cycle(thought)
+            total_registered += len(results)
+            new_concerns += sum(1 for r in results if r.get('is_new'))
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Registered {total_registered} concerns ({new_concerns} new)",
+            'thoughts_processed': len(thoughts_with_concerns),
+            'total_registered': total_registered,
+            'new_concerns': new_concerns
+        })
+
+    except Exception as e:
+        logger.error(f"Error registering historical concerns: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def concern_detail_api(request, concern_id):
+    """
+    Get detailed information about a specific concern.
+    """
+    try:
+        from core.models_unified_system import TrackedConcern
+
+        concern = TrackedConcern.objects.get(id=concern_id)
+
+        return JsonResponse({
+            'success': True,
+            'concern': {
+                'id': str(concern.id),
+                'concern_text': concern.concern_text,
+                'category': concern.category,
+                'severity': concern.severity,
+                'status': concern.status,
+                'times_detected': concern.times_detected,
+                'days_active': concern.days_active,
+                'first_seen_cycle': concern.first_seen_cycle.cycle_number if concern.first_seen_cycle else None,
+                'last_seen_cycle': concern.last_seen_cycle.cycle_number if concern.last_seen_cycle else None,
+                'actions_taken': [
+                    {
+                        'id': str(a.id),
+                        'action_type': a.action_type,
+                        'action_name': a.action_name,
+                        'status': a.status,
+                        'created_at': a.created_at.isoformat()
+                    }
+                    for a in concern.actions_taken.all()[:10]
+                ],
+                'verification_metric': concern.verification_metric,
+                'last_verification': concern.last_verification_result,
+                'last_verified_at': concern.last_verification_at.isoformat() if concern.last_verification_at else None,
+                'resolution_notes': concern.resolution_notes,
+                'created_at': concern.created_at.isoformat(),
+                'resolved_at': concern.resolved_at.isoformat() if concern.resolved_at else None,
+            }
+        })
+
+    except TrackedConcern.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Concern not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching concern detail: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -6982,6 +6982,11 @@
                             🧠 Thinking Engine
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-concerns-tab" data-bs-toggle="pill" data-bs-target="#research-concerns" type="button" role="tab">
+                            🎯 Concern Tracking
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Sub-tab Content -->
@@ -7415,6 +7420,92 @@
                                             <small class="text-muted">Max Actions/Cycle</small>
                                             <p class="mb-0" id="thinking-config-actions">5</p>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONCERN TRACKING SUB-TAB (Session 546) -->
+                    <div class="tab-pane fade" id="research-concerns" role="tabpanel">
+                        <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(245,158,11,0.3); border-radius: 15px;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="card-title mb-0">🎯 Concern Tracking & Verification</h5>
+                                    <div>
+                                        <button class="btn btn-outline-warning btn-sm me-2" onclick="verifyConcerns()" style="border-color: #f59e0b; color: #f59e0b;">
+                                            ✓ Verify All
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="loadConcernsDashboard()">
+                                            🔄 Refresh
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="text-secondary mb-4">
+                                    Track concerns identified by the ThinkingAgent and verify whether actions have resolved them.
+                                </p>
+
+                                <!-- Concern Stats Row -->
+                                <div class="row mb-4" id="concern-stats-row">
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(239,68,68,0.15); border-radius: 10px; border-left: 3px solid #ef4444;">
+                                            <h4 class="mb-0" id="concern-active-count">0</h4>
+                                            <small class="text-danger">Active</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(245,158,11,0.15); border-radius: 10px; border-left: 3px solid #f59e0b;">
+                                            <h4 class="mb-0" id="concern-progress-count">0</h4>
+                                            <small class="text-warning">In Progress</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(6,182,212,0.15); border-radius: 10px; border-left: 3px solid #06b6d4;">
+                                            <h4 class="mb-0" id="concern-monitoring-count">0</h4>
+                                            <small class="text-info">Monitoring</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(34,197,94,0.15); border-radius: 10px; border-left: 3px solid #22c55e;">
+                                            <h4 class="mb-0" id="concern-resolved-count">0</h4>
+                                            <small class="text-success">Resolved</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(139,92,246,0.15); border-radius: 10px; border-left: 3px solid #8b5cf6;">
+                                            <h4 class="mb-0" id="concern-recurring-count">0</h4>
+                                            <small class="text-purple">Recurring</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="p-3 text-center" style="background: rgba(100,116,139,0.15); border-radius: 10px; border-left: 3px solid #64748b;">
+                                            <h4 class="mb-0" id="concern-stale-count">0</h4>
+                                            <small class="text-muted">Stale (7d+)</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Concern Categories -->
+                                <h6 class="mb-3">📊 By Category</h6>
+                                <div class="mb-4" id="concern-categories">
+                                    <p class="text-secondary text-center">No category data.</p>
+                                </div>
+
+                                <!-- Recent Concerns List -->
+                                <h6 class="mb-3">📋 Recent Concerns</h6>
+                                <div id="concern-list" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center py-5 text-secondary">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading concerns...
+                                    </div>
+                                </div>
+
+                                <!-- Verification Log -->
+                                <div class="mt-4 p-3" style="background: rgba(255,255,255,0.03); border-radius: 10px;">
+                                    <h6 class="mb-3">📝 Verification Log</h6>
+                                    <div id="concern-verification-log" style="max-height: 200px; overflow-y: auto;">
+                                        <p class="text-secondary text-center">No verifications yet. Click "Verify All" to check concern resolution.</p>
                                     </div>
                                 </div>
                             </div>
@@ -74593,7 +74684,179 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             thinkingTab.addEventListener('shown.bs.tab', loadThinkingDashboard);
         }
 
-        // END SESSION 542 + 544: RESEARCH DEMO + THINKING ENGINE
+        // ====================================================================
+        // SESSION 546: CONCERN TRACKING UI
+        // ====================================================================
+
+        // Load concerns dashboard
+        function loadConcernsDashboard() {
+            const listContainer = document.getElementById('concern-list');
+            listContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+
+            fetch('/api/v1/reasoning/concerns/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const dashboard = data.dashboard;
+
+                        // Update stat counters
+                        document.getElementById('concern-active-count').textContent = dashboard.by_status?.active || 0;
+                        document.getElementById('concern-progress-count').textContent = dashboard.by_status?.in_progress || 0;
+                        document.getElementById('concern-monitoring-count').textContent = dashboard.by_status?.monitoring || 0;
+                        document.getElementById('concern-resolved-count').textContent = dashboard.by_status?.resolved || 0;
+                        document.getElementById('concern-recurring-count').textContent = dashboard.by_status?.recurring || 0;
+                        document.getElementById('concern-stale-count').textContent = dashboard.stale_count || 0;
+
+                        // Render categories
+                        const categoriesContainer = document.getElementById('concern-categories');
+                        if (dashboard.by_category && Object.keys(dashboard.by_category).length > 0) {
+                            categoriesContainer.innerHTML = Object.entries(dashboard.by_category).map(([cat, count]) => `
+                                <span class="badge me-2 mb-1" style="background: ${getConcernCategoryColor(cat)}; font-size: 0.9em; padding: 6px 12px;">
+                                    ${formatConcernCategory(cat)}: ${count}
+                                </span>
+                            `).join('');
+                        } else {
+                            categoriesContainer.innerHTML = '<p class="text-secondary text-center mb-0">No active concerns by category.</p>';
+                        }
+
+                        // Render concerns list
+                        if (dashboard.recent && dashboard.recent.length > 0) {
+                            listContainer.innerHTML = dashboard.recent.map(c => `
+                                <div class="p-3 mb-2" style="background: rgba(${getConcernStatusRGB(c.status)},0.1); border-radius: 8px; border-left: 3px solid ${getConcernStatusColor(c.status)};">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span class="badge bg-${getConcernSeverityBadge(c.severity)} me-2">${c.severity}</span>
+                                            <span class="badge" style="background: ${getConcernStatusColor(c.status)};">${c.status}</span>
+                                            <span class="badge bg-secondary ms-1">${formatConcernCategory(c.category)}</span>
+                                        </div>
+                                        <small class="text-muted">
+                                            ${c.days_active} day${c.days_active !== 1 ? 's' : ''} active
+                                        </small>
+                                    </div>
+                                    <p class="mb-1 mt-2">${c.text}</p>
+                                    <small class="text-muted">
+                                        Detected ${c.times_detected}x | ${c.actions_count} actions taken
+                                        ${c.last_verified ? ` | Last verified: ${new Date(c.last_verified).toLocaleString()}` : ''}
+                                    </small>
+                                </div>
+                            `).join('');
+                        } else {
+                            listContainer.innerHTML = '<p class="text-secondary text-center py-3">No concerns tracked yet. Trigger a thinking cycle to generate concerns!</p>';
+                        }
+                    } else {
+                        listContainer.innerHTML = `<p class="text-danger text-center py-3">Error: ${data.error || 'Failed to load concerns'}</p>`;
+                    }
+                })
+                .catch(err => {
+                    listContainer.innerHTML = `<p class="text-danger text-center py-3">Error: ${err.message}</p>`;
+                });
+        }
+
+        // Verify all active concerns
+        function verifyConcerns() {
+            const logContainer = document.getElementById('concern-verification-log');
+            logContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm me-2"></div>Verifying concerns...</div>';
+
+            fetch('/api/v1/reasoning/concerns/verify/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const results = data.verification_results;
+                    logContainer.innerHTML = `
+                        <div class="p-3" style="background: rgba(34,197,94,0.1); border-radius: 8px;">
+                            <strong>Verification Complete</strong>
+                            <p class="mb-1 mt-2">
+                                Checked: ${results.total_checked} |
+                                Resolved: ${results.resolved} |
+                                Still Active: ${results.still_active} |
+                                Errors: ${results.errors}
+                            </p>
+                            ${results.concerns && results.concerns.length > 0 ? `
+                                <div class="mt-2" style="max-height: 150px; overflow-y: auto;">
+                                    ${results.concerns.map(c => `
+                                        <div class="d-flex justify-content-between align-items-center p-1">
+                                            <span style="font-size: 0.85em;">${c.text}...</span>
+                                            <span class="badge ${c.is_resolved ? 'bg-success' : 'bg-warning'}">${c.status}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    // Refresh the dashboard
+                    loadConcernsDashboard();
+                } else {
+                    logContainer.innerHTML = `<p class="text-danger text-center py-3">Verification failed: ${data.error}</p>`;
+                }
+            })
+            .catch(err => {
+                logContainer.innerHTML = `<p class="text-danger text-center py-3">Error: ${err.message}</p>`;
+            });
+        }
+
+        // Helper functions for concern UI
+        function getConcernStatusColor(status) {
+            const colors = {
+                'active': '#ef4444',
+                'in_progress': '#f59e0b',
+                'monitoring': '#06b6d4',
+                'resolved': '#22c55e',
+                'recurring': '#8b5cf6',
+                'accepted': '#64748b'
+            };
+            return colors[status] || '#6b7280';
+        }
+
+        function getConcernStatusRGB(status) {
+            const colors = {
+                'active': '239,68,68',
+                'in_progress': '245,158,11',
+                'monitoring': '6,182,212',
+                'resolved': '34,197,94',
+                'recurring': '139,92,246',
+                'accepted': '100,116,139'
+            };
+            return colors[status] || '107,114,128';
+        }
+
+        function getConcernSeverityBadge(severity) {
+            const badges = {
+                'critical': 'danger',
+                'high': 'warning',
+                'medium': 'info',
+                'low': 'secondary'
+            };
+            return badges[severity] || 'secondary';
+        }
+
+        function getConcernCategoryColor(category) {
+            const colors = {
+                'spider_activity': '#8b5cf6',
+                'decision_bottleneck': '#f59e0b',
+                'knowledge_silos': '#ec4899',
+                'insight_gap': '#06b6d4',
+                'action_gap': '#22c55e',
+                'execution_failure': '#ef4444',
+                'general': '#64748b'
+            };
+            return colors[category] || '#6b7280';
+        }
+
+        function formatConcernCategory(category) {
+            return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Load concerns dashboard when tab is shown
+        const concernsTab = document.getElementById('research-concerns-tab');
+        if (concernsTab) {
+            concernsTab.addEventListener('shown.bs.tab', loadConcernsDashboard);
+        }
+
+        // END SESSION 542 + 544 + 546: RESEARCH DEMO + THINKING ENGINE + CONCERN TRACKING
         // ====================================================================
     </script>
 

@@ -2467,6 +2467,12 @@ urlpatterns = [
     path('api/v1/reasoning/config/update/', views_autonomous_reasoning.update_reasoning_config_api, name='reasoning-config-update'),
     path('api/v1/reasoning/dashboard/', views_autonomous_reasoning.reasoning_dashboard_api, name='reasoning-dashboard'),
 
+    # Session 546: Concern Tracking APIs
+    path('api/v1/reasoning/concerns/', views_autonomous_reasoning.concerns_dashboard_api, name='concerns-dashboard'),
+    path('api/v1/reasoning/concerns/verify/', views_autonomous_reasoning.verify_concerns_api, name='concerns-verify'),
+    path('api/v1/reasoning/concerns/register-historical/', views_autonomous_reasoning.register_historical_concerns_api, name='concerns-register-historical'),
+    path('api/v1/reasoning/concerns/<uuid:concern_id>/', views_autonomous_reasoning.concern_detail_api, name='concern-detail'),
+
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
     path('api/v1/persistence/', include('persistence.urls')),  # Data Persistence Infrastructure
