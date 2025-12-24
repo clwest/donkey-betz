@@ -74689,6 +74689,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // ====================================================================
 
         // Load concerns dashboard
+        // CACHE_BUST_v549_20251224 - Force browser reload
         function loadConcernsDashboard() {
             const listContainer = document.getElementById('concern-list');
             listContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
@@ -74696,6 +74697,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             fetch('/api/v1/reasoning/concerns/')
                 .then(res => res.json())
                 .then(data => {
+                    console.log('[Session 549] Concerns API Response:', data);  // Debug log
                     if (data.success) {
                         // Session 548: API returns data at root level, not nested under 'dashboard'
                         const dashboard = data;

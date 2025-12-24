@@ -40,6 +40,11 @@ class ConcernTrackerService:
         'insight': 'insight_gap',
         'action': 'action_gap',
         'execution': 'execution_failure',
+        # Session 549: Information redundancy category
+        'redundancy': 'information_redundancy',
+        'duplicate': 'information_redundancy',
+        'echo chamber': 'information_redundancy',
+        'duplication': 'information_redundancy',
     }
 
     # Verification metrics for different concern categories
@@ -50,6 +55,7 @@ class ConcernTrackerService:
         'insight_gap': 'insights_generated_24h',
         'action_gap': 'actions_executed_24h',
         'execution_failure': 'action_success_rate',
+        'information_redundancy': 'duplicate_ratio',  # Session 549
     }
 
     def __init__(self):
@@ -324,6 +330,26 @@ class ConcernTrackerService:
                 result['metrics']['successful_actions'] = successful
                 result['is_resolved'] = success_rate >= 80
 
+            elif concern.category == 'information_redundancy':
+                # Session 549: Check deduplication stats
+                from core.services.deduplication_service import get_deduplication_service
+                dedup = get_deduplication_service()
+                stats = dedup.get_deduplication_stats()
+
+                total_duplicates = (
+                    stats['spider_duplicates'] +
+                    stats['conversation_duplicates'] +
+                    stats['dream_duplicates']
+                )
+                result['metrics']['spider_duplicates'] = stats['spider_duplicates']
+                result['metrics']['conversation_duplicates'] = stats['conversation_duplicates']
+                result['metrics']['dream_duplicates'] = stats['dream_duplicates']
+                result['metrics']['total_duplicates'] = total_duplicates
+
+                # Resolved if total duplicates are under threshold
+                # Session 549: Set to 100 - some spider duplicates have FK refs and can't be deleted
+                result['is_resolved'] = total_duplicates <= 100
+
             else:
                 # General verification - check if concern appears in recent cycles
                 from core.models_unified_system import ThoughtRecord
@@ -446,7 +472,7 @@ class ConcernTrackerService:
             'recent': [
                 {
                     'id': str(c.id),
-                    'text': c.concern_text[:60],
+                    'text': c.concern_text,  # Session 549: Show full text
                     'category': c.category,
                     'severity': c.severity,
                     'status': c.status,
