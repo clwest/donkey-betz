@@ -3827,7 +3827,8 @@ def run_agent_learning_cycle():
     import random
     from django.utils import timezone
     from core.models import (
-        Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer
+        Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer,
+        MythologyQuarantine  # Session 541: Quarantine for blocked transfers
     )
 
     logger.info("🧠 [LEARNING] Starting autonomous agent learning cycle...")
@@ -3908,11 +3909,44 @@ def run_agent_learning_cycle():
                     )
 
                     if validation.get('mythology_corrected'):
-                        # Knowledge contains unrealistic claims - skip transfer
+                        # Knowledge contains unrealistic claims - quarantine instead of just logging
                         mythology_blocks += 1
+
+                        # Get violation details from the original validation
+                        original_validation = mythology_enforcer.validator.validate_output(
+                            f"{teacher.name}→{student.name}",
+                            knowledge_content
+                        )
+                        violations = original_validation.get('violations', [])
+                        first_violation_type = violations[0]['type'] if violations else 'spider_data_myth'
+
+                        # Create quarantine entry with full context
+                        try:
+                            MythologyQuarantine.objects.create(
+                                teacher_agent=teacher,
+                                student_agent=student,
+                                connection=connection,
+                                source_knowledge=knowledge,
+                                blocked_title=knowledge.title[:500] if knowledge.title else "Unknown",
+                                blocked_content=knowledge_content[:2000],
+                                blocked_summary=knowledge.summary[:500] if knowledge.summary else "",
+                                violation_type=first_violation_type,
+                                violation_count=len(violations),
+                                violation_patterns=[v.get('pattern', '') for v in violations[:5]],
+                                mythology_warning=validation.get('warning', ''),
+                                spider_sources=knowledge.source_spider_names or [],
+                                source_urls=[],  # Could be extracted from knowledge if available
+                            )
+                        except Exception as q_err:
+                            logger.warning(f"⚠️ [MYTHOLOGY] Quarantine creation failed: {q_err}")
+
+                        # Apply trust decay to the connection
+                        connection.apply_mythology_penalty()
+
                         logger.warning(
-                            f"🚨 [MYTHOLOGY] Blocked transfer {teacher.name}→{student.name}: "
-                            f"'{knowledge.title[:50]}' contained {validation.get('violations', 0)} violations"
+                            f"🚨 [MYTHOLOGY] Blocked & quarantined {teacher.name}→{student.name}: "
+                            f"'{knowledge.title[:50]}' ({len(violations)} violations, "
+                            f"connection strength now {connection.strength:.2f})"
                         )
                         continue
 
@@ -4068,16 +4102,20 @@ def run_agent_learning_cycle():
                 logger.warning(f"Redis broadcast failed: {redis_err}")
 
         # Session 541: Include mythology blocks in log
-        mythology_msg = f", {mythology_blocks} blocked by mythology" if mythology_blocks > 0 else ""
+        mythology_msg = f", {mythology_blocks} quarantined by mythology" if mythology_blocks > 0 else ""
         logger.info(
             f"🧠 [LEARNING] Cycle complete: {transfers_made} knowledge transfers made "
             f"across {len(connections)} connections{mythology_msg}"
         )
 
+        # Session 541: Get quarantine stats for return
+        quarantine_pending = MythologyQuarantine.objects.filter(status='pending').count()
+
         return {
             'status': 'success',
             'transfers_made': transfers_made,
             'mythology_blocks': mythology_blocks,  # Session 541: Track quality gate blocks
+            'quarantine_pending': quarantine_pending,  # Session 541: Total awaiting review
             'connections_processed': len(connections),
             'learning_events': learning_events,
             'timestamp': timezone.now().isoformat()
