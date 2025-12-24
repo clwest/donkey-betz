@@ -73267,9 +73267,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             fetch('/api/v1/research/network-graph/')
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success && data.data) {
-                        researchNodes = data.data.nodes;
-                        researchEdges = data.data.edges;
+                    if (data.success && data.nodes) {
+                        researchNodes = data.nodes;
+                        researchEdges = data.edges;
                         renderNetworkGraph(container);
                     }
                 })
@@ -73478,8 +73478,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             fetch('/api/v1/research/live-feed/?limit=50&hours=24')
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success && data.data && data.data.events) {
-                        renderLiveFeed(container, data.data.events);
+                    if (data.success && data.events) {
+                        renderLiveFeed(container, data.events);
                     }
                 })
                 .catch(err => {
