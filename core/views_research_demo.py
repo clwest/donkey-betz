@@ -666,6 +666,69 @@ def self_blog_api(request):
         }, status=500)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def self_blog_by_id_api(request, blog_id):
+    """
+    Get a specific self-blog by ID.
+
+    Returns:
+        - Full blog content
+        - All available blogs list for navigation
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        # Get the requested blog
+        try:
+            blog = SelfBlog.objects.get(id=blog_id)
+        except SelfBlog.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Blog not found',
+            }, status=404)
+
+        # Get list of all blogs for navigation
+        all_blogs = list(
+            SelfBlog.objects.values('id', 'title', 'tone', 'word_count', 'created_at')[:20]
+        )
+
+        return Response({
+            'success': True,
+            'blog': {
+                'id': str(blog.id),
+                'title': blog.title,
+                'meta_description': blog.meta_description,
+                'intro': blog.intro,
+                'sections': blog.sections,
+                'conclusion': blog.conclusion,
+                'tags': blog.tags,
+                'full_text': blog.full_text,
+                'tone': blog.tone,
+                'word_count': blog.word_count,
+                'stats_snapshot': blog.stats_snapshot,
+                'created_at': blog.created_at.isoformat(),
+            },
+            'all_blogs': [
+                {
+                    'id': str(b['id']),
+                    'title': b['title'],
+                    'tone': b['tone'],
+                    'word_count': b['word_count'],
+                    'created_at': b['created_at'].isoformat(),
+                }
+                for b in all_blogs
+            ],
+        })
+
+    except Exception as e:
+        logger.error(f"Error in self_blog_by_id_api: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def generate_self_blog_api(request):
