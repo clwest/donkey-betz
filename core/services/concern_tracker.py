@@ -308,6 +308,22 @@ class ConcernTrackerService:
                 result['metrics']['action_success_rate'] = success_rate
                 result['is_resolved'] = success_rate >= 80
 
+            elif concern.category == 'execution_failure':
+                # Session 548: Check action success rate for execution failures
+                from core.models_unified_system import AutonomousAction
+                total_actions = AutonomousAction.objects.filter(
+                    created_at__gte=last_24h
+                ).count()
+                successful = AutonomousAction.objects.filter(
+                    created_at__gte=last_24h,
+                    status='completed'
+                ).count()
+                success_rate = (successful / total_actions * 100) if total_actions > 0 else 0
+                result['metrics']['action_success_rate'] = success_rate
+                result['metrics']['total_actions'] = total_actions
+                result['metrics']['successful_actions'] = successful
+                result['is_resolved'] = success_rate >= 80
+
             else:
                 # General verification - check if concern appears in recent cycles
                 from core.models_unified_system import ThoughtRecord
