@@ -74058,27 +74058,73 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         function renderSelfBlog(container, blog, allBlogs) {
-            const statsHtml = blog.stats_snapshot ? `
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span class="badge" style="background: #8b5cf6;" title="Active AI Agents">🤖 ${blog.stats_snapshot.agents || 0} Agents</span>
-                    <span class="badge" style="background: #06b6d4;" title="Knowledge Sources">📚 ${(blog.stats_snapshot.knowledge_sources || 0).toLocaleString()} Knowledge</span>
-                    <span class="badge" style="background: #22c55e;" title="Learning Connections">🔗 ${blog.stats_snapshot.connections || 0} Connections</span>
-                    <span class="badge" style="background: #f59e0b;" title="Knowledge Transfers">📤 ${(blog.stats_snapshot.transfers || 0).toLocaleString()} Transfers</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mb-4">
-                    <span class="badge" style="background: #ec4899;" title="Agent Conversations">💬 ${(blog.stats_snapshot.conversations || 0).toLocaleString()} Conversations</span>
-                    <span class="badge" style="background: #a855f7;" title="Agent Dreams">💭 ${(blog.stats_snapshot.dreams || 0).toLocaleString()} Dreams</span>
-                    <span class="badge" style="background: #14b8a6;" title="Boardroom Decisions">🏛️ ${blog.stats_snapshot.decisions || 0} Decisions</span>
-                    <span class="badge" style="background: #64748b;" title="Spider Data Points">🕷️ ${(blog.stats_snapshot.spider_data_total || 0).toLocaleString()} Spider Data</span>
-                </div>
-            ` : '';
+            // Check if this is an auto-generated report (has insights_count) or regular blog (has agents)
+            const isAutoReport = blog.stats_snapshot && blog.stats_snapshot.auto_generated;
+            let statsHtml = '';
 
-            const sectionsHtml = (blog.sections || []).map(section => `
-                <div class="mb-4">
-                    <h5 style="color: #ec4899; font-weight: 600;">${section.header}</h5>
-                    <p style="color: #cbd5e1; line-height: 1.7;">${section.content}</p>
-                </div>
-            `).join('');
+            if (blog.stats_snapshot) {
+                if (isAutoReport) {
+                    // Auto-generated report stats
+                    statsHtml = `
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <span class="badge" style="background: #8b5cf6;" title="Key Insights">💡 ${blog.stats_snapshot.insights_count || 0} Insights</span>
+                            <span class="badge" style="background: #06b6d4;" title="Patterns Detected">🔍 ${blog.stats_snapshot.patterns_count || 0} Patterns</span>
+                            <span class="badge" style="background: #22c55e;" title="Opportunities">🚀 ${blog.stats_snapshot.opportunities_count || 0} Opportunities</span>
+                            <span class="badge" style="background: #f59e0b;" title="Concerns">⚠️ ${blog.stats_snapshot.concerns_count || 0} Concerns</span>
+                        </div>
+                    `;
+                } else {
+                    // Regular blog stats
+                    statsHtml = `
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge" style="background: #8b5cf6;" title="Active AI Agents">🤖 ${blog.stats_snapshot.agents || 0} Agents</span>
+                            <span class="badge" style="background: #06b6d4;" title="Knowledge Sources">📚 ${(blog.stats_snapshot.knowledge_sources || 0).toLocaleString()} Knowledge</span>
+                            <span class="badge" style="background: #22c55e;" title="Learning Connections">🔗 ${blog.stats_snapshot.connections || 0} Connections</span>
+                            <span class="badge" style="background: #f59e0b;" title="Knowledge Transfers">📤 ${(blog.stats_snapshot.transfers || 0).toLocaleString()} Transfers</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <span class="badge" style="background: #ec4899;" title="Agent Conversations">💬 ${(blog.stats_snapshot.conversations || 0).toLocaleString()} Conversations</span>
+                            <span class="badge" style="background: #a855f7;" title="Agent Dreams">💭 ${(blog.stats_snapshot.dreams || 0).toLocaleString()} Dreams</span>
+                            <span class="badge" style="background: #14b8a6;" title="Boardroom Decisions">🏛️ ${blog.stats_snapshot.decisions || 0} Decisions</span>
+                            <span class="badge" style="background: #64748b;" title="Spider Data Points">🕷️ ${(blog.stats_snapshot.spider_data_total || 0).toLocaleString()} Spider Data</span>
+                        </div>
+                    `;
+                }
+            }
+
+            // Render sections if available, otherwise render full_text as markdown
+            let sectionsHtml = '';
+            if (blog.sections && blog.sections.length > 0) {
+                sectionsHtml = blog.sections.map(section => `
+                    <div class="mb-4">
+                        <h5 style="color: #ec4899; font-weight: 600;">${section.header}</h5>
+                        <p style="color: #cbd5e1; line-height: 1.7;">${section.content}</p>
+                    </div>
+                `).join('');
+            } else if (blog.full_text) {
+                // Convert markdown to HTML for full_text display
+                let fullTextHtml = blog.full_text
+                    .replace(/^# (.+)$/gm, '<h3 style="color: #f9fafb; font-weight: 700; margin-top: 1.5rem;">$1</h3>')
+                    .replace(/^## (.+)$/gm, '<h4 style="color: #ec4899; font-weight: 600; margin-top: 1.25rem;">$1</h4>')
+                    .replace(/\*\*\[([A-Z]+)\]\*\*/g, '<span class="badge me-2" style="background: #8b5cf6;">$1</span>')
+                    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #f9fafb;">$1</strong>')
+                    .replace(/\*([^*]+)\*/g, '<em style="color: #94a3b8;">$1</em>')
+                    .replace(/^- (.+)$/gm, '<li style="color: #cbd5e1; margin-left: 1rem; list-style: disc;">$1</li>')
+                    // Make Evidence lines expandable
+                    .replace(/^  - Evidence: (.+)$/gm, '<div class="evidence-item" style="margin-left: 2rem; margin-top: 0.25rem;"><span class="evidence-toggle" onclick="this.parentElement.classList.toggle(\'expanded\')" style="color: #06b6d4; cursor: pointer; font-size: 0.85em;">📋 Evidence <span class="toggle-icon">▶</span></span><div class="evidence-content" style="display: none; color: #94a3b8; font-size: 0.9em; padding: 0.5rem; margin-top: 0.25rem; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 2px solid #06b6d4;">$1</div></div>')
+                    .replace(/^  - (.+)$/gm, '<li style="color: #94a3b8; margin-left: 2rem; font-size: 0.9em; list-style: circle;">$1</li>')
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n/g, '<br>');
+                sectionsHtml = `
+                <style>
+                    .evidence-item.expanded .evidence-content { display: block !important; }
+                    .evidence-item.expanded .toggle-icon { transform: rotate(90deg); display: inline-block; }
+                    .evidence-toggle:hover { text-decoration: underline; }
+                </style>
+                <div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.2);">
+                    <div style="color: #e2e8f0; line-height: 1.7;">${fullTextHtml}</div>
+                </div>`;
+            }
 
             const tagsHtml = (blog.tags || []).map(tag =>
                 `<span class="badge me-1 mb-1" style="background: rgba(139, 92, 246, 0.3); color: #a78bfa;">${tag}</span>`
@@ -74102,7 +74148,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                 <div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.2);">
                     <h5 style="color: #22d3ee;">Introduction</h5>
-                    <p style="color: #e2e8f0; line-height: 1.8; font-size: 15px;">${blog.intro}</p>
+                    <p style="color: #e2e8f0; line-height: 1.8; font-size: 15px;">${(blog.intro || '').replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #f9fafb;">$1</strong>')}</p>
                 </div>
 
                 ${sectionsHtml}
