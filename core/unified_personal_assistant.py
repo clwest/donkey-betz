@@ -226,30 +226,78 @@ When users ask about agents, you should:
             except Exception as e:
                 logger.debug(f"Could not get policy context: {e}")
 
-            # Session 324: Get agent knowledge/learning insights
+            # Session 554: Get comprehensive agent intelligence using IntelligenceQueryService
             agent_knowledge_context = ""
+            intelligence_summary = None
             try:
-                from core.models import AgentKnowledgeSource, KnowledgeTransfer
-                from django.utils import timezone
-                from datetime import timedelta
+                from core.services.intelligence_query import intelligence_service
 
-                # Get recent valuable knowledge transfers
-                recent_transfers = KnowledgeTransfer.objects.filter(
-                    was_useful=True,
-                    created_at__gte=timezone.now() - timedelta(days=7)
-                ).select_related('connection__teacher_agent').order_by('-created_at')[:5]
+                # Search full knowledge base for relevant entries
+                intelligence_summary = intelligence_service.get_intelligence_summary(message)
 
-                if recent_transfers:
-                    knowledge_parts = ["\n== AGENT COLLECTIVE KNOWLEDGE =="]
-                    knowledge_parts.append("Recent insights from the agent network:")
-                    for transfer in recent_transfers:
-                        summary = transfer.transfer_summary[:100] if transfer.transfer_summary else ''
-                        if summary:
-                            knowledge_parts.append(f"- {transfer.connection.teacher_agent.name}: {summary}")
+                if intelligence_summary and intelligence_summary.get('has_data'):
+                    knowledge_parts = ["\n== AGENT COLLECTIVE INTELLIGENCE =="]
+
+                    # Add attribution
+                    attribution = intelligence_summary.get('attribution', '')
+                    if attribution:
+                        knowledge_parts.append(attribution)
+
+                    # Add relevant knowledge entries
+                    knowledge_data = intelligence_summary.get('knowledge', {})
+                    if knowledge_data.get('entries'):
+                        knowledge_parts.append("\nRelevant knowledge from agent network:")
+                        for entry in knowledge_data['entries'][:5]:
+                            title = entry.get('title', '')[:80]
+                            agent = entry.get('agent__name', 'Unknown')
+                            confidence = entry.get('confidence_score', 0)
+                            knowledge_parts.append(f"- [{agent}] {title} (confidence: {confidence:.0%})")
+
+                    # Add expert agents
+                    experts_data = intelligence_summary.get('experts', {})
+                    if experts_data.get('experts'):
+                        expert_names = [e['agent_name'] for e in experts_data['experts'][:3]]
+                        knowledge_parts.append(f"\nExpert agents on this topic: {', '.join(expert_names)}")
+
+                    # Add recent insights
+                    insights_data = intelligence_summary.get('insights', {})
+                    if insights_data.get('dreams'):
+                        knowledge_parts.append("\nRecent agent insights:")
+                        for dream in insights_data['dreams'][:2]:
+                            title = dream.get('title', '')[:60]
+                            agent = dream.get('agent__name', 'Unknown')
+                            knowledge_parts.append(f"- 💭 {agent} dreamed: {title}")
+
                     agent_knowledge_context = '\n'.join(knowledge_parts)
-                    logger.info(f"🧠 Injected {len(recent_transfers)} agent knowledge insights")
+                    logger.info(
+                        f"🧠 Session 554: Injected intelligence from "
+                        f"{knowledge_data.get('total_count', 0)} knowledge entries, "
+                        f"{len(experts_data.get('experts', []))} experts"
+                    )
             except Exception as e:
-                logger.debug(f"Could not get agent knowledge: {e}")
+                logger.warning(f"Could not get agent intelligence: {e}")
+                # Fallback to basic query
+                try:
+                    from core.models import KnowledgeTransfer
+                    from django.utils import timezone
+                    from datetime import timedelta
+
+                    recent_transfers = KnowledgeTransfer.objects.filter(
+                        was_useful=True,
+                        created_at__gte=timezone.now() - timedelta(days=7)
+                    ).select_related('connection__teacher_agent').order_by('-created_at')[:5]
+
+                    if recent_transfers:
+                        knowledge_parts = ["\n== AGENT COLLECTIVE KNOWLEDGE =="]
+                        knowledge_parts.append("Recent insights from the agent network:")
+                        for transfer in recent_transfers:
+                            summary = transfer.transfer_summary[:100] if transfer.transfer_summary else ''
+                            if summary:
+                                knowledge_parts.append(f"- {transfer.connection.teacher_agent.name}: {summary}")
+                        agent_knowledge_context = '\n'.join(knowledge_parts)
+                        logger.info(f"🧠 Fallback: Injected {len(recent_transfers)} agent knowledge insights")
+                except Exception as fallback_e:
+                    logger.debug(f"Fallback knowledge also failed: {fallback_e}")
 
             # Check if user is asking about platform components
             message_lower = message.lower()
@@ -345,6 +393,19 @@ Provide a helpful, personalized response. If this seems like it needs an agent, 
                         [d.get('source', 'unknown') for d in spider_insights.get('related_discussions', [])]
                     ))
                 }
+
+            # Session 554: Add intelligence data to response
+            if intelligence_summary and intelligence_summary.get('has_data'):
+                knowledge_data = intelligence_summary.get('knowledge', {})
+                experts_data = intelligence_summary.get('experts', {})
+                result['intelligence_data'] = {
+                    'knowledge_entries': knowledge_data.get('total_count', 0),
+                    'agents_referenced': len(knowledge_data.get('agent_breakdown', {})),
+                    'expert_agents': [e['agent_name'] for e in experts_data.get('experts', [])[:3]],
+                    'attribution': intelligence_summary.get('attribution', ''),
+                    'has_intelligence': True
+                }
+                result['metadata']['intelligence_used'] = True
 
             return result
 

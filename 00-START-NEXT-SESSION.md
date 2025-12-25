@@ -1,77 +1,50 @@
-# Session 554 - Start Here
+# Session 555 - Start Here
 
-**Previous Session:** 553
+**Previous Session:** 554
 **Date:** December 25, 2025
-**Focus:** Implement PA ↔ Intelligence Integration (Phase 1)
+**Focus:** Frontend Intelligence Attribution & Expert Routing
 
 ---
 
-## Session 553 Accomplishments
+## Session 554 Accomplishments
 
-### PA ↔ Intelligence Mapping Complete
+### PA Intelligence Integration COMPLETE
 
-Analyzed the full data flow from user query through PA to intelligence sources.
+Connected Personal Assistant to the full knowledge base (3,668+ entries).
 
-**Key Finding:** The learning system is running beautifully (3,345+ knowledge entries, 160 connections, 110+ transfers/day), but users can only access ~5 recent transfers through PA.
+**Before:** PA used 5 recent transfers
+**After:** PA searches entire knowledge base by topic
 
-**Full analysis:** `docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md`
+**Key Results:**
+- Query "AI trends" → 432 matching knowledge entries
+- Expert agents identified: SEOOptimizerAgent, WorkflowAgent, ResearchAgent
+- Full attribution: "Based on 432 entries from 8 agents..."
 
----
+**Files Created:**
+- `core/services/intelligence_query.py` - IntelligenceQueryService
+- `docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md`
 
-## Session 554 Mission
-
-**Goal:** Connect PA to the full knowledge base so users can ACCESS the learning system.
-
-### The Gap We're Fixing
-
-| Current State | Target State |
-|---------------|--------------|
-| PA uses 5 recent transfers | PA searches 3,345+ knowledge entries |
-| No topic matching | Query by topic relevance |
-| Generic responses | "Based on 47 entries from 12 agents..." |
+**Full handoff:** `docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md`
 
 ---
 
-## Implementation Plan
+## Session 555 Options
 
-### Phase 1: Intelligence Query Service (Session 554)
+### Option A: Frontend Intelligence Display
+Show intelligence attribution in PA responses in the UI:
+- Display "Based on X entries from Y agents" badge
+- Show expert agent chips
+- Add "Powered by agent learning" indicator
 
-Create `core/services/intelligence_query.py`:
+### Option B: Expert Agent Routing
+Route complex queries to discovered expert agents:
+- When user asks about blockchain → auto-route to ResearchAgent (expert)
+- Display "Consulting expert agent..." status
 
-```python
-class IntelligenceQueryService:
-    def search_knowledge(self, query: str, limit: int = 10):
-        """Search full knowledge base by topic"""
-
-    def get_expert_agents(self, topic: str):
-        """Find agents who have expertise on topic"""
-
-    def get_recent_insights(self, topic: str = None):
-        """Get recent dreams/conversations about topic"""
-```
-
-### Phase 2: PA Integration
-
-Modify `core/unified_personal_assistant.py`:
-- Add `IntelligenceQueryService` to `_handle_direct_response()`
-- Include knowledge attribution in responses
-
-### Phase 3: Response Enhancement
-
-When user asks "What do we know about blockchain?":
-- Search knowledge base for blockchain entries
-- Find agents who've learned about it
-- Include: "Based on 23 knowledge entries from 8 agents..."
-
----
-
-## Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `core/services/intelligence_query.py` | CREATE | Unified intelligence querying |
-| `core/unified_personal_assistant.py` | MODIFY | Add intelligence integration |
-| `core/agents/personal_assistant_agent.py` | MODIFY | Add knowledge attribution |
+### Option C: Dream Integration
+Surface relevant agent dreams in responses:
+- "Your agents have been thinking about this..."
+- Show dream insights alongside knowledge
 
 ---
 
@@ -79,11 +52,12 @@ When user asks "What do we know about blockchain?":
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Knowledge Entries** | 3,345+ | Active, growing |
+| **Knowledge Entries** | 3,668+ | Active, growing |
 | **Learning Connections** | 160 | Active |
 | **Agents** | 55 | All learning |
-| **Spiders** | 75 | Active, collecting |
-| **Scheduled Tasks** | 142 | All running |
+| **Transfers (24h)** | 122 | Healthy |
+| **Dreams (24h)** | 821 | Healthy |
+| **Spiders** | 75 | Active |
 
 ---
 
@@ -96,8 +70,12 @@ make start && make celery
 # 2. Verify health
 curl http://localhost:8000/health/ping/
 
-# 3. Check knowledge count
-.venv/bin/python manage.py shell -c "from core.models_unified_system import AgentKnowledgeSource; print(f'Knowledge entries: {AgentKnowledgeSource.objects.filter(is_active=True).count()}')"
+# 3. Test intelligence service
+.venv/bin/python manage.py shell -c "
+from core.services.intelligence_query import intelligence_service
+result = intelligence_service.search_knowledge('AI', limit=5)
+print(f'Found {result[\"total_count\"]} entries from {len(result[\"agent_breakdown\"])} agents')
+"
 
 # 4. Access AI Studio
 open http://localhost:8000/ai-studio/
@@ -105,25 +83,15 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Success Criteria for Session 554
-
-1. **IntelligenceQueryService created** with `search_knowledge()` method
-2. **PA integrated** - searches full knowledge base
-3. **Test query works:**
-   - User: "What do we know about AI trends?"
-   - PA: "Based on X knowledge entries from Y agents, here's what we know..."
-
----
-
 ## Key Files for Reference
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md` | Full gap analysis |
-| `core/unified_personal_assistant.py` | Current PA implementation |
-| `core/models_unified_system.py` | Knowledge models |
-| `core/views_research_demo.py` | Working research APIs |
+| `core/services/intelligence_query.py` | IntelligenceQueryService |
+| `core/unified_personal_assistant.py` | PA with intelligence integration |
+| `docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md` | Session 554 handoff |
+| `docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md` | Gap analysis |
 
 ---
 
-**Let's make the learning system accessible!**
+**The learning system is now ACCESSIBLE - let's make it VISIBLE!**
