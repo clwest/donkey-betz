@@ -74026,24 +74026,39 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         function renderLiveFeed(container, events) {
+            // Session 552: Fixed to match API response structure
             if (events.length === 0) {
                 container.innerHTML = '<div class="text-secondary text-center py-5">No events in the last 24 hours</div>';
                 return;
             }
 
             const html = events.map(event => {
-                const isBlock = event.event_type === 'mythology_block';
-                const icon = isBlock ? '🚨' : '📚';
-                const color = isBlock ? 'text-danger' : 'text-cyan';
+                // Session 552: Use event.type (not event_type) from API
+                const iconMap = {
+                    'transfer': '📚',
+                    'conversation': '💬',
+                    'dream': '✨',
+                    'mythology_block': '🚨'
+                };
+                const colorMap = {
+                    'transfer': '#06b6d4',      // Cyan
+                    'conversation': '#8b5cf6',  // Purple
+                    'dream': '#f59e0b',         // Amber
+                    'mythology_block': '#ef4444' // Red
+                };
+
+                const icon = iconMap[event.type] || '📚';
+                const borderColor = colorMap[event.type] || '#06b6d4';
+                const textColor = event.type === 'mythology_block' ? 'text-danger' : 'text-cyan';
                 const time = new Date(event.timestamp).toLocaleTimeString();
-                const borderColor = isBlock ? '#ef4444' : '#06b6d4';
 
                 return `
                     <div class="d-flex align-items-start gap-2 p-2 mb-2" style="background: rgba(15, 23, 42, 0.5); border-radius: 8px; border-left: 3px solid ${borderColor};">
                         <span style="font-size: 1.2em;">${icon}</span>
                         <div class="flex-grow-1">
-                            <div class="small ${color}">${event.title}</div>
-                            <div class="small text-secondary">${event.teacher.name} → ${event.student.name}</div>
+                            <div class="small ${textColor}">${event.title || 'Event'}</div>
+                            <div class="small text-secondary">${event.description || ''}</div>
+                            ${event.details ? `<div class="small text-muted" style="opacity: 0.7;">${event.details}</div>` : ''}
                         </div>
                         <small class="text-secondary">${time}</small>
                     </div>

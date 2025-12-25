@@ -2452,8 +2452,9 @@ urlpatterns = [
     path('api/v1/research/live-feed/', views_research_demo.live_feed_api, name='research-live-feed'),
     path('api/v1/research/stats/', views_research_demo.stats_api, name='research-stats'),
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
-    # Session 550: Commented out - functions not implemented yet
-    # path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
+    # Session 552: Self-blog stub API (returns empty data, prevents frontend errors)
+    path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
+    # TODO: Implement these in a future session
     # path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
     # path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
     # path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
