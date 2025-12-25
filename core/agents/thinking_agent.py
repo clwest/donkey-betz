@@ -211,10 +211,27 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append(f"- Total Dreams: {stats.get('total', 0)}\n")
             prompt_parts.append(f"- Dreams (24h): {stats.get('count_24h', 0)}\n")
 
+            # Session 551: Add pending dreams awaiting decision
+            pending = stats.get('pending_decision', 0)
+            oldest_hours = stats.get('oldest_pending_hours', 0)
+            prompt_parts.append(f"- Dreams Awaiting Decision: {pending}\n")
+            if pending > 0:
+                prompt_parts.append(f"- Oldest Pending: {oldest_hours:.1f} hours\n")
+
             if stats.get('recent_dreams'):
                 prompt_parts.append("\n**Recent Dream Themes:**\n")
                 for dream in stats['recent_dreams'][:5]:
                     prompt_parts.append(f"- {dream['agent']}: \"{dream['summary'][:100]}...\"\n")
+
+            # Session 551: Add expected behavior context for dream backlog
+            if pending > 0:
+                prompt_parts.append("\n**IMPORTANT - Dream Backlog Assessment:**\n")
+                prompt_parts.append("Dreams awaiting decision represent high-value ideas promoted to the Boardroom.\n")
+                prompt_parts.append("Flag as a concern if:\n")
+                prompt_parts.append("- More than 10 dreams are pending (decision bottleneck)\n")
+                prompt_parts.append("- Oldest pending dream is over 48 hours old (stale backlog)\n")
+                prompt_parts.append("- Pending count is growing faster than decisions are made\n")
+
             prompt_parts.append("\n")
 
         # Add boardroom decisions
@@ -409,9 +426,27 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 'agent__name', 'title', 'content'
             )[:5])
 
+            # Session 551: Track pending dreams awaiting decision
+            pending_dreams = AgentDream.objects.filter(
+                promoted_to_decision=True,
+                decision_outcome='pending'
+            ).count()
+
+            # Get oldest pending dream age for backlog assessment
+            oldest_pending = AgentDream.objects.filter(
+                promoted_to_decision=True,
+                decision_outcome='pending'
+            ).order_by('promoted_at').first()
+
+            pending_age_hours = 0
+            if oldest_pending and oldest_pending.promoted_at:
+                pending_age_hours = (timezone.now() - oldest_pending.promoted_at).total_seconds() / 3600
+
             context['dream_stats'] = {
                 'total': total_dreams,
                 'count_24h': dreams_24h,
+                'pending_decision': pending_dreams,
+                'oldest_pending_hours': round(pending_age_hours, 1),
                 'recent_dreams': [
                     {'agent': d['agent__name'], 'summary': d['title'] or d['content'][:100] if d['content'] else ''}
                     for d in recent_dreams

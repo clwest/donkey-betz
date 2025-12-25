@@ -45,6 +45,11 @@ class ConcernTrackerService:
         'duplicate': 'information_redundancy',
         'echo chamber': 'information_redundancy',
         'duplication': 'information_redundancy',
+        # Session 551: Dream backlog category
+        'dream': 'dream_backlog',
+        'pending dream': 'dream_backlog',
+        'awaiting decision': 'dream_backlog',
+        'dream backlog': 'dream_backlog',
     }
 
     # Verification metrics for different concern categories
@@ -56,6 +61,7 @@ class ConcernTrackerService:
         'action_gap': 'actions_executed_24h',
         'execution_failure': 'action_success_rate',
         'information_redundancy': 'duplicate_ratio',  # Session 549
+        'dream_backlog': 'pending_dreams_count',  # Session 551
     }
 
     def __init__(self):
