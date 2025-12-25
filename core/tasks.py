@@ -17913,19 +17913,49 @@ def trigger_thinking_on_event(event_type: str, event_data: dict):
 @shared_task
 def scan_concerns_for_human_action():
     """
-    Session 549: Periodic task to scan for concerns requiring human action.
+    Session 549/550: Periodic task to scan for concerns requiring human action.
 
     Scans active concerns that cannot be auto-verified and creates
-    action-required notifications for them.
+    action-required notifications for them. Also cleans up stale notifications
+    for concerns that have been resolved.
 
     Returns:
-        Summary of notifications created
+        Summary of notifications created and cleaned
     """
     from core.services.human_action_service import get_human_action_service
+    from core.models_unified_system import ProactiveNotification, TrackedConcern
+    from django.utils import timezone
 
     logger.info("🔔 [HUMAN ACTION] Scanning for concerns requiring human action...")
 
     try:
+        # Session 550: First, clean up stale notifications for resolved concerns
+        stale_dismissed = 0
+        pending_notifications = ProactiveNotification.objects.filter(
+            notification_type='action_required',
+            is_dismissed=False
+        )
+
+        for n in pending_notifications:
+            concern_id = n.rich_content.get('concern_id') if n.rich_content else None
+            if concern_id:
+                try:
+                    concern = TrackedConcern.objects.get(id=concern_id)
+                    if concern.status == 'resolved':
+                        n.is_dismissed = True
+                        n.dismissed_at = timezone.now()
+                        n.save()
+                        stale_dismissed += 1
+                except TrackedConcern.DoesNotExist:
+                    n.is_dismissed = True
+                    n.dismissed_at = timezone.now()
+                    n.save()
+                    stale_dismissed += 1
+
+        if stale_dismissed > 0:
+            logger.info(f"🔔 [HUMAN ACTION] Dismissed {stale_dismissed} stale notifications")
+
+        # Now create new notifications for active concerns
         service = get_human_action_service()
         result = service.create_notifications_for_active_concerns()
 
@@ -17956,6 +17986,7 @@ def scan_concerns_for_human_action():
             'success': True,
             'notifications_created': result['notifications_created'],
             'already_notified': result['already_notified'],
+            'stale_dismissed': stale_dismissed,
             'total_concerns': result['total_concerns']
         }
 

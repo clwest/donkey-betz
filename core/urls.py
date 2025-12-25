@@ -1150,11 +1150,11 @@ from core.views_revenue_tracking import (
 # Import Partnership views (Session 38)
 from core import views_partnership
 
-# Session 542: Research Demo API
-from core import views_research_demo
-
 # Session 544: Autonomous Reasoning Engine API
 from core import views_autonomous_reasoning
+
+# Session 550: Research Demo API
+from core import views_research_demo
 
 # Import enhanced learning workflow API
 try:
@@ -2477,6 +2477,12 @@ urlpatterns = [
     path('api/v1/reasoning/actions/pending/', views_autonomous_reasoning.pending_human_actions_api, name='pending-actions'),
     path('api/v1/reasoning/actions/create/', views_autonomous_reasoning.create_action_notifications_api, name='create-actions'),
     path('api/v1/reasoning/actions/<uuid:notification_id>/respond/', views_autonomous_reasoning.handle_human_action_api, name='handle-action'),
+
+    # Session 550: Research Demo APIs (D3.js network visualization)
+    path('api/v1/research/network-graph/', views_research_demo.network_graph_api, name='research-network-graph'),
+    path('api/v1/research/live-feed/', views_research_demo.live_feed_api, name='research-live-feed'),
+    path('api/v1/research/stats/', views_research_demo.stats_api, name='research-stats'),
+    path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
 
     path('api/v1/odds-calc/', include('odds_calc.urls')),  # Odds calculation endpoints
     path('api/v1/intelligence/', include('intelligence.urls')),  # Intelligence module with action plan execution
