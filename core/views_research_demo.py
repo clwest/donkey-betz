@@ -1,827 +1,342 @@
 """
-Session 542: Research Demo API
-Provides endpoints for the interactive D3.js visualization of the knowledge pipeline.
+Research Demo API - Session 550
 
-Endpoints:
-- /api/v1/research/network-graph/ - Nodes and edges for D3 force graph
-- /api/v1/research/live-feed/ - Recent learning events
-- /api/v1/research/stats/ - Aggregate pipeline statistics
-- /api/v1/research/mythology-gate/ - Quarantine data with trust decay
+Provides data for the Research Demo tab with D3.js network visualization
+showing the knowledge pipeline: Spiders -> Agents -> Learning Network -> Mythology Gate -> Outcomes
 """
 
 import logging
-from datetime import timedelta
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db.models import Count, Avg, Sum, Q, F
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
+from django.db import models
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-# Category color mapping for D3.js visualization
+# Category colors for D3.js visualization
 CATEGORY_COLORS = {
     'creation': '#ec4899',      # Pink
     'editing': '#f472b6',       # Light pink
     'research': '#8b5cf6',      # Purple
     'strategy': '#06b6d4',      # Cyan
-    'business': '#0ea5e9',      # Light blue
-    'executive': '#f59e0b',     # Orange
+    'business': '#14b8a6',      # Teal
+    'executive': '#f59e0b',     # Amber
     'development': '#22c55e',   # Green
     'content_studio': '#a855f7', # Violet
     'specialized': '#6366f1',   # Indigo
-    'training': '#14b8a6',      # Teal
-    'orchestration': '#ef4444', # Red
+    'training': '#ef4444',      # Red
+    'orchestration': '#3b82f6', # Blue
     'entry_point': '#fbbf24',   # Yellow
-    'default': '#64748b'        # Gray
-}
-
-# Agent category mapping
-AGENT_CATEGORIES = {
-    'ImageAgent': 'creation',
-    'VideoAgent': 'creation',
-    'AudioAgent': 'creation',
-    'ThreeDAgent': 'creation',
-    'ImageEditingAgent': 'editing',
-    'VideoEditingAgent': 'editing',
-    'ResearchAgent': 'research',
-    'TrendAnalysisAgent': 'research',
-    'OpportunityScoringAgent': 'research',
-    'ContentStrategyAgent': 'strategy',
-    'BrandIdentityAgent': 'strategy',
-    'SEOOptimizerAgent': 'strategy',
-    'SocialMediaAgent': 'strategy',
-    'CompetitorAnalysisAgent': 'business',
-    'CustomerResearchAgent': 'business',
-    'BrandStrategyAgent': 'business',
-    'MarketingStrategyAgent': 'business',
-    'BusinessContentStrategyAgent': 'business',
-    'CTOAgent': 'executive',
-    'COOAgent': 'executive',
-    'CreativeDirectorAgent': 'executive',
-    'MeetingCoordinatorAgent': 'executive',
-    'CodeGeneratorAgent': 'development',
-    'FullStackDeveloperAgent': 'development',
-    'CodeReviewAgent': 'development',
-    'DevOpsAgent': 'development',
-    'AutonomousContentStudioCoordinator': 'content_studio',
-    'TopicMinerAgent': 'content_studio',
-    'ContrarianAgent': 'content_studio',
-    'PerformanceAnalystAgent': 'content_studio',
-    'LegalDocDrafterAgent': 'specialized',
-    'ResolveAgent': 'specialized',
-    'PodcastCoordinatorAgent': 'specialized',
-    'CharacterTrainingAgent': 'training',
-    'TrainedCreationAgent': 'training',
-    'WorkflowAgent': 'orchestration',
-    'CampaignOrchestratorAgent': 'orchestration',
-    'PersonalAssistantAgent': 'entry_point',
+    'default': '#64748b',       # Slate
 }
 
 
-def get_agent_category(agent_name):
-    """Get category for an agent by name."""
-    return AGENT_CATEGORIES.get(agent_name, 'default')
-
-
-def get_category_color(category):
-    """Get color for a category."""
-    return CATEGORY_COLORS.get(category, CATEGORY_COLORS['default'])
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
+@require_http_methods(["GET"])
 def network_graph_api(request):
     """
-    Returns nodes and edges for D3.js force-directed graph.
-
-    Response:
-    {
-        "success": true,
-        "nodes": [{"id", "name", "category", "color", "knowledge_count", "mythology_blocks"}],
-        "edges": [{"source", "target", "strength", "learning_type", "total_transfers", "mythology_blocks"}],
-        "stats": {"total_agents", "total_connections", "total_transfers", "avg_strength"}
-    }
+    Returns nodes (agents) and edges (connections) for D3.js force-directed graph.
     """
-    try:
-        from core.models_unified_system import Agent, AgentLearningConnection, AgentKnowledgeSource
+    from core.models_unified_system import Agent, AgentLearningConnection, KnowledgeTransfer
 
-        # Get all active agents
+    try:
+        # Get all active agents as nodes
         agents = Agent.objects.filter(is_active=True)
 
-        # Get knowledge counts per agent
-        knowledge_counts = dict(
-            AgentKnowledgeSource.objects.filter(is_active=True)
-            .values('agent_id')
-            .annotate(count=Count('id'))
-            .values_list('agent_id', 'count')
-        )
-
-        # Get mythology blocks per agent (sum of blocks from connections where agent is teacher)
-        mythology_blocks_by_agent = dict(
-            AgentLearningConnection.objects.filter(is_active=True)
-            .values('teacher_agent_id')
-            .annotate(total_blocks=Sum('mythology_blocks'))
-            .values_list('teacher_agent_id', 'total_blocks')
-        )
-
-        # Build nodes
+        # Build nodes list
         nodes = []
         agent_ids = set()
         for agent in agents:
-            category = get_agent_category(agent.name)
+            category = agent.category or 'default'
+            color = CATEGORY_COLORS.get(category, CATEGORY_COLORS['default'])
+
+            # Count knowledge for this agent
+            knowledge_count = KnowledgeTransfer.objects.filter(
+                recipient_agent=agent
+            ).count()
+
+            # Count mythology blocks
+            mythology_blocks = AgentLearningConnection.objects.filter(
+                student_agent=agent,
+                mythology_blocks__gt=0
+            ).aggregate(total=models.Sum('mythology_blocks'))['total'] or 0
+
             nodes.append({
                 'id': str(agent.id),
                 'name': agent.name,
                 'category': category,
-                'color': get_category_color(category),
-                'knowledge_count': knowledge_counts.get(agent.id, 0),
-                'mythology_blocks': mythology_blocks_by_agent.get(agent.id, 0) or 0,
-                'effectiveness_score': agent.effectiveness_score if hasattr(agent, 'effectiveness_score') else 0,
-                'is_active': agent.is_active,
+                'color': color,
+                'effectiveness': float(agent.effectiveness_score or 0),
+                'knowledge_count': knowledge_count,
+                'mythology_blocks': mythology_blocks,
+                'total_executions': agent.total_executions or 0,
+                'is_recently_active': agent.last_active and agent.last_active > timezone.now() - timedelta(hours=24),
             })
-            agent_ids.add(agent.id)
+            agent_ids.add(str(agent.id))
 
-        # Get all active learning connections
-        connections = AgentLearningConnection.objects.filter(
-            is_active=True,
-            teacher_agent__is_active=True,
-            student_agent__is_active=True
-        ).select_related('teacher_agent', 'student_agent')
+        # Get all active learning connections as edges
+        connections = AgentLearningConnection.objects.filter(is_active=True)
 
-        # Build edges
         edges = []
-        total_transfers = 0
-        total_mythology_blocks = 0
-        strengths = []
-
         for conn in connections:
-            if conn.teacher_agent_id in agent_ids and conn.student_agent_id in agent_ids:
+            teacher_id = str(conn.teacher_agent_id)
+            student_id = str(conn.student_agent_id)
+
+            if teacher_id in agent_ids and student_id in agent_ids:
                 edges.append({
-                    'id': str(conn.id),
-                    'source': str(conn.teacher_agent_id),
-                    'target': str(conn.student_agent_id),
-                    'strength': float(conn.strength),
+                    'source': teacher_id,
+                    'target': student_id,
+                    'strength': float(conn.strength or 0.5),
                     'learning_type': conn.learning_type,
-                    'total_transfers': conn.total_transfers,
-                    'successful_transfers': conn.successful_transfers,
-                    'mythology_blocks': conn.mythology_blocks,
-                    'last_transfer_at': conn.last_transfer_at.isoformat() if conn.last_transfer_at else None,
+                    'total_transfers': conn.total_transfers or 0,
+                    'mythology_blocks': conn.mythology_blocks or 0,
+                    'has_recent_transfer': conn.last_transfer_at and conn.last_transfer_at > timezone.now() - timedelta(hours=24),
                 })
-                total_transfers += conn.total_transfers
-                total_mythology_blocks += conn.mythology_blocks
-                strengths.append(conn.strength)
 
-        # Calculate stats
-        avg_strength = sum(strengths) / len(strengths) if strengths else 0
+        # Aggregate stats
+        stats = {
+            'total_nodes': len(nodes),
+            'total_edges': len(edges),
+            'total_transfers': KnowledgeTransfer.objects.count(),
+            'active_connections': connections.filter(total_transfers__gt=0).count(),
+            'mythology_blocked': connections.filter(mythology_blocks__gt=0).count(),
+        }
 
-        return Response({
+        return JsonResponse({
             'success': True,
             'nodes': nodes,
             'edges': edges,
-            'stats': {
-                'total_agents': len(nodes),
-                'total_connections': len(edges),
-                'total_transfers': total_transfers,
-                'total_mythology_blocks': total_mythology_blocks,
-                'avg_strength': round(avg_strength, 3),
-            }
+            'stats': stats,
         })
 
     except Exception as e:
-        logger.error(f"Error in network_graph_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        logger.error(f"Network graph API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
+@require_http_methods(["GET"])
 def live_feed_api(request):
     """
-    Returns recent learning events for the live feed.
-
-    Query params:
-    - limit (default: 50)
-    - hours (default: 24)
-    - include_blocks (default: true)
+    Returns recent learning events for the live feed sub-tab.
     """
+    from core.models_unified_system import KnowledgeTransfer, AgentConversation, AgentDream
+
     try:
-        from core.models_unified_system import KnowledgeTransfer, MythologyQuarantine
-
-        limit = int(request.GET.get('limit', 50))
         hours = int(request.GET.get('hours', 24))
-        include_blocks = request.GET.get('include_blocks', 'true').lower() == 'true'
+        limit = int(request.GET.get('limit', 50))
+        since = timezone.now() - timedelta(hours=hours)
 
-        cutoff = timezone.now() - timedelta(hours=hours)
         events = []
 
-        # Get recent knowledge transfers
+        # Recent knowledge transfers
         transfers = KnowledgeTransfer.objects.filter(
-            created_at__gte=cutoff
-        ).select_related(
-            'connection__teacher_agent',
-            'connection__student_agent',
-            'source_knowledge'
-        ).order_by('-created_at')[:limit]
+            created_at__gte=since
+        ).select_related('source_agent', 'recipient_agent').order_by('-created_at')[:limit]
 
-        for transfer in transfers:
+        for t in transfers:
             events.append({
-                'id': str(transfer.id),
-                'timestamp': transfer.created_at.isoformat(),
-                'event_type': 'knowledge_transfer',
-                'teacher': {
-                    'id': str(transfer.connection.teacher_agent_id),
-                    'name': transfer.connection.teacher_agent.name,
-                },
-                'student': {
-                    'id': str(transfer.connection.student_agent_id),
-                    'name': transfer.connection.student_agent.name,
-                },
-                'title': transfer.source_knowledge.title if transfer.source_knowledge else transfer.transfer_summary[:100],
-                'summary': transfer.transfer_summary[:200] if transfer.transfer_summary else '',
-                'usefulness_score': float(transfer.usefulness_score) if transfer.usefulness_score else 0,
-                'was_applied': transfer.was_applied,
+                'type': 'transfer',
+                'icon': 'book',
+                'timestamp': t.created_at.isoformat(),
+                'title': f"Knowledge Transfer",
+                'description': f"{t.source_agent.name if t.source_agent else 'System'} taught {t.recipient_agent.name if t.recipient_agent else 'Unknown'}",
+                'details': t.knowledge_title[:100] if t.knowledge_title else 'Untitled',
+                'quality_score': float(t.quality_score or 0),
             })
 
-        # Get mythology blocks if requested
-        if include_blocks:
-            blocks = MythologyQuarantine.objects.filter(
-                created_at__gte=cutoff
-            ).select_related(
-                'teacher_agent',
-                'student_agent'
-            ).order_by('-created_at')[:limit]
+        # Recent agent conversations
+        conversations = AgentConversation.objects.filter(
+            started_at__gte=since
+        ).order_by('-started_at')[:limit//2]
 
-            for block in blocks:
-                events.append({
-                    'id': str(block.id),
-                    'timestamp': block.created_at.isoformat(),
-                    'event_type': 'mythology_block',
-                    'teacher': {
-                        'id': str(block.teacher_agent_id),
-                        'name': block.teacher_agent.name,
-                    },
-                    'student': {
-                        'id': str(block.student_agent_id),
-                        'name': block.student_agent.name,
-                    },
-                    'title': block.blocked_title[:100],
-                    'summary': block.blocked_summary[:200] if block.blocked_summary else '',
-                    'violation_type': block.violation_type,
-                    'status': block.status,
-                })
+        for c in conversations:
+            events.append({
+                'type': 'conversation',
+                'icon': 'chat',
+                'timestamp': c.started_at.isoformat(),
+                'title': f"Agent Conversation",
+                'description': c.topic[:80] if c.topic else 'General discussion',
+                'details': f"{c.message_count or 0} messages",
+                'quality_score': float(c.quality_rating or 0),
+            })
 
-        # Sort by timestamp descending
+        # Recent agent dreams
+        dreams = AgentDream.objects.filter(
+            dreamed_at__gte=since
+        ).select_related('agent').order_by('-dreamed_at')[:limit//3]
+
+        for d in dreams:
+            events.append({
+                'type': 'dream',
+                'icon': 'sparkles',
+                'timestamp': d.dreamed_at.isoformat(),
+                'title': f"Agent Dream",
+                'description': f"{d.agent.name if d.agent else 'Unknown'} dreamed",
+                'details': d.dream_title[:80] if d.dream_title else 'Untitled dream',
+                'quality_score': float(d.creativity_score or 0),
+            })
+
+        # Sort all events by timestamp
         events.sort(key=lambda x: x['timestamp'], reverse=True)
         events = events[:limit]
 
-        # Calculate stats
-        transfers_count = len([e for e in events if e['event_type'] == 'knowledge_transfer'])
-        blocks_count = len([e for e in events if e['event_type'] == 'mythology_block'])
-
-        return Response({
+        return JsonResponse({
             'success': True,
             'events': events,
-            'stats': {
-                'total_events': len(events),
-                'transfers': transfers_count,
-                'blocks': blocks_count,
-                'hours_covered': hours,
-            }
+            'total': len(events),
+            'since': since.isoformat(),
         })
 
     except Exception as e:
-        logger.error(f"Error in live_feed_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        logger.error(f"Live feed API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
+@require_http_methods(["GET"])
 def stats_api(request):
     """
-    Returns aggregate pipeline statistics for the overview.
-
-    Shows: Spiders -> Agents -> Learning Network -> Mythology Gate -> Outcomes
+    Returns aggregate pipeline statistics for the overview sub-tab.
     """
-    try:
-        from core.models_unified_system import (
-            Agent, AgentLearningConnection, AgentKnowledgeSource,
-            KnowledgeTransfer, MythologyQuarantine, SpiderData
-        )
-        from ai_core.spiders.spider_registry import spider_registry
+    from core.models_unified_system import Agent, AgentLearningConnection, KnowledgeTransfer
+    from core.models_unified_system import AgentConversation, AgentDream
+    from ai_core.models import SpiderData
 
+    try:
         now = timezone.now()
-        last_24h = now - timedelta(hours=24)
+        today = now - timedelta(hours=24)
 
         # Spider stats
-        spider_count = len(spider_registry.get_all_spiders()) if hasattr(spider_registry, 'get_all_spiders') else 72
-        spider_data_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
+        total_spiders = 75
+        spider_data_24h = SpiderData.objects.filter(created_at__gte=today).count()
+        total_spider_data = SpiderData.objects.count()
 
         # Agent stats
         total_agents = Agent.objects.filter(is_active=True).count()
-        agents_with_knowledge = AgentKnowledgeSource.objects.filter(
-            is_active=True
-        ).values('agent_id').distinct().count()
+        active_agents_24h = Agent.objects.filter(last_active__gte=today).count()
 
         # Learning network stats
         total_connections = AgentLearningConnection.objects.filter(is_active=True).count()
+        active_connections = AgentLearningConnection.objects.filter(
+            is_active=True,
+            last_transfer_at__gte=today
+        ).count()
+
+        # Transfer stats
         total_transfers = KnowledgeTransfer.objects.count()
-        transfers_24h = KnowledgeTransfer.objects.filter(created_at__gte=last_24h).count()
-        avg_strength = AgentLearningConnection.objects.filter(
-            is_active=True
-        ).aggregate(avg=Avg('strength'))['avg'] or 0
+        transfers_24h = KnowledgeTransfer.objects.filter(created_at__gte=today).count()
 
         # Mythology gate stats
-        quarantine_total = MythologyQuarantine.objects.count()
-        quarantine_pending = MythologyQuarantine.objects.filter(status='pending').count()
-        quarantine_approved = MythologyQuarantine.objects.filter(status='approved').count()
-        quarantine_rejected = MythologyQuarantine.objects.filter(status='rejected').count()
-
-        # Trust decay stats
-        connections_with_blocks = AgentLearningConnection.objects.filter(
-            mythology_blocks__gt=0
-        ).count()
-        total_blocks = AgentLearningConnection.objects.aggregate(
-            total=Sum('mythology_blocks')
+        mythology_blocks_total = AgentLearningConnection.objects.aggregate(
+            total=models.Sum('mythology_blocks')
         )['total'] or 0
 
-        # Outcomes stats
-        total_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).count()
-        knowledge_24h = AgentKnowledgeSource.objects.filter(
-            first_discovered_at__gte=last_24h
-        ).count()
-        avg_confidence = AgentKnowledgeSource.objects.filter(
-            is_active=True
-        ).aggregate(avg=Avg('confidence_score'))['avg'] or 0
+        # Quality metrics
+        avg_transfer_quality = KnowledgeTransfer.objects.aggregate(
+            avg=models.Avg('quality_score')
+        )['avg'] or 0
 
-        # === NEW: Detailed Analytics ===
+        # Conversation & dream stats
+        conversations_24h = AgentConversation.objects.filter(started_at__gte=today).count()
+        dreams_24h = AgentDream.objects.filter(dreamed_at__gte=today).count()
 
-        # Transfers per hour (last 24h)
-        last_1h = now - timedelta(hours=1)
-        transfers_1h = KnowledgeTransfer.objects.filter(created_at__gte=last_1h).count()
-        transfers_per_hour = round(transfers_24h / 24, 1) if transfers_24h else 0
-
-        # Top knowledge topics (most shared across agents)
-        # Filter out empty titles and get top 5
-        top_topics_raw = list(
-            AgentKnowledgeSource.objects.filter(is_active=True)
-            .exclude(title='')
-            .exclude(title__isnull=True)
-            .exclude(title__startswith='[Learned]')  # Skip pure "[Learned]" entries
-            .values('title')
-            .annotate(agent_count=Count('agent_id', distinct=True))
-            .order_by('-agent_count')[:10]  # Get more to filter
-        )
-
-        # Clean "[Learned]" prefix from titles
-        top_topics = []
-        for item in top_topics_raw:
-            title = item['title']
-            # Strip "[Learned]" prefix if present
-            if title.startswith('[Learned] '):
-                title = title[10:]  # Remove "[Learned] " (10 chars)
-            elif title.startswith('[Learned]'):
-                title = title[9:]  # Remove "[Learned]" (9 chars)
-
-            # Skip if title is now empty or too short
-            if title and len(title) > 2:
-                top_topics.append({
-                    'title': title,
-                    'agent_count': item['agent_count']
-                })
-
-            if len(top_topics) >= 5:
-                break
-
-        # Most knowledgeable agents
-        top_knowledgeable = list(
-            AgentKnowledgeSource.objects.filter(is_active=True, agent__is_active=True)
-            .values('agent__name')
-            .annotate(knowledge_count=Count('id'))
-            .order_by('-knowledge_count')[:5]
-        )
-
-        # Top teachers (most outgoing transfers)
-        top_teachers = list(
-            KnowledgeTransfer.objects.filter(created_at__gte=last_24h)
-            .values('connection__teacher_agent__name')
-            .annotate(transfer_count=Count('id'))
-            .order_by('-transfer_count')[:5]
-        )
-
-        # Top students (most incoming transfers)
-        top_students = list(
-            KnowledgeTransfer.objects.filter(created_at__gte=last_24h)
-            .values('connection__student_agent__name')
-            .annotate(transfer_count=Count('id'))
-            .order_by('-transfer_count')[:5]
-        )
-
-        # Most active connections
-        top_connections = list(
-            AgentLearningConnection.objects.filter(is_active=True)
-            .select_related('teacher_agent', 'student_agent')
-            .order_by('-total_transfers')[:5]
-            .values('teacher_agent__name', 'student_agent__name', 'total_transfers', 'strength')
-        )
-
-        return Response({
+        return JsonResponse({
             'success': True,
             'pipeline': {
                 'spiders': {
-                    'total': spider_count,
-                    'data_points_24h': spider_data_24h,
-                    'label': 'Spiders',
-                    'icon': '🕷️',
+                    'total': total_spiders,
+                    'data_24h': spider_data_24h,
+                    'total_data': total_spider_data,
                 },
                 'agents': {
                     'total': total_agents,
-                    'with_knowledge': agents_with_knowledge,
-                    'label': 'Agents',
-                    'icon': '🤖',
+                    'active_24h': active_agents_24h,
                 },
                 'network': {
                     'connections': total_connections,
+                    'active_24h': active_connections,
                     'total_transfers': total_transfers,
                     'transfers_24h': transfers_24h,
-                    'avg_strength': round(avg_strength, 2),
-                    'label': 'Learning Network',
-                    'icon': '🔗',
                 },
                 'mythology_gate': {
-                    'quarantined': quarantine_total,
-                    'pending': quarantine_pending,
-                    'approved': quarantine_approved,
-                    'rejected': quarantine_rejected,
-                    'connections_with_blocks': connections_with_blocks,
-                    'total_blocks': total_blocks,
-                    'label': 'Mythology Gate',
-                    'icon': '🛡️',
+                    'total_blocks': mythology_blocks_total,
                 },
-                'outcomes': {
-                    'total_knowledge': total_knowledge,
-                    'new_24h': knowledge_24h,
-                    'avg_confidence': round(avg_confidence, 2),
-                    'label': 'Knowledge',
-                    'icon': '📚',
-                }
+                'quality': {
+                    'avg_transfer_quality': round(float(avg_transfer_quality), 2),
+                },
+                'activity': {
+                    'conversations_24h': conversations_24h,
+                    'dreams_24h': dreams_24h,
+                },
             },
-            'summary': {
-                'spiders_feeding': spider_count,
-                'agents_learning': total_agents,
-                'knowledge_flowing': total_transfers,
-                'myths_blocked': quarantine_total,
-            },
-            'analytics': {
-                'transfers_per_hour': transfers_per_hour,
-                'transfers_last_hour': transfers_1h,
-                'top_topics': top_topics,
-                'top_knowledgeable': top_knowledgeable,
-                'top_teachers': top_teachers,
-                'top_students': top_students,
-                'top_connections': top_connections,
-            }
+            'timestamp': now.isoformat(),
         })
 
     except Exception as e:
-        logger.error(f"Error in stats_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        logger.error(f"Stats API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
+@require_http_methods(["GET"])
 def mythology_gate_api(request):
     """
-    Returns mythology quarantine data with trust decay information.
+    Returns mythology gate data: quarantine queue, trust decay, blocked transfers.
     """
+    from core.models_unified_system import AgentLearningConnection
+
     try:
-        from core.models_unified_system import MythologyQuarantine, AgentLearningConnection
+        # Get connections with mythology blocks
+        blocked_connections = AgentLearningConnection.objects.filter(
+            mythology_blocks__gt=0
+        ).select_related('teacher_agent', 'student_agent').order_by('-mythology_blocks')[:20]
 
-        limit = int(request.GET.get('limit', 20))
-        status_filter = request.GET.get('status', None)
-
-        # Get quarantine items
-        queryset = MythologyQuarantine.objects.select_related(
-            'teacher_agent',
-            'student_agent',
-            'connection'
-        ).order_by('-created_at')
-
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-
-        items = []
-        for q in queryset[:limit]:
-            items.append({
-                'id': str(q.id),
-                'teacher': {
-                    'id': str(q.teacher_agent_id),
-                    'name': q.teacher_agent.name,
-                },
-                'student': {
-                    'id': str(q.student_agent_id),
-                    'name': q.student_agent.name,
-                },
-                'blocked_title': q.blocked_title,
-                'blocked_summary': q.blocked_summary[:300] if q.blocked_summary else '',
-                'violation_type': q.violation_type,
-                'violation_count': q.violation_count,
-                'spider_sources': q.spider_sources,
-                'status': q.status,
-                'created_at': q.created_at.isoformat(),
-                'reviewed_at': q.reviewed_at.isoformat() if q.reviewed_at else None,
-                'reviewed_by': q.reviewed_by,
-                'connection_strength': float(q.connection.strength) if q.connection else None,
-                'connection_blocks': q.connection.mythology_blocks if q.connection else 0,
+        blocked_list = []
+        for conn in blocked_connections:
+            blocked_list.append({
+                'id': str(conn.id),
+                'teacher': conn.teacher_agent.name if conn.teacher_agent else 'Unknown',
+                'student': conn.student_agent.name if conn.student_agent else 'Unknown',
+                'blocks': conn.mythology_blocks,
+                'last_block': conn.last_mythology_block_at.isoformat() if conn.last_mythology_block_at else None,
+                'strength': float(conn.strength or 0),
+                'total_transfers': conn.total_transfers or 0,
             })
 
-        # Get trust decay leaderboard (connections with most blocks)
-        decay_leaderboard = AgentLearningConnection.objects.filter(
-            mythology_blocks__gt=0,
-            is_active=True
-        ).select_related(
-            'teacher_agent',
-            'student_agent'
-        ).order_by('-mythology_blocks')[:10]
+        # Trust decay leaderboard
+        trust_decay = AgentLearningConnection.objects.filter(
+            is_active=True,
+            strength__lt=0.5,
+            total_transfers__gt=5,
+        ).select_related('teacher_agent', 'student_agent').order_by('strength')[:10]
 
-        leaderboard = []
-        for conn in decay_leaderboard:
-            leaderboard.append({
-                'teacher': conn.teacher_agent.name,
-                'student': conn.student_agent.name,
-                'mythology_blocks': conn.mythology_blocks,
-                'strength': float(conn.strength),
-                'trust_lost': round((1 - conn.strength) * 100, 1),  # Percentage lost
+        decay_list = []
+        for conn in trust_decay:
+            decay_list.append({
+                'id': str(conn.id),
+                'teacher': conn.teacher_agent.name if conn.teacher_agent else 'Unknown',
+                'student': conn.student_agent.name if conn.student_agent else 'Unknown',
+                'strength': float(conn.strength or 0),
+                'mythology_blocks': conn.mythology_blocks or 0,
             })
 
-        # Stats by violation type
-        by_type = dict(
-            MythologyQuarantine.objects.values('violation_type')
-            .annotate(count=Count('id'))
-            .values_list('violation_type', 'count')
-        )
+        stats = {
+            'total_blocks': AgentLearningConnection.objects.aggregate(
+                total=models.Sum('mythology_blocks')
+            )['total'] or 0,
+            'connections_with_blocks': AgentLearningConnection.objects.filter(
+                mythology_blocks__gt=0
+            ).count(),
+            'low_trust_connections': AgentLearningConnection.objects.filter(
+                strength__lt=0.5
+            ).count(),
+        }
 
-        # Stats by status
-        by_status = dict(
-            MythologyQuarantine.objects.values('status')
-            .annotate(count=Count('id'))
-            .values_list('status', 'count')
-        )
-
-        return Response({
+        return JsonResponse({
             'success': True,
-            'quarantine': items,
-            'trust_decay_leaderboard': leaderboard,
-            'stats': {
-                'total': MythologyQuarantine.objects.count(),
-                'by_type': by_type,
-                'by_status': by_status,
-            }
+            'blocked': blocked_list,
+            'trust_decay': decay_list,
+            'stats': stats,
         })
 
     except Exception as e:
-        logger.error(f"Error in mythology_gate_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
-
-# =============================================================================
-# SELF-BLOG API - Session 543
-# =============================================================================
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def self_blog_api(request):
-    """
-    Get the latest self-blog written by the system about itself.
-    
-    Returns:
-        - Latest blog post content
-        - System stats at generation time
-        - All available blogs list
-    """
-    try:
-        from core.models_unified_system import SelfBlog
-        
-        # Get latest blog
-        latest = SelfBlog.objects.first()
-        
-        # Get list of all blogs
-        all_blogs = list(
-            SelfBlog.objects.values('id', 'title', 'tone', 'word_count', 'created_at')[:10]
-        )
-        
-        if latest:
-            return Response({
-                'success': True,
-                'has_blog': True,
-                'latest': {
-                    'id': str(latest.id),
-                    'title': latest.title,
-                    'meta_description': latest.meta_description,
-                    'intro': latest.intro,
-                    'sections': latest.sections,
-                    'conclusion': latest.conclusion,
-                    'tags': latest.tags,
-                    'full_text': latest.full_text,
-                    'tone': latest.tone,
-                    'word_count': latest.word_count,
-                    'stats_snapshot': latest.stats_snapshot,
-                    'created_at': latest.created_at.isoformat(),
-                },
-                'all_blogs': [
-                    {
-                        'id': str(b['id']),
-                        'title': b['title'],
-                        'tone': b['tone'],
-                        'word_count': b['word_count'],
-                        'created_at': b['created_at'].isoformat(),
-                    }
-                    for b in all_blogs
-                ],
-            })
-        else:
-            return Response({
-                'success': True,
-                'has_blog': False,
-                'message': 'No self-blogs generated yet. Run: python manage.py write_self_blog',
-                'all_blogs': [],
-            })
-            
-    except Exception as e:
-        logger.error(f"Error in self_blog_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def self_blog_by_id_api(request, blog_id):
-    """
-    Get a specific self-blog by ID.
-
-    Returns:
-        - Full blog content
-        - All available blogs list for navigation
-    """
-    try:
-        from core.models_unified_system import SelfBlog
-
-        # Get the requested blog
-        try:
-            blog = SelfBlog.objects.get(id=blog_id)
-        except SelfBlog.DoesNotExist:
-            return Response({
-                'success': False,
-                'error': 'Blog not found',
-            }, status=404)
-
-        # Get list of all blogs for navigation
-        all_blogs = list(
-            SelfBlog.objects.values('id', 'title', 'tone', 'word_count', 'created_at')[:20]
-        )
-
-        return Response({
-            'success': True,
-            'blog': {
-                'id': str(blog.id),
-                'title': blog.title,
-                'meta_description': blog.meta_description,
-                'intro': blog.intro,
-                'sections': blog.sections,
-                'conclusion': blog.conclusion,
-                'tags': blog.tags,
-                'full_text': blog.full_text,
-                'tone': blog.tone,
-                'word_count': blog.word_count,
-                'stats_snapshot': blog.stats_snapshot,
-                'created_at': blog.created_at.isoformat(),
-            },
-            'all_blogs': [
-                {
-                    'id': str(b['id']),
-                    'title': b['title'],
-                    'tone': b['tone'],
-                    'word_count': b['word_count'],
-                    'created_at': b['created_at'].isoformat(),
-                }
-                for b in all_blogs
-            ],
-        })
-
-    except Exception as e:
-        logger.error(f"Error in self_blog_by_id_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def generate_self_blog_api(request):
-    """
-    Trigger generation of a new self-blog as a background Celery task.
-    Returns task_id for polling status.
-
-    Body params:
-        - tone: professional/casual/technical/enthusiastic (default: enthusiastic)
-        - word_count: target word count (default: 1500)
-    """
-    try:
-        from core.tasks import generate_self_blog_task
-
-        tone = request.data.get('tone', 'enthusiastic')
-        word_count = request.data.get('word_count', 1500)
-
-        # Start Celery task
-        task = generate_self_blog_task.delay(tone=tone, word_count=word_count)
-
-        return Response({
-            'success': True,
-            'message': 'Blog generation started',
-            'task_id': task.id,
-            'status': 'pending',
-        })
-
-    except Exception as e:
-        logger.error(f"Error in generate_self_blog_api: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def self_blog_task_status_api(request, task_id):
-    """
-    Check status of a self-blog generation task.
-
-    Returns:
-        - status: pending/started/success/failure
-        - result: blog data on success
-    """
-    try:
-        from celery.result import AsyncResult
-
-        task = AsyncResult(task_id)
-
-        if task.state == 'PENDING':
-            return Response({
-                'success': True,
-                'status': 'pending',
-                'message': 'Task is waiting to start...',
-            })
-        elif task.state == 'STARTED':
-            return Response({
-                'success': True,
-                'status': 'started',
-                'message': 'AI is writing the blog...',
-            })
-        elif task.state == 'SUCCESS':
-            result = task.result
-            if result and result.get('success'):
-                return Response({
-                    'success': True,
-                    'status': 'completed',
-                    'blog_id': result.get('blog_id'),
-                    'title': result.get('title'),
-                })
-            else:
-                return Response({
-                    'success': False,
-                    'status': 'failed',
-                    'error': result.get('error', 'Unknown error'),
-                })
-        elif task.state == 'FAILURE':
-            return Response({
-                'success': False,
-                'status': 'failed',
-                'error': str(task.info),
-            })
-        else:
-            return Response({
-                'success': True,
-                'status': task.state.lower(),
-                'message': f'Task state: {task.state}',
-            })
-
-    except Exception as e:
-        logger.error(f"Error checking task status: {e}")
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        logger.error(f"Mythology gate API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

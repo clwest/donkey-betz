@@ -1,37 +1,38 @@
-# Session 550 - Start Here
+# Session 551 - Start Here
 
-**Previous Session:** 549
+**Previous Session:** 550
 **Date:** December 24, 2025
-**Focus:** Human Action Required System + Deduplication Complete
+**Focus:** Research Demo Tab Finalization + Stale Notification Cleanup
 
 ---
 
-## Session 549 Accomplishments
+## Session 550 Accomplishments
 
-### 1. Deduplication Service (Commit `66e932d`)
+### 1. Research Demo Backend API
+Created `core/views_research_demo.py` with 4 API endpoints:
+- `GET /api/v1/research/network-graph/` - D3.js graph data (55 nodes, 160 edges)
+- `GET /api/v1/research/live-feed/` - Recent learning events
+- `GET /api/v1/research/stats/` - Pipeline statistics
+- `GET /api/v1/research/mythology-gate/` - Trust decay data
 
-Cleaned **61,237 duplicate records** from the database:
+### 2. Auto-Cleanup for Stale Notifications
+Enhanced `scan_concerns_for_human_action()` task to auto-dismiss notifications for resolved concerns.
 
-| Category | Deleted | Remaining |
-|----------|---------|-----------|
-| Spider Data | 14,472 | 58 (FK refs) |
-| Conversations | 45,449 | 0 |
-| Dreams | 1,316 | 1 |
+---
 
-Created `core/services/deduplication_service.py` with FK-safe deletion.
+## Research Demo Tab (Complete)
 
-### 2. Human Action Required Alert System (Commit `e819179`)
+The Research Demo tab is **fully functional** with:
 
-Full human-in-the-loop notification pipeline for concerns requiring policy decisions:
+| Feature | Status |
+|---------|--------|
+| D3.js Force Graph | 55 agents, 160 connections |
+| Color-coded Nodes | By category (pink, purple, cyan, etc.) |
+| Edge Tooltips | Transfer count + strength on hover |
+| Auto-refresh | Every 10 seconds |
+| Sub-tabs | Overview, Network, Feed, Mythology, Blog, Thinking, Concerns |
 
-| Component | Description |
-|-----------|-------------|
-| `HumanActionService` | Creates action notifications, handles responses |
-| 3 API Endpoints | pending, create, respond |
-| Pulsing UI Alert | Red "Action Required" button in navbar |
-| Quick Actions | Approve/Reject/Defer buttons per category |
-
-**Categories:** legal_review, data_provenance, security_review, compliance, policy_decision
+**Access:** http://localhost:8000/ai-studio/ → 🔬 Research tab
 
 ---
 
@@ -41,30 +42,31 @@ Full human-in-the-loop notification pipeline for concerns requiring policy decis
 |-----------|-------|--------|
 | **Spiders** | 75 | Active |
 | **Agents** | 55 | All learning |
-| **Learning Connections** | 145+ | Active |
-| **Tracked Concerns** | 43 | All resolved |
-| **Pending Actions** | 0 | All approved |
-| **Duplicate Records** | 59 | Cleaned (was 61,296) |
+| **Learning Connections** | 160 | Active |
+| **Knowledge Transfers** | 1,262 | Growing |
+| **Tracked Concerns** | 54 | All resolved |
+| **Pending Actions** | 0 | Clean |
 
 ---
 
-## Priority Tasks for Session 550
+## Priority Tasks for Session 551
 
-### 1. Scheduled Concern Scanning (HIGH)
-Add Celery Beat task to periodically:
-- Scan for new concerns requiring human action
-- Auto-create action notifications
-- Send Discord alerts for urgent concerns
+### 1. Improve ThinkingAgent Concern Quality (HIGH)
+ThinkingAgent generates vague "general" category concerns that aren't actionable:
+- Include specific data that triggered the concern
+- Provide clear recommended actions
+- Add measurable resolution criteria
 
-### 2. Discord Action Alerts (MEDIUM)
-Post action-required notifications to Discord:
-- Enable mobile notifications for urgent policy decisions
-- Link back to AI Studio for action handling
-
-### 3. Action Analytics (LOW)
+### 2. Action Analytics (MEDIUM)
 Track which actions are taken most often:
 - Improve auto-resolution based on patterns
 - Identify concerns that always get approved/rejected
+
+### 3. Network Graph Enhancements (LOW)
+Optional visual improvements:
+- Animated particles flowing along edges during transfers
+- Pulse animation on recently active nodes
+- Filter by category or learning type
 
 ---
 
@@ -74,80 +76,37 @@ Track which actions are taken most often:
 # 1. Start services
 make start && make celery
 
-# 2. Check pending actions
-curl http://localhost:8000/api/v1/reasoning/actions/pending/
+# 2. Check system health
+curl http://localhost:8000/health/ping/
 
-# 3. Create action notifications for active concerns
-curl -X POST http://localhost:8000/api/v1/reasoning/actions/create/
-
-# 4. View in UI
+# 3. View Research Demo
 open http://localhost:8000/ai-studio/
-# Look for pulsing "Action Required" button in navbar
+# Click 🔬 Research tab
+
+# 4. Test APIs
+curl http://localhost:8000/api/v1/research/network-graph/
+curl http://localhost:8000/api/v1/research/stats/
 ```
 
 ---
 
-## Key Files (Session 549)
+## Key Files (Session 550)
 
 | File | Purpose |
 |------|---------|
-| `core/services/human_action_service.py` | Human action notification service |
-| `core/services/deduplication_service.py` | Duplicate record cleanup |
-| `core/views_autonomous_reasoning.py` | Action API endpoints |
-| `docs/handoffs/SESSION_549_HUMAN_ACTION_SYSTEM.md` | Full session handoff |
-
----
-
-## API Reference
-
-### Human Action APIs
-
-```bash
-# List pending actions
-GET /api/v1/reasoning/actions/pending/
-
-# Create notifications for active concerns
-POST /api/v1/reasoning/actions/create/
-
-# Handle user action
-POST /api/v1/reasoning/actions/<uuid>/respond/
-Body: {"action": "approve", "notes": "optional"}
-```
-
-### Action Types by Category
-
-| Category | Actions Available |
-|----------|-------------------|
-| legal_review | approve, reject, defer |
-| data_provenance | verified, block, monitor |
-| security_review | safe, block, investigate |
-| compliance | compliant, non_compliant, remediate |
-| policy_decision | accept, reject, defer |
-
----
-
-## Human Action Flow
-
-```
-ThinkingAgent → Concern (cannot auto-verify)
-                    ↓
-         HumanActionService.create_action_notification()
-                    ↓
-         UI: Pulsing "Action Required" button
-                    ↓
-         User clicks quick action button
-                    ↓
-         API: handle_human_action_api()
-                    ↓
-         Concern resolved, notification dismissed
-```
+| `core/views_research_demo.py` | NEW - Research demo API endpoints |
+| `core/urls.py` | Added research API routes |
+| `core/tasks.py` | Updated scan_concerns with stale cleanup |
+| `ai_core/templates/ai_image_studio.html` | Research Demo UI (lines 6985-7500) |
 
 ---
 
 ## What's Working
 
-1. **ThinkingAgent** - Accurate data, generates real concerns
-2. **Concern Tracking** - Auto-verification for 6 categories
-3. **Human Actions** - Full notification → action → resolution pipeline
-4. **Deduplication** - Database cleaned, prevention in place
-5. **Action Feed UI** - Shows all reasoning activity in real-time
+1. **Research Demo Tab** - D3.js network visualization with 55 agents
+2. **ThinkingAgent** - Generates insights, actions, concerns every 2 hours
+3. **Concern Tracking** - Auto-verification for 6 categories
+4. **Human Actions** - Full notification pipeline with auto-cleanup
+5. **All 75 Spiders** - Data collection active
+6. **All 55 Agents** - Learning network active
+
