@@ -1,55 +1,48 @@
-# Session 552 - Start Here
+# Session 553 - Start Here
 
-**Previous Session:** 551
+**Previous Session:** 552
 **Date:** December 25, 2025
-**Focus:** Boardroom Deduplication + Pending Dreams Tracking
+**Focus:** Continue System Monitoring
 
 ---
 
-## Session 551 Accomplishments
+## Session 552 Accomplishments
 
-### 1. Celery Schedule Sync
-Synced 80 missing scheduled tasks from `celery.py` to the database scheduler:
-- Before: 62 tasks in database
-- After: 142 tasks in database
-- All autonomous tasks now running properly
+### 1. Fixed "Most Shared Knowledge" Display
+The Research Overview subtab was showing garbage words ("each", "content", "this") instead of actual knowledge titles.
 
-### 2. Pending Dreams Tracking
-Added to ThinkingAgent:
-- `pending_decision` count - how many dreams await human decision
-- `oldest_pending_hours` - age of oldest pending dream
-- "Dream Backlog Assessment" guidance in prompts
-- Added `dream_backlog` category to ConcernTracker
+**Root Cause:**
+- Session 550 stripped the analytics code from `views_research_demo.py`
+- Django was serving cached bytecode from Session 543 with broken queries
+- Database contained 310 garbage entries (single words) in `AgentKnowledgeSource`
 
-### 3. Boardroom Decision Cleanup
-Deleted 614 duplicate decisions:
-- Before: 990 decisions
-- After: 376 decisions
-- Worst case: "Crunchbase - Startups Intelligence" had 75 duplicates!
+**Fixes Applied:**
+1. Restored `analytics` section to `stats_api` in `core/views_research_demo.py`
+2. Added filtering to exclude short titles (< 10 chars) and single words
+3. Fixed SpiderData import (moved to `core.models_unified_system`)
+4. Cleaned up 310 garbage entries from database
 
-### 4. Decision Deduplication Prevention
-Added to `core/services/decision_extractor.py`:
-- `normalize_topic()` - standardizes topics for comparison
-- `_has_recent_decision_for_topic()` - 24-hour dedup window
-- Prevents duplicate decisions when multiple agent pairs discuss same topic
+**Before:** "1. each, 2. content, 3. this"
+**After:** "1. Securityweek - Cybersecurity Intelligence, 2. Crunchbase - Startups Intelligence, 3. Mobihealthnews - Healthtech Intelligence"
 
-### 5. User Dream Cleanup
-User reviewed and processed all pending dreams:
-- 9 Approved
-- 3 Deferred
-- 8 Rejected
-- 0 Pending (backlog cleared!)
+### 2. Fixed Research Demo API Errors
+Multiple API endpoints were broken with 500 errors:
 
----
+| API | Error | Fix |
+|-----|-------|-----|
+| `/api/v1/research/live-feed/` | Invalid field `source_agent`, `recipient_agent` | Changed to `connection__teacher_agent`, `connection__student_agent` |
+| `/api/v1/research/live-feed/` | `quality_rating` doesn't exist | Changed to `quality_score` |
+| `/api/v1/research/live-feed/` | `dream_title` doesn't exist | Changed to `title` |
+| `/api/v1/research/network-graph/` | `recipient_agent` doesn't exist | Changed to `connection__student_agent` |
+| `/api/v1/research/network-graph/` | `AgentCategory` not JSON serializable | Wrapped in `str()` |
+| `/api/v1/research/self-blog/` | 404 Not Found | Added stub API |
 
-## Boardroom Structure Clarified
+### 3. Fixed Live Feed Frontend Rendering
+The Live Feed sub-tab showed "Failed to load live feed" despite API returning correct data.
 
-| Section | Source | Model |
-|---------|--------|-------|
-| **Boardroom Decisions** | Agent conversations | `AgentDecisionSummary` |
-| **Dreams Awaiting Decisions** | High-scoring promoted dreams | `AgentDream` |
+**Root Cause:** Frontend expected `event.teacher.name` and `event.student.name` objects, but API returns `event.description` string.
 
-Both are now tracked by ThinkingAgent.
+**Fix:** Updated `renderLiveFeed()` function in `ai_image_studio.html` to use correct API structure with icon/color maps for different event types (transfer, conversation, dream, mythology_block).
 
 ---
 
@@ -63,26 +56,26 @@ Both are now tracked by ThinkingAgent.
 | **Boardroom Decisions** | 376 | Deduplicated |
 | **Pending Dreams** | 0 | Cleared |
 | **Scheduled Tasks** | 142 | All synced |
+| **Knowledge Sources** | 3,345 | Cleaned (310 garbage removed) |
 
 ---
 
-## Priority Tasks for Session 552
+## Priority Tasks for Session 553
 
 ### 1. Monitor Deduplication (HIGH)
-Verify no new duplicates appear overnight. Check logs for:
+Verify Session 551's decision deduplication is working:
 ```
 Session 551: Skipping duplicate decision for topic '...' - similar decision exists within 24h
 ```
 
-### 2. Boardroom Review (MEDIUM)
+### 2. Continue Boardroom Review (MEDIUM)
 User may want to review the 376 remaining decisions:
 - Promote valuable ones to Canonical (Active Policy)
 - Clean up any remaining low-value decisions
 
-### 3. Action Analytics (LOW)
-Track which human actions are taken most often:
-- Improve auto-resolution based on patterns
-- Identify concerns that always get approved/rejected
+### 3. Research Demo Enhancements (LOW)
+- Consider adding D3.js particle animations
+- Add real-time WebSocket updates
 
 ---
 
@@ -95,33 +88,42 @@ make start && make celery
 # 2. Check system health
 curl http://localhost:8000/health/ping/
 
-# 3. View Boardroom
+# 3. View Research Tab
 open http://localhost:8000/ai-studio/
-# Click Intelligence tab -> Boardroom sub-tab
+# Click Research tab -> Overview sub-tab
 
-# 4. Check scheduled tasks
-.venv/bin/python manage.py shell -c "from django_celery_beat.models import PeriodicTask; print(f'Tasks: {PeriodicTask.objects.count()}')"
+# 4. Verify Most Shared Knowledge is fixed
+curl http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | grep -A 20 "top_topics"
 ```
 
 ---
 
-## Key Files (Session 551)
+## Key Files (Session 552)
 
 | File | Purpose |
 |------|---------|
-| `core/agents/thinking_agent.py` | Added pending dreams tracking (lines 412-436, 214-234) |
-| `core/services/concern_tracker.py` | Added dream_backlog category |
-| `core/services/decision_extractor.py` | Added topic-based deduplication |
-| `docs/handoffs/SESSION_551_BOARDROOM_DEDUPLICATION.md` | Full session details |
+| `core/views_research_demo.py` | Fixed stats_api + live_feed_api |
+| `00-START-NEXT-SESSION.md` | This file |
 
 ---
 
 ## What's Working
 
-1. **Boardroom Deduplication** - No more duplicate decisions within 24h window
-2. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
-3. **Research Demo Tab** - D3.js network visualization
-4. **ThinkingAgent** - Expected behavior awareness + dream tracking
+1. **Most Shared Knowledge** - Now shows proper knowledge titles
+2. **Boardroom Deduplication** - No more duplicate decisions within 24h window
+3. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
+4. **Research Demo Tab** - D3.js network visualization
 5. **All 142 Scheduled Tasks** - Running via DatabaseScheduler
 6. **All 75 Spiders** - Data collection active
 7. **All 55 Agents** - Learning network active
+
+---
+
+## Session 551-552 Combined Fixes
+
+| Issue | Session | Fix |
+|-------|---------|-----|
+| 614 duplicate decisions | 551 | Cleaned + added 24h dedup |
+| Pending dreams not tracked | 551 | Added to ThinkingAgent |
+| 80 missing scheduled tasks | 551 | Synced to database |
+| Garbage in Most Shared Knowledge | 552 | Fixed query + cleaned 310 entries |
