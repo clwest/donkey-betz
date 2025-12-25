@@ -119,6 +119,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 552 | Research Demo Tab Complete Fix - APIs, colors, live feed, self-blog | `SESSION_552_RESEARCH_DEMO_FIXES.md` |
+| 551 | Boardroom Deduplication + Pending Dreams Tracking | `SESSION_551_BOARDROOM_DEDUPLICATION.md` |
 | 520 | Projects Tab Unification - Fixed CreativeProject vs PartnershipProject disconnect | `SESSION_520_PROJECTS_TAB_AUDIT.md` |
 | 519 | Auto-Project Creation & Content Display | `SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md` |
 | 513 | Campaign Orchestrator Agent - Marketing hub | `SESSION_513_CAMPAIGN_ORCHESTRATOR.md` |
@@ -127,8 +129,6 @@ curl http://localhost:8000/health/ping/
 | 499 | Full Agent Routing (42 Agents) | `SESSION_499_FULL_AGENT_ROUTING.md` |
 | 497 | Platform Integration Gap Analysis | `SESSION_497_INTEGRATION_GAP_ANALYSIS.md` |
 | 496 | AI Podcast Studio | `SESSION_496_AI_PODCAST_STUDIO.md` |
-| 495 | SmartTrendingService & New Spiders | `SESSION_495_SMART_TRENDING_SERVICE.md` |
-| 478 | DaVinci Resolve Integration | `SESSION_478_DAVINCI_RESOLVE_FULL_UTILIZATION.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
