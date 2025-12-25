@@ -32,6 +32,63 @@ CATEGORY_COLORS = {
 }
 
 
+def infer_category_from_name(name: str) -> str:
+    """
+    Session 552: Infer agent category from name since category field may be NULL.
+    """
+    name_lower = name.lower()
+
+    # Creation agents
+    if any(x in name_lower for x in ['image', 'video', 'audio', '3d', 'threed']):
+        return 'creation'
+
+    # Editing agents
+    if 'editing' in name_lower:
+        return 'editing'
+
+    # Research agents
+    if any(x in name_lower for x in ['research', 'trend', 'opportunity', 'scoring']):
+        return 'research'
+
+    # Strategy agents
+    if any(x in name_lower for x in ['strategy', 'brand', 'seo', 'social']):
+        return 'strategy'
+
+    # Business agents
+    if any(x in name_lower for x in ['competitor', 'customer', 'marketing', 'business']):
+        return 'business'
+
+    # Executive agents
+    if any(x in name_lower for x in ['cto', 'coo', 'director', 'meeting', 'coordinator']):
+        return 'executive'
+
+    # Development agents
+    if any(x in name_lower for x in ['code', 'developer', 'fullstack', 'devops', 'review']):
+        return 'development'
+
+    # Content Studio agents
+    if any(x in name_lower for x in ['content', 'topic', 'contrarian', 'performance', 'autonomous']):
+        return 'content_studio'
+
+    # Specialized agents
+    if any(x in name_lower for x in ['legal', 'resolve', 'podcast', 'series', 'workflow']):
+        return 'specialized'
+
+    # Training agents
+    if any(x in name_lower for x in ['training', 'trained', 'character']):
+        return 'training'
+
+    # Orchestration agents
+    if any(x in name_lower for x in ['orchestrat', 'campaign', 'workflow']):
+        return 'orchestration'
+
+    # Entry point agents
+    if any(x in name_lower for x in ['personal', 'assistant']):
+        return 'entry_point'
+
+    return 'default'
+
+
 @require_http_methods(["GET"])
 def network_graph_api(request):
     """
@@ -47,8 +104,11 @@ def network_graph_api(request):
         nodes = []
         agent_ids = set()
         for agent in agents:
-            # Session 552: Convert category to string (may be AgentCategory object)
-            category = str(agent.category) if agent.category else 'default'
+            # Session 552: Infer category from name since category field may be NULL
+            if agent.category:
+                category = str(agent.category)
+            else:
+                category = infer_category_from_name(agent.name)
             color = CATEGORY_COLORS.get(category, CATEGORY_COLORS['default'])
 
             # Count knowledge for this agent (Session 552: Fixed field name)
@@ -464,13 +524,57 @@ def mythology_gate_api(request):
 @require_http_methods(["GET"])
 def self_blog_api(request):
     """
-    Session 552: Stub API for self-blog feature.
-    Returns empty data to prevent frontend errors.
-    TODO: Implement full self-blog generation in future session.
+    Session 543: Get the latest self-blog written by the system about itself.
+    Session 552: Restored from Session 543 (was accidentally replaced with stub).
     """
-    return JsonResponse({
-        'success': True,
-        'posts': [],
-        'total': 0,
-        'message': 'Self-blog feature coming soon'
-    })
+    try:
+        from core.models_unified_system import SelfBlog
+
+        # Get latest blog
+        latest = SelfBlog.objects.first()
+
+        # Get list of all blogs
+        all_blogs = list(
+            SelfBlog.objects.values('id', 'title', 'tone', 'word_count', 'created_at')[:10]
+        )
+
+        if latest:
+            return JsonResponse({
+                'success': True,
+                'has_blog': True,
+                'latest': {
+                    'id': str(latest.id),
+                    'title': latest.title,
+                    'meta_description': latest.meta_description,
+                    'intro': latest.intro,
+                    'sections': latest.sections,
+                    'conclusion': latest.conclusion,
+                    'tags': latest.tags,
+                    'full_text': latest.full_text,
+                    'tone': latest.tone,
+                    'word_count': latest.word_count,
+                    'stats_snapshot': latest.stats_snapshot,
+                    'created_at': latest.created_at.isoformat(),
+                },
+                'all_blogs': [
+                    {
+                        'id': str(b['id']),
+                        'title': b['title'],
+                        'tone': b['tone'],
+                        'word_count': b['word_count'],
+                        'created_at': b['created_at'].isoformat(),
+                    }
+                    for b in all_blogs
+                ],
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'has_blog': False,
+                'message': 'No self-blogs generated yet. Run: python manage.py write_self_blog',
+                'all_blogs': [],
+            })
+
+    except Exception as e:
+        logger.error(f"Error in self_blog_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
