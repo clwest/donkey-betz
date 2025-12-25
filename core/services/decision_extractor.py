@@ -2,6 +2,7 @@
 Decision Extractor Service
 Session 323: Boardroom Decisions (original)
 Session 412: Updated to support both AgentConversation and HiveMindSession
+Session 551: Added topic-based deduplication to prevent duplicate decisions
 
 Extracts structured decisions from agent conversation conclusions.
 Uses GPT-5-mini to parse the conclusion text into structured format.
@@ -15,10 +16,31 @@ that influence future agent behavior.
 """
 
 import logging
+import re
+from datetime import timedelta
 from typing import Optional, Dict, Any, Union
+from django.utils import timezone
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_topic(topic: str) -> str:
+    """
+    Normalize a topic string for comparison.
+    Session 551: Used for topic-based deduplication.
+    """
+    if not topic:
+        return ''
+    # Remove common prefixes: [Learned], Discussion:, etc.
+    normalized = re.sub(r'\[Learned\]\s*', '', topic).strip()
+    normalized = re.sub(r'^Discussion:\s*', '', normalized, flags=re.IGNORECASE).strip()
+    # Lowercase and remove special chars
+    normalized = normalized.lower()
+    normalized = re.sub(r'[^a-z0-9\s]', '', normalized).strip()
+    # Collapse multiple spaces
+    normalized = re.sub(r'\s+', ' ', normalized)
+    return normalized
 
 EXTRACTION_PROMPT = """
 Analyze this agent conversation conclusion and extract a structured decision summary.
@@ -72,8 +94,42 @@ Rules:
 class DecisionExtractor:
     """Extracts structured decisions from conversation conclusions."""
 
+    # Session 551: Deduplication window - skip if same topic was decided within this period
+    DEDUP_HOURS = 24
+
     def __init__(self):
         self.client = OpenAI()
+
+    def _has_recent_decision_for_topic(self, topic: str) -> bool:
+        """
+        Check if a decision was recently made for a similar topic.
+        Session 551: Prevents duplicate decisions from different conversations.
+
+        Args:
+            topic: The topic to check
+
+        Returns:
+            True if a recent decision exists for this topic
+        """
+        from core.models_unified_system import AgentDecisionSummary
+
+        normalized = normalize_topic(topic)
+        if not normalized or len(normalized) < 6:
+            return False
+
+        cutoff = timezone.now() - timedelta(hours=self.DEDUP_HOURS)
+
+        # Check existing decisions within the window
+        recent_decisions = AgentDecisionSummary.objects.filter(
+            created_at__gte=cutoff
+        ).values_list('topic', flat=True)
+
+        for existing_topic in recent_decisions:
+            if normalize_topic(existing_topic) == normalized:
+                logger.info(f"Session 551: Skipping duplicate decision for topic '{topic[:50]}...' - similar decision exists within {self.DEDUP_HOURS}h")
+                return True
+
+        return False
 
     def extract_decision(
         self,
@@ -163,6 +219,10 @@ class DecisionExtractor:
         # Check if decision already exists for this conversation
         if AgentDecisionSummary.objects.filter(conversation=conversation).exists():
             logger.debug(f"Decision already exists for conversation {conversation.id}")
+            return None
+
+        # Session 551: Check for recent decision on same topic (topic-based dedup)
+        if self._has_recent_decision_for_topic(conversation.topic):
             return None
 
         extracted = self.extract_decision(conversation)
@@ -287,12 +347,16 @@ class DecisionExtractor:
             logger.debug(f"Decision already exists for HiveMindSession {session.id}")
             return None
 
+        # Use conversation_topic for conversation mode, question for hive_mind mode
+        fallback_topic = session.conversation_topic or session.question or 'Unknown Topic'
+
+        # Session 551: Check for recent decision on same topic (topic-based dedup)
+        if self._has_recent_decision_for_topic(fallback_topic):
+            return None
+
         extracted = self.extract_decision_from_hive_session(session)
         if not extracted:
             return None
-
-        # Use conversation_topic for conversation mode, question for hive_mind mode
-        fallback_topic = session.conversation_topic or session.question or 'Unknown Topic'
 
         try:
             summary = AgentDecisionSummary.objects.create(
