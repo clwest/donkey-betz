@@ -1,94 +1,77 @@
-# Session 553 - Start Here
+# Session 554 - Start Here
 
-**Previous Session:** 552
+**Previous Session:** 553
 **Date:** December 25, 2025
-**Focus:** Map Personal Assistant ↔ Intelligence System Integration
+**Focus:** Implement PA ↔ Intelligence Integration (Phase 1)
 
 ---
 
-## Session 553 Mission
+## Session 553 Accomplishments
 
-**Goal:** Map out how to connect the Personal Assistant to the Intelligence Command Center and Research system so users can ACCESS the learning system.
+### PA ↔ Intelligence Mapping Complete
 
-### The Problem
-We have an amazing learning system running autonomously:
-- 55 agents learning from each other
-- 160+ learning connections
-- 75 spiders collecting data
-- Dreams, conversations, knowledge transfers happening continuously
+Analyzed the full data flow from user query through PA to intelligence sources.
 
-**BUT** users can't easily access this intelligence through the Personal Assistant!
+**Key Finding:** The learning system is running beautifully (3,345+ knowledge entries, 160 connections, 110+ transfers/day), but users can only access ~5 recent transfers through PA.
 
-### Key Questions to Answer
-1. How does a user query flow from Personal Assistant → Intelligence?
-2. What intelligence is available but not surfaced?
-3. Where are the connection gaps?
-4. What's the ideal user experience?
+**Full analysis:** `docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md`
 
 ---
 
-## System Components to Map
+## Session 554 Mission
 
-### 1. Personal Assistant (Entry Point)
-- Location: `core/agents/personal_assistant_agent.py`
-- Current capabilities: Chat, agent routing
-- **Gap:** Does it query the learning network?
+**Goal:** Connect PA to the full knowledge base so users can ACCESS the learning system.
 
-### 2. Intelligence Command Center
-- Location: Research tab in AI Studio
-- Components: Network Graph, Live Feed, Mythology Gate, Self-Blog
-- APIs: `/api/v1/research/*`
-- **Gap:** Is this connected to PA responses?
+### The Gap We're Fixing
 
-### 3. Agent Knowledge Sources
-- Model: `AgentKnowledgeSource`
-- 3,345+ knowledge entries
-- **Gap:** Can PA access agent knowledge?
-
-### 4. Learning Network
-- Model: `AgentLearningConnection`, `KnowledgeTransfer`
-- 160 connections, 110+ transfers/day
-- **Gap:** Does PA know what agents learned?
-
-### 5. Spider Data
-- Model: `SpiderData`
-- 20,000+ records from 75 spiders
-- **Gap:** Can PA query spider intelligence?
+| Current State | Target State |
+|---------------|--------------|
+| PA uses 5 recent transfers | PA searches 3,345+ knowledge entries |
+| No topic matching | Query by topic relevance |
+| Generic responses | "Based on 47 entries from 12 agents..." |
 
 ---
 
-## Mapping Exercise for Session 553
+## Implementation Plan
 
-### Phase 1: Current State Audit
-- [ ] Trace a user question through PA → response
-- [ ] Identify what data sources PA currently uses
-- [ ] Document what intelligence PA does NOT access
+### Phase 1: Intelligence Query Service (Session 554)
 
-### Phase 2: Gap Analysis
-- [ ] List all intelligence sources available
-- [ ] Compare to what PA actually queries
-- [ ] Prioritize integration opportunities
+Create `core/services/intelligence_query.py`:
 
-### Phase 3: Design Integration
-- [ ] Sketch ideal flow: User → PA → Intelligence → Response
-- [ ] Define API contracts needed
-- [ ] Plan implementation phases
+```python
+class IntelligenceQueryService:
+    def search_knowledge(self, query: str, limit: int = 10):
+        """Search full knowledge base by topic"""
+
+    def get_expert_agents(self, topic: str):
+        """Find agents who have expertise on topic"""
+
+    def get_recent_insights(self, topic: str = None):
+        """Get recent dreams/conversations about topic"""
+```
+
+### Phase 2: PA Integration
+
+Modify `core/unified_personal_assistant.py`:
+- Add `IntelligenceQueryService` to `_handle_direct_response()`
+- Include knowledge attribution in responses
+
+### Phase 3: Response Enhancement
+
+When user asks "What do we know about blockchain?":
+- Search knowledge base for blockchain entries
+- Find agents who've learned about it
+- Include: "Based on 23 knowledge entries from 8 agents..."
 
 ---
 
-## Session 552 Accomplishments (Completed)
+## Files to Create/Modify
 
-### Research Demo Tab Fixes
-1. **Most Shared Knowledge** - Fixed garbage words display
-2. **Network Graph** - Added category-based colors
-3. **Live Feed** - Fixed frontend rendering
-4. **Self-Blog** - Restored Session 543 API
-5. **All APIs** - Fixed 500 errors
-
-### Celery Worker Stability
-- Fixed SIGSEGV crashes by switching to `--pool=threads`
-- Permanent fix in Makefile
-- 4 concurrent threads for task processing
+| File | Action | Purpose |
+|------|--------|---------|
+| `core/services/intelligence_query.py` | CREATE | Unified intelligence querying |
+| `core/unified_personal_assistant.py` | MODIFY | Add intelligence integration |
+| `core/agents/personal_assistant_agent.py` | MODIFY | Add knowledge attribution |
 
 ---
 
@@ -96,10 +79,10 @@ We have an amazing learning system running autonomously:
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 75 | Active, collecting |
-| **Agents** | 55 | All learning |
+| **Knowledge Entries** | 3,345+ | Active, growing |
 | **Learning Connections** | 160 | Active |
-| **Knowledge Sources** | 3,345 | Growing |
+| **Agents** | 55 | All learning |
+| **Spiders** | 75 | Active, collecting |
 | **Scheduled Tasks** | 142 | All running |
 
 ---
@@ -113,8 +96,8 @@ make start && make celery
 # 2. Verify health
 curl http://localhost:8000/health/ping/
 
-# 3. Check learning activity
-curl http://localhost:8000/api/v1/research/live-feed/?limit=5
+# 3. Check knowledge count
+.venv/bin/python manage.py shell -c "from core.models_unified_system import AgentKnowledgeSource; print(f'Knowledge entries: {AgentKnowledgeSource.objects.filter(is_active=True).count()}')"
 
 # 4. Access AI Studio
 open http://localhost:8000/ai-studio/
@@ -122,34 +105,25 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Key Files for Mapping
+## Success Criteria for Session 554
 
-| Component | Files |
-|-----------|-------|
-| Personal Assistant | `core/agents/personal_assistant_agent.py` |
-| Agent Router | `core/agent_router.py` |
-| Intelligence APIs | `core/views_research_demo.py` |
-| Knowledge Models | `core/models_unified_system.py` |
-| Spider Registry | `ai_core/spiders/spider_registry.py` |
+1. **IntelligenceQueryService created** with `search_knowledge()` method
+2. **PA integrated** - searches full knowledge base
+3. **Test query works:**
+   - User: "What do we know about AI trends?"
+   - PA: "Based on X knowledge entries from Y agents, here's what we know..."
 
 ---
 
-## Session 552 Commits
+## Key Files for Reference
 
-| Commit | Description |
-|--------|-------------|
-| `d8ef739` | docs: Complete documentation update |
-| `4abd6f3` | fix: Restore self-blog API and network graph colors |
-| `2eefdb0` | fix: Research Demo tab API and frontend fixes |
+| File | Purpose |
+|------|---------|
+| `docs/handoffs/SESSION_553_PA_INTELLIGENCE_MAPPING.md` | Full gap analysis |
+| `core/unified_personal_assistant.py` | Current PA implementation |
+| `core/models_unified_system.py` | Knowledge models |
+| `core/views_research_demo.py` | Working research APIs |
 
 ---
 
-## End Goal
-
-After Session 553 mapping, we should have:
-1. Clear diagram of current PA → Intelligence flow
-2. List of integration gaps with priorities
-3. Design document for connecting PA to learning system
-4. Ready to implement in Session 554+
-
-**A learning system is amazing, but we need to be able to ACCESS it!**
+**Let's make the learning system accessible!**
