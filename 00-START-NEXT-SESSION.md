@@ -2,64 +2,93 @@
 
 **Previous Session:** 552
 **Date:** December 25, 2025
-**Focus:** Continue System Monitoring
+**Focus:** Map Personal Assistant ↔ Intelligence System Integration
 
 ---
 
-## Session 552 Accomplishments
+## Session 553 Mission
 
-### 1. Fixed "Most Shared Knowledge" Display
-The Research Overview subtab was showing garbage words ("each", "content", "this") instead of actual knowledge titles.
+**Goal:** Map out how to connect the Personal Assistant to the Intelligence Command Center and Research system so users can ACCESS the learning system.
 
-**Root Cause:**
-- Session 550 stripped the analytics code from `views_research_demo.py`
-- Django was serving cached bytecode from Session 543 with broken queries
-- Database contained 310 garbage entries (single words) in `AgentKnowledgeSource`
+### The Problem
+We have an amazing learning system running autonomously:
+- 55 agents learning from each other
+- 160+ learning connections
+- 75 spiders collecting data
+- Dreams, conversations, knowledge transfers happening continuously
 
-**Fixes Applied:**
-1. Restored `analytics` section to `stats_api` in `core/views_research_demo.py`
-2. Added filtering to exclude short titles (< 10 chars) and single words
-3. Fixed SpiderData import (moved to `core.models_unified_system`)
-4. Cleaned up 310 garbage entries from database
+**BUT** users can't easily access this intelligence through the Personal Assistant!
 
-**Before:** "1. each, 2. content, 3. this"
-**After:** "1. Securityweek - Cybersecurity Intelligence, 2. Crunchbase - Startups Intelligence, 3. Mobihealthnews - Healthtech Intelligence"
+### Key Questions to Answer
+1. How does a user query flow from Personal Assistant → Intelligence?
+2. What intelligence is available but not surfaced?
+3. Where are the connection gaps?
+4. What's the ideal user experience?
 
-### 2. Fixed Research Demo API Errors
-Multiple API endpoints were broken with 500 errors:
+---
 
-| API | Error | Fix |
-|-----|-------|-----|
-| `/api/v1/research/live-feed/` | Invalid field `source_agent`, `recipient_agent` | Changed to `connection__teacher_agent`, `connection__student_agent` |
-| `/api/v1/research/live-feed/` | `quality_rating` doesn't exist | Changed to `quality_score` |
-| `/api/v1/research/live-feed/` | `dream_title` doesn't exist | Changed to `title` |
-| `/api/v1/research/network-graph/` | `recipient_agent` doesn't exist | Changed to `connection__student_agent` |
-| `/api/v1/research/network-graph/` | `AgentCategory` not JSON serializable | Wrapped in `str()` |
-| `/api/v1/research/self-blog/` | 404 Not Found | Restored original Session 543 implementation |
+## System Components to Map
 
-### 3. Fixed Live Feed Frontend Rendering
-The Live Feed sub-tab showed "Failed to load live feed" despite API returning correct data.
+### 1. Personal Assistant (Entry Point)
+- Location: `core/agents/personal_assistant_agent.py`
+- Current capabilities: Chat, agent routing
+- **Gap:** Does it query the learning network?
 
-**Root Cause:** Frontend expected `event.teacher.name` and `event.student.name` objects, but API returns `event.description` string.
+### 2. Intelligence Command Center
+- Location: Research tab in AI Studio
+- Components: Network Graph, Live Feed, Mythology Gate, Self-Blog
+- APIs: `/api/v1/research/*`
+- **Gap:** Is this connected to PA responses?
 
-**Fix:** Updated `renderLiveFeed()` function in `ai_image_studio.html` to use correct API structure with icon/color maps for different event types (transfer, conversation, dream, mythology_block).
+### 3. Agent Knowledge Sources
+- Model: `AgentKnowledgeSource`
+- 3,345+ knowledge entries
+- **Gap:** Can PA access agent knowledge?
 
-### 4. Fixed Network Graph Colors
-All agent nodes were showing gray (default) instead of category-based colors.
+### 4. Learning Network
+- Model: `AgentLearningConnection`, `KnowledgeTransfer`
+- 160 connections, 110+ transfers/day
+- **Gap:** Does PA know what agents learned?
 
-**Root Cause:** Agent `category` field is NULL in database.
+### 5. Spider Data
+- Model: `SpiderData`
+- 20,000+ records from 75 spiders
+- **Gap:** Can PA query spider intelligence?
 
-**Fix:** Added `infer_category_from_name()` function that determines agent category from name patterns:
-- ImageAgent, VideoAgent → creation (pink #ec4899)
-- ResearchAgent, TrendAnalysisAgent → research (purple #8b5cf6)
-- ContentStrategyAgent, BrandIdentityAgent → strategy (cyan #06b6d4)
-- CreativeDirectorAgent, CTOAgent → executive (amber #f59e0b)
-- CodeGeneratorAgent, FullStackDeveloperAgent → development (green #22c55e)
+---
 
-### 5. Restored Self-Blog API
-The self-blog sub-tab was empty after accidental stub replacement.
+## Mapping Exercise for Session 553
 
-**Fix:** Restored original Session 543 `self_blog_api` that queries `SelfBlog` model and returns "[Report] System Insights" content.
+### Phase 1: Current State Audit
+- [ ] Trace a user question through PA → response
+- [ ] Identify what data sources PA currently uses
+- [ ] Document what intelligence PA does NOT access
+
+### Phase 2: Gap Analysis
+- [ ] List all intelligence sources available
+- [ ] Compare to what PA actually queries
+- [ ] Prioritize integration opportunities
+
+### Phase 3: Design Integration
+- [ ] Sketch ideal flow: User → PA → Intelligence → Response
+- [ ] Define API contracts needed
+- [ ] Plan implementation phases
+
+---
+
+## Session 552 Accomplishments (Completed)
+
+### Research Demo Tab Fixes
+1. **Most Shared Knowledge** - Fixed garbage words display
+2. **Network Graph** - Added category-based colors
+3. **Live Feed** - Fixed frontend rendering
+4. **Self-Blog** - Restored Session 543 API
+5. **All APIs** - Fixed 500 errors
+
+### Celery Worker Stability
+- Fixed SIGSEGV crashes by switching to `--pool=threads`
+- Permanent fix in Makefile
+- 4 concurrent threads for task processing
 
 ---
 
@@ -67,91 +96,60 @@ The self-blog sub-tab was empty after accidental stub replacement.
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 75 | Active |
+| **Spiders** | 75 | Active, collecting |
 | **Agents** | 55 | All learning |
 | **Learning Connections** | 160 | Active |
-| **Boardroom Decisions** | 376 | Deduplicated |
-| **Pending Dreams** | 0 | Cleared |
-| **Scheduled Tasks** | 142 | All synced |
-| **Knowledge Sources** | 3,345 | Cleaned (310 garbage removed) |
-
----
-
-## Priority Tasks for Session 553
-
-### 1. Monitor Deduplication (HIGH)
-Verify Session 551's decision deduplication is working:
-```
-Session 551: Skipping duplicate decision for topic '...' - similar decision exists within 24h
-```
-
-### 2. Continue Boardroom Review (MEDIUM)
-User may want to review the 376 remaining decisions:
-- Promote valuable ones to Canonical (Active Policy)
-- Clean up any remaining low-value decisions
-
-### 3. Research Demo Enhancements (LOW)
-- Consider adding D3.js particle animations
-- Add real-time WebSocket updates
+| **Knowledge Sources** | 3,345 | Growing |
+| **Scheduled Tasks** | 142 | All running |
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start services
+# 1. Start all services
 make start && make celery
 
-# 2. Check system health
+# 2. Verify health
 curl http://localhost:8000/health/ping/
 
-# 3. View Research Tab
-open http://localhost:8000/ai-studio/
-# Click Research tab -> All sub-tabs now working!
+# 3. Check learning activity
+curl http://localhost:8000/api/v1/research/live-feed/?limit=5
 
-# 4. Verify APIs
-curl http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | grep -A 20 "top_topics"
-curl http://localhost:8000/api/v1/research/network-graph/ | python3 -m json.tool | head -30
-curl http://localhost:8000/api/v1/research/self-blog/ | python3 -m json.tool | head -20
+# 4. Access AI Studio
+open http://localhost:8000/ai-studio/
 ```
 
 ---
 
-## Key Files (Session 552)
+## Key Files for Mapping
 
-| File | Purpose |
-|------|---------|
-| `core/views_research_demo.py` | Fixed all 4 APIs + added category inference |
-| `ai_core/templates/ai_image_studio.html` | Fixed renderLiveFeed() frontend |
-| `core/urls.py` | Uncommented self-blog route |
-| `docs/handoffs/SESSION_552_RESEARCH_DEMO_FIXES.md` | Full handoff documentation |
-
----
-
-## What's Working
-
-1. **Most Shared Knowledge** - Now shows proper knowledge titles
-2. **Network Graph** - Color-coded agents by category
-3. **Live Feed** - Real-time events with proper icons
-4. **Self-Blog** - System Insights reports displayed
-5. **Mythology Gate** - Trust decay and blocking stats
-6. **Boardroom Deduplication** - No more duplicate decisions within 24h window
-7. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
-8. **All 142 Scheduled Tasks** - Running via DatabaseScheduler
-9. **All 75 Spiders** - Data collection active
-10. **All 55 Agents** - Learning network active
+| Component | Files |
+|-----------|-------|
+| Personal Assistant | `core/agents/personal_assistant_agent.py` |
+| Agent Router | `core/agent_router.py` |
+| Intelligence APIs | `core/views_research_demo.py` |
+| Knowledge Models | `core/models_unified_system.py` |
+| Spider Registry | `ai_core/spiders/spider_registry.py` |
 
 ---
 
-## Session 551-552 Combined Fixes
+## Session 552 Commits
 
-| Issue | Session | Fix |
-|-------|---------|-----|
-| 614 duplicate decisions | 551 | Cleaned + added 24h dedup |
-| Pending dreams not tracked | 551 | Added to ThinkingAgent |
-| 80 missing scheduled tasks | 551 | Synced to database |
-| Garbage in Most Shared Knowledge | 552 | Fixed query + cleaned 310 entries |
-| Research Demo API 500 errors | 552 | Fixed all field references |
-| Live Feed "Failed to load" | 552 | Fixed frontend rendering |
-| Network Graph gray nodes | 552 | Added category inference |
-| Self-Blog empty | 552 | Restored Session 543 API |
+| Commit | Description |
+|--------|-------------|
+| `d8ef739` | docs: Complete documentation update |
+| `4abd6f3` | fix: Restore self-blog API and network graph colors |
+| `2eefdb0` | fix: Research Demo tab API and frontend fixes |
+
+---
+
+## End Goal
+
+After Session 553 mapping, we should have:
+1. Clear diagram of current PA → Intelligence flow
+2. List of integration gaps with priorities
+3. Design document for connecting PA to learning system
+4. Ready to implement in Session 554+
+
+**A learning system is amazing, but we need to be able to ACCESS it!**
