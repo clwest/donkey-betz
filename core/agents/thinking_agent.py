@@ -175,6 +175,15 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 prompt_parts.append("\n**Top Teachers:**\n")
                 for teacher in stats['top_teachers'][:5]:
                     prompt_parts.append(f"- {teacher['name']}: {teacher['teaching_count']} teachings\n")
+                # Session 550: Add expected behavior context for teaching concentration
+                prompt_parts.append("\n**IMPORTANT - Expected Behavior:**\n")
+                prompt_parts.append("Teaching concentration among a few agents is NORMAL and BY DESIGN.\n")
+                prompt_parts.append("Agents with more knowledge naturally teach more - this is how the system works.\n")
+                prompt_parts.append("ResearchAgent and TrendAnalysisAgent have the most knowledge, so they teach the most.\n")
+                prompt_parts.append("Only flag as a concern if:\n")
+                prompt_parts.append("- An agent with high knowledge is NOT teaching (connection issues)\n")
+                prompt_parts.append("- Quality of teachings degrades over time\n")
+                prompt_parts.append("- Learning connections fail repeatedly\n")
 
             if stats.get('top_learners'):
                 prompt_parts.append("\n**Most Active Learners:**\n")
@@ -229,6 +238,20 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append(f"- Active Spiders: {stats.get('active_count', 0)}\n")
             prompt_parts.append(f"- Data Points (24h): {stats.get('data_24h', 0)}\n")
             prompt_parts.append(f"- Total Data Records: {stats.get('total_data', 0)}\n")
+
+            # Session 550: Add expected behavior context for spider yield
+            active_count = stats.get('active_count', 0)
+            data_24h = stats.get('data_24h', 0)
+            if active_count > 0:
+                avg_per_spider = data_24h / active_count
+                prompt_parts.append(f"- Average per Spider: {avg_per_spider:.1f} items/day\n")
+                prompt_parts.append("\n**IMPORTANT - Expected Behavior:**\n")
+                prompt_parts.append("Spider yield of 10-20 items/day per spider is NORMAL due to deduplication.\n")
+                prompt_parts.append("The system filters duplicate URLs within 24 hours to prevent redundant data.\n")
+                prompt_parts.append("Only flag as a concern if:\n")
+                prompt_parts.append("- Average drops below 5 items/spider/day (possible API issues)\n")
+                prompt_parts.append("- Specific spiders produce 0 items (possible source problems)\n")
+                prompt_parts.append("- Data quality degrades (not yield quantity)\n")
 
             if stats.get('trending_topics'):
                 prompt_parts.append("\n**Trending Topics from Spiders:**\n")
