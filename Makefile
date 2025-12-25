@@ -208,15 +208,17 @@ davinci-bridge-logs: ## Tail DaVinci Bridge logs
 	@touch $(DAVINCI_BRIDGE_LOG)
 	@tail -f $(DAVINCI_BRIDGE_LOG)
 
-# ---------- Celery helpers (Session 207) ----------
+# ---------- Celery helpers (Session 207, updated Session 550) ----------
 celery: ## Start Celery worker + beat (background) for spider scheduling
 	@echo "==> Starting Celery services..."
-	@# Start Celery worker if not running (use solo pool on macOS to avoid fork/segfault issues)
+	@# Start Celery worker if not running
+	@# Session 550: Changed from --pool=solo (1 task) to --pool=threads --concurrency=4
+	@# This allows 4 tasks to run concurrently, preventing backlog with 90+ scheduled tasks
 	@if pgrep -f "celery.*worker" >/dev/null 2>&1; then \
 		echo "-> Celery worker already running"; \
 	else \
-		echo "-> Starting Celery worker (background, solo pool for macOS)..."; \
-		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
+		echo "-> Starting Celery worker (background, threads pool, 4 concurrent)..."; \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=4 > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
 		sleep 1; \
 	fi
 	@# Start Celery beat if not running
