@@ -1,53 +1,55 @@
-# Session 551 - Start Here
+# Session 552 - Start Here
 
-**Previous Session:** 550
-**Date:** December 24, 2025
-**Focus:** ThinkingAgent Expected Behavior Context
-
----
-
-## Session 550 Accomplishments
-
-### 1. Research Demo Backend API
-Created `core/views_research_demo.py` with 4 API endpoints:
-- `GET /api/v1/research/network-graph/` - D3.js graph data (55 nodes, 160 edges)
-- `GET /api/v1/research/live-feed/` - Recent learning events
-- `GET /api/v1/research/stats/` - Pipeline statistics
-- `GET /api/v1/research/mythology-gate/` - Trust decay data
-
-### 2. Auto-Cleanup for Stale Notifications
-Enhanced `scan_concerns_for_human_action()` task to auto-dismiss notifications for resolved concerns.
-
-### 3. ThinkingAgent Expected Behavior Context
-Added guidance to ThinkingAgent so it understands what's normal vs. actual issues:
-
-**Spider Yield:**
-- 10-20 items/spider/day is NORMAL (deduplication filters duplicates)
-- Only flag if average drops below 5 items/spider/day
-- Only flag if specific spiders produce 0 items
-- Only flag if data quality degrades
-
-**Teaching Concentration:**
-- Agents with more knowledge teaching more is BY DESIGN
-- ResearchAgent (689 knowledge items) and TrendAnalysisAgent teach most
-- Only flag if high-knowledge agents stop teaching
-- Only flag if teaching quality degrades
+**Previous Session:** 551
+**Date:** December 25, 2025
+**Focus:** Boardroom Deduplication + Pending Dreams Tracking
 
 ---
 
-## Research Demo Tab (Complete)
+## Session 551 Accomplishments
 
-The Research Demo tab is **fully functional** with:
+### 1. Celery Schedule Sync
+Synced 80 missing scheduled tasks from `celery.py` to the database scheduler:
+- Before: 62 tasks in database
+- After: 142 tasks in database
+- All autonomous tasks now running properly
 
-| Feature | Status |
-|---------|--------|
-| D3.js Force Graph | 55 agents, 160 connections |
-| Color-coded Nodes | By category (pink, purple, cyan, etc.) |
-| Edge Tooltips | Transfer count + strength on hover |
-| Auto-refresh | Every 10 seconds |
-| Sub-tabs | Overview, Network, Feed, Mythology, Blog, Thinking, Concerns |
+### 2. Pending Dreams Tracking
+Added to ThinkingAgent:
+- `pending_decision` count - how many dreams await human decision
+- `oldest_pending_hours` - age of oldest pending dream
+- "Dream Backlog Assessment" guidance in prompts
+- Added `dream_backlog` category to ConcernTracker
 
-**Access:** http://localhost:8000/ai-studio/ -> Research tab
+### 3. Boardroom Decision Cleanup
+Deleted 614 duplicate decisions:
+- Before: 990 decisions
+- After: 376 decisions
+- Worst case: "Crunchbase - Startups Intelligence" had 75 duplicates!
+
+### 4. Decision Deduplication Prevention
+Added to `core/services/decision_extractor.py`:
+- `normalize_topic()` - standardizes topics for comparison
+- `_has_recent_decision_for_topic()` - 24-hour dedup window
+- Prevents duplicate decisions when multiple agent pairs discuss same topic
+
+### 5. User Dream Cleanup
+User reviewed and processed all pending dreams:
+- 9 Approved
+- 3 Deferred
+- 8 Rejected
+- 0 Pending (backlog cleared!)
+
+---
+
+## Boardroom Structure Clarified
+
+| Section | Source | Model |
+|---------|--------|-------|
+| **Boardroom Decisions** | Agent conversations | `AgentDecisionSummary` |
+| **Dreams Awaiting Decisions** | High-scoring promoted dreams | `AgentDream` |
+
+Both are now tracked by ThinkingAgent.
 
 ---
 
@@ -55,30 +57,32 @@ The Research Demo tab is **fully functional** with:
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 75 | Active (~14 items/spider/day after dedup) |
+| **Spiders** | 75 | Active |
 | **Agents** | 55 | All learning |
 | **Learning Connections** | 160 | Active |
-| **Knowledge Transfers** | 1,262 | Growing |
-| **Tracked Concerns** | 54 | All resolved |
-| **Pending Actions** | 0 | Clean |
+| **Boardroom Decisions** | 376 | Deduplicated |
+| **Pending Dreams** | 0 | Cleared |
+| **Scheduled Tasks** | 142 | All synced |
 
 ---
 
-## Priority Tasks for Session 551
+## Priority Tasks for Session 552
 
-### 1. Action Analytics (MEDIUM)
-Track which actions are taken most often:
+### 1. Monitor Deduplication (HIGH)
+Verify no new duplicates appear overnight. Check logs for:
+```
+Session 551: Skipping duplicate decision for topic '...' - similar decision exists within 24h
+```
+
+### 2. Boardroom Review (MEDIUM)
+User may want to review the 376 remaining decisions:
+- Promote valuable ones to Canonical (Active Policy)
+- Clean up any remaining low-value decisions
+
+### 3. Action Analytics (LOW)
+Track which human actions are taken most often:
 - Improve auto-resolution based on patterns
 - Identify concerns that always get approved/rejected
-
-### 2. Network Graph Enhancements (LOW)
-Optional visual improvements:
-- Animated particles flowing along edges during transfers
-- Pulse animation on recently active nodes
-- Filter by category or learning type
-
-### 3. ThinkingAgent Concern Quality (DONE in Session 550)
-Added expected behavior context so ThinkingAgent can distinguish normal operation from actual issues.
 
 ---
 
@@ -91,35 +95,33 @@ make start && make celery
 # 2. Check system health
 curl http://localhost:8000/health/ping/
 
-# 3. View Research Demo
+# 3. View Boardroom
 open http://localhost:8000/ai-studio/
-# Click Research tab
+# Click Intelligence tab -> Boardroom sub-tab
 
-# 4. Test APIs
-curl http://localhost:8000/api/v1/research/network-graph/
-curl http://localhost:8000/api/v1/research/stats/
+# 4. Check scheduled tasks
+.venv/bin/python manage.py shell -c "from django_celery_beat.models import PeriodicTask; print(f'Tasks: {PeriodicTask.objects.count()}')"
 ```
 
 ---
 
-## Key Files (Session 550)
+## Key Files (Session 551)
 
 | File | Purpose |
 |------|---------|
-| `core/views_research_demo.py` | NEW - Research demo API endpoints |
-| `core/urls.py` | Added research API routes |
-| `core/tasks.py` | Updated scan_concerns with stale cleanup |
-| `core/agents/thinking_agent.py` | Added expected behavior context (lines 178-186, 233-245) |
-| `ai_core/templates/ai_image_studio.html` | Research Demo UI (lines 6985-7500) |
+| `core/agents/thinking_agent.py` | Added pending dreams tracking (lines 412-436, 214-234) |
+| `core/services/concern_tracker.py` | Added dream_backlog category |
+| `core/services/decision_extractor.py` | Added topic-based deduplication |
+| `docs/handoffs/SESSION_551_BOARDROOM_DEDUPLICATION.md` | Full session details |
 
 ---
 
 ## What's Working
 
-1. **Research Demo Tab** - D3.js network visualization with 55 agents
-2. **ThinkingAgent** - Generates insights with expected behavior awareness
-3. **Concern Tracking** - Auto-verification for 6 categories
-4. **Human Actions** - Full notification pipeline with auto-cleanup
-5. **All 75 Spiders** - Data collection active (deduplication filtering duplicates)
-6. **All 55 Agents** - Learning network active
-
+1. **Boardroom Deduplication** - No more duplicate decisions within 24h window
+2. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
+3. **Research Demo Tab** - D3.js network visualization
+4. **ThinkingAgent** - Expected behavior awareness + dream tracking
+5. **All 142 Scheduled Tasks** - Running via DatabaseScheduler
+6. **All 75 Spiders** - Data collection active
+7. **All 55 Agents** - Learning network active
