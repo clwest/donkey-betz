@@ -1,7 +1,7 @@
-# Session 550: ThinkingAgent Expected Behavior Context
+# Session 550: ThinkingAgent Expected Behavior + Celery Concurrency Fix
 
 **Date:** December 24, 2025
-**Commits:** `770806d`, `6c3e36f`
+**Commits:** `770806d`, `6c3e36f`, `6b4a8bb`, `9cc4c8b`
 **Status:** COMPLETE
 
 ---
@@ -77,6 +77,68 @@ Ran ThinkingAgent Cycle #28 to verify the changes work:
 
 ---
 
+## Part 2: Celery Concurrency Fix
+
+### Problem
+
+Celery was experiencing bottlenecks - tasks backing up and not processing in time.
+
+**Root Cause:** The Makefile was starting Celery with `--pool=solo`, which means **only 1 task can run at a time**.
+
+With 90+ scheduled tasks (many running every 30s, 1min, 2min, 5min), a single-threaded worker couldn't keep up.
+
+### High-Frequency Task Count
+```
+Every 30 seconds: 4 tasks
+Every 60 seconds: 2 tasks
+Every 2 minutes:  3 tasks
+Every 3 minutes:  1 task
+Every 5 minutes:  6 tasks
+Every 10 minutes: 5 tasks
+Every 15 minutes: 12 tasks
+= 33 tasks every 15 minutes competing for 1 worker!
+```
+
+### Solution
+
+Changed `Makefile` from:
+```bash
+# OLD - 1 task at a time
+--pool=solo
+```
+
+To:
+```bash
+# NEW - 4 tasks concurrent
+--pool=threads --concurrency=4
+```
+
+**Why threads instead of prefork?**
+- `prefork` causes segfaults on macOS due to fork() issues
+- `threads` pool works reliably on macOS
+- `gevent` would also work but requires additional dependency
+
+### Verification
+
+After the fix:
+```
+$ celery -A core inspect active
+->  celery@Chriss-MacBook-Pro.local: OK
+    * generate_agent_dreams (running)
+    * run_spider_network (running)
+    * run_multi_agent_conversation (running)
+    * run_agent_conversation (running)
+
+$ redis-cli LLEN celery
+0  # Queue empty - workers keeping up!
+```
+
+### Also Fixed
+
+Commented out 4 URL routes in `core/urls.py` that referenced non-existent `self_blog_api` functions (lines 2455-2458). These were preventing Django from starting.
+
+---
+
 ## Other Session 550 Work
 
 ### 1. Research Demo Backend API
@@ -96,8 +158,9 @@ Enhanced `scan_concerns_for_human_action()` in `core/tasks.py` to auto-dismiss n
 | File | Changes |
 |------|---------|
 | `core/agents/thinking_agent.py` | Added expected behavior context (lines 178-186, 233-245) |
+| `Makefile` | Changed Celery from `--pool=solo` to `--pool=threads --concurrency=4` |
 | `core/views_research_demo.py` | NEW - Research demo API endpoints |
-| `core/urls.py` | Added research API routes |
+| `core/urls.py` | Added research API routes, commented out missing self_blog routes |
 | `core/tasks.py` | Enhanced scan_concerns with stale cleanup |
 | `00-START-NEXT-SESSION.md` | Updated for Session 551 |
 
