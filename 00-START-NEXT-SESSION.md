@@ -35,7 +35,7 @@ Multiple API endpoints were broken with 500 errors:
 | `/api/v1/research/live-feed/` | `dream_title` doesn't exist | Changed to `title` |
 | `/api/v1/research/network-graph/` | `recipient_agent` doesn't exist | Changed to `connection__student_agent` |
 | `/api/v1/research/network-graph/` | `AgentCategory` not JSON serializable | Wrapped in `str()` |
-| `/api/v1/research/self-blog/` | 404 Not Found | Added stub API |
+| `/api/v1/research/self-blog/` | 404 Not Found | Restored original Session 543 implementation |
 
 ### 3. Fixed Live Feed Frontend Rendering
 The Live Feed sub-tab showed "Failed to load live feed" despite API returning correct data.
@@ -43,6 +43,23 @@ The Live Feed sub-tab showed "Failed to load live feed" despite API returning co
 **Root Cause:** Frontend expected `event.teacher.name` and `event.student.name` objects, but API returns `event.description` string.
 
 **Fix:** Updated `renderLiveFeed()` function in `ai_image_studio.html` to use correct API structure with icon/color maps for different event types (transfer, conversation, dream, mythology_block).
+
+### 4. Fixed Network Graph Colors
+All agent nodes were showing gray (default) instead of category-based colors.
+
+**Root Cause:** Agent `category` field is NULL in database.
+
+**Fix:** Added `infer_category_from_name()` function that determines agent category from name patterns:
+- ImageAgent, VideoAgent → creation (pink #ec4899)
+- ResearchAgent, TrendAnalysisAgent → research (purple #8b5cf6)
+- ContentStrategyAgent, BrandIdentityAgent → strategy (cyan #06b6d4)
+- CreativeDirectorAgent, CTOAgent → executive (amber #f59e0b)
+- CodeGeneratorAgent, FullStackDeveloperAgent → development (green #22c55e)
+
+### 5. Restored Self-Blog API
+The self-blog sub-tab was empty after accidental stub replacement.
+
+**Fix:** Restored original Session 543 `self_blog_api` that queries `SelfBlog` model and returns "[Report] System Insights" content.
 
 ---
 
@@ -90,10 +107,12 @@ curl http://localhost:8000/health/ping/
 
 # 3. View Research Tab
 open http://localhost:8000/ai-studio/
-# Click Research tab -> Overview sub-tab
+# Click Research tab -> All sub-tabs now working!
 
-# 4. Verify Most Shared Knowledge is fixed
+# 4. Verify APIs
 curl http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | grep -A 20 "top_topics"
+curl http://localhost:8000/api/v1/research/network-graph/ | python3 -m json.tool | head -30
+curl http://localhost:8000/api/v1/research/self-blog/ | python3 -m json.tool | head -20
 ```
 
 ---
@@ -102,20 +121,25 @@ curl http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | grep 
 
 | File | Purpose |
 |------|---------|
-| `core/views_research_demo.py` | Fixed stats_api + live_feed_api |
-| `00-START-NEXT-SESSION.md` | This file |
+| `core/views_research_demo.py` | Fixed all 4 APIs + added category inference |
+| `ai_core/templates/ai_image_studio.html` | Fixed renderLiveFeed() frontend |
+| `core/urls.py` | Uncommented self-blog route |
+| `docs/handoffs/SESSION_552_RESEARCH_DEMO_FIXES.md` | Full handoff documentation |
 
 ---
 
 ## What's Working
 
 1. **Most Shared Knowledge** - Now shows proper knowledge titles
-2. **Boardroom Deduplication** - No more duplicate decisions within 24h window
-3. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
-4. **Research Demo Tab** - D3.js network visualization
-5. **All 142 Scheduled Tasks** - Running via DatabaseScheduler
-6. **All 75 Spiders** - Data collection active
-7. **All 55 Agents** - Learning network active
+2. **Network Graph** - Color-coded agents by category
+3. **Live Feed** - Real-time events with proper icons
+4. **Self-Blog** - System Insights reports displayed
+5. **Mythology Gate** - Trust decay and blocking stats
+6. **Boardroom Deduplication** - No more duplicate decisions within 24h window
+7. **Pending Dreams Tracking** - ThinkingAgent monitors dream backlog
+8. **All 142 Scheduled Tasks** - Running via DatabaseScheduler
+9. **All 75 Spiders** - Data collection active
+10. **All 55 Agents** - Learning network active
 
 ---
 
@@ -127,3 +151,7 @@ curl http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | grep 
 | Pending dreams not tracked | 551 | Added to ThinkingAgent |
 | 80 missing scheduled tasks | 551 | Synced to database |
 | Garbage in Most Shared Knowledge | 552 | Fixed query + cleaned 310 entries |
+| Research Demo API 500 errors | 552 | Fixed all field references |
+| Live Feed "Failed to load" | 552 | Fixed frontend rendering |
+| Network Graph gray nodes | 552 | Added category inference |
+| Self-Blog empty | 552 | Restored Session 543 API |
