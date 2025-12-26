@@ -133,6 +133,55 @@ PA responses now include:
 
 ---
 
+## Garbage Topic Cleanup
+
+During Session 554, garbage single-word topics were discovered polluting Boardroom Decisions:
+- "Discussion: this", "Discussion: ai", "Discussion: brand", etc.
+
+### Root Cause
+Knowledge entries with single-word titles (e.g., `title="this"`) were flowing through:
+`AgentKnowledgeSource` → `AgentConversation` → `AgentDecisionSummary`
+
+### Fix Applied
+Added validation in `core/tasks.py:5159-5163`:
+```python
+# Session 554: Validate topic - reject garbage single words
+garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are'}
+if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
+    # Single-word or garbage topic - use knowledge type instead
+    topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
+```
+
+### Data Cleaned
+| Model | Records Cleaned |
+|-------|-----------------|
+| AgentDecisionSummary | 6+ deleted |
+| AgentConversation | 55+ deleted |
+| AgentKnowledgeSource | 200+ deactivated |
+
+---
+
+## Dream Scoring Fix (Also Session 554)
+
+Fixed "Dreams Awaiting Decision" showing empty in Boardroom.
+
+### Root Cause
+GPT-5-mini reasoning model uses ~350 tokens for internal reasoning before generating output. The `max_completion_tokens` was set too low (50-100), leaving no room for actual response content.
+
+### Fix Applied
+Updated `core/tasks.py` lines 7803 and 7837:
+```python
+max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
+```
+
+### Result
+- Before: 0 dreams promoted, relevance_score=0.00, avg_composite=0.45
+- After: 6 dreams promoted, relevance_score calculated, avg_composite=0.59-0.77
+
+Dreams now properly flow to the Boardroom for user decision!
+
+---
+
 ## Next Steps (Session 555+)
 
 1. **Frontend Enhancement**: Display intelligence attribution in PA responses

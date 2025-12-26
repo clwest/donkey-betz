@@ -24,6 +24,21 @@ Connected Personal Assistant to the full knowledge base (3,668+ entries).
 - `core/services/intelligence_query.py` - IntelligenceQueryService
 - `docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md`
 
+### Garbage Topic Cleanup COMPLETE
+
+Cleaned single-word garbage topics ("this", "ai", "brand", "each", "content") from Boardroom:
+- Added validation filter in `core/tasks.py:5159-5163`
+- Deleted 6+ garbage decisions
+- Deleted 55+ garbage conversations
+- Deactivated 200+ garbage knowledge entries
+
+### Dream Scoring Fix COMPLETE
+
+Fixed "Dreams Awaiting Decision" showing empty:
+- GPT-5-mini needs 500+ tokens (350 for reasoning)
+- Updated `core/tasks.py:7803,7837` from 50-100 to 500 tokens
+- 6 dreams now promoted to Boardroom for user decision
+
 **Full handoff:** `docs/handoffs/SESSION_554_PA_INTELLIGENCE_INTEGRATION.md`
 
 ---
@@ -52,11 +67,11 @@ Surface relevant agent dreams in responses:
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Knowledge Entries** | 3,668+ | Active, growing |
+| **Knowledge Entries** | 3,379 | Active (cleaned of garbage) |
+| **Decisions** | 393 | Clean |
+| **Conversations** | 1,390 | Clean |
 | **Learning Connections** | 160 | Active |
 | **Agents** | 55 | All learning |
-| **Transfers (24h)** | 122 | Healthy |
-| **Dreams (24h)** | 821 | Healthy |
 | **Spiders** | 75 | Active |
 
 ---
