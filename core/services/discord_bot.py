@@ -510,6 +510,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(LegalCommands(self))  # Session 497: Pro Se Legal Assistant
         await self.add_cog(DeveloperCommands(self))  # Session 497: Code Generation/Review
         await self.add_cog(MLScoringCommands(self))  # Session 497: ML Scoring Status
+        await self.add_cog(ReviewCommands(self))  # Session 556: Chief of Staff Review Documents
 
         # Sync slash commands with Discord
         try:
@@ -12644,6 +12645,346 @@ class MLScoringCommands(commands.Cog):
                     color=discord.Color.red()
                 )
             )
+
+
+class ReviewCommands(commands.Cog):
+    """
+    Session 556: Chief of Staff Review Document Commands.
+
+    Discord commands for reviewing artifacts, interrogating Pro/Con sides,
+    and making decisions from mobile.
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    @app_commands.command(name="review", description="Show review document for an artifact or dream")
+    @app_commands.describe(target_id="The artifact or dream ID to review")
+    async def review(self, interaction: discord.Interaction, target_id: str):
+        """Display review document summary."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_or_create_review():
+                from core.services.review_document import review_service
+                from core.models_conversation_artifacts import ReviewDocument
+
+                # Try to find existing review by target_id
+                try:
+                    # First check if it's already a review document ID
+                    review = ReviewDocument.objects.get(id=target_id)
+                    return review
+                except (ReviewDocument.DoesNotExist, ValueError):
+                    pass
+
+                # Try as artifact ID
+                try:
+                    review = review_service.get_or_create_for_artifact(target_id)
+                    return review
+                except Exception:
+                    pass
+
+                # Try as dream ID
+                try:
+                    review = review_service.get_or_create_for_dream(target_id)
+                    return review
+                except Exception:
+                    pass
+
+                return None
+
+            review = await get_or_create_review()
+
+            if not review:
+                await interaction.followup.send("❌ Could not find or create review for that ID")
+                return
+
+            # Build embed
+            embed = discord.Embed(
+                title=f"📋 Review: {review.target_type.title()}",
+                color=self._get_lean_color(review.ai_lean),
+                description=review.neutral_summary[:500] + ("..." if len(review.neutral_summary) > 500 else "")
+            )
+
+            # Add fields
+            pro_text = review.pro_case[:500] + ("..." if len(review.pro_case) > 500 else "")
+            embed.add_field(
+                name="✅ Pro Case",
+                value=pro_text or "No pro case available",
+                inline=False
+            )
+
+            con_text = review.con_case[:500] + ("..." if len(review.con_case) > 500 else "")
+            embed.add_field(
+                name="❌ Con Case",
+                value=con_text or "No con case available",
+                inline=False
+            )
+
+            embed.add_field(
+                name="🤖 AI Recommendation",
+                value=f"**{review.ai_lean.replace('_', ' ').title()}** ({review.ai_confidence:.0%} confidence)\n{review.ai_recommendation[:300]}",
+                inline=False
+            )
+
+            # Open questions
+            if review.open_questions:
+                questions_text = "\n".join(f"• {q}" for q in review.open_questions[:5])
+                embed.add_field(
+                    name="❓ Open Questions",
+                    value=questions_text or "None",
+                    inline=False
+                )
+
+            # Status and footer
+            embed.add_field(
+                name="📊 Status",
+                value=f"Status: {review.status.replace('_', ' ').title()}\nQuestions: Pro {review.questions_asked_pro} | Con {review.questions_asked_con}",
+                inline=True
+            )
+
+            embed.set_footer(text=f"Review ID: {review.id}\nUse /ask-pro or /ask-con to interrogate sides")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Review command error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @app_commands.command(name="review-list", description="List pending review documents")
+    async def review_list(self, interaction: discord.Interaction):
+        """List all pending reviews."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_pending_reviews():
+                from core.models_conversation_artifacts import ReviewDocument
+                reviews = list(ReviewDocument.objects.filter(
+                    status='awaiting_human'
+                ).order_by('-created_at')[:10])
+                return reviews
+
+            reviews = await get_pending_reviews()
+
+            if not reviews:
+                await interaction.followup.send("📭 No pending reviews")
+                return
+
+            embed = discord.Embed(
+                title="📋 Pending Reviews",
+                color=discord.Color.blue(),
+                description=f"Found {len(reviews)} reviews awaiting decision"
+            )
+
+            for review in reviews:
+                lean_emoji = self._get_lean_emoji(review.ai_lean)
+                embed.add_field(
+                    name=f"{lean_emoji} {review.target_type.title()}",
+                    value=f"ID: `{str(review.id)[:8]}...`\nAI: {review.ai_lean.replace('_', ' ')} ({review.ai_confidence:.0%})\nQuestions: {review.questions_asked_pro + review.questions_asked_con}",
+                    inline=True
+                )
+
+            embed.set_footer(text="Use /review <id> to view full details")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Review list error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @app_commands.command(name="ask-pro", description="Ask the Pro advocate a question")
+    @app_commands.describe(
+        review_id="The review document ID",
+        question="Your question for the Pro advocate"
+    )
+    async def ask_pro(self, interaction: discord.Interaction, review_id: str, question: str):
+        """Ask Pro side a question."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def ask_pro_sync():
+                from core.services.side_chat import side_chat_service
+                from core.models_conversation_artifacts import ReviewDocument
+
+                review = ReviewDocument.objects.get(id=review_id)
+                result = side_chat_service.ask_side(review, 'pro', question)
+                return result, review
+
+            result, review = await ask_pro_sync()
+
+            embed = discord.Embed(
+                title="✅ Pro Advocate",
+                color=discord.Color.green(),
+                description=result['answer'][:2000]
+            )
+            embed.add_field(
+                name="Your Question",
+                value=question[:500],
+                inline=False
+            )
+            embed.set_footer(text=f"Questions asked: Pro {review.questions_asked_pro} | Con {review.questions_asked_con}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            if "DoesNotExist" in str(type(e).__name__):
+                await interaction.followup.send("❌ Review not found")
+            else:
+                logger.error(f"Ask pro error: {e}", exc_info=True)
+                await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @app_commands.command(name="ask-con", description="Ask the Con skeptic a question")
+    @app_commands.describe(
+        review_id="The review document ID",
+        question="Your question for the Con skeptic"
+    )
+    async def ask_con(self, interaction: discord.Interaction, review_id: str, question: str):
+        """Ask Con side a question."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def ask_con_sync():
+                from core.services.side_chat import side_chat_service
+                from core.models_conversation_artifacts import ReviewDocument
+
+                review = ReviewDocument.objects.get(id=review_id)
+                result = side_chat_service.ask_side(review, 'con', question)
+                return result, review
+
+            result, review = await ask_con_sync()
+
+            embed = discord.Embed(
+                title="❌ Con Skeptic",
+                color=discord.Color.red(),
+                description=result['answer'][:2000]
+            )
+            embed.add_field(
+                name="Your Question",
+                value=question[:500],
+                inline=False
+            )
+            embed.set_footer(text=f"Questions asked: Pro {review.questions_asked_pro} | Con {review.questions_asked_con}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            if "DoesNotExist" in str(type(e).__name__):
+                await interaction.followup.send("❌ Review not found")
+            else:
+                logger.error(f"Ask con error: {e}", exc_info=True)
+                await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @app_commands.command(name="decide", description="Make a decision on a review")
+    @app_commands.describe(
+        review_id="The review document ID",
+        decision="Your decision",
+        conditions="Optional conditions (for approve with conditions)"
+    )
+    @app_commands.choices(decision=[
+        app_commands.Choice(name="Approve", value="approved"),
+        app_commands.Choice(name="Approve with Conditions", value="approved_with_conditions"),
+        app_commands.Choice(name="Decline", value="declined"),
+        app_commands.Choice(name="Defer", value="deferred"),
+    ])
+    async def decide(
+        self,
+        interaction: discord.Interaction,
+        review_id: str,
+        decision: str,
+        conditions: str = ""
+    ):
+        """Make a decision on a review document."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def make_decision():
+                from django.utils import timezone
+                from core.models_conversation_artifacts import ReviewDocument, ExtractedArtifact
+
+                review = ReviewDocument.objects.get(id=review_id)
+
+                # Update review document
+                review.status = decision
+                review.decision_conditions = conditions
+                review.decided_at = timezone.now()
+                review.save()
+
+                # Cascade to artifact if applicable
+                if review.target_type == 'artifact':
+                    try:
+                        artifact = ExtractedArtifact.objects.get(id=review.target_id)
+                        if decision in ['approved', 'approved_with_conditions']:
+                            artifact.status = 'approved'
+                        elif decision == 'declined':
+                            artifact.status = 'rejected'
+                        elif decision == 'deferred':
+                            artifact.status = 'deferred'
+                        artifact.save()
+                    except ExtractedArtifact.DoesNotExist:
+                        pass
+
+                return review
+
+            review = await make_decision()
+
+            # Send confirmation
+            decision_emoji = {
+                'approved': '✅',
+                'approved_with_conditions': '⚠️',
+                'declined': '❌',
+                'deferred': '⏸️'
+            }.get(decision, '📋')
+
+            embed = discord.Embed(
+                title=f"{decision_emoji} Decision Recorded",
+                color=discord.Color.green() if 'approved' in decision else discord.Color.orange(),
+                description=f"Review **{decision.replace('_', ' ').title()}**"
+            )
+
+            if conditions:
+                embed.add_field(name="Conditions", value=conditions, inline=False)
+
+            embed.set_footer(text=f"Review ID: {review.id}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            if "DoesNotExist" in str(type(e).__name__):
+                await interaction.followup.send("❌ Review not found")
+            else:
+                logger.error(f"Decide error: {e}", exc_info=True)
+                await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    def _get_lean_color(self, lean: str) -> discord.Color:
+        """Get color based on AI lean."""
+        colors = {
+            'strong_approve': discord.Color.green(),
+            'lean_approve': discord.Color.dark_green(),
+            'neutral': discord.Color.gold(),
+            'lean_decline': discord.Color.orange(),
+            'strong_decline': discord.Color.red(),
+            'pilot': discord.Color.blue(),
+            'defer': discord.Color.greyple(),
+        }
+        return colors.get(lean, discord.Color.blue())
+
+    def _get_lean_emoji(self, lean: str) -> str:
+        """Get emoji based on AI lean."""
+        emojis = {
+            'strong_approve': '🟢',
+            'lean_approve': '🟡',
+            'neutral': '⚪',
+            'lean_decline': '🟠',
+            'strong_decline': '🔴',
+            'pilot': '🔵',
+            'defer': '⏸️',
+        }
+        return emojis.get(lean, '📋')
 
 
 # Bot instance (created when module loads)

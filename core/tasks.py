@@ -18007,3 +18007,345 @@ def scan_concerns_for_human_action():
             'success': False,
             'error': str(e)
         }
+
+
+# ============================================================================
+# Session 555: Conversation Artifact Extraction (Chief of Staff Layer Phase A)
+# ============================================================================
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def extract_conversation_artifacts(self, conversation_id: str):
+    """
+    Extract actionable artifacts from a completed agent conversation.
+
+    Triggered when:
+    - Conversation status changes to 'completed'
+    - Or via scheduled batch processing
+
+    Args:
+        conversation_id: UUID of the conversation to extract from
+
+    Returns:
+        dict with extraction results
+    """
+    from collections import Counter
+
+    try:
+        from core.services.artifact_extraction import extraction_service
+
+        artifacts = extraction_service.extract_from_conversation(conversation_id)
+
+        logger.info(f"📋 [ARTIFACTS] Extracted {len(artifacts)} artifacts from conversation {conversation_id}")
+
+        return {
+            'success': True,
+            'conversation_id': conversation_id,
+            'artifacts_extracted': len(artifacts),
+            'by_type': dict(Counter(a.artifact_type for a in artifacts))
+        }
+
+    except Exception as e:
+        logger.error(f"📋 [ARTIFACTS] Extraction failed for {conversation_id}: {e}", exc_info=True)
+        raise self.retry(exc=e)
+
+
+@shared_task
+def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
+    """
+    Process conversations from last N hours that haven't been extracted.
+
+    Run via Celery Beat every hour.
+
+    Args:
+        hours_back: Look back this many hours for conversations
+        limit: Max conversations to process per batch
+
+    Returns:
+        dict with batch results
+    """
+    try:
+        from core.services.artifact_extraction import extraction_service
+
+        results = extraction_service.batch_extract(hours_back=hours_back)
+
+        if results['artifacts_total'] > 0:
+            logger.info(f"📋 [ARTIFACTS BATCH] Processed {results['processed']} conversations, "
+                       f"extracted {results['artifacts_total']} artifacts")
+        else:
+            logger.info(f"📋 [ARTIFACTS BATCH] Processed {results['processed']} conversations, no artifacts found")
+
+        return {
+            'success': True,
+            **results
+        }
+
+    except Exception as e:
+        logger.error(f"📋 [ARTIFACTS BATCH] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+# ============================================================================
+# Session 555: Artifact Execution Pipeline (Chief of Staff Layer Phase B)
+# ============================================================================
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+def execute_single_artifact(self, artifact_id: str):
+    """
+    Execute a single approved artifact.
+
+    Triggered when:
+    - User clicks "Execute Now" in Boardroom
+    - Or via scheduled batch processing
+
+    Args:
+        artifact_id: UUID of the artifact to execute
+
+    Returns:
+        dict with execution results
+    """
+    try:
+        from core.services.artifact_execution import execution_service
+        from core.models_conversation_artifacts import ExtractedArtifact
+
+        artifact = ExtractedArtifact.objects.get(id=artifact_id)
+        execution = execution_service.execute_artifact(artifact)
+
+        logger.info(f"⚡ [EXECUTION] Artifact {artifact_id} executed via {execution.agent_name}: {execution.status}")
+
+        return {
+            'success': execution.status == 'completed',
+            'artifact_id': artifact_id,
+            'execution_id': str(execution.id),
+            'agent_name': execution.agent_name,
+            'status': execution.status,
+            'execution_time_ms': execution.execution_time_ms,
+        }
+
+    except Exception as e:
+        logger.error(f"⚡ [EXECUTION] Failed for artifact {artifact_id}: {e}", exc_info=True)
+        raise self.retry(exc=e)
+
+
+@shared_task
+def execute_approved_artifacts(limit: int = 10):
+    """
+    Process all approved artifacts waiting for execution.
+
+    Run via Celery Beat every 15 minutes.
+
+    Args:
+        limit: Max artifacts to process per batch
+
+    Returns:
+        dict with batch results
+    """
+    try:
+        from core.services.artifact_execution import execution_service
+
+        results = execution_service.execute_approved_artifacts(limit=limit)
+
+        if results['processed'] > 0:
+            logger.info(f"⚡ [EXECUTION BATCH] Processed {results['processed']} artifacts: "
+                       f"{results['succeeded']} succeeded, {results['failed']} failed")
+        else:
+            logger.info("⚡ [EXECUTION BATCH] No approved artifacts pending execution")
+
+        return {
+            'success': True,
+            **results
+        }
+
+    except Exception as e:
+        logger.error(f"⚡ [EXECUTION BATCH] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def generate_weekly_synthesis(days_back: int = 7):
+    """
+    Session 555 - Phase C: Generate weekly Chief of Staff synthesis.
+
+    Run via Celery Beat every Sunday at 8 AM.
+
+    Aggregates:
+    - Artifacts extracted during the period
+    - Decisions made (approved/rejected/deferred)
+    - Execution results and success rates
+    - Agent activity metrics
+
+    Uses GPT-5-mini for trend analysis and recommendations.
+    Posts to Discord #boardroom.
+
+    Args:
+        days_back: Number of days to analyze (default 7)
+
+    Returns:
+        dict with synthesis results
+    """
+    try:
+        from core.services.weekly_synthesis import synthesis_service
+        from core.services.discord_notifications import discord_notify
+
+        synthesis = synthesis_service.generate_weekly_synthesis(days_back=days_back)
+
+        # Post to Discord #boardroom
+        try:
+            discord_notify.send_weekly_synthesis(synthesis)
+            synthesis.posted_to_discord = True
+            synthesis.save()
+            logger.info(f"📊 [WEEKLY SYNTHESIS] Posted to Discord #boardroom")
+        except Exception as e:
+            logger.warning(f"📊 [WEEKLY SYNTHESIS] Discord notification failed: {e}")
+
+        logger.info(
+            f"📊 [WEEKLY SYNTHESIS] Generated: {synthesis.artifacts_extracted} artifacts, "
+            f"{synthesis.executions_total} executions, {synthesis.execution_success_rate:.0%} success rate"
+        )
+
+        return {
+            'success': True,
+            'synthesis_id': str(synthesis.id),
+            'period': f"{synthesis.period_start} to {synthesis.period_end}",
+            'artifacts_extracted': synthesis.artifacts_extracted,
+            'executions_total': synthesis.executions_total,
+            'execution_success_rate': synthesis.execution_success_rate,
+            'posted_to_discord': synthesis.posted_to_discord,
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [WEEKLY SYNTHESIS] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def generate_pending_reviews():
+    """
+    Session 556 - Option C: Auto-generate review documents for pending artifacts.
+
+    Runs hourly via Celery Beat.
+
+    Triggers review generation for:
+    - High-priority artifacts (composite_score >= 0.7)
+    - Artifacts pending > 24 hours
+    - Urgent artifacts (urgency_score >= 0.8)
+
+    Posts notifications to Discord #boardroom.
+
+    Returns:
+        dict with generation results
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_conversation_artifacts import ExtractedArtifact, ReviewDocument
+
+    logger.info("📋 [AUTO-REVIEW] Starting auto-review generation scan...")
+
+    now = timezone.now()
+    results = {
+        'scanned': 0,
+        'generated': 0,
+        'high_priority': 0,
+        'pending_long': 0,
+        'urgent': 0,
+        'errors': 0,
+    }
+
+    try:
+        # Find artifacts that don't have reviews yet
+        existing_review_targets = ReviewDocument.objects.filter(
+            target_type='artifact'
+        ).values_list('target_id', flat=True)
+
+        pending_artifacts = ExtractedArtifact.objects.filter(
+            status='pending'
+        ).exclude(
+            id__in=existing_review_targets
+        )
+
+        results['scanned'] = pending_artifacts.count()
+
+        for artifact in pending_artifacts:
+            should_generate = False
+            reason = ""
+            reason_key = ""
+
+            # Check high priority (composite_score >= 0.7)
+            if artifact.composite_score >= 0.7:
+                should_generate = True
+                reason = f"High priority (score: {artifact.composite_score:.2f})"
+                reason_key = 'high_priority'
+
+            # Check pending duration (> 24 hours)
+            elif now - artifact.extracted_at > timedelta(hours=24):
+                should_generate = True
+                hours_pending = (now - artifact.extracted_at).total_seconds() / 3600
+                reason = f"Pending {hours_pending:.1f}h (> 24h threshold)"
+                reason_key = 'pending_long'
+
+            # Check urgency (urgency_score >= 0.8)
+            elif artifact.urgency_score >= 0.8:
+                should_generate = True
+                reason = f"Urgent (urgency: {artifact.urgency_score:.2f})"
+                reason_key = 'urgent'
+
+            if should_generate:
+                try:
+                    from core.services.review_document import review_service
+
+                    logger.info(f"📋 [AUTO-REVIEW] Generating for '{artifact.title[:40]}': {reason}")
+                    review = review_service.generate_review_document(artifact)
+
+                    results['generated'] += 1
+                    results[reason_key] += 1
+
+                    # Notify Discord
+                    try:
+                        from core.services.discord_notifications import discord_notify
+
+                        discord_notify.send_embed(
+                            channel_name='boardroom',
+                            title='📋 Auto-Generated Review Awaiting Decision',
+                            description=f"**{artifact.title}**\n\n{review.neutral_summary[:400]}",
+                            color=0x3498db,
+                            fields=[
+                                {'name': 'Trigger', 'value': reason, 'inline': True},
+                                {'name': 'AI Lean', 'value': review.ai_lean.replace('_', ' ').title(), 'inline': True},
+                                {'name': 'Confidence', 'value': f'{review.ai_confidence:.0%}', 'inline': True},
+                            ],
+                            footer=f'Review ID: {str(review.id)[:8]}... | Use /review to respond'
+                        )
+                    except Exception as discord_err:
+                        logger.warning(f"📋 [AUTO-REVIEW] Discord notification failed: {discord_err}")
+
+                except Exception as gen_err:
+                    logger.error(f"📋 [AUTO-REVIEW] Failed to generate for {artifact.id}: {gen_err}")
+                    results['errors'] += 1
+
+        logger.info(
+            f"📋 [AUTO-REVIEW] Complete: scanned {results['scanned']}, "
+            f"generated {results['generated']} reviews "
+            f"(high_priority: {results['high_priority']}, "
+            f"pending_long: {results['pending_long']}, "
+            f"urgent: {results['urgent']})"
+        )
+
+        return {
+            'success': True,
+            **results
+        }
+
+    except Exception as e:
+        logger.error(f"📋 [AUTO-REVIEW] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }

@@ -1033,6 +1033,45 @@ app.conf.beat_schedule = {
             'expires': 1800,  # 30 minutes
         }
     },
+    # SESSION 555: CONVERSATION ARTIFACT EXTRACTION (Chief of Staff Layer)
+    # Extract actionable proposals, risks, experiments from agent conversations
+    'batch-extract-artifacts': {
+        'task': 'core.tasks.batch_extract_artifacts',
+        'schedule': crontab(minute=15),  # Every hour at :15
+        'kwargs': {'hours_back': 24},
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # SESSION 555 PHASE B: ARTIFACT EXECUTION PIPELINE
+    # Execute approved artifacts via agent routing
+    'execute-approved-artifacts': {
+        'task': 'core.tasks.execute_approved_artifacts',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'kwargs': {'limit': 10},
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
+    # SESSION 555 PHASE C: WEEKLY SYNTHESIS
+    # Generate weekly executive summary every Sunday at 8 AM
+    'generate-weekly-synthesis': {
+        'task': 'core.tasks.generate_weekly_synthesis',
+        'schedule': crontab(day_of_week=0, hour=8, minute=0),  # Sunday 8 AM
+        'kwargs': {'days_back': 7},
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # SESSION 556 OPTION C: AUTO-REVIEW GENERATION
+    # Auto-generate reviews for pending artifacts
+    'generate-pending-reviews': {
+        'task': 'core.tasks.generate_pending_reviews',
+        'schedule': crontab(minute=30),  # Every hour at :30
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Spider-specific task routing configuration
