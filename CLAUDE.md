@@ -1,9 +1,10 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 21, 2025 - Session 521
+**Last Updated:** December 25, 2025 - Session 556
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
 **Spider Network:** 72 spiders | 20,712 data records | 88.1% embeddings
 **Agent Ecosystem:** 42 routable agents | Autonomous Content Generation | 3-Agent Debates
+**Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -42,6 +43,8 @@ open http://localhost:8000/ai-studio/
 | `core/tasks.py` | Celery background tasks |
 | `core/celery.py` | Celery Beat schedules |
 | `core/assistant/tool_definitions.py` | GPT tool schemas |
+| `core/services/review_document.py` | Chief of Staff review generation |
+| `core/services/side_chat.py` | Pro/Con interrogation service |
 
 ---
 
@@ -119,6 +122,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 556 | Chief of Staff Extensions - Discord commands, Boardroom UI, auto-reviews, dream reviews | `SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md` |
+| 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con review documents | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 | 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
 | 552 | Research Demo Tab Complete Fix - APIs, colors, live feed, self-blog | `SESSION_552_RESEARCH_DEMO_FIXES.md` |
 | 551 | Boardroom Deduplication + Pending Dreams Tracking | `SESSION_551_BOARDROOM_DEDUPLICATION.md` |
@@ -127,9 +132,6 @@ curl http://localhost:8000/health/ping/
 | 513 | Campaign Orchestrator Agent - Marketing hub | `SESSION_513_CAMPAIGN_ORCHESTRATOR.md` |
 | 511 | ML Scoring Sub-Tab Enhancement | `SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md` |
 | 503 | Spider API Fixes (Etherscan + Kaggle) | `SESSION_503_SPIDER_FIXES.md` |
-| 499 | Full Agent Routing (42 Agents) | `SESSION_499_FULL_AGENT_ROUTING.md` |
-| 497 | Platform Integration Gap Analysis | `SESSION_497_INTEGRATION_GAP_ANALYSIS.md` |
-| 496 | AI Podcast Studio | `SESSION_496_AI_PODCAST_STUDIO.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
