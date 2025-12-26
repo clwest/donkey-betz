@@ -5157,7 +5157,7 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                         except (json.JSONDecodeError, TypeError):
                             topic = knowledge_item.summary[:80]
                 # Session 554: Validate topic - reject garbage single words
-                garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are'}
+                garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are', 'ai', 'brand', 'competitor', 'handmade', 'trends', 'market'}
                 if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
                     # Single-word or garbage topic - use knowledge type instead
                     topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
@@ -5786,6 +5786,12 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
                     except (json.JSONDecodeError, TypeError):
                         topic = knowledge_item.summary[:80]
             if not topic:
+                topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {moderator.name}"
+
+            # Session 554: Validate topic - reject garbage single words (same filter as Discussion)
+            garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are', 'ai', 'brand', 'competitor', 'handmade', 'trends', 'market'}
+            if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
+                # Single-word or garbage topic - use knowledge type instead
                 topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {moderator.name}"
 
             # Choose panel template
