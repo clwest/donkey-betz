@@ -5156,6 +5156,11 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
                             topic = data.get('query') or data.get('topic') or data.get('insight', '')[:80]
                         except (json.JSONDecodeError, TypeError):
                             topic = knowledge_item.summary[:80]
+                # Session 554: Validate topic - reject garbage single words
+                garbage_words = {'this', 'that', 'the', 'each', 'content', 'a', 'an', 'it', 'is', 'was', 'be', 'are'}
+                if topic and (len(topic) <= 6 or topic.lower() in garbage_words or ' ' not in topic.strip()):
+                    # Single-word or garbage topic - use knowledge type instead
+                    topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
                 if not topic:
                     topic = f"{knowledge_item.knowledge_type.replace('_', ' ').title()} from {initiator.name}"
             else:
