@@ -7800,7 +7800,7 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
                 actionability_response = client.chat.completions.create(
                     model="gpt-5-mini",
                     messages=[{"role": "user", "content": actionability_prompt}],
-                    max_completion_tokens=50  # Higher for reasoning models
+                    max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
                 )
 
                 actionability_text = actionability_response.choices[0].message.content.strip()
@@ -7834,7 +7834,7 @@ Example: 0.8|AI Content Studio"""
                     relevance_response = client.chat.completions.create(
                         model="gpt-5-mini",
                         messages=[{"role": "user", "content": relevance_prompt}],
-                        max_completion_tokens=100  # Higher for reasoning models
+                        max_completion_tokens=500  # GPT-5-mini uses ~350 tokens for reasoning
                     )
 
                     relevance_text = relevance_response.choices[0].message.content.strip()
