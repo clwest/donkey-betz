@@ -3137,6 +3137,46 @@ urlpatterns += [
     path('api/mi/briefs/<uuid:brief_id>/', weekly_brief_detail, name='mi-brief-detail'),
 
     # =========================================================================
+    # Session 555: Conversation Artifacts API (Chief of Staff Layer Phase A)
+    # =========================================================================
+    path('api/artifacts/', lambda r: __import__('core.views_artifacts', fromlist=['list_artifacts']).list_artifacts(r), name='artifacts-list'),
+    path('api/artifacts/pending/', lambda r: __import__('core.views_artifacts', fromlist=['pending_artifacts_summary']).pending_artifacts_summary(r), name='artifacts-pending'),
+    path('api/artifacts/<uuid:artifact_id>/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['get_artifact']).get_artifact(r, artifact_id), name='artifacts-detail'),
+    path('api/artifacts/<uuid:artifact_id>/decide/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['decide_artifact']).decide_artifact(r, artifact_id), name='artifacts-decide'),
+    path('api/conversations/<uuid:conversation_id>/artifacts/', lambda r, conversation_id: __import__('core.views_artifacts', fromlist=['conversation_artifacts']).conversation_artifacts(r, conversation_id), name='conversation-artifacts'),
+    path('api/conversations/<uuid:conversation_id>/extract/', lambda r, conversation_id: __import__('core.views_artifacts', fromlist=['extract_conversation']).extract_conversation(r, conversation_id), name='conversation-extract'),
+
+    # =========================================================================
+    # Session 555: Artifact Execution API (Chief of Staff Layer Phase B)
+    # =========================================================================
+    path('api/artifacts/execution-status/', lambda r: __import__('core.views_artifacts', fromlist=['execution_status']).execution_status(r), name='artifacts-execution-status'),
+    path('api/artifacts/<uuid:artifact_id>/execute/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['execute_artifact']).execute_artifact(r, artifact_id), name='artifacts-execute'),
+    path('api/artifacts/<uuid:artifact_id>/executions/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['list_executions']).list_executions(r, artifact_id), name='artifacts-executions'),
+    path('api/artifacts/executions/<uuid:execution_id>/', lambda r, execution_id: __import__('core.views_artifacts', fromlist=['get_execution']).get_execution(r, execution_id), name='execution-detail'),
+
+    # =========================================================================
+    # Session 555: Review Documents API (Chief of Staff Layer Phase D)
+    # =========================================================================
+    path('api/reviews/', lambda r: __import__('core.views_artifacts', fromlist=['list_review_documents']).list_review_documents(r), name='reviews-list'),
+    path('api/reviews/<uuid:review_id>/', lambda r, review_id: __import__('core.views_artifacts', fromlist=['get_review_document']).get_review_document(r, review_id), name='reviews-detail'),
+    path('api/reviews/<uuid:review_id>/ask-pro/', lambda r, review_id: __import__('core.views_artifacts', fromlist=['ask_pro_side']).ask_pro_side(r, review_id), name='reviews-ask-pro'),
+    path('api/reviews/<uuid:review_id>/ask-con/', lambda r, review_id: __import__('core.views_artifacts', fromlist=['ask_con_side']).ask_con_side(r, review_id), name='reviews-ask-con'),
+    path('api/reviews/<uuid:review_id>/decide/', lambda r, review_id: __import__('core.views_artifacts', fromlist=['decide_review']).decide_review(r, review_id), name='reviews-decide'),
+    path('api/artifacts/<uuid:artifact_id>/generate-review/', lambda r, artifact_id: __import__('core.views_artifacts', fromlist=['generate_review_for_artifact']).generate_review_for_artifact(r, artifact_id), name='artifacts-generate-review'),
+
+    # =========================================================================
+    # Session 556: Auto-Review Generation (Chief of Staff Layer Option C)
+    # =========================================================================
+    path('api/artifacts/trigger-auto-reviews/', lambda r: __import__('core.views_artifacts', fromlist=['trigger_auto_reviews']).trigger_auto_reviews(r), name='artifacts-trigger-auto-reviews'),
+    path('api/artifacts/auto-review-stats/', lambda r: __import__('core.views_artifacts', fromlist=['get_auto_review_stats']).get_auto_review_stats(r), name='artifacts-auto-review-stats'),
+
+    # =========================================================================
+    # Session 556: Dream Reviews (Chief of Staff Layer Option D)
+    # =========================================================================
+    path('api/dreams/<uuid:dream_id>/generate-review/', lambda r, dream_id: __import__('core.views_artifacts', fromlist=['generate_review_for_dream']).generate_review_for_dream(r, dream_id), name='dreams-generate-review'),
+    path('api/dreams/reviews/', lambda r: __import__('core.views_artifacts', fromlist=['list_dream_reviews']).list_dream_reviews(r), name='dreams-reviews-list'),
+
+    # =========================================================================
     # Session 476: Autonomous Monitoring Dashboard
     # =========================================================================
     path('monitoring/', lambda r: __import__('core.views_autonomous_monitoring', fromlist=['autonomous_monitoring_dashboard']).autonomous_monitoring_dashboard(r), name='autonomous-monitoring'),

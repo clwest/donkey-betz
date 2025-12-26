@@ -6979,6 +6979,129 @@
                     </div>
                 </div>
 
+                <!-- Session 556: Side Chat Modal (Pro/Con Interrogation) -->
+                <div class="modal fade" id="side-chat-modal" tabindex="-1" data-review-id="" data-side="">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #3b82f6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" id="side-chat-title">💬 Ask Pro Advocate</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" style="max-height: 60vh; display: flex; flex-direction: column;">
+                                <!-- Chat Messages Area -->
+                                <div id="side-chat-messages" style="flex: 1; overflow-y: auto; min-height: 300px; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 1rem;">
+                                    <p class="text-muted text-center" id="side-chat-empty">Start a conversation by asking a question...</p>
+                                </div>
+                                <!-- Question Counter -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted" id="side-chat-counter">Questions asked: 0</small>
+                                    <small class="text-warning" id="side-chat-warning" style="display: none;">⚠️ Consider making a decision</small>
+                                </div>
+                                <!-- Input Area -->
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="side-chat-input"
+                                           placeholder="Ask a question..."
+                                           style="background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #fff;"
+                                           onkeypress="if(event.key==='Enter') sendSideChatMessage()">
+                                    <button class="btn btn-primary" onclick="sendSideChatMessage()" id="side-chat-send-btn">
+                                        Send 💬
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session 556: Review Detail Modal -->
+                <div class="modal fade" id="review-detail-modal" tabindex="-1" data-review-id="">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #3b82f6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title">📋 Review Document</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Loading State -->
+                                <div id="review-detail-loading" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <p class="text-muted mt-2">Loading review...</p>
+                                </div>
+                                <!-- Review Content -->
+                                <div id="review-detail-content" style="display: none;">
+                                    <!-- Neutral Summary -->
+                                    <div class="mb-4">
+                                        <h6 style="color: #9ca3af;">NEUTRAL SUMMARY</h6>
+                                        <p id="review-neutral-summary" class="text-light"></p>
+                                    </div>
+                                    <!-- Pro/Con Grid -->
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e;">
+                                                <div class="card-header" style="background: transparent; border-bottom: 1px solid #22c55e;">
+                                                    <h6 class="mb-0" style="color: #22c55e;">✅ PRO CASE</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="review-pro-case" class="text-light" style="white-space: pre-line;"></div>
+                                                </div>
+                                                <div class="card-footer" style="background: transparent; border-top: 1px solid #22c55e;">
+                                                    <button class="btn btn-sm btn-outline-success w-100" onclick="openSideChatFromDetail('pro')">
+                                                        Ask Pro 💬
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card h-100" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444;">
+                                                <div class="card-header" style="background: transparent; border-bottom: 1px solid #ef4444;">
+                                                    <h6 class="mb-0" style="color: #ef4444;">❌ CON CASE</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="review-con-case" class="text-light" style="white-space: pre-line;"></div>
+                                                </div>
+                                                <div class="card-footer" style="background: transparent; border-top: 1px solid #ef4444;">
+                                                    <button class="btn btn-sm btn-outline-danger w-100" onclick="openSideChatFromDetail('con')">
+                                                        Ask Con 💬
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- AI Recommendation -->
+                                    <div class="mb-4 p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid #3b82f6;">
+                                        <h6 style="color: #3b82f6;">🤖 AI RECOMMENDATION</h6>
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span id="review-ai-lean" class="badge"></span>
+                                            <span id="review-ai-confidence" class="text-muted"></span>
+                                        </div>
+                                        <p id="review-ai-recommendation" class="text-light mb-0"></p>
+                                    </div>
+                                    <!-- Open Questions -->
+                                    <div class="mb-4">
+                                        <h6 style="color: #f59e0b;">❓ OPEN QUESTIONS</h6>
+                                        <ul id="review-open-questions" class="text-light"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <div class="d-flex gap-2 w-100 justify-content-center">
+                                    <button class="btn btn-success" onclick="makeReviewDecision('approved')">
+                                        ✅ Approve
+                                    </button>
+                                    <button class="btn btn-warning" onclick="makeReviewDecision('approved_with_conditions')">
+                                        ⚠️ Approve with Conditions
+                                    </button>
+                                    <button class="btn btn-danger" onclick="makeReviewDecision('declined')">
+                                        ❌ Decline
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="makeReviewDecision('deferred')">
+                                        ⏸️ Defer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <!-- END PROJECTS TAB -->
 
@@ -13075,6 +13198,25 @@
                                         <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                                             <div id="boardroom-dreams-list">
                                                 <p class="text-muted text-center">Loading boardroom dreams...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Session 556: Chief of Staff Review Documents -->
+                                    <div class="card mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+                                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid #333;">
+                                            <div>
+                                                <h6 class="mb-0" style="color: #3b82f6;">📋 Review Documents</h6>
+                                                <small class="text-muted">Interactive decision briefs with Pro/Con interrogation</small>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <span id="reviews-pending-badge" class="badge" style="background: #3b82f6;">0 pending</span>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="loadReviewDocuments()">🔄 Refresh</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                            <div id="review-documents-list" class="row g-3">
+                                                <p class="text-muted text-center">Loading review documents...</p>
                                             </div>
                                         </div>
                                     </div>
@@ -55367,6 +55509,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 loadBoardroomDecisions();
                 console.log('  ✓ Boardroom Decisions: loading latest');
             }
+
+            // 7. Session 556: Refresh Review Documents
+            if (typeof loadReviewDocuments === 'function') {
+                loadReviewDocuments();
+                console.log('  ✓ Review Documents: loading latest');
+            }
         }
 
         // Session 320: Page Visibility API - Refresh Social when user returns to browser tab
@@ -55895,6 +56043,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadDreamImplementations();
                     loadBoardroomDreams();
                     loadDreamMetrics();
+                    loadReviewDocuments();  // Session 556: Load Chief of Staff reviews
                 });
             }
         });
@@ -56178,6 +56327,382 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 showNotification('Error processing decision', 'danger');
             }
         }
+
+        // ============================================================================
+        // Session 556: Chief of Staff Review Documents Functions
+        // ============================================================================
+
+        // Load review documents
+        async function loadReviewDocuments() {
+            try {
+                const response = await authenticatedFetch('/api/reviews/?status=awaiting_human&limit=20');
+                const data = await response.json();
+
+                const container = document.getElementById('review-documents-list');
+                const badge = document.getElementById('reviews-pending-badge');
+
+                if (data.success) {
+                    const reviews = data.reviews || [];
+                    badge.textContent = `${reviews.length} pending`;
+
+                    if (reviews.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-12 text-center text-muted py-4">
+                                <h5>📋 No pending reviews</h5>
+                                <p>Generate reviews from artifacts or dreams</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = reviews.map(review => `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: #0d0d0d; border-left: 4px solid ${getReviewLeanColor(review.ai_lean)};">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <span class="badge" style="background: ${getReviewLeanColor(review.ai_lean)};">
+                                            ${getReviewLeanEmoji(review.ai_lean)} ${formatLean(review.ai_lean)}
+                                        </span>
+                                        <small class="text-muted">${review.target_type}</small>
+                                    </div>
+                                    <p class="small text-light mb-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                        ${review.neutral_summary || 'No summary available'}
+                                    </p>
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <small class="text-muted">
+                                            ${Math.round(review.ai_confidence * 100)}% confident
+                                        </small>
+                                        <small class="text-muted">
+                                            💬 ${review.questions_asked_pro + review.questions_asked_con} Qs
+                                        </small>
+                                    </div>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="openReviewDetail('${review.id}')">
+                                            View
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success" onclick="openSideChat('${review.id}', 'pro')">
+                                            Pro
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="openSideChat('${review.id}', 'con')">
+                                            Con
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading review documents:', error);
+                document.getElementById('review-documents-list').innerHTML = `
+                    <div class="col-12 text-center text-danger py-4">Error loading reviews</div>
+                `;
+            }
+        }
+
+        // Get review lean color
+        function getReviewLeanColor(lean) {
+            const colors = {
+                'strong_approve': '#22c55e',
+                'lean_approve': '#84cc16',
+                'neutral': '#eab308',
+                'lean_decline': '#f97316',
+                'strong_decline': '#ef4444',
+                'pilot': '#3b82f6',
+                'defer': '#6b7280'
+            };
+            return colors[lean] || '#6b7280';
+        }
+
+        // Get review lean emoji
+        function getReviewLeanEmoji(lean) {
+            const emojis = {
+                'strong_approve': '🟢',
+                'lean_approve': '🟡',
+                'neutral': '⚪',
+                'lean_decline': '🟠',
+                'strong_decline': '🔴',
+                'pilot': '🔵',
+                'defer': '⏸️'
+            };
+            return emojis[lean] || '📋';
+        }
+
+        // Format lean for display
+        function formatLean(lean) {
+            return (lean || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Open review detail modal
+        async function openReviewDetail(reviewId) {
+            const modal = document.getElementById('review-detail-modal');
+            modal.dataset.reviewId = reviewId;
+
+            // Show loading, hide content
+            document.getElementById('review-detail-loading').style.display = 'block';
+            document.getElementById('review-detail-content').style.display = 'none';
+
+            // Show modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            try {
+                const response = await authenticatedFetch(`/api/reviews/${reviewId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const review = data.review;
+
+                    // Populate content
+                    document.getElementById('review-neutral-summary').textContent = review.neutral_summary || '';
+                    document.getElementById('review-pro-case').textContent = review.pro_case || '';
+                    document.getElementById('review-con-case').textContent = review.con_case || '';
+                    document.getElementById('review-ai-recommendation').textContent = review.ai_recommendation || '';
+
+                    // AI lean badge
+                    const leanBadge = document.getElementById('review-ai-lean');
+                    leanBadge.textContent = formatLean(review.ai_lean);
+                    leanBadge.style.background = getReviewLeanColor(review.ai_lean);
+
+                    document.getElementById('review-ai-confidence').textContent =
+                        `${Math.round(review.ai_confidence * 100)}% confidence`;
+
+                    // Open questions
+                    const questionsList = document.getElementById('review-open-questions');
+                    const questions = review.open_questions || [];
+                    questionsList.innerHTML = questions.length > 0
+                        ? questions.map(q => `<li>${q}</li>`).join('')
+                        : '<li class="text-muted">No open questions</li>';
+
+                    // Hide loading, show content
+                    document.getElementById('review-detail-loading').style.display = 'none';
+                    document.getElementById('review-detail-content').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading review detail:', error);
+                document.getElementById('review-detail-loading').innerHTML =
+                    '<p class="text-danger">Error loading review</p>';
+            }
+        }
+
+        // Open side chat from detail modal
+        function openSideChatFromDetail(side) {
+            const detailModal = document.getElementById('review-detail-modal');
+            const reviewId = detailModal.dataset.reviewId;
+
+            // Close detail modal
+            bootstrap.Modal.getInstance(detailModal).hide();
+
+            // Open side chat
+            setTimeout(() => openSideChat(reviewId, side), 300);
+        }
+
+        // Open side chat modal
+        async function openSideChat(reviewId, side) {
+            const modal = document.getElementById('side-chat-modal');
+            modal.dataset.reviewId = reviewId;
+            modal.dataset.side = side;
+
+            // Update title and styling
+            const title = document.getElementById('side-chat-title');
+            const sendBtn = document.getElementById('side-chat-send-btn');
+            const input = document.getElementById('side-chat-input');
+
+            if (side === 'pro') {
+                title.textContent = '✅ Ask Pro Advocate';
+                title.style.color = '#22c55e';
+                sendBtn.className = 'btn btn-success';
+                input.style.borderColor = '#22c55e';
+                modal.querySelector('.modal-content').style.borderColor = '#22c55e';
+            } else {
+                title.textContent = '❌ Ask Con Skeptic';
+                title.style.color = '#ef4444';
+                sendBtn.className = 'btn btn-danger';
+                input.style.borderColor = '#ef4444';
+                modal.querySelector('.modal-content').style.borderColor = '#ef4444';
+            }
+
+            // Clear previous messages
+            const messagesContainer = document.getElementById('side-chat-messages');
+            messagesContainer.innerHTML = '<p class="text-muted text-center" id="side-chat-empty">Start a conversation by asking a question...</p>';
+
+            // Reset counter
+            document.getElementById('side-chat-counter').textContent = 'Questions asked: 0';
+            document.getElementById('side-chat-warning').style.display = 'none';
+
+            // Clear input
+            document.getElementById('side-chat-input').value = '';
+
+            // Load existing chat history
+            try {
+                const response = await authenticatedFetch(`/api/reviews/${reviewId}/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const review = data.review;
+                    const history = side === 'pro' ? review.pro_chat_history : review.con_chat_history;
+                    const totalQuestions = review.questions_asked_pro + review.questions_asked_con;
+
+                    if (history && history.length > 0) {
+                        messagesContainer.innerHTML = '';
+                        history.forEach(msg => {
+                            appendChatMessage(msg.role, msg.content, side);
+                        });
+                    }
+
+                    document.getElementById('side-chat-counter').textContent =
+                        `Questions asked: ${totalQuestions}`;
+
+                    if (totalQuestions >= 5) {
+                        document.getElementById('side-chat-warning').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
+
+            // Show modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            // Focus input
+            setTimeout(() => document.getElementById('side-chat-input').focus(), 300);
+        }
+
+        // Append message to side chat
+        function appendChatMessage(role, content, side) {
+            const container = document.getElementById('side-chat-messages');
+
+            // Remove empty state if present
+            const emptyState = document.getElementById('side-chat-empty');
+            if (emptyState) emptyState.remove();
+
+            const isUser = role === 'user';
+            const bgColor = isUser ? 'rgba(99, 102, 241, 0.2)' :
+                           (side === 'pro' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+            const borderColor = isUser ? '#6366f1' : (side === 'pro' ? '#22c55e' : '#ef4444');
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'p-3 mb-2 rounded';
+            msgDiv.style.cssText = `background: ${bgColor}; border-left: 3px solid ${borderColor};`;
+            msgDiv.innerHTML = `
+                <small class="text-muted d-block mb-1">${isUser ? 'You' : (side === 'pro' ? 'Pro Advocate' : 'Con Skeptic')}</small>
+                <div class="text-light" style="white-space: pre-wrap;">${content}</div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send side chat message
+        async function sendSideChatMessage() {
+            const modal = document.getElementById('side-chat-modal');
+            const reviewId = modal.dataset.reviewId;
+            const side = modal.dataset.side;
+            const input = document.getElementById('side-chat-input');
+            const question = input.value.trim();
+
+            if (!question) return;
+
+            // Disable input while sending
+            input.disabled = true;
+            document.getElementById('side-chat-send-btn').disabled = true;
+
+            // Add user message to UI immediately
+            appendChatMessage('user', question, side);
+            input.value = '';
+
+            try {
+                // Send to API
+                const endpoint = `/api/reviews/${reviewId}/ask-${side}/`;
+                const response = await authenticatedFetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    appendChatMessage('assistant', data.answer, side);
+
+                    // Update counter
+                    document.getElementById('side-chat-counter').textContent =
+                        `Questions asked: ${data.total_questions}`;
+
+                    // Show warning if threshold exceeded
+                    if (data.total_questions >= 5) {
+                        document.getElementById('side-chat-warning').style.display = 'block';
+                    }
+                } else {
+                    appendChatMessage('assistant', `Error: ${data.error || 'Failed to get response'}`, side);
+                }
+            } catch (error) {
+                console.error('Error sending side chat message:', error);
+                appendChatMessage('assistant', 'Error: Failed to connect to server', side);
+            } finally {
+                // Re-enable input
+                input.disabled = false;
+                document.getElementById('side-chat-send-btn').disabled = false;
+                input.focus();
+            }
+        }
+
+        // Make review decision
+        async function makeReviewDecision(decision) {
+            const modal = document.getElementById('review-detail-modal');
+            const reviewId = modal.dataset.reviewId;
+
+            let conditions = '';
+            let reasoning = '';
+
+            if (decision === 'approved_with_conditions') {
+                conditions = prompt('Enter conditions for approval:');
+                if (conditions === null) return; // User cancelled
+            }
+
+            reasoning = prompt('Optional: Enter your reasoning (or press Cancel to skip)') || '';
+
+            try {
+                const response = await authenticatedFetch(`/api/reviews/${reviewId}/decide/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ decision, conditions, reasoning })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const emoji = {
+                        'approved': '✅',
+                        'approved_with_conditions': '⚠️',
+                        'declined': '❌',
+                        'deferred': '⏸️'
+                    }[decision] || '📋';
+
+                    showNotification(`${emoji} Decision recorded: ${formatLean(decision)}`, 'success');
+
+                    // Close modal and refresh list
+                    bootstrap.Modal.getInstance(modal).hide();
+                    loadReviewDocuments();
+                } else {
+                    showNotification(data.error || 'Failed to record decision', 'danger');
+                }
+            } catch (error) {
+                console.error('Error making decision:', error);
+                showNotification('Error recording decision', 'danger');
+            }
+        }
+
+        // ============================================================================
+        // End Session 556: Chief of Staff Review Documents
+        // ============================================================================
 
         // Validate or reject an implementation
         async function validateImplementation(implId, action) {
