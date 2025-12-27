@@ -41,6 +41,9 @@ from ..models_autonomous_studio import *
 # Import podcast studio models (Session 496)
 from ..models_podcast_studio import *
 
+# Import conversation artifacts (Session 555)
+from ..models_conversation_artifacts import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -139,4 +142,12 @@ __all__ = [
     'PodcastEpisode',
     'PodcastDebate',
     'PodcastParticipant',
+
+    # Conversation Artifacts (Session 555)
+    'ExtractedArtifact',
+    'ArtifactExtractionLog',
+    'ArtifactExecution',
+    'WeeklySynthesis',
+    'ReviewDocument',
+    'SideChat',
 ]

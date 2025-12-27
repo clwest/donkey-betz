@@ -119,6 +119,9 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             bear_results = self._run_bear_case(tickers, context)
             risk_results = self._run_risk_assessment(tickers, context)
 
+            # 3.5 PREDICTION MARKETS: Get crowd wisdom from Kalshi (Session 558)
+            prediction_market_signals = self._get_prediction_market_signals(context)
+
             # 4. SYNTHESIZE DEBATE: Find agreement, disagreement, opportunities
             synthesis = self._synthesize_debate(bull_results, bear_results, risk_results)
 
@@ -126,7 +129,10 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             changes = self._track_changes(synthesis, previous_brief)
 
             # 6. GENERATE BRIEF: Create deliverable output
-            brief = self._generate_market_brief(synthesis, changes, risk_results, bull_results, bear_results)
+            brief = self._generate_market_brief(
+                synthesis, changes, risk_results, bull_results, bear_results,
+                prediction_market_signals  # Session 558: Include Kalshi data
+            )
 
             # 7. OUTPUTS WITH CONSEQUENCES: Prepare for delivery
             delivery_ready = self._prepare_delivery(brief, context)
@@ -145,6 +151,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                     'bull_analysis': bull_results,
                     'bear_analysis': bear_results,
                     'risk_assessment': risk_results,
+                    'prediction_markets': prediction_market_signals,  # Session 558
                     'synthesis': synthesis,
                     'changes_from_yesterday': changes,
                     'delivery_ready': delivery_ready,
@@ -284,6 +291,118 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             logger.error(f"Risk assessment error: {e}")
             return {'error': str(e)}
 
+    def _get_prediction_market_signals(self, context: Dict) -> Dict[str, Any]:
+        """
+        Fetch prediction market signals from Kalshi.
+
+        Session 558: Integration of prediction markets into Market Intelligence Desk.
+
+        Categories of interest:
+        - Economics (jobs, inflation, Fed decisions)
+        - Finance (stock movements, crypto)
+        - Politics (elections, policy changes)
+        - Tech (product launches, company events)
+
+        Returns dict with:
+        - economics_signals: Economic prediction markets
+        - finance_signals: Financial prediction markets
+        - politics_signals: Political prediction markets
+        - high_volume_markets: Most traded markets (crowd wisdom)
+        - high_probability_events: Events likely to happen (>80%)
+        - contrarian_opportunities: Low probability events with high potential
+        """
+        try:
+            from core.services.kalshi_service import get_kalshi_service
+
+            logger.info("🎰 Fetching prediction market signals from Kalshi...")
+
+            service = get_kalshi_service()
+            intel = service.get_market_intelligence(
+                categories=['economics', 'politics', 'finance', 'tech']
+            )
+
+            # Get trending markets (high volume = strong conviction)
+            trending = intel.get('trending_by_volume', [])[:10]
+
+            # Get high probability events (>80%)
+            high_prob = intel.get('high_probability', [])[:5]
+
+            # Get uncertain markets (40-60% = genuine uncertainty)
+            uncertain = intel.get('uncertain', [])[:5]
+
+            # Categorize by type
+            economics_signals = [
+                m for m in trending
+                if m.get('category') == 'economics'
+            ][:5]
+
+            finance_signals = [
+                m for m in trending
+                if m.get('category') == 'finance'
+            ][:5]
+
+            politics_signals = [
+                m for m in trending
+                if m.get('category') == 'politics'
+            ][:5]
+
+            tech_signals = [
+                m for m in trending
+                if m.get('category') == 'tech'
+            ][:5]
+
+            # Build summary insights
+            insights = []
+
+            # Economic insights from prediction markets
+            for market in economics_signals:
+                prob = market.get('implied_probability_pct', 50)
+                title = market.get('title', '')
+                if prob > 70:
+                    insights.append(f"Markets expect: {title} ({prob}% likely)")
+                elif prob < 30:
+                    insights.append(f"Markets doubt: {title} (only {prob}% likely)")
+
+            # High conviction events
+            for market in high_prob:
+                title = market.get('title', '')[:60]
+                prob = market.get('implied_probability_pct', 50)
+                insights.append(f"High confidence: {title}... ({prob}%)")
+
+            signals = {
+                'total_markets_analyzed': intel.get('total_markets', 0),
+                'economics_signals': economics_signals,
+                'finance_signals': finance_signals,
+                'politics_signals': politics_signals,
+                'tech_signals': tech_signals,
+                'high_volume_markets': trending,
+                'high_probability_events': high_prob,
+                'uncertain_markets': uncertain,
+                'market_insights': insights[:10],  # Top 10 insights
+                'categories': intel.get('categories', {}),
+                'timestamp': datetime.now().isoformat(),
+            }
+
+            logger.info(f"🎰 Fetched {intel.get('total_markets', 0)} prediction markets, "
+                       f"{len(economics_signals)} economics, {len(finance_signals)} finance signals")
+
+            return signals
+
+        except Exception as e:
+            logger.error(f"Prediction market signals error: {e}")
+            return {
+                'error': str(e),
+                'total_markets_analyzed': 0,
+                'economics_signals': [],
+                'finance_signals': [],
+                'politics_signals': [],
+                'tech_signals': [],
+                'high_volume_markets': [],
+                'high_probability_events': [],
+                'uncertain_markets': [],
+                'market_insights': [],
+            }
+
     def _synthesize_debate(self, bull: Dict, bear: Dict, risk: Dict) -> Dict[str, Any]:
         """
         Synthesize bull vs bear debate - THE CORE OF THE AUTONOMOUS SITUATION.
@@ -398,8 +517,11 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
         return changes
 
     def _generate_market_brief(self, synthesis: Dict, changes: Dict, risks: Dict,
-                                bull_results: Dict, bear_results: Dict) -> Dict[str, Any]:
+                                bull_results: Dict, bear_results: Dict,
+                                prediction_markets: Dict = None) -> Dict[str, Any]:
         """Generate the final deliverable market brief."""
+        prediction_markets = prediction_markets or {}
+
         # Calculate GPT success rate from bull cases
         bull_cases = bull_results.get('bull_cases', [])
         total_stocks = len(bull_cases)
@@ -411,8 +533,8 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             'date': datetime.now().strftime('%Y-%m-%d'),
             'type': 'daily_market_intelligence_brief',
 
-            # Executive Summary
-            'executive_summary': self._build_executive_summary(synthesis, changes),
+            # Executive Summary (now includes prediction market insights)
+            'executive_summary': self._build_executive_summary(synthesis, changes, prediction_markets),
 
             # High Conviction (both agree)
             'high_conviction': synthesis.get('high_conviction_opportunities', []),
@@ -430,12 +552,26 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
             # Risk Alerts
             'risk_alerts': synthesis.get('risk_alerts', []),
 
+            # Session 558: Prediction Market Signals from Kalshi
+            'prediction_markets': {
+                'economics': prediction_markets.get('economics_signals', []),
+                'finance': prediction_markets.get('finance_signals', []),
+                'politics': prediction_markets.get('politics_signals', []),
+                'tech': prediction_markets.get('tech_signals', []),
+                'high_volume': prediction_markets.get('high_volume_markets', [])[:5],
+                'high_probability': prediction_markets.get('high_probability_events', []),
+                'uncertain': prediction_markets.get('uncertain_markets', []),
+                'insights': prediction_markets.get('market_insights', []),
+                'total_markets': prediction_markets.get('total_markets_analyzed', 0),
+            },
+
             # What Changed
             'changes_from_yesterday': changes,
 
             # Metadata
             'confidence_distribution': self._calculate_confidence_distribution(synthesis),
             'total_stocks_analyzed': self._count_total_stocks(synthesis),
+            'total_prediction_markets': prediction_markets.get('total_markets_analyzed', 0),
             'generation_time': datetime.now().isoformat(),
             'gpt_success_rate': gpt_success_rate,
 
@@ -446,12 +582,20 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
 
         return brief
 
-    def _build_executive_summary(self, synthesis: Dict, changes: Dict) -> str:
-        """Build concise executive summary."""
+    def _build_executive_summary(self, synthesis: Dict, changes: Dict,
+                                   prediction_markets: Dict = None) -> str:
+        """Build concise executive summary with prediction market insights."""
+        prediction_markets = prediction_markets or {}
+
         debate_count = len(synthesis.get('debate_zone', []))
         bull_count = len(synthesis.get('bull_dominated', []))
         bear_count = len(synthesis.get('bear_dominated', []))
         risks = len(synthesis.get('risk_alerts', []))
+
+        # Prediction market summary
+        pm_total = prediction_markets.get('total_markets_analyzed', 0)
+        pm_economics = len(prediction_markets.get('economics_signals', []))
+        pm_insights = prediction_markets.get('market_insights', [])[:3]
 
         summary = f"""Market Intelligence Brief - {datetime.now().strftime('%B %d, %Y')}
 
@@ -459,7 +603,20 @@ Bull vs Bear Analysis Complete:
 - {debate_count} stocks in DEBATE ZONE (high disagreement - most interesting)
 - {bull_count} bullish opportunities (bull case dominates)
 - {bear_count} bearish warnings (bear case dominates)
-- {risks} risk alerts from audit system
+- {risks} risk alerts from audit system"""
+
+        # Add prediction market section if data available
+        if pm_total > 0:
+            summary += f"""
+
+🎰 Prediction Market Signals ({pm_total} markets analyzed):"""
+            for insight in pm_insights:
+                summary += f"\n• {insight}"
+
+            if pm_economics > 0:
+                summary += f"\n• {pm_economics} active economics markets (jobs, inflation, Fed)"
+
+        summary += f"""
 
 {changes.get('message', 'Tracking changes from previous brief')}
 

@@ -1,86 +1,74 @@
-# Session 558 - Start Here
+# Session 559 - Start Here
 
-**Previous Session:** 557
-**Date:** December 25, 2025
-**Focus:** TBD - Chief of Staff Layer Fully Tested
+**Previous Session:** 558
+**Date:** December 26, 2025
+**Focus:** TBD - Kalshi Prediction Markets Fully Integrated
 
 ---
 
-## Session 557 Accomplishments
+## Session 558 Accomplishments
 
-### End-to-End Testing of Chief of Staff Layer
+### Kalshi Prediction Markets Integration
 
-Validated the complete human-in-the-loop review workflow:
+Complete integration of Kalshi prediction markets into the platform:
 
-| Test | Status | Details |
-|------|--------|---------|
-| **Review Workflow** | ✅ PASSED | Artifact → Review → Ask Pro/Con → Decide → Update |
-| **Discord Commands** | ✅ PASSED | All 5 commands verified (review, review-list, ask-pro, ask-con, decide) |
-| **Boardroom UI** | ✅ PASSED | Panel in Dreams tab, modals working |
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Spider** | ✅ COMPLETE | `kalshi_spider.py` - Fetches markets, series, orderbooks |
+| **Service** | ✅ COMPLETE | `kalshi_service.py` - RSA-PSS authenticated trading |
+| **Celery Tasks** | ✅ COMPLETE | 30-min collection + 4-hour intelligence posts |
+| **Market Intelligence** | ✅ COMPLETE | Added to Market Intelligence Desk |
+| **Discord Command** | ✅ COMPLETE | `/predictions` with category filtering |
 
-### Workflow Test Results
+### New Files Created
 
-1. **Ask Pro** - Got compelling response about revenue expansion upside
-2. **Ask Con** - Got detailed risk analysis about vendor dependency
-3. **Decision** - Approved with conditions: "90-day Stripe pilot, $5k max"
-4. **Cascade** - Artifact status correctly updated to `approved`
+| File | Lines | Purpose |
+|------|-------|---------|
+| `ai_core/spiders/specialized/kalshi_spider.py` | 448 | Public API spider |
+| `core/services/kalshi_service.py` | 350 | Authenticated trading service |
 
-### Final State After Testing
+### Integration Points
 
+1. **Spider Registry** - Kalshi registered as prediction_markets category
+2. **SpiderData Storage** - Markets stored with probabilities and volumes
+3. **Market Intelligence Desk** - Prediction signals in executive briefs
+4. **Discord** - `/predictions`, `/predictions category:economics`
+
+### Tested & Verified
+
+```bash
+# Spider fetches 200 markets
+.venv/bin/python -c "from ai_core.spiders.specialized.kalshi_spider import KalshiSpider; s=KalshiSpider(); print(len(s.fetch_data(200)))"
+# Output: 200
+
+# Celery task stores to SpiderData
+.venv/bin/celery -A core call core.tasks.collect_kalshi_prediction_markets
+# Output: 200 records stored
 ```
-Reviews: 4 total
-├── Pending: 1
-├── Approved w/Conditions: 3
-└── Side Chats: 10+ messages recorded
-```
 
-**Handoff:** `docs/handoffs/SESSION_557_CHIEF_OF_STAFF_TESTING.md`
+**Handoff:** `docs/handoffs/SESSION_558_KALSHI_PREDICTION_MARKETS.md`
 
 ---
 
-## Sessions 555-556 Summary (For Reference)
+## Session 559 Priority Options
 
-### Chief of Staff Layer - Complete Implementation
+### Option 1: Kalshi Web UI Panel
+- Add prediction markets panel to Intelligence Command Center
+- Live probabilities with auto-refresh
+- Category filtering and search
+- Market details modal with orderbook
 
-**4 Phases (Session 555):**
-- Phase A: Artifact Extraction from conversations
-- Phase B: Execution Pipeline for approved artifacts
-- Phase C: Weekly Synthesis reports
-- Phase D: Human Feedback Loop with Pro/Con reviews
+### Option 2: Trading Automation
+- Create PredictionMarketAgent for automated analysis
+- Position tracking and P&L reporting
+- Alert system for probability shifts
+- Paper trading mode for testing
 
-**4 Extensions (Session 556):**
-- Option A: Discord Commands (5 slash commands)
-- Option B: Boardroom UI Integration
-- Option C: Auto-Review Generation (Celery task)
-- Option D: Dream Reviews
-
-**Handoffs:**
-- `docs/handoffs/SESSION_555_CHIEF_OF_STAFF_LAYER.md`
-- `docs/handoffs/SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md`
-
----
-
-## Session 558 Priority Options
-
-The Chief of Staff Layer is **FULLY TESTED AND OPERATIONAL**. Here are potential directions:
-
-### Option 1: Production Polish
-- Add email notifications for pending reviews
-- Implement batch decision capability
-- Add review expiration/reminder system
-- Fine-tune Pro/Con prompts based on output quality
-
-### Option 2: Analytics Dashboard
-- Review decision metrics (approve rate, avg questions asked)
-- Agent performance from artifact outcomes
-- Weekly synthesis trends over time
-- Most common artifact types
-
-### Option 3: Agent Execution Integration
-- Connect approved artifacts to specific agent execution
-- Implement actual "Quick Apply" for job artifacts
-- Wire dream approvals to project creation
-- Track execution outcomes back to reviews
+### Option 3: Historical Analysis
+- Track prediction accuracy over time
+- Build model for identifying mispriced markets
+- Backtest prediction strategies
+- Performance metrics dashboard
 
 ### Option 4: Something Else
 Ask the user what they want to focus on.
@@ -91,15 +79,13 @@ Ask the user what they want to focus on.
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Review Documents** | 4 | 1 pending, 3 decided |
-| **Extracted Artifacts** | 4 | Active |
-| **Side Chats** | 10+ | Messages recorded |
+| **Prediction Markets** | 200+ | Kalshi integrated |
+| **Spiders** | 76 | +1 Kalshi |
+| **Celery Beat Tasks** | 2 new | Kalshi collection |
 | **Knowledge Entries** | 3,379+ | Active |
 | **Decisions** | 393+ | Clean |
-| **Conversations** | 1,473+ | Active |
-| **Learning Connections** | 160 | Active |
 | **Agents** | 55 | All learning |
-| **Spiders** | 75 | Active |
+| **Review Documents** | 4 | Chief of Staff |
 
 ---
 
@@ -112,61 +98,74 @@ make start && make celery
 # 2. Verify health
 curl http://localhost:8000/health/ping/
 
-# 3. Check Chief of Staff status
-.venv/bin/python manage.py shell -c "
-from core.models_conversation_artifacts import ExtractedArtifact, ReviewDocument, SideChat
-print(f'Artifacts: {ExtractedArtifact.objects.count()}')
-print(f'Reviews: {ReviewDocument.objects.count()}')
-print(f'Pending Reviews: {ReviewDocument.objects.filter(status=\"awaiting_human\").count()}')
-print(f'Side Chats: {SideChat.objects.count()}')
+# 3. Test Kalshi integration
+.venv/bin/python -c "
+from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+spider = KalshiSpider()
+markets = spider.fetch_data(max_results=5)
+for m in markets:
+    if m.get('data_type') == 'prediction_market':
+        print(f\"{m['title'][:50]} - {m['implied_probability_pct']:.1f}%\")
 "
 
-# 4. Access AI Studio
+# 4. Check SpiderData records
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import SpiderData
+kalshi = SpiderData.objects.filter(spider_name='kalshi').count()
+print(f'Kalshi records: {kalshi}')
+"
+
+# 5. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 5. Test Boardroom UI
-# Navigate to Dreams tab → Review Documents panel
-
-# 6. Test Discord commands (if bot is running)
-# /review-list
-# /review <review_id>
+# 6. Test Discord command (if bot running)
+# /predictions
+# /predictions category:economics limit:10
 ```
 
 ---
 
-## Key Files
+## Key Files (Kalshi)
 
 | File | Purpose |
 |------|---------|
-| `core/models_conversation_artifacts.py` | All Chief of Staff models |
-| `core/services/review_document.py` | Generate review documents |
-| `core/services/side_chat.py` | Pro/Con side chat service |
-| `core/views_artifacts.py` | All artifact/review APIs |
-| `core/services/discord_bot.py` | ReviewCommands cog (line 12650) |
-| `ai_core/templates/ai_image_studio.html` | Boardroom UI (line 13205) |
-| `core/tasks.py` | Auto-review Celery task |
+| `ai_core/spiders/specialized/kalshi_spider.py` | Public API spider |
+| `core/services/kalshi_service.py` | Authenticated trading |
+| `ai_core/spiders/spider_registry.py` | Spider registration |
+| `core/tasks.py` | Celery collection tasks |
+| `core/celery.py` | Beat schedules |
+| `core/agents/stocks/market_intelligence_coordinator.py` | Intelligence integration |
+| `core/services/discord_bot.py` | `/predictions` command |
 
 ---
 
-## API Endpoints (Chief of Staff)
+## API Endpoints (Kalshi - via Spider)
 
-### Artifacts
-- `GET /api/artifacts/` - List artifacts
-- `POST /api/artifacts/<uuid>/generate-review/` - Generate review for artifact
-- `POST /api/artifacts/trigger-auto-reviews/` - Trigger auto-review scan
-- `GET /api/artifacts/auto-review-stats/` - Auto-review statistics
+### Public (No Auth Required)
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /markets` | List all markets |
+| `GET /markets/{ticker}` | Market details |
+| `GET /markets/{ticker}/orderbook` | Order book |
+| `GET /series` | Market categories |
 
-### Reviews
-- `GET /api/reviews/` - List reviews (filter by status)
-- `GET /api/reviews/<uuid>/` - Get review with chat histories
-- `POST /api/reviews/<uuid>/ask-pro/` - Ask Pro advocate
-- `POST /api/reviews/<uuid>/ask-con/` - Ask Con skeptic
-- `POST /api/reviews/<uuid>/decide/` - Make decision
-
-### Dreams
-- `POST /api/dreams/<uuid>/generate-review/` - Generate review for dream
-- `GET /api/dreams/reviews/` - List dream reviews
+### Authenticated (Requires KALSHI_API_KEY + KALSHI_PRIVATE_KEY)
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /portfolio/balance` | Account balance |
+| `GET /portfolio/positions` | Current positions |
+| `POST /portfolio/orders` | Place order |
 
 ---
 
-**Chief of Staff Layer: FULLY IMPLEMENTED & TESTED** ✅
+## Environment Variables
+
+Required for authenticated trading:
+```bash
+KALSHI_API_KEY=your_api_key
+KALSHI_PRIVATE_KEY=your_rsa_private_key
+```
+
+---
+
+**Kalshi Prediction Markets: FULLY INTEGRATED** ✅
