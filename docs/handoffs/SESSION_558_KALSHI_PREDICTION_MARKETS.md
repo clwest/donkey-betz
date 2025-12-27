@@ -337,6 +337,101 @@ SpiderData.objects.filter(spider_name='theodds', data_type='sports_odds')
 
 ---
 
+## Part 3: Market Analyst Agents
+
+### 6. PredictionMarketAnalyst
+**File:** `core/agents/markets/prediction_market_analyst.py`
+
+Dedicated agent for analyzing Kalshi prediction markets.
+
+```python
+class PredictionMarketAnalyst(BaseAgent):
+    name = "PredictionMarketAnalyst"
+
+    # Signal Types Generated:
+    # - HIGH_CONVICTION: >80% probability with supporting data
+    # - UNCERTAIN_VALUE: 40-60% probability (research opportunities)
+    # - SMART_MONEY: High volume (>50k) indicating institutional interest
+
+    def execute(task, context):
+        markets = self._get_kalshi_markets(context)     # Via KalshiSpider
+        analysis = self._analyze_markets(markets, task)  # Pattern detection
+        signals = self._generate_signals(markets, analysis)
+        response = self._generate_analysis_report(...)   # LLM-powered report
+        return AgentResult(...)
+```
+
+**Analysis Categories:**
+- `high_conviction`: Markets >80% or <20% probability
+- `contrarian_opportunities`: Potentially mispriced markets
+- `momentum_plays`: Fast-moving probabilities
+- `uncertain_markets`: 40-60% probability (toss-ups)
+- `high_volume`: >50k volume (smart money signals)
+
+### 7. SportsOddsAnalyst
+**File:** `core/agents/markets/sports_odds_analyst.py`
+
+Dedicated agent for analyzing sports betting odds.
+
+```python
+class SportsOddsAnalyst(BaseAgent):
+    name = "SportsOddsAnalyst"
+
+    # Signal Types Generated:
+    # - TOSS_UP: Close games (45-55% implied) - research opportunities
+    # - FAVORITE_ANALYSIS: Heavy favorites (>70%) - check spread value
+    # - SHARP_MARKET: High book count (8+) - sharp money involved
+    # - UPCOMING: Games starting within 24 hours
+
+    def execute(task, context):
+        events = self._get_sports_odds(context)       # Via TheOddsSpider
+        analysis = self._analyze_odds(events, task)   # Pattern detection
+        signals = self._generate_signals(events, analysis)
+        response = self._generate_analysis_report(...)  # LLM-powered report
+        return AgentResult(...)
+```
+
+**Analysis Categories:**
+- `value_bets`: Potential +EV opportunities
+- `toss_ups`: Close games (45-55% implied)
+- `heavy_favorites`: >70% implied probability
+- `sharp_indicators`: High book count, unusual lines
+- `upcoming_games`: Games in next 24 hours
+
+### Agent Registration
+**File:** `core/agent_router.py`
+
+```python
+AGENT_MAP = {
+    # ... existing agents ...
+    'PredictionMarketAnalyst': PredictionMarketAnalyst,
+    'SportsOddsAnalyst': SportsOddsAnalyst,
+}
+```
+
+### Usage Examples
+
+```python
+# Via direct import
+from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst
+
+pma = PredictionMarketAnalyst()
+result = pma.execute('analyze economics markets', context={'category': 'economics'})
+# Returns: 100 markets analyzed, 5 signals
+
+soa = SportsOddsAnalyst()
+result = soa.execute('analyze NFL games', context={'sport': 'nfl'})
+# Returns: 100 events analyzed, 14 signals
+
+# Via AgentRouter
+from core.agent_router import AgentRouter
+router = AgentRouter(user=request.user)
+result = router.route("PredictionMarketAnalyst", "find value bets")
+result = router.route("SportsOddsAnalyst", "analyze today's games")
+```
+
+---
+
 ## Session 559 Recommendations
 
 1. **Discord `/odds` Command**
@@ -344,8 +439,8 @@ SpiderData.objects.filter(spider_name='theodds', data_type='sports_odds')
    - Filter by sport, show upcoming games
 
 2. **Trading Automation**
-   - Create trading agent that uses prediction market signals
-   - Sports betting analysis agent
+   - Wire PredictionMarketAnalyst to actual Kalshi trading
+   - Create betting recommendation system using SportsOddsAnalyst
 
 3. **Alert System**
    - Discord alerts for significant line movements
@@ -364,10 +459,15 @@ SpiderData.objects.filter(spider_name='theodds', data_type='sports_odds')
 | `ai_core/spiders/specialized/kalshi_spider.py` | **NEW** - 448 lines |
 | `ai_core/spiders/specialized/theodds_spider.py` | **NEW** - 448 lines |
 | `core/services/kalshi_service.py` | **NEW** - 350 lines |
+| `core/agents/markets/__init__.py` | **NEW** - Package exports |
+| `core/agents/markets/prediction_market_analyst.py` | **NEW** - 350 lines |
+| `core/agents/markets/sports_odds_analyst.py` | **NEW** - 430 lines |
 | `ai_core/spiders/spider_registry.py` | Added kalshi + theodds registration |
 | `core/tasks.py` | Added 4 Celery tasks (~500 lines) |
 | `core/celery.py` | Added 4 Beat schedules |
 | `core/agents/stocks/market_intelligence_coordinator.py` | Added prediction signals |
+| `core/agents/__init__.py` | Added markets agents exports |
+| `core/agent_router.py` | Added PredictionMarketAnalyst, SportsOddsAnalyst |
 | `core/services/discord_bot.py` | Added `/predictions` command |
 | `ai_core/templates/.../intelligence_command_center.html` | Markets tab + Sports section (~170 lines) |
 | `ai_core/templates/.../js/intelligence_command_center.html` | `loadPredictionMarkets()` + `loadSportsOdds()` (~280 lines) |
@@ -386,6 +486,9 @@ SpiderData.objects.filter(spider_name='theodds', data_type='sports_odds')
 | `139453a` | Handoff document |
 | `1504338` | Auth middleware fix |
 | `14aa43f` | The Odds API sports betting integration |
+| `0e18a67` | Handoff update with sports odds |
+| `24711d4` | MST timezone fix for sports odds |
+| `5ae63be` | Market analyst agents (PredictionMarketAnalyst, SportsOddsAnalyst) |
 
 ---
 
@@ -399,6 +502,7 @@ Session 558 delivered complete market intelligence integration:
 - 30-minute data collection + 4-hour Discord posts
 - Market Intelligence Desk integration
 - `/predictions` Discord command
+- **PredictionMarketAnalyst agent** for LLM-powered analysis
 
 **Sports Betting (The Odds API):**
 - Spider fetches odds from 40+ bookmakers
@@ -406,6 +510,12 @@ Session 558 delivered complete market intelligence integration:
 - Moneylines, spreads, totals, implied probabilities
 - Hourly collection (conserving 20k/month quota)
 - 6-hour Discord intelligence posts
+- **SportsOddsAnalyst agent** for LLM-powered analysis
+
+**Market Analyst Agents:**
+- PredictionMarketAnalyst: 100 markets → 5 signals (HIGH_CONVICTION, UNCERTAIN_VALUE, SMART_MONEY)
+- SportsOddsAnalyst: 100 events → 14 signals (TOSS_UP, FAVORITE_ANALYSIS, SHARP_MARKET, UPCOMING)
+- Both registered in AgentRouter for routing via Personal Assistant
 
 **Unified Web UI:**
 - Markets tab in Intelligence Command Center
@@ -416,4 +526,5 @@ Session 558 delivered complete market intelligence integration:
 The platform now has comprehensive market intelligence covering:
 - Political/economic predictions (Kalshi)
 - Sports betting odds (The Odds API)
-- All accessible via Discord, Web UI, and programmatic API
+- LLM-powered market analysis agents
+- All accessible via Discord, Web UI, Agents, and programmatic API
