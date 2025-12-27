@@ -1872,6 +1872,135 @@ const ICCState = {
     },
 
     /**
+     * Session 555: Load conversation artifacts (proposals awaiting decision)
+     */
+    async loadBoardroomProposals() {
+        try {
+            const response = await fetch('/api/artifacts/pending/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            const container = document.getElementById('icc-boardroom-proposals');
+            const pendingBadge = document.getElementById('icc-proposals-pending');
+            const approvedBadge = document.getElementById('icc-proposals-approved');
+
+            if (data.success) {
+                if (pendingBadge) pendingBadge.textContent = `${data.total_pending || 0} pending`;
+                if (approvedBadge) approvedBadge.textContent = `${data.type_counts?.proposal || 0} proposals`;
+
+                if (data.top_artifacts && data.top_artifacts.length > 0) {
+                    // Artifact type info for context
+                    const artifactTypeInfo = {
+                        'proposal': { emoji: '📋', color: '#06b6d4' },
+                        'experiment': { emoji: '🧪', color: '#8b5cf6' },
+                        'risk': { emoji: '⚠️', color: '#ef4444' },
+                        'data_spec': { emoji: '📊', color: '#22c55e' },
+                        'question': { emoji: '❓', color: '#f59e0b' },
+                        'action_item': { emoji: '✅', color: '#3b82f6' },
+                        'insight': { emoji: '💡', color: '#ec4899' }
+                    };
+
+                    container.innerHTML = data.top_artifacts.map((artifact, index) => {
+                        const typeInfo = artifactTypeInfo[artifact.type] || { emoji: '📝', color: '#9ca3af' };
+
+                        return `
+                        <div class="mb-3 p-3" style="background: #0d0d0d; border: 1px solid ${typeInfo.color}40; border-radius: 8px;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1" style="color: ${typeInfo.color};">
+                                        ${typeInfo.emoji} ${artifact.title || 'Untitled Artifact'}
+                                    </h6>
+                                    <small style="color: #9ca3af;">From ${artifact.source_agent || 'Unknown Agent'}</small>
+                                </div>
+                                <span class="badge" style="background: linear-gradient(135deg, ${typeInfo.color} 0%, ${typeInfo.color}99 100%);">
+                                    ${artifact.type_display || artifact.type}
+                                </span>
+                            </div>
+
+                            <!-- Agent & Type Badges -->
+                            <div class="mb-2">
+                                <span class="badge bg-secondary">${artifact.source_agent || 'Unknown'}</span>
+                                <span class="badge ms-1" style="background: ${typeInfo.color}33; color: ${typeInfo.color};">${artifact.type_display}</span>
+                                <span class="badge bg-info ms-1">Score: ${((artifact.composite_score || 0) * 100).toFixed(0)}%</span>
+                            </div>
+
+                            <!-- Description Preview -->
+                            <div style="background: ${typeInfo.color}10; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid ${typeInfo.color};">
+                                <p style="color: #e5e7eb; font-size: 13px; margin: 0;">
+                                    ${artifact.description.substring(0, 200)}${artifact.description.length > 200 ? '...' : ''}
+                                </p>
+                            </div>
+
+                            <!-- Source conversation link -->
+                            <small style="color: #6b7280;">
+                                Extracted from: <a href="#" onclick="ICCState.viewConversation('${artifact.conversation_id}')" style="color: #06b6d4;">${artifact.conversation_topic || 'View Conversation'}</a>
+                            </small>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-sm btn-success" onclick="ICCState.decideProposal('${artifact.id}', 'approved')">
+                                    ✅ Approve
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="ICCState.decideProposal('${artifact.id}', 'deferred')">
+                                    ⏸️ Defer
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="ICCState.decideProposal('${artifact.id}', 'rejected')">
+                                    ❌ Reject
+                                </button>
+                            </div>
+                        </div>
+                    `}).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <h5>📋 No pending proposals</h5>
+                            <p>Proposals from agent conversations will appear here for your decision</p>
+                            <small>Extraction runs hourly - check back soon!</small>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('ICC: Error loading boardroom proposals:', error);
+            const container = document.getElementById('icc-boardroom-proposals');
+            if (container) {
+                container.innerHTML = `<div class="text-muted text-center">Error loading proposals</div>`;
+            }
+        }
+    },
+
+    /**
+     * Session 555: Decide on a proposal (approve/defer/reject)
+     */
+    async decideProposal(artifactId, decision) {
+        try {
+            const response = await fetch(`/api/artifacts/${artifactId}/decide/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({ decision: decision })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const messages = {
+                    'approved': '✅ Proposal approved for execution!',
+                    'deferred': '⏸️ Proposal deferred for later review',
+                    'rejected': '❌ Proposal rejected'
+                };
+                if (typeof showNotification === 'function') {
+                    showNotification(messages[decision] || 'Decision recorded', decision === 'approved' ? 'success' : 'info');
+                }
+                this.loadBoardroomProposals();
+            }
+        } catch (error) {
+            console.error('ICC: Error deciding proposal:', error);
+        }
+    },
+
+    /**
      * Load learning feed
      */
     async loadLearningFeed() {
@@ -2080,6 +2209,7 @@ document.addEventListener('DOMContentLoaded', function() {
         boardroomTab.addEventListener('shown.bs.tab', function() {
             ICCState.loadBoardroomDecisions();
             ICCState.loadBoardroomDreams();
+            ICCState.loadBoardroomProposals();  // Session 555: Load artifact proposals
         });
     }
 

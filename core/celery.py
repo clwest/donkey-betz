@@ -611,6 +611,21 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 558: Kalshi Prediction Markets Collection
+    'collect-kalshi-prediction-markets': {
+        'task': 'core.tasks.collect_kalshi_prediction_markets',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+    'collect-kalshi-market-intelligence': {
+        'task': 'core.tasks.collect_kalshi_market_intelligence',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
     # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
     'track-prediction-outcomes': {
         'task': 'learning_loop.track_prediction_outcomes',

@@ -1,10 +1,11 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 25, 2025 - Session 556
+**Last Updated:** December 26, 2025 - Session 558
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
-**Spider Network:** 72 spiders | 20,712 data records | 88.1% embeddings
+**Spider Network:** 76 spiders | 20,712+ data records | 88.1% embeddings
 **Agent Ecosystem:** 42 routable agents | Autonomous Content Generation | 3-Agent Debates
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
+**Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -122,6 +123,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 558 | Kalshi Prediction Markets - Spider, Service, Celery tasks, Discord command | `SESSION_558_KALSHI_PREDICTION_MARKETS.md` |
 | 556 | Chief of Staff Extensions - Discord commands, Boardroom UI, auto-reviews, dream reviews | `SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md` |
 | 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con review documents | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 | 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
@@ -131,7 +133,6 @@ curl http://localhost:8000/health/ping/
 | 519 | Auto-Project Creation & Content Display | `SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md` |
 | 513 | Campaign Orchestrator Agent - Marketing hub | `SESSION_513_CAMPAIGN_ORCHESTRATOR.md` |
 | 511 | ML Scoring Sub-Tab Enhancement | `SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md` |
-| 503 | Spider API Fixes (Etherscan + Kaggle) | `SESSION_503_SPIDER_FIXES.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 

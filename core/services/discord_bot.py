@@ -968,6 +968,137 @@ class SpiderCommands(commands.Cog):
                 ephemeral=True
             )
 
+    # Session 558: Prediction Markets command
+    @app_commands.command(name="predictions", description="View prediction market signals from Kalshi")
+    @app_commands.describe(
+        category="Filter by category (economics, politics, tech, finance, weather)",
+        limit="Number of markets to show (default: 5)"
+    )
+    async def predictions(
+        self,
+        interaction: discord.Interaction,
+        category: Optional[str] = None,
+        limit: int = 5
+    ):
+        """Display prediction market data from Kalshi."""
+        await interaction.response.defer()
+
+        try:
+            from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+
+            # Cap limit
+            limit = min(limit, 10)
+
+            @sync_to_async
+            def get_prediction_data(cat, lim):
+                spider = KalshiSpider()
+                markets = spider.fetch_data(max_results=100)
+
+                # Filter to actual markets (not series)
+                markets = [m for m in markets if m.get('data_type') == 'prediction_market']
+
+                # Filter by category if specified
+                if cat:
+                    cat_lower = cat.lower()
+                    markets = [m for m in markets if m.get('category', '').lower() == cat_lower]
+
+                # Sort by volume (most active first)
+                markets.sort(key=lambda m: m.get('volume', 0) or 0, reverse=True)
+
+                return markets[:lim], len(markets)
+
+            markets_data, total_count = await get_prediction_data(category, limit)
+
+            if not markets_data:
+                await interaction.followup.send(
+                    f"No prediction markets found{' for category: ' + category if category else ''}.",
+                    ephemeral=True
+                )
+                return
+
+            # Category emojis
+            category_emoji = {
+                'economics': '📊',
+                'politics': '🏛️',
+                'finance': '💰',
+                'tech': '🔧',
+                'weather': '🌤️',
+                'entertainment': '🎬',
+                'science': '🔬',
+                'general': '📈',
+            }
+
+            embed = discord.Embed(
+                title=f"🎰 Prediction Markets{' - ' + category.title() if category else ''}",
+                description="Live market data from Kalshi",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            for market in markets_data:
+                title = market.get('title', 'Unknown Market')
+                title = title[:60] + "..." if len(title) > 60 else title
+                ticker = market.get('ticker', '')
+                cat = market.get('category', 'general')
+                emoji = category_emoji.get(cat, '📈')
+
+                # Probability and pricing
+                prob = market.get('implied_probability_pct', 50)
+                yes_bid = market.get('yes_bid', 0)
+                yes_ask = market.get('yes_ask', 0)
+                volume = market.get('volume', 0) or 0
+
+                # Probability bar visualization
+                prob_bar_filled = int(prob / 10)
+                prob_bar = '█' * prob_bar_filled + '░' * (10 - prob_bar_filled)
+
+                # Status indicators
+                if prob >= 80:
+                    status = "🟢 Likely"
+                elif prob <= 20:
+                    status = "🔴 Unlikely"
+                elif 40 <= prob <= 60:
+                    status = "🟡 Uncertain"
+                else:
+                    status = "⚪ Leaning"
+
+                field_value = (
+                    f"```\n"
+                    f"Probability: {prob:.1f}% {prob_bar}\n"
+                    f"Yes: {yes_bid}¢-{yes_ask}¢ | Vol: {volume:,}\n"
+                    f"Status: {status}\n"
+                    f"```"
+                )
+
+                embed.add_field(
+                    name=f"{emoji} {title}",
+                    value=field_value,
+                    inline=False
+                )
+
+            # Tags for high-value markets
+            tags = market.get('tags', [])
+            tag_indicators = []
+            if 'high_volume' in tags:
+                tag_indicators.append('🔥 High Volume')
+            if 'trending' in [m.get('is_trending') for m in markets_data]:
+                tag_indicators.append('📈 Trending')
+
+            footer_text = f"Showing {len(markets_data)} of {total_count} markets"
+            if tag_indicators:
+                footer_text += f" | {' '.join(tag_indicators)}"
+
+            embed.set_footer(text=footer_text)
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Predictions command error: {e}")
+            await interaction.followup.send(
+                f"Error fetching predictions: {str(e)[:100]}",
+                ephemeral=True
+            )
+
 
 # =============================================================================
 # Session 427: Interactive Commands (/ask, /create, /research)

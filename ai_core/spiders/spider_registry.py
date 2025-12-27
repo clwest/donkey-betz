@@ -70,6 +70,9 @@ from .specialized.etherscan_spider import EtherscanSpider
 # Session 461: BLOCKCHAIN AUDIT spiders
 from .specialized.etherscan_api_spider import EtherscanAPISpider
 
+# Session 558: PREDICTION MARKETS spider
+from .specialized.kalshi_spider import KalshiSpider
+
 # Session 218: TECH spiders
 from .specialized.hackernews_spider import HackerNewsSpider
 from .specialized.devto_spider import DevToSpider
@@ -878,6 +881,22 @@ class SpiderRegistry:
             'api_key_env': 'ETHERSCAN_API_KEY',
             'targets': ['api.etherscan.io'],
             'description': 'Real-time Ethereum transaction monitoring for security audits'
+        })
+
+        # ============================================================
+        # SESSION 558: PREDICTION MARKETS SPIDER
+        # ============================================================
+
+        # Kalshi - CFTC-regulated prediction market exchange
+        # Categories: economics, politics, weather, tech, entertainment, finance, science
+        self.register_spider('kalshi', KalshiSpider, {
+            'category': 'prediction_markets',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': False,  # Public data works without auth
+            'api_key_env': 'KALSHI_API_KEY',
+            'targets': ['api.elections.kalshi.com'],
+            'description': 'Prediction market data: economics, politics, weather, tech events'
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")

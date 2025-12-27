@@ -752,6 +752,27 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
                 </div>
             </div>
 
+            <!-- Session 555: Conversation Artifacts (Proposals Awaiting Decision) -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(6, 182, 212, 0.15); border-bottom: 1px solid #06b6d4;">
+                    <h5 class="mb-0" style="color: #06b6d4;">
+                        &#128203; Proposals Awaiting Decision
+                    </h5>
+                    <div>
+                        <span class="badge" style="background: #06b6d4;" id="icc-proposals-pending">0 pending</span>
+                        <span class="badge bg-success ms-1" id="icc-proposals-approved">0 approved</span>
+                    </div>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "Proposals, experiments, and risks extracted from agent conversations. Approve to execute, defer to review later, or reject."
+                    </p>
+                    <div id="icc-boardroom-proposals">
+                        <p class="text-muted text-center">Loading pending proposals...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Boardroom Dreams (Pending Approval) -->
             <div class="card" style="background: #1a1a1a; border: 2px solid #f59e0b;">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.15); border-bottom: 1px solid #f59e0b;">

@@ -736,6 +736,109 @@ class DiscordNotificationService:
         return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
 
     # =========================================================================
+    # Session 555 Phase C: Weekly Synthesis
+    # =========================================================================
+
+    def send_weekly_synthesis(self, synthesis: 'WeeklySynthesis') -> bool:
+        """
+        Send weekly synthesis to #boardroom (Session 555 Phase C).
+
+        Delivers the comprehensive weekly executive summary including:
+        - Artifacts extracted
+        - Decisions made
+        - Execution results
+        - AI-generated insights and recommendations
+
+        Args:
+            synthesis: WeeklySynthesis model object
+
+        Returns:
+            True if notification sent successfully
+        """
+        # Color based on execution success rate
+        if synthesis.execution_success_rate >= 0.8:
+            color = 0x22c55e  # Green
+            performance = "Excellent"
+            performance_emoji = "🟢"
+        elif synthesis.execution_success_rate >= 0.6:
+            color = 0xf59e0b  # Yellow/Amber
+            performance = "Good"
+            performance_emoji = "🟡"
+        elif synthesis.executions_total > 0:
+            color = 0xef4444  # Red
+            performance = "Needs Attention"
+            performance_emoji = "🔴"
+        else:
+            color = 0x3498DB  # Blue - no executions yet
+            performance = "Getting Started"
+            performance_emoji = "🔵"
+
+        # Calculate total decisions
+        total_decisions = (
+            synthesis.decisions_approved +
+            synthesis.decisions_rejected +
+            synthesis.decisions_deferred
+        )
+
+        # Format executions display
+        if synthesis.executions_total > 0:
+            exec_display = f"{synthesis.executions_succeeded}/{synthesis.executions_total}"
+        else:
+            exec_display = "0"
+
+        # Build embed
+        embed = {
+            "title": f"📊 Weekly Synthesis: {synthesis.period_start} to {synthesis.period_end}",
+            "description": (
+                synthesis.trend_analysis[:500]
+                if synthesis.trend_analysis
+                else "Weekly executive summary of agent activity and decisions."
+            ),
+            "color": color,
+            "fields": [
+                {"name": "📋 Artifacts Extracted", "value": str(synthesis.artifacts_extracted), "inline": True},
+                {"name": "✅ Decisions Made", "value": str(total_decisions), "inline": True},
+                {"name": "⚡ Executions", "value": exec_display, "inline": True},
+                {"name": "📈 Success Rate", "value": f"{synthesis.execution_success_rate:.0%}", "inline": True},
+                {"name": "⏱️ Avg Time", "value": f"{synthesis.avg_execution_time_ms}ms", "inline": True},
+                {"name": f"{performance_emoji} Performance", "value": performance, "inline": True},
+            ],
+            "footer": {
+                "text": "Chief of Staff Layer - Phase C | Session 555"
+            }
+        }
+
+        # Add pending items alert if significant
+        if synthesis.pending_high_priority > 0:
+            embed["fields"].append({
+                "name": "⚠️ Attention Required",
+                "value": f"{synthesis.pending_high_priority} high-priority items pending",
+                "inline": False
+            })
+
+        # Add recommendations if available (limit to top 3)
+        if synthesis.recommendations:
+            recs = synthesis.recommendations[:3]
+            recs_text = "\n".join(f"• {r}" for r in recs)
+            embed["fields"].append({
+                "name": "💡 Recommendations",
+                "value": recs_text[:1024],  # Discord field limit
+                "inline": False
+            })
+
+        # Add key themes if available
+        if synthesis.key_themes:
+            themes = synthesis.key_themes[:3]
+            themes_text = ", ".join(themes)
+            embed["fields"].append({
+                "name": "🔍 Key Themes",
+                "value": themes_text[:1024],
+                "inline": False
+            })
+
+        return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
+
+    # =========================================================================
     # Session 460: Autonomous Intelligence Loop - SEC/Market Alerts
     # =========================================================================
 

@@ -18349,3 +18349,230 @@ def generate_pending_reviews():
             'success': False,
             'error': str(e)
         }
+
+
+# ============================================================
+# SESSION 558: KALSHI PREDICTION MARKETS DATA COLLECTION
+# ============================================================
+
+@shared_task
+def collect_kalshi_prediction_markets():
+    """
+    Collect prediction market data from Kalshi and store in SpiderData.
+
+    Session 558: Initial implementation
+    - Fetches active markets from Kalshi API
+    - Stores as SpiderData for semantic search and agent analysis
+    - Categories: economics, politics, weather, tech, entertainment, finance
+    """
+    from persistence.models import SpiderData
+    from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+    from django.utils import timezone
+    import hashlib
+
+    logger.info("🎰 [KALSHI] Starting prediction market data collection...")
+
+    results = {
+        'markets_fetched': 0,
+        'new_records': 0,
+        'updated_records': 0,
+        'errors': 0,
+        'categories': {},
+    }
+
+    try:
+        spider = KalshiSpider()
+
+        # Fetch markets
+        markets = spider.fetch_data(max_results=200)
+
+        # Filter to prediction markets only (exclude series metadata)
+        prediction_markets = [
+            m for m in markets
+            if m.get('data_type') == 'prediction_market'
+        ]
+
+        results['markets_fetched'] = len(prediction_markets)
+        logger.info(f"🎰 [KALSHI] Fetched {len(prediction_markets)} prediction markets")
+
+        for market in prediction_markets:
+            try:
+                ticker = market.get('ticker', '')
+                title = market.get('title', '')
+                category = market.get('category', 'general')
+
+                # Track category counts
+                results['categories'][category] = results['categories'].get(category, 0) + 1
+
+                # Generate unique ID based on ticker
+                unique_id = hashlib.md5(f"kalshi:{ticker}".encode()).hexdigest()[:16]
+
+                # Build content for embedding
+                content_parts = [
+                    f"Prediction Market: {title}",
+                    f"Ticker: {ticker}",
+                    f"Category: {category}",
+                    f"Implied Probability: {market.get('implied_probability_pct', 50)}%",
+                ]
+
+                if market.get('subtitle'):
+                    content_parts.append(f"Details: {market.get('subtitle')}")
+
+                # Add probability interpretation
+                prob = market.get('implied_probability_pct', 50)
+                if prob >= 80:
+                    content_parts.append("Market consensus: Very likely to happen")
+                elif prob >= 60:
+                    content_parts.append("Market consensus: Likely to happen")
+                elif prob <= 20:
+                    content_parts.append("Market consensus: Very unlikely to happen")
+                elif prob <= 40:
+                    content_parts.append("Market consensus: Unlikely to happen")
+                else:
+                    content_parts.append("Market consensus: Uncertain / toss-up")
+
+                content = "\n".join(content_parts)
+
+                # Build metadata
+                metadata = {
+                    'ticker': ticker,
+                    'event_ticker': market.get('event_ticker'),
+                    'series_ticker': market.get('series_ticker'),
+                    'category': category,
+                    'status': market.get('status'),
+                    'yes_bid': market.get('yes_bid'),
+                    'yes_ask': market.get('yes_ask'),
+                    'no_bid': market.get('no_bid'),
+                    'no_ask': market.get('no_ask'),
+                    'last_price': market.get('last_price'),
+                    'implied_probability': market.get('implied_probability'),
+                    'implied_probability_pct': market.get('implied_probability_pct'),
+                    'volume': market.get('volume'),
+                    'volume_24h': market.get('volume_24h'),
+                    'open_interest': market.get('open_interest'),
+                    'close_time': market.get('close_time'),
+                    'expiration_time': market.get('expiration_time'),
+                    'is_trending': market.get('is_trending', False),
+                }
+
+                # Create or update SpiderData
+                # Use source_platform for lookups, spider_name for source identification
+                spider_data, created = SpiderData.objects.update_or_create(
+                    spider_name='kalshi',
+                    source_url=f"https://kalshi.com/markets/{ticker}",
+                    defaults={
+                        'source_platform': 'kalshi',
+                        'title': title[:500] if title else ticker,
+                        'content': content,
+                        'data_type': 'prediction_market',
+                        'metadata': metadata,
+                        'tags': market.get('tags', []),
+                        'is_processed': False,  # Mark for embedding
+                    }
+                )
+
+                if created:
+                    results['new_records'] += 1
+                else:
+                    results['updated_records'] += 1
+
+            except Exception as market_error:
+                logger.error(f"🎰 [KALSHI] Error processing market {market.get('ticker')}: {market_error}")
+                results['errors'] += 1
+
+        logger.info(
+            f"🎰 [KALSHI] Collection complete: "
+            f"{results['markets_fetched']} fetched, "
+            f"{results['new_records']} new, "
+            f"{results['updated_records']} updated, "
+            f"{results['errors']} errors"
+        )
+        logger.info(f"🎰 [KALSHI] Categories: {results['categories']}")
+
+        return {
+            'success': True,
+            **results
+        }
+
+    except Exception as e:
+        logger.error(f"🎰 [KALSHI] Collection failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def collect_kalshi_market_intelligence():
+    """
+    Collect high-value market intelligence from Kalshi for agent analysis.
+
+    Focuses on:
+    - High volume markets (trading activity signals interest)
+    - Markets with significant probability changes
+    - Economics/politics markets (high alpha potential)
+
+    Session 558: Initial implementation
+    """
+    from core.services.kalshi_service import get_kalshi_service
+    from core.services.discord_notifications import discord_notify
+
+    logger.info("🎰 [KALSHI-INTEL] Collecting market intelligence...")
+
+    try:
+        service = get_kalshi_service()
+        intel = service.get_market_intelligence(
+            categories=['economics', 'politics', 'finance', 'tech']
+        )
+
+        # Post trending markets to Discord
+        trending = intel.get('trending_by_volume', [])[:5]
+
+        if trending:
+            # Format trending markets
+            trending_lines = []
+            for m in trending:
+                prob = m.get('implied_probability_pct', 50)
+                vol = m.get('volume', 0)
+                title = m.get('title', '')[:50]
+                trending_lines.append(f"• **{prob}%** - {title}... (vol: {vol:,})")
+
+            # Send to Discord
+            try:
+                discord_notify.send_embed(
+                    channel_name='market-intelligence',
+                    title='🎰 Kalshi Prediction Markets Update',
+                    description=f"**Top Markets by Volume:**\n" + "\n".join(trending_lines),
+                    color=0x9b59b6,  # Purple
+                    fields=[
+                        {
+                            'name': 'Total Active Markets',
+                            'value': str(intel.get('total_markets', 0)),
+                            'inline': True
+                        },
+                        {
+                            'name': 'Categories',
+                            'value': ', '.join(intel.get('categories', {}).keys()),
+                            'inline': True
+                        },
+                    ],
+                    footer='Kalshi - CFTC Regulated Prediction Market'
+                )
+            except Exception as discord_err:
+                logger.warning(f"🎰 [KALSHI-INTEL] Discord notification failed: {discord_err}")
+
+        logger.info(f"🎰 [KALSHI-INTEL] Intelligence collected: {intel.get('total_markets', 0)} markets")
+
+        return {
+            'success': True,
+            'total_markets': intel.get('total_markets', 0),
+            'categories': intel.get('categories', {}),
+            'trending_count': len(trending),
+        }
+
+    except Exception as e:
+        logger.error(f"🎰 [KALSHI-INTEL] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
