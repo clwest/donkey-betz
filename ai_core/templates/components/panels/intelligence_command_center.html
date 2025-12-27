@@ -472,8 +472,13 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="icc-memory-tab" data-bs-toggle="pill" data-bs-target="#icc-memory" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(6, 182, 212, 0.3);">
+                <button class="nav-link" id="icc-memory-tab" data-bs-toggle="pill" data-bs-target="#icc-memory" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(6, 182, 212, 0.3); margin-right: 8px;">
                     &#129504; Memory
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icc-markets-tab" data-bs-toggle="pill" data-bs-target="#icc-markets" type="button" role="tab" style="color: #e5e7eb; background: transparent; border: 1px solid rgba(168, 85, 247, 0.3);">
+                    &#127922; Markets
                 </button>
             </li>
         </ul>
@@ -843,6 +848,98 @@ Shows real-time data flow: Spiders -> Triggers -> Situations -> Agents
             </div>
         </div>
         <!-- END MEMORY SUB-TAB -->
+
+        <!-- ========== MARKETS SUB-TAB (Session 558) ========== -->
+        <div class="tab-pane fade" id="icc-markets" role="tabpanel">
+            <!-- Prediction Markets Header -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #a855f7;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.2); border-bottom: 1px solid #a855f7;">
+                    <h5 class="mb-0" style="color: #a855f7;">
+                        &#127922; Prediction Markets
+                    </h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" style="background: #a855f7;" id="icc-markets-count">0 markets</span>
+                        <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #a855f7; color: #fff;" id="icc-markets-category" onchange="ICCState.loadPredictionMarkets(this.value)">
+                            <option value="">All Categories</option>
+                            <option value="economics">📊 Economics</option>
+                            <option value="politics">🏛️ Politics</option>
+                            <option value="finance">💰 Finance</option>
+                            <option value="tech">🔧 Tech</option>
+                            <option value="weather">🌤️ Weather</option>
+                            <option value="entertainment">🎬 Entertainment</option>
+                            <option value="science">🔬 Science</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="ICCState.loadPredictionMarkets()" style="border-color: #a855f7; color: #a855f7; background: transparent;">
+                            &#8635; Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3" style="font-style: italic;">
+                        "Real-time prediction market data from Kalshi. See what the crowd thinks will happen next."
+                    </p>
+
+                    <!-- Market Stats Row -->
+                    <div class="row mb-3" id="icc-markets-stats">
+                        <div class="col-md-3">
+                            <div class="p-2 text-center" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                <div class="text-success" style="font-size: 1.5rem; font-weight: bold;" id="icc-markets-likely">0</div>
+                                <div class="text-muted small">🟢 Likely (&gt;80%)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 text-center" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                <div class="text-warning" style="font-size: 1.5rem; font-weight: bold;" id="icc-markets-uncertain">0</div>
+                                <div class="text-muted small">🟡 Uncertain (40-60%)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 text-center" style="background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <div class="text-danger" style="font-size: 1.5rem; font-weight: bold;" id="icc-markets-unlikely">0</div>
+                                <div class="text-muted small">🔴 Unlikely (&lt;20%)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-2 text-center" style="background: rgba(168, 85, 247, 0.1); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.3);">
+                                <div style="color: #a855f7; font-size: 1.5rem; font-weight: bold;" id="icc-markets-volume">$0</div>
+                                <div class="text-muted small">📈 Total Volume</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending Markets -->
+            <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.15); border-bottom: 1px solid #f59e0b;">
+                    <h5 class="mb-0" style="color: #f59e0b;">
+                        🔥 Trending Markets
+                    </h5>
+                    <span class="badge" style="background: #f59e0b;" id="icc-trending-count">0</span>
+                </div>
+                <div class="card-body" style="max-height: 350px; overflow-y: auto;">
+                    <div id="icc-trending-markets">
+                        <p class="text-muted text-center">Loading trending markets...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Markets List -->
+            <div class="card" style="background: #1a1a1a; border: 2px solid #a855f7;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(168, 85, 247, 0.15); border-bottom: 1px solid #a855f7;">
+                    <h5 class="mb-0" style="color: #a855f7;">
+                        📋 All Markets
+                    </h5>
+                    <span class="badge" style="background: #a855f7;" id="icc-all-markets-count">0</span>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <div id="icc-all-markets">
+                        <p class="text-muted text-center">Loading markets...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END MARKETS SUB-TAB -->
 
         </div>
         <!-- END Sub-tab Content -->
