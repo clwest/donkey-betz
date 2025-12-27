@@ -432,6 +432,129 @@ result = router.route("SportsOddsAnalyst", "analyze today's games")
 
 ---
 
+## Part 4: Session 558 Continued - Bug Fixes & Testing
+
+### 8. Celery SIGSEGV Fix
+
+**Problem:** Celery workers crashing with `signal 11 (SIGSEGV)` when using default prefork pool.
+
+**Error:**
+```
+Process 'ForkPoolWorker-X' pid:XXXX exited with 'signal 11 (SIGSEGV)'
+```
+
+**Solution:** Use threads pool instead of prefork:
+```bash
+# DON'T USE (crashes)
+celery -A core worker --loglevel=info
+
+# USE THIS (works)
+celery -A core worker --loglevel=info --pool=threads --concurrency=4
+```
+
+### 9. SpiderData Field Names Fix
+
+**Problem:** Kalshi and The Odds tasks using wrong field names for `SpiderData` model.
+
+**Error:**
+```
+Invalid field name(s) for model SpiderData: 'collected_at', 'raw_data'
+Invalid field name(s) for model SpiderData: 'embedding_text', 'processed_data'
+```
+
+**Root Cause:** Two different `SpiderData` models exist:
+- `persistence.models.SpiderData` - Correct (title, content, structured_data)
+- `core.models.SpiderData` - Wrong (raw_data, processed_data)
+
+**Fix in `core/tasks.py`:**
+```python
+# collect_kalshi_prediction_markets (lines 18458-18477)
+# collect_sports_odds (lines 18698-18715)
+
+# Changed to use correct fields:
+SpiderData.objects.update_or_create(
+    spider_name='kalshi',  # or 'theodds'
+    source_url=url,
+    defaults={
+        'source_platform': 'kalshi',
+        'data_type': 'prediction_market',
+        'title': title[:500],
+        'content': content[:5000],
+        'category': category,
+        'structured_data': {...},  # Full data goes here
+        'relevance_score': 0.80,
+        'quality_score': 0.85,
+    }
+)
+```
+
+### 10. Spider Collection Results
+
+Ran comprehensive spider collection for all active spiders:
+
+| Spider | Records | Category |
+|--------|---------|----------|
+| kalshi | 200 | Prediction Markets |
+| theodds | 150 | Sports Betting |
+| yahoo_finance | 30 | Finance |
+| producthunt | 25 | Tech Products |
+| remoteok | 25 | Remote Jobs |
+| reddit | 25 | Social Media |
+| techcrunch | 25 | Tech News |
+| hackernews | 25 | Tech/Dev |
+| coingecko | 19 | Crypto |
+| axios | 15 | News |
+| finnhub | 15 | Financial Data |
+| mit_tech_review | 15 | Tech News |
+| arstechnica | 15 | Tech News |
+| wired | 15 | Tech News |
+| devto | 15 | Developer |
+| theverge | 15 | Tech News |
+
+**Total: 629 records from 16 spiders**
+
+### 11. Agent Router Enhancement
+
+Added full tool mapping for market analysts:
+
+```python
+# core/agent_router.py - TOOL_TO_AGENT_MAP
+
+# Session 558: Markets Agents
+'prediction_market_analyst': 'PredictionMarketAnalyst',
+'sports_odds_analyst': 'SportsOddsAnalyst',
+'market_analysis': 'PredictionMarketAnalyst',
+'sports_betting': 'SportsOddsAnalyst',
+'kalshi': 'PredictionMarketAnalyst',
+'odds': 'SportsOddsAnalyst',
+```
+
+Added market keyword detection for spider context:
+```python
+# _get_spider_context method
+if any(word in task.lower() for word in ['betting', 'odds', 'sports', 'prediction', 'kalshi', 'market', 'wager']):
+    context['market_analysis'] = True
+```
+
+### 12. Market Analyst Test Results
+
+| Agent | Markets/Events | Signals | Time |
+|-------|----------------|---------|------|
+| PredictionMarketAnalyst | 100 markets | 5 | 10.2s |
+| SportsOddsAnalyst | 100 events | 12 | 11.9s |
+
+**PredictionMarketAnalyst Output:**
+- Categories: general (88), tech (6), politics (5), weather (1)
+- Total volume analyzed: 199,843
+- Signal types: HIGH_CONVICTION, UNCERTAIN_VALUE, SMART_MONEY
+
+**SportsOddsAnalyst Output:**
+- Sports: NFL (13), NBA (9), NHL (18), EPL (23), UCL (18), UFC (19)
+- Games in next 24h: 33
+- Signal types: TOSS_UP, FAVORITE_ANALYSIS, SHARP_MARKET, UPCOMING
+
+---
+
 ## Session 559 Recommendations
 
 1. **Discord `/odds` Command**
@@ -463,11 +586,11 @@ result = router.route("SportsOddsAnalyst", "analyze today's games")
 | `core/agents/markets/prediction_market_analyst.py` | **NEW** - 350 lines |
 | `core/agents/markets/sports_odds_analyst.py` | **NEW** - 430 lines |
 | `ai_core/spiders/spider_registry.py` | Added kalshi + theodds registration |
-| `core/tasks.py` | Added 4 Celery tasks (~500 lines) |
+| `core/tasks.py` | Added 4 Celery tasks (~500 lines) + Fixed SpiderData fields |
 | `core/celery.py` | Added 4 Beat schedules |
 | `core/agents/stocks/market_intelligence_coordinator.py` | Added prediction signals |
 | `core/agents/__init__.py` | Added markets agents exports |
-| `core/agent_router.py` | Added PredictionMarketAnalyst, SportsOddsAnalyst |
+| `core/agent_router.py` | Added PredictionMarketAnalyst, SportsOddsAnalyst + tool mappings |
 | `core/services/discord_bot.py` | Added `/predictions` command |
 | `ai_core/templates/.../intelligence_command_center.html` | Markets tab + Sports section (~170 lines) |
 | `ai_core/templates/.../js/intelligence_command_center.html` | `loadPredictionMarkets()` + `loadSportsOdds()` (~280 lines) |
@@ -489,6 +612,9 @@ result = router.route("SportsOddsAnalyst", "analyze today's games")
 | `0e18a67` | Handoff update with sports odds |
 | `24711d4` | MST timezone fix for sports odds |
 | `5ae63be` | Market analyst agents (PredictionMarketAnalyst, SportsOddsAnalyst) |
+| `3956413` | Handoff update with market analyst agents |
+| `8556a41` | Fix SpiderData field names in Kalshi/Odds tasks |
+| `ed5db6c` | Register market analysts in agent router (tool mappings) |
 
 ---
 
@@ -523,8 +649,16 @@ Session 558 delivered complete market intelligence integration:
 - Sports Betting section (green) with sport filter
 - Real-time stats and game cards
 
+**Bug Fixes & Testing (Part 4):**
+- Fixed Celery SIGSEGV crashes (use `--pool=threads`)
+- Fixed SpiderData field names in collect tasks
+- Collected 629 records from 16 spiders
+- Tested market analysts: 100 markets → 5 signals, 100 events → 12 signals
+- Added 6 tool mappings for flexible agent invocation
+
 The platform now has comprehensive market intelligence covering:
 - Political/economic predictions (Kalshi)
 - Sports betting odds (The Odds API)
 - LLM-powered market analysis agents
 - All accessible via Discord, Web UI, Agents, and programmatic API
+- **Total registered agents: 46**
