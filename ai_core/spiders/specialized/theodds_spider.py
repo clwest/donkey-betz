@@ -39,35 +39,70 @@ class TheOddsSpider:
     name = "theodds"
     base_url = "https://api.the-odds-api.com/v4"
 
-    # Popular sports to fetch (API sport keys)
+    # Comprehensive sports coverage (API sport keys)
     SPORTS = {
-        # US Major Leagues
+        # ===== US MAJOR LEAGUES =====
         'americanfootball_nfl': {'name': 'NFL', 'category': 'american_football', 'priority': 1},
         'basketball_nba': {'name': 'NBA', 'category': 'basketball', 'priority': 1},
         'baseball_mlb': {'name': 'MLB', 'category': 'baseball', 'priority': 1},
         'icehockey_nhl': {'name': 'NHL', 'category': 'hockey', 'priority': 1},
 
-        # College Sports
-        'americanfootball_ncaaf': {'name': 'NCAAF', 'category': 'american_football', 'priority': 2},
-        'basketball_ncaab': {'name': 'NCAAB', 'category': 'basketball', 'priority': 2},
+        # ===== FUTURES / CHAMPIONSHIP WINNERS =====
+        'americanfootball_nfl_super_bowl_winner': {'name': 'Super Bowl Winner', 'category': 'futures', 'priority': 1},
+        'basketball_nba_championship_winner': {'name': 'NBA Championship', 'category': 'futures', 'priority': 1},
+        'baseball_mlb_world_series_winner': {'name': 'World Series Winner', 'category': 'futures', 'priority': 1},
+        'icehockey_nhl_championship_winner': {'name': 'Stanley Cup Winner', 'category': 'futures', 'priority': 1},
+        'americanfootball_ncaaf_championship_winner': {'name': 'CFP Champion', 'category': 'futures', 'priority': 2},
+        'basketball_ncaab_championship_winner': {'name': 'March Madness Winner', 'category': 'futures', 'priority': 2},
 
-        # Soccer
+        # ===== COLLEGE SPORTS =====
+        'americanfootball_ncaaf': {'name': 'NCAAF', 'category': 'american_football', 'priority': 1},
+        'basketball_ncaab': {'name': 'NCAAB', 'category': 'basketball', 'priority': 1},
+
+        # ===== SOCCER - TOP LEAGUES =====
         'soccer_epl': {'name': 'English Premier League', 'category': 'soccer', 'priority': 1},
-        'soccer_spain_la_liga': {'name': 'La Liga', 'category': 'soccer', 'priority': 2},
+        'soccer_spain_la_liga': {'name': 'La Liga', 'category': 'soccer', 'priority': 1},
         'soccer_germany_bundesliga': {'name': 'Bundesliga', 'category': 'soccer', 'priority': 2},
         'soccer_italy_serie_a': {'name': 'Serie A', 'category': 'soccer', 'priority': 2},
         'soccer_france_ligue_one': {'name': 'Ligue 1', 'category': 'soccer', 'priority': 2},
-        'soccer_usa_mls': {'name': 'MLS', 'category': 'soccer', 'priority': 2},
+        'soccer_usa_mls': {'name': 'MLS', 'category': 'soccer', 'priority': 1},
         'soccer_uefa_champs_league': {'name': 'Champions League', 'category': 'soccer', 'priority': 1},
+        'soccer_uefa_europa_league': {'name': 'Europa League', 'category': 'soccer', 'priority': 2},
 
-        # Combat Sports
+        # ===== SOCCER - ADDITIONAL LEAGUES =====
+        'soccer_england_league1': {'name': 'English League One', 'category': 'soccer', 'priority': 3},
+        'soccer_england_efl_cup': {'name': 'EFL Cup', 'category': 'soccer', 'priority': 3},
+        'soccer_brazil_campeonato': {'name': 'Brasileirão', 'category': 'soccer', 'priority': 3},
+        'soccer_mexico_ligamx': {'name': 'Liga MX', 'category': 'soccer', 'priority': 2},
+        'soccer_australia_aleague': {'name': 'A-League', 'category': 'soccer', 'priority': 3},
+
+        # ===== COMBAT SPORTS =====
         'mma_mixed_martial_arts': {'name': 'UFC/MMA', 'category': 'mma', 'priority': 1},
         'boxing_boxing': {'name': 'Boxing', 'category': 'boxing', 'priority': 2},
 
-        # Other
-        'tennis_atp_french_open': {'name': 'ATP French Open', 'category': 'tennis', 'priority': 2},
-        'tennis_wta_french_open': {'name': 'WTA French Open', 'category': 'tennis', 'priority': 2},
-        'golf_pga_championship': {'name': 'PGA Championship', 'category': 'golf', 'priority': 2},
+        # ===== TENNIS =====
+        'tennis_atp_aus_open': {'name': 'Australian Open (ATP)', 'category': 'tennis', 'priority': 2},
+        'tennis_wta_aus_open': {'name': 'Australian Open (WTA)', 'category': 'tennis', 'priority': 2},
+        'tennis_atp_french_open': {'name': 'French Open (ATP)', 'category': 'tennis', 'priority': 2},
+        'tennis_wta_french_open': {'name': 'French Open (WTA)', 'category': 'tennis', 'priority': 2},
+        'tennis_atp_wimbledon': {'name': 'Wimbledon (ATP)', 'category': 'tennis', 'priority': 2},
+        'tennis_wta_wimbledon': {'name': 'Wimbledon (WTA)', 'category': 'tennis', 'priority': 2},
+        'tennis_atp_us_open': {'name': 'US Open (ATP)', 'category': 'tennis', 'priority': 2},
+        'tennis_wta_us_open': {'name': 'US Open (WTA)', 'category': 'tennis', 'priority': 2},
+
+        # ===== GOLF =====
+        'golf_masters_tournament_winner': {'name': 'Masters', 'category': 'golf', 'priority': 2},
+        'golf_pga_championship_winner': {'name': 'PGA Championship', 'category': 'golf', 'priority': 2},
+        'golf_us_open_winner': {'name': 'US Open (Golf)', 'category': 'golf', 'priority': 2},
+        'golf_the_open_championship_winner': {'name': 'The Open', 'category': 'golf', 'priority': 2},
+
+        # ===== POLITICS (when available) =====
+        'politics_us_presidential_election_winner': {'name': 'US Presidential Election', 'category': 'politics', 'priority': 1},
+
+        # ===== OTHER SPORTS =====
+        'rugbyleague_nrl': {'name': 'NRL (Rugby)', 'category': 'rugby', 'priority': 3},
+        'cricket_ipl': {'name': 'IPL (Cricket)', 'category': 'cricket', 'priority': 3},
+        'cricket_test_match': {'name': 'Test Cricket', 'category': 'cricket', 'priority': 3},
     }
 
     # Preferred bookmakers (US-focused)
@@ -81,8 +116,14 @@ class TheOddsSpider:
         'betonlineag',
     ]
 
-    # Market types
+    # Market types - expanded coverage
     MARKETS = ['h2h', 'spreads', 'totals']  # Head-to-head, point spreads, over/under
+    MARKETS_FUTURES = ['outrights']  # For championship/winner markets
+    MARKETS_PROPS = ['player_pass_tds', 'player_rush_yds', 'player_receptions']  # Player props (NFL example)
+
+    # Regions for odds comparison (us is primary, others for arbitrage detection)
+    REGIONS = ['us']  # Default region
+    REGIONS_EXTENDED = ['us', 'us2', 'uk', 'eu', 'au']  # For comprehensive odds comparison
 
     def __init__(self):
         self.api_key = os.getenv('THE_ODDS_API_KEY')
@@ -129,23 +170,28 @@ class TheOddsSpider:
             logger.error(f"Error fetching {endpoint}: {str(e)}")
             return None
 
-    def fetch_data(self, sports: List[str] = None, max_results: int = 100) -> List[Dict[str, Any]]:
+    def fetch_data(self, sports: List[str] = None, max_results: int = 200,
+                   include_futures: bool = True, max_priority: int = 2,
+                   extended_regions: bool = False) -> List[Dict[str, Any]]:
         """
-        Main entry point - fetch odds for specified sports.
+        Main entry point - fetch odds for specified sports with expanded coverage.
 
         Args:
             sports: List of sport keys (e.g., ['americanfootball_nfl', 'basketball_nba'])
-                   If None, fetches priority 1 sports
-            max_results: Maximum number of events to return
+                   If None, fetches sports based on max_priority
+            max_results: Maximum number of events to return (default 200 for broader coverage)
+            include_futures: Whether to include futures/championship winner markets
+            max_priority: Maximum priority level to include (1=core, 2=expanded, 3=all)
+            extended_regions: Whether to fetch odds from multiple regions (more API calls)
 
         Returns:
             List of normalized event data with odds
         """
         results = []
 
-        # Default to priority 1 sports if none specified
+        # Default to priority 1 and 2 sports if none specified
         if sports is None:
-            sports = [k for k, v in self.SPORTS.items() if v.get('priority') == 1]
+            sports = [k for k, v in self.SPORTS.items() if v.get('priority', 3) <= max_priority]
 
         # First, get list of in-season sports
         active_sports = self._get_active_sports()
@@ -153,15 +199,23 @@ class TheOddsSpider:
             logger.warning("Could not fetch active sports list")
             active_sports = sports  # Fall back to requested sports
 
-        # Filter to only active sports
+        # Filter to only active sports from our list
         sports_to_fetch = [s for s in sports if s in active_sports]
 
-        for sport_key in sports_to_fetch:
+        # Identify futures markets (need different market type)
+        futures_sports = [s for s in sports_to_fetch if 'winner' in s or 'championship' in s]
+        regular_sports = [s for s in sports_to_fetch if s not in futures_sports]
+
+        logger.info(f"TheOddsSpider fetching {len(regular_sports)} regular sports, {len(futures_sports)} futures markets")
+
+        # Fetch regular sports
+        for sport_key in regular_sports:
             if len(results) >= max_results:
                 break
 
             sport_info = self.SPORTS.get(sport_key, {})
-            events = self._fetch_sport_odds(sport_key)
+            regions = self.REGIONS_EXTENDED if extended_regions else self.REGIONS
+            events = self._fetch_sport_odds(sport_key, regions=regions)
 
             if events:
                 for event in events:
@@ -172,12 +226,32 @@ class TheOddsSpider:
                     if normalized:
                         results.append(normalized)
 
+        # Fetch futures/championship markets
+        if include_futures:
+            for sport_key in futures_sports:
+                if len(results) >= max_results:
+                    break
+
+                sport_info = self.SPORTS.get(sport_key, {})
+                events = self._fetch_futures_odds(sport_key)
+
+                if events:
+                    for event in events:
+                        if len(results) >= max_results:
+                            break
+
+                        normalized = self._normalize_futures_event(event, sport_key, sport_info)
+                        if normalized:
+                            results.append(normalized)
+
         # Add metadata
         results.append({
             'data_type': 'api_status',
             'spider_name': self.name,
             'requests_remaining': self.requests_remaining,
             'requests_used': self.requests_used,
+            'sports_fetched': len(sports_to_fetch),
+            'futures_fetched': len(futures_sports) if include_futures else 0,
             'timestamp': datetime.utcnow().isoformat(),
         })
 
@@ -192,10 +266,13 @@ class TheOddsSpider:
 
         return [sport['key'] for sport in data if sport.get('active', False)]
 
-    def _fetch_sport_odds(self, sport_key: str) -> List[Dict]:
+    def _fetch_sport_odds(self, sport_key: str, regions: List[str] = None) -> List[Dict]:
         """Fetch odds for a specific sport."""
+        if regions is None:
+            regions = self.REGIONS
+
         params = {
-            'regions': 'us',
+            'regions': ','.join(regions),
             'markets': ','.join(self.MARKETS),
             'oddsFormat': 'american',
             'dateFormat': 'iso',
@@ -203,6 +280,103 @@ class TheOddsSpider:
 
         data = self._make_request(f'sports/{sport_key}/odds', params)
         return data if data else []
+
+    def _fetch_futures_odds(self, sport_key: str) -> List[Dict]:
+        """Fetch futures/outrights odds for championship markets."""
+        params = {
+            'regions': ','.join(self.REGIONS),
+            'markets': ','.join(self.MARKETS_FUTURES),
+            'oddsFormat': 'american',
+            'dateFormat': 'iso',
+        }
+
+        data = self._make_request(f'sports/{sport_key}/odds', params)
+        return data if data else []
+
+    def _normalize_futures_event(self, event: Dict, sport_key: str, sport_info: Dict) -> Optional[Dict]:
+        """Normalize futures/championship market data."""
+        try:
+            # Futures markets have different structure - usually just outrights
+            bookmakers = event.get('bookmakers', [])
+            if not bookmakers:
+                return None
+
+            # Get all outcomes from first bookmaker
+            outcomes = []
+            best_bookmaker = None
+            for bm in bookmakers:
+                if bm.get('key') in self.PREFERRED_BOOKMAKERS:
+                    for market in bm.get('markets', []):
+                        if market.get('key') == 'outrights':
+                            outcomes = market.get('outcomes', [])
+                            best_bookmaker = bm.get('key')
+                            break
+                    if outcomes:
+                        break
+
+            # Fallback to first bookmaker
+            if not outcomes and bookmakers:
+                for market in bookmakers[0].get('markets', []):
+                    if market.get('key') == 'outrights':
+                        outcomes = market.get('outcomes', [])
+                        best_bookmaker = bookmakers[0].get('key')
+                        break
+
+            if not outcomes:
+                return None
+
+            # Sort by odds (favorites first)
+            sorted_outcomes = sorted(outcomes, key=lambda x: x.get('price', 0))
+
+            # Top contenders
+            top_contenders = []
+            for outcome in sorted_outcomes[:10]:
+                prob = self._american_to_probability(outcome.get('price'))
+                top_contenders.append({
+                    'name': outcome.get('name'),
+                    'odds': outcome.get('price'),
+                    'implied_prob': round(prob * 100, 1) if prob else None,
+                })
+
+            # Find favorite
+            if top_contenders:
+                favorite = top_contenders[0]
+            else:
+                favorite = {'name': None, 'odds': None, 'implied_prob': None}
+
+            return {
+                'data_type': 'futures_odds',
+                'spider_name': self.name,
+                'source_platform': 'theodds',
+                'source_url': f"https://the-odds-api.com/sports/{sport_key}",
+
+                # Market info
+                'event_id': event.get('id'),
+                'sport_key': sport_key,
+                'sport_name': sport_info.get('name', sport_key),
+                'category': 'futures',
+                'market_type': 'championship_winner',
+                'title': sport_info.get('name', sport_key),
+
+                # Favorite
+                'favorite': favorite.get('name'),
+                'favorite_odds': favorite.get('odds'),
+                'favorite_probability': favorite.get('implied_prob'),
+
+                # All contenders
+                'contenders': top_contenders,
+                'total_outcomes': len(outcomes),
+
+                # Metadata
+                'bookmaker_count': len(bookmakers),
+                'best_bookmaker': best_bookmaker,
+                'fetched_at': datetime.utcnow().isoformat(),
+                'tags': ['futures', 'championship', sport_info.get('category', 'sports')],
+            }
+
+        except Exception as e:
+            logger.error(f"Error normalizing futures event: {str(e)}")
+            return None
 
     def _normalize_event(self, event: Dict, sport_key: str, sport_info: Dict) -> Optional[Dict]:
         """Normalize event data to standard format."""

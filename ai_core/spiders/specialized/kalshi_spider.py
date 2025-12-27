@@ -50,21 +50,24 @@ class KalshiSpider:
             'Content-Type': 'application/json',
         })
 
-    def fetch_data(self, max_results: int = 100, categories: List[str] = None) -> List[Dict[str, Any]]:
+    def fetch_data(self, max_results: int = 500, categories: List[str] = None,
+                   include_events: bool = True, include_series: bool = True) -> List[Dict[str, Any]]:
         """
-        Fetch prediction market data from Kalshi.
+        Fetch prediction market data from Kalshi with full pagination.
 
         Args:
-            max_results: Maximum number of markets to fetch
+            max_results: Maximum number of markets to fetch (default 500 for broader coverage)
             categories: Optional list of categories to filter by
+            include_events: Whether to include event collections
+            include_series: Whether to include series metadata
 
         Returns:
             List of prediction market data
         """
         all_data = []
 
-        # Fetch active markets
-        markets = self._fetch_markets(limit=max_results)
+        # Fetch active markets with pagination (up to 2000 markets)
+        markets = self._fetch_markets(limit=min(max_results, 2000))
         all_data.extend(markets)
 
         # Fetch trending/high volume markets
@@ -75,35 +78,56 @@ class KalshiSpider:
             if market.get('ticker') not in existing_tickers:
                 all_data.append(market)
 
-        # Fetch series (categories) for context
-        series_data = self._fetch_series(limit=20)
-        all_data.extend(series_data)
+        # Fetch events for additional context
+        if include_events:
+            events_data = self._fetch_events(limit=100)
+            all_data.extend(events_data)
 
-        logger.info(f"Fetched {len(all_data)} total items from Kalshi")
-        return all_data[:max_results]
+        # Fetch series (categories) for context
+        if include_series:
+            series_data = self._fetch_series(limit=50)
+            all_data.extend(series_data)
+
+        logger.info(f"Fetched {len(all_data)} total items from Kalshi (markets + events + series)")
+        return all_data[:max_results] if max_results else all_data
 
     def _fetch_markets(self, limit: int = 100, status: str = 'open') -> List[Dict[str, Any]]:
-        """Fetch markets from Kalshi API."""
+        """Fetch markets from Kalshi API with pagination support."""
         try:
             url = f"{self.base_url}/markets"
-            params = {
-                'limit': min(limit, 200),  # API max is 200
-                'status': status,
-            }
-
-            logger.info(f"Fetching {limit} markets from Kalshi")
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            markets = data.get('markets', [])
             market_data = []
+            cursor = None
+            page_size = min(limit, 200)  # API max is 200 per page
+            max_pages = 10  # Safety limit to avoid excessive requests
 
-            for market in markets:
-                market_data.append(self._transform_market(market))
+            logger.info(f"Fetching up to {limit} markets from Kalshi with pagination")
 
-            logger.info(f"Fetched {len(market_data)} markets from Kalshi")
-            return market_data
+            for page in range(max_pages):
+                params = {
+                    'limit': page_size,
+                    'status': status,
+                }
+                if cursor:
+                    params['cursor'] = cursor
+
+                response = self.session.get(url, params=params, timeout=30)
+                response.raise_for_status()
+
+                data = response.json()
+                markets = data.get('markets', [])
+
+                for market in markets:
+                    market_data.append(self._transform_market(market))
+
+                # Check for next page
+                cursor = data.get('cursor')
+                if not cursor or len(market_data) >= limit:
+                    break
+
+                logger.debug(f"Kalshi pagination: page {page+1}, fetched {len(market_data)} so far")
+
+            logger.info(f"Fetched {len(market_data)} markets from Kalshi (paginated)")
+            return market_data[:limit]
 
         except Exception as e:
             logger.error(f"Error fetching markets from Kalshi: {e}")
