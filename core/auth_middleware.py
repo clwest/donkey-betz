@@ -83,8 +83,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 546: Concern Tracking APIs
         '/api/v1/reasoning/concerns/',  # Concern dashboard
 
-        # Session 558: Prediction Markets API (read-only for Command Center)
+        # Session 558: Prediction Markets & Sports Odds API (read-only for Command Center)
         '/api/prediction-markets/',  # Kalshi prediction market data
+        '/api/sports-odds/',  # The Odds API sports betting data
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

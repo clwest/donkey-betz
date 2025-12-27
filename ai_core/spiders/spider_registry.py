@@ -73,6 +73,9 @@ from .specialized.etherscan_api_spider import EtherscanAPISpider
 # Session 558: PREDICTION MARKETS spider
 from .specialized.kalshi_spider import KalshiSpider
 
+# Session 558: SPORTS ODDS spider
+from .specialized.theodds_spider import TheOddsSpider
+
 # Session 218: TECH spiders
 from .specialized.hackernews_spider import HackerNewsSpider
 from .specialized.devto_spider import DevToSpider
@@ -897,6 +900,18 @@ class SpiderRegistry:
             'api_key_env': 'KALSHI_API_KEY',
             'targets': ['api.elections.kalshi.com'],
             'description': 'Prediction market data: economics, politics, weather, tech events'
+        })
+
+        # The Odds API - Sports betting odds aggregator (40+ bookmakers)
+        # Sports: NFL, NBA, MLB, NHL, Soccer, UFC, Tennis, Golf
+        self.register_spider('theodds', TheOddsSpider, {
+            'category': 'sports_odds',
+            'priority': 1,
+            'rate_limit': 1.0,
+            'requires_auth': True,
+            'api_key_env': 'THE_ODDS_API_KEY',
+            'targets': ['api.the-odds-api.com'],
+            'description': 'Sports betting odds: NFL, NBA, MLB, NHL, Soccer, UFC, Tennis'
         })
 
         logger.info(f"Registered {len(self.spider_classes)} spider classes")
