@@ -18455,19 +18455,24 @@ def collect_kalshi_prediction_markets():
                     'is_trending': market.get('is_trending', False),
                 }
 
-                # Create or update SpiderData
-                # Use source_platform for lookups, spider_name for source identification
+                # Create or update SpiderData (using persistence.models.SpiderData)
                 spider_data, created = SpiderData.objects.update_or_create(
                     spider_name='kalshi',
                     source_url=f"https://kalshi.com/markets/{ticker}",
                     defaults={
                         'source_platform': 'kalshi',
-                        'title': title[:500] if title else ticker,
-                        'content': content,
                         'data_type': 'prediction_market',
-                        'metadata': metadata,
+                        'title': title[:500] if title else ticker,
+                        'content': content[:5000],
+                        'category': category,
+                        'structured_data': {
+                            'metadata': metadata,
+                            **market,  # Include all market data
+                        },
                         'tags': market.get('tags', []),
-                        'is_processed': False,  # Mark for embedding
+                        'relevance_score': 0.80,
+                        'quality_score': 0.85,
+                        'is_processed': False,
                     }
                 )
 
@@ -18690,7 +18695,7 @@ def collect_sports_odds():
                     'tags': event.get('tags', []),
                 }
 
-                # Store in SpiderData
+                # Store in SpiderData (using persistence.models.SpiderData)
                 obj, created = SpiderData.objects.update_or_create(
                     spider_name='theodds',
                     source_url=f"https://the-odds-api.com/sports/{event.get('sport_key')}/{event_id}",
@@ -18700,10 +18705,12 @@ def collect_sports_odds():
                         'title': title[:500] if title else f"{sport_name} Event",
                         'content': content[:5000],
                         'category': category,
-                        'raw_data': event,
-                        'metadata': metadata,
+                        'structured_data': {
+                            'metadata': metadata,
+                            **event,  # Include all event data
+                        },
+                        'relevance_score': 0.85,
                         'quality_score': 0.85,  # High quality - real API data
-                        'collected_at': timezone.now(),
                     }
                 )
 
