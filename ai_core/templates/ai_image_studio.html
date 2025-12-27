@@ -1813,6 +1813,13 @@
                 </button>
             </li>
 
+            <!-- Session 559: Betting Dashboard - Odds, Arbitrage & Bankroll -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="betting-tab" data-bs-toggle="tab" data-bs-target="#betting" type="button" role="tab" title="Betting Dashboard - Odds, Arbitrage & Bankroll">
+                    💰 Betting
+                </button>
+            </li>
+
             <!-- Session 221 Phase F: Advanced Analytics Tab -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab" title="Analytics & Performance Monitoring">
@@ -16760,6 +16767,12 @@
             {% include "components/panels/intelligence_command_center.html" %}
             {% include "partials/js/intelligence_command_center.html" %}
             <!-- END INTELLIGENCE COMMAND CENTER -->
+
+            <!-- ============================================================ -->
+            <!-- Session 559: BETTING DASHBOARD - Odds, Arbitrage & Bankroll -->
+            <!-- ============================================================ -->
+            {% include "components/panels/betting_dashboard_panel.html" %}
+            <!-- END BETTING DASHBOARD -->
 
         </div>
         <!-- END TAB CONTENT -->

@@ -304,53 +304,112 @@ def calculate_kelly_criterion(request):
         message='Kelly Criterion calculation successful'
     )
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def detect_arbitrage(request):
     """
-    Detect arbitrage opportunities across bookmakers - migrated from DBAO
+    Detect arbitrage opportunities across bookmakers.
+
+    GET: Scan for live arbitrage opportunities using ArbitrageDetector agent
+         Query params: sport, min_profit, limit
+    POST: Calculate arbitrage from provided odds_list (legacy)
     """
+    # Session 559: GET request - scan for live arbs using ArbitrageDetector
+    if request.method == 'GET':
+        try:
+            from core.agents.markets.arbitrage_detector import ArbitrageDetector
+
+            sport = request.GET.get('sport')
+            min_profit = float(request.GET.get('min_profit', 0.5))
+            limit = int(request.GET.get('limit', 10))
+
+            detector = ArbitrageDetector()
+            result = detector.execute(
+                task="Scan for arbitrage opportunities",
+                context={
+                    'sport': sport,
+                    'min_profit_pct': min_profit
+                }
+            )
+
+            if result.success:
+                opportunities = result.data.get('arbitrage_opportunities', [])[:limit]
+                return Response({
+                    'success': True,
+                    'opportunities': opportunities,
+                    'stats': {
+                        'events_scanned': result.data.get('events_scanned', 0),
+                        'total_arbs': result.data.get('total_arbs', 0),
+                        'hot_arbs': result.data.get('hot_arbs', 0),
+                        'good_arbs': result.data.get('good_arbs', 0),
+                    },
+                    'scan_time': datetime.now().isoformat()
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'opportunities': [],
+                    'error': result.error or 'No arbitrage data available',
+                    'message': 'Ensure THE_ODDS_API_KEY is configured'
+                })
+
+        except ImportError as e:
+            logger.error(f"ArbitrageDetector import error: {e}")
+            return Response({
+                'success': False,
+                'opportunities': [],
+                'error': 'ArbitrageDetector agent not available'
+            })
+        except Exception as e:
+            logger.error(f"Arbitrage scan error: {e}", exc_info=True)
+            return Response({
+                'success': False,
+                'opportunities': [],
+                'error': str(e)
+            })
+
+    # POST request - legacy behavior with provided odds
     data = request.data
-    
+
     odds_list = data.get('odds_list', [])
-    
+
     if len(odds_list) < 2:
         return Response({
             'success': False,
             'error': 'At least 2 odds required for arbitrage detection'
         }, status=400)
-    
+
     # Convert all odds to decimal and find best odds for each outcome
     best_odds = {}
     bookmakers = {}
-    
+
     for odds_data in odds_list:
         bookmaker = odds_data.get('bookmaker', 'Unknown')
         outcome = odds_data.get('outcome', 'outcome')
         odds = odds_data.get('odds', 0)
         odds_format = odds_data.get('odds_format', 'decimal')
-        
+
         # Convert to decimal
         if odds_format == 'american':
             decimal_odds = (odds / 100) + 1 if odds > 0 else (100 / abs(odds)) + 1
         else:
             decimal_odds = odds
-        
+
         if outcome not in best_odds or decimal_odds > best_odds[outcome]:
             best_odds[outcome] = decimal_odds
             bookmakers[outcome] = bookmaker
-    
+
     # Check for arbitrage
     implied_probabilities = [1 / odds for odds in best_odds.values()]
     total_implied_probability = sum(implied_probabilities)
-    
+
     is_arbitrage = total_implied_probability < 1.0
     profit_margin = (1 / total_implied_probability - 1) if is_arbitrage else 0
-    
+
     # Calculate bet allocation for guaranteed profit
     bet_allocation = {}
     total_stake = 1000  # Example stake
-    
+
     if is_arbitrage:
         for outcome, odds in best_odds.items():
             stake_percentage = (1 / odds) / total_implied_probability
@@ -359,7 +418,7 @@ def detect_arbitrage(request):
                 'stake': round(total_stake * stake_percentage, 2),
                 'potential_return': round(total_stake * stake_percentage * odds, 2)
             }
-    
+
     return Response({
         'success': True,
         'result': {
@@ -369,6 +428,77 @@ def detect_arbitrage(request):
             'total_return': round(total_stake * (1 + profit_margin), 2) if is_arbitrage else 0
         }
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def scan_arbitrage_opportunities(request):
+    """
+    Session 559: Scan for live arbitrage opportunities using ArbitrageDetector agent.
+
+    GET /api/v1/betting/arbitrage/scan/
+
+    Query params:
+        sport: Filter by sport (nfl, nba, mlb, nhl, soccer)
+        min_profit: Minimum profit threshold (default 0.5%)
+        limit: Max results (default 10)
+    """
+    try:
+        from core.agents.markets.arbitrage_detector import ArbitrageDetector
+
+        sport = request.GET.get('sport')
+        min_profit = float(request.GET.get('min_profit', 0.5))
+        limit = int(request.GET.get('limit', 10))
+
+        # Initialize the agent
+        detector = ArbitrageDetector()
+
+        # Execute arbitrage detection
+        result = detector.execute(
+            task="Scan for arbitrage opportunities",
+            context={
+                'sport': sport,
+                'min_profit_pct': min_profit
+            }
+        )
+
+        if result.success:
+            opportunities = result.data.get('arbitrage_opportunities', [])[:limit]
+
+            return Response({
+                'success': True,
+                'opportunities': opportunities,
+                'stats': {
+                    'events_scanned': result.data.get('events_scanned', 0),
+                    'total_arbs': result.data.get('total_arbs', 0),
+                    'hot_arbs': result.data.get('hot_arbs', 0),
+                    'good_arbs': result.data.get('good_arbs', 0),
+                },
+                'scan_time': datetime.now().isoformat()
+            })
+        else:
+            return Response({
+                'success': False,
+                'opportunities': [],
+                'error': result.error or 'No arbitrage data available',
+                'message': 'Ensure THE_ODDS_API_KEY is configured'
+            })
+
+    except ImportError as e:
+        logger.error(f"ArbitrageDetector import error: {e}")
+        return Response({
+            'success': False,
+            'opportunities': [],
+            'error': 'ArbitrageDetector agent not available'
+        })
+    except Exception as e:
+        logger.error(f"Arbitrage scan error: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'opportunities': [],
+            'error': str(e)
+        })
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1273,7 +1403,7 @@ def sports_sync(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 559: Public for Betting Dashboard UI
 @rate_limit_api(service_name='odds_api')
 # @cache_response(cache_type='odds', key_params=['sport', 'markets'])  # Disabled - causes pickle errors with DRF Response
 def live_odds(request):

@@ -1,0 +1,289 @@
+{% comment %}
+Session 559: Betting Arbitrage Sub-Panel
+Real-time arbitrage opportunity detection and alerts.
+{% endcomment %}
+
+<div class="tab-pane fade" id="betting-arbitrage" role="tabpanel">
+    <!-- Header with Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 style="color: #ec4899;">🔥 Arbitrage Scanner</h4>
+            <p class="text-muted mb-0">Cross-bookmaker arbitrage opportunities with guaranteed profit</p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- Sport Filter -->
+            <select id="arb-sport-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(236, 72, 153, 0.4); color: #f9a8d4; width: auto;">
+                <option value="all">All Sports</option>
+                <option value="americanfootball_nfl">NFL</option>
+                <option value="basketball_nba">NBA</option>
+                <option value="baseball_mlb">MLB</option>
+                <option value="icehockey_nhl">NHL</option>
+                <option value="soccer_epl">Soccer (EPL)</option>
+                <option value="mma_mixed_martial_arts">UFC/MMA</option>
+            </select>
+            <!-- Min Profit Filter -->
+            <select id="arb-min-profit" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(236, 72, 153, 0.4); color: #f9a8d4; width: auto;">
+                <option value="0">Any Profit</option>
+                <option value="0.5">0.5%+</option>
+                <option value="1">1%+</option>
+                <option value="1.5">1.5%+ (HOT)</option>
+            </select>
+            <!-- Refresh Button -->
+            <button class="btn btn-sm" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none;" onclick="loadArbitrageAlerts()">
+                🔄 Scan Now
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(219, 39, 119, 0.2)); border: 1px solid rgba(236, 72, 153, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #f9a8d4;" id="arb-total-count">0</h3>
+                    <small class="text-muted">Total Arbs</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2)); border: 1px solid rgba(239, 68, 68, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #fca5a5;" id="arb-hot-count">0</h3>
+                    <small class="text-muted">HOT (1.5%+)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border: 1px solid rgba(251, 191, 36, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #fcd34d;" id="arb-avg-profit">0%</h3>
+                    <small class="text-muted">Avg Profit</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2)); border: 1px solid rgba(34, 197, 94, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #86efac;" id="arb-last-scan">--:--</h3>
+                    <small class="text-muted">Last Scan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="arb-loading" class="text-center py-5" style="display: none;">
+        <div class="spinner-border" style="color: #ec4899;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Scanning all bookmakers for arbitrage...</p>
+    </div>
+
+    <!-- Arbitrage Cards Container -->
+    <div id="arb-cards-container">
+        <!-- Placeholder -->
+        <div class="text-center py-5" id="arb-empty-state">
+            <div style="font-size: 4rem;">📊</div>
+            <h5 class="mt-3" style="color: #ec4899;">Ready to Scan</h5>
+            <p class="text-muted">Click "Scan Now" to find arbitrage opportunities</p>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="card mt-4" style="background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(236, 72, 153, 0.3);">
+        <div class="card-body">
+            <h6 style="color: #ec4899;">💡 How Arbitrage Works</h6>
+            <div class="row mt-3">
+                <div class="col-md-4 text-center">
+                    <div style="font-size: 2rem;">📈</div>
+                    <p class="text-muted small mt-2">Different bookmakers set different odds for the same event</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div style="font-size: 2rem;">🔍</div>
+                    <p class="text-muted small mt-2">We scan 40+ bookmakers to find price discrepancies</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div style="font-size: 2rem;">💰</div>
+                    <p class="text-muted small mt-2">Bet both sides at different books for guaranteed profit</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    async function loadArbitrageAlerts() {
+        const loading = document.getElementById('arb-loading');
+        const container = document.getElementById('arb-cards-container');
+        const emptyState = document.getElementById('arb-empty-state');
+
+        loading.style.display = 'block';
+        container.innerHTML = '';
+
+        try {
+            const sport = document.getElementById('arb-sport-filter').value;
+            const minProfit = parseFloat(document.getElementById('arb-min-profit').value) || 0;
+
+            let url = '/api/v1/betting/arbitrage/';
+            const params = new URLSearchParams();
+            if (sport !== 'all') params.append('sport', sport);
+            if (minProfit > 0) params.append('min_profit', minProfit);
+            if (params.toString()) url += '?' + params.toString();
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error('API not available');
+            }
+
+            const data = await response.json();
+            const arbs = data.opportunities || data.arbitrage_opportunities || [];
+
+            loading.style.display = 'none';
+
+            // Update stats
+            document.getElementById('arb-total-count').textContent = arbs.length;
+            document.getElementById('arb-hot-count').textContent = arbs.filter(a => (a.profit_margin || 0) >= 1.5).length;
+
+            if (arbs.length > 0) {
+                const avgProfit = arbs.reduce((sum, a) => sum + (a.profit_margin || 0), 0) / arbs.length;
+                document.getElementById('arb-avg-profit').textContent = avgProfit.toFixed(2) + '%';
+            }
+
+            document.getElementById('arb-last-scan').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            if (arbs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <div style="font-size: 4rem;">✅</div>
+                        <h5 class="mt-3" style="color: #22c55e;">Markets Are Efficient</h5>
+                        <p class="text-muted">No arbitrage opportunities found at this time.</p>
+                        <p class="text-muted small">Tip: Try different sports or lower the minimum profit threshold.</p>
+                    </div>`;
+                return;
+            }
+
+            // Render arbitrage cards
+            container.innerHTML = arbs.map(arb => renderArbCard(arb)).join('');
+
+        } catch (error) {
+            console.error('Error loading arbitrage:', error);
+            loading.style.display = 'none';
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div style="font-size: 3rem;">⚠️</div>
+                    <h5 class="mt-3 text-warning">Scan Unavailable</h5>
+                    <p class="text-muted">Use <code>/arb</code> in Discord to scan for arbitrage opportunities.</p>
+                    <p class="text-muted small">Make sure THE_ODDS_API_KEY is configured.</p>
+                </div>`;
+        }
+    }
+
+    function renderArbCard(arb) {
+        const profit = arb.profit_margin || 0;
+        const rating = profit >= 1.5 ? 'HOT' : profit >= 1.0 ? 'GOOD' : 'MARGINAL';
+        const ratingClass = rating === 'HOT' ? 'arb-hot' : rating === 'GOOD' ? 'arb-good' : 'arb-marginal';
+        const borderColor = rating === 'HOT' ? '#ef4444' : rating === 'GOOD' ? '#fbbf24' : '#6b7280';
+
+        const outcomes = arb.outcomes || arb.bets || [];
+        const stake = 100; // Example $100 stake
+
+        return `
+            <div class="arb-card card mb-3" style="background: rgba(255, 255, 255, 0.05); border: 2px solid ${borderColor}; border-radius: 12px;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid ${borderColor};">
+                    <div>
+                        <span class="badge ${ratingClass}" style="font-size: 12px; padding: 6px 12px; margin-right: 10px;">
+                            ${rating === 'HOT' ? '🔥' : rating === 'GOOD' ? '⚡' : '📊'} ${rating}
+                        </span>
+                        <span style="color: #f9a8d4; font-weight: 600;">${arb.event || arb.matchup || 'Unknown Event'}</span>
+                    </div>
+                    <div>
+                        <span class="badge" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 14px; padding: 8px 16px;">
+                            +${profit.toFixed(2)}% Profit
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        ${outcomes.map((outcome, idx) => `
+                            <div class="col-md-${12 / outcomes.length}">
+                                <div style="background: rgba(${idx === 0 ? '59, 130, 246' : idx === 1 ? '34, 197, 94' : '168, 85, 247'}, 0.15);
+                                            border: 1px solid rgba(${idx === 0 ? '59, 130, 246' : idx === 1 ? '34, 197, 94' : '168, 85, 247'}, 0.4);
+                                            border-radius: 8px; padding: 15px; text-align: center;">
+                                    <div style="font-size: 11px; color: #9ca3af; text-transform: uppercase; margin-bottom: 5px;">
+                                        ${outcome.bookmaker || 'Bookmaker ' + (idx + 1)}
+                                    </div>
+                                    <div style="font-size: 16px; font-weight: 700; color: ${idx === 0 ? '#93c5fd' : idx === 1 ? '#86efac' : '#c4b5fd'};">
+                                        ${outcome.name || outcome.selection}
+                                    </div>
+                                    <div style="font-size: 20px; font-weight: 800; color: #fbbf24; margin: 8px 0;">
+                                        ${formatOdds(outcome.price || outcome.odds)}
+                                    </div>
+                                    <div style="font-size: 12px; color: #9ca3af;">
+                                        Stake: $${outcome.stake?.toFixed(2) || '--'}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); padding: 12px; border-radius: 8px;">
+                                <div>
+                                    <span class="text-muted">Total Stake:</span>
+                                    <span style="color: #fbbf24; font-weight: 700; margin-left: 10px;">$${stake.toFixed(2)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Guaranteed Return:</span>
+                                    <span style="color: #22c55e; font-weight: 700; margin-left: 10px;">$${(stake * (1 + profit/100)).toFixed(2)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Profit:</span>
+                                    <span style="color: #22c55e; font-weight: 800; font-size: 18px; margin-left: 10px;">+$${(stake * profit/100).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center" style="background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.1);">
+                    <small class="text-muted">
+                        ${arb.sport || 'Sports'} • Updated ${arb.last_update || 'just now'}
+                    </small>
+                    <button class="btn btn-sm" style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.4); color: #fcd34d;" onclick="alert('Copy these stakes and place bets at each bookmaker!')">
+                        📋 Copy Stakes
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function formatOdds(odds) {
+        if (!odds) return '-';
+        const num = parseFloat(odds);
+        if (num >= 2) {
+            // Decimal odds, convert to American
+            const american = (num - 1) * 100;
+            return american >= 100 ? `+${american.toFixed(0)}` : `${american.toFixed(0)}`;
+        }
+        return num > 0 ? `+${num}` : `${num}`;
+    }
+
+    // Expose to global scope
+    window.loadArbitrageAlerts = loadArbitrageAlerts;
+
+    // Filter change handlers
+    document.getElementById('arb-sport-filter')?.addEventListener('change', loadArbitrageAlerts);
+    document.getElementById('arb-min-profit')?.addEventListener('change', loadArbitrageAlerts);
+
+    // Auto-load when tab is shown
+    document.addEventListener('DOMContentLoaded', function() {
+        const arbTab = document.getElementById('betting-arbitrage-tab');
+        if (arbTab) {
+            arbTab.addEventListener('shown.bs.tab', loadArbitrageAlerts);
+        }
+    });
+})();
+</script>
