@@ -73,6 +73,10 @@ Available Agents:
     - CompetitorAnalysisAgent: Competitor analysis and SWOT
     - CustomerResearchAgent: Customer personas and pain points
 
+    Markets (Session 558):
+    - PredictionMarketAnalyst: Kalshi prediction market analysis
+    - SportsOddsAnalyst: Sports betting odds analysis (The Odds API)
+
     Orchestration:
     - WorkflowAgent: Multi-step workflow coordination
 """
@@ -611,6 +615,10 @@ class AgentRouter:
                 creative = self.spider_service.get_creative_trends(hours=48)
                 context['creative_trends'] = creative
 
+            # Session 558: Get market data for betting/prediction tasks
+            if any(word in task.lower() for word in ['betting', 'odds', 'sports', 'prediction', 'kalshi', 'market', 'wager']):
+                context['market_analysis'] = True
+
             return context
         except Exception as e:
             logger.warning(f"Failed to get spider context: {e}")
@@ -680,6 +688,13 @@ class AgentRouter:
             'brand_strategy_agent': 'BrandStrategyAgent',
             # Session 496: Content Writer Agent
             'content_writer_agent': 'ContentWriterAgent',
+            # Session 558: Markets Agents
+            'prediction_market_analyst': 'PredictionMarketAnalyst',
+            'sports_odds_analyst': 'SportsOddsAnalyst',
+            'market_analysis': 'PredictionMarketAnalyst',
+            'sports_betting': 'SportsOddsAnalyst',
+            'kalshi': 'PredictionMarketAnalyst',
+            'odds': 'SportsOddsAnalyst',
         }
 
         try:
