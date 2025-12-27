@@ -265,6 +265,12 @@ from core.agents.campaign_orchestrator_agent import (
     get_campaign_orchestrator_agent,
 )
 
+# Markets Agents (Session 558: Prediction Markets & Sports Odds)
+from core.agents.markets import (
+    PredictionMarketAnalyst,
+    SportsOddsAnalyst,
+)
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -389,4 +395,8 @@ __all__ = [
     # Campaign Orchestrator Agent (1) - Session 513
     'CampaignOrchestratorAgent',
     'get_campaign_orchestrator_agent',
+
+    # Markets Agents (2) - Session 558
+    'PredictionMarketAnalyst',
+    'SportsOddsAnalyst',
 ]
