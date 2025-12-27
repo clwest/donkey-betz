@@ -174,6 +174,9 @@ from core.agents.podcast import (
 # Session 513: Campaign Orchestrator Agent
 from core.agents.campaign_orchestrator_agent import CampaignOrchestratorAgent
 
+# Session 558: Markets Agents
+from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst
+
 logger = logging.getLogger(__name__)
 
 # Session 488: Semantic routing confidence threshold
@@ -290,6 +293,10 @@ class AgentRouter:
 
         # Campaign Orchestrator (Session 513)
         "CampaignOrchestratorAgent": CampaignOrchestratorAgent,
+
+        # Markets Agents (Session 558)
+        "PredictionMarketAnalyst": PredictionMarketAnalyst,
+        "SportsOddsAnalyst": SportsOddsAnalyst,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,
