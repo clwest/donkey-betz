@@ -18806,13 +18806,14 @@ def collect_sports_odds_intelligence():
 
         message = "\n".join(lines)
 
-        # Post to Discord
+        # Post to Discord using betting digest
         try:
             discord_service = DiscordNotificationService()
-            discord_service.send_market_intelligence(
-                title="🏈 Sports Betting Odds",
-                content=message,
-                color=0x00FF00  # Green
+            discord_service.send_betting_digest(
+                title="Sports Betting Odds",
+                prediction_markets=[],
+                sports_events=upcoming,
+                tossups=toss_ups,
             )
         except Exception as discord_err:
             logger.warning(f"🏈 [THEODDS-INTEL] Discord notification failed: {discord_err}")
@@ -18827,6 +18828,308 @@ def collect_sports_odds_intelligence():
 
     except Exception as e:
         logger.error(f"🏈 [THEODDS-INTEL] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task(name='core.tasks.daily_betting_digest')
+def daily_betting_digest():
+    """
+    Post comprehensive daily betting digest to Discord.
+
+    Session 558: Morning briefing combining prediction markets and sports odds.
+    Scheduled to run at 8 AM MST daily.
+    """
+    from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from core.services.discord_notifications import DiscordNotificationService
+    from datetime import datetime
+
+    logger.info("📊 [DAILY-DIGEST] Generating daily betting digest...")
+
+    try:
+        lines = [
+            f"# 📊 Daily Betting Digest",
+            f"*{datetime.now().strftime('%A, %B %d, %Y')}*",
+            "",
+        ]
+
+        # ============================================
+        # PREDICTION MARKETS SECTION
+        # ============================================
+        lines.append("## 🎰 Prediction Markets (Kalshi)")
+        lines.append("")
+
+        kalshi_spider = KalshiSpider()
+        kalshi_data = kalshi_spider.fetch_data(max_results=200)
+        markets = [m for m in kalshi_data if m.get('data_type') == 'prediction_market']
+
+        # High volume markets
+        high_volume = sorted(
+            [m for m in markets if (m.get('volume') or 0) > 10000],
+            key=lambda m: -(m.get('volume') or 0)
+        )[:5]
+
+        if high_volume:
+            lines.append("**🔥 Top Volume Markets**")
+            for m in high_volume:
+                title = m.get('title', '')[:50]
+                prob = m.get('implied_probability_pct', 50)
+                vol = m.get('volume', 0)
+                lines.append(f"• {title}... ({prob:.0f}%) - Vol: {vol:,}")
+            lines.append("")
+
+        # Uncertain markets (research opportunities)
+        uncertain = [m for m in markets if 40 <= m.get('implied_probability_pct', 50) <= 60][:3]
+        if uncertain:
+            lines.append("**🎯 Uncertain Markets (Research Opportunities)**")
+            for m in uncertain:
+                title = m.get('title', '')[:50]
+                prob = m.get('implied_probability_pct', 50)
+                lines.append(f"• {title}... ({prob:.0f}%)")
+            lines.append("")
+
+        # ============================================
+        # SPORTS BETTING SECTION
+        # ============================================
+        lines.append("## 🏈 Sports Betting (The Odds API)")
+        lines.append("")
+
+        odds_spider = TheOddsSpider()
+        odds_data = odds_spider.fetch_data(max_results=100, max_priority=2)
+        events = [e for e in odds_data if e.get('data_type') == 'sports_odds']
+
+        # Group by sport
+        by_sport = {}
+        for event in events:
+            sport = event.get('sport_name', 'Unknown')
+            if sport not in by_sport:
+                by_sport[sport] = []
+            by_sport[sport].append(event)
+
+        # Count by sport
+        lines.append("**📅 Today's Action**")
+        for sport, sport_events in sorted(by_sport.items(), key=lambda x: -len(x[1]))[:6]:
+            lines.append(f"• {sport}: {len(sport_events)} games")
+        lines.append("")
+
+        # Toss-up games
+        tossups = [e for e in events if 45 <= (e.get('home_implied_prob') or 50) <= 55][:5]
+        if tossups:
+            lines.append("**🎯 Toss-Up Games (Research These)**")
+            for e in tossups:
+                away = e.get('away_team', '?')
+                home = e.get('home_team', '?')
+                sport = e.get('sport_name', '')
+                home_prob = e.get('home_implied_prob', 50)
+                game_time = e.get('commence_time_formatted', 'TBD')
+                lines.append(f"• [{sport}] {away} @ {home} ({home_prob:.0f}%/{100-home_prob:.0f}%) - {game_time}")
+            lines.append("")
+
+        # Heavy favorites (potential fades)
+        favorites = [e for e in events if (e.get('favorite_probability') or 0) >= 70][:3]
+        if favorites:
+            lines.append("**⭐ Heavy Favorites (Check Spread Value)**")
+            for e in favorites:
+                fav = e.get('favorite', '?')
+                fav_prob = e.get('favorite_probability', 0)
+                spread = e.get('home_spread')
+                spread_str = f" (spread: {spread:+.1f})" if spread else ""
+                lines.append(f"• {fav} at {fav_prob:.0f}%{spread_str}")
+            lines.append("")
+
+        # ============================================
+        # SUMMARY STATS
+        # ============================================
+        lines.append("---")
+        lines.append(f"*{len(markets)} prediction markets | {len(events)} sports events | {len(tossups)} toss-ups*")
+
+        message = "\n".join(lines)
+
+        # Post to Discord using the betting digest format
+        try:
+            discord_service = DiscordNotificationService()
+            discord_service.send_betting_digest(
+                title="Daily Betting Digest",
+                prediction_markets=markets,
+                sports_events=events,
+                tossups=tossups,
+                heavy_favorites=favorites,
+                high_volume=high_volume,
+            )
+            logger.info(f"📊 [DAILY-DIGEST] Posted digest with {len(markets)} markets, {len(events)} events")
+        except Exception as discord_err:
+            logger.warning(f"📊 [DAILY-DIGEST] Discord notification failed: {discord_err}")
+
+        return {
+            'success': True,
+            'prediction_markets': len(markets),
+            'sports_events': len(events),
+            'tossups': len(tossups),
+            'sports_covered': list(by_sport.keys()),
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [DAILY-DIGEST] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task(name='core.tasks.market_intelligence_scan')
+def market_intelligence_scan():
+    """
+    Hourly market intelligence scan.
+
+    Session 558: Runs market analysts and posts significant findings to Discord.
+    Scheduled to run every 2 hours.
+    """
+    from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+    from core.services.discord_notifications import DiscordNotificationService
+    from datetime import datetime
+
+    logger.info("📡 [MARKET-INTEL] Starting hourly market intelligence scan...")
+
+    try:
+        findings = []
+        alerts = []
+
+        # Run Sports Odds Analysis
+        sports_analyst = SportsOddsAnalyst()
+        sports_result = sports_analyst.execute("Find high-value betting opportunities")
+        if sports_result.success:
+            signals = sports_result.data.get('signals', [])
+            tossups = [s for s in signals if s.get('type') == 'TOSS_UP']
+            if tossups:
+                findings.append(f"🎯 Found {len(tossups)} toss-up games for research")
+                for t in tossups[:2]:
+                    alerts.append({
+                        'type': 'TOSS_UP',
+                        'message': f"{t.get('sport', '')} - {t.get('matchup', '')[:40]}",
+                    })
+
+        # Run Arbitrage Detection
+        arb_detector = ArbitrageDetector()
+        arb_result = arb_detector.execute("Scan for arbitrage opportunities")
+        if arb_result.success:
+            arbs = arb_result.data.get('arbitrage_opportunities', [])
+            hot_arbs = [a for a in arbs if a.get('rating') == 'HOT']
+            if hot_arbs:
+                findings.append(f"🔥 {len(hot_arbs)} HOT arbitrage opportunities detected!")
+                for a in hot_arbs[:2]:
+                    alerts.append({
+                        'type': 'ARBITRAGE',
+                        'message': f"{a.get('profit_pct', 0):.1f}% on {a.get('matchup', '')[:30]}",
+                    })
+
+        # Run Prediction Markets Analysis
+        pm_analyst = PredictionMarketAnalyst()
+        pm_result = pm_analyst.execute("Find high-volume uncertain markets")
+        if pm_result.success:
+            signals = pm_result.data.get('signals', [])
+            research_opps = [s for s in signals if s.get('type') == 'RESEARCH_OPPORTUNITY']
+            if research_opps:
+                findings.append(f"🔬 {len(research_opps)} prediction markets need research")
+
+        # Post to Discord if significant findings
+        if alerts:
+            discord_service = DiscordNotificationService()
+            discord_service.send_status(
+                title="📡 Market Intelligence Alert",
+                message="\n".join([
+                    f"**{a['type']}**: {a['message']}"
+                    for a in alerts[:5]
+                ]),
+                status_type="info"
+            )
+            logger.info(f"📡 [MARKET-INTEL] Posted {len(alerts)} alerts to Discord")
+
+        logger.info(f"📡 [MARKET-INTEL] Scan complete: {len(findings)} findings, {len(alerts)} alerts")
+
+        return {
+            'success': True,
+            'findings': findings,
+            'alerts_posted': len(alerts),
+            'timestamp': datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"📡 [MARKET-INTEL] Scan failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task(name='core.tasks.market_movement_alerts')
+def market_movement_alerts():
+    """
+    Real-time market movement detection.
+
+    Session 558: Monitors for significant odds changes and alerts via Discord.
+    Scheduled to run every 30 minutes.
+    """
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+    from core.services.discord_notifications import DiscordNotificationService
+    from datetime import datetime
+
+    logger.info("⚡ [MARKET-ALERTS] Checking for significant market movements...")
+
+    try:
+        alerts = []
+
+        # Check sports odds for line movements
+        odds_spider = TheOddsSpider()
+        events = odds_spider.fetch_data(max_results=50, max_priority=1)
+        sports_events = [e for e in events if e.get('data_type') == 'sports_odds']
+
+        # Look for extreme spreads (potential line movement)
+        for event in sports_events:
+            spread = event.get('home_spread')
+            if spread and abs(spread) > 10:
+                # Large spread might indicate big movement
+                alerts.append({
+                    'type': 'LINE_MOVEMENT',
+                    'sport': event.get('sport_name', 'Sports'),
+                    'message': f"{event.get('away_team', '?')} @ {event.get('home_team', '?')} spread at {spread:+.1f}",
+                })
+
+        # Check Kalshi for high-volume movers
+        kalshi_spider = KalshiSpider()
+        markets = kalshi_spider.fetch_data(max_results=50)
+        prediction_markets = [m for m in markets if m.get('data_type') == 'prediction_market']
+
+        for market in prediction_markets:
+            volume = market.get('volume') or 0
+            if volume > 50000:
+                alerts.append({
+                    'type': 'HIGH_VOLUME',
+                    'message': f"{market.get('title', '')[:40]}... (Vol: ${volume:,})",
+                })
+
+        # Post significant alerts
+        if alerts:
+            discord_service = DiscordNotificationService()
+            message_lines = [f"**{a['type']}**: {a['message']}" for a in alerts[:5]]
+            discord_service.send_status(
+                title="⚡ Market Movement Alert",
+                message="\n".join(message_lines),
+                status_type="warning" if len(alerts) > 3 else "info"
+            )
+            logger.info(f"⚡ [MARKET-ALERTS] Posted {len(alerts)} movement alerts")
+
+        return {
+            'success': True,
+            'alerts': len(alerts),
+            'timestamp': datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"⚡ [MARKET-ALERTS] Failed: {e}", exc_info=True)
         return {
             'success': False,
             'error': str(e)

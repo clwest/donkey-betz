@@ -1946,6 +1946,87 @@ class DiscordNotificationService:
             logger.error(f"Discord file upload failed: {e}")
             return False
 
+    def send_betting_digest(self, title: str, prediction_markets: List[dict] = None,
+                             sports_events: List[dict] = None, tossups: List[dict] = None,
+                             heavy_favorites: List[dict] = None, high_volume: List[dict] = None) -> bool:
+        """
+        Send a betting/prediction markets digest to #boardroom (Session 558).
+
+        Args:
+            title: Digest title
+            prediction_markets: List of prediction market dicts
+            sports_events: List of sports events with odds
+            tossups: List of close/uncertain events
+            heavy_favorites: List of events with heavy favorites
+            high_volume: List of high-volume markets
+
+        Returns:
+            True if notification sent successfully
+        """
+        sections = []
+
+        # High volume prediction markets
+        if high_volume:
+            sections.append("**📈 High Volume Markets**")
+            for m in high_volume[:3]:
+                ticker = m.get('ticker', m.get('title', 'Unknown'))[:30]
+                volume = m.get('volume_24h', m.get('volume', 0))
+                yes_price = m.get('yes_price', m.get('last_price', 0))
+                sections.append(f"• {ticker}: {yes_price}¢ | Vol: ${volume:,.0f}")
+            sections.append("")
+
+        # Toss-ups (close games/markets)
+        if tossups:
+            sections.append("**🎲 Toss-Ups (50/50 Bets)**")
+            for t in tossups[:5]:
+                name = t.get('name', t.get('title', 'Unknown'))[:40]
+                odds = t.get('odds', t.get('implied_probability', 50))
+                sections.append(f"• {name}: ~{odds}%")
+            sections.append("")
+
+        # Heavy favorites
+        if heavy_favorites:
+            sections.append("**🏆 Heavy Favorites**")
+            for f in heavy_favorites[:3]:
+                name = f.get('name', f.get('title', 'Unknown'))[:40]
+                odds = f.get('odds', f.get('implied_probability', 0))
+                sections.append(f"• {name}: {odds}%")
+            sections.append("")
+
+        # Sports events
+        if sports_events:
+            sections.append("**🏈 Today's Sports**")
+            for e in sports_events[:5]:
+                home = e.get('home_team', 'Home')[:15]
+                away = e.get('away_team', 'Away')[:15]
+                sport = e.get('sport', 'Sports')[:10]
+                sections.append(f"• [{sport}] {away} @ {home}")
+            sections.append("")
+
+        # Summary stats
+        pm_count = len(prediction_markets) if prediction_markets else 0
+        se_count = len(sports_events) if sports_events else 0
+        tossup_count = len(tossups) if tossups else 0
+
+        description = "\n".join(sections) if sections else "No betting data available."
+
+        embed = {
+            "title": f"🎰 {title}",
+            "description": description[:4000],
+            "color": 0x9B59B6,  # Purple
+            "fields": [
+                {"name": "📊 Prediction Markets", "value": str(pm_count), "inline": True},
+                {"name": "🏈 Sports Events", "value": str(se_count), "inline": True},
+                {"name": "🎲 Toss-Ups", "value": str(tossup_count), "inline": True},
+            ],
+            "footer": {
+                "text": "AI Studio Betting Intelligence | Session 558"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
+
     def send_podcast(self, episode_id: str, topic: str, duration_seconds: int,
                      audio_file_path: str, segment_count: int = 0,
                      speakers: List[str] = None, audio_url: str = None) -> bool:

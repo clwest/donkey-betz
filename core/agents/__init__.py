@@ -269,6 +269,7 @@ from core.agents.campaign_orchestrator_agent import (
 from core.agents.markets import (
     PredictionMarketAnalyst,
     SportsOddsAnalyst,
+    ArbitrageDetector,
 )
 
 __all__ = [
@@ -396,7 +397,8 @@ __all__ = [
     'CampaignOrchestratorAgent',
     'get_campaign_orchestrator_agent',
 
-    # Markets Agents (2) - Session 558
+    # Markets Agents (3) - Session 558
     'PredictionMarketAnalyst',
     'SportsOddsAnalyst',
+    'ArbitrageDetector',
 ]
