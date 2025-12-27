@@ -185,6 +185,8 @@ Output Format:
 
     def _american_to_decimal(self, american_odds: int) -> float:
         """Convert American odds to decimal odds."""
+        if american_odds is None:
+            return 0
         if american_odds > 0:
             return (american_odds / 100) + 1
         else:
@@ -200,85 +202,44 @@ Output Format:
         """
         Detect arbitrage opportunities across bookmakers.
 
-        For 2-way markets, we need the best odds for each outcome
-        from ANY bookmaker, then check if sum of implied probs < 100.
+        For 2-way markets (NFL, NBA, etc.), we need odds for 2 outcomes.
+        For 3-way markets (soccer), we MUST have odds for all 3 outcomes
+        (home, away, draw) otherwise it's not a real arbitrage.
         """
         arb_opportunities = []
         min_profit = context.get('min_profit_pct', 0.5)
 
+        # Sports that have 3-way markets (with draws)
+        soccer_sports = ['soccer', 'soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga',
+                        'soccer_italy_serie_a', 'soccer_france_ligue_one', 'soccer_usa_mls',
+                        'soccer_uefa_champs_league', 'soccer_uefa_europa_league']
+
         for event in events:
             try:
-                # Get best odds for each outcome
-                # The spider stores h2h_odds as list of bookmaker odds
                 h2h_odds = event.get('h2h_odds', [])
+                sport_key = event.get('sport_key', '')
+                category = event.get('category', '')
 
+                # Determine if this is a 3-way market (soccer)
+                is_3way = category == 'soccer' or any(s in sport_key for s in ['soccer', 'epl', 'la_liga',
+                                                                                'bundesliga', 'serie_a',
+                                                                                'ligue_one', 'mls',
+                                                                                'champs_league', 'europa'])
+
+                # Need at least 2 bookmakers for arbitrage
                 if not h2h_odds or len(h2h_odds) < 2:
-                    # Try using the aggregated odds
-                    home_odds = event.get('home_odds')
-                    away_odds = event.get('away_odds')
-
-                    if home_odds and away_odds:
-                        home_decimal = self._american_to_decimal(home_odds)
-                        away_decimal = self._american_to_decimal(away_odds)
-
-                        home_prob = self._implied_probability(home_decimal)
-                        away_prob = self._implied_probability(away_decimal)
-
-                        total_prob = home_prob + away_prob
-
-                        # Check for arbitrage (unlikely with same-book odds)
-                        if total_prob < 100:
-                            profit_pct = ((100 / total_prob) - 1) * 100
-                            if profit_pct >= min_profit:
-                                arb_opportunities.append(self._create_arb_opportunity(
-                                    event, home_decimal, away_decimal,
-                                    "Unknown", "Unknown", profit_pct
-                                ))
                     continue
 
-                # Find best odds for home and away from different books
-                best_home = {'odds': 0, 'book': None}
-                best_away = {'odds': 0, 'book': None}
-
-                for book_odds in h2h_odds:
-                    book = book_odds.get('bookmaker', 'Unknown')
-                    home_american = book_odds.get('home_odds')
-                    away_american = book_odds.get('away_odds')
-
-                    if home_american:
-                        home_decimal = self._american_to_decimal(home_american)
-                        if home_decimal > best_home['odds']:
-                            best_home = {'odds': home_decimal, 'book': book, 'american': home_american}
-
-                    if away_american:
-                        away_decimal = self._american_to_decimal(away_american)
-                        if away_decimal > best_away['odds']:
-                            best_away = {'odds': away_decimal, 'book': book, 'american': away_american}
-
-                # Need valid odds for both outcomes
-                if best_home['odds'] <= 1 or best_away['odds'] <= 1:
-                    continue
-
-                # Calculate implied probabilities
-                home_prob = self._implied_probability(best_home['odds'])
-                away_prob = self._implied_probability(best_away['odds'])
-                total_prob = home_prob + away_prob
-
-                # Check for arbitrage
-                if total_prob < 100:
-                    profit_pct = ((100 / total_prob) - 1) * 100
-
-                    if profit_pct >= min_profit:
-                        arb_opportunities.append(self._create_arb_opportunity(
-                            event,
-                            best_home['odds'],
-                            best_away['odds'],
-                            best_home['book'],
-                            best_away['book'],
-                            profit_pct,
-                            best_home.get('american'),
-                            best_away.get('american')
-                        ))
+                if is_3way:
+                    # 3-way arbitrage: need best odds for home, away, AND draw
+                    arb = self._detect_3way_arbitrage(event, h2h_odds, min_profit)
+                    if arb:
+                        arb_opportunities.append(arb)
+                else:
+                    # 2-way arbitrage: home vs away
+                    arb = self._detect_2way_arbitrage(event, h2h_odds, min_profit)
+                    if arb:
+                        arb_opportunities.append(arb)
 
             except Exception as e:
                 logger.debug(f"Error analyzing event for arb: {e}")
@@ -288,11 +249,205 @@ Output Format:
         arb_opportunities.sort(key=lambda x: -x.get('profit_pct', 0))
         return arb_opportunities
 
+    def _detect_2way_arbitrage(self, event: Dict, h2h_odds: List[Dict], min_profit: float) -> Optional[Dict]:
+        """Detect 2-way arbitrage (NFL, NBA, NHL, MLB, etc.)."""
+        best_home = {'odds': 0, 'book': None, 'american': None}
+        best_away = {'odds': 0, 'book': None, 'american': None}
+
+        for book_odds in h2h_odds:
+            book = book_odds.get('bookmaker', 'Unknown')
+            home_american = book_odds.get('home_odds')
+            away_american = book_odds.get('away_odds')
+
+            if home_american:
+                home_decimal = self._american_to_decimal(home_american)
+                if home_decimal > best_home['odds']:
+                    best_home = {'odds': home_decimal, 'book': book, 'american': home_american}
+
+            if away_american:
+                away_decimal = self._american_to_decimal(away_american)
+                if away_decimal > best_away['odds']:
+                    best_away = {'odds': away_decimal, 'book': book, 'american': away_american}
+
+        # Need valid odds for both outcomes
+        if best_home['odds'] <= 1 or best_away['odds'] <= 1:
+            return None
+
+        # Calculate implied probabilities
+        home_prob = self._implied_probability(best_home['odds'])
+        away_prob = self._implied_probability(best_away['odds'])
+        total_prob = home_prob + away_prob
+
+        # SANITY CHECK: Real 2-way markets have total implied prob of 100-115%
+        # If total is below 85%, the data is clearly wrong (stale odds, mixed markets, etc.)
+        # This filters out false positives from bad API data
+        if total_prob < 85:
+            logger.debug(f"Skipping {event.get('title')} - implausible total prob {total_prob:.1f}%")
+            return None
+
+        # Check for arbitrage (must be less than 100%)
+        if total_prob < 100:
+            profit_pct = ((100 / total_prob) - 1) * 100
+
+            # Additional sanity check: Real arbs are typically 0.5-5%
+            # Anything above 10% is almost certainly bad data
+            if profit_pct > 10:
+                logger.debug(f"Skipping {event.get('title')} - implausible profit {profit_pct:.1f}%")
+                return None
+
+            if profit_pct >= min_profit:
+                return self._create_arb_opportunity(
+                    event,
+                    best_home['odds'],
+                    best_away['odds'],
+                    best_home['book'],
+                    best_away['book'],
+                    profit_pct,
+                    best_home.get('american'),
+                    best_away.get('american'),
+                    is_3way=False
+                )
+        return None
+
+    def _detect_3way_arbitrage(self, event: Dict, h2h_odds: List[Dict], min_profit: float) -> Optional[Dict]:
+        """Detect 3-way arbitrage (soccer with draw)."""
+        best_home = {'odds': 0, 'book': None, 'american': None}
+        best_away = {'odds': 0, 'book': None, 'american': None}
+        best_draw = {'odds': 0, 'book': None, 'american': None}
+
+        for book_odds in h2h_odds:
+            book = book_odds.get('bookmaker', 'Unknown')
+            home_american = book_odds.get('home_odds')
+            away_american = book_odds.get('away_odds')
+            draw_american = book_odds.get('draw_odds')
+
+            if home_american:
+                home_decimal = self._american_to_decimal(home_american)
+                if home_decimal > best_home['odds']:
+                    best_home = {'odds': home_decimal, 'book': book, 'american': home_american}
+
+            if away_american:
+                away_decimal = self._american_to_decimal(away_american)
+                if away_decimal > best_away['odds']:
+                    best_away = {'odds': away_decimal, 'book': book, 'american': away_american}
+
+            if draw_american:
+                draw_decimal = self._american_to_decimal(draw_american)
+                if draw_decimal > best_draw['odds']:
+                    best_draw = {'odds': draw_decimal, 'book': book, 'american': draw_american}
+
+        # 3-way arb REQUIRES all three outcomes
+        if best_home['odds'] <= 1 or best_away['odds'] <= 1 or best_draw['odds'] <= 1:
+            return None
+
+        # Calculate implied probabilities for ALL 3 outcomes
+        home_prob = self._implied_probability(best_home['odds'])
+        away_prob = self._implied_probability(best_away['odds'])
+        draw_prob = self._implied_probability(best_draw['odds'])
+        total_prob = home_prob + away_prob + draw_prob
+
+        # SANITY CHECK: Real 3-way markets have total implied prob of 100-120%
+        # If total is below 90%, the data is clearly wrong
+        if total_prob < 90:
+            logger.debug(f"Skipping 3-way {event.get('title')} - implausible total prob {total_prob:.1f}%")
+            return None
+
+        # Check for arbitrage
+        if total_prob < 100:
+            profit_pct = ((100 / total_prob) - 1) * 100
+
+            # Sanity check: Real arbs are typically 0.5-5%, max 10%
+            if profit_pct > 10:
+                logger.debug(f"Skipping 3-way {event.get('title')} - implausible profit {profit_pct:.1f}%")
+                return None
+
+            if profit_pct >= min_profit:
+                return self._create_3way_arb_opportunity(
+                    event, best_home, best_away, best_draw, profit_pct
+                )
+        return None
+
+    def _create_3way_arb_opportunity(self, event: Dict, best_home: Dict,
+                                      best_away: Dict, best_draw: Dict,
+                                      profit_pct: float) -> Dict:
+        """Create a 3-way arbitrage opportunity record with stake calculations."""
+        # Calculate optimal stakes for $100 total bankroll
+        total_bankroll = 100
+        home_decimal = best_home['odds']
+        away_decimal = best_away['odds']
+        draw_decimal = best_draw['odds']
+
+        # Calculate stakes to guarantee equal returns from any outcome
+        total_inverse = (1/home_decimal) + (1/away_decimal) + (1/draw_decimal)
+        home_stake = total_bankroll / (home_decimal * total_inverse)
+        away_stake = total_bankroll / (away_decimal * total_inverse)
+        draw_stake = total_bankroll / (draw_decimal * total_inverse)
+
+        # Guaranteed return (same regardless of outcome)
+        guaranteed_return = home_stake * home_decimal
+        guaranteed_profit = guaranteed_return - total_bankroll
+
+        # Classify opportunity
+        if profit_pct >= 1.5:
+            rating = "HOT"
+        elif profit_pct >= 1.0:
+            rating = "GOOD"
+        elif profit_pct >= 0.5:
+            rating = "MARGINAL"
+        else:
+            rating = "SKIP"
+
+        return {
+            'event_id': event.get('source_id', ''),
+            'matchup': event.get('title', ''),
+            'sport': event.get('sport_name', ''),
+            'home_team': event.get('home_team', ''),
+            'away_team': event.get('away_team', ''),
+            'game_time': event.get('commence_time_formatted', ''),
+            'commence_time': event.get('commence_time', ''),
+            'is_3way': True,
+
+            # Home bet
+            'home_book': best_home['book'],
+            'home_decimal_odds': round(home_decimal, 3),
+            'home_american_odds': best_home['american'],
+            'stake_home': round(home_stake, 2),
+
+            # Away bet
+            'away_book': best_away['book'],
+            'away_decimal_odds': round(away_decimal, 3),
+            'away_american_odds': best_away['american'],
+            'stake_away': round(away_stake, 2),
+
+            # Draw bet
+            'draw_book': best_draw['book'],
+            'draw_decimal_odds': round(draw_decimal, 3),
+            'draw_american_odds': best_draw['american'],
+            'stake_draw': round(draw_stake, 2),
+
+            # Probability analysis
+            'home_implied_prob': round(self._implied_probability(home_decimal), 2),
+            'away_implied_prob': round(self._implied_probability(away_decimal), 2),
+            'draw_implied_prob': round(self._implied_probability(draw_decimal), 2),
+            'total_implied_prob': round(
+                self._implied_probability(home_decimal) +
+                self._implied_probability(away_decimal) +
+                self._implied_probability(draw_decimal), 2
+            ),
+
+            # Profit analysis
+            'profit_pct': round(profit_pct, 3),
+            'rating': rating,
+            'guaranteed_profit': round(guaranteed_profit, 2),
+            'guaranteed_return': round(guaranteed_return, 2),
+        }
+
     def _create_arb_opportunity(self, event: Dict, home_decimal: float,
                                  away_decimal: float, home_book: str,
                                  away_book: str, profit_pct: float,
                                  home_american: int = None,
-                                 away_american: int = None) -> Dict:
+                                 away_american: int = None,
+                                 is_3way: bool = False) -> Dict:
         """Create an arbitrage opportunity record with stake calculations."""
 
         # Calculate optimal stakes for $100 total bankroll
@@ -323,6 +478,7 @@ Output Format:
             'away_team': event.get('away_team', ''),
             'game_time': event.get('commence_time_formatted', ''),
             'commence_time': event.get('commence_time', ''),
+            'is_3way': is_3way,
 
             # Odds details
             'home_book': home_book,
