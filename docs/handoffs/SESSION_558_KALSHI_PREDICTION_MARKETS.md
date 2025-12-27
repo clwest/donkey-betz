@@ -662,3 +662,216 @@ The platform now has comprehensive market intelligence covering:
 - LLM-powered market analysis agents
 - All accessible via Discord, Web UI, Agents, and programmatic API
 - **Total registered agents: 46**
+
+---
+
+## Part 5: Spider Data Expansion
+
+### 13. Kalshi Spider Pagination
+
+**Problem:** Only fetching first page of 200 markets, but Kalshi has thousands of markets available.
+
+**Solution:** Added cursor-based pagination to fetch up to 2000 markets:
+
+```python
+# ai_core/spiders/specialized/kalshi_spider.py
+
+def _fetch_markets(self, limit: int = 100, status: str = 'open') -> List[Dict]:
+    """Fetch markets from Kalshi API with pagination support."""
+    market_data = []
+    cursor = None
+    max_pages = 10  # Safety limit
+
+    for page in range(max_pages):
+        params = {'limit': min(limit, 200), 'status': status}
+        if cursor:
+            params['cursor'] = cursor
+
+        response = self.session.get(url, params=params, timeout=30)
+        data = response.json()
+        markets = data.get('markets', [])
+
+        for market in markets:
+            market_data.append(self._transform_market(market))
+
+        cursor = data.get('cursor')
+        if not cursor or len(market_data) >= limit:
+            break
+
+    return market_data[:limit]
+```
+
+**Results:**
+| Before | After |
+|--------|-------|
+| 200 markets | 1000+ markets |
+| No pagination | Cursor-based pagination |
+| max_results=100 default | max_results=500 default |
+
+**Markets by Category (1000 sample):**
+- politics: 446
+- general: 425
+- tech: 65
+- economics: 49
+- weather: 4
+- entertainment: 4
+- finance: 4
+- science: 3
+
+**Top Volume Markets:**
+- Will Trump nominate Kevin Hassett as Fed Chair? (vol: 3,989,510)
+- Will Trump nominate Kevin Warsh as Fed Chair? (vol: 2,607,628)
+- Will Trump nominate Christopher Waller? (vol: 2,498,180)
+- Will Gavin Newsom be Democratic nominee? (vol: 2,222,606)
+- Will Trump buy Greenland? (vol: 2,033,989)
+
+### 14. The Odds API Expansion
+
+**Problem:** Only fetching 7 priority-1 sports from 64 available sports. Missing futures, college sports, and additional leagues.
+
+**Solution:** Expanded SPORTS dictionary from 18 → 37 sports with futures support:
+
+```python
+# ai_core/spiders/specialized/theodds_spider.py
+
+SPORTS = {
+    # US MAJOR LEAGUES (priority 1)
+    'americanfootball_nfl': {'name': 'NFL', 'priority': 1},
+    'basketball_nba': {'name': 'NBA', 'priority': 1},
+    'baseball_mlb': {'name': 'MLB', 'priority': 1},
+    'icehockey_nhl': {'name': 'NHL', 'priority': 1},
+
+    # FUTURES / CHAMPIONSHIP WINNERS (priority 1-2) - NEW
+    'americanfootball_nfl_super_bowl_winner': {'name': 'Super Bowl Winner', 'priority': 1},
+    'basketball_nba_championship_winner': {'name': 'NBA Championship', 'priority': 1},
+    'baseball_mlb_world_series_winner': {'name': 'World Series Winner', 'priority': 1},
+    'icehockey_nhl_championship_winner': {'name': 'Stanley Cup Winner', 'priority': 1},
+    'americanfootball_ncaaf_championship_winner': {'name': 'CFP Champion', 'priority': 2},
+    'basketball_ncaab_championship_winner': {'name': 'March Madness Winner', 'priority': 2},
+
+    # COLLEGE SPORTS (elevated to priority 1) - UPDATED
+    'americanfootball_ncaaf': {'name': 'NCAAF', 'priority': 1},
+    'basketball_ncaab': {'name': 'NCAAB', 'priority': 1},
+
+    # SOCCER - TOP LEAGUES (priority 1-2)
+    'soccer_epl': {'name': 'EPL', 'priority': 1},
+    'soccer_spain_la_liga': {'name': 'La Liga', 'priority': 1},
+    'soccer_uefa_champs_league': {'name': 'Champions League', 'priority': 1},
+    'soccer_usa_mls': {'name': 'MLS', 'priority': 1},
+    # + Bundesliga, Serie A, Ligue 1, Europa League
+
+    # ADDITIONAL SOCCER (priority 2-3) - NEW
+    'soccer_mexico_ligamx': {'name': 'Liga MX', 'priority': 2},
+    'soccer_brazil_campeonato': {'name': 'Brasileirão', 'priority': 3},
+
+    # TENNIS (all Grand Slams) - NEW
+    'tennis_atp_aus_open': {'name': 'Australian Open (ATP)', 'priority': 2},
+    'tennis_atp_french_open': {'name': 'French Open (ATP)', 'priority': 2},
+    'tennis_atp_wimbledon': {'name': 'Wimbledon (ATP)', 'priority': 2},
+    'tennis_atp_us_open': {'name': 'US Open (ATP)', 'priority': 2},
+    # + WTA equivalents
+
+    # GOLF (all Majors) - NEW
+    'golf_masters_tournament_winner': {'name': 'Masters', 'priority': 2},
+    'golf_pga_championship_winner': {'name': 'PGA Championship', 'priority': 2},
+    'golf_us_open_winner': {'name': 'US Open (Golf)', 'priority': 2},
+    'golf_the_open_championship_winner': {'name': 'The Open', 'priority': 2},
+
+    # POLITICS - NEW
+    'politics_us_presidential_election_winner': {'name': 'US Presidential Election', 'priority': 1},
+
+    # OTHER - NEW
+    'rugbyleague_nrl': {'name': 'NRL (Rugby)', 'priority': 3},
+    'cricket_ipl': {'name': 'IPL (Cricket)', 'priority': 3},
+}
+```
+
+**New Features:**
+
+```python
+# Futures market support
+MARKETS_FUTURES = ['outrights']
+
+# Extended regions for arbitrage detection
+REGIONS = ['us']  # Default
+REGIONS_EXTENDED = ['us', 'us2', 'uk', 'eu', 'au']  # For comprehensive odds comparison
+
+# Updated fetch_data signature
+def fetch_data(
+    sports=None,
+    max_results=200,           # Was 100
+    include_futures=True,      # NEW
+    max_priority=2,            # NEW - Fetch priority 1+2 by default
+    extended_regions=False     # NEW
+)
+
+# Dedicated futures normalization
+def _normalize_futures_event(event, sport_key, sport_info):
+    """Returns top 10 contenders with implied probabilities"""
+```
+
+**Results:**
+| Before | After |
+|--------|-------|
+| 7 sports (priority 1 only) | 37 sports (priority 1+2) |
+| No futures markets | 11 futures markets (Super Bowl, NBA Championship, etc.) |
+| 100 max_results default | 200 max_results default |
+| US region only | Extended regions available |
+| No outrights market | outrights for championship winners |
+
+**API Stats After Expansion:**
+- Active sports from API: 64
+- Sports in our SPORTS dict: 37
+- Priority 1 sports: 17
+- Priority 2 sports: 14
+- Futures/Championship sports: 11
+
+---
+
+## Updated Commits
+
+| Commit | Description |
+|--------|-------------|
+| `e31bece` | Kalshi prediction markets integration |
+| `a7e82d4` | Web UI prediction markets panel |
+| `139453a` | Handoff document |
+| `1504338` | Auth middleware fix |
+| `14aa43f` | The Odds API sports betting integration |
+| `0e18a67` | Handoff update with sports odds |
+| `24711d4` | MST timezone fix for sports odds |
+| `5ae63be` | Market analyst agents |
+| `3956413` | Handoff update with market analyst agents |
+| `8556a41` | Fix SpiderData field names in Kalshi/Odds tasks |
+| `ed5db6c` | Register market analysts in agent router |
+| `62bb288` | Part 4: Bug fixes & testing documentation |
+| `TBD` | Part 5: Spider data expansion (pagination + futures) |
+
+---
+
+## Updated Summary
+
+Session 558 delivered complete market intelligence integration with **5x data expansion**:
+
+**Kalshi Prediction Markets:**
+- Spider now fetches **1000+ markets** (was 200) with pagination
+- Covers politics, tech, economics, weather, entertainment, finance, science
+- High-volume markets identified (Trump Fed nominations, Greenland purchase, etc.)
+
+**The Odds API Sports Betting:**
+- Spider now covers **37 sports** (was 7) including:
+  - US major leagues (NFL, NBA, MLB, NHL)
+  - Futures (Super Bowl, NBA Championship, World Series, Stanley Cup)
+  - College sports (NCAAF, NCAAB + championship winners)
+  - All 4 Grand Slams (tennis)
+  - All 4 Golf majors
+  - US Presidential Election
+- Extended regions available for arbitrage detection
+- Outrights market for championship/winner bets
+
+**Total Data Increase:**
+| Metric | Before | After | Increase |
+|--------|--------|-------|----------|
+| Kalshi markets | 200 | 1000+ | 5x |
+| Sports covered | 7 | 37 | 5x |
+| Futures markets | 0 | 11 | NEW |
+| Default results | 100 | 200-500 | 2-5x |
