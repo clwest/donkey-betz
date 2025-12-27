@@ -1,0 +1,348 @@
+{% comment %}
+Session 559: Betting Overview Sub-Panel
+Quick summary of betting activity, recent bets, and top opportunities.
+{% endcomment %}
+
+<div class="tab-pane fade show active" id="betting-overview" role="tabpanel">
+    <!-- Loading State -->
+    <div id="betting-overview-loading" class="text-center py-5">
+        <div class="spinner-border" style="color: #fbbf24;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading betting overview...</p>
+    </div>
+
+    <!-- Content Container -->
+    <div id="betting-overview-content" style="display: none;">
+        <div class="row">
+            <!-- Left Column: Recent Bets & Activity -->
+            <div class="col-md-6">
+                <!-- Recent Bets -->
+                <div class="card mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(251, 191, 36, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                        <h5 class="mb-0" style="color: #fbbf24;">📝 Recent Wagers</h5>
+                        <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fcd34d;" id="recent-wagers-count">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead style="position: sticky; top: 0; background: #1a1a1a;">
+                                    <tr style="border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                                        <th style="color: #9ca3af; font-size: 11px;">EVENT</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">PICK</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">ODDS</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">STAKE</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-wagers-table">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">No wagers yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Betting Streaks -->
+                <div class="card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(34, 197, 94, 0.3);">
+                    <div class="card-header" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
+                        <h5 class="mb-0" style="color: #22c55e;">🔥 Betting Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div style="padding: 15px; background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                                    <h4 class="mb-0" style="color: #22c55e;" id="perf-wins">0</h4>
+                                    <small class="text-muted">Wins</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                                    <h4 class="mb-0" style="color: #ef4444;" id="perf-losses">0</h4>
+                                    <small class="text-muted">Losses</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div style="padding: 15px; background: rgba(251, 191, 36, 0.1); border-radius: 8px;">
+                                    <h4 class="mb-0" style="color: #fbbf24;" id="perf-streak">0</h4>
+                                    <small class="text-muted">Streak</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Top Opportunities -->
+            <div class="col-md-6">
+                <!-- Top Arbitrage Opportunities -->
+                <div class="card mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(236, 72, 153, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.1); border-bottom: 1px solid rgba(236, 72, 153, 0.2);">
+                        <h5 class="mb-0" style="color: #ec4899;">⚡ Top Arbitrage</h5>
+                        <button class="btn btn-sm" style="background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border: none;" onclick="loadArbitrageAlerts()">
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="card-body" id="top-arb-container">
+                        <div class="text-center text-muted py-4">
+                            <div style="font-size: 2rem;">📊</div>
+                            <p class="mt-2">Scanning for arbitrage opportunities...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Value Plays -->
+                <div class="card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(168, 85, 247, 0.3);">
+                    <div class="card-header" style="background: rgba(168, 85, 247, 0.1); border-bottom: 1px solid rgba(168, 85, 247, 0.2);">
+                        <h5 class="mb-0" style="color: #a855f7;">🎯 Value Plays (45-55%)</h5>
+                    </div>
+                    <div class="card-body" id="value-plays-container">
+                        <div class="text-center text-muted py-4">
+                            <div style="font-size: 2rem;">🎲</div>
+                            <p class="mt-2">Loading value plays...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    async function loadBettingOverview() {
+        const loading = document.getElementById('betting-overview-loading');
+        const content = document.getElementById('betting-overview-content');
+
+        loading.style.display = 'block';
+        content.style.display = 'none';
+
+        try {
+            // Load recent wagers
+            await loadRecentWagers();
+            // Load performance stats
+            await loadPerformanceStats();
+            // Load top arbs
+            await loadTopArbs();
+            // Load value plays
+            await loadValuePlays();
+
+            loading.style.display = 'none';
+            content.style.display = 'block';
+        } catch (error) {
+            console.error('Error loading overview:', error);
+            loading.innerHTML = '<div class="text-danger">Error loading data</div>';
+        }
+    }
+
+    async function loadRecentWagers() {
+        try {
+            const response = await fetch('/api/v1/odds/bankroll/');
+            if (!response.ok) throw new Error('API not available');
+
+            const data = await response.json();
+            const wagers = data.recent_wagers || [];
+            const table = document.getElementById('recent-wagers-table');
+            document.getElementById('recent-wagers-count').textContent = wagers.length;
+
+            if (wagers.length === 0) {
+                table.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No wagers yet. Use /bet in Discord to log wagers.</td></tr>';
+                return;
+            }
+
+            table.innerHTML = wagers.slice(0, 10).map(w => `
+                <tr>
+                    <td style="font-size: 12px;">${truncate(w.event_name, 20)}</td>
+                    <td style="font-size: 12px;">${w.selection}</td>
+                    <td style="font-size: 12px; color: #fbbf24;">${formatOdds(w.odds)}</td>
+                    <td style="font-size: 12px;">$${w.stake}</td>
+                    <td>${getStatusBadge(w.status)}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.log('Bankroll API not available');
+            document.getElementById('recent-wagers-table').innerHTML =
+                '<tr><td colspan="5" class="text-center text-muted py-4">Use /bankroll in Discord to start tracking</td></tr>';
+        }
+    }
+
+    async function loadPerformanceStats() {
+        try {
+            const response = await fetch('/api/v1/odds/bankroll/stats/');
+            if (!response.ok) return;
+
+            const data = await response.json();
+            document.getElementById('perf-wins').textContent = data.wins || 0;
+            document.getElementById('perf-losses').textContent = data.losses || 0;
+
+            const streak = data.current_streak || 0;
+            const streakEl = document.getElementById('perf-streak');
+            streakEl.textContent = Math.abs(streak);
+            streakEl.style.color = streak >= 0 ? '#22c55e' : '#ef4444';
+        } catch (error) {
+            console.log('Stats API not available');
+        }
+    }
+
+    async function loadTopArbs() {
+        try {
+            const response = await fetch('/api/v1/betting/arbitrage/?limit=3');
+            if (!response.ok) throw new Error('API not available');
+
+            const data = await response.json();
+            const container = document.getElementById('top-arb-container');
+            const arbs = data.opportunities || [];
+
+            if (arbs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <div style="font-size: 1.5rem;">✅</div>
+                        <p class="text-muted mb-0 mt-2">No arbitrage opportunities found</p>
+                        <small class="text-muted">Markets are efficient right now</small>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = arbs.map(arb => `
+                <div class="arb-card mb-2 p-3" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid ${getArbColor(arb.profit_margin)};">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="font-weight: 600; color: #f9a8d4;">${arb.event || arb.matchup}</div>
+                            <small class="text-muted">${arb.sport || 'Sports'}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${getArbClass(arb.profit_margin)}" style="padding: 6px 12px;">
+                                +${arb.profit_margin?.toFixed(2) || 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.log('Arbitrage API not available');
+            document.getElementById('top-arb-container').innerHTML =
+                '<div class="text-center text-muted py-3">Use /arb in Discord to scan for opportunities</div>';
+        }
+    }
+
+    async function loadValuePlays() {
+        try {
+            const response = await fetch('/api/v1/sports/live-odds/?sport=americanfootball_nfl');
+            if (!response.ok) throw new Error('API not available');
+
+            const data = await response.json();
+            const container = document.getElementById('value-plays-container');
+            // Session 559: API returns games in 'odds' key
+            const games = data.odds || data.data || data.games || [];
+
+            // Find toss-up games (45-55% implied probability)
+            const valuePlays = [];
+            games.forEach(game => {
+                if (game.bookmakers && game.bookmakers.length > 0) {
+                    const bm = game.bookmakers[0];
+                    const h2h = bm.markets?.find(m => m.key === 'h2h');
+                    if (h2h && h2h.outcomes) {
+                        h2h.outcomes.forEach(outcome => {
+                            const prob = americanToProb(outcome.price);
+                            if (prob >= 0.45 && prob <= 0.55) {
+                                valuePlays.push({
+                                    event: `${game.home_team} vs ${game.away_team}`,
+                                    team: outcome.name,
+                                    odds: outcome.price,
+                                    prob: prob
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+
+            if (valuePlays.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <div style="font-size: 1.5rem;">🎲</div>
+                        <p class="text-muted mb-0 mt-2">No toss-up games found</p>
+                        <small class="text-muted">Check back closer to game time</small>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = valuePlays.slice(0, 3).map(play => `
+                <div class="mb-2 p-3" style="background: rgba(168, 85, 247, 0.1); border-radius: 8px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="font-weight: 600; color: #c4b5fd;">${play.team}</div>
+                            <small class="text-muted">${truncate(play.event, 30)}</small>
+                        </div>
+                        <div>
+                            <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #e9d5ff;">
+                                ${formatOdds(play.odds)} (${(play.prob * 100).toFixed(0)}%)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.log('Odds API not available');
+            document.getElementById('value-plays-container').innerHTML =
+                '<div class="text-center text-muted py-3">Use /odds in Discord to check live odds</div>';
+        }
+    }
+
+    // Helper functions
+    function truncate(str, len) {
+        if (!str) return '';
+        return str.length > len ? str.substring(0, len) + '...' : str;
+    }
+
+    function formatOdds(odds) {
+        if (!odds) return '-';
+        const num = parseFloat(odds);
+        return num > 0 ? `+${num}` : `${num}`;
+    }
+
+    function americanToProb(odds) {
+        if (!odds) return 0.5;
+        const num = parseFloat(odds);
+        if (num > 0) return 100 / (num + 100);
+        return Math.abs(num) / (Math.abs(num) + 100);
+    }
+
+    function getStatusBadge(status) {
+        const styles = {
+            'pending': 'background: rgba(251, 191, 36, 0.2); color: #fcd34d;',
+            'won': 'background: rgba(34, 197, 94, 0.2); color: #86efac;',
+            'lost': 'background: rgba(239, 68, 68, 0.2); color: #fca5a5;',
+            'push': 'background: rgba(107, 114, 128, 0.2); color: #9ca3af;'
+        };
+        return `<span class="badge" style="${styles[status] || styles.pending}; font-size: 10px;">${(status || 'pending').toUpperCase()}</span>`;
+    }
+
+    function getArbColor(margin) {
+        if (margin >= 1.5) return '#ef4444';
+        if (margin >= 1.0) return '#fbbf24';
+        return '#6b7280';
+    }
+
+    function getArbClass(margin) {
+        if (margin >= 1.5) return 'arb-hot';
+        if (margin >= 1.0) return 'arb-good';
+        return 'arb-marginal';
+    }
+
+    // Expose to global scope
+    window.loadBettingOverview = loadBettingOverview;
+
+    // Auto-load on tab activation
+    document.addEventListener('DOMContentLoaded', function() {
+        const overviewTab = document.getElementById('betting-overview-tab');
+        if (overviewTab) {
+            overviewTab.addEventListener('shown.bs.tab', loadBettingOverview);
+        }
+    });
+})();
+</script>

@@ -1,0 +1,268 @@
+{% comment %}
+Session 559: Betting Odds Sub-Panel
+Live sports betting odds from The Odds API.
+{% endcomment %}
+
+<div class="tab-pane fade" id="betting-odds" role="tabpanel">
+    <!-- Header with Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 style="color: #22c55e;">🎯 Live Odds</h4>
+            <p class="text-muted mb-0">Real-time odds from 40+ bookmakers</p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- Sport Selector -->
+            <select id="odds-sport-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
+                <option value="americanfootball_nfl">🏈 NFL</option>
+                <option value="basketball_nba">🏀 NBA</option>
+                <option value="baseball_mlb">⚾ MLB</option>
+                <option value="icehockey_nhl">🏒 NHL</option>
+                <option value="americanfootball_ncaaf">🏈 NCAAF</option>
+                <option value="basketball_ncaab">🏀 NCAAB</option>
+                <option value="soccer_epl">⚽ EPL</option>
+                <option value="mma_mixed_martial_arts">🥊 UFC/MMA</option>
+            </select>
+            <!-- Market Type -->
+            <select id="odds-market-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
+                <option value="h2h">Moneyline</option>
+                <option value="spreads">Spread</option>
+                <option value="totals">Over/Under</option>
+            </select>
+            <!-- Refresh Button -->
+            <button class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;" onclick="loadLiveOdds()">
+                🔄 Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2)); border: 1px solid rgba(34, 197, 94, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #86efac;" id="odds-games-count">0</h3>
+                    <small class="text-muted">Games</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2)); border: 1px solid rgba(59, 130, 246, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #93c5fd;" id="odds-books-count">0</h3>
+                    <small class="text-muted">Bookmakers</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(124, 58, 237, 0.2)); border: 1px solid rgba(168, 85, 247, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #c4b5fd;" id="odds-tossups-count">0</h3>
+                    <small class="text-muted">Toss-ups</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border: 1px solid rgba(251, 191, 36, 0.4);">
+                <div class="card-body py-3">
+                    <h3 class="mb-0" style="color: #fcd34d;" id="odds-last-update">--:--</h3>
+                    <small class="text-muted">Updated</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="odds-loading" class="text-center py-5">
+        <div class="spinner-border" style="color: #22c55e;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Fetching live odds...</p>
+    </div>
+
+    <!-- Games Container -->
+    <div id="odds-games-container" style="display: none;">
+        <!-- Games will be rendered here -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="odds-empty" class="text-center py-5" style="display: none;">
+        <div style="font-size: 4rem;">📅</div>
+        <h5 class="mt-3" style="color: #22c55e;">No Games Scheduled</h5>
+        <p class="text-muted">Check back later or try a different sport.</p>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    async function loadLiveOdds() {
+        const loading = document.getElementById('odds-loading');
+        const container = document.getElementById('odds-games-container');
+        const empty = document.getElementById('odds-empty');
+
+        loading.style.display = 'block';
+        container.style.display = 'none';
+        empty.style.display = 'none';
+
+        try {
+            const sport = document.getElementById('odds-sport-filter').value;
+            const market = document.getElementById('odds-market-filter').value;
+
+            const response = await fetch(`/api/v1/sports/live-odds/?sport=${sport}&markets=${market}`);
+
+            if (!response.ok) {
+                throw new Error('API not available');
+            }
+
+            const data = await response.json();
+            // Session 559: API returns games in 'odds' key
+            const games = data.odds || data.data || data.games || [];
+
+            loading.style.display = 'none';
+
+            // Update stats
+            document.getElementById('odds-games-count').textContent = games.length;
+
+            // Count unique bookmakers
+            const bookmakers = new Set();
+            games.forEach(g => {
+                (g.bookmakers || []).forEach(b => bookmakers.add(b.key));
+            });
+            document.getElementById('odds-books-count').textContent = bookmakers.size;
+
+            // Count toss-ups (45-55% implied probability)
+            let tossups = 0;
+            games.forEach(game => {
+                if (game.bookmakers && game.bookmakers[0]) {
+                    const h2h = game.bookmakers[0].markets?.find(m => m.key === 'h2h');
+                    if (h2h && h2h.outcomes) {
+                        h2h.outcomes.forEach(o => {
+                            const prob = americanToProb(o.price);
+                            if (prob >= 0.45 && prob <= 0.55) tossups++;
+                        });
+                    }
+                }
+            });
+            document.getElementById('odds-tossups-count').textContent = tossups;
+            document.getElementById('odds-last-update').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            if (games.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+
+            // Render games
+            container.innerHTML = games.map(game => renderGameCard(game, market)).join('');
+            container.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error loading odds:', error);
+            loading.style.display = 'none';
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <div style="font-size: 3rem;">⚠️</div>
+                    <h5 class="mt-3 text-warning">Odds Unavailable</h5>
+                    <p class="text-muted">Use <code>/odds [sport]</code> in Discord to check live odds.</p>
+                    <p class="text-muted small">Make sure THE_ODDS_API_KEY is configured.</p>
+                </div>`;
+            container.style.display = 'block';
+        }
+    }
+
+    function renderGameCard(game, marketType) {
+        const startTime = new Date(game.commence_time);
+        const isLive = startTime <= new Date();
+        const timeStr = isLive ? 'LIVE' : startTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+        // Get best odds from all bookmakers
+        const bestOdds = {};
+        (game.bookmakers || []).forEach(book => {
+            const market = book.markets?.find(m => m.key === marketType) || book.markets?.[0];
+            if (market && market.outcomes) {
+                market.outcomes.forEach(outcome => {
+                    const key = outcome.name;
+                    if (!bestOdds[key] || outcome.price > bestOdds[key].price) {
+                        bestOdds[key] = { ...outcome, bookmaker: book.title || book.key };
+                    }
+                });
+            }
+        });
+
+        const outcomes = Object.values(bestOdds);
+        if (outcomes.length === 0) return '';
+
+        return `
+            <div class="card mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
+                    <div>
+                        <span class="badge ${isLive ? 'bg-danger' : ''}" style="${!isLive ? 'background: rgba(107, 114, 128, 0.3); color: #9ca3af;' : ''} font-size: 10px; margin-right: 10px;">
+                            ${isLive ? '🔴 LIVE' : '📅 ' + timeStr}
+                        </span>
+                        <span style="color: #86efac; font-weight: 600;">${game.home_team} vs ${game.away_team}</span>
+                    </div>
+                    <small class="text-muted">${game.bookmakers?.length || 0} books</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        ${outcomes.map((outcome, idx) => {
+                            const prob = americanToProb(outcome.price);
+                            const isFavorite = prob > 0.55;
+                            const isUnderdog = prob < 0.45;
+
+                            return `
+                                <div class="col-md-${marketType === 'totals' ? 6 : outcomes.length === 3 ? 4 : 6}">
+                                    <div class="odds-btn d-flex justify-content-between align-items-center mb-2"
+                                         style="cursor: pointer; ${isFavorite ? 'border-color: rgba(34, 197, 94, 0.6);' : isUnderdog ? 'border-color: rgba(239, 68, 68, 0.4);' : ''}">
+                                        <div>
+                                            <div style="font-weight: 600; color: ${isFavorite ? '#86efac' : isUnderdog ? '#fca5a5' : '#e5e7eb'};">
+                                                ${outcome.name}
+                                                ${isFavorite ? '<span style="font-size: 10px; color: #22c55e; margin-left: 5px;">FAV</span>' : ''}
+                                            </div>
+                                            <small class="text-muted">${outcome.bookmaker}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div style="font-size: 18px; font-weight: 800; color: #fbbf24;">
+                                                ${formatOdds(outcome.price)}
+                                            </div>
+                                            <small style="color: #9ca3af;">${(prob * 100).toFixed(0)}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function formatOdds(odds) {
+        if (!odds) return '-';
+        const num = parseFloat(odds);
+        return num > 0 ? `+${num}` : `${num}`;
+    }
+
+    function americanToProb(odds) {
+        if (!odds) return 0.5;
+        const num = parseFloat(odds);
+        if (num > 0) return 100 / (num + 100);
+        return Math.abs(num) / (Math.abs(num) + 100);
+    }
+
+    // Expose to global scope
+    window.loadLiveOdds = loadLiveOdds;
+
+    // Filter change handlers
+    document.getElementById('odds-sport-filter')?.addEventListener('change', loadLiveOdds);
+    document.getElementById('odds-market-filter')?.addEventListener('change', loadLiveOdds);
+
+    // Auto-load when tab is shown
+    document.addEventListener('DOMContentLoaded', function() {
+        const oddsTab = document.getElementById('betting-odds-tab');
+        if (oddsTab) {
+            oddsTab.addEventListener('shown.bs.tab', loadLiveOdds);
+        }
+    });
+})();
+</script>

@@ -1094,7 +1094,7 @@ from core.views_odds_sports import (
     sports_game_analysis, live_betting_opportunities, list_betting_markets,
     get_bankroll_management, get_bankroll_stats, live_odds, get_weather_data, get_injury_data,
     get_betting_intelligence, orchestrate_agent_analysis, get_orchestration_status, get_game_details,
-    get_bookmaker_analysis, get_game_spider_insights
+    get_bookmaker_analysis, get_game_spider_insights, scan_arbitrage_opportunities
 )
 
 # Import Phase 2 advanced features
@@ -2400,7 +2400,9 @@ urlpatterns = [
     # Add missing betting endpoints expected by verification
     path('api/v1/betting/live/', live_betting_opportunities, name='betting-live'),
     path('api/v1/betting/arbitrage/', detect_arbitrage, name='betting-arbitrage'),
-    
+    # Session 559: GET endpoint for live arbitrage scanning
+    path('api/v1/betting/arbitrage/scan/', scan_arbitrage_opportunities, name='betting-arbitrage-scan'),
+
     # ===== PHASE 2 ADVANCED FEATURES =====
     
     # Advanced RAG & Embeddings APIs

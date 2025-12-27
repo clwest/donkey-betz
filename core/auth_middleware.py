@@ -86,6 +86,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 558: Prediction Markets & Sports Odds API (read-only for Command Center)
         '/api/prediction-markets/',  # Kalshi prediction market data
         '/api/sports-odds/',  # The Odds API sports betting data
+
+        # Session 559: Betting Dashboard APIs (read-only for web UI)
+        '/api/v1/betting/arbitrage/',  # Arbitrage scanning
+        '/api/v1/sports/live-odds/',  # Live sports odds
+        '/api/v1/odds/bankroll/',  # Bankroll stats (read-only)
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
