@@ -1,77 +1,68 @@
 # Session 559 - Start Here
 
 **Previous Session:** 558
-**Date:** December 26, 2025
-**Focus:** TBD - Kalshi Prediction Markets Fully Integrated
+**Date:** December 27, 2025
+**Focus:** UI Updates for Betting Platform + New Features
 
 ---
 
 ## Session 558 Accomplishments
 
-### Kalshi Prediction Markets Integration
+### Complete Betting Platform (8 Features)
 
-Complete integration of Kalshi prediction markets into the platform:
+| Feature | Command/Task | Status |
+|---------|--------------|--------|
+| Sports Odds Lookup | `/odds [sport]` | ✅ |
+| Daily Betting Digest | Celery 8:30 AM | ✅ |
+| Arbitrage Detector | `/arb` | ✅ |
+| Bankroll Tracker | `/bankroll`, `/bet`, `/resolve` | ✅ |
+| Market Intelligence | Every 2 hours | ✅ |
+| Futures Tracker | `/futures` | ✅ |
+| Bet Slip Generator | `/slip` | ✅ |
+| Real-Time Alerts | Every 30 min | ✅ |
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Spider** | ✅ COMPLETE | `kalshi_spider.py` - Fetches markets, series, orderbooks |
-| **Service** | ✅ COMPLETE | `kalshi_service.py` - RSA-PSS authenticated trading |
-| **Celery Tasks** | ✅ COMPLETE | 30-min collection + 4-hour intelligence posts |
-| **Market Intelligence** | ✅ COMPLETE | Added to Market Intelligence Desk |
-| **Discord Command** | ✅ COMPLETE | `/predictions` with category filtering |
+### Arbitrage Detector Fixes
+- 3-way market handling (soccer with draw)
+- Fuzzy team name matching
+- Sanity checks (prob ≥85%, profit ≤10%)
+- None value handling
 
-### New Files Created
+### New Files
+| File | Purpose |
+|------|---------|
+| `core/agents/markets/arbitrage_detector.py` | Arb detection agent |
+| `core/models_bankroll.py` | Bankroll tracking models |
+| `run_discord_bot.py` | Discord bot helper script |
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `ai_core/spiders/specialized/kalshi_spider.py` | 448 | Public API spider |
-| `core/services/kalshi_service.py` | 350 | Authenticated trading service |
-
-### Integration Points
-
-1. **Spider Registry** - Kalshi registered as prediction_markets category
-2. **SpiderData Storage** - Markets stored with probabilities and volumes
-3. **Market Intelligence Desk** - Prediction signals in executive briefs
-4. **Discord** - `/predictions`, `/predictions category:economics`
-
-### Tested & Verified
-
-```bash
-# Spider fetches 200 markets
-.venv/bin/python -c "from ai_core.spiders.specialized.kalshi_spider import KalshiSpider; s=KalshiSpider(); print(len(s.fetch_data(200)))"
-# Output: 200
-
-# Celery task stores to SpiderData
-.venv/bin/celery -A core call core.tasks.collect_kalshi_prediction_markets
-# Output: 200 records stored
-```
-
-**Handoff:** `docs/handoffs/SESSION_558_KALSHI_PREDICTION_MARKETS.md`
+**Handoff:** `docs/handoffs/SESSION_558_BETTING_PLATFORM.md`
 
 ---
 
-## Session 559 Priority Options
+## Session 559 Priorities
 
-### Option 1: Kalshi Web UI Panel
-- Add prediction markets panel to Intelligence Command Center
-- Live probabilities with auto-refresh
-- Category filtering and search
-- Market details modal with orderbook
+### 1. UI Updates for Betting Platform
+The Discord commands work great, but the web UI needs updates:
 
-### Option 2: Trading Automation
-- Create PredictionMarketAgent for automated analysis
-- Position tracking and P&L reporting
-- Alert system for probability shifts
-- Paper trading mode for testing
+- [ ] **Betting Dashboard Tab** - New tab or sub-tab showing:
+  - Live odds from The Odds API
+  - Arbitrage opportunities
+  - User's bankroll stats
+  - Recent wagers
 
-### Option 3: Historical Analysis
-- Track prediction accuracy over time
-- Build model for identifying mispriced markets
-- Backtest prediction strategies
-- Performance metrics dashboard
+- [ ] **Market Intelligence Panel Update** - Add:
+  - Prediction market opportunities (Kalshi)
+  - Sports betting insights
+  - Value plays identified by agents
 
-### Option 4: Something Else
-Ask the user what they want to focus on.
+- [ ] **Arbitrage Alerts Widget** - Real-time notifications for arbs
+
+- [ ] **Bankroll Visualization** - Charts for P/L over time
+
+### 2. Additional Features to Consider
+- Kelly Criterion calculator for optimal bet sizing
+- Historical odds tracking / line movement charts
+- Betting patterns analysis (win rate by sport/bet type)
+- Push notifications for arbs (browser/mobile)
 
 ---
 
@@ -79,13 +70,11 @@ Ask the user what they want to focus on.
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Prediction Markets** | 200+ | Kalshi integrated |
-| **Spiders** | 76 | +1 Kalshi |
-| **Celery Beat Tasks** | 2 new | Kalshi collection |
+| **Spiders** | 76 | +Kalshi, TheOdds |
+| **Agents** | 55 | +ArbitrageDetector |
+| **Discord Commands** | ~96 | 4 cogs disabled for limit |
+| **Celery Beat Tasks** | +3 | Betting digest, intelligence, alerts |
 | **Knowledge Entries** | 3,379+ | Active |
-| **Decisions** | 393+ | Clean |
-| **Agents** | 55 | All learning |
-| **Review Documents** | 4 | Chief of Staff |
 
 ---
 
@@ -95,77 +84,58 @@ Ask the user what they want to focus on.
 # 1. Start all services
 make start && make celery
 
-# 2. Verify health
-curl http://localhost:8000/health/ping/
+# 2. Run Discord bot
+.venv/bin/python run_discord_bot.py
 
-# 3. Test Kalshi integration
-.venv/bin/python -c "
-from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
-spider = KalshiSpider()
-markets = spider.fetch_data(max_results=5)
-for m in markets:
-    if m.get('data_type') == 'prediction_market':
-        print(f\"{m['title'][:50]} - {m['implied_probability_pct']:.1f}%\")
-"
+# 3. Test betting commands in Discord
+/odds nfl
+/arb
+/bankroll
+/futures
 
-# 4. Check SpiderData records
-.venv/bin/python manage.py shell -c "
-from core.models_unified_system import SpiderData
-kalshi = SpiderData.objects.filter(spider_name='kalshi').count()
-print(f'Kalshi records: {kalshi}')
-"
-
-# 5. Access AI Studio
+# 4. Access AI Studio
 open http://localhost:8000/ai-studio/
-
-# 6. Test Discord command (if bot running)
-# /predictions
-# /predictions category:economics limit:10
 ```
 
 ---
 
-## Key Files (Kalshi)
+## Key Files (Betting Platform)
 
 | File | Purpose |
 |------|---------|
-| `ai_core/spiders/specialized/kalshi_spider.py` | Public API spider |
-| `core/services/kalshi_service.py` | Authenticated trading |
-| `ai_core/spiders/spider_registry.py` | Spider registration |
-| `core/tasks.py` | Celery collection tasks |
-| `core/celery.py` | Beat schedules |
-| `core/agents/stocks/market_intelligence_coordinator.py` | Intelligence integration |
-| `core/services/discord_bot.py` | `/predictions` command |
+| `ai_core/spiders/specialized/theodds_spider.py` | Sports odds spider |
+| `ai_core/spiders/specialized/kalshi_spider.py` | Prediction markets |
+| `core/agents/markets/arbitrage_detector.py` | Arb detection |
+| `core/models_bankroll.py` | Bankroll models |
+| `core/services/discord_bot.py` | Discord commands |
+| `core/tasks.py` | Celery tasks |
 
 ---
 
-## API Endpoints (Kalshi - via Spider)
+## Environment Variables Required
 
-### Public (No Auth Required)
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /markets` | List all markets |
-| `GET /markets/{ticker}` | Market details |
-| `GET /markets/{ticker}/orderbook` | Order book |
-| `GET /series` | Market categories |
-
-### Authenticated (Requires KALSHI_API_KEY + KALSHI_PRIVATE_KEY)
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /portfolio/balance` | Account balance |
-| `GET /portfolio/positions` | Current positions |
-| `POST /portfolio/orders` | Place order |
-
----
-
-## Environment Variables
-
-Required for authenticated trading:
 ```bash
-KALSHI_API_KEY=your_api_key
-KALSHI_PRIVATE_KEY=your_rsa_private_key
+THE_ODDS_API_KEY=your_key_here      # Required for sports odds
+KALSHI_API_KEY=your_key_here        # Optional for prediction markets
 ```
 
 ---
 
-**Kalshi Prediction Markets: FULLY INTEGRATED** ✅
+## Discord Commands Available
+
+### Betting
+| Command | Description |
+|---------|-------------|
+| `/odds [sport]` | Live sports betting odds |
+| `/arb [sport]` | Arbitrage opportunities |
+| `/bankroll` | View bankroll stats |
+| `/bet` | Log a new wager |
+| `/resolve` | Resolve pending wager |
+| `/futures [league]` | Championship futures |
+| `/slip` | Generate bet slip |
+| `/predictions` | Kalshi prediction markets |
+
+---
+
+**Betting Platform: COMPLETE** ✅
+**Next Focus: Web UI Updates**
