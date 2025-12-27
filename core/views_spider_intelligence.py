@@ -2191,3 +2191,76 @@ def get_prediction_markets(request):
             'error': str(e),
             'markets': []
         }, status=500)
+
+
+def get_sports_odds(request):
+    """
+    Session 558: Returns sports betting odds from The Odds API spider.
+
+    Query params:
+        sport: Filter by sport (nfl, nba, mlb, nhl, soccer, mma, etc.)
+        limit: Number of events (default 50)
+    """
+    try:
+        from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+        sport = request.GET.get('sport', '')
+        limit = min(int(request.GET.get('limit', 50)), 100)
+
+        # Map display names to sport keys
+        sport_key_map = {
+            'nfl': 'americanfootball_nfl',
+            'nba': 'basketball_nba',
+            'mlb': 'baseball_mlb',
+            'nhl': 'icehockey_nhl',
+            'ncaaf': 'americanfootball_ncaaf',
+            'ncaab': 'basketball_ncaab',
+            'soccer': None,  # Multiple soccer leagues
+            'epl': 'soccer_epl',
+            'mls': 'soccer_usa_mls',
+            'mma': 'mma_mixed_martial_arts',
+            'ufc': 'mma_mixed_martial_arts',
+        }
+
+        # Fetch from spider
+        spider = TheOddsSpider()
+
+        if sport and sport.lower() in sport_key_map and sport_key_map[sport.lower()]:
+            # Fetch specific sport
+            sport_key = sport_key_map[sport.lower()]
+            all_data = spider.fetch_data(sports=[sport_key], max_results=limit * 2)
+        else:
+            # Fetch all priority 1 sports
+            all_data = spider.fetch_data(max_results=limit * 2)
+
+        # Filter to sports odds only
+        events = [e for e in all_data if e.get('data_type') == 'sports_odds']
+
+        # Filter by sport display name if needed
+        if sport and sport.lower() == 'soccer':
+            events = [e for e in events if e.get('category') == 'soccer']
+
+        # Sort by game time (soonest first)
+        events.sort(key=lambda e: e.get('commence_time', ''))
+
+        # Limit results
+        events = events[:limit]
+
+        # Get API usage
+        usage = spider.get_api_usage()
+
+        return JsonResponse({
+            'success': True,
+            'events': events,
+            'total': len(events),
+            'sport': sport or 'all',
+            'api_usage': usage,
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching sports odds: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'events': []
+        }, status=500)

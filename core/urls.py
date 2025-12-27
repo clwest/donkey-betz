@@ -202,8 +202,9 @@ from core.views_spider_intelligence import (
     spider_detail,
     agent_detail,  # Session 537: Agent detail for ICC
     situation_detail,  # Session 537: Situation detail for ICC
-    # Session 558: Prediction Markets
+    # Session 558: Prediction Markets & Sports Odds
     get_prediction_markets,
+    get_sports_odds,
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -2578,6 +2579,7 @@ urlpatterns = [
 
     # Session 558: Prediction Markets API
     path('api/prediction-markets/', get_prediction_markets, name='prediction-markets'),
+    path('api/sports-odds/', get_sports_odds, name='sports-odds'),
 
     # Session 388: Income Action Pipeline - Spider to Income Bridge
     path('api/income/save-opportunity/', income_save_opportunity, name='income-save-opportunity'),

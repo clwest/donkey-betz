@@ -18576,3 +18576,251 @@ def collect_kalshi_market_intelligence():
             'success': False,
             'error': str(e)
         }
+
+
+# ============================================================
+# SESSION 558: SPORTS ODDS DATA COLLECTION (THE ODDS API)
+# ============================================================
+
+@shared_task
+def collect_sports_odds():
+    """
+    Collect sports betting odds from The Odds API and store in SpiderData.
+
+    Session 558: Initial implementation
+    - Fetches odds from 40+ bookmakers for major sports
+    - Sports: NFL, NBA, MLB, NHL, Soccer, UFC, Tennis, Golf
+    - Stores as SpiderData for semantic search and agent analysis
+    """
+    from persistence.models import SpiderData
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from django.utils import timezone
+    import hashlib
+
+    logger.info("🏈 [THEODDS] Starting sports odds data collection...")
+
+    results = {
+        'events_fetched': 0,
+        'new_records': 0,
+        'updated_records': 0,
+        'errors': 0,
+        'sports': {},
+    }
+
+    try:
+        spider = TheOddsSpider()
+
+        # Fetch odds for priority 1 sports (NFL, NBA, MLB, NHL, EPL, Champions League, UFC)
+        events = spider.fetch_data(max_results=150)
+
+        # Filter to sports odds only (exclude api_status)
+        sports_events = [
+            e for e in events
+            if e.get('data_type') == 'sports_odds'
+        ]
+
+        results['events_fetched'] = len(sports_events)
+        logger.info(f"🏈 [THEODDS] Fetched {len(sports_events)} sports events")
+
+        for event in sports_events:
+            try:
+                event_id = event.get('event_id', '')
+                title = event.get('title', '')
+                sport_name = event.get('sport_name', 'Unknown')
+                category = event.get('category', 'sports')
+
+                # Track sport counts
+                results['sports'][sport_name] = results['sports'].get(sport_name, 0) + 1
+
+                # Generate unique ID based on event_id
+                unique_id = hashlib.md5(f"theodds:{event_id}".encode()).hexdigest()[:16]
+
+                # Build content for embedding
+                content_parts = [
+                    f"Sports Event: {title}",
+                    f"Sport: {sport_name}",
+                    f"League: {event.get('league', sport_name)}",
+                ]
+
+                # Add odds info
+                if event.get('home_odds') and event.get('away_odds'):
+                    content_parts.append(f"Moneyline: {event.get('home_team')} {event.get('home_odds'):+d} vs {event.get('away_team')} {event.get('away_odds'):+d}")
+
+                if event.get('home_implied_prob'):
+                    content_parts.append(f"Win probability: {event.get('home_team')} {event.get('home_implied_prob')}%")
+
+                if event.get('favorite'):
+                    content_parts.append(f"Favorite: {event.get('favorite')} ({event.get('favorite_probability', 0)}% implied)")
+
+                if event.get('home_spread'):
+                    content_parts.append(f"Spread: {event.get('home_team')} {event.get('home_spread'):+.1f}")
+
+                if event.get('total_line'):
+                    content_parts.append(f"Total: O/U {event.get('total_line')}")
+
+                if event.get('commence_time_formatted'):
+                    content_parts.append(f"Game time: {event.get('commence_time_formatted')}")
+
+                content = "\n".join(content_parts)
+
+                # Build metadata
+                metadata = {
+                    'event_id': event_id,
+                    'sport_key': event.get('sport_key'),
+                    'sport_name': sport_name,
+                    'league': event.get('league'),
+                    'home_team': event.get('home_team'),
+                    'away_team': event.get('away_team'),
+                    'commence_time': event.get('commence_time'),
+                    'home_odds': event.get('home_odds'),
+                    'away_odds': event.get('away_odds'),
+                    'draw_odds': event.get('draw_odds'),
+                    'home_implied_prob': event.get('home_implied_prob'),
+                    'away_implied_prob': event.get('away_implied_prob'),
+                    'home_spread': event.get('home_spread'),
+                    'away_spread': event.get('away_spread'),
+                    'total_line': event.get('total_line'),
+                    'over_odds': event.get('over_odds'),
+                    'under_odds': event.get('under_odds'),
+                    'favorite': event.get('favorite'),
+                    'favorite_probability': event.get('favorite_probability'),
+                    'bookmaker_count': event.get('bookmaker_count'),
+                    'best_bookmaker': event.get('best_bookmaker'),
+                    'is_live': event.get('is_live'),
+                    'tags': event.get('tags', []),
+                }
+
+                # Store in SpiderData
+                obj, created = SpiderData.objects.update_or_create(
+                    spider_name='theodds',
+                    source_url=f"https://the-odds-api.com/sports/{event.get('sport_key')}/{event_id}",
+                    defaults={
+                        'source_platform': 'theodds',
+                        'data_type': 'sports_odds',
+                        'title': title[:500] if title else f"{sport_name} Event",
+                        'content': content[:5000],
+                        'category': category,
+                        'raw_data': event,
+                        'metadata': metadata,
+                        'quality_score': 0.85,  # High quality - real API data
+                        'collected_at': timezone.now(),
+                    }
+                )
+
+                if created:
+                    results['new_records'] += 1
+                else:
+                    results['updated_records'] += 1
+
+            except Exception as e:
+                logger.error(f"🏈 [THEODDS] Error storing event {event.get('title', 'unknown')}: {e}")
+                results['errors'] += 1
+
+        # Log API usage
+        usage = spider.get_api_usage()
+        logger.info(f"🏈 [THEODDS] API usage: {usage.get('requests_used', '?')}/{usage.get('monthly_limit', '?')} requests")
+
+        logger.info(f"🏈 [THEODDS] Collection complete: {results['events_fetched']} events, {results['new_records']} new, {results['updated_records']} updated")
+
+        return {
+            'success': True,
+            **results,
+            'api_usage': usage,
+        }
+
+    except Exception as e:
+        logger.error(f"🏈 [THEODDS] Collection failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def collect_sports_odds_intelligence():
+    """
+    Post trending sports odds to Discord #market-intelligence.
+
+    Session 558: Posts upcoming high-interest games with betting insights.
+    """
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from core.services.discord_notifications import DiscordNotificationService
+
+    logger.info("🏈 [THEODDS-INTEL] Collecting sports odds intelligence...")
+
+    try:
+        spider = TheOddsSpider()
+
+        # Get upcoming events (next 24 hours)
+        upcoming = spider.get_upcoming_events(hours=24)
+
+        if not upcoming:
+            logger.info("🏈 [THEODDS-INTEL] No upcoming events in next 24 hours")
+            return {'success': True, 'events': 0}
+
+        # Group by sport
+        by_sport = {}
+        for event in upcoming:
+            sport = event.get('sport_name', 'Unknown')
+            if sport not in by_sport:
+                by_sport[sport] = []
+            by_sport[sport].append(event)
+
+        # Build Discord message
+        lines = ["🏈 **Sports Betting Intelligence**", ""]
+
+        for sport, events in by_sport.items():
+            lines.append(f"**{sport}** ({len(events)} games)")
+            # Show top 3 per sport
+            for event in events[:3]:
+                home = event.get('home_team', '?')
+                away = event.get('away_team', '?')
+                home_odds = event.get('home_odds')
+                away_odds = event.get('away_odds')
+                time_str = event.get('commence_time_formatted', '')
+
+                odds_str = ""
+                if home_odds and away_odds:
+                    odds_str = f" ({home_odds:+d} / {away_odds:+d})"
+
+                lines.append(f"• {away} @ {home}{odds_str} - {time_str}")
+
+            lines.append("")
+
+        # Get best bets (toss-ups)
+        toss_ups = [e for e in upcoming if 45 <= (e.get('home_implied_prob') or 50) <= 55]
+        if toss_ups:
+            lines.append("**🎯 Close Matchups (Toss-ups)**")
+            for event in toss_ups[:3]:
+                home = event.get('home_team', '?')
+                away = event.get('away_team', '?')
+                home_prob = event.get('home_implied_prob', 50)
+                lines.append(f"• {away} @ {home} - {home_prob:.0f}% / {100-home_prob:.0f}%")
+
+        message = "\n".join(lines)
+
+        # Post to Discord
+        try:
+            discord_service = DiscordNotificationService()
+            discord_service.send_market_intelligence(
+                title="🏈 Sports Betting Odds",
+                content=message,
+                color=0x00FF00  # Green
+            )
+        except Exception as discord_err:
+            logger.warning(f"🏈 [THEODDS-INTEL] Discord notification failed: {discord_err}")
+
+        logger.info(f"🏈 [THEODDS-INTEL] Posted {len(upcoming)} upcoming events to Discord")
+
+        return {
+            'success': True,
+            'events': len(upcoming),
+            'sports': list(by_sport.keys()),
+        }
+
+    except Exception as e:
+        logger.error(f"🏈 [THEODDS-INTEL] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }

@@ -2303,6 +2303,146 @@ const ICCState = {
             document.getElementById('icc-trending-markets').innerHTML = '<p class="text-danger text-center">Error loading markets</p>';
             document.getElementById('icc-all-markets').innerHTML = '<p class="text-danger text-center">Error loading markets</p>';
         }
+    },
+
+    /**
+     * Session 558: Load sports odds from The Odds API
+     */
+    async loadSportsOdds(sport = null) {
+        console.log('ICC: Loading sports odds...', sport || 'all sports');
+
+        try {
+            // Build API URL with optional sport filter
+            let url = '/api/sports-odds/';
+            if (sport) {
+                url += `?sport=${encodeURIComponent(sport)}`;
+            }
+
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            const events = data.events || [];
+
+            // Calculate stats
+            const now = new Date();
+            const upcoming24h = events.filter(e => {
+                if (!e.commence_time) return false;
+                const gameTime = new Date(e.commence_time);
+                const hoursUntil = (gameTime - now) / (1000 * 60 * 60);
+                return hoursUntil > 0 && hoursUntil <= 24;
+            });
+
+            const tossups = events.filter(e => {
+                const prob = e.home_implied_prob || 50;
+                return prob >= 45 && prob <= 55;
+            });
+
+            // Count unique leagues
+            const leagues = new Set(events.map(e => e.sport_name)).size;
+
+            // Update stats badges
+            document.getElementById('icc-sports-count').textContent = `${events.length} events`;
+            document.getElementById('icc-sports-upcoming').textContent = upcoming24h.length;
+            document.getElementById('icc-sports-tossups').textContent = tossups.length;
+            document.getElementById('icc-sports-leagues').textContent = leagues;
+            document.getElementById('icc-sports-events-count').textContent = events.length;
+
+            // Sport emojis
+            const sportEmoji = {
+                'NFL': '🏈',
+                'NBA': '🏀',
+                'MLB': '⚾',
+                'NHL': '🏒',
+                'NCAAF': '🏈',
+                'NCAAB': '🏀',
+                'English Premier League': '⚽',
+                'La Liga': '⚽',
+                'MLS': '⚽',
+                'Champions League': '⚽',
+                'UFC/MMA': '🥊',
+                'Boxing': '🥊',
+            };
+
+            // Render a single sports event card
+            const renderSportsCard = (event) => {
+                const home = event.home_team || 'Home';
+                const away = event.away_team || 'Away';
+                const homeOdds = event.home_odds;
+                const awayOdds = event.away_odds;
+                const homeProb = event.home_implied_prob || 50;
+                const sport = event.sport_name || 'Sports';
+                const emoji = sportEmoji[sport] || '🎮';
+                const gameTime = event.commence_time_formatted || '';
+                const spread = event.home_spread;
+                const total = event.total_line;
+
+                // Favorite indicator
+                const homeFav = homeOdds && awayOdds && homeOdds < awayOdds;
+                const awayFav = homeOdds && awayOdds && awayOdds < homeOdds;
+
+                // Status color based on how close the matchup is
+                let borderColor = '#22c55e';
+                if (homeProb >= 70 || homeProb <= 30) {
+                    borderColor = '#a855f7';  // Clear favorite
+                } else if (homeProb >= 45 && homeProb <= 55) {
+                    borderColor = '#f59e0b';  // Toss-up
+                }
+
+                // Format odds with sign
+                const formatOdds = (odds) => {
+                    if (!odds) return '--';
+                    return odds > 0 ? `+${odds}` : `${odds}`;
+                };
+
+                return `
+                    <div class="mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 3px solid ${borderColor};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div style="color: #9ca3af; font-size: 10px; margin-bottom: 2px;">
+                                    ${emoji} ${sport} • ${gameTime}
+                                </div>
+                                <div style="color: #e5e7eb; font-size: 13px;">
+                                    <span ${awayFav ? 'style="font-weight: bold;"' : ''}>${away}</span>
+                                    <span style="color: #6b7280;"> @ </span>
+                                    <span ${homeFav ? 'style="font-weight: bold;"' : ''}>${home}</span>
+                                </div>
+                            </div>
+                            <div class="text-end" style="min-width: 100px;">
+                                <div style="font-size: 11px;">
+                                    <span style="color: ${awayFav ? '#22c55e' : '#e5e7eb'};">${formatOdds(awayOdds)}</span>
+                                    <span style="color: #6b7280;"> / </span>
+                                    <span style="color: ${homeFav ? '#22c55e' : '#e5e7eb'};">${formatOdds(homeOdds)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1" style="font-size: 10px; color: #6b7280;">
+                            <span>
+                                ${spread ? `Spread: ${spread > 0 ? '+' : ''}${spread}` : ''}
+                                ${spread && total ? ' | ' : ''}
+                                ${total ? `O/U: ${total}` : ''}
+                            </span>
+                            <span>${homeProb.toFixed(0)}% / ${(100 - homeProb).toFixed(0)}%</span>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Render events
+            const container = document.getElementById('icc-sports-events');
+            if (events.length > 0) {
+                container.innerHTML = events.slice(0, 30).map(renderSportsCard).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted text-center">No sports events available. Try a different sport or check back later.</p>';
+            }
+
+            console.log('ICC: Loaded', events.length, 'sports events');
+
+        } catch (error) {
+            console.error('ICC: Error loading sports odds:', error);
+            document.getElementById('icc-sports-events').innerHTML = '<p class="text-danger text-center">Error loading sports odds</p>';
+        }
     }
 };
 
@@ -2352,11 +2492,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Session 558: Markets tab
+    // Session 558: Markets tab - loads both prediction markets and sports odds
     const marketsTab = document.getElementById('icc-markets-tab');
     if (marketsTab) {
         marketsTab.addEventListener('shown.bs.tab', function() {
             ICCState.loadPredictionMarkets();
+            ICCState.loadSportsOdds();
         });
     }
 });

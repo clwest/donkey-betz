@@ -626,6 +626,21 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 558: Sports Odds Collection (The Odds API)
+    'collect-sports-odds': {
+        'task': 'core.tasks.collect_sports_odds',
+        'schedule': crontab(minute='*/60'),  # Every hour (conserve API quota: 20k/month)
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    'collect-sports-odds-intelligence': {
+        'task': 'core.tasks.collect_sports_odds_intelligence',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
     # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
     'track-prediction-outcomes': {
         'task': 'learning_loop.track_prediction_outcomes',
