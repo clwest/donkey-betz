@@ -202,6 +202,8 @@ from core.views_spider_intelligence import (
     spider_detail,
     agent_detail,  # Session 537: Agent detail for ICC
     situation_detail,  # Session 537: Situation detail for ICC
+    # Session 558: Prediction Markets
+    get_prediction_markets,
 )
 
 # Session 219: Import agent intelligence views (Phase A)
@@ -2573,6 +2575,9 @@ urlpatterns = [
     path('api/spider-intelligence/detail/<str:spider_name>/', spider_detail, name='spider-intelligence-detail'),
     path('api/agent-intelligence/detail/<str:agent_name>/', agent_detail, name='agent-intelligence-detail'),  # Session 537
     path('api/situation-intelligence/detail/<str:situation_type>/', situation_detail, name='situation-intelligence-detail'),  # Session 537
+
+    # Session 558: Prediction Markets API
+    path('api/prediction-markets/', get_prediction_markets, name='prediction-markets'),
 
     # Session 388: Income Action Pipeline - Spider to Income Bridge
     path('api/income/save-opportunity/', income_save_opportunity, name='income-save-opportunity'),

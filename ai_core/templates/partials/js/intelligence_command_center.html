@@ -2171,6 +2171,138 @@ const ICCState = {
             console.error('ICC: Error asking hive mind:', error);
             responseDiv.innerHTML = '<p class="text-danger mb-0">Error connecting to hive mind</p>';
         }
+    },
+
+    /**
+     * Session 558: Load prediction markets from Kalshi
+     */
+    async loadPredictionMarkets(category = null) {
+        console.log('ICC: Loading prediction markets...', category || 'all categories');
+
+        try {
+            // Build API URL with optional category filter
+            let url = '/api/prediction-markets/';
+            if (category) {
+                url += `?category=${encodeURIComponent(category)}`;
+            }
+
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            // Update stats
+            const markets = data.markets || [];
+            const trendingMarkets = markets.filter(m => m.is_trending || (m.volume && m.volume > 10000));
+
+            // Count by probability
+            const likely = markets.filter(m => (m.implied_probability_pct || 0) >= 80).length;
+            const uncertain = markets.filter(m => {
+                const prob = m.implied_probability_pct || 0;
+                return prob >= 40 && prob <= 60;
+            }).length;
+            const unlikely = markets.filter(m => (m.implied_probability_pct || 0) <= 20).length;
+            const totalVolume = markets.reduce((sum, m) => sum + (m.volume || 0), 0);
+
+            // Update stats badges
+            document.getElementById('icc-markets-count').textContent = `${markets.length} markets`;
+            document.getElementById('icc-markets-likely').textContent = likely;
+            document.getElementById('icc-markets-uncertain').textContent = uncertain;
+            document.getElementById('icc-markets-unlikely').textContent = unlikely;
+            document.getElementById('icc-markets-volume').textContent = `$${(totalVolume / 100).toLocaleString()}`;
+            document.getElementById('icc-trending-count').textContent = trendingMarkets.length;
+            document.getElementById('icc-all-markets-count').textContent = markets.length;
+
+            // Category emojis
+            const categoryEmoji = {
+                'economics': '📊',
+                'politics': '🏛️',
+                'finance': '💰',
+                'tech': '🔧',
+                'weather': '🌤️',
+                'entertainment': '🎬',
+                'science': '🔬',
+                'general': '📈'
+            };
+
+            // Render a single market card
+            const renderMarketCard = (market) => {
+                const title = market.title || 'Unknown Market';
+                const prob = market.implied_probability_pct || 50;
+                const yesBid = market.yes_bid || 0;
+                const yesAsk = market.yes_ask || 0;
+                const volume = market.volume || 0;
+                const cat = market.category || 'general';
+                const emoji = categoryEmoji[cat] || '📈';
+
+                // Probability bar
+                const probBarFilled = Math.round(prob / 10);
+                const probBar = '█'.repeat(probBarFilled) + '░'.repeat(10 - probBarFilled);
+
+                // Status color and text
+                let statusColor, statusText;
+                if (prob >= 80) {
+                    statusColor = '#22c55e';
+                    statusText = '🟢 Likely';
+                } else if (prob <= 20) {
+                    statusColor = '#ef4444';
+                    statusText = '🔴 Unlikely';
+                } else if (prob >= 40 && prob <= 60) {
+                    statusColor = '#f59e0b';
+                    statusText = '🟡 Uncertain';
+                } else {
+                    statusColor = '#6b7280';
+                    statusText = '⚪ Leaning';
+                }
+
+                return `
+                    <div class="mb-2 p-2" style="background: rgba(168, 85, 247, 0.1); border-radius: 8px; border-left: 3px solid ${statusColor};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div style="color: #e5e7eb; font-size: 13px; font-weight: 500;">
+                                    ${emoji} ${title.length > 60 ? title.substring(0, 60) + '...' : title}
+                                </div>
+                                <div class="mt-1" style="font-family: monospace; font-size: 11px;">
+                                    <span style="color: #a855f7;">${prob.toFixed(1)}%</span>
+                                    <span style="color: #6b7280; margin-left: 8px;">${probBar}</span>
+                                </div>
+                            </div>
+                            <div class="text-end" style="min-width: 80px;">
+                                <div style="color: ${statusColor}; font-size: 11px;">${statusText}</div>
+                                <div style="color: #6b7280; font-size: 10px;">${yesBid}¢-${yesAsk}¢</div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1" style="font-size: 10px; color: #6b7280;">
+                            <span>Vol: ${volume.toLocaleString()}</span>
+                            <span class="badge" style="background: rgba(168, 85, 247, 0.3); font-size: 9px;">${cat}</span>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Render trending markets
+            const trendingContainer = document.getElementById('icc-trending-markets');
+            if (trendingMarkets.length > 0) {
+                trendingContainer.innerHTML = trendingMarkets.slice(0, 5).map(renderMarketCard).join('');
+            } else {
+                trendingContainer.innerHTML = '<p class="text-muted text-center">No trending markets</p>';
+            }
+
+            // Render all markets
+            const allContainer = document.getElementById('icc-all-markets');
+            if (markets.length > 0) {
+                allContainer.innerHTML = markets.slice(0, 20).map(renderMarketCard).join('');
+            } else {
+                allContainer.innerHTML = '<p class="text-muted text-center">No markets available</p>';
+            }
+
+            console.log('ICC: Loaded', markets.length, 'prediction markets');
+
+        } catch (error) {
+            console.error('ICC: Error loading prediction markets:', error);
+            document.getElementById('icc-trending-markets').innerHTML = '<p class="text-danger text-center">Error loading markets</p>';
+            document.getElementById('icc-all-markets').innerHTML = '<p class="text-danger text-center">Error loading markets</p>';
+        }
     }
 };
 
@@ -2217,6 +2349,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (memoryTab) {
         memoryTab.addEventListener('shown.bs.tab', function() {
             ICCState.loadLearningFeed();
+        });
+    }
+
+    // Session 558: Markets tab
+    const marketsTab = document.getElementById('icc-markets-tab');
+    if (marketsTab) {
+        marketsTab.addEventListener('shown.bs.tab', function() {
+            ICCState.loadPredictionMarkets();
         });
     }
 });

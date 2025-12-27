@@ -2139,3 +2139,55 @@ def situation_detail(request, situation_type):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+# =============================================================================
+# Session 558: Prediction Markets API
+# =============================================================================
+
+def get_prediction_markets(request):
+    """
+    Session 558: Returns prediction market data from Kalshi spider.
+
+    Query params:
+        category: Filter by category (economics, politics, tech, finance, etc.)
+        limit: Number of markets (default 50)
+    """
+    try:
+        from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+
+        category = request.GET.get('category', '')
+        limit = min(int(request.GET.get('limit', 50)), 100)
+
+        # Fetch from Kalshi spider
+        spider = KalshiSpider()
+        all_data = spider.fetch_data(max_results=limit * 2)
+
+        # Filter to actual markets (not series)
+        markets = [m for m in all_data if m.get('data_type') == 'prediction_market']
+
+        # Filter by category if specified
+        if category:
+            category_lower = category.lower()
+            markets = [m for m in markets if m.get('category', '').lower() == category_lower]
+
+        # Sort by volume (most active first)
+        markets.sort(key=lambda m: m.get('volume', 0) or 0, reverse=True)
+
+        # Limit results
+        markets = markets[:limit]
+
+        return JsonResponse({
+            'success': True,
+            'markets': markets,
+            'total': len(markets),
+            'category': category or 'all',
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching prediction markets: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'markets': []
+        }, status=500)
