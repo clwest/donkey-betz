@@ -14,6 +14,7 @@ Added comprehensive Kalshi prediction markets integration including:
 - Celery tasks for automated data collection
 - Market Intelligence Desk integration
 - Discord `/predictions` command
+- Web UI panel in Intelligence Command Center
 
 ---
 
@@ -177,6 +178,39 @@ Live market data from Kalshi
 └─────────────────────────────────────────┘
 ```
 
+### 8. Web UI Panel
+**Files:**
+- `ai_core/templates/components/panels/intelligence_command_center.html`
+- `ai_core/templates/partials/js/intelligence_command_center.html`
+- `core/views_spider_intelligence.py`
+- `core/urls.py`
+
+Added Markets sub-tab to Intelligence Command Center:
+
+**UI Components:**
+- 🎲 Markets sub-tab button
+- Stats row: Likely (>80%), Uncertain (40-60%), Unlikely (<20%), Total Volume
+- Trending Markets section (top 5 by volume >10k)
+- All Markets list (up to 20 markets)
+- Category filter dropdown
+- Refresh button
+
+**Display Features:**
+- Probability bar visualization (█░░░░░░░░░)
+- Yes bid/ask prices in cents
+- Volume numbers with formatting
+- Category badges (economics, politics, tech, etc.)
+- Status indicators (🟢 Likely, 🟡 Uncertain, 🔴 Unlikely, ⚪ Leaning)
+
+**API Endpoint:**
+```
+GET /api/prediction-markets/
+GET /api/prediction-markets/?category=economics
+GET /api/prediction-markets/?category=politics&limit=20
+```
+
+**Access:** AI Studio → Intelligence Command Center → Markets tab
+
 ---
 
 ## Environment Variables
@@ -283,21 +317,25 @@ SpiderData.objects.update_or_create(
 
 ## Session 559 Recommendations
 
-1. **Add Kalshi to Web UI**
-   - Create prediction markets panel in Intelligence Command Center
-   - Show live probabilities with auto-refresh
-
-2. **Trading Automation**
+1. **Trading Automation**
    - Create trading agent that uses prediction market signals
    - Implement position tracking and P&L reporting
+   - Paper trading mode for testing strategies
 
-3. **Alert System**
+2. **Alert System**
    - Discord alerts when high-probability markets shift significantly
    - Alert when new markets match user interests
+   - Threshold-based notifications (e.g., "probability changed >10%")
 
-4. **Historical Analysis**
+3. **Historical Analysis**
    - Track prediction accuracy over time
    - Build model for identifying mispriced markets
+   - Backtest prediction strategies
+
+4. **Enhanced UI**
+   - Auto-refresh on Markets tab (every 60 seconds)
+   - Market detail modal with orderbook and candlesticks
+   - Watchlist functionality
 
 ---
 
@@ -312,6 +350,10 @@ SpiderData.objects.update_or_create(
 | `core/celery.py` | Added 2 Beat schedules |
 | `core/agents/stocks/market_intelligence_coordinator.py` | Added prediction signals |
 | `core/services/discord_bot.py` | Added `/predictions` command |
+| `ai_core/templates/components/panels/intelligence_command_center.html` | Added Markets sub-tab (+99 lines) |
+| `ai_core/templates/partials/js/intelligence_command_center.html` | Added `loadPredictionMarkets()` (+140 lines) |
+| `core/views_spider_intelligence.py` | Added `get_prediction_markets()` API view |
+| `core/urls.py` | Added `/api/prediction-markets/` route |
 
 ---
 
@@ -323,5 +365,6 @@ Session 558 delivered complete Kalshi prediction markets integration:
 - **Automation:** 30-minute data collection + 4-hour intelligence posts
 - **Integration:** Market Intelligence Desk includes prediction signals
 - **Discord:** `/predictions` command with category filtering
+- **Web UI:** Markets sub-tab in Intelligence Command Center with stats, trending, and all markets
 
-The platform now has real-time access to prediction market data for economics, politics, tech, finance, weather, and entertainment categories.
+The platform now has real-time access to prediction market data for economics, politics, tech, finance, weather, and entertainment categories via Discord, Web UI, and programmatic API.
