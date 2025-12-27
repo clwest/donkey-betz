@@ -1099,6 +1099,848 @@ class SpiderCommands(commands.Cog):
                 ephemeral=True
             )
 
+    # Session 558: Sports Odds command
+    @app_commands.command(name="odds", description="View sports betting odds and analysis")
+    @app_commands.describe(
+        sport="Filter by sport (nfl, nba, nhl, ncaaf, ncaab, soccer, ufc)",
+        show="What to show: tossups, favorites, or all (default: all)",
+        limit="Number of events to show (default: 5)"
+    )
+    async def odds(
+        self,
+        interaction: discord.Interaction,
+        sport: Optional[str] = None,
+        show: Optional[str] = None,
+        limit: int = 5
+    ):
+        """Display sports betting odds from The Odds API."""
+        await interaction.response.defer()
+
+        try:
+            from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+            # Cap limit
+            limit = min(limit, 10)
+
+            @sync_to_async
+            def get_odds_data(sport_filter, show_filter, lim):
+                spider = TheOddsSpider()
+                events = spider.fetch_data(max_results=100, max_priority=2)
+
+                # Filter to actual sports odds
+                events = [e for e in events if e.get('data_type') == 'sports_odds']
+
+                # Filter by sport if specified
+                if sport_filter:
+                    sport_lower = sport_filter.lower()
+                    sport_map = {
+                        'nfl': 'NFL', 'nba': 'NBA', 'nhl': 'NHL',
+                        'mlb': 'MLB', 'ncaaf': 'NCAAF', 'ncaab': 'NCAAB',
+                        'soccer': 'English Premier League', 'epl': 'English Premier League',
+                        'ufc': 'UFC/MMA', 'mma': 'UFC/MMA',
+                    }
+                    target_sport = sport_map.get(sport_lower, sport_filter)
+                    events = [e for e in events if target_sport.lower() in e.get('sport_name', '').lower()]
+
+                # Filter by show type
+                if show_filter:
+                    show_lower = show_filter.lower()
+                    if show_lower == 'tossups':
+                        events = [e for e in events if 45 <= (e.get('home_implied_prob') or 50) <= 55]
+                    elif show_lower == 'favorites':
+                        events = [e for e in events if (e.get('favorite_probability') or 0) >= 65]
+
+                # Sort by game time (upcoming first)
+                events.sort(key=lambda e: e.get('commence_time', ''))
+
+                return events[:lim], len(events)
+
+            events_data, total_count = await get_odds_data(sport, show, limit)
+
+            if not events_data:
+                await interaction.followup.send(
+                    f"No sports odds found{' for ' + sport if sport else ''}{' (' + show + ')' if show else ''}.",
+                    ephemeral=True
+                )
+                return
+
+            # Sport emojis
+            sport_emoji = {
+                'NFL': '🏈', 'NCAAF': '🏈',
+                'NBA': '🏀', 'NCAAB': '🏀',
+                'NHL': '🏒',
+                'MLB': '⚾',
+                'UFC/MMA': '🥊',
+                'English Premier League': '⚽', 'La Liga': '⚽',
+                'Champions League': '⚽', 'Bundesliga': '⚽',
+                'Serie A': '⚽', 'Ligue 1': '⚽', 'MLS': '⚽',
+            }
+
+            title_parts = ["🎲 Sports Odds"]
+            if sport:
+                title_parts.append(f"- {sport.upper()}")
+            if show:
+                title_parts.append(f"({show.title()})")
+
+            embed = discord.Embed(
+                title=" ".join(title_parts),
+                description="Live odds from 40+ bookmakers",
+                color=discord.Color.green(),
+                timestamp=datetime.now()
+            )
+
+            for event in events_data:
+                sport_name = event.get('sport_name', 'Unknown')
+                emoji = sport_emoji.get(sport_name, '🎯')
+                home = event.get('home_team', 'Home')
+                away = event.get('away_team', 'Away')
+                home_odds = event.get('home_odds', 0)
+                away_odds = event.get('away_odds', 0)
+                home_prob = event.get('home_implied_prob', 50)
+                away_prob = event.get('away_implied_prob', 50)
+                spread = event.get('home_spread')
+                total = event.get('total_line')
+                game_time = event.get('commence_time_formatted', 'TBD')
+                favorite = event.get('favorite', '')
+
+                # Format odds with + for positive
+                home_odds_str = f"+{home_odds}" if home_odds > 0 else str(home_odds)
+                away_odds_str = f"+{away_odds}" if away_odds > 0 else str(away_odds)
+
+                # Determine favorite indicator
+                fav_indicator = ""
+                if favorite == home:
+                    home = f"**{home}** ⭐"
+                elif favorite == away:
+                    away = f"**{away}** ⭐"
+
+                # Build matchup display
+                spread_str = f"Spread: {spread:+.1f}" if spread else ""
+                total_str = f"O/U: {total}" if total else ""
+                lines = f"{spread_str}  {total_str}".strip()
+
+                field_value = (
+                    f"```\n"
+                    f"{away[:20]}: {away_odds_str} ({away_prob:.0f}%)\n"
+                    f"{home[:20]}: {home_odds_str} ({home_prob:.0f}%)\n"
+                    f"{lines}\n"
+                    f"⏰ {game_time}\n"
+                    f"```"
+                )
+
+                embed.add_field(
+                    name=f"{emoji} {sport_name}: {away[:15]} @ {home[:15]}",
+                    value=field_value,
+                    inline=False
+                )
+
+            # Toss-up indicator
+            tossups = len([e for e in events_data if 45 <= (e.get('home_implied_prob') or 50) <= 55])
+            footer_text = f"Showing {len(events_data)} of {total_count} events"
+            if tossups > 0:
+                footer_text += f" | 🎯 {tossups} toss-ups"
+
+            embed.set_footer(text=footer_text)
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Odds command error: {e}")
+            await interaction.followup.send(
+                f"Error fetching odds: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Arbitrage Detector command
+    @app_commands.command(name="arb", description="Scan for arbitrage opportunities across bookmakers")
+    @app_commands.describe(
+        sport="Filter by sport (nfl, nba, nhl, ncaaf, ncaab)",
+        min_profit="Minimum profit % to show (default: 0.5)"
+    )
+    async def arb(
+        self,
+        interaction: discord.Interaction,
+        sport: Optional[str] = None,
+        min_profit: float = 0.5
+    ):
+        """Scan for arbitrage (guaranteed profit) opportunities."""
+        await interaction.response.defer()
+
+        try:
+            from core.agents.markets import ArbitrageDetector
+
+            @sync_to_async
+            def run_arb_scan(sport_filter, min_pct):
+                detector = ArbitrageDetector()
+                context = {'min_profit_pct': min_pct}
+                if sport_filter:
+                    context['sport'] = sport_filter.lower()
+
+                result = detector.execute(
+                    task=f"Scan for arbitrage opportunities{' in ' + sport_filter.upper() if sport_filter else ''}",
+                    context=context
+                )
+                return result
+
+            result = await run_arb_scan(sport, min_profit)
+
+            if not result.success:
+                await interaction.followup.send(
+                    f"Arbitrage scan failed: {result.error or 'Unknown error'}",
+                    ephemeral=True
+                )
+                return
+
+            arbs = result.data.get('arbitrage_opportunities', [])
+            hot_count = result.data.get('hot_arbs', 0)
+            good_count = result.data.get('good_arbs', 0)
+            events_scanned = result.data.get('events_scanned', 0)
+
+            # Create embed
+            if arbs:
+                color = discord.Color.gold() if hot_count > 0 else discord.Color.green()
+                title_emoji = "🔥" if hot_count > 0 else "✅"
+            else:
+                color = discord.Color.blue()
+                title_emoji = "📊"
+
+            embed = discord.Embed(
+                title=f"{title_emoji} Arbitrage Scan Results",
+                description=f"Scanned {events_scanned} events for guaranteed profit opportunities",
+                color=color,
+                timestamp=datetime.now()
+            )
+
+            if not arbs:
+                embed.add_field(
+                    name="No Opportunities Found",
+                    value="Markets are efficient right now. Keep scanning - arbs are fleeting!",
+                    inline=False
+                )
+            else:
+                # Summary stats
+                embed.add_field(name="🔥 HOT (1.5%+)", value=str(hot_count), inline=True)
+                embed.add_field(name="✅ GOOD (1-1.5%)", value=str(good_count), inline=True)
+                embed.add_field(name="📊 Total", value=str(len(arbs)), inline=True)
+
+                # Show top 3 arbs
+                for arb in arbs[:3]:
+                    matchup = arb.get('matchup', 'Unknown')[:40]
+                    profit = arb.get('profit_pct', 0)
+                    rating = arb.get('rating', 'SKIP')
+                    home_book = arb.get('home_book', 'Book A')
+                    away_book = arb.get('away_book', 'Book B')
+                    home_team = arb.get('home_team', 'Home')[:15]
+                    away_team = arb.get('away_team', 'Away')[:15]
+                    home_decimal = arb.get('home_decimal_odds', 0)
+                    away_decimal = arb.get('away_decimal_odds', 0)
+                    stake_home = arb.get('stake_home', 50)
+                    stake_away = arb.get('stake_away', 50)
+                    guaranteed = arb.get('guaranteed_profit', 0)
+                    game_time = arb.get('game_time', 'TBD')
+
+                    rating_emoji = "🔥" if rating == "HOT" else "✅" if rating == "GOOD" else "📊"
+
+                    field_value = (
+                        f"```\n"
+                        f"Profit: {profit:.2f}% guaranteed\n"
+                        f"Bet ${stake_home:.0f} on {home_team} @ {home_book} ({home_decimal:.2f})\n"
+                        f"Bet ${stake_away:.0f} on {away_team} @ {away_book} ({away_decimal:.2f})\n"
+                        f"= ${guaranteed:.2f} profit on $100\n"
+                        f"⏰ {game_time}\n"
+                        f"```"
+                    )
+
+                    embed.add_field(
+                        name=f"{rating_emoji} [{rating}] {matchup}",
+                        value=field_value,
+                        inline=False
+                    )
+
+            # Warnings
+            embed.add_field(
+                name="⚠️ Important",
+                value="• Verify odds before betting\n• Check betting limits\n• Arbs close quickly",
+                inline=False
+            )
+
+            embed.set_footer(text="AI Studio Arbitrage Detector | Session 558")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Arb command error: {e}")
+            await interaction.followup.send(
+                f"Error scanning for arbs: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Bankroll command
+    @app_commands.command(name="bankroll", description="View your betting bankroll and stats")
+    async def bankroll(self, interaction: discord.Interaction):
+        """Display user's bankroll stats and recent wagers."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.models_bankroll import Bankroll, Wager
+
+            @sync_to_async
+            def get_bankroll_data(discord_user_id):
+                from core.models import UnifiedUser
+                try:
+                    user = UnifiedUser.objects.get(discord_id=str(discord_user_id))
+                except UnifiedUser.DoesNotExist:
+                    return None, None
+
+                try:
+                    bankroll = user.betting_bankroll
+                except Bankroll.DoesNotExist:
+                    # Create default bankroll
+                    bankroll = Bankroll.objects.create(user=user)
+
+                # Get recent wagers
+                recent = list(bankroll.wagers.order_by('-placed_at')[:5])
+                return bankroll, recent
+
+            bankroll, recent = await get_bankroll_data(interaction.user.id)
+
+            if not bankroll:
+                await interaction.followup.send(
+                    "You need to link your Discord account first. Use `/link` to get started.",
+                    ephemeral=True
+                )
+                return
+
+            # Create bankroll embed
+            profit_color = discord.Color.green() if bankroll.profit_loss >= 0 else discord.Color.red()
+            profit_emoji = "+" if bankroll.profit_loss >= 0 else ""
+
+            embed = discord.Embed(
+                title="💰 Your Betting Bankroll",
+                color=profit_color,
+                timestamp=datetime.now()
+            )
+
+            # Balance section
+            embed.add_field(
+                name="💵 Current Balance",
+                value=f"**${bankroll.current_balance:,.2f}**",
+                inline=True
+            )
+            embed.add_field(
+                name="📊 P/L",
+                value=f"{profit_emoji}${bankroll.profit_loss:,.2f}",
+                inline=True
+            )
+            embed.add_field(
+                name="📈 ROI",
+                value=f"{bankroll.roi:.1f}%",
+                inline=True
+            )
+
+            # Stats section
+            embed.add_field(
+                name="🎯 Win Rate",
+                value=f"{bankroll.win_rate:.1f}%",
+                inline=True
+            )
+            embed.add_field(
+                name="📝 Record",
+                value=f"{bankroll.total_won}W - {bankroll.total_lost}L",
+                inline=True
+            )
+            embed.add_field(
+                name="⏳ Pending",
+                value=str(bankroll.total_pending),
+                inline=True
+            )
+
+            # Streak
+            streak_str = f"+{bankroll.current_streak}🔥" if bankroll.current_streak > 0 else (
+                f"{bankroll.current_streak}❄️" if bankroll.current_streak < 0 else "0"
+            )
+            embed.add_field(
+                name="🔥 Streak",
+                value=streak_str,
+                inline=True
+            )
+            embed.add_field(
+                name="💰 Total Wagered",
+                value=f"${bankroll.total_wagered:,.2f}",
+                inline=True
+            )
+            embed.add_field(
+                name="🎰 Unit Size",
+                value=f"${bankroll.unit_size:,.2f}",
+                inline=True
+            )
+
+            # Recent wagers
+            if recent:
+                wager_lines = []
+                for w in recent[:5]:
+                    status_emoji = {"won": "✅", "lost": "❌", "pushed": "↔️", "pending": "⏳"}.get(w.status, "❓")
+                    odds_str = f"+{w.odds_american}" if w.odds_american > 0 else str(w.odds_american)
+                    profit_str = f"${w.profit:+.2f}" if w.profit is not None else "pending"
+                    wager_lines.append(f"{status_emoji} {w.selection[:25]}... ({odds_str}) - {profit_str}")
+
+                embed.add_field(
+                    name="📋 Recent Bets",
+                    value="\n".join(wager_lines) if wager_lines else "No recent bets",
+                    inline=False
+                )
+
+            embed.set_footer(text="Use /bet to log a new wager | Session 558")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Bankroll command error: {e}")
+            await interaction.followup.send(
+                f"Error fetching bankroll: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Bet logging command
+    @app_commands.command(name="bet", description="Log a new bet to your bankroll")
+    @app_commands.describe(
+        selection="What you're betting on (e.g., 'Chiefs -3.5')",
+        odds="American odds (e.g., -110, +150)",
+        stake="Amount wagered in dollars",
+        sport="Sport category (nfl, nba, nhl, etc.)",
+        bet_type="Type of bet (moneyline, spread, total, parlay)"
+    )
+    async def bet(
+        self,
+        interaction: discord.Interaction,
+        selection: str,
+        odds: int,
+        stake: float,
+        sport: Optional[str] = None,
+        bet_type: Optional[str] = "moneyline"
+    ):
+        """Log a new bet to your bankroll tracker."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.models_bankroll import Bankroll, Wager
+            from decimal import Decimal
+
+            @sync_to_async
+            def create_wager(discord_user_id, sel, american_odds, amount, sp, b_type):
+                from core.models import UnifiedUser
+                try:
+                    user = UnifiedUser.objects.get(discord_id=str(discord_user_id))
+                except UnifiedUser.DoesNotExist:
+                    return None, "Account not linked"
+
+                try:
+                    bankroll = user.betting_bankroll
+                except Bankroll.DoesNotExist:
+                    bankroll = Bankroll.objects.create(user=user)
+
+                # Calculate units
+                units = Decimal(str(amount)) / bankroll.unit_size
+
+                # Create wager
+                wager = Wager.objects.create(
+                    bankroll=bankroll,
+                    selection=sel,
+                    event_name=sel[:100],
+                    sport=sp or "",
+                    bet_type=b_type,
+                    odds_american=american_odds,
+                    stake=Decimal(str(amount)),
+                    units=units,
+                    source='discord',
+                )
+
+                # Update bankroll
+                bankroll.last_wager_at = wager.placed_at
+                bankroll.total_pending += 1
+                bankroll.save()
+
+                return wager, None
+
+            wager, error = await create_wager(
+                interaction.user.id, selection, odds, stake, sport, bet_type
+            )
+
+            if error:
+                await interaction.followup.send(
+                    f"Error: {error}. Use `/link` to connect your account.",
+                    ephemeral=True
+                )
+                return
+
+            # Calculate potential payout
+            if odds > 0:
+                potential = stake * (odds / 100 + 1)
+            else:
+                potential = stake * (100 / abs(odds) + 1)
+
+            odds_str = f"+{odds}" if odds > 0 else str(odds)
+
+            embed = discord.Embed(
+                title="🎰 Bet Logged!",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(name="Selection", value=selection[:50], inline=False)
+            embed.add_field(name="Odds", value=odds_str, inline=True)
+            embed.add_field(name="Stake", value=f"${stake:,.2f}", inline=True)
+            embed.add_field(name="Units", value=f"{wager.units:.1f}u", inline=True)
+            embed.add_field(name="Potential Win", value=f"${potential - stake:,.2f}", inline=True)
+            embed.add_field(name="Potential Payout", value=f"${potential:,.2f}", inline=True)
+            embed.add_field(name="Status", value="⏳ Pending", inline=True)
+
+            if sport:
+                embed.add_field(name="Sport", value=sport.upper(), inline=True)
+            embed.add_field(name="Type", value=bet_type.title(), inline=True)
+
+            embed.set_footer(text="Use /resolve to settle this bet | Session 558")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Bet command error: {e}")
+            await interaction.followup.send(
+                f"Error logging bet: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Resolve bet command
+    @app_commands.command(name="resolve", description="Resolve a pending bet (won/lost/pushed)")
+    @app_commands.describe(
+        bet_id="The bet ID to resolve (from /bankroll)",
+        result="The result: won, lost, or pushed"
+    )
+    @app_commands.choices(result=[
+        app_commands.Choice(name="Won", value="won"),
+        app_commands.Choice(name="Lost", value="lost"),
+        app_commands.Choice(name="Pushed", value="pushed"),
+    ])
+    async def resolve(
+        self,
+        interaction: discord.Interaction,
+        bet_id: Optional[int] = None,
+        result: str = "won"
+    ):
+        """Resolve a pending bet."""
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            from core.models_bankroll import Bankroll, Wager
+
+            @sync_to_async
+            def resolve_bet(discord_user_id, wager_id, outcome):
+                from core.models import UnifiedUser
+                try:
+                    user = UnifiedUser.objects.get(discord_id=str(discord_user_id))
+                except UnifiedUser.DoesNotExist:
+                    return None, "Account not linked"
+
+                try:
+                    bankroll = user.betting_bankroll
+                except Bankroll.DoesNotExist:
+                    return None, "No bankroll found"
+
+                # Find pending wager
+                if wager_id:
+                    try:
+                        wager = bankroll.wagers.get(id=wager_id, status='pending')
+                    except Wager.DoesNotExist:
+                        return None, f"Pending bet #{wager_id} not found"
+                else:
+                    # Get most recent pending
+                    wager = bankroll.wagers.filter(status='pending').order_by('-placed_at').first()
+                    if not wager:
+                        return None, "No pending bets to resolve"
+
+                # Resolve
+                wager.resolve(outcome)
+
+                # Update streak
+                if outcome == 'won':
+                    if bankroll.current_streak >= 0:
+                        bankroll.current_streak += 1
+                    else:
+                        bankroll.current_streak = 1
+                    if bankroll.current_streak > bankroll.best_streak:
+                        bankroll.best_streak = bankroll.current_streak
+                elif outcome == 'lost':
+                    if bankroll.current_streak <= 0:
+                        bankroll.current_streak -= 1
+                    else:
+                        bankroll.current_streak = -1
+                    if bankroll.current_streak < bankroll.worst_streak:
+                        bankroll.worst_streak = bankroll.current_streak
+
+                bankroll.save()
+                return wager, None
+
+            wager, error = await resolve_bet(interaction.user.id, bet_id, result)
+
+            if error:
+                await interaction.followup.send(f"Error: {error}", ephemeral=True)
+                return
+
+            result_emoji = {"won": "✅", "lost": "❌", "pushed": "↔️"}.get(result, "❓")
+            result_color = {"won": discord.Color.green(), "lost": discord.Color.red(), "pushed": discord.Color.gold()}.get(result, discord.Color.blue())
+
+            embed = discord.Embed(
+                title=f"{result_emoji} Bet Resolved: {result.upper()}",
+                color=result_color,
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(name="Selection", value=wager.selection[:50], inline=False)
+            embed.add_field(name="Stake", value=f"${wager.stake:,.2f}", inline=True)
+
+            profit_str = f"${wager.profit:+,.2f}" if wager.profit is not None else "$0.00"
+            embed.add_field(name="Profit/Loss", value=profit_str, inline=True)
+
+            if wager.payout:
+                embed.add_field(name="Payout", value=f"${wager.payout:,.2f}", inline=True)
+
+            embed.set_footer(text="Use /bankroll to see updated stats | Session 558")
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Resolve command error: {e}")
+            await interaction.followup.send(
+                f"Error resolving bet: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Futures Championship Tracker
+    @app_commands.command(name="futures", description="View championship futures odds")
+    @app_commands.describe(
+        league="League to view futures for (nfl, nba, mlb, nhl)"
+    )
+    async def futures(
+        self,
+        interaction: discord.Interaction,
+        league: Optional[str] = None
+    ):
+        """Display championship futures odds."""
+        await interaction.response.defer()
+
+        try:
+            from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+            @sync_to_async
+            def get_futures_data(league_filter):
+                spider = TheOddsSpider()
+
+                # Map league to futures sport key
+                futures_map = {
+                    'nfl': ['americanfootball_nfl_super_bowl_winner'],
+                    'nba': ['basketball_nba_championship_winner'],
+                    'mlb': ['baseball_mlb_world_series_winner'],
+                    'nhl': ['icehockey_nhl_stanley_cup_winner'],
+                    None: [
+                        'americanfootball_nfl_super_bowl_winner',
+                        'basketball_nba_championship_winner',
+                    ]
+                }
+
+                sports = futures_map.get(league_filter.lower() if league_filter else None, [])
+
+                all_futures = []
+                for sport in sports:
+                    try:
+                        data = spider.fetch_data(sports=[sport], max_results=20, market_types=['outrights'])
+                        futures = [d for d in data if d.get('data_type') == 'futures']
+                        all_futures.extend(futures)
+                    except Exception:
+                        pass
+
+                return all_futures
+
+            futures_data = await get_futures_data(league)
+
+            if not futures_data:
+                # Fallback to SpiderData if live API doesn't have futures
+                from ai_core.models import SpiderData
+
+                @sync_to_async
+                def get_cached_futures():
+                    return list(SpiderData.objects.filter(
+                        spider_name='theodds',
+                        category='futures'
+                    ).order_by('-created_at')[:10])
+
+                cached = await get_cached_futures()
+
+                if not cached:
+                    await interaction.followup.send(
+                        f"No futures data available{' for ' + league.upper() if league else ''}. Futures markets may not be active.",
+                        ephemeral=True
+                    )
+                    return
+
+            title = "🏆 Championship Futures"
+            if league:
+                title += f" - {league.upper()}"
+
+            embed = discord.Embed(
+                title=title,
+                description="Current odds to win championship",
+                color=discord.Color.gold(),
+                timestamp=datetime.now()
+            )
+
+            # Group by sport/event
+            for future in futures_data[:10]:
+                team = future.get('title', future.get('selection', 'Unknown'))
+                odds = future.get('odds_american', future.get('price', 0))
+                sport = future.get('sport_name', 'Championship')
+
+                odds_str = f"+{odds}" if odds > 0 else str(odds)
+                implied = 100 / (abs(odds) / 100 + 1) if odds > 0 else 100 / (100 / abs(odds) + 1)
+
+                embed.add_field(
+                    name=f"{team[:30]}",
+                    value=f"Odds: {odds_str} ({implied:.1f}%)",
+                    inline=True
+                )
+
+            embed.set_footer(text="Data from The Odds API | Session 558")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Futures command error: {e}")
+            await interaction.followup.send(
+                f"Error fetching futures: {str(e)[:100]}",
+                ephemeral=True
+            )
+
+    # Session 558: Bet Slip Generator
+    @app_commands.command(name="slip", description="Generate a bet slip with multiple selections")
+    @app_commands.describe(
+        type="Slip type: single (each bet separate) or parlay (combined)",
+        units="Units to wager (default: 1)"
+    )
+    @app_commands.choices(type=[
+        app_commands.Choice(name="Single Bets", value="single"),
+        app_commands.Choice(name="Parlay", value="parlay"),
+    ])
+    async def slip(
+        self,
+        interaction: discord.Interaction,
+        type: str = "single",
+        units: float = 1.0
+    ):
+        """Generate a bet slip from recent toss-up games."""
+        await interaction.response.defer()
+
+        try:
+            from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+            @sync_to_async
+            def get_tossup_games():
+                spider = TheOddsSpider()
+                events = spider.fetch_data(max_results=100, max_priority=2)
+                sports_events = [e for e in events if e.get('data_type') == 'sports_odds']
+
+                # Find toss-ups (45-55% implied probability)
+                tossups = [
+                    e for e in sports_events
+                    if 45 <= (e.get('home_implied_prob') or 50) <= 55
+                ]
+
+                # Sort by game time (upcoming first)
+                tossups.sort(key=lambda e: e.get('commence_time', ''))
+                return tossups[:5]
+
+            tossups = await get_tossup_games()
+
+            if not tossups:
+                await interaction.followup.send(
+                    "No toss-up games found for bet slip. Try again later when more games are available.",
+                    ephemeral=True
+                )
+                return
+
+            embed = discord.Embed(
+                title=f"📝 Bet Slip ({type.title()})",
+                description=f"Top {len(tossups)} toss-up games • {units}u each" if type == "single" else f"Parlay combining {len(tossups)} legs • {units}u total",
+                color=discord.Color.purple(),
+                timestamp=datetime.now()
+            )
+
+            total_implied = 1.0
+            selections = []
+
+            for i, game in enumerate(tossups, 1):
+                home = game.get('home_team', 'Home')
+                away = game.get('away_team', 'Away')
+                home_odds = game.get('home_odds', -110)
+                away_odds = game.get('away_odds', -110)
+                home_prob = game.get('home_implied_prob', 50)
+                sport = game.get('sport_name', 'Sports')
+                game_time = game.get('commence_time_formatted', 'TBD')
+
+                # Pick the slight favorite or home team
+                if home_prob >= 50:
+                    pick = home
+                    odds = home_odds
+                    prob = home_prob
+                else:
+                    pick = away
+                    odds = away_odds
+                    prob = 100 - home_prob
+
+                odds_str = f"+{odds}" if odds > 0 else str(odds)
+                selections.append({'pick': pick, 'odds': odds, 'prob': prob})
+                total_implied *= (prob / 100)
+
+                embed.add_field(
+                    name=f"Leg {i}: {sport}",
+                    value=f"**{pick}** {odds_str}\n{away} @ {home}\n⏰ {game_time}",
+                    inline=False
+                )
+
+            # Calculate parlay odds if applicable
+            if type == "parlay" and selections:
+                # Multiply decimal odds
+                parlay_decimal = 1.0
+                for sel in selections:
+                    if sel['odds'] > 0:
+                        parlay_decimal *= (sel['odds'] / 100 + 1)
+                    else:
+                        parlay_decimal *= (100 / abs(sel['odds']) + 1)
+
+                parlay_american = int((parlay_decimal - 1) * 100) if parlay_decimal >= 2 else int(-100 / (parlay_decimal - 1))
+                parlay_str = f"+{parlay_american}" if parlay_american > 0 else str(parlay_american)
+
+                embed.add_field(
+                    name="📊 Parlay Summary",
+                    value=f"**Combined Odds:** {parlay_str}\n**Implied Prob:** {total_implied * 100:.1f}%\n**Risk:** {units}u\n**To Win:** {units * (parlay_decimal - 1):.1f}u",
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name="📊 Single Bets Summary",
+                    value=f"**Total Risk:** {len(selections) * units}u\n**Avg Win Rate:** ~50%\n**Strategy:** Research each pick before betting",
+                    inline=False
+                )
+
+            embed.set_footer(text="Use /bet to log these wagers | Session 558")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Slip command error: {e}")
+            await interaction.followup.send(
+                f"Error generating bet slip: {str(e)[:100]}",
+                ephemeral=True
+            )
+
 
 # =============================================================================
 # Session 427: Interactive Commands (/ask, /create, /research)

@@ -44,6 +44,9 @@ from ..models_podcast_studio import *
 # Import conversation artifacts (Session 555)
 from ..models_conversation_artifacts import *
 
+# Import bankroll tracking (Session 558)
+from ..models_bankroll import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models

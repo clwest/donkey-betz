@@ -641,6 +641,30 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # Session 558: Daily Betting Digest - morning briefing
+    'daily-betting-digest': {
+        'task': 'core.tasks.daily_betting_digest',
+        'schedule': crontab(hour=8, minute=0),  # 8 AM MST daily
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Session 558: Market Intelligence Scan - runs market analysts every 2 hours
+    'market-intelligence-scan': {
+        'task': 'core.tasks.market_intelligence_scan',
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    # Session 558: Market Movement Alerts - real-time monitoring every 30 minutes
+    'market-movement-alerts': {
+        'task': 'core.tasks.market_movement_alerts',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
     # Session 464: Learning Loop - Market Intelligence Desk learns from outcomes
     'track-prediction-outcomes': {
         'task': 'learning_loop.track_prediction_outcomes',

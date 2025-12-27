@@ -179,7 +179,7 @@ from core.agents.podcast import (
 from core.agents.campaign_orchestrator_agent import CampaignOrchestratorAgent
 
 # Session 558: Markets Agents
-from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst
+from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
 
 logger = logging.getLogger(__name__)
 
@@ -301,6 +301,7 @@ class AgentRouter:
         # Markets Agents (Session 558)
         "PredictionMarketAnalyst": PredictionMarketAnalyst,
         "SportsOddsAnalyst": SportsOddsAnalyst,
+        "ArbitrageDetector": ArbitrageDetector,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,
@@ -691,10 +692,14 @@ class AgentRouter:
             # Session 558: Markets Agents
             'prediction_market_analyst': 'PredictionMarketAnalyst',
             'sports_odds_analyst': 'SportsOddsAnalyst',
+            'arbitrage_detector': 'ArbitrageDetector',
             'market_analysis': 'PredictionMarketAnalyst',
             'sports_betting': 'SportsOddsAnalyst',
             'kalshi': 'PredictionMarketAnalyst',
             'odds': 'SportsOddsAnalyst',
+            'arbitrage': 'ArbitrageDetector',
+            'arb': 'ArbitrageDetector',
+            'sure_bet': 'ArbitrageDetector',
         }
 
         try:
