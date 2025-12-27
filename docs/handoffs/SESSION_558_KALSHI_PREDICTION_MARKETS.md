@@ -1,24 +1,33 @@
-# Session 558: Kalshi Prediction Markets Integration
+# Session 558: Prediction Markets & Sports Odds Integration
 
-**Date:** December 26, 2025
+**Date:** December 26-27, 2025
 **Status:** COMPLETE
-**Focus:** Full integration of Kalshi prediction markets into the platform
+**Focus:** Full integration of Kalshi prediction markets AND The Odds API sports betting
 
 ---
 
 ## Overview
 
-Added comprehensive Kalshi prediction markets integration including:
+Added comprehensive market intelligence integrations:
+
+**Part 1: Kalshi Prediction Markets**
 - Public API spider for market data
 - Authenticated service for trading operations
 - Celery tasks for automated data collection
 - Market Intelligence Desk integration
 - Discord `/predictions` command
-- Web UI panel in Intelligence Command Center
+
+**Part 2: The Odds API Sports Betting**
+- Sports odds spider for 40+ bookmakers
+- NFL, NBA, MLB, NHL, Soccer, UFC/MMA coverage
+- Celery tasks for hourly collection
+- Web UI panel with sports section
+
+**Unified Web UI:** Markets sub-tab in Intelligence Command Center
 
 ---
 
-## Components Created
+## Part 1: Kalshi Prediction Markets
 
 ### 1. Kalshi Spider
 **File:** `ai_core/spiders/specialized/kalshi_spider.py`
@@ -73,91 +82,8 @@ class KalshiService:
     def get_market_intelligence(categories=None) -> Dict
 ```
 
-**Authentication Flow:**
-```
-1. Create message: "{timestamp_ms}{method}{path}"
-2. Sign with RSA-PSS padding + SHA-256
-3. Headers: KALSHI-ACCESS-KEY, KALSHI-ACCESS-SIGNATURE, KALSHI-ACCESS-TIMESTAMP
-```
-
-### 3. Spider Registry
-**File:** `ai_core/spiders/spider_registry.py`
-
-Added Kalshi spider registration:
-```python
-self.register_spider('kalshi', KalshiSpider, {
-    'category': 'prediction_markets',
-    'priority': 1,
-    'rate_limit': 1.0,
-    'requires_auth': False,
-    'api_key_env': 'KALSHI_API_KEY',
-    'targets': ['api.elections.kalshi.com'],
-    'description': 'Prediction market data: economics, politics, weather, tech events'
-})
-```
-
-### 4. Celery Tasks
-**File:** `core/tasks.py`
-
-Two new tasks for automated collection:
-
-```python
-@shared_task
-def collect_kalshi_prediction_markets():
-    """
-    Fetches 200 markets from Kalshi and stores in SpiderData.
-    Runs every 30 minutes via Beat schedule.
-    """
-
-@shared_task
-def collect_kalshi_market_intelligence():
-    """
-    Posts trending prediction markets to Discord #market-intelligence.
-    Runs every 4 hours via Beat schedule.
-    """
-```
-
-### 5. Celery Beat Schedules
-**File:** `core/celery.py`
-
-```python
-'collect-kalshi-prediction-markets': {
-    'task': 'core.tasks.collect_kalshi_prediction_markets',
-    'schedule': crontab(minute='*/30'),  # Every 30 minutes
-    'options': {'queue': 'default'},
-},
-'collect-kalshi-market-intelligence': {
-    'task': 'core.tasks.collect_kalshi_market_intelligence',
-    'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
-    'options': {'queue': 'default'},
-},
-```
-
-### 6. Market Intelligence Desk Integration
-**File:** `core/agents/stocks/market_intelligence_coordinator.py`
-
-Added prediction market signals to the autonomous Market Intelligence Desk:
-
-```python
-def _get_prediction_market_signals(self, context: Dict) -> Dict[str, Any]:
-    """
-    Fetches Kalshi data and categorizes by:
-    - economics_signals (jobs, inflation, GDP)
-    - finance_signals (stocks, crypto)
-    - politics_signals (elections, policy)
-    - tech_signals (product launches, company events)
-    - high_volume_markets (>10k volume)
-    - high_probability_markets (>80%)
-    - uncertain_markets (40-60%)
-    """
-```
-
-Executive summary now includes prediction market insights.
-
-### 7. Discord Command
+### 3. Discord Command
 **File:** `core/services/discord_bot.py`
-
-Added `/predictions` command to SpiderCommands cog:
 
 ```
 /predictions                      # Top 5 markets by volume
@@ -165,51 +91,167 @@ Added `/predictions` command to SpiderCommands cog:
 /predictions category:politics limit:10  # Combined filters
 ```
 
-**Display Format:**
-```
-🎰 Prediction Markets
-Live market data from Kalshi
+---
 
-📊 Will inflation exceed 3% in January 2025?
-┌─────────────────────────────────────────┐
-│ Probability: 72.5% ███████░░░           │
-│ Yes: 71¢-74¢ | Vol: 45,230              │
-│ Status: ⚪ Leaning                       │
-└─────────────────────────────────────────┘
+## Part 2: The Odds API Sports Betting
+
+### 4. The Odds Spider
+**File:** `ai_core/spiders/specialized/theodds_spider.py` (NEW - 448 lines)
+
+Sports betting odds aggregator fetching from 40+ bookmakers.
+
+```python
+class TheOddsSpider:
+    name = "theodds"
+    base_url = "https://api.the-odds-api.com/v4"
+
+    # Sports covered (priority 1 = fetched by default)
+    SPORTS = {
+        'americanfootball_nfl': {'name': 'NFL', 'priority': 1},
+        'basketball_nba': {'name': 'NBA', 'priority': 1},
+        'baseball_mlb': {'name': 'MLB', 'priority': 1},
+        'icehockey_nhl': {'name': 'NHL', 'priority': 1},
+        'soccer_epl': {'name': 'English Premier League', 'priority': 1},
+        'soccer_uefa_champs_league': {'name': 'Champions League', 'priority': 1},
+        'mma_mixed_martial_arts': {'name': 'UFC/MMA', 'priority': 1},
+        # + college sports, other soccer leagues, tennis, golf, boxing
+    }
+
+    # Preferred US bookmakers
+    PREFERRED_BOOKMAKERS = ['draftkings', 'fanduel', 'betmgm', 'caesars', 'bovada']
+
+    def fetch_data(sports=None, max_results=100)  # Main entry point
+    def get_sport_odds(sport_key)                  # Single sport
+    def get_upcoming_events(hours=24)              # Next 24 hours
+    def get_best_bets()                            # Toss-up games (45-55%)
+    def get_api_usage()                            # Track quota
 ```
 
-### 8. Web UI Panel
+**Data Transform:**
+- Calculates implied probabilities from American odds
+- Identifies favorite team
+- Extracts spread and total lines
+- Tags: `heavy_favorite`, `favorite`, `toss_up`, `has_spread`, `has_totals`, `live`
+
+**Sample Output:**
+```json
+{
+    "event_id": "832c36c4b6d5132e88cf11391797c194",
+    "sport_name": "NFL",
+    "title": "Houston Texans @ Los Angeles Chargers",
+    "home_team": "Los Angeles Chargers",
+    "away_team": "Houston Texans",
+    "home_odds": 102,
+    "away_odds": -122,
+    "home_implied_prob": 49.5,
+    "home_spread": 1.5,
+    "total_line": 40.5,
+    "favorite": "Houston Texans",
+    "best_bookmaker": "draftkings"
+}
+```
+
+### 5. Spider Registry
+**File:** `ai_core/spiders/spider_registry.py`
+
+```python
+# Kalshi
+self.register_spider('kalshi', KalshiSpider, {
+    'category': 'prediction_markets',
+    'priority': 1,
+    'requires_auth': False,
+    'api_key_env': 'KALSHI_API_KEY',
+})
+
+# The Odds API
+self.register_spider('theodds', TheOddsSpider, {
+    'category': 'sports_odds',
+    'priority': 1,
+    'requires_auth': True,
+    'api_key_env': 'THE_ODDS_API_KEY',
+})
+```
+
+---
+
+## Celery Tasks & Schedules
+
+### Tasks
+**File:** `core/tasks.py`
+
+```python
+# Kalshi (existing)
+@shared_task
+def collect_kalshi_prediction_markets():
+    """Fetches 200 markets, stores in SpiderData. Every 30 min."""
+
+@shared_task
+def collect_kalshi_market_intelligence():
+    """Posts trending markets to Discord. Every 4 hours."""
+
+# The Odds API (new)
+@shared_task
+def collect_sports_odds():
+    """Fetches odds for NFL, NBA, MLB, NHL, Soccer, UFC. Every hour."""
+
+@shared_task
+def collect_sports_odds_intelligence():
+    """Posts upcoming games to Discord. Every 6 hours."""
+```
+
+### Beat Schedules
+**File:** `core/celery.py`
+
+```python
+'collect-kalshi-prediction-markets': {
+    'schedule': crontab(minute='*/30'),  # Every 30 minutes
+},
+'collect-kalshi-market-intelligence': {
+    'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours
+},
+'collect-sports-odds': {
+    'schedule': crontab(minute='*/60'),  # Every hour (conserve API quota)
+},
+'collect-sports-odds-intelligence': {
+    'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours
+},
+```
+
+---
+
+## Web UI: Markets Tab
+
 **Files:**
 - `ai_core/templates/components/panels/intelligence_command_center.html`
 - `ai_core/templates/partials/js/intelligence_command_center.html`
 - `core/views_spider_intelligence.py`
 - `core/urls.py`
 
-Added Markets sub-tab to Intelligence Command Center:
+**Access:** AI Studio → Intelligence Command Center → 🎲 Markets tab
 
-**UI Components:**
-- 🎲 Markets sub-tab button
+### Prediction Markets Section (Purple Theme)
 - Stats row: Likely (>80%), Uncertain (40-60%), Unlikely (<20%), Total Volume
-- Trending Markets section (top 5 by volume >10k)
-- All Markets list (up to 20 markets)
-- Category filter dropdown
-- Refresh button
+- Trending Markets (top 5 by volume >10k)
+- All Prediction Markets list
+- Category filter: economics, politics, finance, tech, weather, entertainment, science
 
-**Display Features:**
-- Probability bar visualization (█░░░░░░░░░)
-- Yes bid/ask prices in cents
-- Volume numbers with formatting
-- Category badges (economics, politics, tech, etc.)
-- Status indicators (🟢 Likely, 🟡 Uncertain, 🔴 Unlikely, ⚪ Leaning)
+### Sports Betting Section (Green Theme)
+- Stats row: Upcoming (24h), Toss-ups (45-55%), Active Leagues
+- Sport filter: NFL, NBA, MLB, NHL, College, Soccer, UFC
+- Game cards showing:
+  - Teams with favorite in bold
+  - Moneyline odds (color-coded)
+  - Spread and O/U lines
+  - Implied probabilities
 
-**API Endpoint:**
+**API Endpoints:**
 ```
 GET /api/prediction-markets/
 GET /api/prediction-markets/?category=economics
-GET /api/prediction-markets/?category=politics&limit=20
+GET /api/sports-odds/
+GET /api/sports-odds/?sport=nfl
+GET /api/sports-odds/?sport=nba&limit=20
 ```
-
-**Access:** AI Studio → Intelligence Command Center → Markets tab
 
 ---
 
@@ -217,41 +259,24 @@ GET /api/prediction-markets/?category=politics&limit=20
 
 Required in `.env`:
 ```bash
+# Kalshi (prediction markets)
 KALSHI_API_KEY=your_api_key_here
 KALSHI_PRIVATE_KEY=your_rsa_private_key_here
+
+# The Odds API (sports betting)
+THE_ODDS_API_KEY=your_api_key_here
 ```
 
-**Note:** Private key should be RSA format for RSA-PSS signing. The service loads it using `cryptography` library.
-
----
-
-## API Endpoints Used
-
-### Public (No Auth)
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /markets` | List all markets |
-| `GET /markets/{ticker}` | Market details |
-| `GET /markets/{ticker}/orderbook` | Order book |
-| `GET /markets/{ticker}/candlesticks` | OHLC data |
-| `GET /series` | Market categories |
-| `GET /events` | Event collections |
-
-### Authenticated
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /portfolio/balance` | Account balance |
-| `GET /portfolio/positions` | Current positions |
-| `GET /portfolio/orders` | Active orders |
-| `POST /portfolio/orders` | Place order |
-| `DELETE /portfolio/orders/{id}` | Cancel order |
+**API Quotas:**
+- Kalshi: Unlimited public API
+- The Odds API: 20,000 requests/month (paid tier)
 
 ---
 
 ## Testing
 
 ```bash
-# Test spider
+# Test Kalshi spider
 .venv/bin/python -c "
 from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
 spider = KalshiSpider()
@@ -261,81 +286,74 @@ for m in markets:
         print(f\"{m['title'][:50]} - {m['implied_probability_pct']:.1f}%\")
 "
 
-# Test authenticated service
+# Test The Odds spider
 .venv/bin/python -c "
-from core.services.kalshi_service import KalshiService
-service = KalshiService()
-balance = service.get_balance()
-print(f\"Balance: \${balance.get('balance', 0)/100:.2f}\")
+from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+spider = TheOddsSpider()
+events = spider.fetch_data(max_results=5)
+for e in events:
+    if e.get('data_type') == 'sports_odds':
+        print(f\"{e['title']} - {e['favorite']} favored\")
 "
 
-# Test Celery task
+# Test API endpoints
+curl 'http://localhost:8000/api/prediction-markets/?limit=3'
+curl 'http://localhost:8000/api/sports-odds/?sport=nfl&limit=3'
+
+# Run Celery tasks
 .venv/bin/celery -A core call core.tasks.collect_kalshi_prediction_markets
+.venv/bin/celery -A core call core.tasks.collect_sports_odds
 ```
 
 ---
 
 ## Data Model
 
-Prediction markets are stored in `SpiderData` model:
+Both spiders store data in `SpiderData`:
 
 ```python
-SpiderData.objects.filter(spider_name='kalshi')
+# Prediction markets
+SpiderData.objects.filter(spider_name='kalshi', data_type='prediction_market')
 
-# Fields populated:
-# - spider_name: 'kalshi'
-# - source_platform: 'kalshi'
-# - source_url: 'https://kalshi.com/markets/{ticker}'
-# - data_type: 'prediction_market'
-# - raw_data: Full market JSON
-# - title: Market title
-# - category: Extracted category
+# Sports odds
+SpiderData.objects.filter(spider_name='theodds', data_type='sports_odds')
 ```
 
 ---
 
 ## Bugs Fixed During Session
 
-### 1. Orderbook Parsing
+### 1. Orderbook Parsing (Kalshi)
 **Error:** `TypeError: list indices must be integers or slices, not str`
-**Cause:** Orderbook format is `[[price, count], ...]` not `[{'price': x, 'count': y}]`
-**Fix:** Changed `yes_bids[0]['price']` to `yes_bids[0][0]`
+**Fix:** Orderbook format is `[[price, count], ...]` not `[{'price': x, 'count': y}]`
 
 ### 2. SpiderData Model Fields
 **Error:** `Cannot resolve keyword 'source' into field`
-**Cause:** Model uses `source_platform`, not `source`
-**Fix:** Updated task to use correct field names:
-```python
-SpiderData.objects.update_or_create(
-    spider_name='kalshi',
-    source_url=f"https://kalshi.com/markets/{ticker}",
-    defaults={'source_platform': 'kalshi', ...}
-)
-```
+**Fix:** Model uses `source_platform`, not `source`
+
+### 3. Auth Middleware
+**Error:** API returns 401 for prediction-markets and sports-odds endpoints
+**Fix:** Added both paths to `PUBLIC_PATHS` in `core/auth_middleware.py`
 
 ---
 
 ## Session 559 Recommendations
 
-1. **Trading Automation**
+1. **Discord `/odds` Command**
+   - Add dedicated sports odds command similar to `/predictions`
+   - Filter by sport, show upcoming games
+
+2. **Trading Automation**
    - Create trading agent that uses prediction market signals
-   - Implement position tracking and P&L reporting
-   - Paper trading mode for testing strategies
+   - Sports betting analysis agent
 
-2. **Alert System**
-   - Discord alerts when high-probability markets shift significantly
-   - Alert when new markets match user interests
-   - Threshold-based notifications (e.g., "probability changed >10%")
+3. **Alert System**
+   - Discord alerts for significant line movements
+   - Notification when odds shift >10%
 
-3. **Historical Analysis**
+4. **Historical Analysis**
    - Track prediction accuracy over time
-   - Build model for identifying mispriced markets
-   - Backtest prediction strategies
-
-4. **Enhanced UI**
-   - Auto-refresh on Markets tab (every 60 seconds)
-   - Market detail modal with orderbook and candlesticks
-   - Watchlist functionality
+   - Build model for identifying value bets
 
 ---
 
@@ -344,27 +362,58 @@ SpiderData.objects.update_or_create(
 | File | Changes |
 |------|---------|
 | `ai_core/spiders/specialized/kalshi_spider.py` | **NEW** - 448 lines |
+| `ai_core/spiders/specialized/theodds_spider.py` | **NEW** - 448 lines |
 | `core/services/kalshi_service.py` | **NEW** - 350 lines |
-| `ai_core/spiders/spider_registry.py` | Added kalshi registration |
-| `core/tasks.py` | Added 2 Celery tasks |
-| `core/celery.py` | Added 2 Beat schedules |
+| `ai_core/spiders/spider_registry.py` | Added kalshi + theodds registration |
+| `core/tasks.py` | Added 4 Celery tasks (~500 lines) |
+| `core/celery.py` | Added 4 Beat schedules |
 | `core/agents/stocks/market_intelligence_coordinator.py` | Added prediction signals |
 | `core/services/discord_bot.py` | Added `/predictions` command |
-| `ai_core/templates/components/panels/intelligence_command_center.html` | Added Markets sub-tab (+99 lines) |
-| `ai_core/templates/partials/js/intelligence_command_center.html` | Added `loadPredictionMarkets()` (+140 lines) |
-| `core/views_spider_intelligence.py` | Added `get_prediction_markets()` API view |
-| `core/urls.py` | Added `/api/prediction-markets/` route |
+| `ai_core/templates/.../intelligence_command_center.html` | Markets tab + Sports section (~170 lines) |
+| `ai_core/templates/.../js/intelligence_command_center.html` | `loadPredictionMarkets()` + `loadSportsOdds()` (~280 lines) |
+| `core/views_spider_intelligence.py` | Added 2 API views |
+| `core/urls.py` | Added 2 routes |
+| `core/auth_middleware.py` | Added 2 public paths |
+
+---
+
+## Commits
+
+| Commit | Description |
+|--------|-------------|
+| `e31bece` | Kalshi prediction markets integration |
+| `a7e82d4` | Web UI prediction markets panel |
+| `139453a` | Handoff document |
+| `1504338` | Auth middleware fix |
+| `14aa43f` | The Odds API sports betting integration |
 
 ---
 
 ## Summary
 
-Session 558 delivered complete Kalshi prediction markets integration:
-- **Spider:** Fetches 200 markets with probabilities, volumes, categories
-- **Service:** RSA-PSS authenticated trading capability
-- **Automation:** 30-minute data collection + 4-hour intelligence posts
-- **Integration:** Market Intelligence Desk includes prediction signals
-- **Discord:** `/predictions` command with category filtering
-- **Web UI:** Markets sub-tab in Intelligence Command Center with stats, trending, and all markets
+Session 558 delivered complete market intelligence integration:
 
-The platform now has real-time access to prediction market data for economics, politics, tech, finance, weather, and entertainment categories via Discord, Web UI, and programmatic API.
+**Prediction Markets (Kalshi):**
+- Spider fetches 200 markets with probabilities, volumes, categories
+- RSA-PSS authenticated trading capability
+- 30-minute data collection + 4-hour Discord posts
+- Market Intelligence Desk integration
+- `/predictions` Discord command
+
+**Sports Betting (The Odds API):**
+- Spider fetches odds from 40+ bookmakers
+- NFL, NBA, MLB, NHL, Soccer, UFC/MMA coverage
+- Moneylines, spreads, totals, implied probabilities
+- Hourly collection (conserving 20k/month quota)
+- 6-hour Discord intelligence posts
+
+**Unified Web UI:**
+- Markets tab in Intelligence Command Center
+- Prediction Markets section (purple) with category filter
+- Sports Betting section (green) with sport filter
+- Real-time stats and game cards
+
+The platform now has comprehensive market intelligence covering:
+- Political/economic predictions (Kalshi)
+- Sports betting odds (The Odds API)
+- All accessible via Discord, Web UI, and programmatic API
