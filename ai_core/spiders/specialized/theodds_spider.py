@@ -17,7 +17,15 @@ import os
 import logging
 import requests
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# Try zoneinfo (Python 3.9+), fall back to pytz
+try:
+    from zoneinfo import ZoneInfo
+    MST = ZoneInfo('America/Denver')  # Mountain Time (handles DST automatically)
+except ImportError:
+    import pytz
+    MST = pytz.timezone('America/Denver')
 
 logger = logging.getLogger(__name__)
 
@@ -368,10 +376,13 @@ class TheOddsSpider:
             return None
 
     def _format_time(self, iso_time: str) -> str:
-        """Format ISO time to readable string."""
+        """Format ISO time to readable string in MST (Mountain Time)."""
         try:
+            # Parse UTC time
             dt = datetime.fromisoformat(iso_time.replace('Z', '+00:00'))
-            return dt.strftime('%b %d, %I:%M %p')
+            # Convert to Mountain Time
+            dt_mst = dt.astimezone(MST)
+            return dt_mst.strftime('%b %d, %I:%M %p MST')
         except:
             return iso_time
 
