@@ -493,16 +493,17 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(ClientCommands(self))  # Session 432: Phase 3 Client Management
         await self.add_cog(AgentAccessCommands(self))  # Session 434: Phase 5 Full Agent Access
         await self.add_cog(VoiceCommands(self))  # Session 438: Phase 8 Voice AI
-        await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
+        # Session 558: Temporarily disabled to stay under 100 command limit
+        # await self.add_cog(VoiceMarketplaceCommands(self))  # Session 440: Voice Marketplace
         await self.add_cog(ContentPipelineCommands(self))  # Session 440: Content Pipeline
         await self.add_cog(SeriesCommands(self))  # Session 445: AI Series Workflow
         await self.add_cog(StudioCommands(self))  # Session 466: Autonomous Content Studio
-        await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
+        # await self.add_cog(PipelineLearningCommands(self))  # Session 449: Pipeline Learning Loops
         await self.add_cog(RoleManager(self))  # Session 439: Subscription role management
         await self.add_cog(HelpCommands(self))
         await self.add_cog(ReactionFeedbackCog(self))  # Session 452: Auto-feedback from reactions
-        await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
-        await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
+        # await self.add_cog(NarrativeCommands(self))  # Session 471: Narrative Drift Detector
+        # await self.add_cog(ROICommands(self))  # Session 472: ROI Metrics
         await self.add_cog(ResolveCommands(self))  # Session 478: DaVinci Resolve Integration
         await self.add_cog(SituationCommands(self))  # Session 480: All 19 Autonomous Situations
         await self.add_cog(GumroadCommands(self))  # Session 487: Gumroad Publishing (Golden Egg)
@@ -1328,8 +1329,8 @@ class SpiderCommands(commands.Cog):
                     matchup = arb.get('matchup', 'Unknown')[:40]
                     profit = arb.get('profit_pct', 0)
                     rating = arb.get('rating', 'SKIP')
-                    home_book = arb.get('home_book', 'Book A')
-                    away_book = arb.get('away_book', 'Book B')
+                    home_book = arb.get('home_book', 'Unknown')
+                    away_book = arb.get('away_book', 'Unknown')
                     home_team = arb.get('home_team', 'Home')[:15]
                     away_team = arb.get('away_team', 'Away')[:15]
                     home_decimal = arb.get('home_decimal_odds', 0)
@@ -1338,18 +1339,37 @@ class SpiderCommands(commands.Cog):
                     stake_away = arb.get('stake_away', 50)
                     guaranteed = arb.get('guaranteed_profit', 0)
                     game_time = arb.get('game_time', 'TBD')
+                    is_3way = arb.get('is_3way', False)
 
                     rating_emoji = "🔥" if rating == "HOT" else "✅" if rating == "GOOD" else "📊"
 
-                    field_value = (
-                        f"```\n"
-                        f"Profit: {profit:.2f}% guaranteed\n"
-                        f"Bet ${stake_home:.0f} on {home_team} @ {home_book} ({home_decimal:.2f})\n"
-                        f"Bet ${stake_away:.0f} on {away_team} @ {away_book} ({away_decimal:.2f})\n"
-                        f"= ${guaranteed:.2f} profit on $100\n"
-                        f"⏰ {game_time}\n"
-                        f"```"
-                    )
+                    if is_3way:
+                        # 3-way market (soccer) - show draw too
+                        draw_book = arb.get('draw_book', 'Unknown')
+                        draw_decimal = arb.get('draw_decimal_odds', 0)
+                        stake_draw = arb.get('stake_draw', 0)
+
+                        field_value = (
+                            f"```\n"
+                            f"Profit: {profit:.2f}% guaranteed (3-way)\n"
+                            f"${stake_home:.0f} {home_team} @ {home_book} ({home_decimal:.2f})\n"
+                            f"${stake_away:.0f} {away_team} @ {away_book} ({away_decimal:.2f})\n"
+                            f"${stake_draw:.0f} Draw @ {draw_book} ({draw_decimal:.2f})\n"
+                            f"= ${guaranteed:.2f} profit on $100\n"
+                            f"⏰ {game_time}\n"
+                            f"```"
+                        )
+                    else:
+                        # 2-way market (NFL, NBA, etc.)
+                        field_value = (
+                            f"```\n"
+                            f"Profit: {profit:.2f}% guaranteed\n"
+                            f"${stake_home:.0f} {home_team} @ {home_book} ({home_decimal:.2f})\n"
+                            f"${stake_away:.0f} {away_team} @ {away_book} ({away_decimal:.2f})\n"
+                            f"= ${guaranteed:.2f} profit on $100\n"
+                            f"⏰ {game_time}\n"
+                            f"```"
+                        )
 
                     embed.add_field(
                         name=f"{rating_emoji} [{rating}] {matchup}",

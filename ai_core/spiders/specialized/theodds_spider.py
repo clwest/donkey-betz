@@ -385,8 +385,8 @@ class TheOddsSpider:
             away_team = event.get('away_team', 'Unknown')
             commence_time = event.get('commence_time', '')
 
-            # Parse odds from bookmakers
-            odds_data = self._extract_best_odds(event.get('bookmakers', []))
+            # Parse odds from bookmakers - pass team names for accurate matching
+            odds_data = self._extract_best_odds(event.get('bookmakers', []), home_team, away_team)
 
             # Calculate implied probabilities
             h2h = odds_data.get('h2h', {})
@@ -452,6 +452,9 @@ class TheOddsSpider:
                 'bookmaker_count': len(event.get('bookmakers', [])),
                 'best_bookmaker': odds_data.get('best_bookmaker'),
 
+                # Per-bookmaker odds for arbitrage detection
+                'h2h_odds': odds_data.get('all_bookmaker_odds', []),
+
                 # Metadata
                 'fetched_at': datetime.utcnow().isoformat(),
                 'tags': self._generate_tags(event, odds_data, favorite_prob),
@@ -461,13 +464,20 @@ class TheOddsSpider:
             logger.error(f"Error normalizing event: {str(e)}")
             return None
 
-    def _extract_best_odds(self, bookmakers: List[Dict]) -> Dict:
-        """Extract best odds from bookmaker data, preferring US books."""
+    def _extract_best_odds(self, bookmakers: List[Dict], home_team: str = None, away_team: str = None) -> Dict:
+        """Extract best odds from bookmaker data, preferring US books.
+
+        Args:
+            bookmakers: List of bookmaker data from API
+            home_team: The actual home team name (for accurate matching)
+            away_team: The actual away team name (for accurate matching)
+        """
         result = {
             'h2h': {},
             'spreads': {},
             'totals': {},
             'best_bookmaker': None,
+            'all_bookmaker_odds': [],  # For arbitrage detection
         }
 
         if not bookmakers:
@@ -482,6 +492,47 @@ class TheOddsSpider:
             )
         )
 
+        # Collect ALL bookmaker h2h odds for arbitrage detection
+        # CRITICAL: Match by team name, not by order (bookmakers list teams differently)
+        for bookmaker in bookmakers:
+            book_key = bookmaker.get('key', 'unknown')
+            book_title = bookmaker.get('title', book_key)
+
+            for market in bookmaker.get('markets', []):
+                if market.get('key') == 'h2h':
+                    outcomes = market.get('outcomes', [])
+                    book_odds = {
+                        'bookmaker': book_title,
+                        'bookmaker_key': book_key,
+                    }
+
+                    for outcome in outcomes:
+                        name = outcome.get('name', '')
+                        price = outcome.get('price')
+
+                        if 'Draw' in name or name == 'Draw':
+                            book_odds['draw_odds'] = price
+                        elif home_team and self._teams_match(name, home_team):
+                            # Match by team name (fuzzy)
+                            book_odds['home_odds'] = price
+                            book_odds['home_team'] = name
+                        elif away_team and self._teams_match(name, away_team):
+                            # Match by team name (fuzzy)
+                            book_odds['away_odds'] = price
+                            book_odds['away_team'] = name
+                        elif not home_team or not away_team:
+                            # Fallback to order-based if team names not provided
+                            if 'home_odds' not in book_odds:
+                                book_odds['home_odds'] = price
+                                book_odds['home_team'] = name
+                            elif 'away_odds' not in book_odds:
+                                book_odds['away_odds'] = price
+                                book_odds['away_team'] = name
+
+                    if book_odds.get('home_odds') and book_odds.get('away_odds'):
+                        result['all_bookmaker_odds'].append(book_odds)
+                    break  # Only one h2h market per bookmaker
+
         for bookmaker in sorted_books:
             book_key = bookmaker.get('key')
 
@@ -494,12 +545,17 @@ class TheOddsSpider:
                         name = outcome.get('name')
                         price = outcome.get('price')
                         if name and price:
-                            # Match to home/away/draw
+                            # Match to home/away/draw by team name (fuzzy)
                             if 'Draw' in name or name == 'Draw':
                                 result['h2h']['draw_odds'] = price
-                            else:
-                                # First non-draw is typically away, second is home
-                                # But we need to match by name
+                            elif home_team and self._teams_match(name, home_team):
+                                result['h2h']['home_odds'] = price
+                                result['h2h']['home_team'] = name
+                            elif away_team and self._teams_match(name, away_team):
+                                result['h2h']['away_odds'] = price
+                                result['h2h']['away_team'] = name
+                            elif not home_team or not away_team:
+                                # Fallback to order-based
                                 if 'home_odds' not in result['h2h']:
                                     result['h2h']['home_odds'] = price
                                     result['h2h']['home_team'] = name
@@ -548,6 +604,64 @@ class TheOddsSpider:
                 return abs(odds) / (abs(odds) + 100)
         except:
             return None
+
+    def _teams_match(self, outcome_name: str, team_name: str) -> bool:
+        """
+        Check if outcome name matches team name using fuzzy matching.
+
+        Handles cases like:
+        - "Los Angeles Chargers" vs "LA Chargers"
+        - "BYU Cougars" vs "BYU"
+        - "Georgia Tech Yellow Jackets" vs "Georgia Tech"
+        """
+        if not outcome_name or not team_name:
+            return False
+
+        # Exact match
+        if outcome_name == team_name:
+            return True
+
+        # Normalize for comparison
+        outcome_lower = outcome_name.lower().strip()
+        team_lower = team_name.lower().strip()
+
+        # One contains the other
+        if outcome_lower in team_lower or team_lower in outcome_lower:
+            return True
+
+        # Split into words and check for significant overlap
+        outcome_words = set(outcome_lower.split())
+        team_words = set(team_lower.split())
+
+        # Remove common filler words
+        filler_words = {'the', 'fc', 'sc', 'cf', 'afc', 'united'}
+        outcome_words -= filler_words
+        team_words -= filler_words
+
+        # If at least 2 words match, or 1 word matches and it's a major identifier
+        common_words = outcome_words & team_words
+        if len(common_words) >= 2:
+            return True
+
+        # Check for abbreviation matching (LA = Los Angeles, NY = New York, etc.)
+        abbrev_map = {
+            'la': 'los angeles',
+            'ny': 'new york',
+            'sf': 'san francisco',
+            'tb': 'tampa bay',
+            'gb': 'green bay',
+            'kc': 'kansas city',
+            'lv': 'las vegas',
+            'ne': 'new england',
+        }
+
+        for abbrev, full in abbrev_map.items():
+            if abbrev in outcome_lower and full in team_lower:
+                return True
+            if full in outcome_lower and abbrev in team_lower:
+                return True
+
+        return False
 
     def _format_time(self, iso_time: str) -> str:
         """Format ISO time to readable string in MST (Mountain Time)."""
