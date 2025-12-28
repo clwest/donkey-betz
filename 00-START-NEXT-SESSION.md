@@ -39,13 +39,33 @@ Created 5 narratives across domains:
 - "China tech is uninvestable" (Geopolitics - Fading)
 - "AI agents will manage portfolios" (Tech - Emerging)
 
+### Codebase TODO Cleanup - COMPLETE
+
+Cleaned up all TODO/FIXME comments across the codebase:
+
+| Metric | Value |
+|--------|-------|
+| **TODOs Removed** | 33 |
+| **Files Updated** | 22 |
+| **Remaining TODOs** | 0 |
+
+Changes made:
+- Removed obsolete TODOs (features already implemented)
+- Changed "TODO: Implement X" → "X not implemented" for clarity
+- Converted future work notes to "Note:" comments
+- Removed deprecated commented-out code
+- Fixed deprecation notice on old Revenue class
+
 ### Session 570 Changes
 
-Database-level changes (no code commits):
+Database-level changes:
 - 34 triggers loaded from DEFAULT_TRIGGERS
 - 5 narratives created for Narrative Drift
 - MLModelVersion v2.0 record created
 - ML model trained and saved
+
+Code commits:
+- `b340437` - TODO cleanup across 22 files
 
 ---
 
@@ -149,14 +169,14 @@ print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 ## Recent Commits
 
 ```
+b340437 chore(Session 570): Clean up TODO/FIXME comments across codebase
 6826d46 feat(Session 569): Re-enable Autonomous tab with investor hero section
 88f3f19 refactor(Session 567): Major codebase cleanup - unused imports and debug logging
 4dc4d8a docs(Session 567): Create comprehensive database models documentation
 fb5b5db docs(Session 567): Create comprehensive Discord commands documentation
-be10c49 docs(Session 567): Create comprehensive services documentation
 ```
 
 ---
 
-**Session 570: Autonomous Sub-Tabs Data Population - COMPLETE**
+**Session 570: Autonomous Sub-Tabs + TODO Cleanup - COMPLETE**
 **Ready for Session 571**
