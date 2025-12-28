@@ -255,9 +255,9 @@ def learning_feed_data(request):
 
 @require_http_methods(["GET"])
 def all_agents_list(request):
-    """Get complete list of all 151 agents with details"""
-
-    agents = Agent.objects.all().order_by('-effectiveness_score', 'name')
+    """Get complete list of active agents with details"""
+    # Session 564: Filter to active agents only for consistency with Research tab
+    agents = Agent.objects.filter(is_active=True).order_by('-effectiveness_score', 'name')
 
     agent_list = []
     for agent in agents:
