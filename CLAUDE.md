@@ -188,9 +188,10 @@ For older sessions, see `docs/handoffs/` directory.
 |-----|---------|
 | `docs/ARCHITECTURE.md` | System architecture |
 | `docs/CAPABILITIES.md` | Full feature list |
-| `docs/AGENTS.md` | Agent documentation |
-| `docs/SPIDERS.md` | Spider network details |
-| `docs/SCIFI_FEATURES.md` | 15 advanced AI features |
+| `docs/AGENTS.md` | Agent documentation (71 agents) |
+| `docs/SPIDERS.md` | Spider network (77 spiders) |
+| `docs/SERVICES.md` | Services layer (93 services) |
+| `docs/SCIFI_FEATURES.md` | 14 Sci-Fi AI features |
 
 ---
 

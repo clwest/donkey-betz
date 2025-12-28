@@ -1,0 +1,577 @@
+# Services Reference
+
+**Last Updated:** Session 567 (December 28, 2025)
+**Location:** `core/services/`
+**Total Services:** 93 service classes across 81 files
+
+---
+
+## Overview
+
+The services layer contains business logic separated from views and models. Services are organized by domain and follow a consistent pattern of stateless classes with methods that orchestrate operations.
+
+---
+
+## Service Categories
+
+| Category | Count | Purpose |
+|----------|-------|---------|
+| AI/Agent Intelligence | 15 | Agent learning, collaboration, context |
+| Content Generation | 8 | Creative orchestration, pipelines |
+| Research & Analysis | 7 | Research orchestration, PDF processing |
+| Spider/Data Intelligence | 6 | Spider network, semantic search |
+| Scoring & ML | 6 | ML engine, real-time scoring |
+| Discord Integration | 5 | Bot, voice, notifications |
+| Legal/Litigation | 4 | Document ingestion, response writing |
+| Workflow & Automation | 5 | Workflow builder, analytics |
+| Payments & Monetization | 4 | Stripe, Gumroad, ROI tracking |
+| Provenance & Compliance | 4 | Content audit, originality |
+| Memory & Learning | 5 | Embeddings, implicit learning |
+| Event System | 3 | Event bus, handlers |
+| Chief of Staff | 5 | Reviews, decisions, concerns |
+| Utility Services | 16 | Various specialized services |
+
+---
+
+## AI/Agent Intelligence (15 Services)
+
+### AgentCollaborationService
+**File:** `agent_collaboration.py`
+**Purpose:** Orchestrates multi-agent collaboration sessions
+
+```python
+from core.services.agent_collaboration import AgentCollaborationService
+
+service = AgentCollaborationService()
+result = service.run_collaboration(
+    agents=['CTOAgent', 'CreativeDirectorAgent'],
+    topic='Platform architecture review',
+    collaboration_type='debate'
+)
+```
+
+### AgentCollaborationHub
+**File:** `agent_collaboration_hub.py`
+**Purpose:** Real-time agent messaging and consensus building
+
+### AgentIntelligenceContextService
+**File:** `agent_intelligence_context.py`
+**Purpose:** Builds rich context for agent execution including memories, trends, and spider data
+
+### AgentLearningService
+**File:** `agent_learning_service.py`
+**Purpose:** Tracks agent interactions and learns preferences over time
+
+### AgentTrainingService
+**File:** `agent_training.py`
+**Purpose:** Fine-tuning and training agent behaviors
+
+### AgentIntelligenceService
+**File:** `ai_content_agents.py`
+**Purpose:** Central agent capability registry and routing
+
+### CollectiveIntelligenceService
+**File:** `collective_intelligence.py`
+**Purpose:** Cross-agent knowledge sharing, gap detection, and synthesis
+
+```python
+from core.services.collective_intelligence import CollectiveIntelligenceService
+
+service = CollectiveIntelligenceService()
+report = service.generate_collective_report(topic='AI trends')
+gaps = service.identify_knowledge_gaps()
+```
+
+### PAIntelligenceEnricher
+**File:** `pa_intelligence_enricher.py`
+**Purpose:** Enriches Personal Assistant responses with platform intelligence
+
+### ClassificationIntegrationService
+**File:** `classification_integration.py`
+**Purpose:** Intent classification and agent delegation
+
+### SemanticRoutingService
+**File:** `semantic_routing.py`
+**Purpose:** Routes requests to appropriate agents using semantic similarity
+
+### ProactiveIntelligenceService
+**File:** `proactive_intelligence.py`
+**Purpose:** Generates proactive suggestions and alerts
+
+### SmartSuggestionsService
+**File:** `smart_suggestions.py`
+**Purpose:** Context-aware smart suggestions for users
+
+### IntelligenceQueryService
+**File:** `intelligence_query.py`
+**Purpose:** Unified interface for querying platform intelligence
+
+### PolicyContextService
+**File:** `policy_context.py`
+**Purpose:** Injects policy and guideline context into agent prompts
+
+### ImplicitLearningService
+**File:** `implicit_learning.py`
+**Purpose:** Learns from user behavior signals without explicit feedback
+
+---
+
+## Content Generation (8 Services)
+
+### CreativeOrchestrator
+**File:** `creative_orchestrator.py`
+**Purpose:** Orchestrates multi-asset creative generation (images, videos, audio)
+
+```python
+from core.services.creative_orchestrator import CreativeOrchestrator
+
+orchestrator = CreativeOrchestrator()
+result = orchestrator.generate_full_asset_pack(
+    prompt='Cyberpunk city',
+    include_video=True,
+    include_audio=True
+)
+```
+
+### UnifiedContentPipeline
+**File:** `content_pipeline.py`
+**Purpose:** Tiered content pipeline ($5-$50K packages)
+
+### ResearchToCreativePipeline
+**File:** `research_to_creative_pipeline.py`
+**Purpose:** Converts research insights into creative briefs
+
+### StyleLibrary
+**File:** `style_library.py`
+**Purpose:** Manages 80+ style presets for image generation
+
+### TTSTextOptimizer
+**File:** `tts_optimizer.py`
+**Purpose:** Optimizes text for text-to-speech conversion
+
+### PodcastAudioService
+**File:** `podcast_audio_service.py`
+**Purpose:** Podcast episode audio generation and assembly
+
+### ContentExportService
+**File:** `content_export.py`
+**Purpose:** Exports content in various formats
+
+### WatermarkService
+**File:** `watermark_service.py`
+**Purpose:** Adds watermarks to generated content
+
+---
+
+## Research & Analysis (7 Services)
+
+### ResearchOrchestrator
+**File:** `research_orchestrator.py`
+**Purpose:** Multi-phase research orchestration with source aggregation
+
+```python
+from core.services.research_orchestrator import ResearchOrchestrator
+
+orchestrator = ResearchOrchestrator()
+result = orchestrator.run_full_research(
+    topic='AI market trends 2025',
+    depth='comprehensive'
+)
+```
+
+### ResearchPDFService
+**File:** `research_pdf_service.py`
+**Purpose:** PDF ingestion and analysis for research
+
+### ProjectResearchBridge
+**File:** `project_research_bridge.py`
+**Purpose:** Connects research to project context
+
+### LivingProjectService
+**File:** `living_project_service.py`
+**Purpose:** Maintains project state and learning
+
+### AnalyticsService
+**File:** `analytics_service.py`
+**Purpose:** Platform analytics and time-series data
+
+### WorkflowAnalyticsService
+**File:** `workflow_analytics.py`
+**Purpose:** Workflow execution analytics and metrics
+
+### MarketplaceDiscoveryService
+**File:** `marketplace_discovery_service.py`
+**Purpose:** Discovers marketplace opportunities and platform fit
+
+---
+
+## Spider/Data Intelligence (6 Services)
+
+### SpiderIntelligenceService
+**File:** `spider_intelligence.py`
+**Purpose:** Central interface for spider data intelligence
+
+```python
+from core.services.spider_intelligence import SpiderIntelligenceService
+
+service = SpiderIntelligenceService()
+insights = service.get_insights_for_prompt('AI startup funding')
+trends = service.get_trending_topics(categories=['tech', 'finance'])
+```
+
+### SpiderSemanticSearch
+**File:** `spider_semantic_search.py`
+**Purpose:** Semantic search across spider-collected data
+
+### SpiderPriorityEngine
+**File:** `spider_priority_engine.py`
+**Purpose:** Prioritizes spider execution based on relevance
+
+### SmartTrendingService
+**File:** `smart_trending_service.py`
+**Purpose:** Analyzes trends from spider data
+
+### DomainExtractionService
+**File:** `domain_extraction_service.py`
+**Purpose:** Extracts domain-specific entities from text
+
+### UnifiedIntelligenceSearch
+**File:** `unified_intelligence_search.py`
+**Purpose:** Unified search across all intelligence sources
+
+---
+
+## Scoring & ML (6 Services)
+
+### MLScoringEngine
+**File:** `ml_scoring_engine.py`
+**Purpose:** XGBoost-based opportunity scoring with SHAP explanations
+
+```python
+from core.services.ml_scoring_engine import MLScoringEngine
+
+engine = MLScoringEngine()
+result = engine.score_opportunity(opportunity_data)
+explanation = result.shap_explanation
+```
+
+### ScoringDispatcher
+**File:** `scoring_dispatcher.py`
+**Purpose:** Routes scoring requests to appropriate engines
+
+### RealtimeScorer
+**File:** `realtime_scorer.py`
+**Purpose:** Real-time scoring queue with priority handling
+
+### RecommendationEngine
+**File:** `recommendation_engine.py`
+**Purpose:** Generates personalized recommendations
+
+### KnowledgeSimilarityService
+**File:** `knowledge_similarity.py`
+**Purpose:** Computes similarity between knowledge items
+
+### ABTestingService
+**File:** `ab_testing.py`
+**Purpose:** A/B testing framework for experiments
+
+---
+
+## Discord Integration (5 Services)
+
+### DonkeyBetzBot
+**File:** `discord_bot.py`
+**Purpose:** Main Discord bot with 29 command Cogs (112 commands)
+
+### DiscordNotificationService
+**File:** `discord_notifications.py`
+**Purpose:** Sends notifications to Discord channels
+
+```python
+from core.services.discord_notifications import DiscordNotificationService
+
+service = DiscordNotificationService()
+await service.send_dream_notification(agent_name, dream_content)
+await service.send_system_status(status_data)
+```
+
+### DiscordVoiceService
+**File:** `discord_voice.py`
+**Purpose:** Voice channel recording and voice cloning
+
+### ElevenLabsVoiceCloner
+**File:** `discord_voice.py`
+**Purpose:** Voice cloning via ElevenLabs API
+
+### VoiceRecorder
+**File:** `discord_voice.py`
+**Purpose:** Records voice from Discord channels
+
+---
+
+## Legal/Litigation (4 Services)
+
+### LegalDocumentIngestor
+**File:** `litigation_brain.py`
+**Purpose:** Ingests and parses legal documents
+
+### LegalContextBuilder
+**File:** `litigation_brain.py`
+**Purpose:** Builds legal context from case history
+
+### LegalResponseWriter
+**File:** `litigation_brain.py`
+**Purpose:** Drafts legal responses and filings
+
+### LegalFilingPackager
+**File:** `litigation_brain.py`
+**Purpose:** Packages documents for court filing
+
+---
+
+## Workflow & Automation (5 Services)
+
+### WorkflowBuilderService
+**File:** `workflow_builder.py`
+**Purpose:** Builds and manages multi-step workflows
+
+### AutonomousIntelligenceLoop
+**File:** `autonomous_loop.py`
+**Purpose:** Autonomous monitoring and intelligence gathering
+
+### AutonomousActionExecutor
+**File:** `autonomous_action_executor.py`
+**Purpose:** Executes autonomous actions based on triggers
+
+### TaskMemoryService
+**File:** `task_memory.py`
+**Purpose:** Tracks task state and progress
+
+### StreamingProgressService
+**File:** `streaming_progress.py`
+**Purpose:** Real-time progress updates via WebSocket
+
+---
+
+## Payments & Monetization (4 Services)
+
+### StripeSubscriptionService
+**File:** `stripe_subscription.py`
+**Purpose:** Subscription management via Stripe
+
+### StripeVoicePaymentService
+**File:** `stripe_voice_payments.py`
+**Purpose:** Voice marketplace payments
+
+### GumroadPublishingService
+**File:** `gumroad_publishing.py`
+**Purpose:** Publishes content to Gumroad
+
+### ROITracker
+**File:** `roi_tracker.py`
+**Purpose:** Tracks ROI, conversions, and attribution
+
+```python
+from core.services.roi_tracker import ROITracker
+
+tracker = ROITracker()
+summary = tracker.get_roi_summary(period='weekly')
+attribution = tracker.attribute_conversion(user_id, source)
+```
+
+---
+
+## Provenance & Compliance (4 Services)
+
+### ProvenanceService
+**File:** `provenance_service.py`
+**Purpose:** Content provenance tracking
+
+### ProvenanceTracker
+**File:** `provenance_tracker.py`
+**Purpose:** Tracks content lineage and transformations
+
+### ContentAuditService
+**File:** `provenance_service.py`
+**Purpose:** Audits content for compliance
+
+### OriginalityService
+**File:** `provenance_service.py`
+**Purpose:** Checks content originality
+
+---
+
+## Memory & Learning (5 Services)
+
+### MemoryEmbeddingService
+**File:** `memory_embedding_service.py`
+**Purpose:** Generates and searches memory embeddings
+
+### PipelineLearningService
+**File:** `pipeline_learning.py`
+**Purpose:** Learning from pipeline execution outcomes
+
+### ResolveLearningService
+**File:** `resolve_learning.py`
+**Purpose:** Learning from DaVinci Resolve render outcomes
+
+### ReferenceResolver
+**File:** `reference_resolver.py`
+**Purpose:** Resolves entity references in text
+
+### DeduplicationService
+**File:** `deduplication_service.py`
+**Purpose:** Deduplicates content and knowledge items
+
+---
+
+## Event System (3 Services)
+
+### EventBus
+**File:** `event_bus.py`
+**Purpose:** Central event bus for pub/sub messaging
+
+```python
+from core.services.event_bus import EventBus, Event
+
+bus = EventBus()
+bus.publish(Event(
+    stream='opportunities',
+    event_type='new_opportunity',
+    data={'title': 'AI Job Opening'}
+))
+```
+
+### EventHandlerRegistry
+**File:** `event_handlers.py`
+**Purpose:** Registers and dispatches event handlers
+
+### EventConsumerWorker
+**File:** `event_handlers.py`
+**Purpose:** Background worker for event processing
+
+---
+
+## Chief of Staff (5 Services)
+
+### ReviewDocumentService
+**File:** `review_document.py`
+**Purpose:** Generates Pro/Con review documents for decisions
+
+```python
+from core.services.review_document import ReviewDocumentService
+
+service = ReviewDocumentService()
+review = service.generate_review(
+    topic='Should we add AR features?',
+    context=project_context
+)
+```
+
+### SideChatService
+**File:** `side_chat.py`
+**Purpose:** Pro/Con interrogation of decisions
+
+### DecisionExtractor
+**File:** `decision_extractor.py`
+**Purpose:** Extracts decisions from conversations
+
+### ConcernTrackerService
+**File:** `concern_tracker.py`
+**Purpose:** Tracks and escalates concerns for human review
+
+### HumanActionService
+**File:** `human_action_service.py`
+**Purpose:** Surfaces items requiring human action
+
+---
+
+## Utility Services (16 Services)
+
+### KalshiService
+**File:** `kalshi_service.py`
+**Purpose:** Kalshi prediction market integration with RSA-PSS auth
+
+### MarketDataService
+**File:** `market_data_service.py`
+**Purpose:** Sports odds and market data
+
+### BlockchainEventListener
+**File:** `blockchain_event_listener.py`
+**Purpose:** Listens to blockchain events for audit
+
+### CertificateService
+**File:** `certificate_service.py`
+**Purpose:** Manages user certifications
+
+### HITLValidationService
+**File:** `hitl_validation.py`
+**Purpose:** Human-in-the-loop validation workflows
+
+### ArtifactExtractionService
+**File:** `artifact_extraction.py`
+**Purpose:** Extracts actionable artifacts from conversations
+
+### ArtifactExecutionService
+**File:** `artifact_execution.py`
+**Purpose:** Executes extracted artifacts
+
+### WeeklySynthesisService
+**File:** `weekly_synthesis.py`
+**Purpose:** Generates weekly intelligence synthesis
+
+### PushNotificationService
+**File:** `push_notification_service.py`
+**Purpose:** Web push notifications for alerts
+
+### WatermarkIntegration
+**File:** `watermark_integration.py`
+**Purpose:** Integrates watermarking into pipelines
+
+### IncomeActionService
+**File:** `income_action_service.py`
+**Purpose:** Tracks income-generating actions
+
+---
+
+## Usage Patterns
+
+### Service Instantiation
+Most services are stateless and can be instantiated directly:
+
+```python
+from core.services.spider_intelligence import SpiderIntelligenceService
+
+service = SpiderIntelligenceService()
+result = service.get_insights_for_prompt('query')
+```
+
+### Async Services
+Some services have async methods for non-blocking operations:
+
+```python
+from core.services.discord_notifications import DiscordNotificationService
+
+service = DiscordNotificationService()
+await service.send_notification(channel, message)
+```
+
+### Service Composition
+Services often compose other services:
+
+```python
+class CreativeOrchestrator:
+    def __init__(self):
+        self.spider_service = SpiderIntelligenceService()
+        self.style_library = StyleLibrary()
+        self.recommendation_engine = RecommendationEngine()
+```
+
+---
+
+## See Also
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [AGENTS.md](AGENTS.md) - Agent reference (71 agents)
+- [SPIDERS.md](SPIDERS.md) - Spider network (77 spiders)
+- [CAPABILITIES.md](CAPABILITIES.md) - Full feature list
