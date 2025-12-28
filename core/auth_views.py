@@ -51,7 +51,7 @@ def login_view(request):
             profile = user.userprofile
             credits = profile.credits_remaining
             subscription = profile.account_type
-        except:
+        except Exception:
             credits = 10000
             subscription = 'premium'
         
@@ -82,7 +82,7 @@ def logout_view(request):
     try:
         request.user.auth_token.delete()
         return Response({'detail': 'Successfully logged out'})
-    except:
+    except Exception:
         return Response({'detail': 'Logout successful'})
 
 
@@ -97,7 +97,7 @@ def current_user(request):
             profile = request.user.userprofile
             credits = profile.credits_remaining
             subscription = profile.account_type
-        except:
+        except Exception:
             credits = 10000
             subscription = 'premium'
             
@@ -203,7 +203,7 @@ def user_profile(request):
         # Get real agent count
         try:
             total_agents = UnifiedAgentTemplate.objects.filter(created_by=user).count()
-        except:
+        except Exception:
             total_agents = 0
         
         # Statistics data
@@ -294,7 +294,7 @@ def profile_stats(request):
     try:
         agents_created = UnifiedAgentTemplate.objects.filter(created_by=request.user).count()
         agent_executions = AgentExecution.objects.filter(user=request.user).count()
-    except:
+    except Exception:
         agents_created = 0
         agent_executions = 0
     

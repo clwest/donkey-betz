@@ -2831,13 +2831,13 @@ class ContentCommands(commands.Cog):
                 # Agent interactions
                 try:
                     agent_executions = AgentExecution.objects.filter(user=web_user).count()
-                except:
+                except Exception:
                     agent_executions = 0
 
                 # Opportunities
                 try:
                     opportunities_viewed = Opportunity.objects.filter(user=web_user).count()
-                except:
+                except Exception:
                     opportunities_viewed = 0
 
                 # Revenue
@@ -2845,7 +2845,7 @@ class ContentCommands(commands.Cog):
                     total_revenue = Revenue.objects.filter(user=web_user).aggregate(
                         total=Sum('amount')
                     )['total'] or 0
-                except:
+                except Exception:
                     total_revenue = 0
 
                 # Enhanced profile (if exists)
@@ -2859,7 +2859,7 @@ class ContentCommands(commands.Cog):
                             'goals': enhanced.goals[:2] if enhanced.goals else [],
                             'completeness': enhanced.profile_completeness or 0,
                         }
-                except:
+                except Exception:
                     pass
 
                 return {

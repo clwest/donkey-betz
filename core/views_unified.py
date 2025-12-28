@@ -34,7 +34,7 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
             # Count spider instances that are running (in deployment log we saw 63 deployed)
             spider_keys = r.keys('spider:*:status')
             spiders_active = len(spider_keys) if spider_keys else 63  # Fallback to known deployed count
-        except:
+        except Exception:
             spiders_active = 63  # Fallback to known deployed count from spider army
 
         # Add dashboard stats
@@ -52,7 +52,7 @@ class UnifiedDashboardView(LoginRequiredMixin, TemplateView):
             try:
                 profile = self.request.user.extendeduserprofile
                 context['profile_completion'] = profile.calculate_completion_percentage()
-            except:
+            except Exception:
                 context['profile_completion'] = 0
         else:
             context['profile_completion'] = 0
@@ -229,7 +229,7 @@ class UserProfileView(LoginRequiredMixin, TemplateView):
         context['page_title'] = 'User Profile'
         try:
             context['profile'] = self.request.user.extendeduserprofile
-        except:
+        except Exception:
             context['profile'] = None
         return context
 
@@ -447,7 +447,7 @@ class SystemHealthAPIView(View):
                 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
                 spider_keys = r.keys('spider:*:status')
                 spiders_active = len(spider_keys) if spider_keys else 63
-            except:
+            except Exception:
                 spiders_active = 63
 
             health = {

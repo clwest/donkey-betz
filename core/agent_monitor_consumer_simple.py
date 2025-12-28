@@ -171,7 +171,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                     update = json.loads(item)
                     if update.get('type') == 'task_update':
                         tasks.append(update.get('task'))
-                except:
+                except Exception:
                     pass
 
             # Get active projects

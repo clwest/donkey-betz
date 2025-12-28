@@ -269,5 +269,5 @@ def _get_user(request):
     User = get_user_model()
     try:
         return User.objects.filter(is_superuser=True).first()
-    except:
+    except Exception:
         return None

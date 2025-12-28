@@ -695,7 +695,7 @@ Please respond appropriately based on the context and conversation history."""
             for agent in agents:
                 if agent['name'] not in self.agent_registry:
                     self.agent_registry[agent['name']] = agent
-        except:
+        except Exception:
             pass  # Use defaults if database not available
 
     @database_sync_to_async
@@ -749,7 +749,7 @@ Please respond appropriately based on the context and conversation history."""
                 'redis_connected': bool(self.redis_client),
                 'spider_feed_active': bool(self.spider_feed_task and not self.spider_feed_task.done())
             }
-        except:
+        except Exception:
             return {
                 'agents': 149,
                 'advisors': 25,

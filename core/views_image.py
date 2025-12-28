@@ -5203,7 +5203,7 @@ def promote_session_to_project(request, session_id):
         # Get request data
         try:
             data = json.loads(request.body.decode('utf-8'))
-        except:
+        except Exception:
             data = {}
 
         project_name = data.get('project_name', '').strip()
@@ -11878,7 +11878,7 @@ def delete_portfolio_item(request, item_type, item_id):
                 item = MinifigAsset.objects.get(id=item_id, user=request.user)
                 item.delete()
                 logger.info(f"✅ Deleted 3D model {item_id}")
-            except:
+            except Exception:
                 return Response({
                     'success': False,
                     'error': '3D model not found or not owned by you'

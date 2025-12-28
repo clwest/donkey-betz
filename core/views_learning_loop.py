@@ -447,7 +447,7 @@ def get_pricing_optimization(request):
     # Also save to PricingOptimization model for tracking
     try:
         platform_obj = DistributionPlatform.objects.filter(name__icontains=platform).first()
-    except:
+    except Exception:
         platform_obj = None
 
     pricing, created = PricingOptimization.objects.update_or_create(

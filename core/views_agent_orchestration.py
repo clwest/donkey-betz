@@ -172,7 +172,7 @@ def execute_agent(request):
                 specialization=agent_type, 
                 is_active=True
             ).first()
-        except:
+        except Exception:
             pass
     
     if not agent_template:

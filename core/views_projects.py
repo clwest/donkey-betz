@@ -62,7 +62,7 @@ def find_project_directory(base_dir, project_name):
     # If no exact match, do fuzzy matching on existing directories
     try:
         existing_dirs = [d for d in base_dir.iterdir() if d.is_dir()]
-    except:
+    except Exception:
         return None
 
     # Fuzzy matching - find directories that contain the project name or vice versa
@@ -841,7 +841,7 @@ def orchestrate_real_build(request):
         try:
             # Remove any problematic characters from error message
             error_msg = error_msg.encode('ascii', 'ignore').decode('ascii')
-        except:
+        except Exception:
             error_msg = 'An error occurred during orchestration'
 
         return JsonResponse({

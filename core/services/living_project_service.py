@@ -84,7 +84,7 @@ class LivingProjectService:
             topics.update([t.lower() for t in config.watch_topics])
             topics.update([k.lower() for k in config.watch_keywords])
             topics.update([c.lower() for c in config.watch_competitors])
-        except:
+        except Exception:
             pass  # No config yet
 
         # Filter out common words
@@ -193,7 +193,7 @@ class LivingProjectService:
             min_relevance = 0.6
             try:
                 min_relevance = project.living_config.min_relevance_score
-            except:
+            except Exception:
                 pass
 
             if relevance >= min_relevance:
@@ -277,7 +277,7 @@ class LivingProjectService:
                 participants = []
                 try:
                     participants = list(conversation.participants.values_list('name', flat=True))
-                except:
+                except Exception:
                     pass
 
                 insight = ProjectInsight.objects.create(

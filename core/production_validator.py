@@ -555,7 +555,7 @@ class ProductionValidator:
                     )
                     if response:
                         successful_messages += 1
-                except:
+                except Exception:
                     pass
 
             # Clean up connections

@@ -463,7 +463,7 @@ Please complete this task using your specialized capabilities.
                     execution.error_message = str(e)
                     execution.completed_at = datetime.now()
                     execution.save()
-            except:
+            except Exception:
                 pass
                 
             return {

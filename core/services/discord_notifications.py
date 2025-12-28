@@ -53,7 +53,7 @@ class DiscordNotificationService:
         # Try to get token from Django settings first, then fall back to os.environ
         try:
             self.bot_token = getattr(settings, 'DISCORD_BOT_TOKEN', None) or os.environ.get('DISCORD_BOT_TOKEN', '')
-        except:
+        except Exception:
             self.bot_token = os.environ.get('DISCORD_BOT_TOKEN', '')
 
         self.enabled = bool(self.bot_token)
@@ -2056,7 +2056,7 @@ class DiscordNotificationService:
         file_size_mb = 0
         try:
             file_size_mb = os.path.getsize(audio_file_path) / (1024 * 1024)
-        except:
+        except Exception:
             pass
 
         # Create embed

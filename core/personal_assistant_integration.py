@@ -233,7 +233,7 @@ class PersonalAssistantIntegration:
                     real_components += 1
                 elif status.status == RealityStatus.PARTIAL:
                     real_components += 0.5
-            except:
+            except Exception:
                 pass
 
         return int((real_components / total_components) * 100) if total_components > 0 else 0
@@ -247,7 +247,7 @@ class PersonalAssistantIntegration:
             try:
                 if status.status == RealityStatus.MOCK:
                     mock_components.append(component_type.value)
-            except:
+            except Exception:
                 pass
 
         return mock_components
@@ -261,7 +261,7 @@ class PersonalAssistantIntegration:
             try:
                 if status.status == RealityStatus.REAL:
                     real_components.append(component_type.value)
-            except:
+            except Exception:
                 pass
 
         return real_components
@@ -294,7 +294,7 @@ class PersonalAssistantIntegration:
         try:
             from core.models.agents_registry import UnifiedAgentTemplate
             return UnifiedAgentTemplate.objects.filter(is_active=True).count()
-        except:
+        except Exception:
             return 0
 
     def _get_related_components(self, primary_component: str) -> List[str]:

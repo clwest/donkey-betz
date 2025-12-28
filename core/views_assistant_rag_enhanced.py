@@ -447,7 +447,7 @@ def _get_knowledge_base_size() -> int:
     try:
         from content.models import Document
         return Document.objects.count()
-    except:
+    except Exception:
         return 0
 
 
@@ -459,5 +459,5 @@ def _get_total_embeddings() -> int:
         with connection.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM unified_embeddings")
             return cursor.fetchone()[0]
-    except:
+    except Exception:
         return 0

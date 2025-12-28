@@ -102,7 +102,7 @@ def system_stats(request):
         try:
             from core.models.agents_registry import UnifiedAgentTemplate
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-        except:
+        except Exception:
             agent_count = 151
 
         # Get spider stats from Redis
@@ -250,7 +250,7 @@ def handle_status_command(args):
         try:
             from core.models.agents_registry import UnifiedAgentTemplate
             agent_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()
-        except:
+        except Exception:
             agent_count = 151
 
         status_msg = f"""📊 System Status Report:

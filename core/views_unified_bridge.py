@@ -384,7 +384,7 @@ async def get_match_reasons(user_id: int, opportunity: dict) -> list[str]:
             reasons.append("Remote work available")
 
         return reasons
-    except:
+    except Exception:
         return ["Good opportunity match"]
 
 
@@ -403,7 +403,7 @@ async def get_user_total_earnings(user_id: int) -> float:
     try:
         profile = await UserProfile.objects.aget(user_id=user_id)
         return getattr(profile, 'total_earnings', 0.0)
-    except:
+    except Exception:
         return 0.0
 
 
@@ -421,7 +421,7 @@ async def get_user_profile_summary(user_id: int) -> dict:
             'skills_count': len(profile.skills) if profile.skills else 0,
             'completeness': ext_profile.profile_completeness
         }
-    except:
+    except Exception:
         return {'error': 'Profile not found'}
 
 
@@ -452,7 +452,7 @@ async def get_user_applications_summary(user_id: int) -> dict:
             'successful': successful,
             'success_rate': (successful / total * 100) if total > 0 else 0.0
         }
-    except:
+    except Exception:
         return {'total': 0, 'in_progress': 0, 'successful': 0, 'success_rate': 0.0}
 
 
@@ -473,7 +473,7 @@ async def get_user_revenue_summary(user_id: int) -> dict:
             'projects_completed': 0,  # Would count completed projects
             'avg_project_value': 0.0  # Would calculate average
         }
-    except:
+    except Exception:
         return {'total_earnings': 0.0, 'this_month': 0.0, 'projects_completed': 0, 'avg_project_value': 0.0}
 
 

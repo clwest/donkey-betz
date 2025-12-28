@@ -126,7 +126,7 @@ def delete_avatar_view(request):
         if profile.avatar_file:
             try:
                 default_storage.delete(str(profile.avatar_file))
-            except:
+            except Exception:
                 pass  # File might not exist
         
         # Clear avatar fields

@@ -422,7 +422,7 @@ def extract_docx_text(file_content: bytes, filename: str) -> str:
         # Fallback: just try to decode as text
         try:
             return file_content.decode('utf-8', errors='ignore')
-        except:
+        except Exception:
             return file_content.decode('latin-1', errors='ignore')
 
     except Exception as e:

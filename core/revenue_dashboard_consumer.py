@@ -429,7 +429,7 @@ class RevenueDashboardConsumer(ProductionWebSocketMixin, AsyncWebsocketConsumer)
         if after_id:
             try:
                 query = query.filter(id__gt=after_id)
-            except:
+            except Exception:
                 pass  # Invalid ID, get all recent
 
         earnings = query[:5]  # Last 5 new earnings

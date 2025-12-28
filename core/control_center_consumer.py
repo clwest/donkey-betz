@@ -189,7 +189,7 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
         """Check Redis connection status"""
         try:
             return await database_sync_to_async(self.redis_client.ping)()
-        except:
+        except Exception:
             return False
 
     @database_sync_to_async
@@ -221,7 +221,7 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
             # Check Redis for active agents
             agent_keys = self.redis_client.keys('agent:active:*')
             return len(agent_keys)
-        except:
+        except Exception:
             return 0
 
     @database_sync_to_async
@@ -231,7 +231,7 @@ class ControlCenterConsumer(AsyncWebsocketConsumer):
             # Check Redis for active spiders
             spider_keys = self.redis_client.keys('spider:active:*')
             return len(spider_keys)
-        except:
+        except Exception:
             return 0
 
     @database_sync_to_async
