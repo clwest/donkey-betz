@@ -88,6 +88,16 @@ Top files:
 - `consumers.py` (8 fixes)
 - `views_unified_intelligence.py` (5 fixes)
 
+### Self-Blog Viewer Fix - COMPLETE
+
+Fixed 404 error when viewing individual self-blog posts in Research Demo tab:
+
+| Component | Fix |
+|-----------|-----|
+| **Backend** | Added `GET /api/v1/research/self-blog/<uuid>/` endpoint |
+| **Frontend** | Fixed null check for `allBlogs` in `renderSelfBlog()` |
+| **UX** | Added "Back to All Blogs" button when viewing single post |
+
 ### Session 570 Changes
 
 Database-level changes:
@@ -100,6 +110,8 @@ Code commits:
 - `b340437` - TODO cleanup across 22 files
 - `2d1a1b5` - Print → logging conversion (10 files)
 - `32a7d8b` - Bare except fixes (48 files)
+- `87041eb` - Self-blog by ID API endpoint
+- `5e26883` - Self-blog viewer frontend fix
 
 ---
 
@@ -203,18 +215,23 @@ print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 ## Recent Commits
 
 ```
+5e26883 fix(Session 570): Fix self-blog viewer for single blog display
+87041eb fix(Session 570): Add self-blog by ID API endpoint
 32a7d8b refactor(Session 570): Fix bare except clauses across codebase
 2d1a1b5 refactor(Session 570): Convert print statements to proper logging
 b340437 chore(Session 570): Clean up TODO/FIXME comments across codebase
-6826d46 feat(Session 569): Re-enable Autonomous tab with investor hero section
-88f3f19 refactor(Session 567): Major codebase cleanup - unused imports and debug logging
 ```
 
 ---
 
-**Session 570: Autonomous Sub-Tabs + Major Codebase Cleanup - COMPLETE**
-- TODO cleanup (33 items, 22 files)
-- Print → Logging (69 prints, 10 files)
-- Bare except fixes (135 clauses, 48 files)
+**Session 570: Major Codebase Cleanup + Bug Fixes - COMPLETE**
+
+| Task | Items | Files |
+|------|-------|-------|
+| TODO cleanup | 33 | 22 |
+| Print → Logging | 69 | 10 |
+| Bare except fixes | 135 | 48 |
+| Self-blog viewer fix | 2 bugs | 3 |
+| **Total** | **239 items** | **83 files** |
 
 **Ready for Session 571**
