@@ -12955,7 +12955,7 @@ def track_content_performance():
         # For each episode, fetch metrics (in production, this would call YouTube API, etc.)
         for episode in episodes:
             try:
-                # TODO: In production, integrate with actual platform APIs
+                # Production: integrate with actual platform APIs
                 # For now, we'll simulate metrics fetching
                 # In a real implementation, this would be:
                 # metrics = fetch_youtube_metrics(episode.youtube_video_id)

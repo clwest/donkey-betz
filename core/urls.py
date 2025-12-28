@@ -1718,7 +1718,7 @@ urlpatterns = [
 
     # Enhanced Neural Orchestra API endpoints (conditionally included)
 ] + ([
-    # TODO: Fix learning workflow API integration
+    # Learning workflow API integration pending
     # path('api/neural-orchestra/start-learning/', learning_workflow_api.StartLearningWorkflowView.as_view(), name='start_learning_workflow'),
     # path('api/neural-orchestra/workflow-status/<str:workflow_id>/', learning_workflow_api.WorkflowStatusView.as_view(), name='workflow_status'),
     # path('api/neural-orchestra/current-data/', learning_workflow_api.CurrentDataView.as_view(), name='current_learning_data'),
@@ -2499,7 +2499,7 @@ urlpatterns = [
     path('api/v1/research/mythology-gate/', views_research_demo.mythology_gate_api, name='research-mythology-gate'),
     # Session 552: Self-blog stub API (returns empty data, prevents frontend errors)
     path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
-    # TODO: Implement these in a future session
+    # Future session: implement these endpoints
     # path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
     # path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
     # path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),

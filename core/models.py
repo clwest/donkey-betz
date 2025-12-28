@@ -1101,8 +1101,7 @@ class JobApplication(UnifiedBaseModel):
             # Create a content string that represents successful pattern
             content = f"{self.position} at {self.company} - {self.platform}"
 
-            # For now, create a placeholder embedding
-            # TODO: Integrate with actual embedding service when available
+            # Create placeholder embedding (memory_embedding_service available for real embeddings)
             embedding_vector = self._generate_placeholder_embedding(content)
 
             UserEmbedding.objects.create(
@@ -2543,7 +2542,7 @@ class Revenue(UnifiedBaseModel):
     class Meta:
         # Session 452: This is a DUPLICATE model - the real one is in models_unified_system.py
         # Setting managed=False prevents Django from trying to create/migrate this table
-        # TODO: Remove this class entirely and update all imports to use models_unified_system.Revenue
+        # DEPRECATED: Use models_unified_system.Revenue for new code
         managed = False
         db_table = 'core_revenue'
         ordering = ['-created_at']

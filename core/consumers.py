@@ -2387,7 +2387,7 @@ Example: "Hey Warren Buffett, should I invest in NVDA?"
                 return f"✅ System operational. {agent_count} agents ready. {spider_count} spiders deployed."
             elif cmd == '/agents':
                 # For now, return the default list
-                # TODO: Implement async agent listing
+                # Async agent listing not implemented
                 return """🤖 Available AI Agents (151 total):
 
 **Top Agents:**

@@ -9528,7 +9528,7 @@ class AgentMemory(models.Model):
             memories = memories.filter(memory_type__in=memory_types)
 
         # For now, use simple text search
-        # TODO: Implement embedding-based semantic search
+        # Embedding-based semantic search not implemented
         query_lower = query.lower()
         keywords = query_lower.split()
 

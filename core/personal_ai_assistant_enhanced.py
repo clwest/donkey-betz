@@ -1778,12 +1778,8 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             return self._tool_remove_background(tool_args)
         elif operation == 'create_variations':
             return self._tool_create_variations(tool_args)
-        # elif operation == 'erase_object':  # Deprecated: use search_and_replace with empty replace_prompt
-        #     return self._tool_erase_object(tool_args)
         elif operation == 'recolor':
             return self._tool_recolor_image(tool_args)
-        # elif operation == 'refine':  # TODO: No backend implementation
-        #     return self._tool_refine_image(tool_args)
         elif operation == 'search_and_replace':
             return self._tool_search_and_replace(tool_args)  # Session 151 - also handles removal
         elif operation == 'creative_upscale':

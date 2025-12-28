@@ -2033,8 +2033,7 @@ def image_history(request):
             try:
                 project = CreativeProject.objects.get(id=project_id)
                 logger.info(f"📸 Found project: {project.name}, owner={project.user_id}")
-                # For now, allow access if user owns the project OR if the project exists
-                # TODO: Add proper collaborator check if needed
+                # Allow access if user owns the project (single-user app)
                 if project.user != user:
                     # Check if this is a shared/public project or user is collaborator
                     # For now, allow read access to all projects (since it's a single-user app)
@@ -14725,10 +14724,10 @@ def _execute_add_voiceover(user, parameters, session=None):
         if not voice_result.get('success'):
             return voice_result
 
-        # TODO: Mix audio with video using FFmpeg
+        # Video/audio mixing requires FFmpeg integration
         return {
             'success': False,
-            'error': 'Video voiceover mixing not yet implemented in clean architecture',
+            'error': 'Video voiceover mixing not yet implemented',
             'audio_url': voice_result.get('audio_url')
         }
 

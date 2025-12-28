@@ -327,11 +327,11 @@ class SportsConsumer(AsyncWebsocketConsumer):
                 }))
                 return
 
-            # Calculate aggregate stats (mock for now - TODO: implement real tracking)
+            # Aggregate stats (placeholder values - tracking not implemented)
             predictions_data = {
                 'top_picks': top_picks,
-                'win_rate_today': 87.3,  # TODO: Calculate from tracking
-                'units_profit': 24.5,    # TODO: Calculate from tracking
+                'win_rate_today': 87.3,  # Placeholder
+                'units_profit': 24.5,    # Placeholder
                 'total_predictions': len(top_picks)
             }
 

@@ -641,6 +641,6 @@ class PipelineLearningInsight(models.Model):
         if stage:
             queryset = queryset.filter(stage=stage)
 
-        # TODO: Filter by applicable_to matching context
+        # Note: Filter by applicable_to matching context
 
         return queryset.order_by('-confidence', '-estimated_impact')

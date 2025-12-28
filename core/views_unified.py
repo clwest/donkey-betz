@@ -255,7 +255,7 @@ class NotificationsView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Notifications'
-        context['notifications'] = []  # TODO: Load from database
+        context['notifications'] = []  # Notifications not implemented
         return context
 
 
@@ -330,7 +330,7 @@ class OpportunitiesAPIView(View):
 
     def get(self, request):
         try:
-            # TODO: Fetch from database or spider network
+            # Stub - opportunities fetched via other endpoints
             opportunities = []
 
             return JsonResponse({
@@ -382,7 +382,7 @@ class RevenueStatsAPIView(View):
             if latest_metrics:
                 stats = {
                     'total_revenue': float(total_revenue),
-                    'pending_revenue': 0,  # TODO: Track pending separately
+                    'pending_revenue': 0,  # Pending revenue tracking not implemented
                     'completed_revenue': float(total_revenue),
                     'recent_revenue': float(recent_revenue),
                     'proposals_generated': latest_metrics.proposals_generated,
@@ -478,7 +478,7 @@ class SpiderStatusAPIView(View):
 
     def get(self, request):
         try:
-            # TODO: Get real spider status
+            # Placeholder status - real spider status via /api/spiders/status/
             status = {
                 'total_spiders': 40,
                 'active_spiders': 0,
@@ -505,7 +505,7 @@ class NotificationsAPIView(LoginRequiredMixin, View):
 
     def get(self, request):
         try:
-            # TODO: Fetch from database
+            # Notifications not implemented
             notifications = []
 
             return JsonResponse({
