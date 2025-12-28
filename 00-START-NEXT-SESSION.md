@@ -2,68 +2,77 @@
 
 **Previous Session:** 563
 **Date:** December 27, 2025
-**Focus:** Betting History/Tracking, Mobile-Responsive, Analytics
+**Focus:** Continue Betting Dashboard Polish, Mobile, Analytics
 
 ---
 
 ## Session 563 Accomplishments
 
-### Live Odds Enhancements - COMPLETE
+### Betting Dashboard Sub-Tab Fixes - COMPLETE
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Sport Filter Fix** | DONE | NBA/NFL/NCAAF now show correct games |
-| **Live Scores** | DONE | ESPN integration with auto-refresh (30s) |
-| **Spread Display** | DONE | Shows point spread (+8.5, -8.5) |
-| **Total Display** | DONE | Shows O/U total (Over 245.5) |
-| **Player Props Modal** | DONE | Props by player with Over/Under buttons |
-| **Bet Slip** | DONE | Add picks, calculate parlay odds |
-| **Sport Emojis** | DONE | 🏈 football, 🏀 basketball, etc. |
-| **Dream Maintenance** | DONE | Daily cleanup of stale dreams |
+| Sub-Tab | Fix Applied | Status |
+|---------|-------------|--------|
+| **Overview - Value Plays** | Fixed API field access (markets dict not array) | WORKING |
+| **Futures** | Extract teams from `contenders` array | WORKING |
+| **Line Movement** | Fixed migrations, default to "Show All", robust events | WORKING |
+| **Prediction Markets** | Fixed Kalshi field mapping (implied_probability) | WORKING |
+| **Arbitrage** | Added robust event handling | WORKING |
 
-### New API Endpoints
+### Bet Tracking Backend - COMPLETE
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/sports/live-odds-scores/` | GET | Odds + ESPN live scores |
-| `/api/v1/sports/events/{id}/props/` | GET | Player props for event |
+| Feature | Status |
+|---------|--------|
+| `PlacedWager` model | DONE |
+| `PlacedWagerLeg` model (parlays) | DONE |
+| `BettingStats` model | DONE |
+| `/api/v1/betting/recent/` endpoint | DONE |
+| `/api/v1/betting/stats/` endpoint | DONE |
+| Bet history UI in Overview | DONE |
 
-### Player Props Available
+### Key Pattern Applied
 
-| Sport | Props |
-|-------|-------|
-| **NBA/NCAAB** | Points, Rebounds, Assists, Threes, Blocks, Steals, PRA, Double-Double |
-| **NFL/NCAAF** | Pass TDs, Pass Yds, Rush Yds, Rec Yds, Receptions, Anytime TD, First TD |
-| **NHL** | Points, Assists, Shots on Goal, Blocked Shots |
-| **MLB** | Hits, Home Runs, RBIs, Total Bases, Pitcher Strikeouts |
+All betting sub-tabs now use robust event handling:
+```javascript
+// Event delegation + click fallback
+document.addEventListener('shown.bs.tab', function(event) {
+    if (event.target?.id === 'betting-{tab}-tab') {
+        loadFunction();
+    }
+});
+document.getElementById('betting-{tab}-tab')?.addEventListener('click', function() {
+    setTimeout(loadFunction, 100);
+});
+```
 
-**Handoff:** `docs/handoffs/SESSION_563_LIVE_ODDS_PLAYER_PROPS.md`
+**Handoff:** `docs/handoffs/SESSION_563_BETTING_DASHBOARD_FIXES.md`
 
 ---
 
 ## Session 564 Priorities
 
-### 1. Betting History/Tracking
-- [ ] Record placed bets in database
-- [ ] Track outcomes (win/loss/push)
-- [ ] P/L over time dashboard
-- [ ] Bet confirmation modal
+### 1. Test Remaining Sub-Tabs
+- [ ] Bankroll tab - may need same event listener fixes
+- [ ] Alerts tab - may need same event listener fixes
+- [ ] Live Odds tab - verify all features work
 
 ### 2. Mobile-Responsive Improvements
 - [ ] Audit betting dashboard on mobile
 - [ ] Fix table responsiveness
 - [ ] Add touch-friendly controls
-- [ ] Swipe gestures for tab navigation
 
-### 3. Betting Patterns Analysis
+### 3. Line Movement Enhancement
+- [ ] Celery beat runs `snapshot_odds_for_line_movement()` every 2 hours
+- [ ] After 24 hours, real line movement data will be available
+- [ ] Add time-series chart for individual games
+
+### 4. Betting Analytics
 - [ ] Win rate by sport/type charts
 - [ ] Monthly P/L breakdown
-- [ ] Performance vs closing line (CLV)
+- [ ] Kelly criterion calculator improvements
 
-### 4. Export Functionality
+### 5. Export Functionality
 - [ ] CSV export for betting history
 - [ ] PDF summary report generation
-- [ ] Date range filtering
 
 ---
 
@@ -78,14 +87,17 @@
 | **Web UI Tabs** | 14 | Betting = 8 sub-tabs |
 
 ### Betting Dashboard Sub-Tabs (8)
-1. Overview - Recent wagers, stats, top arbs
-2. **Live Odds** - Sport filters, live scores, props, bet slip (ENHANCED)
-3. Arbitrage - Scanner with profit filters
-4. Prediction Markets - Kalshi integration
-5. Bankroll - P/L charts, win rate
-6. Futures - Championship odds
-7. Line Movement - Historical odds charts
-8. Alerts - Push notification settings
+
+| # | Tab | Status | Notes |
+|---|-----|--------|-------|
+| 1 | Overview | WORKING | Value Plays, Bet History |
+| 2 | Live Odds | WORKING | Props, Bet Slip |
+| 3 | Arbitrage | WORKING | Scans 40+ bookmakers |
+| 4 | Prediction Markets | WORKING | Kalshi integration |
+| 5 | Bankroll | NEEDS TEST | May need event fixes |
+| 6 | Futures | WORKING | Championship odds |
+| 7 | Line Movement | WORKING | Needs more snapshots |
+| 8 | Alerts | NEEDS TEST | May need event fixes |
 
 ---
 
@@ -98,11 +110,10 @@ make start && make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test Live Odds with Props:
+# 3. Test Betting Dashboard:
 #    - Go to Betting tab
-#    - Click "Live Odds" sub-tab
-#    - Select NBA
-#    - Click "📊 Props" on any game
+#    - Click each sub-tab to verify loading
+#    - Check browser console for [TabName] logs
 ```
 
 ---
@@ -111,23 +122,31 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `betting/betting_odds.html` | Live odds with props modal, bet slip |
-| `core/views_odds_sports.py` | Live scores + props endpoints |
-| `sports/data_providers.py` | The Odds API integration |
-| `core/tasks.py` | Dream maintenance task |
+| `betting/betting_overview.html` | Overview with Value Plays, Bet History |
+| `betting/betting_line_movement.html` | Line movement charts |
+| `betting/betting_markets.html` | Kalshi prediction markets |
+| `betting/betting_arbitrage.html` | Arbitrage scanner |
+| `betting/betting_bankroll.html` | Bankroll tracking (NEEDS TEST) |
+| `betting/betting_notifications.html` | Alerts (NEEDS TEST) |
+| `core/views_odds_sports.py` | All betting API endpoints |
 
 ---
 
-## Environment Variables
+## Commits from Session 563
 
-```bash
-THE_ODDS_API_KEY=your_key_here      # Required for sports odds (20k calls/month)
-KALSHI_API_KEY=your_key_here        # Optional for prediction markets
-VAPID_PUBLIC_KEY=your_key           # For push notifications
-VAPID_PRIVATE_KEY=your_key          # For push notifications
+```
+ee4f75c fix(Session 563): Arbitrage tab uses authenticatedFetch and robust events
+564c114 fix(Session 563): Prediction Markets now displays Kalshi data correctly
+a35bbf4 fix(Session 563): Line Movement tab now loads data correctly
+632a4fc fix(Session 563): Line Movement uses regular fetch for public APIs
+20d9e94 fix(Session 563): Line Movement tab now functional with Show All option
+f058188 fix(Session 563): Futures API now extracts teams from contenders array
+0653b3e fix(Session 563): Value Plays now loads correctly from live odds API
+b0eec38 feat(Session 563): Bet history UI with comprehensive stats display
+df3f81d feat(Session 563): Bet tracking backend - parlays & wager history
 ```
 
 ---
 
-**Session 563: Live Odds + Player Props - COMPLETE**
+**Session 563: Betting Dashboard Fixes - COMPLETE**
 **Ready for Session 564**
