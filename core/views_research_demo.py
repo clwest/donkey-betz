@@ -131,6 +131,7 @@ def network_graph_api(request):
                 'knowledge_count': knowledge_count,
                 'mythology_blocks': mythology_blocks,
                 'total_executions': agent.total_executions or 0,
+                'is_active': agent.is_active,  # Session 564: Add is_active for Agent Details card
                 'is_recently_active': agent.last_active and agent.last_active > timezone.now() - timedelta(hours=24),
             })
             agent_ids.add(str(agent.id))
