@@ -15,7 +15,7 @@
 | **Services** | **93** | Business logic layer |
 | **Discord Commands** | **112** | 29 Cog categories |
 | **Advisors** | **25** | Famous figures + domain experts |
-| **Sci-Fi Features** | **15** | 9 active, 4 deprecated, 2 bonus systems |
+| **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
 
 ---
 
@@ -34,7 +34,7 @@
 | **Spiders** | **77** | **Active (72 working)** |
 | **Agents** | **71** | **47 routable, 24 sub-agents** |
 | Advisors | 25 | Production |
-| Sci-Fi Features | 15 | 9 Active, 4 Deprecated |
+| Sci-Fi Features | 14 | All Active |
 | Style Presets | 80+ | Built-in |
 | Multi-Agent Orchestration | Yes | Production |
 | Collective Intelligence Search | Yes | Production |

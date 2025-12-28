@@ -59,31 +59,25 @@ Fixed task reference in `core/celery.py`:
 | **Services** | 93 | Active |
 | **Discord Commands** | 112 | 29 Cogs |
 | **Advisors** | 25 | Active |
-| **Sci-Fi Features** | 15 | 9 active |
+| **Sci-Fi Features** | 14 | All active |
 
 ---
 
 ## Session 568 Priorities
 
-### 1. Consider Removing Deprecated Sci-Fi Features
-- [ ] Memory Clusters (deprecated)
-- [ ] Prophecies (deprecated)
-- [ ] Time Capsules (deprecated)
-- [ ] Neural Sync (deprecated)
-
-### 2. Document Services Layer
+### 1. Document Services Layer
 - [ ] Create `docs/SERVICES.md` documenting 93 service classes
 - [ ] Organize by category (AI, Content, Intelligence, etc.)
 
-### 3. Discord Commands Reference
+### 2. Discord Commands Reference
 - [ ] Create `docs/DISCORD_COMMANDS.md` with all 112 commands
 - [ ] Organize by Cog category
 
-### 4. Database Models Documentation
+### 3. Database Models Documentation
 - [ ] Create `docs/MODELS.md` documenting 324+ models
 - [ ] Organize by category (37 categories)
 
-### 5. Clean Up Legacy Code
+### 4. Clean Up Legacy Code
 - [ ] Audit for unused imports
 - [ ] Remove deprecated feature code if decided
 - [ ] Clean up debug logging from Sessions 565-566

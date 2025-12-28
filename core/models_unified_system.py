@@ -9714,32 +9714,27 @@ class MemoryPalaceRoom(models.Model):
 # =============================================================================
 # Session 257: Agent Memory Clusters
 # =============================================================================
-# DEPRECATED: Session 284 - Zero records exist. Memory Clusters never used.
-# Use Memory Palace with tags instead for memory grouping.
+# RESTORED: Session 567 - Feature audit found 4 clusters with 60 memberships.
+# Memory Clusters provide semantic grouping via embedding-based clustering.
 # =============================================================================
 
 class MemoryCluster(models.Model):
     """
-    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
+    Session 257: Memory Clusters - Semantic Grouping of Agent Memories
 
-    This model is deprecated and will be removed in a future version.
-    No new MemoryCluster records should be created.
+    RESTORED Session 567: Feature audit found this is actively used with real data.
 
-    Original Purpose (Session 257):
     Unlike MemoryPalaceRoom (manual organization by theme), MemoryCluster uses
     embedding-based clustering to automatically discover related memories.
 
-    Reason for Deprecation:
-    - Zero records ever created (feature never used)
-    - Over-engineered solution for memory grouping
-    - Use AgentMemory with tags field instead (simpler)
+    Features:
+    - Automatic clustering via embeddings
+    - Coherence scoring
+    - Visual cluster exploration
+    - Cross-agent knowledge discovery
 
-    Migration Path:
-    Add a 'tags' JSONField to AgentMemory for simple grouping.
+    API: /api/memory-clusters/
     """
-
-    # Deprecation flag - set True to completely disable
-    _deprecated = True
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Cluster can be agent-specific or cross-agent (global insights)
@@ -12713,29 +12708,27 @@ class PredictionFollowUp(models.Model):
 # Session 259: Time Capsule Messages
 # Sci-Fi Feature #13 - The Final Feature!
 # =============================================================================
-# DEPRECATED: Session 284 - Only 7 records exist, minimal user engagement.
-# Model is preserved for data but should not be used for new records.
+# RESTORED: Session 567 - Feature audit found 7 capsules (5 sealed, 2 revealed).
+# Time Capsules provide agent continuity and reflection capabilities.
 # =============================================================================
 
 class TimeCapsule(models.Model):
     """
-    DEPRECATED - Session 284: Sci-Fi Feature Rationalization
+    Session 259: Time Capsules - Agent Messages to Future Selves
 
-    This model is deprecated and will be removed in a future version.
-    No new TimeCapsule records should be created.
+    RESTORED Session 567: Feature audit found this is actively used with real data.
 
-    Original Purpose (Session 259):
     Agents write messages to their "future selves" to be revealed later.
     Creates sense of continuity, growth, and reflection.
 
-    Reason for Deprecation:
-    - Only 7 records ever created (minimal usage)
-    - Novelty feature without practical value
-    - Adds complexity without demonstrated benefit
-    """
+    Features:
+    - Sealed messages with reveal dates
+    - Agent state comparison (then vs now)
+    - AI-generated reflections on reveal
+    - Reaction system for revealed capsules
 
-    # Deprecation flag - set True to completely disable
-    _deprecated = True
+    API: /api/time-capsules/
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     agent = models.ForeignKey(

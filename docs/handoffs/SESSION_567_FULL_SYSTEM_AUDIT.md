@@ -123,13 +123,21 @@ Famous figures and domain experts providing guidance:
 - Creative: Various domain experts
 - Legal: Domain-specific advisors
 
-### 8. Sci-Fi Features: 15 Total
+### 8. Sci-Fi Features: 14 Total (All Active)
 
-| Status | Count | Features |
-|--------|-------|----------|
-| Active | 9 | Dreams, Memory Palace, Evolution, Relationships, Mood System, Learning Loops, Time Travel, Collective Intelligence, Autonomous Situations |
-| Deprecated | 4 | Memory Clusters, Prophecies, Time Capsules, Neural Sync |
-| Bonus | 2 | Chief of Staff Layer, Narrative Drift Detector |
+| # | Feature | Status |
+|---|---------|--------|
+| 1-10 | Core Features | Active |
+| 11 | Memory Clusters | **RESTORED** (was deprecated) |
+| 12 | Time Capsules | **RESTORED** (was deprecated) |
+| 13 | Conversation Contract | Active |
+| 14 | Spider Integration | Active |
+
+**Session 567 Cleanup:**
+- Restored Memory Clusters (has 4 clusters, 60 memberships)
+- Restored Time Capsules (has 7 capsules)
+- Removed Prophecies from list (was never implemented)
+- Neural Sync never existed (not in original 15 features)
 
 ---
 
@@ -165,6 +173,11 @@ Famous figures and domain experts providing guidance:
 ## Files Modified This Session
 
 - `core/celery.py` - Fixed task name typo
-- `CLAUDE.md` - Added System Stats table
+- `core/models_unified_system.py` - Restored MemoryCluster and TimeCapsule (removed deprecated flags)
+- `CLAUDE.md` - Added System Stats table, updated Sci-Fi count to 14
 - `docs/CAPABILITIES.md` - Added System Overview, updated counts
+- `docs/SCIFI_FEATURES.md` - Updated to 14 features, removed Prophecies
+- `docs/AGENTS.md` - All 71 agents documented
+- `docs/SPIDERS.md` - All 77 spiders documented
 - `docs/handoffs/SESSION_567_FULL_SYSTEM_AUDIT.md` - This document
+- `00-START-NEXT-SESSION.md` - Prepared for Session 568

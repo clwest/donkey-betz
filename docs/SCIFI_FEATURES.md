@@ -1,34 +1,35 @@
 # Sci-Fi Features Reference
 
-**Last Updated:** Session 273 (November 29, 2025)
+**Last Updated:** Session 567 (December 28, 2025)
 
 ---
 
 ## Overview
 
-The platform includes 15 advanced AI features built across Sessions 243-261. These features enrich every agent interaction with memory, emotion, learning, and self-awareness.
+The platform includes 14 advanced AI features built across Sessions 243-262. These features enrich every agent interaction with memory, emotion, learning, and self-awareness.
+
+**Session 567 Audit:** Restored Memory Clusters and Time Capsules from deprecated status. Removed Prophecies (never implemented).
 
 ---
 
 ## Feature Summary
 
-| # | Feature | Session | Purpose |
-|---|---------|---------|---------|
-| 1 | Agent Learning | 243-245 | Agents learn from each other |
-| 2 | Agent Conversations | 244-246 | Real-time AI-to-AI chat |
-| 3 | Agent Dreams | 247 | Creative thoughts when idle |
-| 4 | Hive Mind Mode | 248-250 | Collective intelligence |
-| 5 | Memory Palace | 251-252 | Persistent memory |
-| 6 | Mood System | 253 | Emotional states |
-| 7 | Rivalries/Alliances | 253 | Agent relationships |
-| 8 | Evolution System | 254 | XP and leveling |
-| 9 | Time Travel Debug | 255 | Replay decisions |
-| 10 | Personality Profiles | 256 | Distinct personalities |
-| 11 | Memory Clusters | 257 | Grouped memories |
-| 12 | Prophecies | 258 | Agent predictions |
-| 13 | Time Capsules | 259 | Future messages |
-| 14 | Conversation Contract | 261 | Quality scoring |
-| 15 | Spider Integration | 262 | Real-time data feed |
+| # | Feature | Session | Status | Purpose |
+|---|---------|---------|--------|---------|
+| 1 | Agent Learning | 243-245 | Active | Agents learn from each other |
+| 2 | Agent Conversations | 244-246 | Active | Real-time AI-to-AI chat |
+| 3 | Agent Dreams | 247 | Active | Creative thoughts when idle |
+| 4 | Hive Mind Mode | 248-250 | Active | Collective intelligence |
+| 5 | Memory Palace | 251-252 | Active | Persistent memory |
+| 6 | Mood System | 253 | Active | Emotional states |
+| 7 | Rivalries/Alliances | 253 | Active | Agent relationships |
+| 8 | Evolution System | 254 | Active | XP and leveling |
+| 9 | Time Travel Debug | 255 | Active | Replay decisions |
+| 10 | Personality Profiles | 256 | Active | Distinct personalities |
+| 11 | Memory Clusters | 257 | Active | Semantic memory grouping |
+| 12 | Time Capsules | 259 | Active | Future messages to self |
+| 13 | Conversation Contract | 261 | Active | Quality scoring |
+| 14 | Spider Integration | 262 | Active | Real-time data feed |
 
 ---
 
@@ -446,28 +447,7 @@ class MemoryCluster(models.Model):
 
 ---
 
-## 12. Prophecies/Predictions
-
-**Session:** 258
-**Purpose:** Agents make predictions about outcomes
-
-### Model
-
-```python
-class AgentPrediction(models.Model):
-    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
-    prediction_type = models.CharField(max_length=50)
-    # 'trend', 'outcome', 'opportunity', 'risk'
-    content = models.TextField()
-    confidence = models.FloatField(default=0.5)
-    target_date = models.DateField(null=True)
-    outcome = models.CharField(max_length=50, null=True)
-    # 'correct', 'incorrect', 'partially_correct', 'pending'
-```
-
----
-
-## 13. Time Capsules
+## 12. Time Capsules
 
 **Session:** 259
 **Purpose:** Messages to future selves
@@ -487,7 +467,7 @@ class TimeCapsule(models.Model):
 
 ---
 
-## 14. Conversation Contract
+## 13. Conversation Contract
 
 **Session:** 261
 **Purpose:** Ensure quality in AI-to-AI conversations
@@ -531,7 +511,7 @@ Every conversation must include:
 
 ---
 
-## 15. Spider Integration
+## 14. Spider Integration
 
 **Session:** 262
 **Purpose:** Feed real-time spider data to agents
