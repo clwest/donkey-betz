@@ -133,7 +133,8 @@ Real-time arbitrage opportunity detection and alerts.
             if (minProfit > 0) params.append('min_profit', minProfit);
             if (params.toString()) url += '?' + params.toString();
 
-            const response = await fetch(url);
+            console.log('[Arbitrage] Fetching:', url);
+            const response = await authenticatedFetch(url);
 
             if (!response.ok) {
                 throw new Error('API not available');
@@ -278,12 +279,18 @@ Real-time arbitrage opportunity detection and alerts.
     document.getElementById('arb-sport-filter')?.addEventListener('change', loadArbitrageAlerts);
     document.getElementById('arb-min-profit')?.addEventListener('change', loadArbitrageAlerts);
 
-    // Auto-load when tab is shown
-    document.addEventListener('DOMContentLoaded', function() {
-        const arbTab = document.getElementById('betting-arbitrage-tab');
-        if (arbTab) {
-            arbTab.addEventListener('shown.bs.tab', loadArbitrageAlerts);
+    // Session 563: More robust tab detection - use event delegation
+    document.addEventListener('shown.bs.tab', function(event) {
+        if (event.target && event.target.id === 'betting-arbitrage-tab') {
+            console.log('[Arbitrage] Tab shown, loading data...');
+            loadArbitrageAlerts();
         }
+    });
+
+    // Also try direct click handler as fallback
+    document.getElementById('betting-arbitrage-tab')?.addEventListener('click', function() {
+        console.log('[Arbitrage] Tab clicked, loading data...');
+        setTimeout(loadArbitrageAlerts, 100);
     });
 })();
 </script>
