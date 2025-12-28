@@ -882,12 +882,16 @@
                         // Add AI response with metadata (includes prompt if available)
                         // Session 58: Phase B.3 - Add workflow execution button
                         // Session 565: Include intelligence_context for source attribution UI
+                        const intelContext = response.metadata?.intelligence_context || null;
+                        if (intelContext) {
+                            console.log('🧠 Session 565: Intelligence context available:', intelContext);
+                        }
                         this.addMessage('assistant', response.message, false, {
                             prompt: response.prompt || response.params?.prompt,
                             showExecuteButton: response.showExecuteButton,
                             action: response.action,
                             params: response.params,
-                            intelligence_context: response.metadata?.intelligence_context || null
+                            intelligence_context: intelContext
                         });
 
                         // Session 192: Check if we have tool_calls to execute (from workflow interception)
@@ -2099,7 +2103,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         </div>`;
                     }
 
-                    return { message: responseHtml };
+                    // Session 565: Include metadata for intelligence context UI panel
+                    return {
+                        message: responseHtml,
+                        metadata: cleanData.metadata || null
+                    };
                 }
 
                 // Legacy: Call the GPT-5-mini assistant chat endpoint with function calling
