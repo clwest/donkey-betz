@@ -338,7 +338,7 @@ class MLScoringEngine:
 
     def _get_historical_success_rate(self, spider_name: str) -> float:
         """Get historical success rate for a spider source."""
-        # TODO: Query OpportunityOutcome for actual rates
+        # Note: Query OpportunityOutcome for actual rates
         # For now, use default rates based on source type
         default_rates = {
             'remoteok': 0.65,

@@ -230,7 +230,7 @@ def assign_specific_job(request):
                 'error': f'Job {job_id} is not available (status: {target_job.get("status")})'
             }, status=400)
 
-        # TODO: Implement manual job assignment logic
+        # Manual job assignment not implemented
         # For now, return success message
         return JsonResponse({
             'success': True,

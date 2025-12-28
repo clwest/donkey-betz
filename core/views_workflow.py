@@ -369,7 +369,7 @@ def workflow_schedule(request, workflow_id):
         workflow.schedule_cron = cron_expression
         workflow.save()
 
-        # TODO: Session 213 - Register with Celery Beat
+        # Session 213: Celery Beat registration pending
         # This would require django-celery-beat integration
 
         return Response({

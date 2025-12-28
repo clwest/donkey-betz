@@ -365,10 +365,10 @@ If asked to do something outside video generation, politely explain you can only
             return _execute_generate_video(self.user, parameters, session=None)
 
         elif tool_name == "extend_video":
-            # TODO: Implement video extension when available
+            # Video extension not yet implemented
             return {
                 'success': False,
-                'error': 'Video extension not yet implemented in clean architecture'
+                'error': 'Video extension not yet implemented'
             }
 
         elif tool_name == "chain_videos":

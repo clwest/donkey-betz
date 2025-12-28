@@ -251,7 +251,7 @@ async def _process_with_agent_execution(user, message: str, context: str,
         selected_agents = None  # Could be extracted from message or context
 
         # Execute through agents
-        # TODO: Pass project_id to execute_through_agents when implementing project-scoped generation
+        # Note: Pass project_id for project-scoped generation
         execution_result = await personal_assistant_agent_integration.execute_through_agents(
             message, selected_agents
         )

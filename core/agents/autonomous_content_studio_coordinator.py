@@ -596,8 +596,8 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         # Create AISeries for this content
         series_prompt = f"{channel.topic_domain} - {topic}\n\nAngle: {angle}\n\nTarget Audience: {channel.target_audience}"
 
-        # TODO: Phase 3 - Actually trigger AISeriesWorkflowAgent
-        # For now, create placeholder records
+        # Phase 3: AISeriesWorkflowAgent integration pending
+        # Creates placeholder records for now
 
         series = AISeries.objects.create(
             name=f"{channel.name} - {topic}",

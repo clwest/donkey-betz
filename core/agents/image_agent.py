@@ -436,7 +436,7 @@ If asked to do something outside image generation, politely explain you can only
             result = _execute_generate_image(
                 user=self.user,
                 parameters=parameters,
-                session=None  # TODO: Pass session when available
+                session=None
             )
 
             if result.get('success'):

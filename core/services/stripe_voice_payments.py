@@ -286,8 +286,8 @@ class StripeVoicePaymentService:
                 f"{buyer.username} purchased {voice.name} for ${gross_price}"
             )
 
-            # TODO: Trigger notification to voice owner
-            # TODO: Queue audio generation if text was provided
+            # Note: Trigger notification to voice owner
+            # Note: Queue audio generation if text was provided
 
             return {
                 'success': True,

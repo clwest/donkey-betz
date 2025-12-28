@@ -359,7 +359,7 @@ def list_content(request):
             'status': content.status,
             'created_at': content.created_at.isoformat(),
             'updated_at': content.updated_at.isoformat(),
-            'is_starred': False,  # TODO: Implement starring system
+            'is_starred': False,  # Starring not implemented
             'prompt': content.prompt,
             'generation_id': str(content.id)
         }

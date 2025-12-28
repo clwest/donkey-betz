@@ -165,7 +165,7 @@ def analytics_dashboard(request):
             'successful_requests': successful_actions,
             'failed_requests': failed_executions,
             'success_rate': round(success_rate, 1),
-            'avg_response_time': 1.2,  # TODO: Track actual response times
+            'avg_response_time': 1.2,  # Placeholder - response time tracking not implemented
             'total_cost': total_revenue,  # Using revenue as proxy for value
             'opportunities_found': opportunities_count,
             'applications_submitted': applications_count,
@@ -338,7 +338,7 @@ def cost_breakdown(request):
             'daily_costs': daily_costs,
             'projected_monthly': round(projected_monthly, 2)
         },
-        'alerts': []  # TODO: Add budget alerts based on user settings
+        'alerts': []  # Budget alerts not implemented
     })
 
 @api_view(['POST'])

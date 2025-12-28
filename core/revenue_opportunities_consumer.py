@@ -354,7 +354,7 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
                 current_balance=0.0,
                 skills=user_skills,
                 skill_level=skill_level,
-                available_hours_per_week=20  # TODO: Add to user profile
+                available_hours_per_week=20  # Hardcoded - user profile field not implemented
             )
 
             # Fetch REAL opportunities from spider network

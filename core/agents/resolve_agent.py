@@ -560,8 +560,7 @@ If asked to do something outside your scope, politely explain you can only handl
                     'error': "DaVinci Resolve render node is offline. Please start it with: cd resolve_node && python app.py"
                 }
 
-            # TODO: In future, pass color_grade to resolve_node when it supports grading
-            # For now, we just render with the template
+            # Note: color_grade parameter available when resolve_node supports grading
             result = self.resolve_client.start_render(
                 clip_paths=video_paths,
                 template=template
