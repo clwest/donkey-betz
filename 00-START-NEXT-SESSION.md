@@ -36,6 +36,21 @@ Fixed issue where all 24 self-blogs had nearly identical titles about "The Self-
 
 **New parameter:** `topic_category` in `generate_self_blog_task()` - defaults to random selection
 
+### Action Feed Human-Readable Formatting - COMPLETE
+
+Fixed issue where the Thinking Engine's Action Feed displayed raw dict/JSON strings like:
+```
+{'conversation_id': '9136daa8-...', 'initiator': 'ContentStrategyAgent'...}
+```
+
+**After fix:** Now shows human-readable summaries:
+- "Conversation between ContentStrategyAgent and ImageAgent about 'Cross-domain insights'"
+- "Research on 'emerging trends': Research initiated"
+- "Created report on 'System Insights' with 5 insights, 4 patterns"
+- "Spawned newsapi spider to gather 'trending' data"
+
+**Implementation:** Added `format_action_result()` helper function in `core/tasks.py` that extracts key information from result dicts and formats it as readable text.
+
 ### Agent Cycle Verification
 
 Ran full agent cycle to verify Session 571 database fixes:
@@ -49,6 +64,8 @@ Ran full agent cycle to verify Session 571 database fixes:
 ### Session 572 Commits
 
 ```
+bea33b3 fix(Session 572): Format Action Feed results as human-readable text
+ff6aadd docs(Session 572): Update handoff for Session 573
 8b4432b fix(Session 572): Auto-refresh for Thinking/Concerns + diverse Self Blog topics
 ```
 
@@ -176,5 +193,6 @@ d584ad9 docs(Session 571): Update handoff with database audit fixes
 | Thinking Engine | Auto-refreshes every 30s when tab active |
 | Concern Tracking | Auto-refreshes every 30s when tab active |
 | Self Blog | Now generates diverse topics from spider data, dreams, conversations |
+| Action Feed | Results now display as human-readable text, not raw JSON |
 
 **Ready for Session 573**
