@@ -65,19 +65,15 @@ Fixed task reference in `core/celery.py`:
 
 ## Session 568 Priorities
 
-### 1. Document Services Layer
-- [ ] Create `docs/SERVICES.md` documenting 93 service classes
-- [ ] Organize by category (AI, Content, Intelligence, etc.)
-
-### 2. Discord Commands Reference
+### 1. Discord Commands Reference
 - [ ] Create `docs/DISCORD_COMMANDS.md` with all 112 commands
 - [ ] Organize by Cog category
 
-### 3. Database Models Documentation
+### 2. Database Models Documentation
 - [ ] Create `docs/MODELS.md` documenting 324+ models
 - [ ] Organize by category (37 categories)
 
-### 4. Clean Up Legacy Code
+### 3. Clean Up Legacy Code
 - [ ] Audit for unused imports
 - [ ] Remove deprecated feature code if decided
 - [ ] Clean up debug logging from Sessions 565-566
