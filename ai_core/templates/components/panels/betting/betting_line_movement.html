@@ -21,8 +21,8 @@ Track line movement over time to identify sharp money and public betting trends.
             </select>
             <!-- Movement Threshold -->
             <select id="movement-threshold" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(168, 85, 247, 0.4); color: #c4b5fd; width: auto;">
-                <option value="0">Show All</option>
-                <option value="0.5" selected>0.5+ pts</option>
+                <option value="0" selected>Show All</option>
+                <option value="0.5">0.5+ pts</option>
                 <option value="1.0">1+ pts</option>
                 <option value="1.5">1.5+ pts</option>
                 <option value="2.0">2+ pts</option>
@@ -188,8 +188,8 @@ Track line movement over time to identify sharp money and public betting trends.
         try {
             // Fetch movers data
             const url = `/api/v1/betting/movers/?min_spread_movement=${threshold}&min_total_movement=${threshold}${sport ? '&sport=' + sport : ''}`;
-            // Session 563: Use regular fetch - this is a public API
-            const response = await fetch(url);
+            console.log('[Line Movement] Fetching:', url);
+            const response = await authenticatedFetch(url);
             const data = await response.json();
 
             loading.style.display = 'none';
@@ -290,8 +290,8 @@ Track line movement over time to identify sharp money and public betting trends.
         chartTitle.textContent = matchup;
 
         try {
-            // Session 563: Use regular fetch - this is a public API
-            const response = await fetch(`/api/v1/betting/line-movement/${gameId}/?market=spreads&hours=48`);
+            console.log('[Line Movement] Loading chart for game:', gameId);
+            const response = await authenticatedFetch(`/api/v1/betting/line-movement/${gameId}/?market=spreads&hours=48`);
             const data = await response.json();
 
             if (!data.success || !data.snapshots || data.snapshots.length === 0) {
@@ -396,11 +396,20 @@ Track line movement over time to identify sharp money and public betting trends.
     }
 
     // Event listeners
-    document.getElementById('movement-sport-filter').addEventListener('change', loadLineMovement);
-    document.getElementById('movement-threshold').addEventListener('change', loadLineMovement);
+    document.getElementById('movement-sport-filter')?.addEventListener('change', loadLineMovement);
+    document.getElementById('movement-threshold')?.addEventListener('change', loadLineMovement);
 
-    // Initial load when tab is shown
-    document.querySelector('[data-bs-target="#betting-line-movement"]')?.addEventListener('shown.bs.tab', () => {
-        loadLineMovement();
+    // Session 563: More robust tab detection - use event delegation
+    document.addEventListener('shown.bs.tab', function(event) {
+        if (event.target && event.target.id === 'betting-line-movement-tab') {
+            console.log('[Line Movement] Tab shown, loading data...');
+            loadLineMovement();
+        }
+    });
+
+    // Also try direct click handler as fallback
+    document.getElementById('betting-line-movement-tab')?.addEventListener('click', function() {
+        console.log('[Line Movement] Tab clicked, loading data...');
+        setTimeout(loadLineMovement, 100);  // Small delay for tab transition
     });
 </script>
