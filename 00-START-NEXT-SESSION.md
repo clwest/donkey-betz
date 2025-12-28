@@ -56,6 +56,38 @@ Changes made:
 - Removed deprecated commented-out code
 - Fixed deprecation notice on old Revenue class
 
+### Print → Logging Conversion - COMPLETE
+
+Converted debug print statements to proper Python logging:
+
+| Metric | Value |
+|--------|-------|
+| **Prints Converted** | 69 |
+| **Files Updated** | 10 |
+| **Remaining Prints** | 0 (in core/*.py) |
+
+Top files:
+- `consumers.py` (51 prints → logger.debug/error/warning)
+- `agent_monitor_consumer_simple.py` (5 prints)
+- `cache_middleware.py` (3 prints)
+- `views_spider_dashboard.py` (3 prints)
+
+### Bare Except Clause Fixes - COMPLETE
+
+Fixed all bare `except:` clauses for better error handling:
+
+| Metric | Value |
+|--------|-------|
+| **Clauses Fixed** | 135 |
+| **Files Updated** | 48 |
+| **Change** | `except:` → `except Exception:` |
+
+Top files:
+- `tasks.py` (23 fixes)
+- `views_video.py` (13 fixes)
+- `consumers.py` (8 fixes)
+- `views_unified_intelligence.py` (5 fixes)
+
 ### Session 570 Changes
 
 Database-level changes:
@@ -66,6 +98,8 @@ Database-level changes:
 
 Code commits:
 - `b340437` - TODO cleanup across 22 files
+- `2d1a1b5` - Print → logging conversion (10 files)
+- `32a7d8b` - Bare except fixes (48 files)
 
 ---
 
@@ -169,14 +203,18 @@ print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 ## Recent Commits
 
 ```
+32a7d8b refactor(Session 570): Fix bare except clauses across codebase
+2d1a1b5 refactor(Session 570): Convert print statements to proper logging
 b340437 chore(Session 570): Clean up TODO/FIXME comments across codebase
 6826d46 feat(Session 569): Re-enable Autonomous tab with investor hero section
 88f3f19 refactor(Session 567): Major codebase cleanup - unused imports and debug logging
-4dc4d8a docs(Session 567): Create comprehensive database models documentation
-fb5b5db docs(Session 567): Create comprehensive Discord commands documentation
 ```
 
 ---
 
-**Session 570: Autonomous Sub-Tabs + TODO Cleanup - COMPLETE**
+**Session 570: Autonomous Sub-Tabs + Major Codebase Cleanup - COMPLETE**
+- TODO cleanup (33 items, 22 files)
+- Print → Logging (69 prints, 10 files)
+- Bare except fixes (135 clauses, 48 files)
+
 **Ready for Session 571**
