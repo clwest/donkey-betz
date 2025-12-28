@@ -2,9 +2,12 @@
 Custom middleware for the Unified Donkey Betz Platform.
 Session 111: Added RangeRequestMiddleware for video streaming support
 """
-import re
+import logging
 import os
+import re
 from django.utils.deprecation import MiddlewareMixin
+
+logger = logging.getLogger(__name__)
 from django.http import StreamingHttpResponse, HttpResponse, FileResponse
 from django.core.files.storage import default_storage
 
@@ -152,7 +155,7 @@ class RangeRequestMiddleware:
 
         except Exception as e:
             # If anything fails, return original response
-            print(f"Range request error: {e}")
+            logger.warning(f"Range request error: {e}")
             return response
 
     def _get_content_type(self, file_path):

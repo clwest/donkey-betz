@@ -2,13 +2,17 @@
 Spider Network Dashboard Views
 Provides API endpoints for spider network monitoring and control
 """
+import json
+import logging
+import random
+from datetime import timedelta
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-import json
-import random
-from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 from core.models_unified_system import SpiderData
 
@@ -33,7 +37,7 @@ def spider_network_data(request):
         all_spiders = registry.list_spiders()
         spider_count = len(all_spiders)
     except ImportError as e:
-        print(f"Error importing spider registry: {e}")
+        logger.error(f"Error importing spider registry: {e}")
         spider_count = 0
         all_spiders = {}
 
@@ -56,7 +60,7 @@ def spider_network_data(request):
         )
 
     except Exception as e:
-        print(f"Error accessing spider data: {e}")
+        logger.error(f"Error accessing spider data: {e}")
         opportunities = 0
         total_data = 0
         success_rate = 60
@@ -150,7 +154,7 @@ def spider_activity_feed(request):
                 'status': 'success'
             })
     except Exception as e:
-        print(f"Error fetching spider activities: {e}")
+        logger.error(f"Error fetching spider activities: {e}")
 
     # Add simulated recent activities if needed
     if len(activities) < 10:

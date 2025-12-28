@@ -4,9 +4,12 @@ Shows actual status of agents and active projects
 """
 import json
 import asyncio
+import logging
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 import redis
+
+logger = logging.getLogger(__name__)
 
 class AgentMonitorConsumer(AsyncWebsocketConsumer):
     """Simple WebSocket consumer for monitoring real agent activity"""
@@ -44,7 +47,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
             elif data.get('type') == 'ping':
                 await self.send(text_data=json.dumps({'type': 'pong'}))
         except Exception as e:
-            print(f"Error handling message: {e}")
+            logger.error(f"Error handling message: {e}")
 
     async def project_progress(self, event):
         """Handle project progress updates"""
@@ -113,7 +116,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                         'projectStatus': project.get('status', 'active')
                     })
         except Exception as e:
-            print(f"Error loading projects: {e}")
+            logger.error(f"Error loading projects: {e}")
 
         # Check for any agent tasks
         try:
@@ -136,7 +139,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                         'lastActive': datetime.now().isoformat()
                     })
         except Exception as e:
-            print(f"Error loading agent tasks: {e}")
+            logger.error(f"Error loading agent tasks: {e}")
 
         # Don't show idle agents if no active ones - wait for real data
         # if not agents:
@@ -197,7 +200,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                         'url': opportunity.get('url', '#')
                     })
         except Exception as e:
-            print(f"Error loading tasks: {e}")
+            logger.error(f"Error loading tasks: {e}")
 
         if tasks:
             await self.send(text_data=json.dumps({
@@ -217,6 +220,6 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                 await self.send_agent_status()
 
             except Exception as e:
-                print(f"Monitor loop error: {e}")
+                logger.error(f"Monitor loop error: {e}")
 
             await asyncio.sleep(1)

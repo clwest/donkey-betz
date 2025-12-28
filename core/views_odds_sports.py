@@ -1361,7 +1361,7 @@ def sports_sync(request):
                             enrichment_errors.append(f"Game {game.id}: {str(enrich_error)}")
 
                 except Exception as e:
-                    print(f"Error saving game: {e}")
+                    logger.error(f"Error saving game: {e}")
                     continue
 
         # Enrich team data if requested and we have a league

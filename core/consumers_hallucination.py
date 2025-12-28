@@ -1,11 +1,14 @@
 """
 WebSocket consumer for real-time hallucination monitoring
 """
-import json
 import asyncio
-from channels.generic.websocket import AsyncWebsocketConsumer
+import json
+import logging
 from datetime import datetime
+from channels.generic.websocket import AsyncWebsocketConsumer
 import redis.asyncio as redis
+
+logger = logging.getLogger(__name__)
 from ai_core.agents.mythology_validator import mythology_enforcer
 from mythology.services import MythologyDetectionService
 
@@ -91,7 +94,7 @@ class HallucinationMonitorConsumer(AsyncWebsocketConsumer):
                 await asyncio.sleep(0.1)
 
         except Exception as e:
-            print(f"Monitor error: {e}")
+            logger.error(f"Monitor error: {e}")
         finally:
             await pubsub.unsubscribe('hallucination_events')
 

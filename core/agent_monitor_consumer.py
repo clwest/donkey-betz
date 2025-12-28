@@ -4,9 +4,12 @@ Shows actual status of all 152 agents
 """
 import json
 import asyncio
+import logging
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 import redis
+
+logger = logging.getLogger(__name__)
 
 class AgentMonitorConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for monitoring real agent activity"""
@@ -74,7 +77,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                 }
                 agents.append(agent_data)
         except Exception as e:
-            print(f"Error loading agent registry: {e}")
+            logger.error(f"Error loading agent registry: {e}")
             # Fallback - check for any active freelance jobs
             active_jobs = self.redis_client.keys('freelance:job:executing:*')
             for job_key in active_jobs:
@@ -174,7 +177,7 @@ class AgentMonitorConsumer(AsyncWebsocketConsumer):
                     await self.send_agent_status()
 
             except Exception as e:
-                print(f"Monitor error: {e}")
+                logger.error(f"Monitor error: {e}")
 
             await asyncio.sleep(1)  # Check every second
 

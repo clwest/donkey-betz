@@ -1161,5 +1161,5 @@ app.autodiscover_tasks()
 @app.task(bind=True)
 def debug_task(self):
     """Debug task to test Celery configuration."""
-    print(f'Request: {self.request!r}')
+    logger.error(f'Request: {self.request!r}')
     return 'Core Celery is working!'
