@@ -1,12 +1,43 @@
 # Agent Reference
 
-**Last Updated:** Session 496 (December 19, 2025) - Added AI Podcast Studio Agents
+**Last Updated:** Session 567 (December 28, 2025) - Complete 71 Agent Audit
 
 ---
 
 ## Overview
 
+**Total Agents: 71** | **Routable: 47** | **Non-Routable (Sub-agents): 24**
+
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
+
+### Agent Categories Summary
+
+| Category | Count | Routable | Description |
+|----------|-------|----------|-------------|
+| Creation | 4 | 4 | Image, video, audio, 3D generation |
+| Editing | 2 | 2 | Image and video post-processing |
+| Research | 1 | 1 | Web search and spider network |
+| Content Writing | 1 | 1 | Written content generation |
+| Strategy | 4 | 4 | Content, brand, SEO, social media |
+| Executive | 4 | 4 | CTO, COO, Creative Director, Meeting |
+| Analysis | 3 | 2 | Trends, opportunities, market intelligence |
+| Training | 2 | 2 | Character training, LoRA models |
+| Security | 2 | 2 | Memory isolation, content audit |
+| Business | 5 | 2 | Competitor, customer, brand, marketing |
+| Development | 4 | 4 | Code generation, review, DevOps |
+| Blockchain | 5 | 1 | Smart contracts, transactions, whales |
+| Legal | 1 | 1 | Colorado family law documents |
+| Narrative | 4 | 0 | Drift detection, cultural impact |
+| Content Studio | 4 | 4 | Autonomous content with debates |
+| Podcast | 4 | 4 | AI podcast generation |
+| Rendering | 1 | 1 | DaVinci Resolve automation |
+| Orchestration | 4 | 1 | Workflow coordination |
+| Campaign | 2 | 2 | Marketing campaigns, series |
+| Stocks | 9 | 1 | Market intelligence, bull/bear debates |
+| Markets | 3 | 3 | Prediction markets, sports odds, arbitrage |
+| Entry Point | 1 | 1 | Personal Assistant routing |
+| Special | 1 | 0 | Thinking/reasoning agent |
+| **TOTAL** | **71** | **47** | |
 
 **Session 400 Addition:** All agents now automatically inject learned knowledge into their prompts via `_build_prompt()`. The knowledge pipeline is:
 ```
@@ -62,7 +93,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Clean Architecture Agents (27)
+## Complete Agent Reference (71 Agents)
 
 ### PersonalAssistantAgent
 
@@ -954,6 +985,255 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 - Tracks 7-day and 30-day accuracy
 - Updates agent confidence multipliers (0.5x-1.5x)
 - Agents improve over time based on track record
+
+---
+
+### ContentWriterAgent
+
+**Purpose:** Generate written content (articles, blogs, copy)
+
+**Location:** `core/agents/content_writer_agent.py`
+
+**Tools:**
+- `write_content` - Generate articles, blogs, marketing copy
+- `edit_content` - Revise and improve existing text
+- `generate_outline` - Create content structure
+
+**Parameters:**
+```python
+{
+    "topic": "AI trends in 2025",
+    "content_type": "blog",  # blog, article, copy, social
+    "tone": "professional",
+    "length": "medium"  # short, medium, long
+}
+```
+
+**Cannot Access:** Image, video, audio, research tools
+
+---
+
+### Security Agents (2)
+
+#### MemoryIsolationAgent
+
+**Purpose:** Memory namespace management and isolation
+
+**Location:** `core/agents/security/memory_isolation_agent.py`
+
+**Tools:**
+- `create_namespace` - Create isolated memory namespace
+- `validate_access` - Check memory access permissions
+- `audit_memory` - Audit memory usage patterns
+
+---
+
+#### ContentAuditAgent
+
+**Purpose:** Content safety and compliance auditing
+
+**Location:** `core/agents/security/content_audit_agent.py`
+
+**Tools:**
+- `audit_content` - Check content for policy violations
+- `flag_issues` - Flag problematic content
+- `generate_report` - Create audit reports
+
+---
+
+### Blockchain Agents (5) - Sub-agent Details
+
+**Location:** `core/agents/blockchain/`
+
+**Coordinator:** BlockchainAuditCoordinator (ROUTABLE)
+- Orchestrates all blockchain sub-agents
+- Generates comprehensive audit reports
+
+#### SmartContractAuditorAgent (Non-routable)
+
+**Purpose:** Audit smart contract code for vulnerabilities
+
+**Tools:**
+- `analyze_contract` - Static analysis of contract code
+- `detect_vulnerabilities` - Find common exploit patterns
+- `generate_audit_report` - Comprehensive security report
+
+---
+
+#### TransactionMonitorAgent (Non-routable)
+
+**Purpose:** Monitor blockchain transactions in real-time
+
+**Tools:**
+- `monitor_address` - Watch specific wallet addresses
+- `detect_patterns` - Identify suspicious transaction patterns
+- `alert_anomaly` - Generate alerts for unusual activity
+
+---
+
+#### WhaleWatcherAgent (Non-routable)
+
+**Purpose:** Track large wallet movements
+
+**Tools:**
+- `track_whales` - Monitor large holder wallets
+- `analyze_movements` - Analyze large transaction patterns
+- `predict_impact` - Estimate market impact of whale moves
+
+---
+
+#### ExploitDetectorAgent (Non-routable)
+
+**Purpose:** Detect exploit attempts and vulnerabilities
+
+**Tools:**
+- `scan_exploits` - Scan for known exploit patterns
+- `monitor_mempool` - Watch for sandwich attacks
+- `alert_exploit` - Generate exploit alerts
+
+---
+
+### Narrative Agents (4) - Non-routable
+
+**Location:** `core/agents/narrative/`
+
+#### NarrativeDriftCoordinator
+
+**Purpose:** Orchestrates narrative consistency checking
+
+**Tools:**
+- `coordinate_analysis` - Orchestrate sub-agent analysis
+- `synthesize_report` - Combine sub-agent findings
+
+---
+
+#### NarrativeHistorianAgent
+
+**Purpose:** Track narrative evolution over time
+
+**Tools:**
+- `analyze_history` - Analyze historical narrative patterns
+- `detect_shifts` - Identify narrative shifts
+
+---
+
+#### TrendBreakDetectorAgent
+
+**Purpose:** Detect breaks in established trends
+
+**Tools:**
+- `monitor_trends` - Watch for trend breaks
+- `alert_divergence` - Alert on narrative divergence
+
+---
+
+#### CulturalImpactAgent
+
+**Purpose:** Assess cultural impact of narratives
+
+**Tools:**
+- `analyze_impact` - Assess cultural relevance
+- `predict_adoption` - Predict cultural adoption patterns
+
+---
+
+### Orchestration Agents (4) - Additional Details
+
+#### WorkflowOrchestrationAgent (Non-routable)
+
+**Purpose:** Complex multi-agent workflow orchestration
+
+**Location:** `core/agents/workflow_orchestration_agent.py`
+
+**Special:** Used internally by PersonalAssistantAgent for complex tasks
+
+---
+
+#### OpportunityPipelineAgent (Non-routable)
+
+**Purpose:** Manage opportunity evaluation pipeline
+
+**Location:** `core/agents/opportunity_pipeline_agent.py`
+
+**Tools:**
+- `evaluate_opportunity` - Score and evaluate opportunities
+- `route_opportunity` - Route to appropriate agent
+
+---
+
+#### ContentExecutorAgent (Non-routable)
+
+**Purpose:** Execute content creation workflows
+
+**Location:** `core/agents/content_executor_agent.py`
+
+**Tools:**
+- `execute_content_plan` - Execute multi-step content plans
+- `coordinate_assets` - Coordinate asset creation
+
+---
+
+### Prediction Markets Agents (3)
+
+**Location:** `core/agents/markets/`
+
+#### PredictionMarketAnalyst
+
+**Purpose:** Analyze prediction market opportunities (Kalshi, Polymarket)
+
+**Location:** `core/agents/markets/prediction_market_analyst.py`
+
+**Tools:**
+- `analyze_market` - Analyze prediction market data
+- `find_opportunities` - Identify mispriced contracts
+- `calculate_edge` - Calculate expected value
+
+**Integration:** Kalshi API with RSA-PSS authentication
+
+---
+
+#### SportsOddsAnalyst
+
+**Purpose:** Analyze sports betting odds across sportsbooks
+
+**Location:** `core/agents/markets/sports_odds_analyst.py`
+
+**Tools:**
+- `compare_odds` - Compare odds across books
+- `find_value` - Identify value bets
+- `track_movement` - Track line movement
+
+**Data Sources:** The Odds API, ESPN, sports data feeds
+
+---
+
+#### ArbitrageDetector
+
+**Purpose:** Detect cross-sportsbook arbitrage opportunities
+
+**Location:** `core/agents/markets/arbitrage_detector.py`
+
+**Tools:**
+- `scan_arbitrage` - Scan for arb opportunities
+- `calculate_stakes` - Calculate optimal stake distribution
+- `alert_opportunity` - Alert on profitable arbs
+
+**Threshold:** 1%+ profit opportunities
+
+---
+
+### ThinkingAgent (Special - Non-routable)
+
+**Purpose:** Extended reasoning and deliberation
+
+**Location:** `core/agents/thinking_agent.py`
+
+**Tools:**
+- `deep_think` - Extended reasoning on complex problems
+- `evaluate_options` - Systematic option evaluation
+- `synthesize_analysis` - Synthesize multi-factor analysis
+
+**Special:** Uses extended thinking tokens for complex reasoning
 
 ---
 
