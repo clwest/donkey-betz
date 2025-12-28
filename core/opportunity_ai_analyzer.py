@@ -7,8 +7,8 @@ matches them with capable agents, and creates application plans for automated ex
 
 import logging
 import json
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime
+from typing import Dict, Any, List, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 

@@ -4,8 +4,6 @@ FORGET THE COMPLEX SHIT. JUST MAKE MONEY.
 No agents. No consciousness. Just results.
 """
 
-import os
-import requests
 from datetime import datetime
 import json
 

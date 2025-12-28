@@ -2,7 +2,7 @@
 Management command for manual model retraining - Session 24
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from ml.training.model_retrainer import ModelRetrainer
 from ml.models import MLModelVersion
 

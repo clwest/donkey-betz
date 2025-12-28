@@ -7,15 +7,12 @@ revenue generation system, measuring costs, returns, and optimization opportunit
 """
 
 import logging
-import json
-import asyncio
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 import statistics
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 

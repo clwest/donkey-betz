@@ -8,23 +8,16 @@ workflows that leverage agent capabilities.
 """
 
 import logging
-import json
 import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 # Import the Content Studio Bridge
 from agents.content_studio_bridge import (
-    ContentStudioBridge,
-    AgentContentCreator,
-    agent_create_blog,
-    agent_create_social,
-    agent_create_image,
-    agent_create_campaign
+    ContentStudioBridge
 )
 
 # Import agent executor lazily to avoid circular dependency
-from ai_core.agents.ai_enforced_base import AIEnforcedAgent
 from core.models.agents_registry import UnifiedAgentTemplate
 
 logger = logging.getLogger(__name__)

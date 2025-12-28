@@ -16,20 +16,18 @@ import asyncio
 import logging
 import json
 import redis
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
 from channels.layers import get_channel_layer
-from django.core.cache import cache
-from django.db import transaction
 from asgiref.sync import sync_to_async
 
 # Import all platform components
 from core.agents.registry import agent_registry
 from intelligence.spiders.spider_army.orchestrator import SpiderArmyOrchestrator
-from intelligence.models import OpportunityActionPlan, RevenueMetrics, EarningRecord
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration
-from persistence.models import AgentKnowledge, SpiderData, UnifiedEmbedding
+from intelligence.models import RevenueMetrics, EarningRecord
+from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from persistence.models import UnifiedEmbedding
 from django.db import models
 
 logger = logging.getLogger(__name__)
@@ -1005,7 +1003,6 @@ class PlatformUnificationOrchestrator:
 
     async def _track_advisor_content_revenue(self, advisor_name: str, content: Dict[str, Any]):
         """Track revenue potential for advisor content"""
-        pass
 
     async def _check_component_health(self, component_name: str) -> bool:
         """Check health of a specific component"""
@@ -1021,7 +1018,6 @@ class PlatformUnificationOrchestrator:
 
     async def _apply_optimization(self, bottleneck: Dict[str, Any]):
         """Apply optimization for identified bottleneck"""
-        pass
 
     async def _update_pipeline_metrics(self, pipeline_name: str, processed_count: int):
         """Update metrics for a pipeline"""
@@ -1045,7 +1041,6 @@ class PlatformUnificationOrchestrator:
 
     async def _update_revenue_tracking(self, pipeline_name: str, data: List[Dict[str, Any]]):
         """Update revenue tracking for pipeline"""
-        pass
 
     # Revenue pipeline processor methods
     async def _package_agent_services(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1457,7 +1452,6 @@ class PlatformUnificationConsumer(AsyncWebsocketConsumer):
     async def _handle_component_specific_message(self, data: Dict[str, Any]):
         """Handle component-specific messages"""
         # Override in subclasses for component-specific handling
-        pass
 
     # Channel layer message handlers
     async def platform_status_update(self, event):

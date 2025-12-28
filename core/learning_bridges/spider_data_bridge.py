@@ -9,7 +9,7 @@ instead of persistence.models.SpiderData (empty model - never populated)
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict, List
+from typing import List
 
 # Session 400: Use the CORRECT SpiderData model (the one that actually has data!)
 # Also use Agent from core.models_unified_system (has 31 agents) not UnifiedAgentTemplate (28 agents)

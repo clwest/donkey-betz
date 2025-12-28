@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Avg, F
+from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
 import json
@@ -14,7 +14,7 @@ import logging
 
 from core.models_unified_system import (
     Agent, AgentSolution, AgentLearning,
-    SpiderData, AgentCategory
+    SpiderData
 )
 
 logger = logging.getLogger(__name__)

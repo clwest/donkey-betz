@@ -14,7 +14,6 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from django.contrib.auth.models import User
-from django.db import transaction
 from django.utils import timezone
 
 from content.models import ImageHistory

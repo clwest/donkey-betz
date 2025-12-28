@@ -3,37 +3,27 @@ ML Training Pipeline
 Automated training pipeline for all ML models in the Unified Donkey Betz Platform
 """
 
-import os
 import logging
 import asyncio
 import json
-import pickle
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
 # ML Libraries
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import joblib
 
 # Deep Learning
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
 
 # Apple MLX (if available)
 try:
-    import mlx.core as mx
-    import mlx.nn as mlx_nn
-    import mlx.optimizers as mlx_optim
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False

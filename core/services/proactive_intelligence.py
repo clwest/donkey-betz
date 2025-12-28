@@ -19,10 +19,9 @@ The 19 Situations by Domain:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import List, Dict, Any, Optional
 from django.utils import timezone
-from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +181,7 @@ class ProactiveIntelligenceService:
     ) -> List[Any]:
         """Get recent trigger events for specified domains."""
         try:
-            from core.models_situation_triggers import TriggerEvent, SituationType
+            from core.models_situation_triggers import TriggerEvent
 
             cutoff = timezone.now() - timedelta(hours=hours)
 

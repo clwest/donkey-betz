@@ -14,18 +14,14 @@ Features:
 - Integration with Income Builder agent workflows
 """
 
-import asyncio
 import json
 import logging
-import redis
-from redis import asyncio as aioredis
-from typing import Dict, List, Optional, Any, Set
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
 from .agent_data_receiver import AgentSpiderDataReceiver, IntelligenceData, AgentDataSubscription
-from ..intelligence.income_builder import IncomeBuilderAgent
 
 logger = logging.getLogger(__name__)
 

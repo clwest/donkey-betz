@@ -17,7 +17,6 @@ class MobileTokenAuthentication(TokenAuthentication):
     Extends DRF's TokenAuthentication to work seamlessly with mobile clients.
     Uses X-API-Key header (already handled by TokenAuthentication's get_authorization_header).
     """
-    pass
 
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):

@@ -8,9 +8,9 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 from django.contrib.auth import get_user_model
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentExecution
-from sports.models import League, Team, Game, Sportsbook, BettingMarket, OddsLine
-from content.models import ContentTemplate, Document, KnowledgeBase, DocumentEmbedding
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
+from sports.models import League, Team, Sportsbook
+from content.models import ContentTemplate, KnowledgeBase
 from self_awareness.models import SystemMetrics, SelfAnalysisReport, CodebaseSnapshot
 
 User = get_user_model()

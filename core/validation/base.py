@@ -7,7 +7,7 @@ Provides common functionality for all section validators.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -115,7 +115,6 @@ class BaseValidationAgent(ABC):
         Subclasses must implement this method and call self.add_check()
         for each validation check performed.
         """
-        pass
 
     def add_check(self, name: str, passed: bool, message: str,
                   duration_ms: float = 0, details: Dict = None):

@@ -3,14 +3,10 @@ Personal Assistant WebSocket Consumer for AI-powered chat and user profiling
 """
 
 import json
-import asyncio
 import logging
-import random
-from datetime import datetime, timedelta
 from django.utils import timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
 

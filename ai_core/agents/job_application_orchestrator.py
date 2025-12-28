@@ -13,11 +13,9 @@ Key Features:
 
 import logging
 from asgiref.sync import async_to_sync
-import json
 import asyncio
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime
-import re
 from dataclasses import dataclass
 from ai_core.agents.agent_llm_integration import agent_llm_integration
 

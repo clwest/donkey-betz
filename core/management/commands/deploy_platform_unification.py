@@ -18,13 +18,10 @@ import json
 import logging
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
 from core.platform_unification_orchestrator import (
     PlatformUnificationOrchestrator,
-    UnificationConfig,
-    get_platform_orchestrator,
-    start_unified_platform
+    UnificationConfig
 )
 
 

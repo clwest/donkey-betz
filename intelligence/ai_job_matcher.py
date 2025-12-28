@@ -13,12 +13,9 @@ Key Features:
 - Tracks success rates for continuous improvement
 """
 
-import re
-import json
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
 
 logger = logging.getLogger(__name__)

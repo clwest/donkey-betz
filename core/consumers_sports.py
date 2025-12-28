@@ -3,7 +3,6 @@ WebSocket consumer for real-time sports updates and odds refresh
 """
 
 import json
-import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
@@ -216,7 +215,7 @@ class SportsUpdatesConsumer(AsyncWebsocketConsumer):
     def get_games_status(self, league):
         """Get status of games and their last update times"""
         try:
-            from sports.models import Game, BettingMarket
+            from sports.models import Game
 
             games_query = Game.objects.filter(
                 is_active=True,

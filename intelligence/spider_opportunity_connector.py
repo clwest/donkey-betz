@@ -14,11 +14,10 @@ Features:
 - Error handling and fallback mechanisms
 """
 
-import asyncio
 import json
 import logging
 import redis.asyncio as aioredis
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 import hashlib

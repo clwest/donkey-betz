@@ -4,7 +4,6 @@ SIMPLE MONEY MAKER - The simplest possible way to start making money NOW
 No complex setup. Just run and start earning.
 """
 
-import os
 import json
 from datetime import datetime
 

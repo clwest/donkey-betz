@@ -6,7 +6,6 @@ import json
 import asyncio
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.core.cache import cache
 import redis
 
 class AgentMonitorConsumer(AsyncWebsocketConsumer):

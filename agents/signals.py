@@ -11,7 +11,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from content.models import ImageHistory, VideoHistory
-from core.models.agents_registry import AgentContribution
 from agents.services import AgentContributionService
 
 logger = logging.getLogger(__name__)

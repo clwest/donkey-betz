@@ -9,9 +9,7 @@ Usage:
 """
 
 import asyncio
-import json
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 
 class Command(BaseCommand):
@@ -49,7 +47,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from ai_core.spiders.specialized.discord_training_spider import DiscordTrainingSpider
-        from ai_core.spiders.base_spider import SpiderTarget
 
         dry_run = options['dry_run']
         save_to_db = options['save_to_db']

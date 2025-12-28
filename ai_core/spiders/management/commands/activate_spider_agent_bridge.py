@@ -13,13 +13,11 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand, CommandError
-from django.conf import settings
 import asyncio
-import json
 import logging
 import sys
 import os
-from typing import List, Optional
+from typing import List
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,8 +25,7 @@ if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
 from spiders.spider_connector_orchestrator import (
-    get_spider_connector_orchestrator,
-    SpiderConnectorOrchestrator
+    get_spider_connector_orchestrator
 )
 
 logger = logging.getLogger(__name__)

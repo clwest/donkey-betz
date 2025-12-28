@@ -8,16 +8,12 @@ identify the most profitable and suitable prospects for applications.
 
 import logging
 import asyncio
-import json
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, List
+from datetime import datetime
 from dataclasses import dataclass, field
-from collections import defaultdict
 import re
-import math
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 logger = logging.getLogger(__name__)
 

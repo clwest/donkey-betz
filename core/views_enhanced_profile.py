@@ -3,10 +3,7 @@ Enhanced User Profile API Views
 ================================
 """
 
-import json
 import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated

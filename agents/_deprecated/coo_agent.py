@@ -20,15 +20,13 @@ Created: Session 98
 
 import logging
 import os
-import json
 from datetime import datetime
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+from typing import Dict, Optional, Any
 
 from django.contrib.auth import get_user_model
 from openai import OpenAI
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 from intelligence.shared_memory import AgentMemoryInterface
 
 User = get_user_model()

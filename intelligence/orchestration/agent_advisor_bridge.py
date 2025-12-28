@@ -4,7 +4,7 @@ Connects 102 Agents with 25+ Advisors and ML Pipeline for intelligent decision-m
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import json
@@ -12,12 +12,12 @@ import json
 from django.db import transaction
 from django.core.cache import cache
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate
 from intelligence.models.advisor_network import (
-    Advisor, AdvisorCategory, AdvisorCollaboration, AdvisorVerification
+    Advisor, AdvisorCategory, AdvisorCollaboration
 )
 from intelligence.services.advisor_network_service import AdvisorNetworkService
-from ml.core.ml_engine import MLEngine, PatternPrediction, UserBehaviorProfile
+from ml.core.ml_engine import PatternPrediction
 from ml_intelligence.ml_service import MLService
 
 logger = logging.getLogger(__name__)

@@ -5,21 +5,9 @@ Comprehensive agent definitions for sports betting intelligence that integrate
 with the unified agent orchestration system.
 """
 
-from typing import Dict, List, Any, Optional
-from decimal import Decimal
-from datetime import datetime, timedelta
 
-from django.utils import timezone
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization, LLMProvider
-from .models import (
-    Game, BettingMarket, OddsLine, Team, League, BettingRecommendation,
-    ArbitrageOpportunity, BankrollManagement, SportsAnalytics
-)
-from .services import (
-    KellyCriterionService, ArbitrageDetectionService, 
-    BettingRecommendationService, SportsAnalyticsService
-)
+from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
 
 
 class SportsAgentRegistry:

@@ -12,14 +12,13 @@ Key Features:
 """
 
 import logging
-import json
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
 # Import existing components
-from advisors.registry import advisor_registry, AdvisorDomain, AdvisorConsultation, AdvisorProfile
+from advisors.registry import advisor_registry, AdvisorProfile
 from core.agents.registry import agent_registry
 from intelligence.action_plan_formatter import ActionPlanFormatter
 

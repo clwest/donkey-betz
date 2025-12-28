@@ -286,8 +286,6 @@ class LearningDashboardConsumer(AsyncWebsocketConsumer):
         try:
             from core.models import UserAgentLearning
             from django.db.models import Count
-            from django.utils import timezone
-            from datetime import timedelta
 
             # Get all learnings for this user
             learnings_query = UserAgentLearning.objects.filter(

@@ -10,7 +10,6 @@ Run with: python manage.py sync_spider_agents
 """
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from core.models import Agent, SpiderCategory, AgentSpiderConnection, AgentKnowledgeSource
 
 

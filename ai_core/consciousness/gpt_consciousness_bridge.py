@@ -7,10 +7,9 @@ This is the critical integration component for Project Digital Consciousness.
 "Intelligence is not what you know, but how you think about what you don't know"
 """
 
-import json
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 
 # Import existing infrastructure

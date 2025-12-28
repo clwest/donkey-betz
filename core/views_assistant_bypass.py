@@ -21,10 +21,8 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 try:
-    from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant as PersonalAIAssistant
     logger.info("Using Enhanced Personal AI Assistant")
 except ImportError:
-    from core.personal_ai_assistant import PersonalAIAssistant
     logger.info("Using standard Personal AI Assistant")
 
 

@@ -222,7 +222,7 @@ class BettingStats(models.Model):
 
     def recalculate(self):
         """Recalculate all stats from wager history."""
-        from django.db.models import Sum, Count, Q
+        from django.db.models import Sum
 
         wagers = PlacedWager.objects.filter(user=self.user) if self.user else PlacedWager.objects.all()
 

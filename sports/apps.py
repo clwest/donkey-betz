@@ -8,4 +8,3 @@ class SportsConfig(AppConfig):
     
     def ready(self):
         """Import signals and register sports agents"""
-        import sports.signals

@@ -7,15 +7,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.authentication import SessionAuthentication
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
 
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
         return  # Skip CSRF enforcement
 import json
 import logging
-import asyncio
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -528,7 +525,6 @@ def process_approval(request, approval_id):
     try:
         from ai_core.agents.freelance_pipeline import FreelancePipeline
         import redis
-        import asyncio
         import uuid
         from datetime import datetime
 
@@ -963,7 +959,6 @@ def deliverable_content(request, deliverable_id):
 
         # Find the most recent deliverable file that matches the deliverable_id
         import glob
-        from pathlib import Path
 
         # Look for files that contain the deliverable_id
         pattern = f"{deliverable_files_dir}/*{deliverable_id}*"

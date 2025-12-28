@@ -14,9 +14,8 @@ The scraper focuses on AI/ML/Developer positions that can be completed remotely.
 
 import asyncio
 import aiohttp
-import requests
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 import json
 import random
@@ -406,7 +405,7 @@ def scrape_jobs_sync() -> List[Dict]:
 
 if __name__ == "__main__":
     # Test the scraper
-    import pprint
+    pass
 
     print("Starting job scraping...")
     jobs = scrape_jobs_sync()

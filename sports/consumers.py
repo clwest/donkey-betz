@@ -1,13 +1,12 @@
 """
 WebSocket consumers for real-time sports data updates
 """
-import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +210,7 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
 
     async def send_live_games(self):
         """Send real games from the database (next 36 hours)"""
-        from .models import Game, GameStatus
-        from django.utils import timezone
+        from .models import Game
         from datetime import timedelta
 
         try:
@@ -291,7 +289,6 @@ class SportsConsumer(AsyncJsonWebsocketConsumer):
         """Send real live scores from ESPN API (fallback to database if ESPN unavailable)"""
         from datetime import datetime
         import requests
-        from django.utils import timezone
 
         try:
             # Use local datetime for ESPN API (ESPN uses local game times, not UTC)
@@ -997,8 +994,7 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
 
     async def send_live_games(self):
         """Send real games from the database (next 36 hours)"""
-        from .models import Game, GameStatus
-        from django.utils import timezone
+        from .models import Game
         from datetime import timedelta
 
         try:
@@ -1077,7 +1073,6 @@ class GamesConsumer(AsyncJsonWebsocketConsumer):
         """Send real live scores from ESPN API (fallback to database if ESPN unavailable)"""
         from datetime import datetime
         import requests
-        from django.utils import timezone
 
         try:
             # Use local datetime for ESPN API (ESPN uses local game times, not UTC)

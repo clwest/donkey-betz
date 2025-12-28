@@ -439,7 +439,7 @@ You analyze and report - you do NOT create content or execute workflows."""
         logger.info(f"Searching trends for: {query[:50]}...")
 
         try:
-            from django.utils import timezone
+            pass
 
             # Search spider data semantically
             results = self.semantic_search.semantic_search(

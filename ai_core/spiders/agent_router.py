@@ -7,12 +7,10 @@ ensuring that collected data reaches the right processing units.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List
 from datetime import datetime
-import asyncio
 import json
 from django.core.cache import cache
-from django.db import transaction
 
 logger = logging.getLogger(__name__)
 

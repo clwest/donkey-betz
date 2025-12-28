@@ -207,4 +207,3 @@ class AgentMemoryInterface:
             details: Action details dictionary
         """
         # TODO: Implement proper action logging
-        pass

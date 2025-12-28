@@ -7,7 +7,6 @@ from django.db import migrations
 
 def noop(apps, schema_editor):
     """No-op migration - columns already exist in database."""
-    pass
 
 
 class Migration(migrations.Migration):

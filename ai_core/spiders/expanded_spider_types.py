@@ -7,7 +7,6 @@ Additional specialized spiders for comprehensive market coverage.
 
 from ai_core.spiders.lightweight_spider_system import LightweightSpider, SpiderResult
 from datetime import datetime
-import random
 
 
 class LiveBettingSpider(LightweightSpider):

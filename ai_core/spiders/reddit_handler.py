@@ -6,14 +6,11 @@ Implements PRAW (Python Reddit API Wrapper) for comprehensive Reddit data collec
 import os
 import logging
 import asyncio
-import aiohttp
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from datetime import datetime, timezone
 import time
 import praw
-from prawcore.exceptions import ResponseException, RequestException
-from praw.models import Submission, Comment, Redditor
-import json
+from prawcore.exceptions import ResponseException
 from dataclasses import dataclass, asdict
 
 logger = logging.getLogger(__name__)

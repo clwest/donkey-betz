@@ -9,8 +9,7 @@ No more simulations - this handles real payments that go into your real bank acc
 import asyncio
 import logging
 import json
-import requests
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from django.core.cache import cache

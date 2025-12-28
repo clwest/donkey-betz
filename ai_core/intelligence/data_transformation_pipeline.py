@@ -16,11 +16,9 @@ Capabilities:
 import asyncio
 import json
 import logging
-from typing import Dict, List, Any, Optional, Callable, Tuple
+from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
-from collections import defaultdict
-import hashlib
 import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)

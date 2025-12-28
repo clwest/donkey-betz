@@ -3,17 +3,14 @@ ML Training Data Collector
 Automated collection and preparation of training data for all ML models
 """
 
-import os
 import json
 import logging
 import asyncio
 import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any
 from dataclasses import dataclass, asdict
 import yfinance as yf
-import requests
 from pathlib import Path
 
 @dataclass
@@ -200,7 +197,7 @@ class TrainingDataCollector:
         try:
             # This would integrate with the Django database
             from django.contrib.auth import get_user_model
-            from core.models import UserStatistics, ChatConversation
+            from core.models import UserStatistics
 
             User = get_user_model()
 

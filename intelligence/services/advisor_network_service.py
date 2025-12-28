@@ -3,12 +3,11 @@ Advisor Network Service - Managing 25+ Expert Advisors
 Implements recruitment, verification, and collaboration orchestration
 """
 
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
-from django.db.models import Avg, Count, Q, F
+from typing import Dict, List
+from datetime import timedelta
+from django.db.models import Avg
 from django.utils import timezone
 from django.core.cache import cache
-import json
 import logging
 
 from intelligence.models.advisor_network import (

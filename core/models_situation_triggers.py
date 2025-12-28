@@ -11,7 +11,6 @@ proactive (alert within seconds of significant events).
 
 import uuid
 import re
-from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta

@@ -5,17 +5,12 @@ Optimized for Apple M3 with MLX framework
 
 import os
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 import numpy as np
-import pandas as pd
 
 # Apple ML Stack
 try:
-    import mlx.core as mx
-    import mlx.nn as nn
-    from mlx.utils import tree_flatten
     MLX_AVAILABLE = True
 except ImportError:
     MLX_AVAILABLE = False
@@ -23,13 +18,11 @@ except ImportError:
 
 # Core ML Libraries
 import torch
-import torch.nn as torch_nn
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import joblib
 
 # HuggingFace Integration
-from transformers import pipeline, AutoTokenizer, AutoModel
+from transformers import pipeline
 
 @dataclass
 class MLConfig:
@@ -1046,7 +1039,6 @@ class MLEngine:
     def _record_user_decision(self, decision_data: Dict[str, Any], confidence: float):
         """Record user decision for learning"""
         # Placeholder - implement decision tracking
-        pass
 
     def _analyze_options_to_sports(self, options_data: Dict, sports_data: Dict) -> Optional[PatternPrediction]:
         """Analyze options IV patterns for sports betting opportunities"""

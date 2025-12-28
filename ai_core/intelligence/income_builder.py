@@ -5,11 +5,8 @@ Helps users build income streams using AI, regardless of starting capital.
 Focuses on skills, services, and value creation rather than traditional investing.
 """
 
-import asyncio
-import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from enum import Enum
 import logging
 
@@ -790,7 +787,7 @@ class AIIncomeBuilder:
         """Convert spider opportunity format to internal opportunity format"""
         try:
             # Create an IncomeOpportunity-like object from spider data
-            from datetime import timedelta, datetime
+            from datetime import datetime
 
             # Map spider data to our format
             stream_type_mapping = {

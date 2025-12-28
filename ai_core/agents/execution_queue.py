@@ -5,7 +5,7 @@ Ensures high-value tasks are processed first
 import asyncio
 import json
 import redis
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
 from enum import Enum
 import logging

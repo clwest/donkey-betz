@@ -2,7 +2,6 @@
 Complete Freelance Pipeline with Human-in-the-Loop
 Orchestrates the entire process from opportunity to payment
 """
-import asyncio
 import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime

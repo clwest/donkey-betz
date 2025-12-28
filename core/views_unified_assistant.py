@@ -10,9 +10,7 @@ The One True Assistant™ endpoint that combines:
 """
 
 import logging
-import json
 from datetime import datetime
-from typing import Dict, Any, Optional
 
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model

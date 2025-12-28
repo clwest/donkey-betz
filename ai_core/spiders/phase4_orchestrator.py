@@ -8,28 +8,26 @@ pool management, caching, routing, and performance optimization.
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List
 from datetime import datetime, timedelta
-from collections import defaultdict
 import json
 import random
 from django.core.cache import cache
 
 # Import all Phase 4 components
 from .pool_manager import spider_pool, get_spider_for_task, release_spider, scale_pool
-from .cache_layer import smart_cache, cache_get, cache_set, optimize_cache
+from .cache_layer import smart_cache, cache_get, cache_set
 from .metrics import (
     metrics_tracker,
     record_spider_request,
     record_data_collection,
-    record_api_call,
     get_performance_metrics
 )
 
 # Import Phase 3 components for integration
-from .agent_router import router, route_spider_data
-from .advisor_feed import advisor_feed, feed_advisors
-from .realtime_publisher import publisher, broadcast_spider_discovery
+from .agent_router import route_spider_data
+from .advisor_feed import feed_advisors
+from .realtime_publisher import broadcast_spider_discovery
 
 logger = logging.getLogger(__name__)
 

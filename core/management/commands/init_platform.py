@@ -5,7 +5,7 @@ This command sets up initial configuration, creates system defaults,
 and prepares the platform for first use.
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from core.models import SystemConfiguration, PlatformMetrics
 

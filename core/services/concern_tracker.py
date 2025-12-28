@@ -14,9 +14,8 @@ The verification process:
 import hashlib
 import logging
 from datetime import timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from django.utils import timezone
-from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 

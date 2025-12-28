@@ -6,7 +6,6 @@ Tests for the /health/ping/ endpoint used by mobile app for connectivity testing
 """
 
 from django.test import TestCase, Client
-from django.urls import reverse
 import json
 
 

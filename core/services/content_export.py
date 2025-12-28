@@ -6,7 +6,7 @@ Supports: .md (Markdown), .docx (Word), .txt (Plain text), .pdf (PDF)
 """
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from io import BytesIO
 
 logger = logging.getLogger(__name__)
@@ -249,7 +249,6 @@ def export_content_to_docx(content_data: Dict[str, Any], content_type: str) -> b
     """
     from docx import Document
     from docx.shared import Pt, Inches
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
 
     doc = Document()
 
@@ -319,7 +318,6 @@ def export_content_to_pdf(content_data: Dict[str, Any], content_type: str) -> by
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
     buf = BytesIO()

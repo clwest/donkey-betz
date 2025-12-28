@@ -9,7 +9,7 @@ Created: September 30, 2025
 """
 
 import logging
-from django.db.models import Q, Count, Avg
+from django.db.models import Count, Avg
 from datetime import datetime, timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated

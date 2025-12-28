@@ -9,7 +9,7 @@ extracts actual style characteristics from the prompt text.
 import logging
 import json
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from django.conf import settings
 
 logger = logging.getLogger(__name__)

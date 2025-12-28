@@ -16,7 +16,6 @@ Examples:
 
 import json
 import logging
-import asyncio
 from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -204,7 +203,6 @@ class StreamingProgressService:
             return
 
         try:
-            import asyncio
             from asgiref.sync import async_to_sync
 
             # Broadcast to the agents_general group

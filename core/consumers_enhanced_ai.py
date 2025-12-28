@@ -4,15 +4,12 @@ Enhanced AI Assistant WebSocket Consumer with Full Personalization
 
 import json
 import logging
-import asyncio
 from typing import Dict, Any
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from datetime import datetime
 
 from core.personal_ai_orchestrator import personal_ai_orchestrator
-from core.models import UserProfile, UserPreferences
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

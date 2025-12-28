@@ -4,18 +4,15 @@ Aggregates jobs from all free sources and provides intelligent matching
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import os
 import sys
 
 # Handle Django imports gracefully
 try:
     from django.core.cache import cache
-    from django.db import models
-    from django.contrib.auth.models import User
 except:
     # For standalone testing
     class MockCache:

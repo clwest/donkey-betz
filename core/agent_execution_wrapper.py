@@ -3,7 +3,6 @@ Agent execution tracking wrapper
 """
 from core.models_unified_system import AgentExecution, Agent
 from django.utils import timezone
-from decimal import Decimal
 import time
 import logging
 

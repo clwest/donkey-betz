@@ -21,7 +21,7 @@ Integration with existing systems:
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
 from dataclasses import dataclass, field
@@ -29,7 +29,7 @@ from collections import defaultdict
 from enum import Enum
 
 from django.utils import timezone
-from django.db.models import Avg, Sum, Count, Q, F
+from django.db.models import Avg, Count, Q
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)

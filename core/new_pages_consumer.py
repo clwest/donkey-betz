@@ -6,11 +6,11 @@ import json
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.db.models import Sum, Count, Avg, Q
+from django.db.models import Sum, Avg
 
 logger = logging.getLogger(__name__)
 
@@ -537,7 +537,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
 
     async def send_agent_status(self):
         """Send detailed agent status information"""
-        from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+        from core.models.agents_registry import AgentExecution
 
         try:
             # Get recent agent activity (last 24 hours to ensure we show some data)

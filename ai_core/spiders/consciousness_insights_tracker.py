@@ -6,8 +6,8 @@ Generates new insights periodically and tracks which ones have been addressed
 import json
 import redis
 import random
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import datetime
+from typing import Dict, List, Any
 
 
 class DynamicInsightsTracker:

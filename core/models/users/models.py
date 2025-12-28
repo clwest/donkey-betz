@@ -835,7 +835,6 @@ class EnhancedUserProfile(models.Model):
     def can_use_task(self) -> tuple:
         """Check if user can use another agent task today."""
         from django.utils import timezone
-        from datetime import timedelta
 
         limits = self.get_tier_limits()
         daily_limit = limits['daily_tasks']

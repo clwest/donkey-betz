@@ -8,13 +8,12 @@ It fetches actual data from configured targets using aiohttp and BeautifulSoup.
 
 import aiohttp
 import asyncio
-import json
 import logging
 import feedparser
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -630,7 +629,6 @@ async def _collect_api_spider_data(spider_name: str) -> Dict[str, Any]:
     Collect data from API-based spiders (BlueSky, YouTube, Discord).
     These spiders use their own API clients instead of SPIDER_TARGET_URLS.
     """
-    import os
 
     if spider_name == 'bluesky':
         return await _collect_bluesky_data()

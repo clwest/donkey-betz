@@ -4,7 +4,6 @@ Generates realistic job data with actual agent names and work details
 """
 
 import random
-from datetime import datetime, timedelta
 from typing import List, Dict
 
 # Real agent names and specializations

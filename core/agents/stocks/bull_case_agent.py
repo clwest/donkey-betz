@@ -397,7 +397,6 @@ Be specific and data-driven. Use the market data provided."""
         """
         try:
             from core.models_unified_system import AgentAccuracyMetrics
-            from datetime import date, timedelta
 
             # Get the most recent metrics for this agent
             latest_metrics = AgentAccuracyMetrics.objects.filter(

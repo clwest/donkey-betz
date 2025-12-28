@@ -8,9 +8,8 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.exceptions import StopConsumer
 from django.conf import settings
 import redis
 
@@ -406,8 +405,6 @@ class ProductionRevenueConsumer(ProductionWebSocketMixin, AsyncWebsocketConsumer
             logger.info("Refreshing revenue metrics")
 
             # Trigger metrics recalculation
-            from intelligence.models import RevenueMetrics
-            from django.utils import timezone
 
             # This would trigger actual metrics refresh
             # For now, just send fresh data

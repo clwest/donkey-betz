@@ -17,10 +17,7 @@ Flow:
 
 import logging
 import re
-from typing import List, Dict, Any, Optional, Set
-from datetime import timedelta
-from django.utils import timezone
-from django.db.models import Q
+from typing import List, Dict, Set
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +141,7 @@ class LivingProjectService:
 
         Returns list of created insights.
         """
-        from core.models_unified_system import ProjectInsight, LivingProjectConfig
+        from core.models_unified_system import ProjectInsight
         from core.models_partnership import PartnershipProject
 
         created_insights = []

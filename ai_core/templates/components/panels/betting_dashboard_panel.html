@@ -66,6 +66,23 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
         </div>
     </div>
 
+    <!-- Quick Actions Row (Session 560) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-sm" onclick="openLogBetModal()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000; font-weight: 600;">
+                    <i class="fas fa-plus me-1"></i> Log Bet
+                </button>
+                <button class="btn btn-sm" onclick="openKellyCalculator()" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; font-weight: 600;">
+                    <i class="fas fa-calculator me-1"></i> Kelly Calculator
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="loadBettingDashboard()" style="font-weight: 500;">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh All
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sub-tabs Navigation -->
     <ul class="nav nav-pills mb-4" id="betting-subtabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -89,8 +106,23 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="betting-bankroll-tab" data-bs-toggle="pill" data-bs-target="#betting-bankroll" type="button" role="tab" style="background: transparent; border: 1px solid rgba(6, 182, 212, 0.4); color: #06b6d4;">
+            <button class="nav-link" id="betting-bankroll-tab" data-bs-toggle="pill" data-bs-target="#betting-bankroll" type="button" role="tab" style="background: transparent; border: 1px solid rgba(6, 182, 212, 0.4); color: #06b6d4; margin-right: 8px;">
                 💵 Bankroll
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="betting-futures-tab" data-bs-toggle="pill" data-bs-target="#betting-futures" type="button" role="tab" style="background: transparent; border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; margin-right: 8px;">
+                🏆 Futures
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="betting-line-movement-tab" data-bs-toggle="pill" data-bs-target="#betting-line-movement" type="button" role="tab" style="background: transparent; border: 1px solid rgba(59, 130, 246, 0.4); color: #3b82f6;">
+                📈 Line Movement
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="betting-notifications-tab" data-bs-toggle="pill" data-bs-target="#betting-notifications" type="button" role="tab" style="background: transparent; border: 1px solid rgba(59, 130, 246, 0.4); color: #3b82f6;">
+                🔔 Alerts
             </button>
         </li>
     </ul>
@@ -102,6 +134,9 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
         {% include "components/panels/betting/betting_arbitrage.html" %}
         {% include "components/panels/betting/betting_markets.html" %}
         {% include "components/panels/betting/betting_bankroll.html" %}
+        {% include "components/panels/betting/betting_futures.html" %}
+        {% include "components/panels/betting/betting_line_movement.html" %}
+        {% include "components/panels/betting/betting_notifications.html" %}
     </div>
 </div>
 <!-- END BETTING DASHBOARD TAB -->
@@ -197,6 +232,9 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
             case 'bankroll':
                 if (typeof loadBankrollDetails === 'function') loadBankrollDetails();
                 break;
+            case 'futures':
+                if (typeof loadFuturesOdds === 'function') loadFuturesOdds();
+                break;
         }
     }
 
@@ -222,6 +260,224 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
             const tabId = e.target.getAttribute('data-bs-target').replace('#betting-', '');
             loadSubTabContent(tabId);
         });
+    });
+
+    // Session 560: WebSocket Real-Time Odds Updates
+    let oddsWebSocket = null;
+    let arbWebSocket = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    function connectOddsWebSocket() {
+        if (oddsWebSocket && oddsWebSocket.readyState === WebSocket.OPEN) {
+            return; // Already connected
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/live-sports/`;
+
+        try {
+            oddsWebSocket = new WebSocket(wsUrl);
+
+            oddsWebSocket.onopen = function() {
+                console.log('[Betting] Odds WebSocket connected');
+                reconnectAttempts = 0;
+                updateConnectionStatus(true);
+
+                // Subscribe to odds updates
+                oddsWebSocket.send(JSON.stringify({
+                    type: 'subscribe',
+                    channels: ['odds_updates', 'live_scores']
+                }));
+            };
+
+            oddsWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleOddsUpdate(data);
+                } catch (e) {
+                    console.error('[Betting] Error parsing WebSocket message:', e);
+                }
+            };
+
+            oddsWebSocket.onclose = function(event) {
+                console.log('[Betting] Odds WebSocket closed');
+                updateConnectionStatus(false);
+
+                // Attempt reconnect
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    console.log(`[Betting] Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts})`);
+                    setTimeout(connectOddsWebSocket, delay);
+                }
+            };
+
+            oddsWebSocket.onerror = function(error) {
+                console.error('[Betting] WebSocket error:', error);
+            };
+        } catch (e) {
+            console.error('[Betting] Failed to connect WebSocket:', e);
+        }
+    }
+
+    function connectArbWebSocket() {
+        if (arbWebSocket && arbWebSocket.readyState === WebSocket.OPEN) {
+            return;
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/arbitrage/`;
+
+        try {
+            arbWebSocket = new WebSocket(wsUrl);
+
+            arbWebSocket.onopen = function() {
+                console.log('[Betting] Arbitrage WebSocket connected');
+            };
+
+            arbWebSocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleArbUpdate(data);
+                } catch (e) {
+                    console.error('[Betting] Error parsing arb message:', e);
+                }
+            };
+
+            arbWebSocket.onclose = function() {
+                // Reconnect handled by main socket
+            };
+        } catch (e) {
+            console.error('[Betting] Failed to connect arb WebSocket:', e);
+        }
+    }
+
+    function handleOddsUpdate(data) {
+        const updateType = data.type;
+
+        if (updateType === 'odds_update' || updateType === 'live_odds') {
+            // Flash the odds that changed
+            const oddsData = data.data;
+            if (oddsData && oddsData.game_id) {
+                const gameCard = document.querySelector(`[data-game-id="${oddsData.game_id}"]`);
+                if (gameCard) {
+                    gameCard.classList.add('odds-flash');
+                    setTimeout(() => gameCard.classList.remove('odds-flash'), 1500);
+
+                    // Update odds values if present
+                    if (oddsData.home_odds) {
+                        const homeOddsEl = gameCard.querySelector('.home-odds');
+                        if (homeOddsEl) homeOddsEl.textContent = formatOdds(oddsData.home_odds);
+                    }
+                    if (oddsData.away_odds) {
+                        const awayOddsEl = gameCard.querySelector('.away-odds');
+                        if (awayOddsEl) awayOddsEl.textContent = formatOdds(oddsData.away_odds);
+                    }
+                }
+            }
+
+            // Show toast notification for significant movements
+            if (data.significant) {
+                showOddsToast(data.message || 'Odds moved significantly!');
+            }
+        }
+
+        if (updateType === 'live_score') {
+            const scoreData = data.data;
+            if (scoreData && scoreData.game_id) {
+                const scoreEl = document.querySelector(`[data-game-id="${scoreData.game_id}"] .live-score`);
+                if (scoreEl) {
+                    scoreEl.textContent = `${scoreData.home_score} - ${scoreData.away_score}`;
+                    scoreEl.classList.add('score-update');
+                    setTimeout(() => scoreEl.classList.remove('score-update'), 1000);
+                }
+            }
+        }
+    }
+
+    function handleArbUpdate(data) {
+        if (data.type === 'arbitrage_update' || data.type === 'new_arb') {
+            const arbData = data.data;
+            if (arbData) {
+                // Update arb count
+                const arbCountEl = document.getElementById('stat-arb-alerts');
+                if (arbCountEl) {
+                    const currentCount = parseInt(arbCountEl.textContent) || 0;
+                    arbCountEl.textContent = currentCount + 1;
+                    arbCountEl.classList.add('arb-pulse');
+                    setTimeout(() => arbCountEl.classList.remove('arb-pulse'), 2000);
+                }
+
+                // Show toast for new arbitrage
+                showArbToast(arbData);
+            }
+        }
+    }
+
+    function updateConnectionStatus(connected) {
+        const statusIndicator = document.getElementById('ws-status-indicator');
+        if (statusIndicator) {
+            statusIndicator.className = connected ? 'badge bg-success' : 'badge bg-danger';
+            statusIndicator.textContent = connected ? 'LIVE' : 'OFFLINE';
+        }
+    }
+
+    function formatOdds(odds) {
+        return odds > 0 ? `+${odds}` : odds.toString();
+    }
+
+    function showOddsToast(message) {
+        // Create toast if Bootstrap Toast is available
+        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-warning border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-chart-line me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastEl = toastContainer.lastElementChild;
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+        }
+    }
+
+    function showArbToast(arbData) {
+        const profit = arbData.profit_percentage || arbData.profit || 0;
+        const message = `New Arb: ${profit.toFixed(2)}% profit - ${arbData.event || arbData.description || 'Opportunity found!'}`;
+        showOddsToast(message);
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1100';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // Connect WebSockets when betting tab is shown
+    document.getElementById('betting-tab')?.addEventListener('shown.bs.tab', function() {
+        connectOddsWebSocket();
+        connectArbWebSocket();
+    });
+
+    // Also connect if already on betting tab
+    if (document.querySelector('#betting.active')) {
+        connectOddsWebSocket();
+        connectArbWebSocket();
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (oddsWebSocket) oddsWebSocket.close();
+        if (arbWebSocket) arbWebSocket.close();
     });
 })();
 </script>
@@ -293,6 +549,38 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
     50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
 
+/* Session 560: WebSocket Real-Time Update Animations */
+.odds-flash {
+    animation: oddsFlash 1.5s ease-out;
+}
+
+@keyframes oddsFlash {
+    0%, 100% { background-color: inherit; }
+    25% { background-color: rgba(251, 191, 36, 0.3); }
+    50% { background-color: rgba(251, 191, 36, 0.5); }
+    75% { background-color: rgba(251, 191, 36, 0.3); }
+}
+
+.score-update {
+    animation: scoreUpdate 1s ease-out;
+}
+
+@keyframes scoreUpdate {
+    0% { transform: scale(1.2); color: #22c55e; }
+    100% { transform: scale(1); color: inherit; }
+}
+
+.arb-pulse {
+    animation: arbPulse 2s ease-out;
+}
+
+@keyframes arbPulse {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.15); }
+    50% { transform: scale(1.1); background-color: rgba(34, 197, 94, 0.3); }
+    75% { transform: scale(1.05); }
+}
+
 /* Bankroll chart placeholder */
 .chart-container {
     background: rgba(255, 255, 255, 0.03);
@@ -303,4 +591,627 @@ Main betting intelligence interface with sub-tabs for odds, arbitrage, and bankr
     align-items: center;
     justify-content: center;
 }
+
+/* Session 560: Kelly Calculator Modal Styles */
+#kelly-modal .modal-content {
+    background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+#kelly-modal .form-control, #kelly-modal .form-select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+#kelly-modal .form-control:focus, #kelly-modal .form-select:focus {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+#kelly-result {
+    transition: all 0.3s ease;
+}
+
+.kelly-risk-low { border-color: rgba(34, 197, 94, 0.5) !important; }
+.kelly-risk-medium { border-color: rgba(251, 191, 36, 0.5) !important; }
+.kelly-risk-high { border-color: rgba(239, 68, 68, 0.5) !important; }
 </style>
+
+<!-- Session 560: Kelly Criterion Calculator Modal -->
+<div class="modal fade" id="kelly-modal" tabindex="-1" aria-labelledby="kellyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
+                <h5 class="modal-title" id="kellyModalLabel">
+                    <i class="fas fa-calculator me-2" style="color: #22c55e;"></i>
+                    Kelly Criterion Calculator
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="kelly-form">
+                    <!-- Odds Input -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Odds</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="kelly-odds" placeholder="+150 or -110" required>
+                            <select class="form-select" id="kelly-odds-format" style="max-width: 120px;">
+                                <option value="american" selected>American</option>
+                                <option value="decimal">Decimal</option>
+                            </select>
+                        </div>
+                        <small class="text-muted">Enter American (+150, -110) or Decimal (2.50) odds</small>
+                    </div>
+
+                    <!-- Win Probability -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Your Estimated Win Probability</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="kelly-probability" min="1" max="99" step="1" placeholder="55" required>
+                            <span class="input-group-text" style="background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); color: #9ca3af;">%</span>
+                        </div>
+                        <small class="text-muted">Your true estimate that this bet wins (1-99%)</small>
+                    </div>
+
+                    <!-- Bankroll -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Bankroll</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); color: #9ca3af;">$</span>
+                            <input type="number" class="form-control" id="kelly-bankroll" min="1" step="0.01" placeholder="1000" required>
+                        </div>
+                    </div>
+
+                    <!-- Kelly Fraction -->
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">Kelly Fraction</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="kelly-fraction" id="kelly-quarter" value="0.25" checked>
+                            <label class="btn btn-outline-success" for="kelly-quarter">1/4 Kelly</label>
+                            <input type="radio" class="btn-check" name="kelly-fraction" id="kelly-half" value="0.5">
+                            <label class="btn btn-outline-warning" for="kelly-half">1/2 Kelly</label>
+                            <input type="radio" class="btn-check" name="kelly-fraction" id="kelly-full" value="1.0">
+                            <label class="btn btn-outline-danger" for="kelly-full">Full Kelly</label>
+                        </div>
+                        <small class="text-muted">Lower fractions = less volatile, more conservative</small>
+                    </div>
+
+                    <!-- Calculate Button -->
+                    <button type="submit" class="btn btn-success w-100 mb-3" id="kelly-calculate-btn">
+                        <i class="fas fa-calculator me-2"></i> Calculate Optimal Bet Size
+                    </button>
+                </form>
+
+                <!-- Results -->
+                <div id="kelly-result" class="card" style="display: none; background: rgba(0,0,0,0.2); border: 1px solid rgba(34, 197, 94, 0.3);">
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h2 class="mb-0" id="kelly-bet-size" style="color: #22c55e;">$0.00</h2>
+                                <small class="text-muted">Recommended Bet</small>
+                            </div>
+                            <div class="col-6">
+                                <h2 class="mb-0" id="kelly-percentage" style="color: #fbbf24;">0%</h2>
+                                <small class="text-muted">Of Bankroll</small>
+                            </div>
+                        </div>
+                        <hr style="border-color: rgba(255,255,255,0.1);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Risk Level:</span>
+                            <span id="kelly-risk-badge" class="badge">Low</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="text-muted small">Edge:</span>
+                            <span id="kelly-edge" style="color: #22c55e;">+0%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="text-muted small">Implied Probability:</span>
+                            <span id="kelly-implied" class="text-muted">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="kelly-error" class="alert alert-danger" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // Kelly Calculator Logic
+    document.getElementById('kelly-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const oddsInput = document.getElementById('kelly-odds').value.trim();
+        const oddsFormat = document.getElementById('kelly-odds-format').value;
+        const probability = parseFloat(document.getElementById('kelly-probability').value) / 100;
+        const bankroll = parseFloat(document.getElementById('kelly-bankroll').value);
+        const fraction = parseFloat(document.querySelector('input[name="kelly-fraction"]:checked').value);
+
+        const resultDiv = document.getElementById('kelly-result');
+        const errorDiv = document.getElementById('kelly-error');
+        const calculateBtn = document.getElementById('kelly-calculate-btn');
+
+        // Hide previous results
+        resultDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+
+        // Parse odds
+        let odds;
+        if (oddsFormat === 'american') {
+            // Parse American odds
+            const cleanOdds = oddsInput.replace('+', '');
+            odds = parseFloat(cleanOdds);
+            if (isNaN(odds)) {
+                errorDiv.textContent = 'Invalid odds format. Use +150 or -110.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+        } else {
+            // Decimal odds
+            odds = parseFloat(oddsInput);
+            if (isNaN(odds) || odds < 1) {
+                errorDiv.textContent = 'Invalid decimal odds. Must be >= 1.0';
+                errorDiv.style.display = 'block';
+                return;
+            }
+        }
+
+        // Validate inputs
+        if (probability <= 0 || probability >= 1) {
+            errorDiv.textContent = 'Probability must be between 1% and 99%';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (bankroll <= 0) {
+            errorDiv.textContent = 'Bankroll must be positive';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Show loading state
+        calculateBtn.disabled = true;
+        calculateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Calculating...';
+
+        try {
+            // Call Kelly API
+            const response = await fetch('/api/v1/odds/kelly/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    odds: Math.abs(odds),
+                    odds_format: oddsFormat,
+                    true_probability: probability,
+                    bankroll: bankroll,
+                    kelly_multiplier: fraction
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success || data.data) {
+                const result = data.data || data.result || data;
+
+                // Display results
+                const betSize = result.recommended_stake || result.recommended_bet || 0;
+                const kellyPct = (result.fractional_kelly || result.kelly_percentage || 0) * 100;
+                const riskLevel = result.risk_level || 'low';
+
+                document.getElementById('kelly-bet-size').textContent = `$${betSize.toFixed(2)}`;
+                document.getElementById('kelly-percentage').textContent = `${kellyPct.toFixed(1)}%`;
+
+                // Calculate edge
+                let impliedProb;
+                if (oddsFormat === 'american') {
+                    if (odds > 0) {
+                        impliedProb = 100 / (odds + 100);
+                    } else {
+                        impliedProb = Math.abs(odds) / (Math.abs(odds) + 100);
+                    }
+                } else {
+                    impliedProb = 1 / odds;
+                }
+                const edge = (probability - impliedProb) * 100;
+
+                document.getElementById('kelly-edge').textContent = `${edge >= 0 ? '+' : ''}${edge.toFixed(1)}%`;
+                document.getElementById('kelly-edge').style.color = edge >= 0 ? '#22c55e' : '#ef4444';
+                document.getElementById('kelly-implied').textContent = `${(impliedProb * 100).toFixed(1)}%`;
+
+                // Risk badge
+                const riskBadge = document.getElementById('kelly-risk-badge');
+                if (riskLevel === 'high') {
+                    riskBadge.className = 'badge bg-danger';
+                    riskBadge.textContent = 'High';
+                    resultDiv.className = 'card kelly-risk-high';
+                } else if (riskLevel === 'medium') {
+                    riskBadge.className = 'badge bg-warning text-dark';
+                    riskBadge.textContent = 'Medium';
+                    resultDiv.className = 'card kelly-risk-medium';
+                } else {
+                    riskBadge.className = 'badge bg-success';
+                    riskBadge.textContent = 'Low';
+                    resultDiv.className = 'card kelly-risk-low';
+                }
+
+                resultDiv.style.display = 'block';
+            } else {
+                errorDiv.textContent = data.error?.message || data.message || 'Calculation failed';
+                errorDiv.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Kelly calculation error:', error);
+
+            // Fallback: Calculate locally if API fails
+            let decimalOdds;
+            if (oddsFormat === 'american') {
+                if (odds > 0) {
+                    decimalOdds = (odds / 100) + 1;
+                } else {
+                    decimalOdds = (100 / Math.abs(odds)) + 1;
+                }
+            } else {
+                decimalOdds = odds;
+            }
+
+            const b = decimalOdds - 1;
+            const p = probability;
+            const q = 1 - p;
+            let kellyPct = (b * p - q) / b;
+            kellyPct = Math.max(0, kellyPct) * fraction;
+
+            const betSize = bankroll * kellyPct;
+            const impliedProb = 1 / decimalOdds;
+            const edge = (probability - impliedProb) * 100;
+
+            document.getElementById('kelly-bet-size').textContent = `$${betSize.toFixed(2)}`;
+            document.getElementById('kelly-percentage').textContent = `${(kellyPct * 100).toFixed(1)}%`;
+            document.getElementById('kelly-edge').textContent = `${edge >= 0 ? '+' : ''}${edge.toFixed(1)}%`;
+            document.getElementById('kelly-edge').style.color = edge >= 0 ? '#22c55e' : '#ef4444';
+            document.getElementById('kelly-implied').textContent = `${(impliedProb * 100).toFixed(1)}%`;
+
+            const riskBadge = document.getElementById('kelly-risk-badge');
+            if (kellyPct > 0.20) {
+                riskBadge.className = 'badge bg-danger';
+                riskBadge.textContent = 'High';
+            } else if (kellyPct > 0.10) {
+                riskBadge.className = 'badge bg-warning text-dark';
+                riskBadge.textContent = 'Medium';
+            } else {
+                riskBadge.className = 'badge bg-success';
+                riskBadge.textContent = 'Low';
+            }
+
+            resultDiv.style.display = 'block';
+        } finally {
+            calculateBtn.disabled = false;
+            calculateBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Calculate Optimal Bet Size';
+        }
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Global function to open modal
+    window.openKellyCalculator = function() {
+        const modal = new bootstrap.Modal(document.getElementById('kelly-modal'));
+        modal.show();
+    };
+})();
+</script>
+
+<!-- Session 560: Log Bet Modal -->
+<div class="modal fade" id="log-bet-modal" tabindex="-1" aria-labelledby="logBetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%); border: 1px solid rgba(245, 158, 11, 0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(245, 158, 11, 0.2);">
+                <h5 class="modal-title" id="logBetModalLabel">
+                    <i class="fas fa-ticket-alt me-2" style="color: #f59e0b;"></i>
+                    Log New Bet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="log-bet-form">
+                    <div class="row">
+                        <!-- Event Name -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Event Name *</label>
+                            <input type="text" class="form-control" id="bet-event-name" placeholder="Chiefs vs Raiders" required
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Sport -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Sport</label>
+                            <select class="form-select" id="bet-sport" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                <option value="">Select Sport</option>
+                                <option value="NFL">NFL</option>
+                                <option value="NBA">NBA</option>
+                                <option value="MLB">MLB</option>
+                                <option value="NHL">NHL</option>
+                                <option value="NCAAF">NCAAF</option>
+                                <option value="NCAAB">NCAAB</option>
+                                <option value="Soccer">Soccer</option>
+                                <option value="UFC">UFC/MMA</option>
+                                <option value="Tennis">Tennis</option>
+                                <option value="Golf">Golf</option>
+                                <option value="Esports">Esports</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Selection -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Your Pick *</label>
+                            <input type="text" class="form-control" id="bet-selection" placeholder="Chiefs ML" required
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Bet Type -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Bet Type</label>
+                            <select class="form-select" id="bet-type" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                <option value="moneyline">Moneyline</option>
+                                <option value="spread">Spread</option>
+                                <option value="total">Over/Under</option>
+                                <option value="prop">Prop Bet</option>
+                                <option value="parlay">Parlay</option>
+                                <option value="teaser">Teaser</option>
+                                <option value="futures">Futures</option>
+                                <option value="live">Live Bet</option>
+                                <option value="prediction">Prediction Market</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Odds -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted small">Odds (American) *</label>
+                            <input type="text" class="form-control" id="bet-odds" placeholder="-110 or +150" required
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Stake -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted small">Stake *</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); color: #9ca3af;">$</span>
+                                <input type="number" class="form-control" id="bet-stake" min="0.01" step="0.01" placeholder="100" required
+                                       style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                            </div>
+                        </div>
+
+                        <!-- Line (optional) -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted small">Line (if applicable)</label>
+                            <input type="text" class="form-control" id="bet-line" placeholder="-3.5 or 47.5"
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Bookmaker -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Bookmaker</label>
+                            <input type="text" class="form-control" id="bet-bookmaker" placeholder="DraftKings, FanDuel, etc."
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Event Time -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Event Time</label>
+                            <input type="datetime-local" class="form-control" id="bet-event-time"
+                                   style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="col-12 mb-3">
+                            <label class="form-label text-muted small">Notes</label>
+                            <textarea class="form-control" id="bet-notes" rows="2" placeholder="Any notes about this bet..."
+                                      style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Potential Payout Preview -->
+                    <div class="card mb-3" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                        <div class="card-body py-2">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Stake</small>
+                                    <span id="preview-stake" style="color: #f59e0b; font-weight: 600;">$0.00</span>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">To Win</small>
+                                    <span id="preview-profit" style="color: #22c55e; font-weight: 600;">$0.00</span>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Total Payout</small>
+                                    <span id="preview-payout" style="color: #22c55e; font-weight: 700;">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn w-100" id="log-bet-submit-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000; font-weight: 600;">
+                        <i class="fas fa-check me-2"></i> Log Bet
+                    </button>
+                </form>
+
+                <!-- Success Message -->
+                <div id="log-bet-success" class="alert alert-success mt-3" style="display: none;">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span id="log-bet-success-text">Bet logged successfully!</span>
+                </div>
+
+                <!-- Error Message -->
+                <div id="log-bet-error" class="alert alert-danger mt-3" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // Update payout preview when odds or stake change
+    function updatePayoutPreview() {
+        const oddsInput = document.getElementById('bet-odds')?.value.trim().replace('+', '');
+        const stakeInput = document.getElementById('bet-stake')?.value;
+
+        const odds = parseFloat(oddsInput) || 0;
+        const stake = parseFloat(stakeInput) || 0;
+
+        if (stake > 0 && odds !== 0) {
+            let profit;
+            if (odds > 0) {
+                profit = stake * (odds / 100);
+            } else {
+                profit = stake * (100 / Math.abs(odds));
+            }
+            const payout = stake + profit;
+
+            document.getElementById('preview-stake').textContent = `$${stake.toFixed(2)}`;
+            document.getElementById('preview-profit').textContent = `$${profit.toFixed(2)}`;
+            document.getElementById('preview-payout').textContent = `$${payout.toFixed(2)}`;
+        } else {
+            document.getElementById('preview-stake').textContent = `$${stake.toFixed(2)}`;
+            document.getElementById('preview-profit').textContent = '$0.00';
+            document.getElementById('preview-payout').textContent = '$0.00';
+        }
+    }
+
+    document.getElementById('bet-odds')?.addEventListener('input', updatePayoutPreview);
+    document.getElementById('bet-stake')?.addEventListener('input', updatePayoutPreview);
+
+    // Handle form submission
+    document.getElementById('log-bet-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('log-bet-submit-btn');
+        const successDiv = document.getElementById('log-bet-success');
+        const errorDiv = document.getElementById('log-bet-error');
+
+        // Hide previous messages
+        successDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+
+        // Gather form data
+        const data = {
+            event_name: document.getElementById('bet-event-name').value.trim(),
+            selection: document.getElementById('bet-selection').value.trim(),
+            bet_type: document.getElementById('bet-type').value,
+            odds_american: document.getElementById('bet-odds').value.trim().replace('+', ''),
+            stake: document.getElementById('bet-stake').value,
+            sport: document.getElementById('bet-sport').value,
+            bookmaker: document.getElementById('bet-bookmaker').value.trim(),
+            line: document.getElementById('bet-line').value.trim() || null,
+            event_time: document.getElementById('bet-event-time').value || null,
+            notes: document.getElementById('bet-notes').value.trim(),
+        };
+
+        // Basic validation
+        if (!data.event_name || !data.selection || !data.odds_american || !data.stake) {
+            errorDiv.textContent = 'Please fill in all required fields (Event, Pick, Odds, Stake)';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Logging...';
+
+        try {
+            const response = await fetch('/api/v1/betting/wager/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const wager = result.wager;
+                document.getElementById('log-bet-success-text').innerHTML = `
+                    <strong>${wager.selection}</strong> logged!
+                    Stake: $${wager.stake.toFixed(2)} |
+                    Potential Payout: $${wager.potential_payout.toFixed(2)}
+                `;
+                successDiv.style.display = 'block';
+
+                // Reset form after short delay
+                setTimeout(() => {
+                    document.getElementById('log-bet-form').reset();
+                    updatePayoutPreview();
+                    successDiv.style.display = 'none';
+
+                    // Refresh bankroll stats if the function exists
+                    if (typeof loadBettingOverview === 'function') {
+                        loadBettingOverview();
+                    }
+                    if (typeof loadBankrollDetails === 'function') {
+                        loadBankrollDetails();
+                    }
+                }, 2500);
+            } else {
+                errorDiv.textContent = result.error || 'Failed to log bet';
+                errorDiv.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error logging bet:', error);
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i> Log Bet';
+        }
+    });
+
+    // Helper to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Global function to open modal
+    window.openLogBetModal = function() {
+        const modal = new bootstrap.Modal(document.getElementById('log-bet-modal'));
+        modal.show();
+    };
+})();
+</script>

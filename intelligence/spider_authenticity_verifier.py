@@ -7,12 +7,10 @@ It tracks API calls, timestamps, data freshness, and success rates with cryptogr
 
 import hashlib
 import json
-import time
 import uuid
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 import redis
-import requests
 from urllib.parse import urlparse
 import logging
 

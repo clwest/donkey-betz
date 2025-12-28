@@ -3,7 +3,6 @@ Test WebSocket consumers for connectivity verification
 """
 
 import json
-import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
@@ -23,7 +22,6 @@ class EchoTestConsumer(AsyncWebsocketConsumer):
     
     async def disconnect(self, close_code):
         """Handle disconnect"""
-        pass
     
     async def receive(self, text_data):
         """Echo back any received message"""

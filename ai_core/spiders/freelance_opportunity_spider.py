@@ -2,16 +2,14 @@
 Freelance Opportunity Spider
 Finds real freelance jobs that can be completed by our AI agents
 """
-import asyncio
 import aiohttp
 import json
 import re
 import hashlib
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 from dataclasses import dataclass
 import logging
-from urllib.parse import quote
 from html import unescape
 import html2text
 

@@ -4,8 +4,7 @@ Action Plan Formatter
 Creates beautiful, professional action plans with REAL data and AI-generated content
 """
 
-from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 class ActionPlanFormatter:

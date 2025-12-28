@@ -7,7 +7,6 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from core.models import Agent, AgentSolution, AgentLearning
 from decimal import Decimal
-import json
 import random
 from datetime import datetime, timedelta
 

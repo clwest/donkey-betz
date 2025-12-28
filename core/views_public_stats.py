@@ -5,7 +5,6 @@ Public Stats API - Shows system overview without authentication
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from core.models_unified_system import Agent, Advisor, Revenue, Opportunity
-from decimal import Decimal
 
 @require_http_methods(["GET"])
 def public_system_stats(request):

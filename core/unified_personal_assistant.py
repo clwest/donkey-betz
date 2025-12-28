@@ -6,20 +6,17 @@ Combines neural intelligence, agent orchestration, and personal learning
 into a single, coherent assistant that remembers which agents work best.
 """
 
-import json
 import logging
 import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
-from django.db.models import Q, Count, Avg
 
 # Core imports
-from core.models import ExtendedUserProfile, EnhancedUserProfile, JobApplication, UserEmbedding
+from core.models import ExtendedUserProfile
 from core.agent_context_middleware import AgentContextMiddleware
 from core.llm_enforcer import LLMEnforcer
-from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
+from core.unified_memory_manager import get_memory_manager
 from core.models_agent_memory import AgentExecutionMemory, AgentRecommendation, AgentPerformanceStats
 
 # Agent and AI imports

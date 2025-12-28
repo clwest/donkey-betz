@@ -13,10 +13,9 @@ import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from decimal import Decimal
 from typing import Dict
 
-from core.models_unified_system import Revenue, UserAgentLearning, Agent
+from core.models_unified_system import Revenue, UserAgentLearning
 
 logger = logging.getLogger(__name__)
 

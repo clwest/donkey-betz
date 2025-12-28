@@ -531,10 +531,8 @@ class BettingHistoryView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         # Import models here to avoid circular imports
-        from sports.models import UserBet, MLPrediction
-        from django.db.models import Sum, Count, Q
-        from django.utils import timezone
-        from datetime import timedelta
+        from sports.models import UserBet
+        from django.db.models import Sum
 
         # Get user bets if authenticated, otherwise show demo data
         if self.request.user.is_authenticated:

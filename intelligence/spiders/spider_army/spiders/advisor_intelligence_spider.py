@@ -5,8 +5,7 @@ Specialized spiders for feeding the 25 legendary advisor personalities
 
 import scrapy
 import re
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import urljoin, urlparse
 from .base_spider import FinancialIntelligenceSpider
 

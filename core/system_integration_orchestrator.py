@@ -9,23 +9,20 @@ spiders, ML models, and revenue systems - into a seamless, revenue-generating ma
 import asyncio
 import logging
 import json
-from typing import Dict, List, Any, Optional, Set, Union
-from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
 import redis
 import uuid
-from pathlib import Path
-from collections import defaultdict
 
 # Django imports
 from django.core.cache import cache
-from django.utils import timezone
 from channels.layers import get_channel_layer
 
 # Internal imports
-from core.agents.registry import get_agent_registry, AgentRegistry
-from advisors.registry import get_advisor_registry, AdvisorRegistry
+from core.agents.registry import get_agent_registry
+from advisors.registry import get_advisor_registry
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator
 from intelligence.income_builder_automation import IncomeBuilderAutomation
 

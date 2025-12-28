@@ -9,11 +9,10 @@ import os
 import logging
 import asyncio
 import aiohttp
-import json
 import time
-from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timedelta
-from urllib.parse import urljoin, urlencode
+from typing import Dict, List, Any, Optional
+from datetime import datetime
+from urllib.parse import urljoin
 import hashlib
 
 logger = logging.getLogger(__name__)

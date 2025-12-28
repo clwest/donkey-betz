@@ -8,7 +8,6 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 from typing import Dict, Any, List, Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer

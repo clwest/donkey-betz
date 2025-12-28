@@ -13,11 +13,9 @@ Key Features:
 
 import logging
 import asyncio
-from typing import List, Dict, Any, Optional
-from django.db import transaction
-from django.conf import settings
+from typing import List, Dict, Any
 
-from .models import StyleMemory, StylePattern
+from .models import StyleMemory
 from content.models import Document, DocumentEmbedding, EmbeddingModel, DocumentType
 from content.embeddings import rag_system, EmbeddingManager
 

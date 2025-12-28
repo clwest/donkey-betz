@@ -6,7 +6,6 @@ Converts sports betting recommendations into unified income opportunities
 from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Q
 
 from sports.models import Game, BettingRecommendation, OddsLine
 from sports.bankroll_management import BankrollManagement

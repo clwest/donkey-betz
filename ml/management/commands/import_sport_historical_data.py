@@ -9,12 +9,10 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
-from sports.models import Game, Team, League
+from sports.models import Team, League
 from ml.core.sport_configs import SPORT_CONFIGS
 import csv
 from datetime import datetime
-from decimal import Decimal
 
 
 class Command(BaseCommand):

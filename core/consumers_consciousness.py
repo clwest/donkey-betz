@@ -10,7 +10,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from ai_core.spiders.consciousness import ConsciousnessBridge
 from django.core.cache import cache
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)

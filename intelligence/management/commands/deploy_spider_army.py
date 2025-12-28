@@ -4,7 +4,6 @@ Django management command to deploy the massive spider army
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-import json
 import logging
 
 from intelligence.spiders.spider_army.orchestrator import SpiderArmyOrchestrator

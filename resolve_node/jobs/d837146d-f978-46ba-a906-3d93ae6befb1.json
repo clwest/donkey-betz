@@ -1,0 +1,17 @@
+{
+  "job_id": "d837146d-f978-46ba-a906-3d93ae6befb1",
+  "timeline_name": null,
+  "clip_paths": [
+    "/Users/donkeyking/development/unified-donkey-betz/media/rescued_videos/f3961deb-e58a-4fd4-9c95-b04b79ce197e.mp4"
+  ],
+  "template": "default_mp4",
+  "webhook_url": null,
+  "status": "error",
+  "progress": 0.0,
+  "created_at": "2025-12-17T15:10:39.272540",
+  "started_at": "2025-12-17T15:10:39.273073",
+  "completed_at": "2025-12-17T15:10:39.614079",
+  "output_file": null,
+  "error_message": "Failed to start render",
+  "metadata": {}
+}

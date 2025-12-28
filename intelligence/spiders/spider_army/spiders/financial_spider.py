@@ -4,9 +4,7 @@ Massive data collection for Warren Buffett, Cathie Wood, Ray Dalio and other fin
 """
 
 import scrapy
-import re
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import urljoin, urlparse
 from .base_spider import FinancialIntelligenceSpider
 

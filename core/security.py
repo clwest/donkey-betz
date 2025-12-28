@@ -4,9 +4,7 @@ Provides secure handling of sensitive configuration data
 """
 
 import os
-import json
 import base64
-import hashlib
 import logging
 from typing import Any, Dict, Optional, List
 from pathlib import Path

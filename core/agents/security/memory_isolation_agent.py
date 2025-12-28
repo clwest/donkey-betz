@@ -26,7 +26,7 @@ Usage:
 
 import logging
 import time
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any
 from datetime import datetime
 
 from django.db import transaction

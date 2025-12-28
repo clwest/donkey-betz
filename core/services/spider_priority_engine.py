@@ -10,12 +10,11 @@ This service prioritizes spider data collection based on active projects:
 This closes the loop: Projects → Spider Collection → Relevant Data
 """
 import logging
-import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List
 from uuid import UUID
 
 from django.db import transaction
-from django.db.models import Count, Sum, F, Q
+from django.db.models import Count, Sum
 from django.utils import timezone
 from datetime import timedelta
 
@@ -97,7 +96,6 @@ class SpiderPriorityEngine:
         from core.models_unified_system import (
             PartnershipProject,
             SpiderCategory,
-            ProjectSpiderPriority,
         )
 
         # Get all active projects

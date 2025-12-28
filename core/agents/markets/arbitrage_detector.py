@@ -14,7 +14,6 @@ Uses The Odds spider for multi-bookmaker odds comparison.
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
 
 from core.agents.base_agent import BaseAgent, AgentResult
 

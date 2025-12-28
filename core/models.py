@@ -46,9 +46,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
-from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinValueValidator, MaxValueValidator
-import json
 
 import hashlib
 import math
@@ -1039,7 +1037,7 @@ class JobApplication(UnifiedBaseModel):
         """
         try:
             # Import here to avoid circular imports
-            from django.utils import timezone
+            pass
 
             # Success states - update with positive learning
             if self.status in ['offer_received', 'offer_accepted']:
@@ -1869,7 +1867,6 @@ class EnhancedUserProfile(models.Model):
         completeness calculation - they're personal assistant prefs, not
         relevant to income-focused profile completion.
         """
-        from datetime import datetime
 
         required_fields = [
             'primary_role', 'long_term_goals', 'communication_style',
@@ -2020,7 +2017,6 @@ class EnhancedUserProfile(models.Model):
     def can_use_task(self) -> tuple[bool, str]:
         """Check if user can use another agent task today."""
         from django.utils import timezone
-        from datetime import timedelta
 
         limits = self.get_tier_limits()
         daily_limit = limits['daily_tasks']

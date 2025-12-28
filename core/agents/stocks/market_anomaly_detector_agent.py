@@ -13,7 +13,7 @@ Key capabilities:
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult

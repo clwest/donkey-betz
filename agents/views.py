@@ -3,10 +3,8 @@ API Views for the Agent Registry System
 """
 
 import logging
-from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
-from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -34,11 +32,6 @@ from .serializers import (
     AgentOrchestrationSerializer,
     AgentToolSerializer,
     AgentRegistrySerializer,
-    AgentTaskMatchSerializer,
-    AgentTaskMatchResultSerializer,
-    ExecuteAgentSerializer,
-    CreateOrchestrationSerializer,
-    AgentRegistryStatsSerializer,
     AgentChannelSerializer,
     AgentChannelListSerializer,
     AgentChannelMessageSerializer,

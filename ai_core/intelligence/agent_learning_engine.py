@@ -16,10 +16,9 @@ Features:
 import asyncio
 import json
 import logging
-from typing import Dict, List, Any, Optional, Set, Callable
-from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Any, Optional, Set
+from datetime import datetime, timezone
 from dataclasses import dataclass, asdict, field
-from collections import defaultdict
 import redis.asyncio as redis
 import numpy as np
 

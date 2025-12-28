@@ -6,8 +6,7 @@ actually executes them using the appropriate agents and services.
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -455,7 +454,6 @@ class AutonomousActionExecutor:
 
     def _execute_update_strategy(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
         """Update system strategy based on insights."""
-        from core.models_unified_system import ReasoningConfiguration
 
         strategy_area = params.get('area', 'general')
         adjustment = params.get('adjustment', '')
@@ -502,7 +500,6 @@ class AutonomousActionExecutor:
         - STALE LOW (older than 14 days, composite < 0.4) -> Archive
         """
         from core.models_unified_system import AgentDream
-        from datetime import timedelta
 
         # Get thresholds from params or use defaults
         boardroom_threshold = params.get('boardroom_threshold', 0.65)

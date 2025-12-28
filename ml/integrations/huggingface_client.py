@@ -5,13 +5,11 @@ Strategic cloud-based ML processing for heavy models
 
 import os
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import asyncio
 from dataclasses import dataclass
-import requests
-import json
 
-from transformers import pipeline, AutoTokenizer, AutoModel
+from transformers import pipeline
 from huggingface_hub import InferenceClient
 
 @dataclass

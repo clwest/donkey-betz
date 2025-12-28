@@ -6,7 +6,6 @@ Session 534: Simplified to work with spider network interface.
 Uses Replicate API to fetch trending AI models and ML news RSS.
 """
 
-import requests
 import feedparser
 import logging
 import re

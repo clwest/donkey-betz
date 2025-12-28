@@ -6,11 +6,9 @@ Saves all conversations to build knowledge over time
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import psycopg2
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from content.models import Document, DocumentEmbedding
 from core.rag_integration import create_embedding
 
 logger = logging.getLogger(__name__)

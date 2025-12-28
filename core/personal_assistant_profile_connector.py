@@ -7,7 +7,7 @@ ensuring all interview data is properly saved and used for personalization.
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction

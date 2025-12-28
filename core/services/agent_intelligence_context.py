@@ -20,9 +20,9 @@ Usage:
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
 

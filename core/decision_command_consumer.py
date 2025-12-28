@@ -8,10 +8,8 @@ import asyncio
 import logging
 import random
 from datetime import datetime, timezone
-from typing import Dict, Any, List
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +199,6 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
     async def execute_decision(self, data):
         """PHASE 3 FIX: Execute a specific decision with REAL backend actions"""
         try:
-            from channels.db import database_sync_to_async
             decision = data.get('decision')
             decision_id = decision.get('id')
 
@@ -340,7 +337,6 @@ class DecisionCommandConsumer(AsyncWebsocketConsumer):
 
     async def draft_proposal(self, decision):
         """Draft a customized proposal"""
-        from channels.db import database_sync_to_async
 
         # This would call an AI agent to draft proposal
         logger.info(f"✅ Drafting proposal for {decision.get('title', 'Unknown')}")

@@ -1,0 +1,19 @@
+{
+  "job_id": "d80f7a30-c26b-4531-923b-485f465acfe0",
+  "timeline_name": null,
+  "clip_paths": [],
+  "template": "default_mp4",
+  "webhook_url": null,
+  "status": "done",
+  "progress": 0.0,
+  "created_at": "2025-12-17T13:51:50.466682",
+  "started_at": "2025-12-17T13:51:50.467207",
+  "completed_at": "2025-12-17T13:51:50.469098",
+  "output_file": "/Users/donkeyking/development/unified-donkey-betz/resolve_node/results/render_d80f7a30-c26b-4531-923b-485f465acfe0.mp4",
+  "error_message": null,
+  "metadata": {
+    "file_size_mb": 0.0,
+    "render_duration": "0.0s",
+    "output_path": "/Users/donkeyking/development/unified-donkey-betz/resolve_node/results/render_d80f7a30-c26b-4531-923b-485f465acfe0.mp4"
+  }
+}

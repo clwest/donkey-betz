@@ -4,12 +4,9 @@ Project building and code execution views
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render
 from pathlib import Path
 import subprocess
 import json
-import random
-import time
 import sys
 import os
 import logging
@@ -23,7 +20,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Using stub modules after cleanup - need to refactor
 from core.module_stubs import (
     AgentErrorHandler,
-    EnhancedAgentOrchestrator,
     AgentProjectAdvisor,
     RealAgentOrchestra
 )

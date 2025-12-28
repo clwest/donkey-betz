@@ -17,7 +17,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Sum, Avg
-from django.db.models.functions import TruncHour, TruncDay
+from django.db.models.functions import TruncHour
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ def api_content_studio_status(request):
     """
     try:
         from core.models_autonomous_studio import (
-            ContentChannel, ChannelEpisode, ChannelStatus,
-            TopicPerformance, ContentDebate
+            ContentChannel, ChannelEpisode, TopicPerformance,
+            ContentDebate
         )
 
         now = timezone.now()
@@ -152,7 +152,7 @@ def api_narrative_drift_status(request):
     try:
         from core.models_narrative_drift import (
             Narrative, NarrativeEvidence, NarrativeShift,
-            NarrativeStatus, NarrativeAlert
+            NarrativeAlert
         )
 
         now = timezone.now()
@@ -475,7 +475,7 @@ def api_activity_stream(request):
     try:
         from core.models_autonomous_studio import ChannelEpisode
         from core.models_narrative_drift import NarrativeEvidence, NarrativeShift
-        from core.models_unified_system import SpiderData, ConversionEvent, DataProvenance
+        from core.models_unified_system import SpiderData, ConversionEvent
         from core.models_situation_triggers import TriggerEvent
         from core.models_autonomous_alerts import BlockchainSecurityAlert, StockMarketAlert
 
@@ -670,8 +670,8 @@ def api_ml_scoring_status(request):
     """
     try:
         from core.models_unified_system import (
-            SpiderData, Opportunity, OpportunityOutcome,
-            MLModelVersion, ScoringExplanation
+            Opportunity, OpportunityOutcome, MLModelVersion,
+            ScoringExplanation
         )
         from core.services.ml_scoring_engine import get_ml_scoring_engine
 

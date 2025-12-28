@@ -20,11 +20,10 @@ Endpoints:
 
 import json
 import logging
-import uuid
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count
 from django.utils import timezone
 from django.utils.text import slugify
 

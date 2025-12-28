@@ -8,20 +8,17 @@ This module implements:
 - Code relationship mapping
 """
 
-import os
 import ast
 import re
 import hashlib
 import logging
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime
 
 from django.conf import settings
 from django.utils import timezone
-from django.db import transaction
 from sklearn.metrics.pairwise import cosine_similarity
 
 from content.ai_providers import AIProviderManager

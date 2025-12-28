@@ -13,7 +13,6 @@ from sports.models import Game, Team, League
 from datetime import datetime
 import csv
 import os
-from decimal import Decimal
 
 
 class Command(BaseCommand):

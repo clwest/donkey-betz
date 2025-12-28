@@ -9,9 +9,7 @@ This command performs a complete agent extraction from:
 CRITICAL: This ensures NO agents are missed from the unified platform.
 """
 
-import json
 import logging
-from decimal import Decimal
 from typing import Dict, Any, List
 from django.core.management.base import BaseCommand
 from django.db import transaction

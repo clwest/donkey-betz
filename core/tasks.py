@@ -245,7 +245,6 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
     from ai_core.spiders.spider_registry import SpiderRegistry
     from ai_core.spiders.real_data_collector import collect_spider_data_sync, SPIDER_TARGET_URLS
     from core.models_unified_system import SpiderData, SpiderExecutionLog
-    from django.utils import timezone
     import traceback
 
     spider_start_time = time.time()
@@ -421,7 +420,6 @@ def isolate_documents_batch(self, batch_size: int = 50, max_batches: int = None)
         Dict with processing statistics
     """
     from content.models import Document, DocumentEmbedding
-    from django.db.models import Q
     
     try:
         logger.info(f"Starting document isolation batch task - batch_size: {batch_size}")
@@ -1213,7 +1211,6 @@ def _collect_spider_data_sync(spider_name: str, category: str, config: Dict) -> 
 
     Session 207: Comprehensive data collection for all spider categories.
     """
-    import requests
     from django.utils import timezone
 
     data = {
@@ -1971,7 +1968,7 @@ def execute_scheduled_workflow(self, schedule_id: str):
     Args:
         schedule_id: UUID of the ScheduledWorkflow to execute
     """
-    from core.models_unified_system import ScheduledWorkflow, WorkflowExecution
+    from core.models_unified_system import ScheduledWorkflow
     from core.services.workflow_builder import get_workflow_builder
     from django.utils import timezone
 
@@ -2061,7 +2058,6 @@ def sync_workflow_schedules():
     """
     from core.models_unified_system import ScheduledWorkflow
     from django_celery_beat.models import PeriodicTask, CrontabSchedule
-    from django.utils import timezone
     import json
 
     logger.info("🔄 [WORKFLOW SYNC] Syncing workflow schedules with Celery Beat...")
@@ -2332,9 +2328,9 @@ def generate_opportunity_report():
     logger.info("🎯 [OPPORTUNITY ENGINE] Generating daily opportunity report...")
 
     try:
-        from core.models_unified_system import Opportunity, OpportunityAction
+        from core.models_unified_system import Opportunity
         from django.utils import timezone
-        from django.db.models import Count, Avg, Sum
+        from django.db.models import Count, Avg
         from datetime import timedelta
 
         now = timezone.now()
@@ -2427,7 +2423,7 @@ def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
 
     try:
         from core.models_unified_system import (
-            OpportunityOutcome, MLModelVersion, Opportunity
+            OpportunityOutcome, MLModelVersion
         )
         from core.services.ml_scoring_engine import get_ml_scoring_engine
         from django.utils import timezone
@@ -2578,11 +2574,10 @@ def evaluate_ml_model_performance():
 
     try:
         from core.models_unified_system import (
-            ScoringExplanation, OpportunityOutcome, MLModelVersion
+            ScoringExplanation, MLModelVersion
         )
         from django.utils import timezone
         from datetime import timedelta
-        from django.db.models import Avg, Count
 
         # Get recent predictions with outcomes
         week_ago = timezone.now() - timedelta(days=7)
@@ -2920,7 +2915,7 @@ def process_distribution(self, distribution_id: str):
     logger.info(f"🚀 [DISTRIBUTION] Processing distribution {distribution_id}")
 
     try:
-        from core.models_unified_system import ContentDistribution, UserPlatformAccount
+        from core.models_unified_system import ContentDistribution
         from django.utils import timezone
 
         distribution = ContentDistribution.objects.select_related(
@@ -3197,7 +3192,6 @@ def sync_all_platform_revenue():
 
     try:
         from core.models_unified_system import UserPlatformAccount
-        from django.utils import timezone
 
         synced_count = 0
         error_count = 0
@@ -3687,7 +3681,6 @@ def execute_scheduled_automations():
     """
     try:
         from core.proactive_engine import AutomationEngine
-        from core.models_unified_system import AutomatedAction
 
         engine = AutomationEngine()
         executed = engine.check_scheduled_actions()
@@ -4235,7 +4228,7 @@ def update_agent_effectiveness_from_learning():
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models import Agent, AgentLearningConnection, AgentKnowledgeSource
+    from core.models import Agent, AgentLearningConnection
 
     logger.info("📈 [EFFECTIVENESS] Updating agent effectiveness from learning...")
 
@@ -4431,7 +4424,7 @@ def embed_daily_agent_learning():
     from datetime import timedelta
     from django.utils import timezone
     from django.db import transaction
-    from core.models import Agent, AgentKnowledgeSource, KnowledgeTransfer, AgentLearningConnection
+    from core.models import AgentKnowledgeSource, KnowledgeTransfer
     from content.models import Document, DocumentEmbedding, DocumentType, EmbeddingModel, ContentStatus, ContentSource
     from content.embeddings import EmbeddingManager
 
@@ -5499,7 +5492,6 @@ Guidelines:
                 # Session 365: Update agent moods based on conversation outcomes
                 try:
                     from core.models_unified_system import AgentMood, MoodHistory
-                    from django.utils import timezone as tz
                     import random
 
                     # Determine conversation success (insights = good, quality_score = good)
@@ -5629,7 +5621,7 @@ def run_multi_agent_conversation(self, max_conversations: int = 2, participants_
     from django.utils import timezone
     from core.models import (
         Agent, AgentConversation, ConversationMessage,
-        AgentKnowledgeSource, AgentLearningConnection
+        AgentKnowledgeSource
     )
     import random
     import openai
@@ -6345,7 +6337,7 @@ def trigger_spider_conversations(self, min_relevance: int = 70, max_conversation
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models_unified_system import SpiderData, AgentKnowledgeSource
+    from core.models_unified_system import SpiderData
     from core.models import Agent, AgentConversation, ConversationMessage
     import random
     import openai
@@ -6539,9 +6531,8 @@ def trigger_project_research(self, max_projects: int = 3, max_spiders_per_projec
     """
     from django.utils import timezone
     from datetime import timedelta
-    from core.models_unified_system import LivingProjectConfig, SpiderData, ProjectInsight
+    from core.models_unified_system import LivingProjectConfig, ProjectInsight
     from core.models import AgentConversation
-    from core.models_partnership import PartnershipProject
     import random
 
     logger.info("📊 [PROJECT-RESEARCH] Checking for project research needs...")
@@ -6958,8 +6949,7 @@ def run_project_conversation(self, project_id: str, topic: str, max_messages: in
     """
     from django.utils import timezone
     from core.models import (
-        Agent, AgentConversation, ConversationMessage,
-        AgentKnowledgeSource
+        Agent, AgentConversation, ConversationMessage
     )
     from core.models_partnership import PartnershipProject
     from core.models_unified_system import BusinessResearchResult
@@ -7952,7 +7942,7 @@ def generate_directed_dreams(self, topic: str, agent_ids: list = None, dreams_pe
         Stats about directed dreams generated
     """
     from django.utils import timezone
-    from core.models import Agent, AgentDream, AgentKnowledgeSource
+    from core.models import Agent, AgentDream
     import openai
     import os
     import random
@@ -8844,7 +8834,7 @@ def explore_dream_topic(self, exploration_id: str):
     """
     from django.utils import timezone
     from core.models import (
-        DreamExploration, AgentKnowledgeSource, AgentDream
+        DreamExploration, AgentKnowledgeSource
     )
     import openai
     import os
@@ -9046,7 +9036,7 @@ def run_hive_mind_session(self, session_id: str):
     logger.info(f"🧠 [HIVE MIND] Starting session {session_id}")
 
     try:
-        from core.models import HiveMindSession, HiveMindContribution, Agent
+        from core.models import HiveMindSession
         from django.utils import timezone
         import time
         import concurrent.futures
@@ -9867,7 +9857,7 @@ def evolve_agent_relationships():
     - Potentially evolve relationship types based on cumulative interactions
     """
     try:
-        from core.models_unified_system import AgentRelationship, RelationshipEvent
+        from core.models_unified_system import AgentRelationship
 
         relationships = AgentRelationship.objects.all()
         evolved_count = 0
@@ -10144,7 +10134,7 @@ def broadcast_evolution_status():
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
         from core.models_unified_system import AgentEvolution, XPHistory
-        from django.db.models import Sum, Count
+        from django.db.models import Sum
 
         # Get evolution stats
         evolutions = AgentEvolution.objects.all()
@@ -11038,7 +11028,6 @@ def collect_training_data():
 
         # Save to SpiderData (triggers Spider Data Bridge automatically)
         from core.models_unified_system import SpiderData
-        import json
 
         content = result.content
         high_quality = content.get('high_quality_conversations', [])
@@ -11367,7 +11356,6 @@ def send_proactive_opportunity_alerts():
     from django.utils import timezone
     from datetime import timedelta
     from core.models_unified_system import Opportunity
-    from core.models import EnhancedUserProfile
 
     logger.info("🔔 [SESSION 437] Starting proactive opportunity alert check")
 
@@ -11467,7 +11455,6 @@ def send_personalized_opportunity_alerts():
     from datetime import timedelta
     from django.contrib.auth import get_user_model
     from core.models_unified_system import Opportunity
-    from core.models import EnhancedUserProfile
 
     logger.info("🎯 [SESSION 437] Starting personalized opportunity matching")
 
@@ -12234,7 +12221,7 @@ def check_market_events_and_rerun():
     try:
         from core.services.market_data_service import MarketDataService
         from core.models_unified_system import MarketIntelligenceBrief
-        from datetime import date, timedelta
+        from datetime import date
 
         market_service = MarketDataService()
 
@@ -12644,7 +12631,6 @@ def generate_content_for_channel(channel_id):
     from django.utils import timezone
     from core.models_autonomous_studio import ContentChannel, ChannelEpisode, ContentDebate
     from core.agent_router import AgentRouter
-    import json
 
     logger.info(f"🎥 [SESSION 466] Starting content generation for channel {channel_id}...")
 
@@ -14318,7 +14304,7 @@ def run_unified_intelligence_pipeline():
     # Phase 5: Provenance Summary
     # =========================================================================
     try:
-        from core.models_unified_system import DataProvenance, AuditLog
+        from core.models_unified_system import DataProvenance
 
         # Get provenance stats
         total_provenance = DataProvenance.objects.count()
@@ -14826,7 +14812,6 @@ def run_blockchain_security_monitor():
     from datetime import timedelta
     from django.utils import timezone
     from decimal import Decimal
-    import json
     import time
 
     start_time = time.time()
@@ -15038,7 +15023,6 @@ def run_stock_market_intelligence():
     from datetime import timedelta
     from django.utils import timezone
     from decimal import Decimal
-    import json
     import time
 
     start_time = time.time()
@@ -15055,7 +15039,7 @@ def run_stock_market_intelligence():
         from core.models_autonomous_alerts import (
             StockMarketAlert, MarketMonitoringSession
         )
-        from core.models_unified_system import SpiderData, MarketIntelligenceBrief
+        from core.models_unified_system import SpiderData
         from core.services.discord_notifications import DiscordNotificationService
 
         # Create monitoring session (Property #1: Persistent Context)
@@ -15270,7 +15254,6 @@ def process_trigger_events(event_ids: list):
     """
     import time
     from django.utils import timezone
-    from decimal import Decimal
 
     start_time = time.time()
     logger.info(f"⚡ Processing {len(event_ids)} trigger events...")
@@ -15284,9 +15267,6 @@ def process_trigger_events(event_ids: list):
 
     try:
         from core.models_situation_triggers import TriggerEvent
-        from core.models_autonomous_alerts import (
-            BlockchainSecurityAlert, StockMarketAlert
-        )
         from core.services.discord_notifications import DiscordNotificationService
 
         discord = DiscordNotificationService()
@@ -15953,7 +15933,6 @@ def run_design_trends_monitor(self):
         )
         from django.utils import timezone
         from datetime import timedelta
-        import re
         from collections import Counter
 
         session = AutonomousSituationSession.objects.create(
@@ -16605,7 +16584,7 @@ def run_freelance_opportunity_scout(self):
     try:
         from core.models_unified_system import SpiderData
         from core.models_autonomous_situations import (
-            FreelanceOpportunity, JobMatchProfile, AutonomousSituationSession
+            FreelanceOpportunity, AutonomousSituationSession
         )
         from django.utils import timezone
         from datetime import timedelta
@@ -17064,13 +17043,11 @@ def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str
         participants: Number of debate participants (2-4)
         generate_audio: Whether to generate TTS audio
     """
-    import json
-    from django.utils import timezone
 
     logger.info(f"🎙️ [PODCAST] Starting generation for episode {episode_id}: {topic}")
 
     try:
-        from core.models import PodcastEpisode, PodcastDebate
+        from core.models import PodcastEpisode
         from core.agents.podcast import PodcastCoordinatorAgent
 
         # Get the episode
@@ -17279,7 +17256,7 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
     import json
     from datetime import timedelta
     from django.utils import timezone
-    from django.db.models import Count, Avg
+    from django.db.models import Count
     
     logger.info(f"🤖 [SELF-BLOG] Starting generation with tone={tone}")
     
@@ -17696,7 +17673,6 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
         dict with thinking results and actions taken
     """
     import time
-    from datetime import timedelta
     from django.utils import timezone
 
     logger.info(f"🧠 [THINKING] Starting autonomous thinking cycle (type={cycle_type})")
@@ -18367,7 +18343,6 @@ def collect_kalshi_prediction_markets():
     """
     from persistence.models import SpiderData
     from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
-    from django.utils import timezone
     import hashlib
 
     logger.info("🎰 [KALSHI] Starting prediction market data collection...")
@@ -18599,7 +18574,6 @@ def collect_sports_odds():
     """
     from persistence.models import SpiderData
     from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
-    from django.utils import timezone
     import hashlib
 
     logger.info("🏈 [THEODDS] Starting sports odds data collection...")
@@ -19402,7 +19376,6 @@ def maintain_dream_backlog():
     This keeps the pending queue healthy for human review in Boardroom.
     """
     from django.utils import timezone
-    from django.db.models import Q
     from core.models import AgentDream
 
     logger.info("🧹 [DREAM-MAINTENANCE] Starting daily dream maintenance...")

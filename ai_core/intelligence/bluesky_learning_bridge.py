@@ -11,14 +11,12 @@ community insights.
 """
 
 import asyncio
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 import re
-import numpy as np
 from textblob import TextBlob
 
 # Import existing systems

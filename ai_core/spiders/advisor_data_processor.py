@@ -15,20 +15,15 @@ Features:
 - Performance tracking and optimization
 """
 
-import asyncio
 import json
 import logging
-import redis
-from redis import asyncio as aioredis
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum
-import re
-import uuid
 
-from .agent_data_receiver import AgentSpiderDataReceiver, IntelligenceData, ProcessingMetrics
+from .agent_data_receiver import AgentSpiderDataReceiver, IntelligenceData
 
 logger = logging.getLogger(__name__)
 
@@ -116,12 +111,10 @@ class BaseAdvisorDataProcessor(AgentSpiderDataReceiver):
     @abstractmethod
     async def generate_advisor_insight(self, data: IntelligenceData) -> Optional[AdvisorInsight]:
         """Generate advisor-specific insight from intelligence data"""
-        pass
 
     @abstractmethod
     async def evaluate_investment_opportunity(self, data: IntelligenceData) -> Optional[AdvisorRecommendation]:
         """Evaluate investment opportunity based on advisor's philosophy"""
-        pass
 
     async def process_intelligence_data(self, data: IntelligenceData) -> Dict[str, Any]:
         """Process intelligence data with advisor-specific analysis"""

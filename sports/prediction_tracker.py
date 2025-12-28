@@ -5,7 +5,6 @@ Helper functions for saving predictions and calculating win rates
 
 import logging
 from django.utils import timezone
-from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +77,6 @@ def calculate_today_stats():
         dict with keys: win_rate, profit, total_evaluated
     """
     from sports.models import MLPrediction
-    from datetime import timedelta
 
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
 

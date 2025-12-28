@@ -12,16 +12,11 @@ This service unifies all platform components to achieve 95%+ reality score by:
 This transforms the platform from isolated components to a unified income-generating system.
 """
 
-import asyncio
 import logging
-import json
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from datetime import timedelta
 from django.utils import timezone
-from django.db import transaction
-from django.core.cache import cache
 from channels.layers import get_channel_layer
-from asgiref.sync import sync_to_async, async_to_sync
+from asgiref.sync import sync_to_async
 import os
 
 logger = logging.getLogger(__name__)
@@ -408,7 +403,7 @@ class PlatformIntegrationService:
             if ai_configured:
                 # Test AI connection
                 try:
-                    import openai
+                    pass
                     # This would test the connection in a real scenario
                     logger.info("AI connection verified for Income Builder")
                     return True

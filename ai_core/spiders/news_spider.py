@@ -15,7 +15,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from web_request_layer import web_request_layer
-from api_manager import api_vault, api_manager
+from api_manager import api_manager
 from oauth_handler import oauth_handler, social_collector
 from bluesky_handler import bluesky_handler, bluesky_collector
 

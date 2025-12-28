@@ -4,11 +4,9 @@ Implements intelligent caching with TTL and invalidation strategies
 """
 
 from django.core.cache import cache
-from django.conf import settings
 import hashlib
-import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 
 logger = logging.getLogger(__name__)

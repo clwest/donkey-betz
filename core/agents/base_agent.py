@@ -261,7 +261,6 @@ class BaseAgent(ABC, TimeTravelMixin):
         Returns:
             AgentResult with success status, data, and metadata
         """
-        pass
 
     # ==================== Progress Tracking (Session 489) ====================
 
@@ -1920,15 +1919,13 @@ class _NullProgressTracker:
 
     def advance(self, custom_message: str = None) -> None:
         """No-op advance to next stage."""
-        pass
 
     def update(self, message: str, percentage: int) -> None:
         """No-op progress update."""
-        pass
 
 
 # Import models at module level for F expression
 try:
-    from django.db import models
+    pass
 except ImportError:
     pass

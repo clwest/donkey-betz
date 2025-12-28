@@ -6,9 +6,7 @@ import json
 import asyncio
 import logging
 import random
-from datetime import datetime, timedelta
 from django.utils import timezone
-from django.db.models import Q
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 

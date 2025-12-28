@@ -5,7 +5,7 @@ Enables multi-agent collaboration and complex workflows
 import asyncio
 import logging
 import json
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 from dataclasses import dataclass, asdict
 import redis

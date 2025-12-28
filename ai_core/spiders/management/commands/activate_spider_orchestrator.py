@@ -22,11 +22,10 @@ import logging
 import signal
 import sys
 from django.core.management.base import BaseCommand
-from django.conf import settings
 from datetime import datetime, timezone
 
 # Import our spider orchestration components
-from ...spider_data_router import SpiderDataRouter, get_spider_data_router
+from ...spider_data_router import get_spider_data_router
 from ...agent_data_receiver import create_agent_data_receiver
 from ...advisor_data_processor import create_advisor_data_processor
 from ....agents.registry import get_agent_registry

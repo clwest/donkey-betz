@@ -9,7 +9,7 @@ from django.dispatch import receiver
 from django.db.models import F
 from typing import Dict
 
-from core.models_unified_system import AgentExecution, UserAgentLearning, Agent
+from core.models_unified_system import AgentExecution, UserAgentLearning
 
 logger = logging.getLogger(__name__)
 

@@ -12,9 +12,7 @@ UI variations, and other features. Includes:
 import logging
 import hashlib
 import math
-import random
 from typing import Dict, Any, Optional, List
-from datetime import timedelta
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -74,7 +72,6 @@ class ABTestingService:
         Returns:
             Created experiment details
         """
-        from django.utils import timezone
         from core.models_unified_system import ABExperiment, ABVariant
 
         try:
@@ -205,7 +202,7 @@ class ABTestingService:
         Returns:
             ExperimentVariant or None if not in experiment
         """
-        from core.models_unified_system import ABExperiment, ABAssignment, ABVariant
+        from core.models_unified_system import ABExperiment
 
         try:
             experiment = ABExperiment.objects.get(id=experiment_id)
@@ -280,7 +277,7 @@ class ABTestingService:
 
     def _assign_variant(self, experiment, user_id: int, session_id: str):
         """Assign a user to a variant based on weights."""
-        from core.models_unified_system import ABAssignment, ABVariant
+        from core.models_unified_system import ABAssignment
 
         # Get all variants with weights
         variants = list(experiment.variants.all())
@@ -315,7 +312,7 @@ class ABTestingService:
     def mark_exposure(self, experiment_id: str, user_id: int = None, session_id: str = None):
         """Mark that a user has been exposed to their variant (seen it)."""
         from django.utils import timezone
-        from core.models_unified_system import ABExperiment, ABAssignment
+        from core.models_unified_system import ABExperiment
 
         try:
             experiment = ABExperiment.objects.get(id=experiment_id)
@@ -355,7 +352,7 @@ class ABTestingService:
         Returns:
             True if conversion was recorded
         """
-        from core.models_unified_system import ABExperiment, ABAssignment, ABConversion
+        from core.models_unified_system import ABExperiment, ABConversion
 
         try:
             experiment = ABExperiment.objects.get(id=experiment_id)
@@ -392,9 +389,9 @@ class ABTestingService:
         Includes per-variant stats and statistical significance.
         """
         from core.models_unified_system import (
-            ABExperiment, ABVariant, ABAssignment, ABConversion
+            ABExperiment, ABAssignment, ABConversion
         )
-        from django.db.models import Count, Sum, Avg
+        from django.db.models import Sum
 
         try:
             experiment = ABExperiment.objects.get(id=experiment_id)

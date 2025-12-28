@@ -6,7 +6,6 @@ Session 218: Specialized spider for Etherscan blockchain data.
 Focuses on Ethereum transactions, smart contracts, and DeFi activity.
 """
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 import feedparser

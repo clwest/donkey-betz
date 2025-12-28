@@ -6,9 +6,8 @@ Validates and enforces consistent security settings across the platform
 import os
 import re
 import logging
-from typing import Dict, List, Tuple, Any
+from typing import Dict, Tuple, Any
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +172,6 @@ class SecurityValidator:
     
     def scan_for_hardcoded_secrets(self):
         """Scan codebase for hardcoded secrets"""
-        import glob
         from pathlib import Path
         
         base_dir = Path(settings.BASE_DIR)

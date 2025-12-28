@@ -20,7 +20,7 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone, timedelta
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import redis
 from redis import asyncio as aioredis
 from flask import Flask, render_template, jsonify, request

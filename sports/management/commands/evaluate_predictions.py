@@ -10,8 +10,7 @@ Usage:
 Created: Session 23 - Agent-ML Learning Integration
 """
 
-from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
+from django.core.management.base import BaseCommand
 from sports.prediction_evaluator import PredictionEvaluator
 
 

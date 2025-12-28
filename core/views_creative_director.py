@@ -7,7 +7,6 @@ Philosophy: AI suggests → Human chooses → Agent learns → Gets better!
 
 import json
 import logging
-from typing import Dict
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse

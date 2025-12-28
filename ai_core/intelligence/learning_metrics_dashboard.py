@@ -15,10 +15,9 @@ spider-to-learning pipeline, tracking:
 import asyncio
 import json
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
-from collections import defaultdict
 import numpy as np
 import redis.asyncio as redis
 

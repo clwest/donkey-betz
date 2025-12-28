@@ -16,9 +16,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.db import transaction
 import secrets
-import string
-from datetime import datetime, timedelta
-import json
+from datetime import timedelta
 import re
 
 User = get_user_model()

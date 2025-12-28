@@ -424,7 +424,6 @@ class DatabaseConversationHistory:
         """
         try:
             from core.models import ChatConversation
-            from django.utils import timezone
 
             conversation_id = self._get_conversation_id(user_id)
 
@@ -1402,7 +1401,7 @@ class SpiderCommands(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            from core.models_bankroll import Bankroll, Wager
+            from core.models_bankroll import Bankroll
 
             @sync_to_async
             def get_bankroll_data(discord_user_id):
@@ -2711,7 +2710,6 @@ class ContentCommands(commands.Cog):
             @sync_to_async
             def get_images(web_user, limit):
                 from content.models import ImageHistory
-                from django.conf import settings
 
                 if web_user:
                     # Get linked user's images
@@ -2953,7 +2951,6 @@ class ContentCommands(commands.Cog):
             @sync_to_async
             def get_opportunities(web_user, limit, cat_filter):
                 from core.models_unified_system import Opportunity
-                from django.utils import timezone
 
                 queryset = Opportunity.objects.filter(
                     status='active'
@@ -3064,7 +3061,6 @@ class ContentCommands(commands.Cog):
             @sync_to_async
             def create_application(web_user, opp_id, app_message):
                 from core.models_unified_system import Opportunity, Application
-                from django.utils import timezone
 
                 # Find opportunity by user-friendly ID
                 opportunity = Opportunity.objects.filter(user_friendly_id=opp_id).first()
@@ -3176,7 +3172,6 @@ class ContentCommands(commands.Cog):
             @sync_to_async
             def get_applications(web_user, status_filter):
                 from core.models_unified_system import Application
-                from django.db.models import Sum
 
                 queryset = Application.objects.filter(user=web_user).select_related('opportunity')
 
@@ -3308,7 +3303,7 @@ class ContentCommands(commands.Cog):
                     AgentConversation, SharedKnowledge
                 )
                 from django.utils import timezone
-                from django.db.models import Count, Avg, Sum
+                from django.db.models import Count
                 from datetime import timedelta
 
                 now = timezone.now()
@@ -4222,7 +4217,7 @@ class VoiceMarketplaceCommands(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            from core.models import VoiceProfile, DiscordLinkCode
+            from core.models import VoiceProfile
 
             if action == "browse":
                 # Get top rated public voices (async-safe)
@@ -4694,7 +4689,7 @@ class VoiceMarketplaceCommands(commands.Cog):
             from asgiref.sync import sync_to_async
             from django.db.models import Q
             from django.contrib.auth import get_user_model
-            from core.models import VoiceProfile, DiscordLinkCode
+            from core.models import VoiceProfile
             from core.services.stripe_voice_payments import get_stripe_voice_service
             import os
 
@@ -5011,7 +5006,6 @@ class VoiceMarketplaceCommands(commands.Cog):
                 except Exception as ve:
                     logger.error(f"Failed to connect to voice channel: {ve}", exc_info=True)
                     # Still mark as recording - user can speak, we'll try to capture
-                    pass
 
                 embed = discord.Embed(
                     title="🎙️ Voice Recording Started!",
@@ -5316,7 +5310,7 @@ class ContentPipelineCommands(commands.Cog):
             # Get tier info
             @sync_to_async
             def create_package():
-                from core.services.content_pipeline import get_tier_config, TIER_CONFIGS
+                from core.services.content_pipeline import TIER_CONFIGS
                 from core.models_content_pipeline import ContentPackage, ContentGenerationJob, PackageStatus
 
                 tier_config = TIER_CONFIGS.get(tier)
@@ -6394,7 +6388,6 @@ class StudioCommands(commands.Cog):
             @sync_to_async
             def get_channel_status():
                 from core.models_autonomous_studio import ContentChannel, ChannelEpisode, TopicPerformance
-                from django.db.models import Avg
 
                 # Find channel by partial ID
                 channels = ContentChannel.objects.filter(id__startswith=channel_id)
@@ -6747,7 +6740,7 @@ class StudioCommands(commands.Cog):
         try:
             @sync_to_async
             def get_episode_content():
-                from core.models_autonomous_studio import ContentChannel, ChannelEpisode
+                from core.models_autonomous_studio import ContentChannel
                 from core.models_ai_series import AISeries, SeriesEpisode
 
                 channels = ContentChannel.objects.filter(id__startswith=channel_id)
@@ -10459,7 +10452,6 @@ class NarrativeCommands(commands.Cog):
             @sync_to_async
             def get_domain_stats():
                 from core.models_narrative_drift import Narrative, NarrativeShift, NarrativeEvidence, NarrativeDomain
-                from django.db.models import Count
                 from django.utils import timezone
                 from datetime import timedelta
 
@@ -10912,7 +10904,7 @@ class ROICommands(commands.Cog):
                 from core.models_unified_system import (
                     ConversionEvent, AttributionPath, WeeklyIntelligenceBrief
                 )
-                from django.db.models import Sum, Count
+                from django.db.models import Sum
                 from django.utils import timezone
                 from datetime import timedelta
 
@@ -11372,8 +11364,7 @@ class ResolveCommands(commands.Cog):
             @sync_to_async
             def start_render():
                 from core.agents.resolve_agent import get_resolve_agent
-                from core.models_unified_system import ResolveRenderJob
-                from resolve_node.color_grades import get_all_presets, match_grade_to_trends
+                from resolve_node.color_grades import match_grade_to_trends
                 from django.contrib.auth import get_user_model
 
                 # Get linked user
@@ -12204,9 +12195,6 @@ class SituationCommands(commands.Cog):
             @sync_to_async
             def get_situation_stats():
                 from core.models_autonomous_situations import AutonomousSituationSession
-                from django.db.models import Count, Max
-                from django.utils import timezone
-                from datetime import timedelta
 
                 # Get session counts and last run times for each situation type
                 stats = {}
@@ -12346,8 +12334,7 @@ class SituationCommands(commands.Cog):
 
             @sync_to_async
             def get_detailed_stats():
-                from django.utils import timezone
-                from datetime import timedelta
+                pass
 
                 result = {
                     'sessions': [],
@@ -12678,8 +12665,7 @@ class SituationCommands(commands.Cog):
 
             @sync_to_async
             def manage_alert_config():
-                from core.models_autonomous_situations import AutonomousSituationSession
-                from core.models import DiscordUser
+                pass
 
                 # Get or create alert config for this user/situation
                 discord_id = str(interaction.user.id)
@@ -12834,7 +12820,6 @@ class PodcastCommands(commands.Cog):
             @sync_to_async
             def create_episode():
                 from core.models import PodcastEpisode, PodcastDebate
-                from django.utils import timezone
 
                 # Create debate first
                 debate = PodcastDebate.objects.create(

@@ -7,13 +7,12 @@ to e-commerce projects by specialized ML agents.
 
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime, timedelta
+from typing import List, Dict, Any
+from datetime import timedelta
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestRegressor, IsolationForest
 from sklearn.metrics.pairwise import cosine_similarity
-import json
 
 
 class RecommendationEngine:

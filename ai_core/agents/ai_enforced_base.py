@@ -5,12 +5,12 @@ AI Enforced Base Agent - Base class that FORCES all agents to use real AI
 import os
 import sys
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from abc import ABC, abstractmethod
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.llm_enforcer import get_llm_enforcer
-from core.agent_context_middleware import UserContextualAgent, get_user_context_for_agent
+from core.agent_context_middleware import UserContextualAgent
 from core.models import EnhancedUserProfile, UserMemoryContext
 from core.unified_memory_manager import get_memory_manager
 
@@ -217,7 +217,6 @@ class AIEnforcedAgent(UserContextualAgent, ABC):
         This is where the agent's main logic goes.
         MUST use generate_ai_text() for any text generation!
         """
-        pass
 
     def verify_ai_usage(self) -> bool:
         """Verify that this agent has actually used AI"""

@@ -4,7 +4,7 @@ Centralizes all API configurations and authentication
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict
 from dotenv import load_dotenv
 
 # Load environment variables

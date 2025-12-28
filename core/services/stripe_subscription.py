@@ -10,7 +10,6 @@ import logging
 import stripe
 from typing import Optional, Dict, Any
 from datetime import datetime
-from django.conf import settings
 from django.utils import timezone
 from dotenv import load_dotenv
 from asgiref.sync import sync_to_async

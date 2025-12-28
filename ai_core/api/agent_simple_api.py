@@ -3,7 +3,6 @@ Simple Agent API for Frontend
 Provides basic agent data without complex model dependencies
 """
 import json
-import asyncio
 import uuid
 from datetime import datetime
 from django.http import JsonResponse

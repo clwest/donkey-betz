@@ -16,5 +16,3 @@ warnings.warn(
 )
 
 # Re-export from deprecated location for backwards compatibility
-from agents._deprecated.image_agent import *
-from agents._deprecated.image_agent import ImageAgent

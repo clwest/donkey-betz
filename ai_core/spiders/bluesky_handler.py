@@ -5,14 +5,12 @@ Much more developer-friendly and no expensive API fees!
 """
 
 import os
-import json
 import asyncio
 import aiohttp
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Any, List, Tuple
+from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 

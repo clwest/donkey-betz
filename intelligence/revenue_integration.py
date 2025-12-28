@@ -3,16 +3,10 @@ Revenue Activation + Income Builder Integration Service
 Bridges real revenue opportunities with automated income generation
 """
 
-import json
-import asyncio
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-from decimal import Decimal
+from typing import Dict, List, Optional
+from datetime import datetime
 import logging
 
-from django.utils import timezone
-from django.db import transaction
-from asgiref.sync import async_to_sync, sync_to_async
 
 # Import with error handling for missing modules
 try:
@@ -538,7 +532,6 @@ class RevenueIncomeIntegration:
         # This will be implemented when the models are available
         # For now, just log it
         logger.info(f"Linking opportunity {opportunity_id} to plan {plan_id} on {platform}")
-        pass
 
     async def _generate_proposal_content(self, plan: Dict, opportunity: Dict) -> str:
         """Generate the actual proposal content"""
@@ -627,7 +620,6 @@ Best regards,
     async def _schedule_response_monitoring(self, tracking_id: str, platform: str):
         """Schedule monitoring for proposal responses"""
         # This will be implemented with Celery tasks
-        pass
 
     async def _save_proposal_file(self, path: str, content: str) -> Dict:
         """Save proposal to file"""
@@ -899,7 +891,6 @@ Best,
     async def _handle_client_response(self, proposal: Dict, response: Dict):
         """Handle client response to proposal"""
         # Trigger appropriate follow-up actions
-        pass
 
     async def _mark_proposal_submitted(self, proposal_id: str, result: Dict):
         """Mark proposal as submitted in tracking system"""

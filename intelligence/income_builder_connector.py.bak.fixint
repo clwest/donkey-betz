@@ -6,8 +6,6 @@ Bridges the Income Builder frontend with the Task Delegation Orchestrator
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import asyncio
-from pathlib import Path
 from intelligence.income_builder_automation import IncomeBuilderAutomation
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator
 

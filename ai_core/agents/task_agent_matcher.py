@@ -6,12 +6,9 @@ Intelligent system that matches freelance job requirements to the most suitable
 agents from the 152 available agents, considering skills, complexity, and experience.
 """
 
-import json
 import logging
-import re
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime
+from typing import Dict, List, Any
+from dataclasses import dataclass
 import difflib
 
 logger = logging.getLogger(__name__)

@@ -27,7 +27,7 @@ Usage:
 import logging
 import time
 import re
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 from core.agents.base_agent import BaseAgent, AgentResult
 

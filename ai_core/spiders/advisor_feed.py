@@ -10,12 +10,11 @@ expert insights and community-driven learning.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from typing import Dict, List, Any
+from datetime import datetime
 import asyncio
 import json
 from django.core.cache import cache
-from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 

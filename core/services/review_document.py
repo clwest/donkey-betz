@@ -15,7 +15,7 @@ Flow:
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from django.db import transaction
 from openai import OpenAI

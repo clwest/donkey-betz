@@ -135,7 +135,7 @@ class HITLValidationService:
         Returns:
             ValidationResult indicating what action was taken
         """
-        from core.models_unified_system import ValidationConfig, ValidationRequest
+        from core.models_unified_system import ValidationConfig
 
         config = ValidationConfig.get_config(user)
         confidence = scoring_result.confidence
@@ -262,7 +262,6 @@ class HITLValidationService:
     def _try_auto_assign(self, validation_request, config):
         """Try to automatically assign validation to a reviewer."""
         from django.contrib.auth import get_user_model
-        from core.models_unified_system import ValidationRequest
 
         User = get_user_model()
 
@@ -598,7 +597,6 @@ class HITLValidationService:
         from core.models_unified_system import (
             ValidationRequest, ValidationDecision, ValidationConfig
         )
-        from django.db.models import Avg
 
         config = ValidationConfig.get_config(user)
 

@@ -11,18 +11,13 @@ This system provides comprehensive job application management including:
 import logging
 import json
 from typing import Dict, Any, List
-from decimal import Decimal
-from datetime import datetime, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.db.models import Q, Count, Avg
-from django.utils import timezone
 
 from .models import ExtendedUserProfile, JobApplication, ResumeVersion, UserEmbedding
 from .agent_context_middleware import (

@@ -6,14 +6,11 @@ Scrapes Medium, HackerNoon, Dev.to for AI money-making strategies and opportunit
 
 import asyncio
 import aiohttp
-import requests
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
-import json
 import random
 import hashlib
-import re
 import logging
 
 logger = logging.getLogger(__name__)

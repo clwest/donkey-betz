@@ -34,8 +34,7 @@ from .conversation_roles import (
     get_grounding_refs,
     extract_decision_summary,
     validate_decision_summary,
-    CONVERSATION_CONTRACT,
-    TENSION_INDICATORS
+    CONVERSATION_CONTRACT
 )
 
 logger = logging.getLogger(__name__)

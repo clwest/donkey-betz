@@ -5,9 +5,8 @@ This module provides functionality for deploying specific agents to projects,
 managing agent assignments, and tracking project-agent relationships.
 """
 
-import json
 import uuid
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import datetime
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -20,7 +19,7 @@ from core.models.agents_registry import (
     AgentChannel,
     AgentChannelMessage
 )
-from core.models import GeneratedProject, GeneratedCode
+from core.models import GeneratedProject
 
 
 class ProjectAgentDeploymentManager:

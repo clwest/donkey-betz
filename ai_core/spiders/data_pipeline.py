@@ -20,7 +20,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any, Set, Callable
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
 import redis
 from redis import asyncio as aioredis

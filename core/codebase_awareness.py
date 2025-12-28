@@ -3,7 +3,6 @@ Codebase Self-Awareness System
 Allows the AI to understand, learn from, and modify its own code
 """
 
-import os
 import ast
 import logging
 import hashlib

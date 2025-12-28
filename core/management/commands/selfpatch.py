@@ -2,11 +2,10 @@
 import os
 import sys
 import json
-import shlex
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 from django.core.management.base import BaseCommand, CommandError
 

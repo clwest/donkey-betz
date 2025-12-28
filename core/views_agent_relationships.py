@@ -9,7 +9,7 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count, Avg, Q
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from core.models_unified_system import (

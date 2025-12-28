@@ -9,7 +9,6 @@ Provides comprehensive file operations for agents including:
 - Template processing
 """
 
-import os
 import json
 import logging
 from pathlib import Path

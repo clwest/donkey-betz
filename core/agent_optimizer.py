@@ -7,12 +7,8 @@ import json
 import time
 import logging
 import asyncio
-from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from django.core.cache import cache
-from django.conf import settings
-from django.db import transaction
-from django.utils import timezone as django_timezone
 import hashlib
 
 logger = logging.getLogger(__name__)

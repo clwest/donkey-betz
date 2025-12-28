@@ -5,7 +5,7 @@ Management command to create sample agents for testing
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentTool
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 
 
 class Command(BaseCommand):

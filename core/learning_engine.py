@@ -10,14 +10,13 @@ This module provides the core ML algorithms for:
 - Real-time insight generation
 """
 
-import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional
 
-from django.db.models import Avg, Sum, Count, F, Q, StdDev
+from django.db.models import Avg, Sum, Count, Q
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ class PatternDiscoveryEngine:
         Returns list of discovered patterns with confidence scores.
         """
         from .models_unified_system import (
-            ContentDistribution, DistributionAnalytics, SuccessPattern
+            ContentDistribution, DistributionAnalytics
         )
 
         cutoff = timezone.now() - timedelta(days=days)
@@ -459,7 +458,7 @@ class PricingEngine:
         Calculate optimal pricing for content.
         """
         from .models_unified_system import (
-            ContentDistribution, DistributionAnalytics, PricingOptimization
+            ContentDistribution, DistributionAnalytics
         )
 
         result = {
@@ -585,10 +584,6 @@ class InsightGenerator:
 
     def generate_insights(self, max_insights: int = 10) -> List[Dict]:
         """Generate actionable insights from user's data."""
-        from .models_unified_system import (
-            SuccessPattern, ContentDistribution, DistributionAnalytics,
-            ContentPerformancePrediction, UserLearningProfile
-        )
 
         insights = []
 
@@ -679,7 +674,7 @@ class InsightGenerator:
 
     def _find_best_content(self) -> Optional[Dict]:
         """Find and highlight best performing content."""
-        from .models_unified_system import ContentDistribution, DistributionAnalytics
+        from .models_unified_system import ContentDistribution
 
         query = Q()
         if self.user:
@@ -707,7 +702,7 @@ class InsightGenerator:
 
     def _find_underperforming(self) -> Optional[Dict]:
         """Find underperforming content that needs attention."""
-        from .models_unified_system import ContentDistribution, DistributionAnalytics
+        from .models_unified_system import ContentDistribution
 
         query = Q()
         if self.user:
@@ -925,7 +920,6 @@ class RealTimeLearner:
 
     def record_sale(self, sale_data: Dict) -> None:
         """Record a sale for pattern learning."""
-        from .models_unified_system import SuccessPattern
 
         # Update success patterns
         content_type = sale_data.get('content_type')

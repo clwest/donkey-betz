@@ -3,7 +3,6 @@ Fast Job Search - Only uses reliable, fast sources without API keys
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime
 from typing import List, Dict, Any

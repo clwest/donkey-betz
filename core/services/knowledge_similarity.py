@@ -46,7 +46,6 @@ from dataclasses import dataclass
 import numpy as np
 from django.conf import settings
 from django.core.cache import cache
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

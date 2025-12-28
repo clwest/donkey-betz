@@ -7,7 +7,6 @@ Generates real solutions for each agent based on their specialization
 import os
 import sys
 import django
-import json
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal

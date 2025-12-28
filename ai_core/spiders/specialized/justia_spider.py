@@ -14,10 +14,9 @@ All data is publicly accessible, no API key required.
 
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 import logging
-import time
 
 logger = logging.getLogger(__name__)
 

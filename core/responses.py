@@ -6,7 +6,7 @@ Provides consistent response formats across all API endpoints.
 """
 
 from django.http import JsonResponse
-from typing import Optional, Any, Dict
+from typing import Any, Dict
 import logging
 
 logger = logging.getLogger(__name__)

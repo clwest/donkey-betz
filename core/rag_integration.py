@@ -3,13 +3,9 @@ RAG (Retrieval-Augmented Generation) Integration
 Connects to unified_embeddings table for context retrieval
 """
 
-import os
-import json
 import logging
-import numpy as np
 import psycopg2
 from typing import List, Dict, Any, Optional
-from django.db import connection
 from django.conf import settings
 import openai
 

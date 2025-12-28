@@ -10,15 +10,11 @@ import asyncio
 import logging
 import json
 import openai
-import os
-import requests
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from django.core.cache import cache
-from django.conf import settings
 import subprocess
-import tempfile
 from pathlib import Path
 from ai_core.agents.agent_llm_integration import agent_llm_integration
 

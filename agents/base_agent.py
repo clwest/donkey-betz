@@ -27,7 +27,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
-from datetime import datetime
 
 from django.test import RequestFactory
 
@@ -129,7 +128,6 @@ class BaseContentAgent(ABC):
         Returns:
             Dictionary with at least 'success' and 'message' or 'error' keys
         """
-        pass
 
     # =========================================================================
     # Internal API Call Utilities

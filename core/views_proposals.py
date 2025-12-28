@@ -4,11 +4,10 @@ Views for AI Proposal Management
 Handles approval, rejection, and execution of AI-generated proposals.
 """
 
-from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from ai_core.intelligence.proposal_manager import ProposalManager, ProposalStatus
+from ai_core.intelligence.proposal_manager import ProposalManager
 import json
 import logging
 

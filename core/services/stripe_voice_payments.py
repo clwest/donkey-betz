@@ -11,8 +11,6 @@ import os
 import logging
 from decimal import Decimal
 from typing import Optional, Dict, Any
-from django.conf import settings
-from django.utils import timezone
 from dotenv import load_dotenv
 
 load_dotenv()

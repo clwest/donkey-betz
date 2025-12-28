@@ -8,15 +8,15 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from django.utils import timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from asgiref.sync import sync_to_async
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Sum
 import random
 
 # BRIDGE INTEGRATION
-from intelligence.system_integration_bridge import get_system_bridge, activate_unified_pipeline, RequestType
+from intelligence.system_integration_bridge import get_system_bridge, activate_unified_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -394,7 +394,6 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     def get_real_orchestra_data(self) -> Dict[str, Any]:
         """Get REAL Neural Orchestra data - all 149 agents with live activity!"""
         from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-        from django.db.models import Count, Q
 
         # Get ALL registered agents (should be 149!)
         agents = list(UnifiedAgentTemplate.objects.filter(
@@ -696,7 +695,7 @@ class UnifiedWebSocketHub(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_monetization_data(self) -> Dict[str, Any]:
         """Get Monetization Hub data"""
-        from intelligence.models import EarningRecord, RevenueMetrics
+        from intelligence.models import EarningRecord
 
         recent_earnings = list(EarningRecord.objects.order_by('-earned_date')[:10].values())
         total_revenue = EarningRecord.objects.aggregate(total=Sum('amount'))['total'] or 0

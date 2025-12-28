@@ -8,13 +8,11 @@ providing real-time insights into system health and optimization opportunities.
 
 import logging
 import time
-import asyncio
-from typing import Dict, List, Any, Optional, Deque
+from typing import Dict, List, Any, Deque
 from datetime import datetime, timedelta
 from collections import defaultdict, deque, Counter
 from dataclasses import dataclass, field
 import statistics
-import json
 from django.core.cache import cache
 import psutil
 import threading

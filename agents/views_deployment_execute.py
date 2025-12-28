@@ -5,20 +5,14 @@ This module handles actual agent execution and displays their generated outputs.
 Now supports both demo mode (fast, pre-generated) and real mode (LLM-powered).
 """
 
-import json
 import os
-from datetime import datetime
-from typing import Dict, Any
 from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import AgentExecution
 from core.models import GeneratedProject, GeneratedCode
-import redis
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 
 @csrf_exempt

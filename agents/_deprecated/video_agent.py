@@ -45,13 +45,12 @@ import logging
 import os
 import shutil
 from typing import Dict, Any, Optional, List
-from datetime import datetime
 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+from core.models.agents_registry import UnifiedAgentTemplate
 from intelligence.shared_memory import AgentMemoryInterface
 from intelligence.agent_query_protocol import query_protocol
 
@@ -334,7 +333,6 @@ class VideoAgent:
 
                     import os
                     import shutil
-                    from django.core.files import File
                     from content.models import VideoHistory
 
                     # Create media/videos directory if needed
@@ -1300,7 +1298,6 @@ class VideoAgent:
         try:
             from content.models import ImageHistory, VideoHistory
             from content.video_provider import runway_provider
-            from django.core.exceptions import ValidationError
 
             logger.info(f"🎬 VideoAgent.animate_image CALLED with image_id: '{image_id}' (type: {type(image_id).__name__})")
 
@@ -1489,7 +1486,7 @@ class VideoAgent:
         Returns:
             Dict with success status, task_id, and estimated time
         """
-        from content.models import VideoHistory, ImageHistory
+        from content.models import VideoHistory
         from content.video_provider import runway_provider
 
         logger.info(f"🎬 VideoAgent generating video")

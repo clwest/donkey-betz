@@ -6,19 +6,16 @@ import logging
 import json
 import traceback
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from celery import shared_task, Task
-from celery.exceptions import MaxRetriesExceededError
 from django.utils import timezone
-from django.core.cache import cache
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
     AgentExecution,
-    UnifiedAgentTemplate,
     AgentStatus,
     AgentOrchestration
 )
@@ -785,7 +782,7 @@ def update_agent_performance():
         dict: Summary of predictions processed and agents updated
     """
     from sports.models import MLPrediction
-    from core.models.agents_registry import UnifiedAgentTemplate, AgentPerformanceMetrics
+    from core.models.agents_registry import AgentPerformanceMetrics
 
     logger.info("Starting agent performance update task")
 

@@ -15,21 +15,17 @@ The SystemRealityChecker provides:
 - Agent execution verification
 """
 
-import json
 import logging
-import asyncio
 import redis
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
-from django.db import models, connection
+from typing import Dict, Any, List, Optional
+from django.db import connection
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 from dataclasses import dataclass
 from enum import Enum
 import os
-import importlib
-import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -620,7 +616,6 @@ class SystemRealityChecker:
             # Check Orchestra WebSocket
             checks_performed.append("orchestra_websocket_check")
             try:
-                from core.orchestra_consumers import NeuralOrchestraConsumer
                 details['has_orchestra_websocket'] = True
 
             except ImportError:
@@ -730,7 +725,6 @@ class SystemRealityChecker:
             # Check Decision Command WebSocket
             checks_performed.append("websocket_check")
             try:
-                from core.consumers import DecisionCommandConsumer
                 details['has_decision_websocket'] = True
 
             except ImportError:
@@ -1349,7 +1343,7 @@ class SystemRealityChecker:
             # Check revenue models
             checks_performed.append("revenue_models_check")
             try:
-                from intelligence.models import EarningRecord, RevenueMetrics
+                from intelligence.models import EarningRecord
                 from django.db.models import Sum, Avg, Count
 
                 total_earnings = EarningRecord.objects.aggregate(

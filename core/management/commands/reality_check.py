@@ -18,8 +18,6 @@ import json
 import os
 import webbrowser
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
-from django.conf import settings
 
 from core.reality_check import system_reality_checker, ComponentType
 from core.data_flow_tracer import data_flow_tracer, FlowType

@@ -14,12 +14,10 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Sum, Avg, Count, Q, F
-from django.utils import timezone
-from datetime import timedelta
+from django.db.models import Sum, Avg
 from decimal import Decimal
 
-from .models_unified_system import Opportunity, Agent
+from .models_unified_system import Opportunity
 from .models_partnership import PartnershipProject, CollaborativeContent
 
 logger = logging.getLogger(__name__)

@@ -3,9 +3,8 @@ Feedback collection and learning system for agent responses
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime
-from django.db import transaction
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

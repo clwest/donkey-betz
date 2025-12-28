@@ -11,10 +11,9 @@ import aiohttp
 import json
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import redis
 from dataclasses import dataclass, asdict
-import random
 
 logger = logging.getLogger(__name__)
 

@@ -9,11 +9,9 @@ Real-time WebSocket consumers for agent orchestration including:
 """
 
 import json
-import asyncio
 import logging
 import os
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from typing import Dict, Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -24,8 +22,7 @@ from django.conf import settings
 
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import (
-    UnifiedAgentTemplate, AgentExecution, AgentRegistry,
-    AgentStatus, AgentSpecialization
+    UnifiedAgentTemplate, AgentExecution, AgentStatus
 )
 
 User = get_user_model()

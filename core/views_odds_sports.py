@@ -4,15 +4,12 @@ Provides comprehensive betting analytics, Kelly criterion, and live sports data.
 Enhanced with multi-sport support and free data providers.
 """
 
-from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
-from django.db import models
-import json
 import decimal
 import random
 import requests
@@ -21,24 +18,22 @@ import logging
 
 # Import standardized API responses
 from core.api_responses import (
-    api_success, api_error, api_paginated,
-    api_unauthorized, api_forbidden, api_not_found,
-    api_validation_error, APIResponseEnvelope
+    api_success, api_validation_error
 )
 
 # Import rate limiting
-from core.rate_limiter import rate_limit_api, ExternalAPIRateLimiter
+from core.rate_limiter import rate_limit_api
 
 # Import caching
 from core.cache_service import (
-    CacheService, cache_response, OddsCache, GamesCache, KellyCache
+    KellyCache
 )
 
 logger = logging.getLogger(__name__)
 
 # Import sports models if they exist
 try:
-    from sports.models import League, Team, Game, SportType, GameStatus
+    from sports.models import League, Team, Game
     SPORTS_MODELS_AVAILABLE = True
 except ImportError:
     SPORTS_MODELS_AVAILABLE = False
@@ -1576,7 +1571,6 @@ def live_odds_with_scores(request):
                     live_count += 1
             else:
                 # Check if game should be live based on commence_time
-                from django.utils import timezone
                 try:
                     commence = datetime.fromisoformat(game.get('commence_time', '').replace('Z', '+00:00'))
                     if commence <= datetime.now(commence.tzinfo):

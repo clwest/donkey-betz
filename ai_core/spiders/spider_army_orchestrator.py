@@ -12,15 +12,14 @@ and intelligent data routing through the unified bridge system.
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Any, Set, Type
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 import redis
-import aiohttp
 from concurrent.futures import ThreadPoolExecutor
 
-from .base_spider import BaseIntelligenceSpider, SpiderTarget, SpiderMetrics, IntelligenceData
+from .base_spider import BaseIntelligenceSpider, SpiderTarget
 from .spider_registry import spider_registry
 
 logger = logging.getLogger(__name__)

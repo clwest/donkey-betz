@@ -2,7 +2,7 @@
 Unified URL Configuration
 Combines AI Studio, Django/DBAO, and Sports interfaces into one unified routing system
 """
-from django.urls import path, include
+from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views_unified  # We'll create this next
 

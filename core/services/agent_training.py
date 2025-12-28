@@ -18,7 +18,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from uuid import uuid4
 
-from django.db.models import Count, Avg
+from django.db.models import Avg
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -487,8 +487,7 @@ class AgentTrainingService:
         """Get overall training statistics."""
         from core.models_unified_system import (
             AgentPerformanceMetric,
-            SharedKnowledge,
-            CollaborationSession
+            SharedKnowledge
         )
 
         total_agents = AgentPerformanceMetric.objects.count()

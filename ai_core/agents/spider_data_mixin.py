@@ -25,19 +25,13 @@ Usage:
 """
 
 import asyncio
-import json
 import logging
-import redis
-from redis import asyncio as aioredis
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from abc import ABC, abstractmethod
-import uuid
 
 from ai_core.spiders.agent_data_receiver import (
-    AgentSpiderDataReceiver, IntelligenceData, AgentDataSubscription,
-    ProcessingMetrics, DataProcessingPriority, ProcessingStatus
+    AgentSpiderDataReceiver, IntelligenceData, AgentDataSubscription
 )
 
 logger = logging.getLogger(__name__)

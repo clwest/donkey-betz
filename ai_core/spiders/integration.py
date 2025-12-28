@@ -25,15 +25,11 @@ from django.db import transaction
 # Import existing models
 from intelligence.models import (
     AgentExecution,
-    UnifiedAgentTemplate,
-    AdvisorConsultation
+    UnifiedAgentTemplate
 )
 from advisors.registry import get_advisor_registry, AdvisorProfile
 
 # Import spider components
-from .spider_army_orchestrator import SpiderArmyOrchestrator
-from .data_pipeline import RealTimeDataPipeline, IntelligenceMessage
-from .command_center import SpiderCommandCenter
 
 logger = logging.getLogger(__name__)
 

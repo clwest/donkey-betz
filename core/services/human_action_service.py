@@ -18,7 +18,7 @@ This integrates with:
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 

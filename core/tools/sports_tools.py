@@ -4,18 +4,15 @@ Sports-Specific Tools for Agent Execution
 Provides real data access and computational tools for sports betting agents.
 """
 
-import json
 import logging
 from typing import Dict, List, Any, Optional
-from decimal import Decimal
 from datetime import datetime, timedelta
 
-from django.conf import settings
 from django.db.models import Q
 
 from .base import BaseTool
-from sports.data_providers import ESPNProvider, TheOddsAPIProvider, SportRadarProvider
-from sports.models import Game, BettingMarket, OddsLine, Team, League
+from sports.data_providers import ESPNProvider, TheOddsAPIProvider
+from sports.models import Game, BettingMarket, OddsLine, Team
 from sports.services import KellyCriterionService, ArbitrageDetectionService
 
 logger = logging.getLogger(__name__)

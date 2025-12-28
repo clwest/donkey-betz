@@ -5,11 +5,10 @@ The secret sauce that wins high-paying clients automatically!
 This engine writes proposals that beat 95% of human freelancers.
 """
 
-import asyncio
 import logging
 import json
 import openai
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dataclasses import dataclass
 from datetime import datetime
 from django.core.cache import cache

@@ -4,14 +4,9 @@ Demonstrates real code generation, testing, and deployment
 """
 
 import os
-import json
-import asyncio
 import logging
-import subprocess
 from datetime import datetime
-from typing import Dict, List, Optional
-import tempfile
-import shutil
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 

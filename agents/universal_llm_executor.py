@@ -15,7 +15,7 @@ Any agent execution goes through this executor which:
 import os
 import sys
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 from datetime import datetime
 import json
 

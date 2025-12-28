@@ -32,12 +32,11 @@ Usage:
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 import numpy as np
 from django.conf import settings
-from django.db import transaction
 
 logger = logging.getLogger(__name__)
 

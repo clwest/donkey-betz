@@ -31,7 +31,6 @@ def ecosystem_stats(request):
 @require_GET
 def get_project_status(request):
     """Get real project build status"""
-    import os
     from pathlib import Path
 
     project_dir = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")

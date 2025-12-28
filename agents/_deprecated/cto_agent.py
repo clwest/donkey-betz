@@ -45,7 +45,6 @@ Example Usage:
 
 from __future__ import annotations
 
-import os
 import logging
 import json
 from typing import Dict, Any, Optional, List

@@ -7,7 +7,6 @@ This is where we turn the platform from "job board" to "money-making machine"
 
 import asyncio
 import logging
-import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from django.core.cache import cache

@@ -3,7 +3,6 @@ RAG-Enhanced Assistant Views for the Unified Donkey Betz Platform.
 This module provides a personal AI assistant with full RAG capabilities.
 """
 
-from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated

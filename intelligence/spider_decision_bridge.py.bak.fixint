@@ -10,12 +10,12 @@ import redis
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dataclasses import dataclass, asdict
 
 # Import our real components
 from ai_core.spiders.real_job_spider import RealJobSpider
-from intelligence.income_builder import AIIncomeBuilder, income_builder
+from intelligence.income_builder import income_builder
 
 logger = logging.getLogger(__name__)
 

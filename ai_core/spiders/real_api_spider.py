@@ -3,13 +3,10 @@ Real API Spider Implementation
 Uses actual API endpoints with authentication
 """
 
-import asyncio
 import aiohttp
-import os
-import json
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from .base_spider import BaseIntelligenceSpider
 from .api_config import api_config
 

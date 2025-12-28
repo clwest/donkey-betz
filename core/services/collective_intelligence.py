@@ -17,24 +17,17 @@ by combining the specialized knowledge and abilities of multiple agents.
 """
 
 import logging
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from django.db import models, transaction
-from django.db.models import Q, Count, Avg, F, Sum, Max, Min
+from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from django.core.cache import cache
-from django.conf import settings
 
 from .agent_collaboration import (
-    AgentCollaborationService,
     get_collaboration_service,
-    CollaborationType,
-    MessageType,
-    CollaborationStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -174,7 +167,6 @@ class CollectiveIntelligenceService:
             from core.models_unified_system import (
                 SharedKnowledge,
                 CollaborationSession,
-                AgentPerformanceMetric,
                 AgentConversation,
                 AgentDream,
                 AgentMemory
@@ -383,7 +375,6 @@ class CollectiveIntelligenceService:
 
         try:
             from core.models_unified_system import (
-                SharedKnowledge,
                 AgentPerformanceMetric
             )
 
@@ -1256,7 +1247,7 @@ class CollectiveIntelligenceService:
             Dict with resolution status and created knowledge items
         """
         try:
-            from core.models_unified_system import SharedKnowledge, SpiderData, Agent
+            from core.models_unified_system import SharedKnowledge, SpiderData
             import random
 
             created_items = []

@@ -13,10 +13,8 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from django.db import transaction
 from sports.models import Game, Team, League
 from datetime import datetime
-from decimal import Decimal
 import csv
 import os
 

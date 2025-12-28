@@ -8,7 +8,7 @@ import json
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 from dataclasses import dataclass
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt

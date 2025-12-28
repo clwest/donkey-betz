@@ -15,7 +15,7 @@ import asyncio
 import json
 import logging
 import redis
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from enum import Enum
@@ -673,36 +673,28 @@ class SystemIntegrationBridge:
     async def _queue_for_agent_processing(self, agent_type: str, data: Dict):
         """Queue data for agent processing"""
         # This would queue the data for the appropriate agent
-        pass
 
     async def _push_spider_update_to_components(self, channel: str, data: Dict):
         """Push spider updates to interested components"""
         # This would push updates to components interested in this spider data
-        pass
 
     async def _process_queued_data_flows(self):
         """Process queued data flows"""
-        pass
 
     async def _sync_component_data(self):
         """Synchronize data between components"""
-        pass
 
     async def _cleanup_completed_requests(self):
         """Clean up old completed requests"""
-        pass
 
     async def _process_agent_collaborations(self):
         """Process agent collaboration requests"""
-        pass
 
     async def _share_agent_contexts(self):
         """Share context between agents"""
-        pass
 
     async def _aggregate_multi_agent_results(self):
         """Aggregate results from multiple agents"""
-        pass
 
     def activate_spider_swarm(self, plan_id: str, requirements: list) -> Dict[str, Any]:
         """

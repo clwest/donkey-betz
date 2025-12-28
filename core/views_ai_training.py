@@ -1,7 +1,6 @@
 """
 Views for AI Job Market Intelligence Training Dashboard
 """
-from django.shortcuts import render
 from django.http import HttpResponse
 import os
 

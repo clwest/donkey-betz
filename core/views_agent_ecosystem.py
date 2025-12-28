@@ -16,7 +16,6 @@ This file provides REST API access to the complete agent ecosystem:
 
 import json
 import logging
-from typing import Dict
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse

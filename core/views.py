@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .models import SystemConfiguration, PlatformMetrics
 from content.models import Feedback, ContentGeneration
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg
 import json
 from datetime import datetime, timedelta
 import uuid
@@ -1046,7 +1046,6 @@ def personal_knowledge_list(request):
     """Get user's personal knowledge base from unified embeddings"""
     import psycopg2
     import json
-    from django.core.paginator import Paginator
     
     # Get query parameters (support both per_page and page_size)
     search = request.GET.get('search', '')

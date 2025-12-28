@@ -6,8 +6,7 @@ Protects against excessive API usage and manages costs
 from django.core.cache import cache
 from django.http import JsonResponse
 from functools import wraps
-from datetime import datetime, timedelta
-import hashlib
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)

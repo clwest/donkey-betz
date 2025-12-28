@@ -1,6 +1,7 @@
 # core/rag.py
 from __future__ import annotations
-import os, json, re
+import json
+import re
 from pathlib import Path
 
 CORPUS_PATH = Path(".rag/corpus.jsonl")

@@ -18,7 +18,7 @@ import asyncio
 import json
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 import redis.asyncio as redis
 

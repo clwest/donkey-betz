@@ -4,12 +4,12 @@ Connects and activates all 102+ agents in the unified platform
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 from dataclasses import dataclass
 
-from core.agents.registry import get_agent_registry, AgentRegistry
-from core.models.agents_registry import UnifiedAgentTemplate, AgentSpecialization
+from core.agents.registry import get_agent_registry
+from core.models.agents_registry import AgentSpecialization
 from advisors.registry import get_advisor_registry
 
 logger = logging.getLogger(__name__)

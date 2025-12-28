@@ -47,7 +47,7 @@ class WeeklySynthesisService:
             WeeklySynthesis: The generated synthesis record
         """
         from core.models_conversation_artifacts import (
-            ExtractedArtifact, ArtifactExecution, WeeklySynthesis
+            WeeklySynthesis
         )
 
         period_end = timezone.now().date()

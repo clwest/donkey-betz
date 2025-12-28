@@ -4,14 +4,12 @@ Phase 2 enhancement - provides unified access to multiple AI providers.
 Compatible with existing frontend connections.
 """
 
-from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from datetime import datetime
 import json
-import uuid
 
 User = get_user_model()
 

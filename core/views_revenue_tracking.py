@@ -8,8 +8,8 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
-from django.db.models import Sum, Count, Avg, Q
-from datetime import datetime, timedelta
+from django.db.models import Sum, Count, Avg
+from datetime import timedelta
 import json
 
 from .models import Revenue

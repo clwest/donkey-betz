@@ -8,22 +8,19 @@ arbitrage detection, and betting recommendation generation integrated with the a
 import asyncio
 import aiohttp
 import logging
-import math
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 from django.utils import timezone
 from django.db import transaction
-from django.conf import settings
-from django.core.cache import cache
 from asgiref.sync import sync_to_async
 
 from .models import (
-    League, Team, Game, Sportsbook, BettingMarket, OddsLine, LineMovement,
-    Bet, BankrollManagement, ArbitrageOpportunity, BettingRecommendation,
-    SportsAnalytics, SportType, GameStatus, BetType, MarketStatus, RiskLevel
+    Team, Game, Sportsbook, BettingMarket, OddsLine, LineMovement, BankrollManagement,
+    ArbitrageOpportunity, BettingRecommendation, SportsAnalytics, SportType,
+    GameStatus, BetType, MarketStatus, RiskLevel
 )
 from core.models import PlatformMetrics
 

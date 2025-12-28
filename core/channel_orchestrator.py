@@ -14,7 +14,7 @@ This orchestrator enables:
 
 import logging
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict
 from openai import OpenAI
 from django.utils import timezone
 

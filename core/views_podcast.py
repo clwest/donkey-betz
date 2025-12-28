@@ -6,12 +6,10 @@ Combines PodcastEpisode + ChannelEpisode (Autonomous Content Studio) into one un
 """
 
 import json
-import uuid
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 
 
 def _podcast_episode_to_dict(ep):
@@ -417,7 +415,7 @@ def podcast_stats(request):
     """
     from core.models import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
-    from django.db.models import Sum, Avg, Count
+    from django.db.models import Sum
 
     try:
         # PodcastEpisode stats

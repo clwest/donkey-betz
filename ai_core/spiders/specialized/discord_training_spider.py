@@ -17,7 +17,6 @@ are legal and ToS-compliant to use for training specialized agents.
 
 import aiohttp
 import asyncio
-import json
 import os
 import random
 from datetime import datetime, timezone

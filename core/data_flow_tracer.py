@@ -16,19 +16,16 @@ The DataFlowTracer can:
 
 import json
 import logging
-import asyncio
 import time
 import os
 import importlib
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple, Set
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
-from django.db import models
 from django.utils import timezone
 from django.core.cache import cache
 import uuid
-import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -569,7 +566,6 @@ class DataFlowTracer:
                 # Check if income builder works
                 if component == "income_builder":
                     try:
-                        import ai_core.intelligence.income_builder
                         updated_data['ranking_score'] = 0.8
                         updated_data['ranked_at'] = timezone.now().isoformat()
                     except ImportError:
@@ -580,7 +576,6 @@ class DataFlowTracer:
                 # Check WebSocket hub
                 if component == "websocket_hub":
                     try:
-                        from core.unified_hub import UnifiedWebSocketHub
                         updated_data['presented_at'] = timezone.now().isoformat()
                         updated_data['websocket_delivered'] = True
                     except ImportError:
@@ -617,7 +612,6 @@ class DataFlowTracer:
                 # Check revenue tracking
                 if component == "revenue_tracker":
                     try:
-                        from intelligence.models import EarningRecord
                         updated_data['tracked_at'] = timezone.now().isoformat()
                         updated_data['tracking_id'] = str(uuid.uuid4())
                     except ImportError:
@@ -641,7 +635,6 @@ class DataFlowTracer:
             if stage == FlowStage.COLLECTION and component == "websocket_server":
                 # WebSocket server should always work if Django Channels is configured
                 try:
-                    import channels
                     updated_data['received_at'] = timezone.now().isoformat()
                 except ImportError:
                     success = False

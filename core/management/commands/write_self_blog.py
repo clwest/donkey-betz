@@ -18,10 +18,10 @@ Session 543: Initial implementation
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.db.models import Count, Avg, Sum
+from django.db.models import Count
 
 
 class Command(BaseCommand):

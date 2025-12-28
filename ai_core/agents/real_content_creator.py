@@ -6,7 +6,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from openai import OpenAI
 from ai_core.agents.agent_llm_integration import agent_llm_integration
 

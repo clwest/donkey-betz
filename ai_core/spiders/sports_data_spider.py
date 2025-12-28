@@ -3,14 +3,11 @@ Sports Data Spider - Real-time sports odds and game data fetcher
 Fetches live sports data from various sources for the Sports Analytics Hub
 """
 
-import json
 import logging
 import random
-import asyncio
 import aiohttp
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from decimal import Decimal
+from datetime import timedelta
+from typing import Dict, List
 
 from django.utils import timezone
 from django.db import transaction
@@ -329,7 +326,6 @@ class SportsDataSpider:
             predictions = await self.get_ai_predictions(games)
 
             # Store in database
-            from sports.models import Game, League, Team
 
             with transaction.atomic():
                 for game_data in games:

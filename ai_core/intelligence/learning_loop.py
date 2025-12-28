@@ -8,10 +8,9 @@ Enhanced with Bluesky social intelligence integration for real-time learning.
 """
 
 import asyncio
-import json
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 import numpy as np
 import logging
@@ -734,7 +733,7 @@ class LearningLoop:
         """Collect feedback from Bluesky social intelligence"""
         try:
             # Import here to avoid circular dependency
-            from .bluesky_learning_bridge import bluesky_learning_bridge
+            pass
 
             while self.learning_active:
                 try:

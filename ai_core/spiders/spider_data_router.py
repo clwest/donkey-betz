@@ -20,15 +20,14 @@ import json
 import logging
 import redis
 from redis import asyncio as aioredis
-from typing import Dict, List, Optional, Any, Set, Callable
+from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor
-import uuid
 
 from .spider_army_orchestrator import SpiderArmyOrchestrator, SpiderType
-from .data_pipeline import RealTimeDataPipeline, IntelligenceMessage
+from .data_pipeline import RealTimeDataPipeline
 # Agent and advisor registries would be imported here if they exist
 # For now, we'll create our own agent discovery system
 

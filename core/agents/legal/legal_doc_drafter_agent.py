@@ -32,7 +32,6 @@ Session 403 Enhancements:
 
 import logging
 import time
-import json
 import re
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
@@ -43,12 +42,10 @@ from core.agents.legal.motion_context import (
     clean_motion_text,
     render_relief_block,
     render_proposed_order_relief,
-    count_relief_items,
     score_relief_scope
 )
 from core.agents.legal.document_bundle import (
-    parse_motion_output_to_bundle,
-    LegalDocumentBundle
+    parse_motion_output_to_bundle
 )
 
 logger = logging.getLogger(__name__)
@@ -2894,7 +2891,6 @@ For detailed information on this procedure in {county} County, Colorado, please 
         4. Each incident becomes its own separate allegation
         5. Final allegation summarizes pattern/impact
         """
-        import re
         import logging
         logger = logging.getLogger(__name__)
 
@@ -3156,7 +3152,6 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
         Returns the specific detail string, or empty string if can't build one.
         """
-        import re
 
         # Check if item already has good specificity
         has_quote = '"' in item_text or "'" in item_text
@@ -3380,7 +3375,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
         Returns sorted list of allegations.
         """
         import re
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         def extract_date(allegation: str):
             """Extract date from allegation. Returns datetime or None."""
@@ -5203,7 +5198,6 @@ unless this is a true emergency under C.R.S. § 14-10-129.5."""
         Session 404 FINAL FIX: Aggressively filter PDF content.
         Now uses _extract_user_motion_section first, then filters line by line.
         """
-        import re
 
         # First extract only user's motion section
         user_content = self._extract_user_motion_section(content)
@@ -6700,7 +6694,6 @@ MAGISTRATE / JUDGE
         2. Advises whether situation qualifies for emergency relief
         3. Warns when something is NOT actually an emergency
         """
-        import re
         situation_lower = situation_description.lower()
 
         # =====================================================================

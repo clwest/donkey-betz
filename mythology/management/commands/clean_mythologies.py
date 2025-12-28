@@ -3,14 +3,13 @@ Management command to clean mythology from embeddings and create guards.
 """
 
 from django.core.management.base import BaseCommand
-from django.db import connection, transaction
+from django.db import connection
 from django.utils import timezone
-from datetime import datetime
 import time
 
 from mythology.models import (
     MythologyCleanup, MythPattern, MythologyGuard,
-    MythologyEvent, MythologyAlert
+    MythologyAlert
 )
 from mythology.services import MythologyDetectionService
 

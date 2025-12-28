@@ -6,8 +6,7 @@ ensuring they use internal tools instead of external ones.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from django.conf import settings
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 

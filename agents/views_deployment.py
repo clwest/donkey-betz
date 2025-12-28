@@ -6,22 +6,17 @@ integrated with the AI Building Products interface.
 """
 
 import json
-from typing import Dict, Any
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
 
 from django.db import models
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
-    AgentOrchestration,
-    AgentRegistry
+    AgentOrchestration
 )
-from core.models import GeneratedProject, GeneratedCode
-from agents.project_deployment import ProjectAgentDeploymentManager, ProjectStorageEnhancer
+from core.models import GeneratedProject
+from agents.project_deployment import ProjectAgentDeploymentManager
 from agents.universal_integration import UniversalAgentIntegrator
 
 

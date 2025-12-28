@@ -5,16 +5,14 @@ Helps users build income streams using AI, regardless of starting capital.
 Focuses on skills, services, and value creation rather than traditional investing.
 """
 
-import asyncio
 import json
 import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import logging
-from django.conf import settings
 
 # OpenAI Integration
 try:
@@ -28,7 +26,6 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 # Import real dependencies for full system integration
-from core.agents.registry import agent_registry
 # from advisors.registry import advisor_registry  # TODO: Create if needed
 # from orchestration import orchestrator, WorkflowStep, StepType  # TODO: Create if needed
 # from ml_pipeline.pipeline import MLPipeline  # Using embedded MLPipeline instead
@@ -1663,7 +1660,6 @@ Looking forward to discussing your project in detail.
             if orchestrator_path not in sys.path:
                 sys.path.append(orchestrator_path)
 
-            from revenue_activation_orchestrator import revenue_orchestrator
 
             # Register as connected agent
             logger.info("Income Builder connected to Revenue Activation Orchestrator")

@@ -5,12 +5,10 @@ Tracks and catalogs narratives over time.
 "What stories have people believed, and when?"
 """
 
-import json
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
+from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Count, Avg
 from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult

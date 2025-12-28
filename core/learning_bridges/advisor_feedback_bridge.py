@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from typing import Dict
 
-from core.models_unified_system import AdvisorInsight, UserAgentLearning
+from core.models_unified_system import UserAgentLearning
 
 logger = logging.getLogger(__name__)
 

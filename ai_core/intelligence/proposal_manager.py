@@ -418,8 +418,6 @@ class ProposalManager:
 
     def _execute_optimization(self, proposal: AIProposal) -> Dict[str, Any]:
         """Execute optimization proposals - REAL IMPLEMENTATION"""
-        import os
-        import json
         from datetime import datetime
 
         try:

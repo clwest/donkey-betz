@@ -7,7 +7,7 @@ It validates agent outputs against reality constraints before returning to users
 
 import re
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 
 logger = logging.getLogger(__name__)

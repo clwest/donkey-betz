@@ -10,11 +10,10 @@ and 25 legendary advisors.
 import asyncio
 import logging
 from django.core.management.base import BaseCommand, CommandError
-from django.conf import settings
 
 from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
-from ai_core.spiders.command_center import SpiderCommandCenter, get_command_center
-from ai_core.spiders.data_pipeline import RealTimeDataPipeline, get_data_pipeline
+from ai_core.spiders.command_center import get_command_center
+from ai_core.spiders.data_pipeline import get_data_pipeline
 
 
 class Command(BaseCommand):

@@ -5,16 +5,12 @@ Comprehensive REST API endpoints for sports betting data, analytics, recommendat
 and real-time information with advanced filtering, aggregation, and WebSocket support.
 """
 
-import asyncio
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Dict, List, Any
 
 from django.utils import timezone
-from django.db.models import Q, Avg, Sum, Count, Max, Min, F, Case, When
-from django.http import JsonResponse
+from django.db.models import Q, Avg, Sum, Count, F
 from django.core.cache import cache
-from django.conf import settings
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
@@ -22,25 +18,20 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 
 from .models import (
     League, Team, Game, Sportsbook, BettingMarket, OddsLine,
-    LineMovement, Bet, BankrollManagement, ArbitrageOpportunity,
-    BettingRecommendation, SportsAnalytics, SportType, GameStatus,
-    BetType, MarketStatus, BetStatus, RiskLevel
+    LineMovement, Bet, ArbitrageOpportunity, BettingRecommendation,
+    SportsAnalytics, GameStatus, BetType, MarketStatus,
+    BetStatus
 )
 from .serializers import (
     LeagueSerializer, TeamSerializer, GameSerializer, SportsbookSerializer,
-    BettingMarketSerializer, OddsLineSerializer, LineMovementSerializer,
-    BetSerializer, BankrollManagementSerializer, ArbitrageOpportunitySerializer,
-    BettingRecommendationSerializer, SportsAnalyticsSerializer,
-    GameOddsSerializer, UserBettingStatsSerializer, MarketAnalysisSerializer,
+    BettingMarketSerializer, OddsLineSerializer, BetSerializer,
+    ArbitrageOpportunitySerializer, BettingRecommendationSerializer, SportsAnalyticsSerializer,
+    GameOddsSerializer, MarketAnalysisSerializer,
     LeagueStandingsSerializer
-)
-from .services import (
-    OddsIngestionService, KellyCriterionService, ArbitrageDetectionService,
-    BettingRecommendationService, SportsAnalyticsService
 )
 
 

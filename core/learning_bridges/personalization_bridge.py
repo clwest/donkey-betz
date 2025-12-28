@@ -12,7 +12,7 @@ import logging
 import re
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class PersonalizationFeedbackLoop:
         from the user's message text.
         """
         try:
-            from core.models_unified_system import UserAgentLearning
+            pass
 
             message = conversation_memory.message or ''
             user = conversation_memory.user
@@ -182,7 +182,7 @@ class PersonalizationFeedbackLoop:
         logger.info(f"👤 Processing interaction: {interaction.interaction_type}")
 
         try:
-            from core.models_unified_system import Opportunity, UserAgentLearning
+            from core.models_unified_system import Opportunity
 
             # Get the opportunity
             opportunity = Opportunity.objects.filter(id=interaction.opportunity_id).first()

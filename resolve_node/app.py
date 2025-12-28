@@ -9,8 +9,8 @@ import sys
 import os
 from pathlib import Path
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, Header, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
 

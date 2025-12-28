@@ -4,12 +4,10 @@ Handles actual job application submissions to real platforms
 """
 
 import logging
-import json
 import time
 import requests
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from datetime import datetime
-from urllib.parse import quote_plus
 import hashlib
 import os
 

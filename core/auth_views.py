@@ -276,8 +276,6 @@ def profile_stats(request):
     Get user profile statistics matching frontend expectations.
     """
     from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-    from django.db.models import Count, Q
-    from datetime import datetime, timedelta
     
     # Get or create statistics and profile
     stats_obj, _ = UserStatistics.objects.get_or_create(user=request.user)

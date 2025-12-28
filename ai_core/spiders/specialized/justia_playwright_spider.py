@@ -17,7 +17,6 @@ All data is publicly accessible legal information.
 
 import asyncio
 import logging
-import re
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup

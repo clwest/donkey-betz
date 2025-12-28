@@ -5,8 +5,8 @@ Establishes data flow between all 7 components for seamless integration.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from datetime import datetime
+from typing import Dict, Any, List
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 

@@ -7,7 +7,6 @@ import json
 import asyncio
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
 from ai_core.agents.autonomous_revenue_system import AutonomousRevenueSystem
 import logging
 

@@ -16,9 +16,8 @@ Bull and Bear agents can debate about.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
-from decimal import Decimal
+from typing import Dict, Any, List
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

@@ -15,20 +15,15 @@ Features:
 - Comprehensive analytics and performance tracking
 """
 
-import uuid
-import json
 import math
-from decimal import Decimal, ROUND_HALF_UP
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from decimal import Decimal
+from datetime import timedelta
 
-from django.db import models, transaction
+from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.db.models import Q, Avg, Sum, Count
+from django.db.models import Avg, Sum
 
 from core.models import UnifiedBaseModel
 
@@ -1413,7 +1408,6 @@ class ArbitrageOpportunity(UnifiedBaseModel):
         Returns:
             List of detected opportunities
         """
-        from django.db import connection
         
         # Get all current odds for games
         current_time = timezone.now()

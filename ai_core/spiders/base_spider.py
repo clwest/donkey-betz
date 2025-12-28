@@ -14,9 +14,8 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Set, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from urllib.parse import urljoin, urlparse
 import redis
 import hashlib
 
@@ -253,7 +252,6 @@ class BaseIntelligenceSpider(ABC):
         Returns:
             Structured intelligence data or None if invalid
         """
-        pass
 
     async def _distribute_intelligence(self, intelligence: IntelligenceData):
         """Distribute intelligence to subscribers via Redis and persist to database"""
@@ -303,7 +301,6 @@ class BaseIntelligenceSpider(ABC):
         """
         try:
             from persistence.models import SpiderData
-            from django.utils import timezone
 
             # Prepare the data for persistence
             spider_name = intelligence.spider_id.rsplit('_', 1)[0] if '_' in intelligence.spider_id else intelligence.spider_id

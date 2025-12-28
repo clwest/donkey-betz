@@ -9,9 +9,7 @@ This agent can:
 - Enforce coding standards
 """
 
-import json
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentResult
 

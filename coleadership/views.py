@@ -16,7 +16,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import CoLeadershipDecision, HumanDecision, DecisionOutcome
+from .models import CoLeadershipDecision
 from .services import record_human_decision, record_outcome, get_user_decision_stats
 from core.models.agents_registry import UnifiedAgentTemplate
 
@@ -318,7 +318,6 @@ def start_boardroom_meeting(request):
             except (CreativeProject.DoesNotExist, ValueError, TypeError):
                 # If UUID is invalid or project doesn't exist, just skip project linkage
                 logger.warning(f"Invalid or non-existent project_id: {project_id}")
-                pass
 
         # Start the meeting
         coordinator = MeetingCoordinatorAgent(user=request.user)

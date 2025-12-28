@@ -32,12 +32,11 @@ import json
 import logging
 import redis
 from redis import asyncio as aioredis
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor
-import importlib
 import os
 import sys
 
@@ -47,7 +46,7 @@ if backend_dir not in sys.path:
     sys.path.append(backend_dir)
 
 from .spider_registry import get_spider_registry
-from .spider_army_orchestrator import SpiderArmyOrchestrator, SpiderType
+from .spider_army_orchestrator import SpiderArmyOrchestrator
 from .agent_data_receiver import create_agent_data_receiver, AgentSpiderDataReceiver
 
 logger = logging.getLogger(__name__)

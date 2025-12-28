@@ -7,10 +7,9 @@ Separates chat conversations from document embeddings to eliminate confusion.
 - Document embeddings: Used only for RAG retrieval from knowledge base documents
 """
 
-import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from django.contrib.auth import get_user_model
 from django.db import models
 

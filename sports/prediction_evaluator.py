@@ -10,7 +10,7 @@ Created: Session 23 - Agent-ML Learning Integration
 
 import logging
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count, Avg

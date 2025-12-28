@@ -4,15 +4,11 @@ Project Builder Views - API endpoints for the AI Production Hub
 
 import json
 import logging
-import asyncio
-from typing import Dict, Any, List
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.contrib.auth.decorators import login_required
-from asgiref.sync import sync_to_async
 
 from .project_builder_orchestrator import get_project_orchestrator
 from ai_core.agents.concrete_executor import concrete_executor

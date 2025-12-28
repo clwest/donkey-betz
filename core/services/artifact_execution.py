@@ -7,9 +7,8 @@ Tracks execution attempts and updates artifact status upon completion.
 
 import logging
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 
-from django.db import transaction
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

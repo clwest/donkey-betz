@@ -11,12 +11,12 @@ import asyncio
 import logging
 import redis
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from channels.layers import get_channel_layer
 
-from .task_agent_matcher import get_task_agent_matcher, TaskRequirements
+from .task_agent_matcher import get_task_agent_matcher
 from .concrete_executor import ConcreteAgentExecutor
 from .real_task_executor import RealTaskExecutor
 

@@ -6,14 +6,13 @@ WITHOUT breaking existing functionality
 
 import logging
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime
 from django.db import connection
 from django.core.cache import cache
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from dataclasses import dataclass, asdict
-import asyncio
 
 logger = logging.getLogger(__name__)
 

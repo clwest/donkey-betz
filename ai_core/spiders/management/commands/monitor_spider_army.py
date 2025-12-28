@@ -6,7 +6,6 @@ Django management command to monitor the spider army performance,
 health, and intelligence flow in real-time.
 """
 
-import asyncio
 import time
 import json
 from datetime import datetime, timezone

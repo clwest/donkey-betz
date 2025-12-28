@@ -53,8 +53,6 @@ from core.agents.base_agent import BaseAgent, AgentResult
 try:
     from core.prompts.registry import (
         PLATFORM_CONTEXT,
-        get_agent_prompt,
-        DYNAMIC_PROMPT_SECTIONS,
     )
     PROMPTING_SYSTEM_AVAILABLE = True
 except ImportError:

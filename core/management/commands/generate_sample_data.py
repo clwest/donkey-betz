@@ -7,13 +7,12 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from core.models_unified_system import (
     Agent, Advisor, Revenue, Opportunity,
-    Application, AgentExecution, Collaboration,
-    SpiderData, AdvisorInsight
+    AgentExecution, Collaboration, SpiderData,
+    AdvisorInsight
 )
 from decimal import Decimal
 from datetime import datetime, timedelta
 import random
-import json
 
 User = get_user_model()
 

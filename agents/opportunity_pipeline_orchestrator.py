@@ -22,13 +22,9 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
-from decimal import Decimal
 from dataclasses import dataclass
 from enum import Enum
 
-from django.utils import timezone
-from django.db import transaction
-from asgiref.sync import async_to_sync, sync_to_async
 
 # Session 392: Updated to use canonical import paths
 try:
@@ -1550,7 +1546,6 @@ class OpportunityPipelineOrchestrator(PipelineLearningMixin):
         """Update pipeline tracking with final results"""
         logger.info(f"Updated pipeline tracking {pipeline_id} with results")
         # This would update the database record
-        pass
 
     async def _generate_pipeline_report(
         self,

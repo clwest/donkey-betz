@@ -12,9 +12,8 @@ This agent focuses on generating income opportunities that require:
 import os
 import sys
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
-import json
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.llm_enforcer import get_llm_enforcer

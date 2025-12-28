@@ -4,7 +4,6 @@ Provides detailed metrics and logging for agent performance analysis
 """
 
 import time
-import json
 import logging
 from datetime import datetime, timedelta
 from functools import wraps

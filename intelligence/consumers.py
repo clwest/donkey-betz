@@ -834,7 +834,6 @@ class IncomeBuilderConsumer(AsyncWebsocketConsumer, AgentContextMixin):
             # Subscribe to Redis channels for bridge updates
             import redis
             import asyncio
-            import json
 
             redis_client = redis.Redis(host='localhost', port=6379, db=0)
             pubsub = redis_client.pubsub()

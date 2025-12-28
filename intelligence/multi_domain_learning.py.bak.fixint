@@ -12,9 +12,8 @@ Agents learn from ALL types of experiences, not just code:
 
 import redis
 import json
-import hashlib
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+from typing import Dict, List, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
 

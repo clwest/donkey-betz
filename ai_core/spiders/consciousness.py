@@ -11,18 +11,13 @@ import os
 import ast
 import json
 import hashlib
-import inspect
-import importlib
-import traceback
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
-import time
 import redis
 import psutil
-import git
 
 @dataclass
 class Capability:
@@ -328,7 +323,6 @@ class ConsciousnessBridge:
                 print("📂 Skipping database check (in async context)")
             except RuntimeError:
                 # We're in sync context, safe to access database
-                from core.models.agents_registry import UnifiedAgentTemplate
                 from django.db import connection
 
                 with connection.cursor() as cursor:
@@ -460,8 +454,6 @@ class ConsciousnessBridge:
     def _discover_patterns(self) -> List[SystemInsight]:
         """Discover patterns and insights in the system - with dynamic real-time analysis"""
         insights = []
-        import random
-        from datetime import timedelta
 
         # Add time-based variation for dynamic insights
         current_time = datetime.now()
@@ -527,7 +519,6 @@ class ConsciousnessBridge:
     def _detect_emergent_behaviors(self) -> List[Dict[str, Any]]:
         """Detect emergent behaviors not explicitly programmed - with dynamic real-time detection"""
         behaviors = []
-        import random
         current_time = datetime.now()
         minute = current_time.minute
 

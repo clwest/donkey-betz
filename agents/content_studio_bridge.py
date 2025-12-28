@@ -21,7 +21,6 @@ from core.views_content import (
 
 # Import agent models
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-from content.models import ContentGeneration, ContentStatus
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

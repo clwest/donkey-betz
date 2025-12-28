@@ -13,8 +13,8 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
-from django.db import models, transaction
-from django.db.models import Sum, Count, Avg, F, Q
+from django.db import transaction
+from django.db.models import Sum, Count, Avg, Q
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -622,7 +622,7 @@ class ROITracker:
         """
         try:
             from core.models_unified_system import (
-                ROIMetric, ConversionEvent, Opportunity
+                ConversionEvent
             )
 
             if target_date is None:
@@ -860,7 +860,7 @@ class ROITracker:
         """
         try:
             from core.models_unified_system import (
-                WeeklyIntelligenceBrief, ConversionEvent, ROIMetric
+                WeeklyIntelligenceBrief, ConversionEvent
             )
 
             # Calculate week boundaries

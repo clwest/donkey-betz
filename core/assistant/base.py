@@ -19,19 +19,14 @@ Architecture:
 
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List
 
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
-from django.db import connection
-from django.db.models import Q, Count, Avg
-from django.utils import timezone
 
-from core.models import ExtendedUserProfile, EnhancedUserProfile, JobApplication, UserEmbedding, UserMemoryContext
+from core.models import EnhancedUserProfile
 from core.personal_ai_assistant import PersonalAIAssistant
 from core.llm_enforcer import LLMEnforcer
-from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
+from core.unified_memory_manager import get_memory_manager
 
 from core.assistant.tool_definitions import get_tool_definitions
 from core.assistant.utils import (

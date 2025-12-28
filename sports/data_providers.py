@@ -6,12 +6,10 @@ for live sports data, odds, and betting information.
 """
 
 import os
-import json
 import requests
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import datetime
+from typing import Dict, List, Optional
 # from django.core.cache import cache
-import time
 from django.conf import settings
 import logging
 

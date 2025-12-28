@@ -13,9 +13,8 @@ into a self-operating intelligence machine.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
-from django.db.models import Count
 from django.utils import timezone as dj_timezone
 
 logger = logging.getLogger(__name__)
@@ -273,7 +272,7 @@ class AutonomousIntelligenceLoop:
         Returns:
             Dict with results
         """
-        from core.models_unified_system import SpiderData, Opportunity
+        from core.models_unified_system import SpiderData
         from core.services.discord_notifications import discord_notify
 
         results = {
