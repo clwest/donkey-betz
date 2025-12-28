@@ -1,51 +1,43 @@
-# Session 564 - Start Here
+# Session 565 - Start Here
 
-**Previous Session:** 563
+**Previous Session:** 564
 **Date:** December 27, 2025
 **Focus:** Continue platform improvements
 
 ---
 
-## Session 563 Accomplishments
+## Session 564 Accomplishments
 
-### 1. Betting Dashboard Sub-Tab Fixes - COMPLETE
+### 1. Network Graph Fixes - COMPLETE
 
-| Sub-Tab | Fix Applied | Status |
-|---------|-------------|--------|
-| **Overview - Value Plays** | Fixed API field access (markets dict not array) | WORKING |
-| **Futures** | Extract teams from `contenders` array | WORKING |
-| **Line Movement** | Fixed migrations, default to "Show All", robust events | WORKING |
-| **Prediction Markets** | Fixed Kalshi field mapping (implied_probability) | WORKING |
-| **Arbitrage** | Added robust event handling | WORKING |
+| Fix | Details |
+|-----|---------|
+| **is_active field** | Agent Details card now shows Active status correctly |
+| **Agent categories** | Fixed 16 agents with NULL category (Market Intelligence, Cryptocurrency, etc.) |
 
-### 2. Agent Ecosystem Audit - COMPLETE
+### 2. Thinking Engine Restoration - COMPLETE
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Agent classes in code | 67 | 67 |
-| Agents in database | 34 | 71 (67 active) |
-| Missing agents registered | - | +37 |
+- Found `autonomous-thinking-cycle` task was NOT in database scheduler
+- Created PeriodicTask entries for thinking cycle and concern scanning
+- Thinking Engine now runs every 2 hours
+- Created Cycle #2 successfully
 
-**New agents registered across categories:**
-- Content Studio: 4 agents
-- Development: 4 agents (CodeGeneratorAgent, DevOpsAgent, etc.)
-- Blockchain: 5 agents (WhaleWatcherAgent, ExploitDetectorAgent, etc.)
-- Stock/Market: 8 agents (BearCaseAgent, BullCaseAgent, etc.)
-- Narrative/Cultural: 4 agents
-- Podcast: 4 agents
-- Workflow/Pipeline: 5 agents
-- Specialized: 3 agents
+### 3. Dream Triage Pipeline - COMPLETE
 
-### 3. Celery Worker Fix - COMPLETE
+Implemented `triage_dreams` action in Thinking Engine:
+- **HIGH VALUE** (composite >= 0.65, action >= 0.6) -> Boardroom
+- **INSPIRATION** (composite >= 0.5, action < 0.6) -> Mark as shown
+- **STALE LOW** (> 14 days, composite < 0.4) -> Archive
 
-- Celery Beat was running but **worker was not**
-- Started Celery worker with 4 concurrency
-- Triggered learning cycle manually - 6 knowledge transfers made
-- Learning now active: 284 total transfers, 23 in last 24h
+Files modified:
+- `core/services/autonomous_action_executor.py` - Added `_execute_triage_dreams`
+- `core/agents/thinking_agent.py` - Added `triage_dreams` to available actions
 
-**Handoffs:**
-- `docs/handoffs/SESSION_563_BETTING_DASHBOARD_FIXES.md`
-- `docs/handoffs/SESSION_563_AGENT_ECOSYSTEM_AUDIT.md`
+### 4. Live Feed Fix - COMPLETE
+
+Dreams with empty titles now show meaningful content:
+- Extracts title from content using `. ` or `: ` separators
+- Falls back to first 60 chars if no separator
 
 ---
 
@@ -55,14 +47,14 @@
 |-----------|-------|--------|
 | **Spiders** | 77 | Active |
 | **Agents** | 67 | Active (+ 4 inactive legacy) |
-| **Knowledge Items** | 1,247 | Growing |
-| **Learning Transfers** | 284 | 23 in last 24h |
+| **Knowledge Items** | 1,247+ | Growing |
+| **Learning Transfers** | 284+ | Active |
 | **Discord Commands** | ~96 | 4 cogs disabled |
 | **Celery Beat Tasks** | 52+ | Running |
 
 ---
 
-## Session 564 Priorities
+## Session 565 Priorities
 
 ### 1. Test Remaining Betting Sub-Tabs
 - [ ] Bankroll tab - may need same event listener fixes
@@ -101,23 +93,15 @@ ps aux | grep "celery.*worker"
 
 ---
 
-## Commits from Session 563
+## Commits from Session 564
 
 ```
-7e34354 docs: Agent ecosystem audit - registered 37 missing agents
-5c80034 docs: Add handoff and prep Session 564
-ee4f75c fix: Arbitrage tab uses authenticatedFetch and robust events
-564c114 fix: Prediction Markets now displays Kalshi data correctly
-a35bbf4 fix: Line Movement tab now loads data correctly
-632a4fc fix: Line Movement uses regular fetch for public APIs
-20d9e94 fix: Line Movement tab now functional with Show All option
-f058188 fix: Futures API now extracts teams from contenders array
-0653b3e fix: Value Plays now loads correctly from live odds API
-b0eec38 feat: Bet history UI with comprehensive stats display
-df3f81d feat: Bet tracking backend - parlays & wager history
+46a90e6 fix(Session 564): Network Graph Agent Details card shows is_active
+412473e feat(Session 564): Autonomous Dream Triage Pipeline
+1a740ee fix(Session 564): Live Feed extracts title from dream content
 ```
 
 ---
 
-**Session 563: Betting Fixes + Agent Audit + Celery Fix - COMPLETE**
-**Ready for Session 564**
+**Session 564: Network Graph + Thinking Engine + Dream Pipeline + Live Feed - COMPLETE**
+**Ready for Session 565**
