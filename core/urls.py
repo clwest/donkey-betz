@@ -1092,9 +1092,22 @@ from core.views_agent_orchestration import (
 from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,
     sports_game_analysis, live_betting_opportunities, list_betting_markets,
-    get_bankroll_management, get_bankroll_stats, live_odds, get_weather_data, get_injury_data,
+    get_bankroll_management, get_bankroll_stats, live_odds, live_odds_with_scores,
+    get_player_props, get_weather_data, get_injury_data,
     get_betting_intelligence, orchestrate_agent_analysis, get_orchestration_status, get_game_details,
-    get_bookmaker_analysis, get_game_spider_insights, scan_arbitrage_opportunities
+    get_bookmaker_analysis, get_game_spider_insights, scan_arbitrage_opportunities, get_futures_odds,
+    log_wager, get_line_movement, get_games_with_movement
+)
+# Session 562: Push Notification APIs
+from core.views_push_notifications import (
+    get_vapid_public_key, subscribe_push, unsubscribe_push,
+    notification_preferences, get_subscription_status, send_test_push
+)
+
+# Session 563: Bet Tracking APIs
+from core.views_betting import (
+    place_bet, get_wagers, get_wager_detail, settle_wager,
+    cancel_wager, get_betting_stats, get_recent_activity
 )
 
 # Import Phase 2 advanced features
@@ -2384,6 +2397,8 @@ urlpatterns = [
     path('api/v1/sports/analyze-game/', sports_game_analysis, name='sports-analyze'),
     path('api/v1/sports/live-opportunities/', live_betting_opportunities, name='live-opportunities'),
     path('api/v1/sports/live-odds/', live_odds, name='live-odds'),
+    path('api/v1/sports/live-odds-scores/', live_odds_with_scores, name='live-odds-scores'),
+    path('api/v1/sports/events/<str:event_id>/props/', get_player_props, name='player-props'),
     path('api/v1/odds/markets/', list_betting_markets, name='betting-markets'),
     path('api/v1/odds/bankroll/', get_bankroll_management, name='bankroll'),
 
@@ -2402,6 +2417,31 @@ urlpatterns = [
     path('api/v1/betting/arbitrage/', detect_arbitrage, name='betting-arbitrage'),
     # Session 559: GET endpoint for live arbitrage scanning
     path('api/v1/betting/arbitrage/scan/', scan_arbitrage_opportunities, name='betting-arbitrage-scan'),
+    # Session 560: Futures odds endpoint
+    path('api/v1/betting/futures/', get_futures_odds, name='betting-futures'),
+    # Session 560: Web wager logging
+    path('api/v1/betting/wager/', log_wager, name='betting-wager-log'),
+    # Session 561: Line Movement Charts
+    path('api/v1/betting/line-movement/', get_line_movement, name='betting-line-movement'),
+    path('api/v1/betting/line-movement/<str:game_id>/', get_line_movement, name='betting-line-movement-game'),
+    path('api/v1/betting/movers/', get_games_with_movement, name='betting-movers'),
+
+    # Session 563: Bet Tracking APIs
+    path('api/v1/betting/place/', place_bet, name='betting-place'),
+    path('api/v1/betting/wagers/', get_wagers, name='betting-wagers'),
+    path('api/v1/betting/wagers/<uuid:wager_id>/', get_wager_detail, name='betting-wager-detail'),
+    path('api/v1/betting/wagers/<uuid:wager_id>/settle/', settle_wager, name='betting-wager-settle'),
+    path('api/v1/betting/wagers/<uuid:wager_id>/cancel/', cancel_wager, name='betting-wager-cancel'),
+    path('api/v1/betting/stats/', get_betting_stats, name='betting-stats'),
+    path('api/v1/betting/recent/', get_recent_activity, name='betting-recent'),
+
+    # Session 562: Push Notifications for Arb Alerts
+    path('api/v1/push/vapid-key/', get_vapid_public_key, name='push-vapid-key'),
+    path('api/v1/push/subscribe/', subscribe_push, name='push-subscribe'),
+    path('api/v1/push/unsubscribe/', unsubscribe_push, name='push-unsubscribe'),
+    path('api/v1/push/preferences/', notification_preferences, name='push-preferences'),
+    path('api/v1/push/status/', get_subscription_status, name='push-status'),
+    path('api/v1/push/test/', send_test_push, name='push-test'),
 
     # ===== PHASE 2 ADVANCED FEATURES =====
     
