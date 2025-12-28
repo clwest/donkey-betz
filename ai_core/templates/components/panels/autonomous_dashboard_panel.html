@@ -1,16 +1,140 @@
 <!-- ============================================================ -->
 <!-- Session 484: AUTONOMOUS SYSTEMS DASHBOARD -->
+<!-- Session 569: Added investor-ready hero section -->
 <!-- Visibility into 19 autonomous situations running 24/7 -->
 <!-- ============================================================ -->
 <div class="tab-pane fade" id="autonomous" role="tabpanel">
     <div class="container-fluid p-4">
-        <!-- Header with Stats -->
+
+        <!-- ========================================================== -->
+        <!-- Session 569: INVESTOR HERO SECTION -->
+        <!-- Large, impressive stats for demo/pitch presentations -->
+        <!-- ========================================================== -->
+        <div class="row mb-4" id="investorHeroSection">
+            <div class="col-12">
+                <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(236, 72, 153, 0.2) 50%, rgba(59, 130, 246, 0.2) 100%); border: 2px solid rgba(139, 92, 246, 0.5); border-radius: 16px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <!-- Hero Title -->
+                        <div class="text-center mb-4">
+                            <h2 class="mb-2" style="color: #f9a8d4; text-shadow: 0 0 20px rgba(236, 72, 153, 0.6); font-size: 2rem;">
+                                <i class="fas fa-robot me-2"></i>Autonomous Intelligence Platform
+                            </h2>
+                            <p class="lead mb-0" style="color: rgba(255,255,255,0.8); font-size: 1.1rem;">
+                                AI-powered situations running 24/7 across financial, research, content, and legal domains
+                            </p>
+                        </div>
+
+                        <!-- Hero Stats Grid -->
+                        <div class="row g-3 justify-content-center">
+                            <!-- Total Situations -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #a78bfa; text-shadow: 0 0 15px rgba(139, 92, 246, 0.5);" id="heroTotalSituations">
+                                        19
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-cogs me-1"></i>Situations
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Active Now -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #34d399; text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);" id="heroActiveSituations">
+                                        15
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-check-circle me-1"></i>Active
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Domains -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #fbbf24; text-shadow: 0 0 15px rgba(245, 158, 11, 0.5);" id="heroDomains">
+                                        6
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-layer-group me-1"></i>Domains
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Runs Today -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #60a5fa; text-shadow: 0 0 15px rgba(59, 130, 246, 0.5);" id="heroRuns24h">
+                                        0
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-play-circle me-1"></i>Runs (24h)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Success Rate -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(236, 72, 153, 0.2); border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #f472b6; text-shadow: 0 0 15px rgba(236, 72, 153, 0.5);" id="heroSuccessRate">
+                                        100%
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-chart-line me-1"></i>Success
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Uptime -->
+                            <div class="col-6 col-md-2">
+                                <div class="text-center p-3" style="background: rgba(52, 211, 153, 0.2); border-radius: 12px; border: 1px solid rgba(52, 211, 153, 0.4);">
+                                    <div style="font-size: 2.5rem; font-weight: 700; color: #6ee7b7; text-shadow: 0 0 15px rgba(52, 211, 153, 0.5);" id="heroUptime">
+                                        24/7
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 500;">
+                                        <i class="fas fa-clock me-1"></i>Uptime
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Domain Pills -->
+                        <div class="text-center mt-4">
+                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.3); color: #fbbf24; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-chart-bar me-1"></i>Financial
+                                </span>
+                                <span class="badge" style="background: rgba(59, 130, 246, 0.3); color: #60a5fa; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-microscope me-1"></i>Research
+                                </span>
+                                <span class="badge" style="background: rgba(139, 92, 246, 0.3); color: #a78bfa; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-pen-fancy me-1"></i>Content
+                                </span>
+                                <span class="badge" style="background: rgba(236, 72, 153, 0.3); color: #f472b6; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-palette me-1"></i>Creative
+                                </span>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.3); color: #34d399; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-dollar-sign me-1"></i>Income
+                                </span>
+                                <span class="badge" style="background: rgba(107, 114, 128, 0.3); color: #9ca3af; font-size: 0.85rem; padding: 8px 16px; border-radius: 20px;">
+                                    <i class="fas fa-gavel me-1"></i>Legal
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END Investor Hero Section -->
+
+        <!-- Header with Refresh Button -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="mb-1" style="color: #f9a8d4; text-shadow: 0 0 15px rgba(236, 72, 153, 0.5);">
-                    <i class="fas fa-robot me-2"></i>Autonomous Systems Dashboard
+                    <i class="fas fa-robot me-2"></i>Situation Details
                 </h4>
-                <p class="text-muted mb-0">Monitoring 19 autonomous situations running 24/7</p>
+                <p class="text-muted mb-0">Real-time monitoring of all autonomous processes</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-info" onclick="refreshAutonomousDashboard()" title="Refresh Dashboard">
@@ -691,6 +815,9 @@ async function loadSituations() {
 
         if (data.success) {
             renderSituationsByDomain(data.by_domain, data.situations);
+
+            // Session 569: Update investor hero stats from situations data
+            updateHeroStats(data.situations, data.by_domain);
         }
     } catch (error) {
         console.error('Error loading situations:', error);
@@ -700,6 +827,44 @@ async function loadSituations() {
             </div>
         `;
     }
+}
+
+// Session 569: Update hero stats for investor demo
+function updateHeroStats(situations, byDomain) {
+    if (!situations) return;
+
+    // Calculate stats from situations array
+    const totalSituations = situations.length;
+    const activeSituations = situations.filter(s => s.status === 'active' || s.status === 'running').length;
+    const totalDomains = byDomain ? Object.keys(byDomain).length : 6;
+    const totalRuns24h = situations.reduce((sum, s) => sum + (s.runs_24h || 0), 0);
+
+    // Calculate success rate (avoid division by zero)
+    const situationsWithRuns = situations.filter(s => s.runs_30d > 0);
+    let avgSuccessRate = 100;
+    if (situationsWithRuns.length > 0) {
+        const totalSuccessRate = situationsWithRuns.reduce((sum, s) => sum + (s.success_rate || 0), 0);
+        avgSuccessRate = Math.round(totalSuccessRate / situationsWithRuns.length);
+    }
+
+    // Update hero section elements
+    const heroTotal = document.getElementById('heroTotalSituations');
+    const heroActive = document.getElementById('heroActiveSituations');
+    const heroDomains = document.getElementById('heroDomains');
+    const heroRuns = document.getElementById('heroRuns24h');
+    const heroSuccess = document.getElementById('heroSuccessRate');
+
+    if (heroTotal) heroTotal.textContent = totalSituations;
+    if (heroActive) heroActive.textContent = activeSituations;
+    if (heroDomains) heroDomains.textContent = totalDomains;
+    if (heroRuns) heroRuns.textContent = totalRuns24h;
+    if (heroSuccess) heroSuccess.textContent = avgSuccessRate + '%';
+
+    // Also update the smaller stat cards
+    const statTotal = document.getElementById('statTotalSituations');
+    const statRuns = document.getElementById('statRuns24h');
+    if (statTotal) statTotal.textContent = totalSituations;
+    if (statRuns) statRuns.textContent = totalRuns24h;
 }
 
 function renderSituationsByDomain(byDomain, situations) {
