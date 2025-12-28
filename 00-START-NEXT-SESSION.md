@@ -2,13 +2,13 @@
 
 **Previous Session:** 563
 **Date:** December 27, 2025
-**Focus:** Continue Betting Dashboard Polish, Mobile, Analytics
+**Focus:** Continue platform improvements
 
 ---
 
 ## Session 563 Accomplishments
 
-### Betting Dashboard Sub-Tab Fixes - COMPLETE
+### 1. Betting Dashboard Sub-Tab Fixes - COMPLETE
 
 | Sub-Tab | Fix Applied | Status |
 |---------|-------------|--------|
@@ -18,61 +18,34 @@
 | **Prediction Markets** | Fixed Kalshi field mapping (implied_probability) | WORKING |
 | **Arbitrage** | Added robust event handling | WORKING |
 
-### Bet Tracking Backend - COMPLETE
+### 2. Agent Ecosystem Audit - COMPLETE
 
-| Feature | Status |
-|---------|--------|
-| `PlacedWager` model | DONE |
-| `PlacedWagerLeg` model (parlays) | DONE |
-| `BettingStats` model | DONE |
-| `/api/v1/betting/recent/` endpoint | DONE |
-| `/api/v1/betting/stats/` endpoint | DONE |
-| Bet history UI in Overview | DONE |
+| Metric | Before | After |
+|--------|--------|-------|
+| Agent classes in code | 67 | 67 |
+| Agents in database | 34 | 71 (67 active) |
+| Missing agents registered | - | +37 |
 
-### Key Pattern Applied
+**New agents registered across categories:**
+- Content Studio: 4 agents
+- Development: 4 agents (CodeGeneratorAgent, DevOpsAgent, etc.)
+- Blockchain: 5 agents (WhaleWatcherAgent, ExploitDetectorAgent, etc.)
+- Stock/Market: 8 agents (BearCaseAgent, BullCaseAgent, etc.)
+- Narrative/Cultural: 4 agents
+- Podcast: 4 agents
+- Workflow/Pipeline: 5 agents
+- Specialized: 3 agents
 
-All betting sub-tabs now use robust event handling:
-```javascript
-// Event delegation + click fallback
-document.addEventListener('shown.bs.tab', function(event) {
-    if (event.target?.id === 'betting-{tab}-tab') {
-        loadFunction();
-    }
-});
-document.getElementById('betting-{tab}-tab')?.addEventListener('click', function() {
-    setTimeout(loadFunction, 100);
-});
-```
+### 3. Celery Worker Fix - COMPLETE
 
-**Handoff:** `docs/handoffs/SESSION_563_BETTING_DASHBOARD_FIXES.md`
+- Celery Beat was running but **worker was not**
+- Started Celery worker with 4 concurrency
+- Triggered learning cycle manually - 6 knowledge transfers made
+- Learning now active: 284 total transfers, 23 in last 24h
 
----
-
-## Session 564 Priorities
-
-### 1. Test Remaining Sub-Tabs
-- [ ] Bankroll tab - may need same event listener fixes
-- [ ] Alerts tab - may need same event listener fixes
-- [ ] Live Odds tab - verify all features work
-
-### 2. Mobile-Responsive Improvements
-- [ ] Audit betting dashboard on mobile
-- [ ] Fix table responsiveness
-- [ ] Add touch-friendly controls
-
-### 3. Line Movement Enhancement
-- [ ] Celery beat runs `snapshot_odds_for_line_movement()` every 2 hours
-- [ ] After 24 hours, real line movement data will be available
-- [ ] Add time-series chart for individual games
-
-### 4. Betting Analytics
-- [ ] Win rate by sport/type charts
-- [ ] Monthly P/L breakdown
-- [ ] Kelly criterion calculator improvements
-
-### 5. Export Functionality
-- [ ] CSV export for betting history
-- [ ] PDF summary report generation
+**Handoffs:**
+- `docs/handoffs/SESSION_563_BETTING_DASHBOARD_FIXES.md`
+- `docs/handoffs/SESSION_563_AGENT_ECOSYSTEM_AUDIT.md`
 
 ---
 
@@ -80,73 +53,71 @@ document.getElementById('betting-{tab}-tab')?.addEventListener('click', function
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 76 | Active |
-| **Agents** | 55 | Active |
+| **Spiders** | 77 | Active |
+| **Agents** | 67 | Active (+ 4 inactive legacy) |
+| **Knowledge Items** | 1,247 | Growing |
+| **Learning Transfers** | 284 | 23 in last 24h |
 | **Discord Commands** | ~96 | 4 cogs disabled |
 | **Celery Beat Tasks** | 52+ | Running |
-| **Web UI Tabs** | 14 | Betting = 8 sub-tabs |
 
-### Betting Dashboard Sub-Tabs (8)
+---
 
-| # | Tab | Status | Notes |
-|---|-----|--------|-------|
-| 1 | Overview | WORKING | Value Plays, Bet History |
-| 2 | Live Odds | WORKING | Props, Bet Slip |
-| 3 | Arbitrage | WORKING | Scans 40+ bookmakers |
-| 4 | Prediction Markets | WORKING | Kalshi integration |
-| 5 | Bankroll | NEEDS TEST | May need event fixes |
-| 6 | Futures | WORKING | Championship odds |
-| 7 | Line Movement | WORKING | Needs more snapshots |
-| 8 | Alerts | NEEDS TEST | May need event fixes |
+## Session 564 Priorities
+
+### 1. Test Remaining Betting Sub-Tabs
+- [ ] Bankroll tab - may need same event listener fixes
+- [ ] Alerts tab - may need same event listener fixes
+
+### 2. Mobile-Responsive Improvements
+- [ ] Audit betting dashboard on mobile
+- [ ] Fix table responsiveness
+
+### 3. Agent Learning Enhancement
+- [ ] Verify all 67 agents are participating in learning
+- [ ] Check learning connections for new agents
+- [ ] Monitor knowledge transfer quality
+
+### 4. Line Movement Data
+- [ ] Celery beat runs `snapshot_odds_for_line_movement()` every 2 hours
+- [ ] After 24 hours, real line movement data will be available
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start all services
+# 1. Start all services (IMPORTANT: includes Celery worker!)
 make start && make celery
 
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test Betting Dashboard:
-#    - Go to Betting tab
-#    - Click each sub-tab to verify loading
-#    - Check browser console for [TabName] logs
+# 3. Verify Celery worker is running:
+ps aux | grep "celery.*worker"
+
+# 4. Manually trigger learning if needed:
+.venv/bin/python manage.py shell -c "from core.tasks import run_agent_learning_cycle; run_agent_learning_cycle()"
 ```
-
----
-
-## Key Files (Session 564)
-
-| File | Purpose |
-|------|---------|
-| `betting/betting_overview.html` | Overview with Value Plays, Bet History |
-| `betting/betting_line_movement.html` | Line movement charts |
-| `betting/betting_markets.html` | Kalshi prediction markets |
-| `betting/betting_arbitrage.html` | Arbitrage scanner |
-| `betting/betting_bankroll.html` | Bankroll tracking (NEEDS TEST) |
-| `betting/betting_notifications.html` | Alerts (NEEDS TEST) |
-| `core/views_odds_sports.py` | All betting API endpoints |
 
 ---
 
 ## Commits from Session 563
 
 ```
-ee4f75c fix(Session 563): Arbitrage tab uses authenticatedFetch and robust events
-564c114 fix(Session 563): Prediction Markets now displays Kalshi data correctly
-a35bbf4 fix(Session 563): Line Movement tab now loads data correctly
-632a4fc fix(Session 563): Line Movement uses regular fetch for public APIs
-20d9e94 fix(Session 563): Line Movement tab now functional with Show All option
-f058188 fix(Session 563): Futures API now extracts teams from contenders array
-0653b3e fix(Session 563): Value Plays now loads correctly from live odds API
-b0eec38 feat(Session 563): Bet history UI with comprehensive stats display
-df3f81d feat(Session 563): Bet tracking backend - parlays & wager history
+7e34354 docs: Agent ecosystem audit - registered 37 missing agents
+5c80034 docs: Add handoff and prep Session 564
+ee4f75c fix: Arbitrage tab uses authenticatedFetch and robust events
+564c114 fix: Prediction Markets now displays Kalshi data correctly
+a35bbf4 fix: Line Movement tab now loads data correctly
+632a4fc fix: Line Movement uses regular fetch for public APIs
+20d9e94 fix: Line Movement tab now functional with Show All option
+f058188 fix: Futures API now extracts teams from contenders array
+0653b3e fix: Value Plays now loads correctly from live odds API
+b0eec38 feat: Bet history UI with comprehensive stats display
+df3f81d feat: Bet tracking backend - parlays & wager history
 ```
 
 ---
 
-**Session 563: Betting Dashboard Fixes - COMPLETE**
+**Session 563: Betting Fixes + Agent Audit + Celery Fix - COMPLETE**
 **Ready for Session 564**
