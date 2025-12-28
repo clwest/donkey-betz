@@ -30156,13 +30156,19 @@
                         // Add AI response with metadata (includes prompt if available)
                         // Session 58: Phase B.3 - Add workflow execution button
                         // Session 483: Include quick_actions for smart follow-up buttons
+                        // Session 565: Include intelligence_context for source attribution UI
+                        const intelContext = response.metadata?.intelligence_context || null;
+                        if (intelContext) {
+                            console.log('🧠 Session 565: Intelligence context for addMessage:', intelContext);
+                        }
                         this.addMessage('assistant', response.message, false, {
                             prompt: response.prompt || response.params?.prompt,
                             showExecuteButton: response.showExecuteButton,
                             action: response.action,
                             params: response.params,
                             quick_actions: response.quick_actions || [],
-                            smart_suggestions: response.smart_suggestions || []
+                            smart_suggestions: response.smart_suggestions || [],
+                            intelligence_context: intelContext
                         });
 
                         // Session 486: Update reference context indicator
@@ -30996,14 +31002,76 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     messageIcon = role === 'user' ? '👤' : '🤖';
                 }
 
+                // Session 565: Build Intelligence Sources panel if available
+                let intelligencePanel = '';
+                if (role === 'assistant' && !isTemporary && metadata.intelligence_context) {
+                    const intel = metadata.intelligence_context;
+                    const totalSources = (intel.knowledge_count || 0) + (intel.experts_count || 0) +
+                                        (intel.dreams_count || 0) + (intel.policies_count || 0) + (intel.trends_count || 0);
+
+                    if (totalSources > 0) {
+                        // Build expert badges
+                        const expertBadges = (intel.experts || []).map(e =>
+                            `<span style="background: rgba(168, 85, 247, 0.3); color: #c4b5fd; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-right: 4px;">🤖 ${e.name || e}</span>`
+                        ).join('');
+
+                        // Build spider source badges
+                        const spiderBadges = (intel.spider_sources || []).slice(0, 5).map(s =>
+                            `<span style="background: rgba(59, 130, 246, 0.3); color: #93c5fd; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-right: 4px;">🕷️ ${s}</span>`
+                        ).join('');
+
+                        // Session 565: Intelligence Sources panel - collapsible with details
+                        const detailsId = 'intel-details-' + Date.now();
+                        intelligencePanel = `
+                            <div class="intelligence-sources-panel" style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 10px;">
+                                <button class="btn btn-sm" id="intel-btn-${detailsId}"
+                                        style="font-size: 11px; padding: 4px 12px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 6px; cursor: pointer;"
+                                        onclick="document.getElementById('${detailsId}').style.display = document.getElementById('${detailsId}').style.display === 'none' ? 'block' : 'none'">
+                                    🧠 Intelligence Sources (${totalSources})
+                                </button>
+                                <div id="${detailsId}" style="display: none; background: rgba(99,102,241,0.15); border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 12px;">
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="color: #a5b4fc;">📚 Knowledge:</strong> ${intel.knowledge_count || 0} entries
+                                        ${intel.trends_count > 0 ? ` | <strong style="color: #86efac;">📈 Trends:</strong> ${intel.trends_count}` : ''}
+                                        ${intel.experts_count > 0 ? ` | <strong style="color: #c4b5fd;">👥 Experts:</strong> ${intel.experts_count}` : ''}
+                                        ${intel.dreams_count > 0 ? ` | <strong style="color: #fda4af;">💭 Dreams:</strong> ${intel.dreams_count}` : ''}
+                                    </div>
+                                    ${spiderBadges ? '<div style="margin-bottom: 6px;">' + spiderBadges + '</div>' : ''}
+                                    ${expertBadges ? '<div style="margin-bottom: 6px;">' + expertBadges + '</div>' : ''}
+                                    <div style="color: #94a3b8; font-style: italic; font-size: 11px; margin-top: 6px;">
+                                        ${intel.attribution || 'Based on platform intelligence'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        console.log('🧠 Session 565: Intelligence panel built with', totalSources, 'sources');
+                    }
+                }
+
+                // Session 565: Debug - log the panel HTML
+                if (intelligencePanel) {
+                    console.log('🧠 Session 565: Panel HTML length:', intelligencePanel.length);
+                    console.log('🧠 Session 565: Panel HTML preview:', intelligencePanel.substring(0, 200));
+                }
+
                 const messageHTML = `
                     <div id="${messageId}" class="mb-2 ${role === 'user' ? 'text-end' : ''}" ${isTemporary ? 'data-temporary="true"' : ''}>
                         <div class="d-inline-block p-3 rounded" style="max-width: 85%; ${messageStyle} ${messageBorder} font-size: 15px; line-height: 1.6; position: relative;">
                             ${messageIcon} ${content}
                             ${actionButtons}
+                            ${intelligencePanel}
                         </div>
                     </div>
                 `;
+
+                // Session 565: Debug - verify messageHTML contains intelligence panel
+                if (intelligencePanel) {
+                    if (messageHTML.includes('intelligence-sources-panel')) {
+                        console.log('🧠 Session 565: ✅ Intelligence panel included in message');
+                    } else {
+                        console.log('🧠 Session 565: ❌ Panel not in messageHTML');
+                    }
+                }
 
                 // Session 189: Add message to primary container (tab)
                 messagesDiv.insertAdjacentHTML('beforeend', messageHTML);
@@ -31733,10 +31801,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
                     // Session 483: Include quick_actions from SuperPlatform response
                     console.log('🔍 Session 483: Clean Architecture quick_actions:', cleanData.quick_actions);
+                    // Session 565: Include metadata for intelligence context UI panel
+                    console.log('🧠 Session 565: Intelligence context in metadata:', cleanData.metadata?.intelligence_context);
                     return {
                         message: responseHtml,
                         quick_actions: cleanData.quick_actions || [],
-                        smart_suggestions: cleanData.smart_suggestions || []
+                        smart_suggestions: cleanData.smart_suggestions || [],
+                        metadata: cleanData.metadata || null
                     };
                 }
 

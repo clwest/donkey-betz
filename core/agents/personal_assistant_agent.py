@@ -1261,13 +1261,16 @@ ORCHESTRATION:
                 else:
                     prompt += " Use the trend data and articles provided above to give a current, relevant answer."
 
+            # Session 566: Increased max_completion_tokens from 1500 to 4000
+            # GPT-5-mini uses tokens for reasoning before generating content.
+            # With long system prompts, 1500 wasn't enough - model used all for reasoning.
             response = self.client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": task}
                 ],
-                max_completion_tokens=1500,
+                max_completion_tokens=4000,
                 reasoning_effort="medium",
             )
 
