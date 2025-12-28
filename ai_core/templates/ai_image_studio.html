@@ -75349,9 +75349,23 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Load dashboard when thinking tab is shown
+        // Session 572: Added auto-refresh every 30 seconds
+        let thinkingRefreshInterval = null;
         const thinkingTab = document.getElementById('research-thinking-tab');
         if (thinkingTab) {
-            thinkingTab.addEventListener('shown.bs.tab', loadThinkingDashboard);
+            thinkingTab.addEventListener('shown.bs.tab', () => {
+                loadThinkingDashboard();
+                // Start auto-refresh
+                if (thinkingRefreshInterval) clearInterval(thinkingRefreshInterval);
+                thinkingRefreshInterval = setInterval(loadThinkingDashboard, 30000);
+            });
+            thinkingTab.addEventListener('hidden.bs.tab', () => {
+                // Stop auto-refresh when tab is hidden
+                if (thinkingRefreshInterval) {
+                    clearInterval(thinkingRefreshInterval);
+                    thinkingRefreshInterval = null;
+                }
+            });
         }
 
         // ====================================================================
@@ -75524,9 +75538,23 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Load concerns dashboard when tab is shown
+        // Session 572: Added auto-refresh every 30 seconds
+        let concernsRefreshInterval = null;
         const concernsTab = document.getElementById('research-concerns-tab');
         if (concernsTab) {
-            concernsTab.addEventListener('shown.bs.tab', loadConcernsDashboard);
+            concernsTab.addEventListener('shown.bs.tab', () => {
+                loadConcernsDashboard();
+                // Start auto-refresh
+                if (concernsRefreshInterval) clearInterval(concernsRefreshInterval);
+                concernsRefreshInterval = setInterval(loadConcernsDashboard, 30000);
+            });
+            concernsTab.addEventListener('hidden.bs.tab', () => {
+                // Stop auto-refresh when tab is hidden
+                if (concernsRefreshInterval) {
+                    clearInterval(concernsRefreshInterval);
+                    concernsRefreshInterval = null;
+                }
+            });
         }
 
         // ====================================================================

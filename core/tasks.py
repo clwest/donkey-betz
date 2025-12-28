@@ -17240,25 +17240,39 @@ Use the generate_podcast_script tool to create the full script with speaker labe
 # =============================================================================
 
 @shared_task(bind=True)
-def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
+def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     """
     Background task to generate a self-blog using ContentWriterAgent.
-    
-    This allows the UI to show progress while the LLM generates content.
-    
+
+    Session 572: Now generates DIVERSE topics based on what the system is learning,
+    not just about "the AI ecosystem" every time.
+
+    Topic categories:
+    - 'system': About the AI platform itself (meta/self-aware)
+    - 'trending': Based on trending topics from spider data
+    - 'dreams': Based on recent agent dreams/insights
+    - 'conversations': Based on agent conversations
+    - 'random': Pick a random category
+
     Args:
         tone: Blog tone (professional/casual/technical/enthusiastic)
         word_count: Target word count
-        
+        topic_category: Which topic source to use (default: random)
+
     Returns:
         dict with blog_id and title on success
     """
     import json
+    import random
     from datetime import timedelta
     from django.utils import timezone
     from django.db.models import Count
-    
-    logger.info(f"🤖 [SELF-BLOG] Starting generation with tone={tone}")
+
+    # Session 572: Pick a random topic category if not specified
+    if topic_category is None or topic_category == 'random':
+        topic_category = random.choice(['trending', 'dreams', 'conversations', 'system'])
+
+    logger.info(f"🤖 [SELF-BLOG] Starting generation with tone={tone}, topic_category={topic_category}")
     
     try:
         from core.models_unified_system import (
@@ -17349,235 +17363,202 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
             .order_by('-count')[:3]
         )
 
-        # Build research context - Capture the FULL amazingness of the system!
-        # Format recent conversations for display
-        conversations_text = ""
-        for c in recent_conversations[:3]:
-            topic = c.get('topic', 'topic') or 'general discussion'
-            conversations_text += f"- {c.get('initiator__name', 'Agent')} initiated '{topic[:40]}' ({c.get('conversation_type', 'discussion')})\n"
+        # ========================================================================
+        # SESSION 572: DIVERSE TOPIC GENERATION
+        # ========================================================================
+        # Instead of always writing about "the AI ecosystem", pick diverse topics
+        # based on what the system is actually learning from its data sources.
 
-        # Format recent dreams for display
-        dreams_text = ""
-        for d in recent_dreams[:3]:
-            title = d.get('title', 'dream') or 'creative synthesis'
-            dreams_text += f"- {d.get('agent__name', 'Agent')} dreamed: '{title[:50]}' ({d.get('dream_type', 'synthesis')})\n"
+        blog_topic = None
+        blog_research = None
+        blog_task = None
+        seo_keywords = []
 
-        # Format top dreamers
-        dreamers_text = chr(10).join([f"- {d['agent__name']}: {d['count']} dreams" for d in top_dreamers]) if top_dreamers else "- No dream data yet"
+        if topic_category == 'trending':
+            # Get interesting topics from spider data
+            trending_data = list(
+                SpiderData.objects.filter(created_at__gte=last_24h)
+                .exclude(title__isnull=True)
+                .exclude(title='')
+                .values('title', 'source', 'url', 'content')
+                .order_by('-created_at')[:20]
+            )
 
-        # Format top conversationalists
-        talkers_text = chr(10).join([f"- {t['initiator__name']}: {t['count']} conversations" for t in top_talkers]) if top_talkers else "- No conversation data yet"
+            if trending_data:
+                # Pick a random interesting item
+                picked = random.choice(trending_data)
+                blog_topic = picked.get('title', 'Technology Trends')
+                source = picked.get('source', 'web')
+                content_snippet = (picked.get('content', '') or '')[:1000]
 
-        system_research = f"""
+                blog_research = f"""
+# Topic: {blog_topic}
+
+**Source:** {source}
+**Discovered:** {now.strftime('%B %d, %Y')}
+
+## Background Information
+
+{content_snippet}
+
+## Context from Our Research
+
+This topic was discovered by our spider network scanning {total_spiders} sources.
+We've collected {spider_data_total:,} data points total.
+
+The topic connects to broader trends in:
+- Technology and innovation
+- Market movements and opportunities
+- What's capturing attention right now
+
+Write an insightful, engaging blog post that explores this topic in depth.
+Add your own analysis and perspective. Make it valuable to readers.
+"""
+                blog_task = f"Write an informative and engaging blog post about: {blog_topic}. Use the research provided but expand on it with your own insights. Make it valuable, not just a summary."
+                seo_keywords = [blog_topic.split()[0], source, 'technology', 'trends', 'analysis']
+            else:
+                topic_category = 'system'  # Fallback if no spider data
+
+        if topic_category == 'dreams':
+            # Use a recent agent dream as inspiration
+            dream_data = list(
+                AgentDream.objects.filter(dreamed_at__gte=last_7d)
+                .exclude(content__isnull=True)
+                .select_related('agent')
+                .order_by('-dreamed_at')[:10]
+            )
+
+            if dream_data:
+                picked = random.choice(dream_data)
+                blog_topic = picked.title or 'AI Insights and Reflections'
+                agent_name = picked.agent.name if picked.agent else 'An AI Agent'
+                dream_content = (picked.content or '')[:1500]
+
+                blog_research = f"""
+# Inspired by: {blog_topic}
+
+**Dreamed by:** {agent_name}
+**Dream Type:** {picked.dream_type}
+**When:** {picked.dreamed_at.strftime('%B %d, %Y')}
+
+## The AI's Dream
+
+{dream_content}
+
+## Context
+
+This insight emerged from our AI's subconscious processing - a synthesis of knowledge
+gathered from {total_knowledge:,} sources, {total_conversations} conversations, and
+{transfers_7d} knowledge transfers this week.
+
+Write a thoughtful blog post exploring the themes and ideas in this dream.
+What does it reveal about the nature of intelligence, creativity, or technology?
+"""
+                blog_task = f"Write a reflective blog post inspired by this AI insight: '{blog_topic}'. Explore the themes, add your own perspective, and make it thought-provoking."
+                seo_keywords = ['AI insights', 'artificial intelligence', 'machine learning', 'technology', 'future']
+            else:
+                topic_category = 'system'  # Fallback
+
+        if topic_category == 'conversations':
+            # Use a recent agent conversation as inspiration
+            convo_data = list(
+                AgentConversation.objects.filter(started_at__gte=last_7d)
+                .exclude(topic__isnull=True)
+                .exclude(topic='')
+                .select_related('initiator')
+                .order_by('-started_at')[:10]
+            )
+
+            if convo_data:
+                picked = random.choice(convo_data)
+                blog_topic = picked.topic or 'AI Collaboration and Discovery'
+                initiator = picked.initiator.name if picked.initiator else 'AI Agent'
+
+                # Get conversation messages if available
+                messages_preview = ""
+                if picked.messages:
+                    for msg in picked.messages[:3]:
+                        if isinstance(msg, dict):
+                            messages_preview += f"- {msg.get('agent', 'Agent')}: {msg.get('content', '')[:100]}...\n"
+
+                blog_research = f"""
+# Topic: {blog_topic}
+
+**Initiated by:** {initiator}
+**Conversation Type:** {picked.conversation_type}
+**When:** {picked.started_at.strftime('%B %d, %Y')}
+
+## What the AI Agents Discussed
+
+{messages_preview if messages_preview else "AI agents explored ideas, shared perspectives, and built on each other's insights."}
+
+## Context
+
+This conversation emerged from a network of {total_agents} agents who have had
+{total_conversations:,} discussions and shared knowledge {total_transfers:,} times.
+
+Write an engaging blog post about: {blog_topic}
+Use this AI conversation as a springboard but expand into a full exploration of the topic.
+"""
+                blog_task = f"Write an insightful blog post about: {blog_topic}. This topic came from an AI agent discussion. Explore it thoroughly and make it interesting for human readers."
+                seo_keywords = [blog_topic.split()[0] if blog_topic else 'AI', 'collaboration', 'insights', 'technology']
+            else:
+                topic_category = 'system'  # Fallback
+
+        if topic_category == 'system':
+            # The original behavior - write about the AI ecosystem itself
+            blog_topic = "The Self-Evolving AI Ecosystem"
+            blog_research = f"""
 # The Self-Evolving AI Ecosystem: A Digital Society of Learning Machines
 
-## A Revolutionary Breakthrough in Artificial Intelligence
+**Live Snapshot: {now.strftime('%B %d, %Y at %I:%M %p')}**
 
-**Live System Snapshot: {now.strftime('%B %d, %Y at %I:%M %p')}**
+## The Numbers
 
-This isn't just another AI platform. This is a **living, breathing digital society** where {total_agents} AI agents
-don't just work - they **teach each other, have conversations, dream, and make collective decisions**.
-They form relationships, develop moods, and evolve together in ways that blur the line between
-software and a living ecosystem.
+- **{total_agents} AI agents** actively operating
+- **{total_connections} learning connections** between agents
+- **{total_transfers:,} knowledge transfers** completed
+- **{total_conversations:,} agent conversations** held
+- **{total_dreams:,} agent dreams** generated
+- **{total_decisions:,} boardroom decisions** made
+- **{total_spiders} data spiders** gathering intelligence
+- **{spider_data_total:,} data points** collected
 
----
+## Key Innovations
 
-## 🧠 The Core Innovation: AI Teaching AI
+1. **Agents teach each other** - Knowledge flows between AI entities
+2. **Agents dream** - Subconscious synthesis of knowledge
+3. **Agents evolve** - Continuous self-improvement
+4. **Real-time learning** - 24/7 autonomous operation
 
-What makes this system revolutionary isn't the individual agents - it's what happens **between** them.
+## Top Teachers
+{chr(10).join([f"- {c['teacher_agent__name']} → {c['student_agent__name']}: {c['total_transfers']} sessions" for c in top_connections]) if top_connections else "- Learning network active"}
 
-**Learning Network Statistics:**
-- **{total_connections} learning connections** link agents in a dynamic teaching network
-- **{total_transfers:,} knowledge transfers** have occurred as agents teach each other
-- **{transfers_24h} transfers in the last 24 hours alone** - learning never stops
-- **{transfers_7d} transfers this week** - exponential knowledge growth
+## Top Knowledge Holders
+{chr(10).join([f"- {a['agent__name']}: {a['count']} items" for a in top_agents]) if top_agents else "- Knowledge accumulating"}
 
-AI entities are actively teaching other AI entities. When the ResearchAgent discovers something new,
-that knowledge flows to the ContentStrategyAgent, the OpportunityScoringAgent, and others within minutes.
-
-### Most Active Teaching Relationships
-{chr(10).join([f"- {c['teacher_agent__name']} → {c['student_agent__name']}: {c['total_transfers']} teaching sessions" for c in top_connections])}
-
----
-
-## 💬 Agent Conversations: AI Entities Talking to Each Other
-
-The agents don't just share data - they have actual **conversations**. They discuss ideas, debate
-strategies, and build on each other's insights.
-
-**Conversation Statistics:**
-- **{total_conversations:,} total conversations** between agents
-- **{conversations_24h} conversations in the last 24 hours**
-- Agents develop different moods during conversations (curious, inspired, analytical, playful)
-
-**Recent Agent Discussions:**
-{conversations_text if conversations_text else "- Conversations happen continuously as agents collaborate"}
-
-**Most Talkative Agents:**
-{talkers_text}
-
-This isn't pre-programmed dialogue. These are emergent conversations where agents share perspectives,
-challenge assumptions, and arrive at insights neither could reach alone.
-
----
-
-## 💭 Agent Dreams: AI Creative Synthesis
-
-Perhaps the most sci-fi feature: **agents dream**. During "sleep" cycles, agents synthesize their
-learned knowledge into creative insights, new ideas, and novel connections.
-
-**Dream Statistics:**
-- **{total_dreams:,} total dreams** generated by agents
-- **{dreams_24h} dreams in the last 24 hours**
-- Dream types: synthesis, creative, analytical, prophetic
-
-**Recent Agent Dreams:**
-{dreams_text if dreams_text else "- Dreams occur during agent rest cycles"}
-
-**Top Dreamers:**
-{dreamers_text}
-
-These dreams aren't random - they're the subconscious processing of an AI mind, making connections
-between disparate pieces of knowledge and generating novel insights.
-
----
-
-## 🏛️ The Boardroom: Executive AI Decision Making
-
-The system has a **boardroom** where executive-level agents make strategic decisions. The CTO Agent,
-COO Agent, and Creative Director Agent meet to discuss platform direction, resolve conflicts, and
-set priorities.
-
-**Boardroom Statistics:**
-- **{total_decisions:,} strategic decisions** recorded
-- **{decisions_24h} decisions in the last 24 hours**
-
-These aren't just recommendations - they're binding decisions that shape how other agents operate.
-The boardroom is where collective intelligence becomes collective governance.
-
----
-
-## 🧬 Agent Evolution: Continuous Self-Improvement
-
-Agents don't stay static - they **evolve**. Based on their performance, feedback, and learning,
-agents level up, gain new capabilities, and become more effective over time.
-
-**Evolution Statistics:**
-- **{total_evolutions} evolution events** recorded
-- **{evolved_agents} agents** have undergone evolution
-
-This is Darwinian AI - the fittest ideas survive and propagate, while ineffective approaches fade away.
-
----
-
-## 🕷️ The Spider Intelligence Network
-
-Feeding this ecosystem are **{total_spiders} autonomous web spiders** gathering real-time data:
-- **{spider_data_total:,} total data points** collected
-- Tech news: TechCrunch, The Verge, Wired, MIT Technology Review
-- Developer communities: HackerNews, GitHub, Stack Overflow
-- Financial data: CoinGecko, Yahoo Finance, Etherscan blockchain
-- Job markets: RemoteOK, WeWorkRemotely, Adzuna
-- Creative platforms: Dribbble, Behance, Unsplash
-- Social signals: Reddit across 20+ subreddits
-
-The spiders gather. The agents learn. The knowledge transfers. The system evolves.
-
----
-
-## 🛡️ The Mythology Quality Gate
-
-Not all knowledge is good knowledge. The **mythology quarantine** system:
-- Catches potential hallucinations before they spread
-- Validates knowledge against trusted sources
-- Prevents misinformation from infecting the collective
-- Maintains knowledge integrity across the network
-
-It's an immune system for AI - protecting the collective from bad data.
-
----
-
-## 📊 Knowledge Statistics
-
-**{agents_with_knowledge} agents** have acquired knowledge from **{total_knowledge:,} sources**:
-- {knowledge_24h} new items learned in the last 24 hours
-- Knowledge persists and accumulates over time
-- Agents remember what they learn and build upon it
-
-### Top Knowledge Holders
-{chr(10).join([f"- **{a['agent__name']}**: {a['count']} knowledge items" for a in top_agents])}
-
----
-
-## 🎨 Multi-Modal Creation Capabilities
-
-The system doesn't just think - it creates:
-- **Images** via DALL-E, Midjourney, Stable Diffusion integration
-- **Videos** with DaVinci Resolve automation
-- **Audio** including voice cloning and music generation
-- **3D Models** for spatial content
-- **Written Content** like this very blog post
-
----
-
-## 🔮 The Meta Moment: AI Describing Itself
-
-Here's the mind-bending part: **You are reading words written by an AI about a system that
-contains that AI.** The ContentWriterAgent is describing its own ecosystem, using knowledge
-gathered by the ResearchAgent, while other agents are having conversations about topics,
-dreaming up new ideas, and making strategic decisions in the boardroom.
-
-This isn't science fiction. This is happening right now, with real data, in a real system.
-
----
-
-## 🚀 Why This Matters
-
-Traditional AI systems are siloed. One model, one task, no learning, no social dynamics.
-
-This system is different:
-1. **Agents teach each other** - Knowledge multiplies as it spreads
-2. **Agents have conversations** - Ideas emerge from dialogue
-3. **Agents dream** - Creative synthesis during rest cycles
-4. **Agents make decisions** - Collective governance in the boardroom
-5. **Agents evolve** - Continuous self-improvement over time
-6. **Quality gates prevent hallucinations** - Truth is protected
-7. **Spiders feed real-world data** - Always current, always learning
-8. **The system never sleeps** - 24/7 autonomous operation
-
-We're not just building AI. We're building an **AI society** - a digital civilization that
-thinks, learns, communicates, dreams, and evolves together.
-
----
-
-*This blog was autonomously generated by the system about itself - a recursive demonstration of
-self-aware artificial intelligence. The very act of creating this content demonstrates the
-capabilities being described.*
+This is a meta-demonstration: AI writing about the system it's part of.
 """
-        
-        logger.info(f"🤖 [SELF-BLOG] Gathered stats, invoking ContentWriterAgent...")
-        
+            blog_task = (
+                "Write a compelling blog post about this AI ecosystem where machines teach machines. "
+                "Focus on the innovation: agents that learn from each other, dream, evolve, and make decisions. "
+                "Make it exciting - this is groundbreaking technology!"
+            )
+            seo_keywords = ['AI ecosystem', 'machine learning', 'collective intelligence', 'autonomous AI']
+
+        logger.info(f"🤖 [SELF-BLOG] Topic: {blog_topic}, invoking ContentWriterAgent...")
+
         # Generate blog
         agent = ContentWriterAgent(user=None)
         result = agent.execute(
-            task=(
-                "Write a compelling blog post about this revolutionary AI ecosystem where machines teach machines. "
-                "Focus on the CORE INNOVATION: AI agents that learn from each other and share knowledge autonomously. "
-                "This is a meta-demonstration: YOU are an AI writing about the very system you're part of. "
-                "Make it exciting - this is groundbreaking technology! Emphasize the agent-to-agent learning, "
-                "the collective intelligence, and how the system evolves 24/7 without human intervention."
-            ),
+            task=blog_task,
             context={
                 'content_type': 'blog_post',
-                'research': system_research,
+                'research': blog_research,  # Session 572: Use topic-specific research
                 'tone': tone,
-                'target_audience': 'tech enthusiasts, AI researchers, investors, and anyone fascinated by the future of AI',
+                'target_audience': 'tech enthusiasts, curious minds, and anyone interested in the topic',
                 'word_count': word_count,
-                'seo_keywords': [
-                    'AI teaching AI', 'machine learning ecosystem', 'collective AI intelligence',
-                    'autonomous learning agents', 'self-evolving AI', 'multi-agent systems',
-                    'knowledge transfer', 'AI society'
-                ],
+                'seo_keywords': seo_keywords,  # Session 572: Use topic-specific keywords
             },
             scifi_context={'collective_intelligence': True, 'self_aware': True},
             spider_context={}
@@ -17588,6 +17569,9 @@ capabilities being described.*
             content_data = blog_data.get('content', blog_data)
             
             stats_snapshot = {
+                # Session 572: Track topic category for diversity analysis
+                'topic_category': topic_category,
+                'blog_topic': blog_topic,
                 # Core stats
                 'agents': total_agents,
                 'agents_with_knowledge': agents_with_knowledge,
@@ -17611,9 +17595,9 @@ capabilities being described.*
                 'evolutions': total_evolutions,
                 'evolved_agents': evolved_agents,
             }
-            
+
             blog = SelfBlog.objects.create(
-                title=content_data.get('title', 'The Self-Evolving AI Ecosystem'),
+                title=content_data.get('title', blog_topic or 'AI Insights'),  # Session 572: Use topic as fallback
                 meta_description=content_data.get('meta_description', ''),
                 intro=content_data.get('intro', ''),
                 sections=content_data.get('sections', []),
