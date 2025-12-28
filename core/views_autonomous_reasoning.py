@@ -14,6 +14,78 @@ from celery.result import AsyncResult
 logger = logging.getLogger(__name__)
 
 
+def format_action_result(result_summary: str) -> str:
+    """
+    Session 572: Format action result_summary as human-readable text.
+    Handles legacy JSON-like strings stored in database.
+    """
+    if not result_summary:
+        return ''
+
+    # If it looks like a dict string, try to parse and format it
+    if result_summary.startswith('{') and "'" in result_summary:
+        try:
+            import ast
+            result = ast.literal_eval(result_summary)
+
+            if isinstance(result, dict):
+                # Priority 1: Use 'message' field if present
+                if 'message' in result:
+                    return result['message']
+
+                parts = []
+
+                # Conversation
+                if 'conversation_id' in result:
+                    initiator = result.get('initiator', 'Agent')
+                    other = result.get('other_agent', 'another agent')
+                    topic = result.get('topic', 'topic')
+                    parts.append(f"Conversation between {initiator} and {other} about '{topic}'")
+
+                # Research
+                elif 'research_complete' in result:
+                    topic = result.get('topic', 'topic')
+                    preview = result.get('findings_preview', '')
+                    parts.append(f"Research on '{topic}': {preview}" if preview else f"Research initiated on '{topic}'")
+
+                # Report
+                elif 'report_id' in result:
+                    topic = result.get('topic', 'topic')
+                    insights = result.get('insights_count', 0)
+                    patterns = result.get('patterns_count', 0)
+                    parts.append(f"Created report on '{topic}' with {insights} insights, {patterns} patterns")
+
+                # Spider
+                elif 'spider_type' in result:
+                    spider = result.get('spider_type', 'spider')
+                    topic = result.get('topic', 'data')
+                    parts.append(f"Spawned {spider} spider to gather '{topic}' data")
+
+                # Debate
+                elif 'debate_id' in result:
+                    topic = result.get('topic', 'topic')
+                    parts.append(f"Triggered debate on '{topic}'")
+
+                # Triage
+                elif 'total_processed' in result:
+                    processed = result.get('total_processed', 0)
+                    promoted = result.get('promoted_to_boardroom', 0)
+                    parts.append(f"Triaged {processed} dreams, {promoted} promoted to boardroom")
+
+                # Alert
+                elif 'alert_sent' in result:
+                    parts.append(f"Alert sent: {result.get('alert_type', 'notification')}")
+
+                if parts:
+                    return '; '.join(parts)[:500]
+
+        except (ValueError, SyntaxError):
+            pass
+
+    # Return as-is if not JSON-like or parsing failed
+    return result_summary[:500] if len(result_summary) > 500 else result_summary
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def thoughts_api(request):
@@ -103,7 +175,7 @@ def thought_detail_api(request, thought_id):
                 'reasoning': a.reasoning,
                 'priority': a.priority,
                 'status': a.status,
-                'result_summary': a.result_summary,
+                'result_summary': format_action_result(a.result_summary),
                 'error_message': a.error_message,
                 'created_at': a.created_at.isoformat(),
             }
@@ -176,7 +248,7 @@ def actions_api(request):
                 'reasoning': a.reasoning[:200] if a.reasoning else '',
                 'priority': a.priority,
                 'status': a.status,
-                'result_summary': a.result_summary[:200] if a.result_summary else '',
+                'result_summary': format_action_result(a.result_summary),
                 'created_at': a.created_at.isoformat(),
             }
             for a in actions
