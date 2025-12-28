@@ -1403,9 +1403,10 @@ def get_boardroom_dreams(request):
         status = request.GET.get('status', 'pending')
         min_score = float(request.GET.get('min_score', 0))
 
+        # Session 564: Sort by promoted_at first so newest items appear at top
         queryset = AgentDream.objects.filter(
             promoted_to_decision=True
-        ).select_related('agent', 'project').order_by('-composite_score', '-dreamed_at')
+        ).select_related('agent', 'project').order_by('-promoted_at', '-composite_score')
 
         if status:
             queryset = queryset.filter(decision_outcome=status)
