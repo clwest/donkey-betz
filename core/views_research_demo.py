@@ -591,3 +591,42 @@ def self_blog_api(request):
     except Exception as e:
         logger.error(f"Error in self_blog_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def self_blog_by_id_api(request, blog_id):
+    """
+    Session 570: Get a specific self-blog by ID.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        blog = SelfBlog.objects.filter(id=blog_id).first()
+
+        if blog:
+            return JsonResponse({
+                'success': True,
+                'blog': {
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'meta_description': blog.meta_description,
+                    'intro': blog.intro,
+                    'sections': blog.sections,
+                    'conclusion': blog.conclusion,
+                    'tags': blog.tags,
+                    'full_text': blog.full_text,
+                    'tone': blog.tone,
+                    'word_count': blog.word_count,
+                    'stats_snapshot': blog.stats_snapshot,
+                    'created_at': blog.created_at.isoformat(),
+                },
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Blog not found'
+            }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error in self_blog_by_id_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
