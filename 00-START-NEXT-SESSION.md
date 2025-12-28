@@ -39,6 +39,18 @@ Dreams with empty titles now show meaningful content:
 - Extracts title from content using `. ` or `: ` separators
 - Falls back to first 60 chars if no separator
 
+### 5. Command Center API Fix - COMPLETE
+
+Added Command Center APIs to PUBLIC_PATHS in auth middleware:
+- `/api/agents/` - Agent list for main view
+- `/api/agent-conversations/` - Conversations sub-tab
+- `/api/agent-dreams/` - Dreams sub-tab
+- `/api/boardroom/` - Boardroom sub-tab
+- `/api/artifacts/` - Artifacts sub-tab
+- `/api/agent-learning/` - Learning activity
+
+This ensures the Command Center UI loads data consistently.
+
 ---
 
 ## Current System State
@@ -99,6 +111,8 @@ ps aux | grep "celery.*worker"
 46a90e6 fix(Session 564): Network Graph Agent Details card shows is_active
 412473e feat(Session 564): Autonomous Dream Triage Pipeline
 1a740ee fix(Session 564): Live Feed extracts title from dream content
+cf2e0e8 docs(Session 564): Add handoff and prep Session 565
+5445344 fix(Session 564): Add Command Center APIs to PUBLIC_PATHS
 ```
 
 ---
