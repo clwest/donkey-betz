@@ -17662,6 +17662,80 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
     logger.info(f"🧠 [THINKING] Starting autonomous thinking cycle (type={cycle_type})")
     start_time = time.time()
 
+    def format_action_result(result: dict) -> str:
+        """
+        Session 572: Format action result as human-readable summary instead of raw dict.
+        Extracts key information and presents it nicely.
+        """
+        if not result or not isinstance(result, dict):
+            return str(result) if result else ''
+
+        # Priority 1: Use the 'message' field if present (most common)
+        if 'message' in result:
+            return result['message']
+
+        # Priority 2: Build a summary from key fields
+        parts = []
+
+        # For conversations
+        if 'conversation_id' in result:
+            initiator = result.get('initiator', 'Agent')
+            other = result.get('other_agent', 'another agent')
+            topic = result.get('topic', 'topic')
+            parts.append(f"Conversation between {initiator} and {other} about '{topic}'")
+
+        # For research
+        elif 'research_complete' in result:
+            topic = result.get('topic', 'topic')
+            preview = result.get('findings_preview', '')
+            parts.append(f"Research on '{topic}': {preview}" if preview else f"Research initiated on '{topic}'")
+
+        # For reports
+        elif 'report_id' in result:
+            topic = result.get('topic', 'Report')
+            insights = result.get('insights_count', 0)
+            patterns = result.get('patterns_count', 0)
+            parts.append(f"Created report on '{topic}' with {insights} insights, {patterns} patterns")
+
+        # For spiders
+        elif 'spider_type' in result:
+            spider = result.get('spider_type', 'spider')
+            topic = result.get('topic', 'data')
+            parts.append(f"Spawned {spider} spider to gather '{topic}' data")
+
+        # For debates
+        elif 'debate_id' in result:
+            topic = result.get('topic', 'topic')[:80]
+            participants = result.get('participants', [])
+            parts.append(f"Debate on '{topic}' with {len(participants)} participants")
+
+        # For triage
+        elif 'total_processed' in result:
+            processed = result.get('total_processed', 0)
+            promoted = result.get('promoted_to_boardroom', 0)
+            archived = result.get('archived', 0)
+            parts.append(f"Processed {processed} items: {promoted} promoted, {archived} archived")
+
+        # For alerts
+        elif 'sent_via' in result:
+            severity = result.get('severity', 'info')
+            via = result.get('sent_via', 'notification')
+            parts.append(f"Alert sent via {via} (severity: {severity})")
+
+        # Fallback: check for success/error indicators
+        if not parts:
+            if result.get('success') is False:
+                error = result.get('error', 'Unknown error')
+                return f"Failed: {error}"
+            elif result.get('success') is True:
+                return "Completed successfully"
+            else:
+                # Last resort: show first few key-value pairs
+                items = list(result.items())[:3]
+                return ', '.join(f"{k}: {v}" for k, v in items if not k.startswith('_'))[:200]
+
+        return '; '.join(parts)[:500]
+
     try:
         from core.models_unified_system import (
             ThoughtRecord, AutonomousAction, ReasoningConfiguration
@@ -17784,7 +17858,7 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
                     priority=decision.get('priority', 'medium'),
                     status='completed' if exec_result.get('success') else 'failed',
                     result=exec_result.get('result', {}),
-                    result_summary=str(exec_result.get('result', ''))[:500],
+                    result_summary=format_action_result(exec_result.get('result', {})),
                     error_message=exec_result.get('error', '') if not exec_result.get('success') else '',
                     started_at=timezone.now(),
                     completed_at=timezone.now()
