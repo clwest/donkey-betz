@@ -90,7 +90,18 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         # Session 559: Betting Dashboard APIs (read-only for web UI)
         '/api/v1/betting/arbitrage/',  # Arbitrage scanning
         '/api/v1/sports/live-odds/',  # Live sports odds
+        '/api/v1/sports/live-odds-scores/',  # Session 563: Live odds with ESPN scores
+        '/api/v1/sports/events/',  # Session 563: Player props (matches /events/{id}/props/)
         '/api/v1/odds/bankroll/',  # Bankroll stats (read-only)
+        # Session 560: Futures odds
+        '/api/v1/betting/futures/',  # Championship futures
+        # Session 561: Line Movement Charts
+        '/api/v1/betting/line-movement/',  # Line movement data
+        '/api/v1/betting/movers/',  # Games with significant movement
+        # Session 562: Push Notifications (public key is public, subscribe needs to work for anon)
+        '/api/v1/push/vapid-key/',  # VAPID public key for subscription
+        '/api/v1/push/subscribe/',  # Allow anonymous subscriptions
+        '/api/v1/push/unsubscribe/',  # Allow anonymous unsubscribe
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

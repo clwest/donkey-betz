@@ -1,160 +1,290 @@
 {% comment %}
 Session 559: Betting Odds Sub-Panel
-Live sports betting odds from The Odds API.
+Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props modal
 {% endcomment %}
 
 <div class="tab-pane fade" id="betting-odds" role="tabpanel">
-    <!-- Header with Controls -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 style="color: #22c55e;">🎯 Live Odds</h4>
-            <p class="text-muted mb-0">Real-time odds from 40+ bookmakers</p>
-        </div>
-        <div class="d-flex gap-2">
-            <!-- Sport Selector -->
-            <select id="odds-sport-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
-                <option value="americanfootball_nfl">🏈 NFL</option>
-                <option value="basketball_nba">🏀 NBA</option>
-                <option value="baseball_mlb">⚾ MLB</option>
-                <option value="icehockey_nhl">🏒 NHL</option>
-                <option value="americanfootball_ncaaf">🏈 NCAAF</option>
-                <option value="basketball_ncaab">🏀 NCAAB</option>
-                <option value="soccer_epl">⚽ EPL</option>
-                <option value="mma_mixed_martial_arts">🥊 UFC/MMA</option>
-            </select>
-            <!-- Market Type -->
-            <select id="odds-market-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
-                <option value="h2h">Moneyline</option>
-                <option value="spreads">Spread</option>
-                <option value="totals">Over/Under</option>
-            </select>
-            <!-- Refresh Button -->
-            <button class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;" onclick="loadLiveOdds()">
-                🔄 Refresh
-            </button>
-        </div>
-    </div>
+    <div class="row">
+        <!-- Main Odds Panel -->
+        <div class="col-lg-8">
+            <!-- Header with Controls -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 style="color: #22c55e;">🎯 Live Odds</h4>
+                    <p class="text-muted mb-0">Real-time odds + live scores</p>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Auto-refresh toggle -->
+                    <div class="form-check form-switch me-2">
+                        <input class="form-check-input" type="checkbox" id="odds-auto-refresh" checked style="background-color: #22c55e; border-color: #22c55e;">
+                        <label class="form-check-label text-muted small" for="odds-auto-refresh">Auto</label>
+                    </div>
+                    <!-- Sport Selector -->
+                    <select id="odds-sport-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
+                        <option value="americanfootball_nfl">🏈 NFL</option>
+                        <option value="basketball_nba">🏀 NBA</option>
+                        <option value="baseball_mlb">⚾ MLB</option>
+                        <option value="icehockey_nhl">🏒 NHL</option>
+                        <option value="americanfootball_ncaaf">🏈 NCAAF</option>
+                        <option value="basketball_ncaab">🏀 NCAAB</option>
+                        <option value="soccer_epl">⚽ EPL</option>
+                        <option value="mma_mixed_martial_arts">🥊 UFC/MMA</option>
+                    </select>
+                    <!-- Market Type -->
+                    <select id="odds-market-filter" class="form-select form-select-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; width: auto;">
+                        <option value="h2h">Moneyline</option>
+                        <option value="spreads">Spread</option>
+                        <option value="totals">Over/Under</option>
+                    </select>
+                    <!-- Refresh Button -->
+                    <button class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;" onclick="loadLiveOdds()">
+                        🔄
+                    </button>
+                </div>
+            </div>
 
-    <!-- Stats Row -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2)); border: 1px solid rgba(34, 197, 94, 0.4);">
-                <div class="card-body py-3">
-                    <h3 class="mb-0" style="color: #86efac;" id="odds-games-count">0</h3>
-                    <small class="text-muted">Games</small>
+            <!-- Stats Row -->
+            <div class="row mb-4">
+                <div class="col-3">
+                    <div class="card text-center" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2)); border: 1px solid rgba(34, 197, 94, 0.4);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #86efac;" id="odds-games-count">0</h4>
+                            <small class="text-muted" style="font-size: 10px;">Games</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card text-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2)); border: 1px solid rgba(239, 68, 68, 0.4);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #fca5a5;" id="odds-live-count">0</h4>
+                            <small class="text-muted" style="font-size: 10px;">Live</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card text-center" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2)); border: 1px solid rgba(59, 130, 246, 0.4);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #93c5fd;" id="odds-books-count">0</h4>
+                            <small class="text-muted" style="font-size: 10px;">Books</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="card text-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border: 1px solid rgba(251, 191, 36, 0.4);">
+                        <div class="card-body py-2">
+                            <h4 class="mb-0" style="color: #fcd34d;" id="odds-last-update">--:--</h4>
+                            <small class="text-muted" style="font-size: 10px;">Updated</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="odds-loading" class="text-center py-5">
+                <div class="spinner-border" style="color: #22c55e;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Fetching live odds...</p>
+            </div>
+
+            <!-- Games Container -->
+            <div id="odds-games-container" style="display: none;">
+                <!-- Games will be rendered here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="odds-empty" class="text-center py-5" style="display: none;">
+                <div style="font-size: 4rem;">📅</div>
+                <h5 class="mt-3" style="color: #22c55e;">No Games Scheduled</h5>
+                <p class="text-muted">Check back later or try a different sport.</p>
+            </div>
+        </div>
+
+        <!-- Bet Slip Panel -->
+        <div class="col-lg-4">
+            <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 12px; position: sticky; top: 20px;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border-bottom: 1px solid rgba(251, 191, 36, 0.3);">
+                    <span style="color: #fcd34d; font-weight: 600;">🎫 Bet Slip</span>
+                    <span class="badge" style="background: rgba(251, 191, 36, 0.3); color: #fcd34d;" id="betslip-count">0</span>
+                </div>
+                <div class="card-body" id="betslip-container" style="max-height: 400px; overflow-y: auto;">
+                    <div id="betslip-empty" class="text-center py-4">
+                        <div style="font-size: 2rem; opacity: 0.5;">🎲</div>
+                        <p class="text-muted small mt-2 mb-0">Click odds to add picks</p>
+                    </div>
+                    <div id="betslip-picks" style="display: none;">
+                        <!-- Picks will be rendered here -->
+                    </div>
+                </div>
+                <div class="card-footer" id="betslip-footer" style="display: none; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(251, 191, 36, 0.2);">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Parlay Odds:</span>
+                        <span style="color: #fcd34d; font-weight: 700;" id="betslip-parlay-odds">+100</span>
+                    </div>
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text" style="background: rgba(255,255,255,0.05); border-color: rgba(251, 191, 36, 0.3); color: #fcd34d;">$</span>
+                        <input type="number" class="form-control" id="betslip-wager" value="10" min="1" style="background: rgba(255,255,255,0.05); border-color: rgba(251, 191, 36, 0.3); color: #e5e7eb;">
+                        <span class="input-group-text" style="background: rgba(255,255,255,0.05); border-color: rgba(251, 191, 36, 0.3); color: #9ca3af;">wager</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">To Win:</span>
+                        <span style="color: #22c55e; font-weight: 700;" id="betslip-to-win">$0.00</span>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-sm" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;" onclick="placeBet()">
+                            Place Bet (Demo)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearBetSlip()">
+                            Clear Slip
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2)); border: 1px solid rgba(59, 130, 246, 0.4);">
-                <div class="card-body py-3">
-                    <h3 class="mb-0" style="color: #93c5fd;" id="odds-books-count">0</h3>
-                    <small class="text-muted">Bookmakers</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(124, 58, 237, 0.2)); border: 1px solid rgba(168, 85, 247, 0.4);">
-                <div class="card-body py-3">
-                    <h3 class="mb-0" style="color: #c4b5fd;" id="odds-tossups-count">0</h3>
-                    <small class="text-muted">Toss-ups</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); border: 1px solid rgba(251, 191, 36, 0.4);">
-                <div class="card-body py-3">
-                    <h3 class="mb-0" style="color: #fcd34d;" id="odds-last-update">--:--</h3>
-                    <small class="text-muted">Updated</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading State -->
-    <div id="odds-loading" class="text-center py-5">
-        <div class="spinner-border" style="color: #22c55e;" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-2 text-muted">Fetching live odds...</p>
-    </div>
-
-    <!-- Games Container -->
-    <div id="odds-games-container" style="display: none;">
-        <!-- Games will be rendered here -->
-    </div>
-
-    <!-- Empty State -->
-    <div id="odds-empty" class="text-center py-5" style="display: none;">
-        <div style="font-size: 4rem;">📅</div>
-        <h5 class="mt-3" style="color: #22c55e;">No Games Scheduled</h5>
-        <p class="text-muted">Check back later or try a different sport.</p>
     </div>
 </div>
+
+<!-- Player Props Modal -->
+<div class="modal fade" id="propsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(168, 85, 247, 0.4);">
+            <div class="modal-header" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(124, 58, 237, 0.2)); border-bottom: 1px solid rgba(168, 85, 247, 0.3);">
+                <h5 class="modal-title" style="color: #c4b5fd;">
+                    <span id="props-modal-title">Player Props</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="props-modal-body">
+                <div id="props-loading" class="text-center py-5">
+                    <div class="spinner-border" style="color: #a855f7;" role="status"></div>
+                    <p class="mt-2 text-muted">Loading player props...</p>
+                </div>
+                <div id="props-content" style="display: none;"></div>
+                <div id="props-empty" class="text-center py-5" style="display: none;">
+                    <div style="font-size: 3rem;">📊</div>
+                    <h5 class="mt-3" style="color: #a855f7;">No Props Available</h5>
+                    <p class="text-muted">Player props are not available for this game yet.</p>
+                </div>
+                <div id="props-error" class="text-center py-5" style="display: none;">
+                    <div style="font-size: 3rem;">⚠️</div>
+                    <h5 class="mt-3 text-warning">Error Loading Props</h5>
+                    <p class="text-muted" id="props-error-message"></p>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: rgba(0,0,0,0.2); border-top: 1px solid rgba(168, 85, 247, 0.2);">
+                <small class="text-muted me-auto" id="props-quota">API Quota: --</small>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.live-indicator {
+    animation: livePulse 1.5s ease-in-out infinite;
+}
+.odds-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: all 0.2s ease;
+}
+.odds-btn:hover {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.5);
+    transform: translateY(-1px);
+}
+.odds-btn.selected {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.6);
+}
+.score-display {
+    font-size: 24px;
+    font-weight: 800;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+.prop-btn {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.prop-btn:hover {
+    background: rgba(168, 85, 247, 0.25);
+    border-color: rgba(168, 85, 247, 0.6);
+}
+.prop-btn.selected {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.6);
+}
+.player-section {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+.player-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+</style>
 
 <script>
 (function() {
     'use strict';
+
+    let betSlip = [];
+    let autoRefreshInterval = null;
+    let lastLiveCount = 0;
+    let currentSport = 'basketball_nba';
 
     async function loadLiveOdds() {
         const loading = document.getElementById('odds-loading');
         const container = document.getElementById('odds-games-container');
         const empty = document.getElementById('odds-empty');
 
-        loading.style.display = 'block';
-        container.style.display = 'none';
+        if (!container.innerHTML) {
+            loading.style.display = 'block';
+        }
         empty.style.display = 'none';
 
         try {
-            const sport = document.getElementById('odds-sport-filter').value;
+            currentSport = document.getElementById('odds-sport-filter').value;
             const market = document.getElementById('odds-market-filter').value;
 
-            const response = await fetch(`/api/v1/sports/live-odds/?sport=${sport}&markets=${market}`);
-
-            if (!response.ok) {
-                throw new Error('API not available');
-            }
+            const response = await fetch(`/api/v1/sports/live-odds-scores/?sport=${currentSport}&markets=${market}`);
+            if (!response.ok) throw new Error('API not available');
 
             const data = await response.json();
-            // Session 559: API returns games in 'odds' key
-            const games = data.odds || data.data || data.games || [];
+            const games = data.odds || [];
+            const liveCount = data.live_games || 0;
 
             loading.style.display = 'none';
 
-            // Update stats
             document.getElementById('odds-games-count').textContent = games.length;
+            document.getElementById('odds-live-count').textContent = liveCount;
+            lastLiveCount = liveCount;
 
-            // Count unique bookmakers
             const bookmakers = new Set();
-            games.forEach(g => {
-                (g.bookmakers || []).forEach(b => bookmakers.add(b.key));
-            });
+            games.forEach(g => (g.bookmakers || []).forEach(b => bookmakers.add(b.key)));
             document.getElementById('odds-books-count').textContent = bookmakers.size;
-
-            // Count toss-ups (45-55% implied probability)
-            let tossups = 0;
-            games.forEach(game => {
-                if (game.bookmakers && game.bookmakers[0]) {
-                    const h2h = game.bookmakers[0].markets?.find(m => m.key === 'h2h');
-                    if (h2h && h2h.outcomes) {
-                        h2h.outcomes.forEach(o => {
-                            const prob = americanToProb(o.price);
-                            if (prob >= 0.45 && prob <= 0.55) tossups++;
-                        });
-                    }
-                }
-            });
-            document.getElementById('odds-tossups-count').textContent = tossups;
             document.getElementById('odds-last-update').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
             if (games.length === 0) {
                 empty.style.display = 'block';
+                container.style.display = 'none';
                 return;
             }
 
-            // Render games
             container.innerHTML = games.map(game => renderGameCard(game, market)).join('');
             container.style.display = 'block';
+            manageAutoRefresh(liveCount > 0);
 
         } catch (error) {
             console.error('Error loading odds:', error);
@@ -163,8 +293,7 @@ Live sports betting odds from The Odds API.
                 <div class="text-center py-5">
                     <div style="font-size: 3rem;">⚠️</div>
                     <h5 class="mt-3 text-warning">Odds Unavailable</h5>
-                    <p class="text-muted">Use <code>/odds [sport]</code> in Discord to check live odds.</p>
-                    <p class="text-muted small">Make sure THE_ODDS_API_KEY is configured.</p>
+                    <p class="text-muted">Make sure THE_ODDS_API_KEY is configured.</p>
                 </div>`;
             container.style.display = 'block';
         }
@@ -172,13 +301,42 @@ Live sports betting odds from The Odds API.
 
     function renderGameCard(game, marketType) {
         const startTime = new Date(game.commence_time);
-        const isLive = startTime <= new Date();
-        const timeStr = isLive ? 'LIVE' : startTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const live = game.live || {};
+        const isLive = live.is_live || false;
+        const isFinal = live.is_final || false;
 
-        // Get best odds from all bookmakers
+        let statusBadge;
+        if (isLive) {
+            statusBadge = `<span class="badge bg-danger live-indicator" style="font-size: 11px;">🔴 ${live.status_detail || 'LIVE'}</span>`;
+        } else if (isFinal) {
+            statusBadge = `<span class="badge" style="background: rgba(107, 114, 128, 0.5); font-size: 11px;">✓ FINAL</span>`;
+        } else {
+            const timeStr = startTime.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+            statusBadge = `<span class="badge" style="background: rgba(107, 114, 128, 0.3); color: #9ca3af; font-size: 10px;">📅 ${timeStr}</span>`;
+        }
+
+        let scoreDisplay = '';
+        if (isLive || isFinal) {
+            const homeScore = live.home_score || 0;
+            const awayScore = live.away_score || 0;
+            scoreDisplay = `
+                <div class="d-flex justify-content-center align-items-center gap-3 my-2">
+                    <div class="text-center">
+                        <div class="score-display" style="color: ${homeScore > awayScore ? '#22c55e' : '#e5e7eb'};">${homeScore}</div>
+                        <small class="text-muted">${game.home_team.split(' ').pop()}</small>
+                    </div>
+                    <div style="color: #6b7280; font-size: 12px;">vs</div>
+                    <div class="text-center">
+                        <div class="score-display" style="color: ${awayScore > homeScore ? '#22c55e' : '#e5e7eb'};">${awayScore}</div>
+                        <small class="text-muted">${game.away_team.split(' ').pop()}</small>
+                    </div>
+                </div>
+            `;
+        }
+
         const bestOdds = {};
         (game.bookmakers || []).forEach(book => {
-            const market = book.markets?.find(m => m.key === marketType) || book.markets?.[0];
+            const market = book.markets?.[marketType] || Object.values(book.markets || {})[0];
             if (market && market.outcomes) {
                 market.outcomes.forEach(outcome => {
                     const key = outcome.name;
@@ -192,39 +350,62 @@ Live sports betting odds from The Odds API.
         const outcomes = Object.values(bestOdds);
         if (outcomes.length === 0) return '';
 
+        const gameId = game.id;
+        const matchup = `${game.home_team} vs ${game.away_team}`;
+
         return `
-            <div class="card mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px;">
+            <div class="card mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.3)'}; border-radius: 12px;">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(34, 197, 94, 0.2);">
                     <div>
-                        <span class="badge ${isLive ? 'bg-danger' : ''}" style="${!isLive ? 'background: rgba(107, 114, 128, 0.3); color: #9ca3af;' : ''} font-size: 10px; margin-right: 10px;">
-                            ${isLive ? '🔴 LIVE' : '📅 ' + timeStr}
-                        </span>
-                        <span style="color: #86efac; font-weight: 600;">${game.home_team} vs ${game.away_team}</span>
+                        ${statusBadge}
+                        <span style="color: #86efac; font-weight: 600; margin-left: 10px;">${matchup}</span>
                     </div>
-                    <small class="text-muted">${game.bookmakers?.length || 0} books</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm" onclick="openPropsModal('${gameId}', '${matchup.replace(/'/g, "\\'")}')"
+                                style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(124, 58, 237, 0.3)); border: 1px solid rgba(168, 85, 247, 0.5); color: #c4b5fd; font-size: 11px;">
+                            📊 Props
+                        </button>
+                        <small class="text-muted">${game.bookmakers?.length || 0} books</small>
+                    </div>
                 </div>
                 <div class="card-body">
+                    ${scoreDisplay}
                     <div class="row">
-                        ${outcomes.map((outcome, idx) => {
+                        ${outcomes.map(outcome => {
                             const prob = americanToProb(outcome.price);
                             const isFavorite = prob > 0.55;
                             const isUnderdog = prob < 0.45;
+                            const pickId = `${gameId}_${outcome.name}_${outcome.price}`;
+                            const isSelected = betSlip.some(p => p.id === pickId);
+
+                            // Session 563: Format display name with point for spreads/totals
+                            let displayName = outcome.name;
+                            let pointDisplay = '';
+                            if (outcome.point !== undefined && outcome.point !== null) {
+                                if (marketType === 'spreads') {
+                                    // For spreads, show team name + point spread
+                                    pointDisplay = outcome.point > 0 ? `+${outcome.point}` : `${outcome.point}`;
+                                } else if (marketType === 'totals') {
+                                    // For totals, show Over/Under + total
+                                    pointDisplay = outcome.point;
+                                }
+                            }
 
                             return `
                                 <div class="col-md-${marketType === 'totals' ? 6 : outcomes.length === 3 ? 4 : 6}">
-                                    <div class="odds-btn d-flex justify-content-between align-items-center mb-2"
+                                    <div class="odds-btn d-flex justify-content-between align-items-center mb-2 ${isSelected ? 'selected' : ''}"
+                                         onclick="togglePick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${displayName}${pointDisplay ? ' ' + pointDisplay : ''}', ${outcome.price}, '${outcome.bookmaker}')"
                                          style="cursor: pointer; ${isFavorite ? 'border-color: rgba(34, 197, 94, 0.6);' : isUnderdog ? 'border-color: rgba(239, 68, 68, 0.4);' : ''}">
                                         <div>
                                             <div style="font-weight: 600; color: ${isFavorite ? '#86efac' : isUnderdog ? '#fca5a5' : '#e5e7eb'};">
-                                                ${outcome.name}
+                                                ${displayName}
+                                                ${pointDisplay ? `<span style="font-size: 14px; color: #fbbf24; margin-left: 6px; font-weight: 700;">${pointDisplay}</span>` : ''}
                                                 ${isFavorite ? '<span style="font-size: 10px; color: #22c55e; margin-left: 5px;">FAV</span>' : ''}
                                             </div>
                                             <small class="text-muted">${outcome.bookmaker}</small>
                                         </div>
                                         <div class="text-end">
-                                            <div style="font-size: 18px; font-weight: 800; color: #fbbf24;">
-                                                ${formatOdds(outcome.price)}
-                                            </div>
+                                            <div style="font-size: 18px; font-weight: 800; color: #fbbf24;">${formatOdds(outcome.price)}</div>
                                             <small style="color: #9ca3af;">${(prob * 100).toFixed(0)}%</small>
                                         </div>
                                     </div>
@@ -235,6 +416,234 @@ Live sports betting odds from The Odds API.
                 </div>
             </div>
         `;
+    }
+
+    // Player Props Modal
+    async function openPropsModal(eventId, matchup) {
+        const modal = new bootstrap.Modal(document.getElementById('propsModal'));
+        document.getElementById('props-modal-title').textContent = `📊 ${matchup} - Player Props`;
+
+        document.getElementById('props-loading').style.display = 'block';
+        document.getElementById('props-content').style.display = 'none';
+        document.getElementById('props-empty').style.display = 'none';
+        document.getElementById('props-error').style.display = 'none';
+
+        modal.show();
+
+        try {
+            const response = await fetch(`/api/v1/sports/events/${eventId}/props/?sport=${currentSport}`);
+            const data = await response.json();
+
+            document.getElementById('props-loading').style.display = 'none';
+
+            if (!data.success) {
+                document.getElementById('props-error').style.display = 'block';
+                document.getElementById('props-error-message').textContent = data.message || 'Failed to load props';
+                return;
+            }
+
+            const propsByPlayer = data.props_by_player || {};
+            const playerCount = Object.keys(propsByPlayer).length;
+
+            if (playerCount === 0) {
+                document.getElementById('props-empty').style.display = 'block';
+                return;
+            }
+
+            // Update quota display
+            if (data.api_quota) {
+                document.getElementById('props-quota').textContent = `API: ${data.api_quota.used || '?'}/${data.api_quota.remaining ? parseInt(data.api_quota.remaining) + parseInt(data.api_quota.used || 0) : '?'} calls`;
+            }
+
+            // Render props by player
+            let html = `<p class="text-muted mb-3">${playerCount} players, ${data.total_props} props</p>`;
+
+            for (const [player, props] of Object.entries(propsByPlayer)) {
+                // Group props by market type
+                const byMarket = {};
+                props.forEach(p => {
+                    if (!byMarket[p.market_label]) byMarket[p.market_label] = [];
+                    byMarket[p.market_label].push(p);
+                });
+
+                // Session 563: Use sport-appropriate emoji
+                const sportEmoji = currentSport.includes('football') ? '🏈' :
+                                   currentSport.includes('hockey') ? '🏒' :
+                                   currentSport.includes('baseball') ? '⚾' : '🏀';
+
+                html += `
+                    <div class="player-section">
+                        <h6 style="color: #c4b5fd; margin-bottom: 10px;">${sportEmoji} ${player}</h6>
+                        <div class="row g-2">
+                `;
+
+                for (const [market, marketProps] of Object.entries(byMarket)) {
+                    // Find best over and under
+                    const overs = marketProps.filter(p => p.type === 'Over');
+                    const unders = marketProps.filter(p => p.type === 'Under');
+
+                    const bestOver = overs.length ? overs.reduce((a, b) => a.odds > b.odds ? a : b) : null;
+                    const bestUnder = unders.length ? unders.reduce((a, b) => a.odds > b.odds ? a : b) : null;
+
+                    if (bestOver || bestUnder) {
+                        const line = bestOver?.line || bestUnder?.line || 0;
+                        html += `
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.3); color: #c4b5fd; font-size: 10px;">${market}</span>
+                                    <span style="color: #e5e7eb; font-weight: 600;">${line}</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                        `;
+
+                        if (bestOver) {
+                            const pickId = `prop_${eventId}_${player}_${market}_over_${bestOver.line}`;
+                            const isSelected = betSlip.some(p => p.id === pickId);
+                            html += `
+                                <div class="prop-btn flex-fill text-center ${isSelected ? 'selected' : ''}"
+                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} O${bestOver.line}', ${bestOver.odds}, '${bestOver.bookmaker}')">
+                                    <div style="color: #22c55e; font-size: 11px;">Over</div>
+                                    <div style="color: #fbbf24; font-weight: 700;">${formatOdds(bestOver.odds)}</div>
+                                    <div style="color: #6b7280; font-size: 9px;">${bestOver.bookmaker}</div>
+                                </div>
+                            `;
+                        }
+
+                        if (bestUnder) {
+                            const pickId = `prop_${eventId}_${player}_${market}_under_${bestUnder.line}`;
+                            const isSelected = betSlip.some(p => p.id === pickId);
+                            html += `
+                                <div class="prop-btn flex-fill text-center ${isSelected ? 'selected' : ''}"
+                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} U${bestUnder.line}', ${bestUnder.odds}, '${bestUnder.bookmaker}')">
+                                    <div style="color: #ef4444; font-size: 11px;">Under</div>
+                                    <div style="color: #fbbf24; font-weight: 700;">${formatOdds(bestUnder.odds)}</div>
+                                    <div style="color: #6b7280; font-size: 9px;">${bestUnder.bookmaker}</div>
+                                </div>
+                            `;
+                        }
+
+                        html += `</div></div>`;
+                    }
+                }
+
+                html += `</div></div>`;
+            }
+
+            document.getElementById('props-content').innerHTML = html;
+            document.getElementById('props-content').style.display = 'block';
+
+        } catch (error) {
+            console.error('Error loading props:', error);
+            document.getElementById('props-loading').style.display = 'none';
+            document.getElementById('props-error').style.display = 'block';
+            document.getElementById('props-error-message').textContent = error.message;
+        }
+    }
+
+    function togglePropPick(id, matchup, pick, odds, bookmaker) {
+        togglePick(id, matchup, pick, odds, bookmaker);
+        // Re-render modal to update selection state
+        const modal = document.getElementById('propsModal');
+        if (modal.classList.contains('show')) {
+            // Just update the button state without reloading
+            document.querySelectorAll('.prop-btn').forEach(btn => {
+                const btnId = btn.getAttribute('onclick')?.match(/togglePropPick\('([^']+)'/)?.[1];
+                if (btnId === id) {
+                    btn.classList.toggle('selected');
+                }
+            });
+        }
+    }
+
+    function togglePick(id, matchup, pick, odds, bookmaker) {
+        const existingIdx = betSlip.findIndex(p => p.id === id);
+        if (existingIdx >= 0) {
+            betSlip.splice(existingIdx, 1);
+        } else {
+            betSlip.push({ id, matchup, pick, odds, bookmaker });
+        }
+        renderBetSlip();
+    }
+
+    function renderBetSlip() {
+        const empty = document.getElementById('betslip-empty');
+        const picks = document.getElementById('betslip-picks');
+        const footer = document.getElementById('betslip-footer');
+        const count = document.getElementById('betslip-count');
+
+        count.textContent = betSlip.length;
+
+        if (betSlip.length === 0) {
+            empty.style.display = 'block';
+            picks.style.display = 'none';
+            footer.style.display = 'none';
+            return;
+        }
+
+        empty.style.display = 'none';
+        picks.style.display = 'block';
+        footer.style.display = 'block';
+
+        picks.innerHTML = betSlip.map((pick, idx) => `
+            <div class="d-flex justify-content-between align-items-start mb-2 pb-2" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="flex: 1;">
+                    <div style="color: #e5e7eb; font-size: 11px;">${pick.matchup}</div>
+                    <div style="color: #fcd34d; font-weight: 600; font-size: 13px;">${pick.pick}</div>
+                    <small class="text-muted" style="font-size: 10px;">${pick.bookmaker}</small>
+                </div>
+                <div class="text-end">
+                    <div style="color: #fbbf24; font-weight: 700;">${formatOdds(pick.odds)}</div>
+                    <button class="btn btn-sm p-0" onclick="removePick(${idx})" style="color: #ef4444; font-size: 10px;">✕</button>
+                </div>
+            </div>
+        `).join('');
+
+        updateParlayOdds();
+    }
+
+    function removePick(idx) {
+        betSlip.splice(idx, 1);
+        renderBetSlip();
+    }
+
+    function clearBetSlip() {
+        betSlip = [];
+        renderBetSlip();
+    }
+
+    function updateParlayOdds() {
+        if (betSlip.length === 0) return;
+
+        let decimalOdds = 1;
+        betSlip.forEach(pick => {
+            decimalOdds *= americanToDecimal(pick.odds);
+        });
+
+        const americanOdds = decimalToAmerican(decimalOdds);
+        document.getElementById('betslip-parlay-odds').textContent = formatOdds(americanOdds);
+
+        const wager = parseFloat(document.getElementById('betslip-wager').value) || 10;
+        const toWin = wager * (decimalOdds - 1);
+        document.getElementById('betslip-to-win').textContent = `$${toWin.toFixed(2)}`;
+    }
+
+    function americanToDecimal(american) {
+        if (american > 0) return (american / 100) + 1;
+        return (100 / Math.abs(american)) + 1;
+    }
+
+    function decimalToAmerican(decimal) {
+        if (decimal >= 2) return Math.round((decimal - 1) * 100);
+        return Math.round(-100 / (decimal - 1));
+    }
+
+    function placeBet() {
+        if (betSlip.length === 0) return;
+        const wager = parseFloat(document.getElementById('betslip-wager').value) || 10;
+        const parlayOdds = document.getElementById('betslip-parlay-odds').textContent;
+        const toWin = document.getElementById('betslip-to-win').textContent;
+        alert(`Demo Bet Placed!\n\nPicks: ${betSlip.length}\nWager: $${wager}\nParlay Odds: ${parlayOdds}\nTo Win: ${toWin}\n\nThis is a demo - no real money involved.`);
+        clearBetSlip();
     }
 
     function formatOdds(odds) {
@@ -250,19 +659,46 @@ Live sports betting odds from The Odds API.
         return Math.abs(num) / (Math.abs(num) + 100);
     }
 
+    function manageAutoRefresh(hasLiveGames) {
+        const autoRefreshCheckbox = document.getElementById('odds-auto-refresh');
+        if (autoRefreshCheckbox.checked && hasLiveGames) {
+            if (!autoRefreshInterval) {
+                autoRefreshInterval = setInterval(loadLiveOdds, 30000);
+            }
+        } else {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+    }
+
     // Expose to global scope
     window.loadLiveOdds = loadLiveOdds;
+    window.togglePick = togglePick;
+    window.togglePropPick = togglePropPick;
+    window.removePick = removePick;
+    window.clearBetSlip = clearBetSlip;
+    window.placeBet = placeBet;
+    window.openPropsModal = openPropsModal;
 
-    // Filter change handlers
+    // Event listeners
     document.getElementById('odds-sport-filter')?.addEventListener('change', loadLiveOdds);
     document.getElementById('odds-market-filter')?.addEventListener('change', loadLiveOdds);
+    document.getElementById('betslip-wager')?.addEventListener('input', updateParlayOdds);
+    document.getElementById('odds-auto-refresh')?.addEventListener('change', function() {
+        manageAutoRefresh(lastLiveCount > 0);
+    });
 
-    // Auto-load when tab is shown
     document.addEventListener('DOMContentLoaded', function() {
         const oddsTab = document.getElementById('betting-odds-tab');
         if (oddsTab) {
             oddsTab.addEventListener('shown.bs.tab', loadLiveOdds);
         }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     });
 })();
 </script>
