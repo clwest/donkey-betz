@@ -411,7 +411,7 @@ def get_all_preferences(request):
 # ============================================================================
 
 @require_http_methods(["GET"])
-@login_required
+# Session 564: Removed @login_required - now public for Command Center UI
 def get_agent_conversations(request):
     """
     Get recent agent conversations for display in UI.
