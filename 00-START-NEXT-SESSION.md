@@ -1,57 +1,69 @@
-# Session 560 - Start Here
+# Session 564 - Start Here
 
-**Previous Session:** 559
+**Previous Session:** 563
 **Date:** December 27, 2025
-**Focus:** Betting Platform Enhancements & Next Features
+**Focus:** Betting History/Tracking, Mobile-Responsive, Analytics
 
 ---
 
-## Session 559 Accomplishments
+## Session 563 Accomplishments
 
-### Betting Dashboard UI Complete
-Added full web UI for betting features (previously Discord-only):
+### Live Odds Enhancements - COMPLETE
 
-| Sub-Tab | Features |
-|---------|----------|
-| **Overview** | Recent wagers, performance stats, top arbs, value plays |
-| **Live Odds** | Sport/market filters, game cards, bookmaker odds |
-| **Arbitrage** | Scanner with filters, arb cards with stakes |
-| **Prediction Markets** | Kalshi markets, category filters, trending |
-| **Bankroll** | Balance, P/L chart, win rate gauge, pending bets |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Sport Filter Fix** | DONE | NBA/NFL/NCAAF now show correct games |
+| **Live Scores** | DONE | ESPN integration with auto-refresh (30s) |
+| **Spread Display** | DONE | Shows point spread (+8.5, -8.5) |
+| **Total Display** | DONE | Shows O/U total (Over 245.5) |
+| **Player Props Modal** | DONE | Props by player with Over/Under buttons |
+| **Bet Slip** | DONE | Add picks, calculate parlay odds |
+| **Sport Emojis** | DONE | 🏈 football, 🏀 basketball, etc. |
+| **Dream Maintenance** | DONE | Daily cleanup of stale dreams |
 
-### New Files Created
-| File | Purpose |
-|------|---------|
-| `ai_core/templates/components/panels/betting_dashboard_panel.html` | Main panel |
-| `ai_core/templates/components/panels/betting/betting_overview.html` | Overview tab |
-| `ai_core/templates/components/panels/betting/betting_odds.html` | Live odds tab |
-| `ai_core/templates/components/panels/betting/betting_arbitrage.html` | Arb scanner |
-| `ai_core/templates/components/panels/betting/betting_markets.html` | Prediction markets |
-| `ai_core/templates/components/panels/betting/betting_bankroll.html` | Bankroll tracking |
+### New API Endpoints
 
-### Bug Fixes Applied
-- Fixed API authentication (added betting endpoints to `PUBLIC_PATHS`)
-- Fixed `detect_arbitrage` to handle GET requests (was POST-only)
-- Fixed JavaScript parsing to use `data.odds` key (was looking for wrong keys)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/sports/live-odds-scores/` | GET | Odds + ESPN live scores |
+| `/api/v1/sports/events/{id}/props/` | GET | Player props for event |
 
-**Handoff:** `docs/handoffs/SESSION_559_BETTING_DASHBOARD_UI.md`
+### Player Props Available
+
+| Sport | Props |
+|-------|-------|
+| **NBA/NCAAB** | Points, Rebounds, Assists, Threes, Blocks, Steals, PRA, Double-Double |
+| **NFL/NCAAF** | Pass TDs, Pass Yds, Rush Yds, Rec Yds, Receptions, Anytime TD, First TD |
+| **NHL** | Points, Assists, Shots on Goal, Blocked Shots |
+| **MLB** | Hits, Home Runs, RBIs, Total Bases, Pitcher Strikeouts |
+
+**Handoff:** `docs/handoffs/SESSION_563_LIVE_ODDS_PLAYER_PROPS.md`
 
 ---
 
-## Session 560 Priorities
+## Session 564 Priorities
 
-### 1. Betting Platform Enhancements
-- [ ] Add Futures tab to betting dashboard
-- [ ] Implement Kelly Criterion calculator modal
-- [ ] Add bet logging from web UI (not just Discord)
-- [ ] WebSocket real-time updates for odds
+### 1. Betting History/Tracking
+- [ ] Record placed bets in database
+- [ ] Track outcomes (win/loss/push)
+- [ ] P/L over time dashboard
+- [ ] Bet confirmation modal
 
-### 2. Additional Features to Consider
-- Line movement charts (historical odds tracking)
-- Push notifications for arbitrage alerts
-- Mobile-responsive improvements
-- Betting patterns analysis (win rate by sport/bet type)
-- Export functionality for betting history
+### 2. Mobile-Responsive Improvements
+- [ ] Audit betting dashboard on mobile
+- [ ] Fix table responsiveness
+- [ ] Add touch-friendly controls
+- [ ] Swipe gestures for tab navigation
+
+### 3. Betting Patterns Analysis
+- [ ] Win rate by sport/type charts
+- [ ] Monthly P/L breakdown
+- [ ] Performance vs closing line (CLV)
+
+### 4. Export Functionality
+- [ ] CSV export for betting history
+- [ ] PDF summary report generation
+- [ ] Date range filtering
 
 ---
 
@@ -59,11 +71,21 @@ Added full web UI for betting features (previously Discord-only):
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 76 | +Kalshi, TheOdds |
-| **Agents** | 55 | +ArbitrageDetector |
-| **Discord Commands** | ~96 | 4 cogs disabled for limit |
-| **Celery Beat Tasks** | +3 | Betting digest, intelligence, alerts |
-| **Web UI Tabs** | 14 | +Betting Dashboard |
+| **Spiders** | 76 | Active |
+| **Agents** | 55 | Active |
+| **Discord Commands** | ~96 | 4 cogs disabled |
+| **Celery Beat Tasks** | 52+ | Running |
+| **Web UI Tabs** | 14 | Betting = 8 sub-tabs |
+
+### Betting Dashboard Sub-Tabs (8)
+1. Overview - Recent wagers, stats, top arbs
+2. **Live Odds** - Sport filters, live scores, props, bet slip (ENHANCED)
+3. Arbitrage - Scanner with profit filters
+4. Prediction Markets - Kalshi integration
+5. Bankroll - P/L charts, win rate
+6. Futures - Championship odds
+7. Line Movement - Historical odds charts
+8. Alerts - Push notification settings
 
 ---
 
@@ -76,38 +98,36 @@ make start && make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Click "Betting" tab to see new dashboard
-
-# 4. Test betting Discord commands
-.venv/bin/python run_discord_bot.py
-/odds nfl
-/arb
-/bankroll
+# 3. Test Live Odds with Props:
+#    - Go to Betting tab
+#    - Click "Live Odds" sub-tab
+#    - Select NBA
+#    - Click "📊 Props" on any game
 ```
 
 ---
 
-## Key Files (Betting Platform)
+## Key Files (Session 564)
 
 | File | Purpose |
 |------|---------|
-| `ai_core/spiders/specialized/theodds_spider.py` | Sports odds spider |
-| `ai_core/spiders/specialized/kalshi_spider.py` | Prediction markets |
-| `core/agents/markets/arbitrage_detector.py` | Arb detection |
-| `core/models_bankroll.py` | Bankroll models |
-| `core/services/discord_bot.py` | Discord commands |
-| `ai_core/templates/components/panels/betting_dashboard_panel.html` | Web UI |
+| `betting/betting_odds.html` | Live odds with props modal, bet slip |
+| `core/views_odds_sports.py` | Live scores + props endpoints |
+| `sports/data_providers.py` | The Odds API integration |
+| `core/tasks.py` | Dream maintenance task |
 
 ---
 
-## Environment Variables Required
+## Environment Variables
 
 ```bash
-THE_ODDS_API_KEY=your_key_here      # Required for sports odds
+THE_ODDS_API_KEY=your_key_here      # Required for sports odds (20k calls/month)
 KALSHI_API_KEY=your_key_here        # Optional for prediction markets
+VAPID_PUBLIC_KEY=your_key           # For push notifications
+VAPID_PRIVATE_KEY=your_key          # For push notifications
 ```
 
 ---
 
-**Session 559: Betting Dashboard UI - COMPLETE**
-**Ready for Session 560**
+**Session 563: Live Odds + Player Props - COMPLETE**
+**Ready for Session 564**
