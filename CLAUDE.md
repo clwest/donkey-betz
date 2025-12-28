@@ -1,12 +1,12 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 27, 2025 - Session 559
+**Last Updated:** December 27, 2025 - Session 562
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
 **Spider Network:** 76 spiders | 20,712+ data records | 88.1% embeddings
-**Agent Ecosystem:** 42 routable agents | Autonomous Content Generation | 3-Agent Debates
+**Agent Ecosystem:** 71 agents (47 routable) | Autonomous Content Generation | 3-Agent Debates
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
-**Betting Dashboard:** Web UI for odds, arbitrage, bankroll tracking (Session 559)
+**Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts (Session 562)
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -30,7 +30,7 @@ open http://localhost:8000/ai-studio/
 ## Project Structure
 
 ### Key Directories
-- `core/agents/` - **Canonical agent location** (42 agents with learning hooks)
+- `core/agents/` - **Canonical agent location** (71 agents with learning hooks)
 - `core/services/` - Business logic services
 - `core/prompts/` - Central prompt registry
 - `ai_core/spiders/` - Spider network (72 spiders)
@@ -50,29 +50,49 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Agent Ecosystem (42 Agents)
+## Agent Ecosystem (71 Agents)
 
 All agents in `core/agents/` with learning hooks connected to collective intelligence.
+**47 routable** (in AgentRouter) | **24 non-routable** (sub-agents managed by coordinators)
 
-| Category | Agents |
-|----------|--------|
-| **Creation** | ImageAgent, VideoAgent, AudioAgent, ThreeDAgent |
-| **Editing** | ImageEditingAgent, VideoEditingAgent |
-| **Research** | ResearchAgent, TrendAnalysisAgent, OpportunityScoringAgent |
-| **Strategy** | ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent, SocialMediaAgent |
-| **Business** | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent, MarketingStrategyAgent, BusinessContentStrategyAgent |
-| **Executive** | CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent |
-| **Development** | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent |
-| **Content Studio** | AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent |
-| **Specialized** | LegalDocDrafterAgent, ResolveAgent, PodcastCoordinatorAgent, AISeriesWorkflowAgent |
-| **Training** | CharacterTrainingAgent, TrainedCreationAgent |
-| **Orchestration** | WorkflowAgent, CampaignOrchestratorAgent |
-| **Entry Point** | PersonalAssistantAgent |
+| Category | Count | Agents |
+|----------|-------|--------|
+| **Creation** | 4 | ImageAgent, VideoAgent, AudioAgent, ThreeDAgent |
+| **Editing** | 2 | ImageEditingAgent, VideoEditingAgent |
+| **Research** | 1 | ResearchAgent |
+| **Content Writing** | 1 | ContentWriterAgent |
+| **Strategy** | 4 | ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent, SocialMediaAgent |
+| **Executive** | 4 | CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent |
+| **Analysis** | 3 | TrendAnalysisAgent, OpportunityScoringAgent, MarketIntelligenceAgent* |
+| **Training** | 2 | CharacterTrainingAgent, TrainedCreationAgent |
+| **Security** | 2 | MemoryIsolationAgent, ContentAuditAgent |
+| **Business** | 5 | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent*, ContentStrategyAgent (business)*, MarketingStrategyAgent* |
+| **Development** | 4 | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent |
+| **Blockchain** | 5 | BlockchainAuditCoordinator, SmartContractAuditorAgent*, TransactionMonitorAgent*, WhaleWatcherAgent*, ExploitDetectorAgent* |
+| **Legal** | 1 | LegalDocDrafterAgent |
+| **Narrative** | 4 | NarrativeDriftCoordinator*, NarrativeHistorianAgent*, TrendBreakDetectorAgent*, CulturalImpactAgent* |
+| **Content Studio** | 4 | AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent |
+| **Podcast** | 4 | PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
+| **Rendering** | 1 | ResolveAgent |
+| **Orchestration** | 4 | WorkflowAgent, WorkflowOrchestrationAgent*, OpportunityPipelineAgent*, ContentExecutorAgent* |
+| **Campaign** | 2 | CampaignOrchestratorAgent, AISeriesWorkflowAgent |
+| **Stocks** | 9 | StockAuditCoordinator, StockAnalystAgent*, MarketMovementMonitorAgent*, InstitutionalWatcherAgent*, MarketAnomalyDetectorAgent*, BullCaseAgent*, BearCaseAgent*, SignalScannerAgent*, MarketIntelligenceCoordinator* |
+| **Markets** | 3 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector |
+| **Entry Point** | 1 | PersonalAssistantAgent |
+| **Special** | 1 | ThinkingAgent* |
+
+*\* = Non-routable (sub-agents orchestrated by coordinators)*
 
 ### Agent Architecture
 - **BaseAgent** - All agents inherit TimeTravelMixin, learning hooks, memory creation
 - **Router** - `core/agent_router.py` - Deterministic routing (no LLM)
 - **Learning** - All agents connected to collective intelligence system
+- **Coordinators** - 5 coordinator agents manage teams of sub-agents:
+  - BlockchainAuditCoordinator → 4 blockchain sub-agents
+  - StockAuditCoordinator → 5 stock sub-agents
+  - MarketIntelligenceCoordinator → 4 market sub-agents
+  - NarrativeDriftCoordinator → 3 narrative sub-agents
+  - AutonomousContentStudioCoordinator → 3 content sub-agents
 
 ---
 
@@ -124,8 +144,10 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 562 | Push Notifications for Arb Alerts - Web Push API, service worker, preferences UI | `SESSION_562_PUSH_NOTIFICATIONS.md` |
+| 561 | Line Movement Charts - Historical odds tracking, movement visualization, movers API | `SESSION_561_LINE_MOVEMENT_CHARTS.md` |
+| 560 | Betting Dashboard Enhancements - Futures tab, Kelly Calculator, Bet Logging, WebSocket updates | `SESSION_560_BETTING_DASHBOARD_ENHANCEMENTS.md` |
 | 559 | Betting Dashboard UI - Web interface for odds, arbitrage, bankroll tracking | `SESSION_559_BETTING_DASHBOARD_UI.md` |
-| 558 | Complete Betting Platform - 8 features via Discord + Celery tasks | `SESSION_558_BETTING_PLATFORM.md` |
 | 556 | Chief of Staff Extensions - Discord commands, Boardroom UI, auto-reviews, dream reviews | `SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md` |
 | 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con review documents | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 | 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
