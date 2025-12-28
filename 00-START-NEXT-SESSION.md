@@ -1,70 +1,49 @@
-# Session 566 - Start Here
+# Session 568 - Start Here
 
-**Previous Session:** 565
+**Previous Session:** 567
 **Date:** December 28, 2025
 **Focus:** Continue platform improvements
 
 ---
 
-## Session 565 Accomplishments
+## Session 567 Accomplishments
 
-### Context-Aware Personal Assistant - COMPLETE
+### Full System Audit - COMPLETE
 
-Implemented end-to-end integration to make the Personal Assistant query platform intelligence (3,345+ knowledge entries, 284+ transfers, 66+ dreams) when responding to users.
+Conducted comprehensive audit of all platform components with accurate counts.
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| **PAIntelligenceEnricher** | Created | Queries knowledge, experts, dreams, policies, trends |
-| **ContextAggregator** | Updated | Now includes intelligence_context in aggregation |
-| **DynamicPromptBuilder** | Updated | Formats intelligence for prompt injection |
-| **SuperPlatformCoordinator** | Updated | Includes intelligence metadata in responses |
-| **PersonalAssistantAgent** | Updated | Accepts and uses intelligence_context |
-| **BaseAgent** | Updated | `_build_prompt_with_attribution()` now includes intelligence |
-| **UI Panel** | Added | Collapsible "Intelligence Sources" panel in chat |
+| Component | Count | Details |
+|-----------|-------|---------|
+| **Agents** | 71 | 47 routable, 24 sub-agents (5 coordinator teams) |
+| **Spiders** | 77 | 72 working, 5 need API keys |
+| **Database Models** | 324+ | 37 categories |
+| **Celery Tasks** | 226 | 53 scheduled via Beat |
+| **Services** | 93 | Business logic layer |
+| **Discord Commands** | 112 | 29 Cog categories |
+| **Advisors** | 25 | Famous figures + domain experts |
+| **Sci-Fi Features** | 15 | 9 active, 4 deprecated, 2 bonus |
 
-#### How It Works
+### Bug Fix: Celery Task Typo
 
-1. User sends message to PA
-2. ContextAggregator calls PAIntelligenceEnricher.enrich_context()
-3. Enricher classifies intent (trend, strategy, creative, technical, question)
-4. Based on intent, queries:
-   - IntelligenceQueryService (knowledge, experts)
-   - AgentDream (high-value dreams)
-   - AgentDecisionSummary (canonical policies)
-   - SpiderIntelligenceService (trends)
-5. Formatted context injected into PA prompts
-6. Intelligence metadata returned with response
-7. UI shows collapsible "Intelligence Sources (X)" panel
+Fixed task reference in `core/celery.py`:
+- **Before:** `core.tasks.run_earnings_surprise_predictor`
+- **After:** `core.tasks.run_earnings_predictor`
 
-#### Files Created/Modified
+### Documentation Updates
 
-**Created:**
-- `core/services/pa_intelligence_enricher.py` - Main enricher service (~480 lines)
+| File | Changes |
+|------|---------|
+| `CLAUDE.md` | Added System Stats table, updated to Session 567 |
+| `docs/CAPABILITIES.md` | Added System Overview section, corrected counts |
+| `docs/AGENTS.md` | All 71 agents documented by category |
+| `docs/SPIDERS.md` | All 77 spiders documented by category |
+| `docs/handoffs/SESSION_567_FULL_SYSTEM_AUDIT.md` | Complete audit report |
 
-**Modified:**
-- `core/super_platform/context_aggregator.py` - Added intelligence_context field
-- `core/super_platform/prompt_builder.py` - Added _build_intelligence_section()
-- `core/super_platform/coordinator.py` - Pass intelligence to PA, include in result
-- `core/agents/personal_assistant_agent.py` - Accept intelligence_context param
-- `core/agents/base_agent.py` - Updated _build_prompt_with_attribution()
-- `ai_core/templates/partials/js/ai_assistant.html` - Added Intelligence Sources UI
+### Commits
 
-#### Verified Working
-
-```python
-# Test shows intelligence context flowing through
-coordinator = SuperPlatformCoordinator(user=None)
-result = coordinator.process('What strategy should I use for building a fitness app?')
-
-print(result.metadata.get('intelligence_context'))
-# Output:
-# {
-#   'knowledge_count': 3,
-#   'experts_count': 0,
-#   'dreams_count': 0,
-#   'trends_count': 5,
-#   'attribution': 'Based on 3 knowledge entries from 3 agents, 5 trends from...'
-# }
+```
+2d40ebc docs(Session 567): Full system audit documentation
+8b83272 fix(Session 567): Fix Celery task name typo for earnings predictor
 ```
 
 ---
@@ -73,34 +52,41 @@ print(result.metadata.get('intelligence_context'))
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Spiders** | 77 | Active |
-| **Agents** | 67 | Active (+ 4 inactive legacy) |
-| **Knowledge Items** | 3,345+ | Growing |
-| **Learning Transfers** | 284+ | Active |
-| **Discord Commands** | ~96 | 4 cogs disabled |
-| **Celery Beat Tasks** | 52+ | Running |
+| **Agents** | 71 | 47 routable, 24 sub-agents |
+| **Spiders** | 77 | 72 working |
+| **Database Models** | 324+ | 37 categories |
+| **Celery Tasks** | 226 | 53 scheduled (Beat) |
+| **Services** | 93 | Active |
+| **Discord Commands** | 112 | 29 Cogs |
+| **Advisors** | 25 | Active |
+| **Sci-Fi Features** | 15 | 9 active |
 
 ---
 
-## Session 566 Priorities
+## Session 568 Priorities
 
-### 1. Test Intelligence Panel in Live UI
-- [ ] Start server and test chat with "Intelligence Sources" panel
-- [ ] Verify panel expands/collapses correctly
-- [ ] Check expert agent badges display
+### 1. Consider Removing Deprecated Sci-Fi Features
+- [ ] Memory Clusters (deprecated)
+- [ ] Prophecies (deprecated)
+- [ ] Time Capsules (deprecated)
+- [ ] Neural Sync (deprecated)
 
-### 2. Enhance Intent Classification
-- [ ] Add more keywords for better intent detection
-- [ ] Consider ML-based classification for better accuracy
+### 2. Document Services Layer
+- [ ] Create `docs/SERVICES.md` documenting 93 service classes
+- [ ] Organize by category (AI, Content, Intelligence, etc.)
 
-### 3. Monitor Intelligence Quality
-- [ ] Check logs for 🧠 [Session 565] entries
-- [ ] Verify knowledge retrieval is relevant
-- [ ] Tune confidence thresholds if needed
+### 3. Discord Commands Reference
+- [ ] Create `docs/DISCORD_COMMANDS.md` with all 112 commands
+- [ ] Organize by Cog category
 
-### 4. Remaining Betting Sub-Tabs
-- [ ] Test Bankroll tab
-- [ ] Test Alerts tab
+### 4. Database Models Documentation
+- [ ] Create `docs/MODELS.md` documenting 324+ models
+- [ ] Organize by category (37 categories)
+
+### 5. Clean Up Legacy Code
+- [ ] Audit for unused imports
+- [ ] Remove deprecated feature code if decided
+- [ ] Clean up debug logging from Sessions 565-566
 
 ---
 
@@ -113,24 +99,44 @@ make start && make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test intelligence enrichment in PA chat
-# Ask: "What's the best strategy for building a fitness app?"
-# Should see "Intelligence Sources (X)" button below response
+# 3. Health check
+curl http://localhost:8000/health/ping/
 
-# 4. Verify logs show intelligence flow:
-grep "Session 565" /path/to/logs
-# Should see: "🧠 [Session 565] Intelligence enrichment: X knowledge, Y experts, Z dreams"
+# 4. Verify Celery tasks
+.venv/bin/python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+import django; django.setup()
+from core.celery import app
+print(f'Registered tasks: {len(app.tasks)}')
+print(f'Beat schedule: {len(app.conf.beat_schedule)}')
+"
 ```
 
 ---
 
-## Commits from Session 565
+## Key Documentation
 
-(To be committed after this session)
-
-- feat(Session 565): Context-Aware PA with Intelligence Enrichment
+| Doc | Purpose |
+|-----|---------|
+| `CLAUDE.md` | AI session entry point with system stats |
+| `docs/CAPABILITIES.md` | Full feature list with counts |
+| `docs/AGENTS.md` | All 71 agents documented |
+| `docs/SPIDERS.md` | All 77 spiders documented |
+| `docs/handoffs/SESSION_567_FULL_SYSTEM_AUDIT.md` | Complete audit report |
 
 ---
 
-**Session 565: Context-Aware PA with Platform Intelligence - COMPLETE**
-**Ready for Session 566**
+## Recent Commits
+
+```
+2d40ebc docs(Session 567): Full system audit documentation
+8b83272 fix(Session 567): Fix Celery task name typo for earnings predictor
+ffb2b7b feat(Session 566): Intelligence Sources UI panel + GPT-5-mini token fix
+caf7e9e feat(Session 565): Context-Aware PA with Platform Intelligence
+```
+
+---
+
+**Session 567: Full System Audit - COMPLETE**
+**Ready for Session 568**
