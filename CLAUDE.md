@@ -1,12 +1,23 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 27, 2025 - Session 562
+**Last Updated:** December 28, 2025 - Session 567
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
-**Spider Network:** 77 spiders | 20,712+ data records | 88.1% embeddings
-**Agent Ecosystem:** 71 agents (47 routable) | Autonomous Content Generation | 3-Agent Debates
+
+## System Stats (Session 567 Full Audit)
+| Component | Count | Details |
+|-----------|-------|---------|
+| **Agents** | 71 | 47 routable, 24 sub-agents |
+| **Spiders** | 77 | 72 working, 5 need API keys |
+| **Database Models** | 324+ | 37 categories |
+| **Celery Tasks** | 226 | 53 scheduled (Beat) |
+| **Services** | 93 | Business logic layer |
+| **Discord Commands** | 112 | 29 Cog categories |
+| **Advisors** | 25 | Famous figures + domain experts |
+| **Sci-Fi Features** | 15 | 9 active, 4 deprecated, 2 bonus |
+
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
-**Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts (Session 562)
+**Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -31,9 +42,9 @@ open http://localhost:8000/ai-studio/
 
 ### Key Directories
 - `core/agents/` - **Canonical agent location** (71 agents with learning hooks)
-- `core/services/` - Business logic services
+- `core/services/` - Business logic services (93 service classes)
 - `core/prompts/` - Central prompt registry
-- `ai_core/spiders/` - Spider network (72 spiders)
+- `ai_core/spiders/` - Spider network (77 spiders)
 - `ai_core/templates/` - Frontend (ai_image_studio.html)
 - `docs/handoffs/` - Session handoff documents
 
@@ -154,6 +165,9 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 567 | Full System Audit - 71 agents, 77 spiders, 324+ models, 226 Celery tasks, 93 services | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
+| 566 | Intelligence Sources UI panel + GPT-5-mini token fix | - |
+| 565 | Context-Aware PA with Platform Intelligence | - |
 | 562 | Push Notifications for Arb Alerts - Web Push API, service worker, preferences UI | `SESSION_562_PUSH_NOTIFICATIONS.md` |
 | 561 | Line Movement Charts - Historical odds tracking, movement visualization, movers API | `SESSION_561_LINE_MOVEMENT_CHARTS.md` |
 | 560 | Betting Dashboard Enhancements - Futures tab, Kelly Calculator, Bet Logging, WebSocket updates | `SESSION_560_BETTING_DASHBOARD_ENHANCEMENTS.md` |
@@ -163,10 +177,6 @@ curl http://localhost:8000/health/ping/
 | 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
 | 552 | Research Demo Tab Complete Fix - APIs, colors, live feed, self-blog | `SESSION_552_RESEARCH_DEMO_FIXES.md` |
 | 551 | Boardroom Deduplication + Pending Dreams Tracking | `SESSION_551_BOARDROOM_DEDUPLICATION.md` |
-| 520 | Projects Tab Unification - Fixed CreativeProject vs PartnershipProject disconnect | `SESSION_520_PROJECTS_TAB_AUDIT.md` |
-| 519 | Auto-Project Creation & Content Display | `SESSION_519_AUTO_PROJECT_CREATION_AND_CONTENT_DISPLAY.md` |
-| 513 | Campaign Orchestrator Agent - Marketing hub | `SESSION_513_CAMPAIGN_ORCHESTRATOR.md` |
-| 511 | ML Scoring Sub-Tab Enhancement | `SESSION_511_ML_SCORING_SUBTAB_ENHANCEMENT.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
