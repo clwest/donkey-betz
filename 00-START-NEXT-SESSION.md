@@ -1,8 +1,56 @@
-# Session 572 - Start Here
+# Session 573 - Start Here
 
-**Previous Session:** 571
+**Previous Session:** 572
 **Date:** December 28, 2025
 **Focus:** Continue platform improvements
+
+---
+
+## Session 572 Accomplishments
+
+### UI Auto-Refresh for Thinking Engine & Concern Tracking - COMPLETE
+
+Fixed issue where Thinking Engine and Concern Tracking tabs appeared stale because they only loaded data on tab click.
+
+| Component | Fix |
+|-----------|-----|
+| Thinking Engine tab | 30-second auto-refresh when tab is active |
+| Concern Tracking tab | 30-second auto-refresh when tab is active |
+
+**Implementation:** Added `setInterval` that starts on `shown.bs.tab` and clears on `hidden.bs.tab` to prevent unnecessary API calls when not viewing.
+
+### Self Blog Diverse Topic Generation - COMPLETE
+
+Fixed issue where all 24 self-blogs had nearly identical titles about "The Self-Evolving AI Ecosystem".
+
+**Before:** Every blog was about the same topic (the AI platform itself)
+
+**After:** Blogs now randomly pick from 4 topic categories:
+
+| Category | Source | Example |
+|----------|--------|---------|
+| `trending` | Spider data | Real articles from TechCrunch, HackerNews, Reddit |
+| `dreams` | Agent dreams | Insights like "Don't Mistake Certainty for Truth" |
+| `conversations` | Agent discussions | Topics agents talked about |
+| `system` | Meta/self-aware | Original behavior (writing about the platform) |
+
+**New parameter:** `topic_category` in `generate_self_blog_task()` - defaults to random selection
+
+### Agent Cycle Verification
+
+Ran full agent cycle to verify Session 571 database fixes:
+
+| Metric | Count |
+|--------|-------|
+| Dreams generated (Dec 28) | 114 |
+| Conversations (Dec 28) | 76 |
+| Discord notifications | 40+ sent successfully |
+
+### Session 572 Commits
+
+```
+8b4432b fix(Session 572): Auto-refresh for Thinking/Concerns + diverse Self Blog topics
+```
 
 ---
 
@@ -10,89 +58,12 @@
 
 ### Database Audit & Fixes - COMPLETE
 
-Performed comprehensive database audit after discovering migrations marked as "applied" but with missing tables.
-
-#### Issues Found & Fixed
-
 | Issue | Status |
 |-------|--------|
 | 6 missing `ai_intelligence_*` tables | Fixed |
 | Broken import in `conversation_orchestrator.py` | Fixed |
 | Missing `django_session` table | Fixed |
 | `stock_market` situation failing | Fixed |
-
-#### Missing Tables Created
-
-Reapplied `ai_intelligence.0001_initial` migration to create:
-
-| Table | Purpose |
-|-------|---------|
-| `ai_intelligence_agentlearningevent` | Learning event storage |
-| `ai_intelligence_learningdocument` | Auto-generated learning docs |
-| `ai_intelligence_agentknowledgebase` | Agent knowledge storage |
-| `ai_intelligence_learningembedding` | Learning embeddings |
-| `ai_intelligence_agentlearningsession` | Learning session tracking |
-| `ai_intelligence_learninginsight` | Learning insights |
-
-#### Import Fix
-
-Fixed broken import in `core/conversation_orchestrator.py:233`:
-```python
-# Before (wrong - model doesn't exist here)
-from core.models_unified_system import AgentLearningEvent
-
-# After (correct location)
-from ai_core.intelligence.models import AgentLearningEvent
-```
-
-#### Final Audit Results
-
-| Metric | Value |
-|--------|-------|
-| **Total Tables** | 455 |
-| **Django Models** | 358 |
-| **Missing Tables** | 0 |
-| **Applied Migrations** | 264 |
-| **Unapplied Migrations** | 0 |
-
-#### Root Cause
-
-Migrations were marked as "applied" in `django_migrations` table but actual `CREATE TABLE` statements never ran. This can happen when:
-- Migrations were fake-applied during development
-- Database was restored from a backup
-- Migration partially failed silently
-
-### Agent Activity Review
-
-Reviewed what agents did today:
-
-| Activity | Count |
-|----------|-------|
-| Dreams Generated | 43 |
-| Conversations | 56 |
-| Knowledge Created | 130 |
-| Autonomous Situation Runs | 16 |
-
-### Session 571 Commits
-
-```
-0ccaa65 fix(Session 571): Database audit fixes
-```
-
----
-
-## Session 570 Accomplishments
-
-### Codebase Cleanup - COMPLETE
-
-| Task | Items | Files |
-|------|-------|-------|
-| TODO cleanup | 33 | 22 |
-| Print → Logging | 69 | 10 |
-| Bare except fixes | 135 | 48 |
-| Self-blog viewer fix | 2 bugs | 3 |
-| Research stats fix | 2 counts | 1 |
-| **Total** | **241 items** | **84 files** |
 
 ---
 
@@ -113,10 +84,11 @@ Reviewed what agents did today:
 | **ML Model** | v2.0 | Trained |
 | **Triggers** | 34 | Active |
 | **Narratives** | 5 | Tracked |
+| **Self Blogs** | 24 | Now with diverse topics |
 
 ---
 
-## Session 572 Priorities
+## Session 573 Priorities
 
 ### 1. Feature Development
 - [ ] Review backlog for next feature priorities
@@ -127,8 +99,8 @@ Reviewed what agents did today:
 - [ ] Optimize database queries if needed
 
 ### 3. Testing
-- [ ] Add test coverage for critical paths
-- [ ] Verify all Discord commands work
+- [ ] Test diverse self-blog generation with different topic categories
+- [ ] Verify auto-refresh working in UI
 
 ### 4. Database Health (Recommendation)
 - [ ] Consider adding startup health check for critical tables
@@ -159,6 +131,13 @@ print(f'Agents: {Agent.objects.count()}')
 print(f'Celery tasks: {len(app.tasks)}')
 print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 "
+
+# 5. Test diverse self-blog (new!)
+.venv/bin/python manage.py shell -c "
+from core.tasks import generate_self_blog_task
+result = generate_self_blog_task(topic_category='dreams')
+print(result)
+"
 ```
 
 ---
@@ -181,22 +160,21 @@ print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 ## Recent Commits
 
 ```
+8b4432b fix(Session 572): Auto-refresh for Thinking/Concerns + diverse Self Blog topics
+d584ad9 docs(Session 571): Update handoff with database audit fixes
 0ccaa65 fix(Session 571): Database audit fixes
 4b82cb4 fix(Session 570): Fix Research tab spider/agent counts
 5e26883 fix(Session 570): Fix self-blog viewer for single blog display
-87041eb fix(Session 570): Add self-blog by ID API endpoint
-32a7d8b refactor(Session 570): Fix bare except clauses across codebase
 ```
 
 ---
 
-**Session 571: Database Audit & Fixes - COMPLETE**
+**Session 572: UI/UX Improvements - COMPLETE**
 
 | Fix | Details |
 |-----|---------|
-| Missing tables | 6 ai_intelligence tables created |
-| Broken import | conversation_orchestrator.py fixed |
-| stock_market situation | Now working (was failing on missing table) |
-| django_session | Table created |
+| Thinking Engine | Auto-refreshes every 30s when tab active |
+| Concern Tracking | Auto-refreshes every 30s when tab active |
+| Self Blog | Now generates diverse topics from spider data, dreams, conversations |
 
-**Ready for Session 572**
+**Ready for Session 573**
