@@ -244,13 +244,26 @@ def live_feed_api(request):
         ).select_related('agent').order_by('-dreamed_at')[:limit//3]
 
         for d in dreams:
+            # Session 564: Use content as fallback when title is empty
+            dream_title = d.title.strip() if d.title else ''
+            if not dream_title and d.content:
+                # Extract first sentence or first 60 chars as title
+                content_preview = d.content.strip()[:80]
+                if '. ' in content_preview:
+                    dream_title = content_preview.split('. ')[0]
+                elif ': ' in content_preview:
+                    dream_title = content_preview.split(': ')[0]
+                else:
+                    dream_title = content_preview[:60] + '...'
+            dream_title = dream_title or 'Untitled dream'
+
             events.append({
                 'type': 'dream',
                 'icon': 'sparkles',
                 'timestamp': d.dreamed_at.isoformat(),
                 'title': f"Agent Dream",
                 'description': f"{d.agent.name if d.agent else 'Unknown'} dreamed",
-                'details': d.title[:80] if d.title else 'Untitled dream',  # Session 552: Fixed field name
+                'details': dream_title[:80],
                 'quality_score': float(d.creativity_score or 0),
             })
 
