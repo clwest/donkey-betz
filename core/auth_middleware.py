@@ -102,6 +102,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/push/vapid-key/',  # VAPID public key for subscription
         '/api/v1/push/subscribe/',  # Allow anonymous subscriptions
         '/api/v1/push/unsubscribe/',  # Allow anonymous unsubscribe
+
+        # Session 563: Bet Tracking (allow anonymous for demo mode)
+        '/api/v1/betting/place/',  # Place bets
+        '/api/v1/betting/wagers/',  # View wagers
+        '/api/v1/betting/stats/',  # View stats
+        '/api/v1/betting/recent/',  # Recent activity
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

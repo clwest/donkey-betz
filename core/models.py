@@ -32,6 +32,15 @@ from .models_autonomous_situations import *
 # Import podcast studio models (Session 496 - AI Podcast with Agent Debates)
 from .models_podcast_studio import *
 
+# Import odds history models (Session 561 - Line Movement Charts)
+from .models_odds_history import *
+
+# Import push notification models (Session 562 - Arb Alerts)
+from .models_push_notifications import *
+
+# Import betting models (Session 563 - Bet Tracking)
+from .models_betting import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser

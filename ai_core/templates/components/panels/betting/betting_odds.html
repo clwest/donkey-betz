@@ -394,7 +394,7 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
                             return `
                                 <div class="col-md-${marketType === 'totals' ? 6 : outcomes.length === 3 ? 4 : 6}">
                                     <div class="odds-btn d-flex justify-content-between align-items-center mb-2 ${isSelected ? 'selected' : ''}"
-                                         onclick="togglePick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${displayName}${pointDisplay ? ' ' + pointDisplay : ''}', ${outcome.price}, '${outcome.bookmaker}')"
+                                         onclick="togglePick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${displayName}${pointDisplay ? ' ' + pointDisplay : ''}', ${outcome.price}, '${outcome.bookmaker}', '${gameId}', '${currentSport}', '${marketType}', ${outcome.point || 'null'})"
                                          style="cursor: pointer; ${isFavorite ? 'border-color: rgba(34, 197, 94, 0.6);' : isUnderdog ? 'border-color: rgba(239, 68, 68, 0.4);' : ''}">
                                         <div>
                                             <div style="font-weight: 600; color: ${isFavorite ? '#86efac' : isUnderdog ? '#fca5a5' : '#e5e7eb'};">
@@ -501,7 +501,7 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
                             const isSelected = betSlip.some(p => p.id === pickId);
                             html += `
                                 <div class="prop-btn flex-fill text-center ${isSelected ? 'selected' : ''}"
-                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} O${bestOver.line}', ${bestOver.odds}, '${bestOver.bookmaker}')">
+                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} O${bestOver.line}', ${bestOver.odds}, '${bestOver.bookmaker}', '${eventId}', '${currentSport}', ${bestOver.line})">
                                     <div style="color: #22c55e; font-size: 11px;">Over</div>
                                     <div style="color: #fbbf24; font-weight: 700;">${formatOdds(bestOver.odds)}</div>
                                     <div style="color: #6b7280; font-size: 9px;">${bestOver.bookmaker}</div>
@@ -514,7 +514,7 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
                             const isSelected = betSlip.some(p => p.id === pickId);
                             html += `
                                 <div class="prop-btn flex-fill text-center ${isSelected ? 'selected' : ''}"
-                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} U${bestUnder.line}', ${bestUnder.odds}, '${bestUnder.bookmaker}')">
+                                     onclick="togglePropPick('${pickId}', '${matchup.replace(/'/g, "\\'")}', '${player} ${market} U${bestUnder.line}', ${bestUnder.odds}, '${bestUnder.bookmaker}', '${eventId}', '${currentSport}', ${bestUnder.line})">
                                     <div style="color: #ef4444; font-size: 11px;">Under</div>
                                     <div style="color: #fbbf24; font-weight: 700;">${formatOdds(bestUnder.odds)}</div>
                                     <div style="color: #6b7280; font-size: 9px;">${bestUnder.bookmaker}</div>
@@ -540,8 +540,9 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
         }
     }
 
-    function togglePropPick(id, matchup, pick, odds, bookmaker) {
-        togglePick(id, matchup, pick, odds, bookmaker);
+    // Session 563: Updated to include event tracking data for props
+    function togglePropPick(id, matchup, pick, odds, bookmaker, eventId = '', sport = '', line = null) {
+        togglePick(id, matchup, pick, odds, bookmaker, eventId, sport, 'props', line);
         // Re-render modal to update selection state
         const modal = document.getElementById('propsModal');
         if (modal.classList.contains('show')) {
@@ -555,12 +556,13 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
         }
     }
 
-    function togglePick(id, matchup, pick, odds, bookmaker) {
+    // Session 563: Updated to include event tracking data
+    function togglePick(id, matchup, pick, odds, bookmaker, eventId = '', sport = '', marketType = 'h2h', line = null) {
         const existingIdx = betSlip.findIndex(p => p.id === id);
         if (existingIdx >= 0) {
             betSlip.splice(existingIdx, 1);
         } else {
-            betSlip.push({ id, matchup, pick, odds, bookmaker });
+            betSlip.push({ id, matchup, pick, odds, bookmaker, eventId, sport, marketType, line });
         }
         renderBetSlip();
     }
@@ -637,13 +639,47 @@ Session 563: Enhanced with live scores, auto-refresh, bet slip, and player props
         return Math.round(-100 / (decimal - 1));
     }
 
-    function placeBet() {
+    // Session 563: Connect to bet tracking API
+    async function placeBet() {
         if (betSlip.length === 0) return;
+
         const wager = parseFloat(document.getElementById('betslip-wager').value) || 10;
         const parlayOdds = document.getElementById('betslip-parlay-odds').textContent;
         const toWin = document.getElementById('betslip-to-win').textContent;
-        alert(`Demo Bet Placed!\n\nPicks: ${betSlip.length}\nWager: $${wager}\nParlay Odds: ${parlayOdds}\nTo Win: ${toWin}\n\nThis is a demo - no real money involved.`);
-        clearBetSlip();
+
+        // Format picks for API
+        const picks = betSlip.map(p => ({
+            event_id: p.eventId || p.id.split('_')[0],
+            sport: p.sport || currentSport,
+            matchup: p.matchup,
+            market_type: p.marketType || 'h2h',
+            pick: p.pick,
+            odds: p.odds,
+            line: p.line,
+            bookmaker: p.bookmaker
+        }));
+
+        try {
+            const response = await fetch('/api/v1/betting/place/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stake: wager, picks })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Show success message
+                const wagerType = data.wager.type === 'parlay' ? `${data.wager.legs}-Leg Parlay` : 'Single Bet';
+                alert(`✅ Bet Placed!\n\n${wagerType}\nStake: $${wager}\nOdds: ${parlayOdds}\nPotential Payout: $${data.wager.potential_payout.toFixed(2)}\n\nWager ID: ${data.wager.id.slice(0, 8)}...\n\n⚠️ Demo mode - no real money`);
+                clearBetSlip();
+            } else {
+                alert(`❌ Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Error placing bet:', error);
+            alert(`❌ Error placing bet: ${error.message}`);
+        }
     }
 
     function formatOdds(odds) {
