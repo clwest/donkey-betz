@@ -13,6 +13,7 @@ from django.contrib.auth import get_user_model
 from datetime import datetime, timedelta
 from django.db import models
 import json
+import decimal
 import random
 import requests
 import os
@@ -1470,6 +1471,312 @@ def live_odds(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def live_odds_with_scores(request):
+    """
+    Session 563: Get live odds combined with ESPN live scores.
+    Returns odds data enriched with real-time scores for in-progress games.
+    """
+    if not DATA_PROVIDERS_AVAILABLE or not sports_data_manager:
+        return Response({
+            'success': False,
+            'message': 'Data providers not available'
+        })
+
+    try:
+        sport = request.GET.get('sport', 'americanfootball_nfl')
+        markets = request.GET.getlist('markets', ['h2h', 'spreads', 'totals'])
+
+        # Map full sport keys to short keys for ESPN
+        espn_sport_map = {
+            'americanfootball_nfl': 'nfl',
+            'americanfootball_ncaaf': 'ncaaf',
+            'basketball_nba': 'nba',
+            'basketball_ncaab': 'ncaab',
+            'baseball_mlb': 'mlb',
+            'icehockey_nhl': 'nhl',
+        }
+        espn_sport = espn_sport_map.get(sport, 'nfl')
+
+        # Get odds data
+        odds_data = sports_data_manager.odds_api.get_odds(sport, markets)
+
+        # Get ESPN scoreboard for live scores
+        scoreboard = sports_data_manager.espn.get_scoreboard(espn_sport)
+        events = scoreboard.get('events', [])
+
+        # Build lookup of live scores by team names
+        live_scores = {}
+        for event in events:
+            competitors = event.get('competitions', [{}])[0].get('competitors', [])
+            status_info = event.get('status', {})
+            status_type = status_info.get('type', {})
+
+            home_team = None
+            away_team = None
+            home_score = 0
+            away_score = 0
+
+            for comp in competitors:
+                team_name = comp.get('team', {}).get('displayName', '')
+                score = int(comp.get('score', 0) or 0)
+                if comp.get('homeAway') == 'home':
+                    home_team = team_name
+                    home_score = score
+                else:
+                    away_team = team_name
+                    away_score = score
+
+            if home_team and away_team:
+                # Create a key that can match odds data
+                key = f"{home_team}|{away_team}".lower()
+                live_scores[key] = {
+                    'home_score': home_score,
+                    'away_score': away_score,
+                    'status': status_type.get('state', 'pre'),  # pre, in, post
+                    'status_detail': status_info.get('type', {}).get('shortDetail', ''),
+                    'period': status_info.get('period', 0),
+                    'clock': status_info.get('displayClock', ''),
+                    'is_live': status_type.get('state') == 'in',
+                    'is_final': status_type.get('completed', False),
+                }
+
+        # Enrich odds data with live scores
+        enriched_odds = []
+        live_count = 0
+
+        for game in odds_data:
+            home = game.get('home_team', '')
+            away = game.get('away_team', '')
+            key = f"{home}|{away}".lower()
+
+            # Try to find matching live score
+            score_data = live_scores.get(key)
+
+            # Also try reverse key and partial matches
+            if not score_data:
+                for score_key, data in live_scores.items():
+                    if home.lower() in score_key or away.lower() in score_key:
+                        score_data = data
+                        break
+
+            game_data = {
+                'id': game.get('id'),
+                'sport_key': game.get('sport_key'),
+                'home_team': home,
+                'away_team': away,
+                'commence_time': game.get('commence_time'),
+                'bookmakers': []
+            }
+
+            # Add live score info if available
+            if score_data:
+                game_data['live'] = score_data
+                if score_data.get('is_live'):
+                    live_count += 1
+            else:
+                # Check if game should be live based on commence_time
+                from django.utils import timezone
+                try:
+                    commence = datetime.fromisoformat(game.get('commence_time', '').replace('Z', '+00:00'))
+                    if commence <= datetime.now(commence.tzinfo):
+                        game_data['live'] = {
+                            'is_live': True,
+                            'status': 'in',
+                            'status_detail': 'In Progress',
+                            'home_score': 0,
+                            'away_score': 0,
+                        }
+                        live_count += 1
+                except:
+                    pass
+
+            # Format bookmakers
+            for bookmaker in game.get('bookmakers', []):
+                bm_data = {
+                    'key': bookmaker.get('key'),
+                    'title': bookmaker.get('title'),
+                    'markets': {}
+                }
+
+                for market in bookmaker.get('markets', []):
+                    market_key = market.get('key')
+                    bm_data['markets'][market_key] = {
+                        'outcomes': market.get('outcomes', [])
+                    }
+
+                game_data['bookmakers'].append(bm_data)
+
+            enriched_odds.append(game_data)
+
+        # Sort: live games first, then by commence_time
+        enriched_odds.sort(key=lambda g: (
+            0 if g.get('live', {}).get('is_live') else 1,
+            g.get('commence_time', '')
+        ))
+
+        return Response({
+            'success': True,
+            'sport': sport,
+            'total_games': len(enriched_odds),
+            'live_games': live_count,
+            'markets_included': markets,
+            'odds': enriched_odds
+        })
+
+    except Exception as e:
+        logger.error(f"Live odds with scores error: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'message': f'Failed to get live odds: {str(e)}'
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_player_props(request, event_id):
+    """
+    Session 563: Get player props for a specific event.
+    Fetches prop bets from The Odds API for the given event ID.
+    """
+    try:
+        sport = request.GET.get('sport', 'basketball_nba')
+
+        # Define prop markets by sport
+        prop_markets = {
+            'basketball_nba': [
+                'player_points', 'player_rebounds', 'player_assists',
+                'player_threes', 'player_blocks', 'player_steals',
+                'player_points_rebounds_assists', 'player_double_double'
+            ],
+            'basketball_ncaab': [
+                'player_points', 'player_rebounds', 'player_assists', 'player_threes'
+            ],
+            'americanfootball_nfl': [
+                'player_pass_tds', 'player_pass_yds', 'player_rush_yds',
+                'player_reception_yds', 'player_receptions',
+                'player_anytime_td', 'player_first_td'
+            ],
+            'americanfootball_ncaaf': [
+                'player_pass_tds', 'player_pass_yds', 'player_rush_yds',
+                'player_reception_yds', 'player_anytime_td'
+            ],
+            'icehockey_nhl': [
+                'player_points', 'player_assists', 'player_shots_on_goal',
+                'player_blocked_shots'
+            ],
+            'baseball_mlb': [
+                'batter_hits', 'batter_home_runs', 'batter_rbis',
+                'batter_total_bases', 'pitcher_strikeouts'
+            ],
+        }
+
+        markets = prop_markets.get(sport, prop_markets['basketball_nba'])
+        markets_str = ','.join(markets)
+
+        # Get API key
+        api_key = os.environ.get('THE_ODDS_API_KEY')
+        if not api_key:
+            return Response({
+                'success': False,
+                'message': 'Odds API key not configured'
+            }, status=500)
+
+        # Fetch props from The Odds API
+        url = f"https://api.the-odds-api.com/v4/sports/{sport}/events/{event_id}/odds"
+        params = {
+            'apiKey': api_key,
+            'regions': 'us',
+            'markets': markets_str,
+            'oddsFormat': 'american'
+        }
+
+        response = requests.get(url, params=params, timeout=15)
+
+        if response.status_code == 404:
+            return Response({
+                'success': False,
+                'message': 'Event not found or props not available'
+            }, status=404)
+
+        # Session 563: Handle 422 - props not available for this event
+        if response.status_code == 422:
+            return Response({
+                'success': False,
+                'message': 'Player props not available for this event',
+                'props_by_player': {}
+            }, status=200)  # Return 200 with empty props so frontend handles gracefully
+
+        response.raise_for_status()
+        data = response.json()
+
+        # Parse and organize props by player
+        props_by_player = {}
+        bookmakers = data.get('bookmakers', [])
+
+        for book in bookmakers:
+            book_name = book.get('title', book.get('key', 'Unknown'))
+
+            for market in book.get('markets', []):
+                market_key = market.get('key', '')
+
+                for outcome in market.get('outcomes', []):
+                    player_name = outcome.get('description', outcome.get('name', 'Unknown'))
+                    prop_name = outcome.get('name', '')  # Over/Under
+                    point = outcome.get('point', 0)
+                    price = outcome.get('price', 0)
+
+                    if player_name not in props_by_player:
+                        props_by_player[player_name] = []
+
+                    props_by_player[player_name].append({
+                        'market': market_key,
+                        'market_label': market_key.replace('player_', '').replace('_', ' ').title(),
+                        'type': prop_name,  # Over/Under
+                        'line': point,
+                        'odds': price,
+                        'bookmaker': book_name
+                    })
+
+        # Sort props within each player
+        for player in props_by_player:
+            props_by_player[player].sort(key=lambda x: (x['market'], x['type']))
+
+        # Get remaining API quota from response headers
+        remaining = response.headers.get('x-requests-remaining', 'Unknown')
+        used = response.headers.get('x-requests-used', 'Unknown')
+
+        return Response({
+            'success': True,
+            'event_id': event_id,
+            'sport': sport,
+            'home_team': data.get('home_team'),
+            'away_team': data.get('away_team'),
+            'commence_time': data.get('commence_time'),
+            'props_by_player': props_by_player,
+            'player_count': len(props_by_player),
+            'total_props': sum(len(p) for p in props_by_player.values()),
+            'api_quota': {
+                'remaining': remaining,
+                'used': used
+            }
+        })
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Props API request error: {e}")
+        return Response({
+            'success': False,
+            'message': f'Failed to fetch props: {str(e)}'
+        }, status=500)
+    except Exception as e:
+        logger.error(f"Props error: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @rate_limit_api(service_name='weather_api')
 def get_weather_data(request):
@@ -2047,6 +2354,318 @@ def orchestrate_agent_analysis(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])  # Session 560: Public for Betting Dashboard UI
+def get_futures_odds(request):
+    """
+    Session 560: Get championship futures odds from The Odds API.
+
+    GET /api/v1/betting/futures/
+
+    Query params:
+        league: Filter by league (nfl, nba, mlb, nhl) - optional
+        limit: Max results per league (default 15)
+    """
+    try:
+        from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+
+        league = request.GET.get('league')
+        limit = int(request.GET.get('limit', 15))
+
+        spider = TheOddsSpider()
+
+        # Map league to futures sport keys
+        futures_map = {
+            'nfl': ['americanfootball_nfl_super_bowl_winner'],
+            'nba': ['basketball_nba_championship_winner'],
+            'mlb': ['baseball_mlb_world_series_winner'],
+            'nhl': ['icehockey_nhl_championship_winner'],
+            None: [
+                'americanfootball_nfl_super_bowl_winner',
+                'basketball_nba_championship_winner',
+                'baseball_mlb_world_series_winner',
+                'icehockey_nhl_championship_winner',
+            ]
+        }
+
+        sports = futures_map.get(league.lower() if league else None, futures_map[None])
+
+        all_futures = []
+        leagues_data = {}
+
+        for sport_key in sports:
+            try:
+                data = spider.fetch_data(
+                    sports=[sport_key],
+                    max_results=limit,
+                    include_futures=True
+                )
+                futures = [d for d in data if d.get('data_type') == 'futures_odds']
+
+                # Determine league name from sport key
+                if 'nfl' in sport_key or 'super_bowl' in sport_key:
+                    league_name = 'NFL'
+                    championship = 'Super Bowl'
+                elif 'nba' in sport_key or 'basketball' in sport_key:
+                    league_name = 'NBA'
+                    championship = 'NBA Championship'
+                elif 'mlb' in sport_key or 'world_series' in sport_key:
+                    league_name = 'MLB'
+                    championship = 'World Series'
+                elif 'nhl' in sport_key or 'stanley_cup' in sport_key:
+                    league_name = 'NHL'
+                    championship = 'Stanley Cup'
+                else:
+                    league_name = sport_key.upper()
+                    championship = 'Championship'
+
+                # Group by league
+                if league_name not in leagues_data:
+                    leagues_data[league_name] = {
+                        'league': league_name,
+                        'championship': championship,
+                        'teams': []
+                    }
+
+                for future in futures[:limit]:
+                    team_data = {
+                        'team': future.get('title', future.get('selection', 'Unknown')),
+                        'odds_american': future.get('odds_american', 0),
+                        'odds_decimal': future.get('odds_decimal', 0),
+                        'implied_probability': future.get('implied_probability', 0),
+                        'bookmaker': future.get('bookmaker', 'Best Available'),
+                        'last_updated': future.get('updated_at', future.get('created_at', '')),
+                    }
+
+                    # Calculate implied probability if not present
+                    if not team_data['implied_probability'] and team_data['odds_american']:
+                        odds = team_data['odds_american']
+                        if odds > 0:
+                            team_data['implied_probability'] = 100 / (odds + 100)
+                        else:
+                            team_data['implied_probability'] = abs(odds) / (abs(odds) + 100)
+
+                    leagues_data[league_name]['teams'].append(team_data)
+                    all_futures.append(future)
+
+            except Exception as e:
+                logger.warning(f"Error fetching futures for {sport_key}: {e}")
+                continue
+
+        # If no live data, try cached SpiderData
+        if not all_futures:
+            from persistence.models import SpiderData
+
+            cached = SpiderData.objects.filter(
+                spider_name='theodds',
+                category='futures'
+            ).order_by('-created_at')[:limit * 4]
+
+            for item in cached:
+                data = item.data if isinstance(item.data, dict) else {}
+                team = data.get('title', item.title or 'Unknown')
+                odds = data.get('odds_american', data.get('price', 0))
+
+                # Determine league from item
+                league_name = 'NFL'  # Default
+                championship = 'Championship'
+
+                if 'nba' in str(item.category).lower() or 'basketball' in str(item.title).lower():
+                    league_name = 'NBA'
+                    championship = 'NBA Championship'
+                elif 'mlb' in str(item.category).lower() or 'baseball' in str(item.title).lower():
+                    league_name = 'MLB'
+                    championship = 'World Series'
+                elif 'nhl' in str(item.category).lower() or 'hockey' in str(item.title).lower():
+                    league_name = 'NHL'
+                    championship = 'Stanley Cup'
+                else:
+                    league_name = 'NFL'
+                    championship = 'Super Bowl'
+
+                if league_name not in leagues_data:
+                    leagues_data[league_name] = {
+                        'league': league_name,
+                        'championship': championship,
+                        'teams': []
+                    }
+
+                # Calculate implied probability
+                implied = 0
+                if odds > 0:
+                    implied = 100 / (odds + 100)
+                elif odds < 0:
+                    implied = abs(odds) / (abs(odds) + 100)
+
+                leagues_data[league_name]['teams'].append({
+                    'team': team,
+                    'odds_american': odds,
+                    'odds_decimal': data.get('odds_decimal', 0),
+                    'implied_probability': implied,
+                    'bookmaker': data.get('bookmaker', 'Cached'),
+                    'last_updated': item.created_at.isoformat() if item.created_at else '',
+                })
+
+        # Sort teams by implied probability (favorites first)
+        for league_name in leagues_data:
+            leagues_data[league_name]['teams'].sort(
+                key=lambda x: x.get('implied_probability', 0),
+                reverse=True
+            )
+            # Keep top teams per league
+            leagues_data[league_name]['teams'] = leagues_data[league_name]['teams'][:limit]
+
+        return Response({
+            'success': True,
+            'leagues': list(leagues_data.values()),
+            'total_teams': sum(len(l['teams']) for l in leagues_data.values()),
+            'last_updated': datetime.now().isoformat(),
+            'source': 'The Odds API'
+        })
+
+    except ImportError as e:
+        logger.error(f"TheOddsSpider import error: {e}")
+        return Response({
+            'success': False,
+            'leagues': [],
+            'error': 'Odds spider not available'
+        })
+    except Exception as e:
+        logger.error(f"Futures API error: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'leagues': [],
+            'error': str(e)
+        })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def log_wager(request):
+    """
+    Session 560: Log a bet/wager from the web UI.
+
+    POST /api/v1/betting/wager/
+
+    Body:
+        event_name: str - The event being bet on
+        selection: str - What you bet on (e.g., "Chiefs ML")
+        bet_type: str - moneyline, spread, total, prop, parlay, futures, etc.
+        odds_american: int - American odds (-110, +150)
+        stake: float - Amount wagered
+        sport: str - Optional sport category
+        bookmaker: str - Optional bookmaker name
+        line: float - Optional spread/total line
+        event_time: str - Optional ISO datetime of the event
+        notes: str - Optional notes
+    """
+    from core.models_bankroll import Bankroll, Wager
+    from decimal import Decimal
+
+    try:
+        data = request.data
+        user = request.user
+
+        # Get or create bankroll for user
+        bankroll, _ = Bankroll.objects.get_or_create(
+            user=user,
+            defaults={
+                'name': f"{user.username}'s Bankroll",
+                'initial_balance': Decimal('1000.00'),
+                'current_balance': Decimal('1000.00'),
+                'unit_size': Decimal('10.00'),
+            }
+        )
+
+        # Validate required fields
+        required = ['event_name', 'selection', 'odds_american', 'stake']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return Response({
+                'success': False,
+                'error': f"Missing required fields: {', '.join(missing)}"
+            }, status=400)
+
+        # Parse and validate odds
+        try:
+            odds_american = int(data['odds_american'])
+        except (ValueError, TypeError):
+            return Response({
+                'success': False,
+                'error': 'Invalid odds format. Must be integer (e.g., -110, +150)'
+            }, status=400)
+
+        # Parse stake
+        try:
+            stake = Decimal(str(data['stake']))
+            if stake <= 0:
+                raise ValueError("Stake must be positive")
+        except (ValueError, TypeError, decimal.InvalidOperation) as e:
+            return Response({
+                'success': False,
+                'error': f'Invalid stake: {str(e)}'
+            }, status=400)
+
+        # Calculate units
+        units = stake / bankroll.unit_size if bankroll.unit_size > 0 else Decimal('1')
+
+        # Parse optional event time
+        event_time = None
+        if data.get('event_time'):
+            try:
+                event_time = datetime.fromisoformat(data['event_time'].replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                pass
+
+        # Create wager
+        wager = Wager.objects.create(
+            bankroll=bankroll,
+            event_name=data['event_name'],
+            selection=data['selection'],
+            bet_type=data.get('bet_type', 'moneyline'),
+            odds_american=odds_american,
+            stake=stake,
+            units=units,
+            sport=data.get('sport', ''),
+            bookmaker=data.get('bookmaker', ''),
+            line=Decimal(str(data['line'])) if data.get('line') else None,
+            event_time=event_time,
+            notes=data.get('notes', ''),
+            source='web',
+            status='pending',
+        )
+
+        # Update bankroll
+        bankroll.current_balance -= stake
+        bankroll.save()
+
+        return Response({
+            'success': True,
+            'wager': {
+                'id': wager.id,
+                'event_name': wager.event_name,
+                'selection': wager.selection,
+                'odds_american': wager.odds_american,
+                'stake': float(wager.stake),
+                'units': float(wager.units),
+                'potential_payout': float(wager.potential_payout),
+                'status': wager.status,
+                'placed_at': wager.placed_at.isoformat(),
+            },
+            'bankroll': {
+                'current_balance': float(bankroll.current_balance),
+                'pending_wagers': bankroll.wagers.filter(status='pending').count(),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error logging wager: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_orchestration_status(request, task_id):
     """
@@ -2097,4 +2716,213 @@ def get_orchestration_status(request, task_id):
             'task_id': task_id,
             'error': str(e),
             'timestamp': datetime.now().isoformat()
+        }, status=500)
+
+
+# =============================================================================
+# SESSION 561: LINE MOVEMENT CHARTS API
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_line_movement(request, game_id=None):
+    """
+    Session 561: Get line movement data for charting.
+
+    Query params:
+    - game_id: Specific game to get history for (or use URL param)
+    - sport: Filter by sport (e.g., 'americanfootball_nfl')
+    - market: Filter by market type ('h2h', 'spreads', 'totals')
+    - bookmaker: Filter by bookmaker (e.g., 'draftkings')
+    - hours: How many hours of history (default: 48)
+
+    Returns time-series data suitable for charting line movement.
+    """
+    from core.models_odds_history import OddsSnapshot, GameLineHistory
+    from django.utils import timezone
+
+    try:
+        # Get parameters
+        game_id = game_id or request.GET.get('game_id')
+        sport = request.GET.get('sport')
+        market = request.GET.get('market', 'spreads')
+        bookmaker = request.GET.get('bookmaker')
+        hours = int(request.GET.get('hours', 48))
+
+        # Time range
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        if game_id:
+            # Get specific game history
+            snapshots = OddsSnapshot.objects.filter(
+                game_id=game_id,
+                captured_at__gte=cutoff
+            ).order_by('captured_at')
+
+            if market:
+                snapshots = snapshots.filter(market=market)
+            if bookmaker:
+                snapshots = snapshots.filter(bookmaker=bookmaker)
+
+            # Get game summary
+            try:
+                history = GameLineHistory.objects.get(game_id=game_id)
+                game_info = {
+                    'game_id': history.game_id,
+                    'home_team': history.home_team,
+                    'away_team': history.away_team,
+                    'commence_time': history.commence_time.isoformat() if history.commence_time else None,
+                    'sport_key': history.sport_key,
+                    'open_spread': float(history.open_spread_home) if history.open_spread_home else None,
+                    'current_spread': float(history.current_spread_home) if history.current_spread_home else None,
+                    'spread_movement': float(history.spread_movement) if history.spread_movement else 0,
+                    'open_total': float(history.open_total) if history.open_total else None,
+                    'current_total': float(history.current_total) if history.current_total else None,
+                    'total_movement': float(history.total_movement) if history.total_movement else 0,
+                    'snapshot_count': history.snapshot_count,
+                }
+            except GameLineHistory.DoesNotExist:
+                game_info = None
+
+            # Format snapshots for charting
+            chart_data = []
+            for snap in snapshots:
+                chart_data.append({
+                    'timestamp': snap.captured_at.isoformat(),
+                    'bookmaker': snap.bookmaker,
+                    'bookmaker_title': snap.bookmaker_title,
+                    'market': snap.market,
+                    'outcome': snap.outcome_name,
+                    'price': snap.price,
+                    'point': float(snap.point) if snap.point else None,
+                })
+
+            return Response({
+                'success': True,
+                'game': game_info,
+                'snapshots': chart_data,
+                'count': len(chart_data),
+                'hours': hours,
+            })
+
+        else:
+            # Get all games with significant movement
+            games_query = GameLineHistory.objects.filter(
+                last_snapshot_at__gte=cutoff
+            ).order_by('-last_snapshot_at')
+
+            if sport:
+                games_query = games_query.filter(sport_key=sport)
+
+            # Only games with movement or recent activity
+            games = []
+            for game in games_query[:50]:
+                games.append({
+                    'game_id': game.game_id,
+                    'home_team': game.home_team,
+                    'away_team': game.away_team,
+                    'sport_key': game.sport_key,
+                    'commence_time': game.commence_time.isoformat() if game.commence_time else None,
+                    'open_spread': float(game.open_spread_home) if game.open_spread_home else None,
+                    'current_spread': float(game.current_spread_home) if game.current_spread_home else None,
+                    'spread_movement': float(game.spread_movement) if game.spread_movement else 0,
+                    'open_total': float(game.open_total) if game.open_total else None,
+                    'current_total': float(game.current_total) if game.current_total else None,
+                    'total_movement': float(game.total_movement) if game.total_movement else 0,
+                    'has_significant_movement': game.has_significant_movement,
+                    'snapshot_count': game.snapshot_count,
+                    'last_updated': game.last_snapshot_at.isoformat() if game.last_snapshot_at else None,
+                })
+
+            return Response({
+                'success': True,
+                'games': games,
+                'count': len(games),
+                'hours': hours,
+            })
+
+    except Exception as e:
+        logger.error(f"Error getting line movement: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_games_with_movement(request):
+    """
+    Session 561: Get games with significant line movement.
+
+    Returns games where spreads or totals have moved significantly,
+    useful for identifying sharp money or public betting trends.
+
+    Query params:
+    - sport: Filter by sport
+    - min_spread_movement: Minimum spread movement (default: 0.5)
+    - min_total_movement: Minimum total movement (default: 1.0)
+    """
+    from core.models_odds_history import GameLineHistory
+    from django.utils import timezone
+    from django.db.models import Q
+
+    try:
+        sport = request.GET.get('sport')
+        min_spread = float(request.GET.get('min_spread_movement', 0.5))
+        min_total = float(request.GET.get('min_total_movement', 1.0))
+
+        # Get games with movement above threshold
+        cutoff = timezone.now() - timedelta(hours=72)
+
+        games_query = GameLineHistory.objects.filter(
+            last_snapshot_at__gte=cutoff,
+            commence_time__gte=timezone.now()  # Only upcoming games
+        ).filter(
+            Q(spread_movement__gte=min_spread) |
+            Q(spread_movement__lte=-min_spread) |
+            Q(total_movement__gte=min_total) |
+            Q(total_movement__lte=-min_total)
+        ).order_by('-last_snapshot_at')
+
+        if sport:
+            games_query = games_query.filter(sport_key=sport)
+
+        movers = []
+        for game in games_query[:30]:
+            movers.append({
+                'game_id': game.game_id,
+                'matchup': f"{game.away_team} @ {game.home_team}",
+                'sport_key': game.sport_key,
+                'commence_time': game.commence_time.isoformat() if game.commence_time else None,
+                'spread': {
+                    'open': float(game.open_spread_home) if game.open_spread_home else None,
+                    'current': float(game.current_spread_home) if game.current_spread_home else None,
+                    'movement': float(game.spread_movement) if game.spread_movement else 0,
+                    'direction': 'favorite' if (game.spread_movement or 0) < 0 else 'underdog'
+                },
+                'total': {
+                    'open': float(game.open_total) if game.open_total else None,
+                    'current': float(game.current_total) if game.current_total else None,
+                    'movement': float(game.total_movement) if game.total_movement else 0,
+                    'direction': 'over' if (game.total_movement or 0) > 0 else 'under'
+                },
+                'snapshot_count': game.snapshot_count,
+            })
+
+        return Response({
+            'success': True,
+            'movers': movers,
+            'count': len(movers),
+            'thresholds': {
+                'min_spread_movement': min_spread,
+                'min_total_movement': min_total,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting games with movement: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
         }, status=500)

@@ -656,6 +656,20 @@ REDIS_SAVE_POLICY = env('REDIS_SAVE_POLICY', '900 1 300 10 60 10000')  # Backgro
 REDIS_APPENDONLY = env_bool('REDIS_APPENDONLY', True)  # Enable AOF
 REDIS_APPENDFSYNC = env('REDIS_APPENDFSYNC', 'everysec')
 
+# =============================================================================
+# Session 562: Web Push Notifications (VAPID)
+# =============================================================================
+# VAPID (Voluntary Application Server Identification) keys for Web Push API
+# These enable browser push notifications for arbitrage alerts and other events
+
+VAPID_PUBLIC_KEY = env('VAPID_PUBLIC_KEY', 'BFoZhpwPq8Ioe1RW1oXsKSRI8jklazhBxJIh03ipg-aiBy1xLQS0q5KEmSjx-vvZ7j8iaVdiE5-yMVhV-tiVSHI')
+VAPID_PRIVATE_KEY = env('VAPID_PRIVATE_KEY', '263F9LYf3-EQ408J2M8l0qDXi77QMmbgMPxGnDmNuis')
+VAPID_ADMIN_EMAIL = env('VAPID_ADMIN_EMAIL', 'admin@donkeybetz.com')
+
+# Push notification settings
+PUSH_NOTIFICATIONS_ENABLED = env_bool('PUSH_NOTIFICATIONS_ENABLED', True)
+PUSH_ARB_MIN_PROFIT_DEFAULT = 1.0  # Default minimum profit % for arb alerts
+
 # Security Headers and HTTPS
 if not DEBUG:
     # HTTPS and Security Headers
@@ -1136,6 +1150,32 @@ CELERY_BEAT_SCHEDULE = {
     'skill-gap-analyzer': {
         'task': 'core.tasks.run_skill_gap_analyzer',
         'schedule': crontab(minute=0, hour='6,18'),  # Twice daily at 6am and 6pm
+    },
+    # =========================================================================
+    # Session 561: Line Movement Charts
+    # =========================================================================
+    'snapshot-odds-for-line-movement': {
+        'task': 'core.tasks.snapshot_odds_for_line_movement',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes
+    },
+    # =========================================================================
+    # Session 562: Arbitrage Alerts (Push Notifications)
+    # =========================================================================
+    'scan-arbs-and-notify': {
+        'task': 'core.tasks.scan_arbs_and_notify',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+    },
+    # =========================================================================
+    # Session 563: Self-Blog Generation
+    # =========================================================================
+    'generate-self-blog': {
+        'task': 'core.tasks.generate_self_blog_task',
+        'schedule': crontab(hour='*/6'),  # Every 6 hours
+    },
+    # Session 563: Dream Backlog Maintenance
+    'maintain-dream-backlog': {
+        'task': 'core.tasks.maintain_dream_backlog',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
     },
 }
 

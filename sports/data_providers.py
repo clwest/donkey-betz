@@ -124,11 +124,16 @@ class TheOddsAPIProvider:
         if self.api_key == 'demo':
             logger.warning("Using demo API key - limited data available")
             return self._get_demo_odds(sport)
-        
+
         # Skip caching for now
-        
+
         try:
-            sport_key = self.SPORT_MAPPING.get(sport, 'americanfootball_nfl')
+            # Session 563: Support both short keys (nfl) and full keys (americanfootball_nfl)
+            # If sport contains underscore, it's already a full Odds API key
+            if '_' in sport:
+                sport_key = sport
+            else:
+                sport_key = self.SPORT_MAPPING.get(sport, 'americanfootball_nfl')
             url = f"{self.BASE_URL}/sports/{sport_key}/odds"
             
             params = {
@@ -150,10 +155,12 @@ class TheOddsAPIProvider:
     
     def _get_demo_odds(self, sport: str) -> List[Dict]:
         """Return demo odds data when API key not available"""
+        # Session 563: Support both short keys and full keys
+        sport_key = sport if '_' in sport else self.SPORT_MAPPING.get(sport, 'americanfootball_nfl')
         return [
             {
                 'id': 'demo_game_1',
-                'sport_key': self.SPORT_MAPPING.get(sport, 'americanfootball_nfl'),
+                'sport_key': sport_key,
                 'home_team': 'Home Team',
                 'away_team': 'Away Team',
                 'commence_time': datetime.utcnow().isoformat(),

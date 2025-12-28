@@ -19134,3 +19134,320 @@ def market_movement_alerts():
             'success': False,
             'error': str(e)
         }
+
+
+# =============================================================================
+# SESSION 561: LINE MOVEMENT CHARTS - ODDS SNAPSHOT TASK
+# =============================================================================
+
+@shared_task
+def snapshot_odds_for_line_movement():
+    """
+    Session 561: Capture current odds for line movement tracking.
+
+    Runs every 20 minutes to build historical odds data for line movement charts.
+    Captures all major sports from The Odds API and stores snapshots.
+    """
+    from core.models_odds_history import OddsSnapshot, GameLineHistory
+    from ai_core.spiders.specialized.theodds_spider import TheOddsSpider
+    from django.utils import timezone
+    from decimal import Decimal
+
+    logger.info("📊 [ODDS-SNAPSHOT] Starting odds snapshot collection...")
+
+    try:
+        spider = TheOddsSpider()
+
+        # Sports to track
+        sports_list = ['americanfootball_nfl', 'basketball_nba', 'icehockey_nhl', 'baseball_mlb']
+
+        total_snapshots = 0
+        games_updated = 0
+
+        # Fetch all sports at once (API efficient)
+        try:
+            odds_data = spider.fetch_data(sports=sports_list, include_futures=False, max_results=100)
+        except Exception as e:
+            logger.warning(f"📊 [ODDS-SNAPSHOT] Spider error: {e}")
+            odds_data = []
+
+        for game in odds_data:
+            try:
+                # Use event_id from normalized spider data
+                game_id = game.get('event_id')
+                # Skip status records and games without IDs
+                if not game_id or game.get('data_type') == 'api_status':
+                    continue
+
+                sport = game.get('sport_key', 'unknown')
+                home_team = game.get('home_team', '')
+                away_team = game.get('away_team', '')
+                commence_time = game.get('commence_time')
+                bookmaker = game.get('best_bookmaker', 'consensus')
+
+                # Parse commence_time if it's a string
+                if isinstance(commence_time, str):
+                    from dateutil import parser
+                    commence_time = parser.parse(commence_time)
+
+                # Create snapshots from normalized odds data
+                # Moneyline (h2h)
+                if game.get('home_odds'):
+                    OddsSnapshot.objects.create(
+                        game_id=game_id,
+                        sport_key=sport,
+                        home_team=home_team,
+                        away_team=away_team,
+                        commence_time=commence_time,
+                        bookmaker=bookmaker,
+                        bookmaker_title=bookmaker,
+                        market='h2h',
+                        outcome_name=home_team,
+                        price=int(game.get('home_odds', 0)),
+                    )
+                    total_snapshots += 1
+                if game.get('away_odds'):
+                    OddsSnapshot.objects.create(
+                        game_id=game_id,
+                        sport_key=sport,
+                        home_team=home_team,
+                        away_team=away_team,
+                        commence_time=commence_time,
+                        bookmaker=bookmaker,
+                        bookmaker_title=bookmaker,
+                        market='h2h',
+                        outcome_name=away_team,
+                        price=int(game.get('away_odds', 0)),
+                    )
+                    total_snapshots += 1
+
+                # Spreads
+                if game.get('home_spread'):
+                    spread_data = game.get('spread', {})
+                    OddsSnapshot.objects.create(
+                        game_id=game_id,
+                        sport_key=sport,
+                        home_team=home_team,
+                        away_team=away_team,
+                        commence_time=commence_time,
+                        bookmaker=bookmaker,
+                        bookmaker_title=bookmaker,
+                        market='spreads',
+                        outcome_name=home_team,
+                        price=int(spread_data.get('home_price', -110)),
+                        point=Decimal(str(game.get('home_spread', 0))),
+                    )
+                    total_snapshots += 1
+
+                # Totals
+                if game.get('total_line'):
+                    OddsSnapshot.objects.create(
+                        game_id=game_id,
+                        sport_key=sport,
+                        home_team=home_team,
+                        away_team=away_team,
+                        commence_time=commence_time,
+                        bookmaker=bookmaker,
+                        bookmaker_title=bookmaker,
+                        market='totals',
+                        outcome_name='Over',
+                        price=int(game.get('over_odds', -110)),
+                        point=Decimal(str(game.get('total_line', 0))),
+                    )
+                    total_snapshots += 1
+
+                # Update or create GameLineHistory summary
+                history, created = GameLineHistory.objects.get_or_create(
+                    game_id=game_id,
+                    defaults={
+                        'sport_key': sport,
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'commence_time': commence_time,
+                    }
+                )
+
+                # Update tracking
+                now = timezone.now()
+                if created:
+                    history.first_snapshot_at = now
+                    # Set opening lines from first snapshot
+                    history.open_ml_home = game.get('home_odds')
+                    history.open_ml_away = game.get('away_odds')
+                    if game.get('home_spread'):
+                        history.open_spread_home = Decimal(str(game.get('home_spread', 0)))
+                    if game.get('total_line'):
+                        history.open_total = Decimal(str(game.get('total_line', 0)))
+
+                # Always update current lines and last snapshot time
+                history.last_snapshot_at = now
+                history.snapshot_count = (history.snapshot_count or 0) + 1
+
+                # Update current lines
+                history.current_ml_home = game.get('home_odds')
+                history.current_ml_away = game.get('away_odds')
+                if game.get('home_spread'):
+                    history.current_spread_home = Decimal(str(game.get('home_spread', 0)))
+                if game.get('total_line'):
+                    history.current_total = Decimal(str(game.get('total_line', 0)))
+
+                # Calculate movement
+                if history.open_spread_home and history.current_spread_home:
+                    history.spread_movement = history.current_spread_home - history.open_spread_home
+                if history.open_total and history.current_total:
+                    history.total_movement = history.current_total - history.open_total
+
+                history.save()
+                games_updated += 1
+
+            except Exception as e:
+                logger.warning(f"📊 [ODDS-SNAPSHOT] Error processing game: {e}")
+                continue
+
+        logger.info(f"📊 [ODDS-SNAPSHOT] Complete: {total_snapshots} snapshots, {games_updated} games")
+        return {
+            'success': True,
+            'snapshots': total_snapshots,
+            'games': games_updated,
+            'timestamp': timezone.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"📊 [ODDS-SNAPSHOT] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def scan_arbs_and_notify():
+    """
+    Session 562: Scan for arbitrage opportunities and send push notifications.
+
+    Runs every 5 minutes to detect new arb opportunities and alert subscribed users.
+    Uses ArbitrageDetector agent to find profitable opportunities.
+    """
+    from core.agents.markets.arbitrage_detector import ArbitrageDetector
+    from core.services.push_notification_service import get_push_service
+
+    logger.info("🔔 [ARB-NOTIFY] Starting arbitrage scan for notifications...")
+
+    try:
+        # Run arbitrage detection
+        detector = ArbitrageDetector()
+        result = detector.execute(
+            task="Scan all sports for arbitrage opportunities",
+            context={'min_profit_pct': 0.5}
+        )
+
+        if not result.success:
+            logger.warning(f"🔔 [ARB-NOTIFY] Detection failed: {result.error}")
+            return {'success': False, 'error': result.error}
+
+        arb_opps = result.data.get('arbitrage_opportunities', [])
+        notifications_sent = 0
+
+        if not arb_opps:
+            logger.info("🔔 [ARB-NOTIFY] No arbitrage opportunities found")
+            return {'success': True, 'arbs': 0, 'notifications': 0}
+
+        # Get push service
+        push_service = get_push_service()
+
+        # Only notify for arbs with 1%+ profit (avoid spamming for marginal arbs)
+        significant_arbs = [a for a in arb_opps if a.get('profit_pct', 0) >= 1.0]
+
+        logger.info(f"🔔 [ARB-NOTIFY] Found {len(arb_opps)} arbs, {len(significant_arbs)} significant (1%+)")
+
+        for arb in significant_arbs[:5]:  # Limit to top 5 to prevent spam
+            try:
+                sent = push_service.send_arb_alert(
+                    profit_pct=arb['profit_pct'],
+                    matchup=arb['matchup'],
+                    home_book=arb['home_book'],
+                    away_book=arb['away_book'],
+                    sport=arb.get('sport'),
+                    game_time=arb.get('game_time')
+                )
+                notifications_sent += sent
+            except Exception as e:
+                logger.error(f"🔔 [ARB-NOTIFY] Error sending notification: {e}")
+
+        logger.info(f"🔔 [ARB-NOTIFY] Complete: {len(arb_opps)} arbs, {notifications_sent} notifications sent")
+        return {
+            'success': True,
+            'arbs': len(arb_opps),
+            'significant_arbs': len(significant_arbs),
+            'notifications': notifications_sent
+        }
+
+    except Exception as e:
+        logger.error(f"🔔 [ARB-NOTIFY] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task(name='core.tasks.maintain_dream_backlog')
+def maintain_dream_backlog():
+    """
+    Session 563: Daily dream backlog maintenance.
+
+    Prevents dream backlog buildup by:
+    1. Archiving very low score dreams (< 0.3) older than 7 days
+    2. Archiving low score dreams (0.3-0.5) older than 14 days
+
+    This keeps the pending queue healthy for human review in Boardroom.
+    """
+    from django.utils import timezone
+    from django.db.models import Q
+    from core.models import AgentDream
+
+    logger.info("🧹 [DREAM-MAINTENANCE] Starting daily dream maintenance...")
+
+    try:
+        now = timezone.now()
+        seven_days_ago = now - timezone.timedelta(days=7)
+        fourteen_days_ago = now - timezone.timedelta(days=14)
+
+        # Archive very low score dreams (< 0.3, > 7 days old)
+        very_low_score = AgentDream.objects.filter(
+            shown_to_user=False,
+            composite_score__lt=0.3,
+            dreamed_at__lt=seven_days_ago
+        )
+        very_low_count = very_low_score.count()
+        very_low_score.update(shown_to_user=True, shown_at=now)
+
+        # Archive low score dreams (0.3-0.5, > 14 days old)
+        low_score = AgentDream.objects.filter(
+            shown_to_user=False,
+            composite_score__gte=0.3,
+            composite_score__lt=0.5,
+            dreamed_at__lt=fourteen_days_ago
+        )
+        low_count = low_score.count()
+        low_score.update(shown_to_user=True, shown_at=now)
+
+        # Check remaining pending count
+        remaining = AgentDream.objects.filter(shown_to_user=False).count()
+
+        logger.info(f"🧹 [DREAM-MAINTENANCE] Archived {very_low_count} very low score, {low_count} low score dreams")
+        logger.info(f"🧹 [DREAM-MAINTENANCE] Remaining pending: {remaining}")
+
+        return {
+            'success': True,
+            'archived_very_low': very_low_count,
+            'archived_low': low_count,
+            'total_archived': very_low_count + low_count,
+            'remaining_pending': remaining
+        }
+
+    except Exception as e:
+        logger.error(f"🧹 [DREAM-MAINTENANCE] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
