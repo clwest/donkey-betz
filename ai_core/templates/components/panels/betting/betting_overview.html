@@ -28,16 +28,17 @@ Quick summary of betting activity, recent bets, and top opportunities.
                             <table class="table table-dark table-hover mb-0">
                                 <thead style="position: sticky; top: 0; background: #1a1a1a;">
                                     <tr style="border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
-                                        <th style="color: #9ca3af; font-size: 11px;">EVENT</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">TYPE</th>
                                         <th style="color: #9ca3af; font-size: 11px;">PICK</th>
                                         <th style="color: #9ca3af; font-size: 11px;">ODDS</th>
                                         <th style="color: #9ca3af; font-size: 11px;">STAKE</th>
                                         <th style="color: #9ca3af; font-size: 11px;">STATUS</th>
+                                        <th style="color: #9ca3af; font-size: 11px;">P/L</th>
                                     </tr>
                                 </thead>
                                 <tbody id="recent-wagers-table">
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">No wagers yet</td>
+                                        <td colspan="6" class="text-center text-muted py-4">No wagers yet</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -51,7 +52,7 @@ Quick summary of betting activity, recent bets, and top opportunities.
                         <h5 class="mb-0" style="color: #22c55e;">🔥 Betting Performance</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row text-center">
+                        <div class="row text-center mb-3">
                             <div class="col-4">
                                 <div style="padding: 15px; background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
                                     <h4 class="mb-0" style="color: #22c55e;" id="perf-wins">0</h4>
@@ -68,6 +69,27 @@ Quick summary of betting activity, recent bets, and top opportunities.
                                 <div style="padding: 15px; background: rgba(251, 191, 36, 0.1); border-radius: 8px;">
                                     <h4 class="mb-0" style="color: #fbbf24;" id="perf-streak">0</h4>
                                     <small class="text-muted">Streak</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Session 563: Additional stats row -->
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div style="padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 8px;">
+                                    <h5 class="mb-0" id="perf-roi" style="color: #a855f7;">0%</h5>
+                                    <small class="text-muted">ROI</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div style="padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                                    <h5 class="mb-0" id="perf-total-pl" style="color: #3b82f6;">$0</h5>
+                                    <small class="text-muted">Total P/L</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div style="padding: 12px; background: rgba(236, 72, 153, 0.1); border-radius: 8px;">
+                                    <h5 class="mb-0" id="perf-win-rate" style="color: #ec4899;">0%</h5>
+                                    <small class="text-muted">Win Rate</small>
                                 </div>
                             </div>
                         </div>
@@ -141,50 +163,199 @@ Quick summary of betting activity, recent bets, and top opportunities.
 
     async function loadRecentWagers() {
         try {
-            const response = await fetch('/api/v1/odds/bankroll/');
+            // Session 563: Use new bet tracking API
+            const response = await fetch('/api/v1/betting/recent/?limit=10');
             if (!response.ok) throw new Error('API not available');
 
             const data = await response.json();
-            const wagers = data.recent_wagers || [];
+            const wagers = data.recent || [];
             const table = document.getElementById('recent-wagers-table');
             document.getElementById('recent-wagers-count').textContent = wagers.length;
 
             if (wagers.length === 0) {
-                table.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No wagers yet. Use /bet in Discord to log wagers.</td></tr>';
+                table.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No wagers yet. Place bets from the Live Odds tab!</td></tr>';
                 return;
             }
 
-            table.innerHTML = wagers.slice(0, 10).map(w => `
-                <tr>
-                    <td style="font-size: 12px;">${truncate(w.event_name, 20)}</td>
-                    <td style="font-size: 12px;">${w.selection}</td>
-                    <td style="font-size: 12px; color: #fbbf24;">${formatOdds(w.odds)}</td>
-                    <td style="font-size: 12px;">$${w.stake}</td>
-                    <td>${getStatusBadge(w.status)}</td>
-                </tr>
-            `).join('');
+            table.innerHTML = wagers.map(w => {
+                const typeDisplay = w.type === 'parlay'
+                    ? `<span style="color: #a855f7;">🎰 ${w.description}</span>`
+                    : `<span style="color: #3b82f6;">📝 Single</span>`;
+
+                const plDisplay = w.result_amount !== null
+                    ? `<span style="color: ${w.result_amount >= 0 ? '#22c55e' : '#ef4444'};">${w.result_amount >= 0 ? '+' : ''}$${w.result_amount.toFixed(2)}</span>`
+                    : '-';
+
+                return `
+                    <tr style="cursor: pointer;" onclick="showWagerDetails('${w.id}')">
+                        <td style="font-size: 12px;">${typeDisplay}</td>
+                        <td style="font-size: 12px;">${truncate(w.type === 'parlay' ? w.matchup : w.description, 25)}</td>
+                        <td style="font-size: 12px; color: #fbbf24;">${formatOdds(w.odds)}</td>
+                        <td style="font-size: 12px;">$${w.stake.toFixed(2)}</td>
+                        <td>${getStatusBadge(w.status)}</td>
+                        <td style="font-size: 12px;">${plDisplay}</td>
+                    </tr>
+                `;
+            }).join('');
         } catch (error) {
-            console.log('Bankroll API not available');
+            console.log('Bet tracking API not available:', error);
             document.getElementById('recent-wagers-table').innerHTML =
-                '<tr><td colspan="5" class="text-center text-muted py-4">Use /bankroll in Discord to start tracking</td></tr>';
+                '<tr><td colspan="6" class="text-center text-muted py-4">Place bets from Live Odds to start tracking</td></tr>';
         }
     }
 
+    // Session 563: Show wager details modal
+    async function showWagerDetails(wagerId) {
+        try {
+            const response = await fetch(`/api/v1/betting/wagers/${wagerId}/`);
+            if (!response.ok) throw new Error('Failed to load wager');
+
+            const data = await response.json();
+            const wager = data.wager;
+
+            // Build legs HTML for parlays
+            const legsHtml = wager.legs.map(leg => `
+                <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px;">
+                    <div class="d-flex justify-content-between">
+                        <span style="color: #fbbf24;">${leg.pick}</span>
+                        <span>${formatOdds(leg.odds)}</span>
+                    </div>
+                    <small class="text-muted">${leg.matchup}</small>
+                    ${leg.status !== 'pending' ? `<span class="ms-2">${getStatusBadge(leg.status)}</span>` : ''}
+                </div>
+            `).join('');
+
+            const modalHtml = `
+                <div class="modal fade" id="wagerDetailModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1a1a1a; border: 1px solid rgba(251, 191, 36, 0.3);">
+                            <div class="modal-header" style="border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                                <h5 class="modal-title" style="color: #fbbf24;">
+                                    ${wager.type === 'parlay' ? '🎰 Parlay Details' : '📝 Bet Details'}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Status:</span>
+                                        ${getStatusBadge(wager.status)}
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Stake:</span>
+                                        <span style="color: #fbbf24;">$${wager.stake.toFixed(2)}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Odds:</span>
+                                        <span>${formatOdds(wager.odds)} (${wager.implied_probability}%)</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Potential Payout:</span>
+                                        <span style="color: #22c55e;">$${wager.potential_payout.toFixed(2)}</span>
+                                    </div>
+                                    ${wager.result_amount !== null ? `
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">Result:</span>
+                                            <span style="color: ${wager.result_amount >= 0 ? '#22c55e' : '#ef4444'};">
+                                                ${wager.result_amount >= 0 ? '+' : ''}$${wager.result_amount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <h6 style="color: #9ca3af;">Picks (${wager.legs.length})</h6>
+                                ${legsHtml}
+                                <div class="mt-3 text-muted" style="font-size: 11px;">
+                                    Placed: ${new Date(wager.placed_at).toLocaleString()}
+                                    ${wager.settled_at ? `<br>Settled: ${new Date(wager.settled_at).toLocaleString()}` : ''}
+                                </div>
+                            </div>
+                            ${wager.status === 'pending' ? `
+                                <div class="modal-footer" style="border-top: 1px solid rgba(251, 191, 36, 0.2);">
+                                    <button type="button" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;" onclick="cancelWager('${wager.id}')">
+                                        Cancel Bet
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existing = document.getElementById('wagerDetailModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('wagerDetailModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error loading wager details:', error);
+        }
+    }
+    window.showWagerDetails = showWagerDetails;
+
+    // Session 563: Cancel wager
+    async function cancelWager(wagerId) {
+        if (!confirm('Are you sure you want to cancel this wager?')) return;
+
+        try {
+            const response = await fetch(`/api/v1/betting/wagers/${wagerId}/cancel/`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('wagerDetailModal')).hide();
+                await loadRecentWagers();
+                await loadPerformanceStats();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to cancel wager');
+            }
+        } catch (error) {
+            console.error('Error cancelling wager:', error);
+        }
+    }
+    window.cancelWager = cancelWager;
+
     async function loadPerformanceStats() {
         try {
-            const response = await fetch('/api/v1/odds/bankroll/stats/');
+            // Session 563: Use new betting stats API
+            const response = await fetch('/api/v1/betting/stats/');
             if (!response.ok) return;
 
             const data = await response.json();
-            document.getElementById('perf-wins').textContent = data.wins || 0;
-            document.getElementById('perf-losses').textContent = data.losses || 0;
+            const stats = data.stats || {};
 
-            const streak = data.current_streak || 0;
+            // Basic W/L record
+            document.getElementById('perf-wins').textContent = stats.wins || 0;
+            document.getElementById('perf-losses').textContent = stats.losses || 0;
+
+            // Streak with color coding
+            const streak = stats.current_streak || 0;
             const streakEl = document.getElementById('perf-streak');
             streakEl.textContent = Math.abs(streak);
             streakEl.style.color = streak >= 0 ? '#22c55e' : '#ef4444';
+
+            // Session 563: Additional stats
+            // ROI
+            const roiEl = document.getElementById('perf-roi');
+            const roi = stats.roi || 0;
+            roiEl.textContent = `${roi >= 0 ? '+' : ''}${roi}%`;
+            roiEl.style.color = roi >= 0 ? '#22c55e' : '#ef4444';
+
+            // Total P/L
+            const plEl = document.getElementById('perf-total-pl');
+            const pl = stats.total_profit_loss || 0;
+            plEl.textContent = `${pl >= 0 ? '+' : ''}$${Math.abs(pl).toFixed(2)}`;
+            plEl.style.color = pl >= 0 ? '#22c55e' : '#ef4444';
+
+            // Win Rate
+            const winRateEl = document.getElementById('perf-win-rate');
+            winRateEl.textContent = `${stats.win_rate || 0}%`;
+
         } catch (error) {
-            console.log('Stats API not available');
+            console.log('Betting stats API not available:', error);
         }
     }
 
