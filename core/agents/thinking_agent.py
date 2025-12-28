@@ -78,6 +78,7 @@ You can decide to:
 - request_research: Ask ResearchAgent to dive deeper into a topic
 - trigger_conversation: Initiate a conversation between relevant agents
 - archive_insight: Store an important insight for future reference
+- triage_dreams: Process pending dreams - promote high-value to Boardroom, archive stale ones
 
 ## Output Format
 Respond with a JSON object containing:
@@ -224,6 +225,7 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                     prompt_parts.append(f"- {dream['agent']}: \"{dream['summary'][:100]}...\"\n")
 
             # Session 551: Add expected behavior context for dream backlog
+            # Session 564: Updated with triage_dreams action
             if pending > 0:
                 prompt_parts.append("\n**IMPORTANT - Dream Backlog Assessment:**\n")
                 prompt_parts.append("Dreams awaiting decision represent high-value ideas promoted to the Boardroom.\n")
@@ -231,6 +233,9 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 prompt_parts.append("- More than 10 dreams are pending (decision bottleneck)\n")
                 prompt_parts.append("- Oldest pending dream is over 48 hours old (stale backlog)\n")
                 prompt_parts.append("- Pending count is growing faster than decisions are made\n")
+                prompt_parts.append("\n**RECOMMENDED ACTION for dream backlogs:**\n")
+                prompt_parts.append("Use action_type='triage_dreams' to automatically process pending dreams.\n")
+                prompt_parts.append("This will promote high-value dreams to Boardroom and archive stale ones.\n")
 
             prompt_parts.append("\n")
 
