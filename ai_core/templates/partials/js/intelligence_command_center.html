@@ -1618,7 +1618,9 @@ const ICCState = {
                     const color = typeColors[d.decision_type] || '#6b7280';
                     const icon = typeIcons[d.decision_type] || '📄';
                     const timeAgo = this.formatTimeAgo(d.created_at);
-                    const insights = (d.key_insights || []).slice(0, 3).map(i =>
+                    // Session 564: Normalize key_insights to array (can be string or array)
+                    const insightsArray = Array.isArray(d.key_insights) ? d.key_insights : (d.key_insights ? [d.key_insights] : []);
+                    const insights = insightsArray.slice(0, 3).map(i =>
                         `<li style="color: #d1d5db; font-size: 12px;">${i}</li>`
                     ).join('');
 
