@@ -188,7 +188,8 @@ Track line movement over time to identify sharp money and public betting trends.
         try {
             // Fetch movers data
             const url = `/api/v1/betting/movers/?min_spread_movement=${threshold}&min_total_movement=${threshold}${sport ? '&sport=' + sport : ''}`;
-            const response = await authenticatedFetch(url);
+            // Session 563: Use regular fetch - this is a public API
+            const response = await fetch(url);
             const data = await response.json();
 
             loading.style.display = 'none';
@@ -289,7 +290,8 @@ Track line movement over time to identify sharp money and public betting trends.
         chartTitle.textContent = matchup;
 
         try {
-            const response = await authenticatedFetch(`/api/v1/betting/line-movement/${gameId}/?market=spreads&hours=48`);
+            // Session 563: Use regular fetch - this is a public API
+            const response = await fetch(`/api/v1/betting/line-movement/${gameId}/?market=spreads&hours=48`);
             const data = await response.json();
 
             if (!data.success || !data.snapshots || data.snapshots.length === 0) {
