@@ -2,9 +2,12 @@
 Redis caching middleware for API responses
 """
 import json
+import logging
 from django.http import JsonResponse
 from functools import wraps
 import redis
+
+logger = logging.getLogger(__name__)
 
 # Connect to Redis
 redis_client = redis.Redis(
@@ -42,7 +45,7 @@ def cache_api_response(timeout=300):
                     response['X-Cache'] = 'HIT'
                     return response
             except Exception as e:
-                print(f"Cache read error: {e}")
+                logger.warning(f"Cache read error: {e}")
             
             # Call the actual view
             response = view_func(request, *args, **kwargs)
@@ -66,7 +69,7 @@ def cache_api_response(timeout=300):
                         )
                     response['X-Cache'] = 'MISS'
                 except Exception as e:
-                    print(f"Cache write error: {e}")
+                    logger.warning(f"Cache write error: {e}")
                     response['X-Cache'] = 'ERROR'
             
             return response
@@ -83,7 +86,7 @@ def invalidate_cache_pattern(pattern):
             redis_client.delete(key)
         return True
     except Exception as e:
-        print(f"Cache invalidation error: {e}")
+        logger.warning(f"Cache invalidation error: {e}")
         return False
 
 

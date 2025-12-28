@@ -66,7 +66,7 @@ class SafeWebSocketMixin:
             await self.send(text_data=json.dumps(data))
         except Exception as e:
             # Log the error but don't crash the consumer
-            print(f"[SafeWebSocket] Failed to send message: {e}")
+            logger.error(f"[SafeWebSocket] Failed to send message: {e}")
             # Re-raise if it's not a connection-related error
             if "connection" not in str(e).lower() and "close" not in str(e).lower():
                 raise
@@ -250,27 +250,27 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     
     async def connect(self):
         try:
-            print(f"[LiveSports] CONNECT METHOD CALLED")
+            logger.debug(f"[LiveSports] CONNECT METHOD CALLED")
             self.room_group_name = 'live_sports'
             self.user = self.scope.get('user', AnonymousUser())
             
             # Log connection attempt
             user_info = getattr(self.user, 'username', 'anonymous') if not isinstance(self.user, AnonymousUser) else 'anonymous'
-            print(f"[LiveSports] Connection attempt from user: {user_info}")
+            logger.debug(f"[LiveSports] Connection attempt from user: {user_info}")
             
-            print(f"[LiveSports] Adding to channel group...")
+            logger.debug(f"[LiveSports] Adding to channel group...")
             await self.channel_layer.group_add(
                 self.room_group_name,
                 self.channel_name
             )
-            print(f"[LiveSports] Added to channel group successfully")
+            logger.debug(f"[LiveSports] Added to channel group successfully")
             
-            print(f"[LiveSports] Accepting connection...")
+            logger.debug(f"[LiveSports] Accepting connection...")
             await self.accept()
-            print(f"[LiveSports] Connection accepted")
+            logger.debug(f"[LiveSports] Connection accepted")
             
             # Send connection established message with initial data
-            print(f"[LiveSports] Sending welcome message...")
+            logger.debug(f"[LiveSports] Sending welcome message...")
             await self.safe_send({
                 'type': 'connection_established',
                 'data': {
@@ -279,9 +279,9 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     'timestamp': datetime.now().isoformat()
                 }
             })
-            print(f"[LiveSports] Welcome message sent successfully")
+            logger.debug(f"[LiveSports] Welcome message sent successfully")
         except Exception as e:
-            print(f"[LiveSports] ERROR in connect method: {e}")
+            logger.error(f"[LiveSports] ERROR in connect method: {e}")
             import traceback
             traceback.print_exc()
             # Still try to accept the connection
@@ -292,7 +292,7 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     
     async def disconnect(self, close_code):
         user_info = getattr(self.user, 'username', 'anonymous') if hasattr(self, 'user') and not isinstance(self.user, AnonymousUser) else 'anonymous'
-        print(f"[LiveSports] Disconnection (code: {close_code}) for user: {user_info}")
+        logger.debug(f"[LiveSports] Disconnection (code: {close_code}) for user: {user_info}")
         
         await self.channel_layer.group_discard(
             self.room_group_name,
@@ -301,42 +301,42 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
     
     async def receive(self, text_data):
         try:
-            print(f"[LiveSports] Received: {text_data}")
+            logger.debug(f"[LiveSports] Received: {text_data}")
             text_data_json = json.loads(text_data)
             message_type = text_data_json.get('type', 'ping')
-            print(f"[LiveSports] Message type: {message_type}")
+            logger.debug(f"[LiveSports] Message type: {message_type}")
             
             if message_type == 'ping':
-                print(f"[LiveSports] Sending pong response...")
+                logger.debug(f"[LiveSports] Sending pong response...")
                 await self.safe_send({
                     'type': 'pong',
                     'timestamp': datetime.now().isoformat()
                 })
-                print(f"[LiveSports] Pong sent successfully")
+                logger.debug(f"[LiveSports] Pong sent successfully")
             elif message_type == 'subscribe_sport':
                 sport = text_data_json.get('sport', 'all')
-                print(f"[LiveSports] Subscribing to sport: {sport}")
+                logger.debug(f"[LiveSports] Subscribing to sport: {sport}")
                 await self.safe_send({
                     'type': 'subscribed',
                     'sport': sport,
                     'timestamp': datetime.now().isoformat()
                 })
-                print(f"[LiveSports] Subscription confirmation sent")
+                logger.debug(f"[LiveSports] Subscription confirmation sent")
             else:
-                print(f"[LiveSports] Unknown message type: {message_type}")
+                logger.warning(f"[LiveSports] Unknown message type: {message_type}")
                 await self.safe_send({
                     'type': 'error',
                     'data': {'message': f'Unknown message type: {message_type}'}
                 })
-                print(f"[LiveSports] Error message sent")
+                logger.debug(f"[LiveSports] Error message sent")
         except json.JSONDecodeError as e:
-            print(f"[LiveSports] JSON decode error: {e}")
+            logger.warning(f"[LiveSports] JSON decode error: {e}")
             await self.safe_send({
                 'type': 'error',
                 'data': {'message': 'Invalid JSON format'}
             })
         except Exception as e:
-            print(f"[LiveSports] Unexpected error in receive: {e}")
+            logger.error(f"[LiveSports] Unexpected error in receive: {e}")
             # Don't disconnect on receive errors - just log and continue
     
     async def live_odds_update(self, event):
@@ -528,7 +528,7 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                 })
 
         except Exception as e:
-            print(f"Error in AI interview start: {e}")
+            logger.error(f"Error in AI interview start: {e}")
             await self.safe_send({
                 'type': 'error',
                 'data': {'message': f'Interview system error: {str(e)}'}
@@ -620,7 +620,7 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                 })
 
         except Exception as e:
-            print(f"Error in AI interview response: {e}")
+            logger.error(f"Error in AI interview response: {e}")
             await self.safe_send({
                 'type': 'error',
                 'data': {'message': f'Interview processing error: {str(e)}'}
@@ -708,10 +708,10 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             enhanced_profile.calculate_completeness()
             enhanced_profile.save()
 
-            print(f"Saved completed interview profile for user {self.user.username}")
+            logger.info(f"Saved completed interview profile for user {self.user.username}")
 
         except Exception as e:
-            print(f"Error saving profile: {e}")
+            logger.error(f"Error saving profile: {e}")
             raise
 
     async def notify_profile_completion(self, profile_data):
@@ -741,10 +741,10 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                 }
             )
 
-            print(f"Notified platform systems of profile completion for user {self.user.username}")
+            logger.info(f"Notified platform systems of profile completion for user {self.user.username}")
 
         except Exception as e:
-            print(f"Error notifying profile completion: {e}")
+            logger.error(f"Error notifying profile completion: {e}")
 
     async def handle_complete_interview(self, data):
         """Handle interview completion"""
@@ -1175,7 +1175,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             
             return channel_data
         except Exception as e:
-            print(f"Error getting channels: {e}")
+            logger.error(f"Error getting channels: {e}")
             return []
     
     @database_sync_to_async
@@ -1230,7 +1230,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             return message_data
             
         except Exception as e:
-            print(f"Error getting channel messages: {e}")
+            logger.error(f"Error getting channel messages: {e}")
             return []
     
     @database_sync_to_async
@@ -1266,7 +1266,7 @@ class AgentChannelsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             }
             
         except Exception as e:
-            print(f"Error creating user message: {e}")
+            logger.error(f"Error creating user message: {e}")
             return None
 
 
@@ -1497,7 +1497,7 @@ class MythologyConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         # Allow anonymous users for now (you can restrict this later)
         # Just log if user is not authenticated
         if not self.user or self.user == AnonymousUser():
-            print("Warning: Anonymous user connecting to mythology WebSocket")
+            logger.warning("Anonymous user connecting to mythology WebSocket")
             
         # Join mythology notifications group
         self.room_group_name = 'mythology_notifications'
@@ -1569,16 +1569,16 @@ class SportsArbitrageConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         # Log connection with user info
         user = self.scope.get('user', AnonymousUser())
         if not isinstance(user, AnonymousUser):
-            print(f"INFO WebSocket connected: {user.username}")
+            logger.info(f"WebSocket connected: {user.username}")
         else:
-            print("INFO WebSocket connected: anonymous user")
+            logger.info("WebSocket connected: anonymous user")
     
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        print("INFO WebSocket disconnected: ")
+        logger.info("WebSocket disconnected: ")
     
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -1616,16 +1616,16 @@ class SportsRecommendationConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         # Log connection with user info
         user = self.scope.get('user', AnonymousUser())
         if not isinstance(user, AnonymousUser):
-            print(f"INFO WebSocket connected: {user.username}")
+            logger.info(f"WebSocket connected: {user.username}")
         else:
-            print("INFO WebSocket connected: anonymous user")
+            logger.info("WebSocket connected: anonymous user")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        print("INFO WebSocket disconnected: ")
+        logger.info("WebSocket disconnected: ")
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -1730,7 +1730,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
                         }
                     })
             except Exception as e:
-                print(f"Error streaming initial intelligence data: {e}")
+                logger.error(f"Error streaming initial intelligence data: {e}")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -1998,7 +1998,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
 
         except Exception as e:
             # If spider network is not available, return empty list
-            print(f"Spider network not available: {e}")
+            logger.warning(f"Spider network not available: {e}")
             return []
 
     def combine_opportunities(self, ai_analysis, spider_opportunities):
@@ -2050,7 +2050,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
             return True
 
         except Exception as e:
-            print(f"Failed to save analysis: {e}")
+            logger.error(f"Failed to save analysis: {e}")
             return False
 
     @database_sync_to_async
@@ -2078,7 +2078,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
             return plan_instance
 
         except Exception as e:
-            print(f"Failed to save action plan: {e}")
+            logger.error(f"Failed to save action plan: {e}")
             return None
 
     @database_sync_to_async
@@ -2106,7 +2106,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
             return True
 
         except Exception as e:
-            print(f"Failed to save profile: {e}")
+            logger.error(f"Failed to save profile: {e}")
             return False
 
     @database_sync_to_async
@@ -2127,7 +2127,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
             } for record in earnings]
 
         except Exception as e:
-            print(f"Failed to get earnings: {e}")
+            logger.error(f"Failed to get earnings: {e}")
             return []
 
     @database_sync_to_async
@@ -2248,7 +2248,7 @@ I can help you with:
 Try asking something specific or type /help for commands!"""
 
         except Exception as e:
-            print(f"Error in natural language processing: {e}")
+            logger.error(f"Error in natural language processing: {e}")
             return f"I'm having trouble processing that request. Try /help for available commands."
 
     async def handle_command(self, data):
@@ -2539,7 +2539,7 @@ class OpportunityScannerConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                         'data': opp
                     })
             except Exception as e:
-                print(f"Error streaming initial opportunities: {e}")
+                logger.error(f"Error streaming initial opportunities: {e}")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -2590,7 +2590,7 @@ class OpportunityScannerConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                                 }
                             })
                     except Exception as e:
-                        print(f"Error fetching live opportunities: {e}")
+                        logger.error(f"Error fetching live opportunities: {e}")
                         # Fallback to demo opportunity
                         await self.safe_send({
                             'type': 'new_opportunity',
@@ -2657,16 +2657,16 @@ class SportsDashboardConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         # Log connection with user info
         user = self.scope.get('user', AnonymousUser())
         if not isinstance(user, AnonymousUser):
-            print(f"INFO WebSocket connected: {user.username}")
+            logger.info(f"WebSocket connected: {user.username}")
         else:
-            print("INFO WebSocket connected: anonymous user")
+            logger.info("WebSocket connected: anonymous user")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        print("INFO WebSocket disconnected: ")
+        logger.info("WebSocket disconnected: ")
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -2809,7 +2809,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                     })
 
         except Exception as e:
-            print(f"Error sending initial data: {e}")
+            logger.error(f"Error sending initial data: {e}")
 
     async def send_current_data(self):
         """Send current workflow data"""
@@ -2876,7 +2876,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             })
 
         except Exception as e:
-            print(f"Error sending current data: {e}")
+            logger.error(f"Error sending current data: {e}")
 
     async def subscribe_to_workflow(self, workflow_id):
         """Subscribe to a specific workflow"""

@@ -2,11 +2,14 @@
 WebSocket Consumer for Live Deliverables
 Shows actual deliverables being created by agents
 """
-import json
 import asyncio
+import json
+import logging
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 import redis
+
+logger = logging.getLogger(__name__)
 
 class DeliverablesConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time deliverable updates"""
@@ -170,7 +173,7 @@ class DeliverablesConsumer(AsyncWebsocketConsumer):
                         }))
 
             except Exception as e:
-                print(f"Deliverables monitor error: {e}")
+                logger.error(f"Deliverables monitor error: {e}")
 
             await asyncio.sleep(2)  # Check every 2 seconds
 
