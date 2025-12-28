@@ -174,9 +174,10 @@ Kalshi prediction markets and political/economic event odds.
             }
 
             // Update stats
+            // Session 563: API returns implied_probability (0-1) or last_price (cents 0-100)
             let likely = 0, uncertain = 0, unlikely = 0;
             markets.forEach(m => {
-                const prob = m.yes_price || m.probability || 0.5;
+                const prob = m.implied_probability || (m.last_price / 100) || m.yes_price || 0.5;
                 if (prob >= 0.8) likely++;
                 else if (prob >= 0.4 && prob <= 0.6) uncertain++;
                 else if (prob <= 0.2) unlikely++;
@@ -208,7 +209,8 @@ Kalshi prediction markets and political/economic event odds.
     }
 
     function renderMarketCard(market, type) {
-        const yesPrice = market.yes_price || market.probability || 0.5;
+        // Session 563: Use implied_probability or last_price from Kalshi API
+        const yesPrice = market.implied_probability || (market.last_price / 100) || market.yes_price || 0.5;
         const noPrice = 1 - yesPrice;
         const color = yesPrice >= 0.6 ? '#22c55e' : yesPrice <= 0.4 ? '#ef4444' : '#fbbf24';
 
@@ -227,13 +229,14 @@ Kalshi prediction markets and political/economic event odds.
     }
 
     function renderMarketRow(market) {
-        const yesPrice = market.yes_price || market.probability || 0.5;
+        // Session 563: Use implied_probability or last_price from Kalshi API
+        const yesPrice = market.implied_probability || (market.last_price / 100) || market.yes_price || 0.5;
         const noPrice = 1 - yesPrice;
         const yesColor = yesPrice >= 0.6 ? '#22c55e' : yesPrice <= 0.4 ? '#ef4444' : '#fbbf24';
         const noColor = noPrice >= 0.6 ? '#22c55e' : noPrice <= 0.4 ? '#ef4444' : '#fbbf24';
 
-        const expires = market.close_time ? new Date(market.close_time).toLocaleDateString() : '-';
-        const volume = market.volume ? formatVolume(market.volume) : '-';
+        const expires = market.close_time || market.expiration_time ? new Date(market.close_time || market.expiration_time).toLocaleDateString() : '-';
+        const volume = market.volume || market.volume_24h ? formatVolume(market.volume || market.volume_24h) : '-';
 
         return `
             <tr>
@@ -270,12 +273,18 @@ Kalshi prediction markets and political/economic event odds.
     // Filter change handler
     document.getElementById('markets-category-filter')?.addEventListener('change', loadPredictionMarkets);
 
-    // Auto-load when tab is shown
-    document.addEventListener('DOMContentLoaded', function() {
-        const marketsTab = document.getElementById('betting-markets-tab');
-        if (marketsTab) {
-            marketsTab.addEventListener('shown.bs.tab', loadPredictionMarkets);
+    // Session 563: More robust tab detection - use event delegation
+    document.addEventListener('shown.bs.tab', function(event) {
+        if (event.target && event.target.id === 'betting-markets-tab') {
+            console.log('[Prediction Markets] Tab shown, loading data...');
+            loadPredictionMarkets();
         }
+    });
+
+    // Also try direct click handler as fallback
+    document.getElementById('betting-markets-tab')?.addEventListener('click', function() {
+        console.log('[Prediction Markets] Tab clicked, loading data...');
+        setTimeout(loadPredictionMarkets, 100);
     });
 })();
 </script>
