@@ -2426,25 +2426,40 @@ def get_futures_odds(request):
                         'teams': []
                     }
 
-                for future in futures[:limit]:
-                    team_data = {
-                        'team': future.get('title', future.get('selection', 'Unknown')),
-                        'odds_american': future.get('odds_american', 0),
-                        'odds_decimal': future.get('odds_decimal', 0),
-                        'implied_probability': future.get('implied_probability', 0),
-                        'bookmaker': future.get('bookmaker', 'Best Available'),
-                        'last_updated': future.get('updated_at', future.get('created_at', '')),
-                    }
+                # Session 563: Spider returns futures with 'contenders' array
+                for future in futures:
+                    contenders = future.get('contenders', [])
+                    bookmaker = future.get('best_bookmaker', 'Best Available')
+                    fetched_at = future.get('fetched_at', '')
 
-                    # Calculate implied probability if not present
-                    if not team_data['implied_probability'] and team_data['odds_american']:
-                        odds = team_data['odds_american']
+                    # Extract each team from contenders
+                    for contender in contenders[:limit]:
+                        odds = contender.get('odds', 0)
+                        implied_prob = contender.get('implied_prob', 0)
+
+                        # Convert implied_prob from percentage to decimal if needed
+                        if implied_prob and implied_prob > 1:
+                            implied_prob = implied_prob / 100
+
+                        # Calculate decimal odds
                         if odds > 0:
-                            team_data['implied_probability'] = 100 / (odds + 100)
+                            decimal_odds = (odds / 100) + 1
+                        elif odds < 0:
+                            decimal_odds = (100 / abs(odds)) + 1
                         else:
-                            team_data['implied_probability'] = abs(odds) / (abs(odds) + 100)
+                            decimal_odds = 0
 
-                    leagues_data[league_name]['teams'].append(team_data)
+                        team_data = {
+                            'team': contender.get('name', 'Unknown'),
+                            'odds_american': odds,
+                            'odds_decimal': round(decimal_odds, 2),
+                            'implied_probability': implied_prob if implied_prob else 0,
+                            'bookmaker': bookmaker,
+                            'last_updated': fetched_at,
+                        }
+
+                        leagues_data[league_name]['teams'].append(team_data)
+
                     all_futures.append(future)
 
             except Exception as e:
