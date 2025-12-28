@@ -391,6 +391,7 @@ class SuperPlatformCoordinator:
             agent_mood=context.agent_mood,
             user_preferences=context.user_preferences,
             available_agents=context.available_agents,
+            intelligence_context=context.intelligence_context,  # Session 565
         )
 
         system_prompt = self.prompt_builder.build(prompt_context)
@@ -552,6 +553,7 @@ class SuperPlatformCoordinator:
             agent_mood=context.agent_mood,
             user_preferences=context.user_preferences,
             available_agents=context.available_agents,
+            intelligence_context=context.intelligence_context,  # Session 565
         )
 
         system_prompt = self.prompt_builder.build(prompt_context)
@@ -995,15 +997,26 @@ Try:
                 except Exception as e:
                     logger.warning(f"Could not get sci-fi context: {e}")
 
+            # Session 565: Get intelligence context for enriching PA responses
+            intelligence_context = context.intelligence_context or {}
+            if intelligence_context:
+                logger.info(
+                    f"🧠 [Session 565] Passing intelligence context to PA: "
+                    f"{intelligence_context.get('metadata', {}).get('knowledge_count', 0)} knowledge, "
+                    f"{intelligence_context.get('metadata', {}).get('experts_count', 0)} experts"
+                )
+
             # Execute through PersonalAssistantAgent
             result = self.personal_assistant.execute(
                 task=message,
                 context={
                     'classification': classification.to_dict(),
                     'sources_used': context.sources_used,
+                    'intelligence_context': intelligence_context,  # Session 565
                 },
                 scifi_context=scifi_context,
-                spider_context=spider_context
+                spider_context=spider_context,
+                intelligence_context=intelligence_context  # Session 565
             )
 
             execution_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -1098,6 +1111,35 @@ Try:
             if result.knowledge_attribution:
                 knowledge_attribution_data = result.knowledge_attribution.to_dict()
 
+            # Session 565: Extract intelligence metadata for UI display
+            intel_ctx = context.intelligence_context or {}
+            intel_metadata = intel_ctx.get('metadata', {})
+            intelligence_summary = None
+            if intel_ctx and not intel_ctx.get('error'):
+                total_sources = (
+                    intel_metadata.get('knowledge_count', 0) +
+                    intel_metadata.get('experts_count', 0) +
+                    intel_metadata.get('dreams_count', 0) +
+                    intel_metadata.get('policies_count', 0) +
+                    intel_metadata.get('trends_count', 0)
+                )
+                if total_sources > 0:
+                    intelligence_summary = {
+                        'knowledge_count': intel_metadata.get('knowledge_count', 0),
+                        'experts_count': intel_metadata.get('experts_count', 0),
+                        'dreams_count': intel_metadata.get('dreams_count', 0),
+                        'policies_count': intel_metadata.get('policies_count', 0),
+                        'trends_count': intel_metadata.get('trends_count', 0),
+                        'intent': intel_metadata.get('intent', 'unknown'),
+                        'attribution': intel_ctx.get('attribution', ''),
+                        'experts': [e.get('agent_name', '') for e in intel_ctx.get('experts', [])[:5]],
+                        'spider_sources': intel_metadata.get('spider_sources', [])[:5],
+                    }
+                    logger.info(
+                        f"🧠 [Session 565] Intelligence summary for response: "
+                        f"{total_sources} total sources"
+                    )
+
             return CoordinatorResult(
                 success=result.success,
                 response=response_message,
@@ -1113,6 +1155,7 @@ Try:
                     'tool_calls': result.tool_calls,
                     'agent_result': result.data.get('agent_result', {}) if result.data else {},
                     'knowledge_attribution': knowledge_attribution_data,  # Session 401
+                    'intelligence_context': intelligence_summary,  # Session 565
                 },
                 project_created=project_created,  # Session 519: Auto-project creation
             )

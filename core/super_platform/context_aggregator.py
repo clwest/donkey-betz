@@ -8,8 +8,10 @@ This module aggregates context from all platform components:
 - Agent Registry (available agents)
 - User Profile (preferences)
 - Opportunity Engine (revenue context)
+- Platform Intelligence (Session 565: agent knowledge, dreams, policies)
 
 Session 264: Phase 1 Foundation
+Session 565: Added PAIntelligenceEnricher integration
 """
 
 import logging
@@ -51,6 +53,9 @@ class AggregatedContext:
     active_opportunities: List[Dict[str, Any]] = field(default_factory=list)
     revenue_summary: Dict[str, Any] = field(default_factory=dict)
 
+    # Session 565: Platform Intelligence (agent knowledge, dreams, policies)
+    intelligence_context: Dict[str, Any] = field(default_factory=dict)
+
     # Metadata
     aggregation_time: datetime = field(default_factory=timezone.now)
     sources_used: List[str] = field(default_factory=list)
@@ -64,6 +69,7 @@ class AggregatedContext:
             'available_agents': self.available_agents,
             'user_preferences': self.user_preferences,
             'active_opportunities': self.active_opportunities,
+            'intelligence_context': self.intelligence_context,  # Session 565
             'sources_used': self.sources_used,
             'aggregation_time': self.aggregation_time.isoformat(),
         }
@@ -87,6 +93,7 @@ class ContextAggregator:
         self.user = user
         self._spider_service = None
         self._memory_service = None
+        self._intelligence_enricher = None  # Session 565
 
     @property
     def spider_service(self):
@@ -98,6 +105,17 @@ class ContextAggregator:
             except ImportError:
                 logger.warning("SpiderIntelligenceService not available")
         return self._spider_service
+
+    @property
+    def intelligence_enricher(self):
+        """Session 565: Lazy load PA intelligence enricher."""
+        if self._intelligence_enricher is None:
+            try:
+                from core.services.pa_intelligence_enricher import PAIntelligenceEnricher
+                self._intelligence_enricher = PAIntelligenceEnricher()
+            except ImportError:
+                logger.warning("PAIntelligenceEnricher not available")
+        return self._intelligence_enricher
 
     def aggregate(
         self,
@@ -164,6 +182,19 @@ class ContextAggregator:
                 classification.suggested_agents
             )
             context.sources_used.append('agent_relationships')
+
+        # Session 565: Get platform intelligence (agent knowledge, dreams, policies)
+        # Always enrich with platform intelligence for richer context
+        intelligence = self._get_intelligence_context(query, classification)
+        if intelligence:
+            context.intelligence_context = intelligence
+            context.sources_used.append('platform_intelligence')
+            logger.info(
+                f"🧠 [Session 565] Intelligence enrichment: "
+                f"{intelligence.get('metadata', {}).get('knowledge_count', 0)} knowledge, "
+                f"{intelligence.get('metadata', {}).get('experts_count', 0)} experts, "
+                f"{intelligence.get('metadata', {}).get('dreams_count', 0)} dreams"
+            )
 
         return context
 
@@ -496,3 +527,60 @@ class ContextAggregator:
                     pass
 
         return context
+
+    def _get_intelligence_context(
+        self,
+        query: str,
+        classification: ClassificationResult
+    ) -> Dict[str, Any]:
+        """
+        Session 565: Get platform intelligence from PA Intelligence Enricher.
+
+        This queries agent knowledge, expert agents, high-value dreams,
+        canonical policies, and spider trends to enrich the PA context.
+
+        Args:
+            query: The user's query
+            classification: Query classification result
+
+        Returns:
+            Dict with knowledge, experts, dreams, policies, spider_trends,
+            context_text (formatted for prompt), and attribution.
+        """
+        if not self.intelligence_enricher:
+            return {}
+
+        try:
+            # Build user context from aggregator state
+            user_context = {}
+            if self.user:
+                user_context = {
+                    'user_id': str(self.user.id) if hasattr(self.user, 'id') else None,
+                    'username': self.user.username if hasattr(self.user, 'username') else None,
+                }
+
+            # Enrich context using PAIntelligenceEnricher
+            enriched = self.intelligence_enricher.enrich_context(
+                message=query,
+                user_context=user_context
+            )
+
+            # Only return if we got meaningful data
+            if enriched and not enriched.get('error'):
+                metadata = enriched.get('metadata', {})
+                total_sources = (
+                    metadata.get('knowledge_count', 0) +
+                    metadata.get('experts_count', 0) +
+                    metadata.get('dreams_count', 0) +
+                    metadata.get('policies_count', 0) +
+                    metadata.get('trends_count', 0)
+                )
+
+                if total_sources > 0:
+                    return enriched
+
+            return {}
+
+        except Exception as e:
+            logger.error(f"Error getting intelligence context: {e}")
+            return {'error': str(e)}

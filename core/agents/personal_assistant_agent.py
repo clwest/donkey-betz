@@ -579,7 +579,8 @@ ORCHESTRATION:
         task: str,
         context: Dict[str, Any],
         scifi_context: Dict[str, Any],
-        spider_context: Dict[str, Any]
+        spider_context: Dict[str, Any],
+        intelligence_context: Dict[str, Any] = None  # Session 565: Platform intelligence
     ) -> AgentResult:
         """
         Process a user message and route to appropriate agent or respond directly.
@@ -588,9 +589,20 @@ ORCHESTRATION:
         tool_calls_made = []
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
+        intelligence_context = intelligence_context or {}
 
-        # Session 529: Build intelligent prompt with full context
-        self._intelligent_context = self._build_intelligent_prompt(task, scifi_context, spider_context)
+        # Session 565: Store intelligence context for use in question answering
+        self._intelligence_context = intelligence_context
+
+        # Session 565: Debug logging for platform intelligence
+        if intelligence_context:
+            metadata = intelligence_context.get('metadata', {})
+            logger.info(
+                f"🧠 [Session 565] PersonalAssistant.execute() - intelligence_context: "
+                f"{metadata.get('knowledge_count', 0)} knowledge, "
+                f"{metadata.get('experts_count', 0)} experts, "
+                f"{metadata.get('dreams_count', 0)} dreams"
+            )
 
         # Session 483: Debug logging for spider context flow
         logger.info(f"🕷️ [Session 483] PersonalAssistant.execute() - spider_context keys: {list(spider_context.keys()) if spider_context else 'None'}")
@@ -1173,7 +1185,11 @@ ORCHESTRATION:
                     logger.warning(f"Failed to fetch fresh trends: {e}")
 
             # Session 401: Build prompt with attribution to track what knowledge is used
-            prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, enhanced_spider_context)
+            # Session 565: Now includes platform intelligence context
+            intel_ctx = getattr(self, '_intelligence_context', None) or {}
+            prompt, attribution = self._build_prompt_with_attribution(
+                task, scifi_context, enhanced_spider_context, intel_ctx
+            )
 
             # Session 454: Enhanced instruction for trend questions
             # Session 495: Now includes trending keywords + categories from SmartTrendingService
@@ -1367,7 +1383,11 @@ ORCHESTRATION:
         """
         try:
             # Session 401: Build prompt with attribution
-            full_prompt, attribution = self._build_prompt_with_attribution(task, scifi_context, spider_context)
+            # Session 565: Include platform intelligence context
+            intel_ctx = getattr(self, '_intelligence_context', None) or {}
+            full_prompt, attribution = self._build_prompt_with_attribution(
+                task, scifi_context, spider_context, intel_ctx
+            )
 
             gpt_response = self._call_openai(full_prompt)
 

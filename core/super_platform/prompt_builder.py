@@ -34,6 +34,7 @@ class PromptContext:
     user_preferences: Optional[Dict[str, Any]] = None
     available_agents: Optional[List[str]] = None
     recent_actions: Optional[List[Dict[str, Any]]] = None
+    intelligence_context: Optional[Dict[str, Any]] = None  # Session 565: Platform intelligence
 
 
 class DynamicPromptBuilder:
@@ -128,6 +129,11 @@ class DynamicPromptBuilder:
         if context.classification.suggested_agents:
             agents_section = self._build_agents_section(context.classification.suggested_agents)
             sections.append(agents_section)
+
+        # Session 565: Add platform intelligence if available
+        if context.intelligence_context and context.intelligence_context.get('context_text'):
+            intel_section = self._build_intelligence_section(context.intelligence_context)
+            sections.append(intel_section)
 
         # Add timestamp and session context
         sections.append(self._build_session_context())
@@ -269,7 +275,42 @@ class DynamicPromptBuilder:
         now = datetime.now()
         return f"""
 ---
-*Session: {now.strftime('%Y-%m-%d %H:%M')} | Super Platform v264*"""
+*Session: {now.strftime('%Y-%m-%d %H:%M')} | Super Platform v565*"""
+
+    def _build_intelligence_section(self, intelligence: Dict[str, Any]) -> str:
+        """
+        Session 565: Build the platform intelligence section.
+
+        This includes agent knowledge, expert agents, dreams, policies,
+        and spider trends relevant to the user's query.
+        """
+        # Get the pre-formatted context text from the enricher
+        context_text = intelligence.get('context_text', '')
+        attribution = intelligence.get('attribution', '')
+
+        # Get metadata for summary
+        metadata = intelligence.get('metadata', {})
+        knowledge_count = metadata.get('knowledge_count', 0)
+        experts_count = metadata.get('experts_count', 0)
+        dreams_count = metadata.get('dreams_count', 0)
+        policies_count = metadata.get('policies_count', 0)
+        trends_count = metadata.get('trends_count', 0)
+
+        total_sources = knowledge_count + experts_count + dreams_count + policies_count + trends_count
+
+        if not context_text:
+            return ""
+
+        return f"""
+---
+## 🧠 Platform Intelligence ({total_sources} sources)
+
+{context_text}
+
+**Attribution:** {attribution}
+
+*Use this knowledge from our agent network to inform your response. Reference specific insights when relevant.*
+---"""
 
     def build_minimal(self, query_type: QueryType) -> str:
         """
