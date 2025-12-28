@@ -402,7 +402,8 @@ Quick summary of betting activity, recent bets, and top opportunities.
 
     async function loadValuePlays() {
         try {
-            const response = await fetch('/api/v1/sports/live-odds/?sport=americanfootball_nfl');
+            // Session 563: Request h2h markets explicitly
+            const response = await fetch('/api/v1/sports/live-odds/?sport=americanfootball_nfl&markets=h2h');
             if (!response.ok) throw new Error('API not available');
 
             const data = await response.json();
@@ -415,7 +416,8 @@ Quick summary of betting activity, recent bets, and top opportunities.
             games.forEach(game => {
                 if (game.bookmakers && game.bookmakers.length > 0) {
                     const bm = game.bookmakers[0];
-                    const h2h = bm.markets?.find(m => m.key === 'h2h');
+                    // Session 563: markets is a dict, not an array
+                    const h2h = bm.markets?.h2h || bm.markets?.['h2h'];
                     if (h2h && h2h.outcomes) {
                         h2h.outcomes.forEach(outcome => {
                             const prob = americanToProb(outcome.price);
