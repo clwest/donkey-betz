@@ -566,10 +566,12 @@ class BaseAgent(ABC, TimeTravelMixin):
         self,
         task: str,
         scifi_context: Dict[str, Any],
-        spider_context: Dict[str, Any]
+        spider_context: Dict[str, Any],
+        intelligence_context: Dict[str, Any] = None  # Session 565: Platform intelligence
     ) -> tuple:
         """
         Session 400: Build prompt AND return knowledge attribution.
+        Session 565: Now includes platform intelligence (agent knowledge, dreams, policies).
 
         This is the preferred method for agents that want to surface
         what knowledge influenced their response.
@@ -578,6 +580,7 @@ class BaseAgent(ABC, TimeTravelMixin):
             task: The user's task
             scifi_context: Sci-fi system context
             spider_context: Spider intelligence context
+            intelligence_context: Session 565 - Platform intelligence from PAIntelligenceEnricher
 
         Returns:
             Tuple of (prompt_string, KnowledgeAttribution)
@@ -664,6 +667,44 @@ class BaseAgent(ABC, TimeTravelMixin):
                 if trend_names:
                     parts.append(f"\n\n## Current Trends")
                     parts.append(f"Trending topics: {', '.join(trend_names)}")
+
+        # Session 565: Add platform intelligence context
+        if intelligence_context and intelligence_context.get('context_text'):
+            intel_text = intelligence_context.get('context_text', '')
+            intel_attribution = intelligence_context.get('attribution', '')
+            intel_metadata = intelligence_context.get('metadata', {})
+
+            total_sources = (
+                intel_metadata.get('knowledge_count', 0) +
+                intel_metadata.get('experts_count', 0) +
+                intel_metadata.get('dreams_count', 0) +
+                intel_metadata.get('policies_count', 0) +
+                intel_metadata.get('trends_count', 0)
+            )
+
+            if total_sources > 0:
+                parts.append(f"\n\n## 🧠 Platform Intelligence ({total_sources} sources)")
+                parts.append(intel_text)
+                if intel_attribution:
+                    parts.append(f"\n*{intel_attribution}*")
+                parts.append("\nUse this knowledge from our agent network to inform your response.")
+
+                # Update attribution with intelligence sources
+                knowledge_items = attribution.knowledge_items.copy() if attribution.knowledge_items else []
+                for item in intelligence_context.get('knowledge', [])[:3]:
+                    knowledge_items.append({
+                        'title': item.get('title', '')[:60],
+                        'source': item.get('agent__name', 'Platform'),
+                        'type': 'platform_intelligence'
+                    })
+
+                attribution = KnowledgeAttribution(
+                    spider_sources=attribution.spider_sources + intel_metadata.get('spider_sources', [])[:5],
+                    knowledge_items=knowledge_items,
+                    confidence_score=max(attribution.confidence_score, 0.7),
+                    data_freshness_hours=attribution.data_freshness_hours,
+                    total_sources=attribution.total_sources + total_sources
+                )
 
         # Add the task
         parts.append(f"\n\n## Task")

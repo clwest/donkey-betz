@@ -881,11 +881,13 @@
 
                         // Add AI response with metadata (includes prompt if available)
                         // Session 58: Phase B.3 - Add workflow execution button
+                        // Session 565: Include intelligence_context for source attribution UI
                         this.addMessage('assistant', response.message, false, {
                             prompt: response.prompt || response.params?.prompt,
                             showExecuteButton: response.showExecuteButton,
                             action: response.action,
-                            params: response.params
+                            params: response.params,
+                            intelligence_context: response.metadata?.intelligence_context || null
                         });
 
                         // Session 192: Check if we have tool_calls to execute (from workflow interception)
@@ -1583,6 +1585,52 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     actionButtons = `<div class="mt-2 d-flex gap-1 flex-wrap">${buttons.join('')}</div>`;
                 }
 
+                // Session 565: Build Intelligence Sources panel if metadata includes intelligence context
+                let intelligencePanel = '';
+                if (role === 'assistant' && !isTemporary && metadata.intelligence_context) {
+                    const intel = metadata.intelligence_context;
+                    const totalSources = (intel.knowledge_count || 0) + (intel.experts_count || 0) +
+                                        (intel.dreams_count || 0) + (intel.policies_count || 0) +
+                                        (intel.trends_count || 0);
+
+                    if (totalSources > 0) {
+                        const expertBadges = (intel.experts || []).map(e =>
+                            `<span class="badge bg-primary me-1" style="font-size: 10px;">${e}</span>`
+                        ).join('');
+
+                        const spiderBadges = (intel.spider_sources || []).map(s =>
+                            `<span class="badge bg-secondary me-1" style="font-size: 10px;">${s}</span>`
+                        ).join('');
+
+                        const intelId = `intel-${messageId}`;
+                        intelligencePanel = `
+                            <div class="mt-2 intelligence-sources-panel">
+                                <button class="btn btn-sm btn-outline-secondary intel-toggle-btn"
+                                        onclick="document.getElementById('${intelId}').classList.toggle('d-none')"
+                                        style="font-size: 10px; padding: 2px 8px; opacity: 0.8;">
+                                    🧠 Intelligence Sources (${totalSources})
+                                </button>
+                                <div id="${intelId}" class="d-none intel-details mt-2 p-2 rounded"
+                                     style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); font-size: 11px;">
+                                    <div class="mb-1">
+                                        <strong style="color: #a5b4fc;">Sources:</strong>
+                                        ${intel.knowledge_count > 0 ? `<span class="text-muted">📚 ${intel.knowledge_count} knowledge</span>` : ''}
+                                        ${intel.experts_count > 0 ? `<span class="text-muted ms-2">👤 ${intel.experts_count} experts</span>` : ''}
+                                        ${intel.dreams_count > 0 ? `<span class="text-muted ms-2">💭 ${intel.dreams_count} dreams</span>` : ''}
+                                        ${intel.policies_count > 0 ? `<span class="text-muted ms-2">📋 ${intel.policies_count} policies</span>` : ''}
+                                        ${intel.trends_count > 0 ? `<span class="text-muted ms-2">📈 ${intel.trends_count} trends</span>` : ''}
+                                    </div>
+                                    ${expertBadges ? `<div class="mb-1"><strong style="color: #a5b4fc;">Expert Agents:</strong> ${expertBadges}</div>` : ''}
+                                    ${spiderBadges ? `<div class="mb-1"><strong style="color: #a5b4fc;">Spider Sources:</strong> ${spiderBadges}</div>` : ''}
+                                    <div class="text-muted fst-italic" style="font-size: 10px;">
+                                        ${intel.attribution || 'Platform intelligence'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
                 // Session 100: Apply beautiful styling for decision-related content
                 let messageStyle, messageBorder, messageIcon;
                 if (role === 'assistant' && isExecutiveMeeting) {
@@ -1612,6 +1660,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <div class="d-inline-block p-3 rounded" style="max-width: 85%; ${messageStyle} ${messageBorder} font-size: 15px; line-height: 1.6; position: relative;">
                             ${messageIcon} ${content}
                             ${actionButtons}
+                            ${intelligencePanel}
                         </div>
                     </div>
                 `;

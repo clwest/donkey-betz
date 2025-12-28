@@ -1,70 +1,71 @@
-# Session 565 - Start Here
+# Session 566 - Start Here
 
-**Previous Session:** 564
-**Date:** December 27, 2025
+**Previous Session:** 565
+**Date:** December 28, 2025
 **Focus:** Continue platform improvements
 
 ---
 
-## Session 564 Accomplishments
+## Session 565 Accomplishments
 
-### 1. Network Graph Fixes - COMPLETE
+### Context-Aware Personal Assistant - COMPLETE
 
-| Fix | Details |
-|-----|---------|
-| **is_active field** | Agent Details card now shows Active status correctly |
-| **Agent categories** | Fixed 16 agents with NULL category (Market Intelligence, Cryptocurrency, etc.) |
+Implemented end-to-end integration to make the Personal Assistant query platform intelligence (3,345+ knowledge entries, 284+ transfers, 66+ dreams) when responding to users.
 
-### 2. Thinking Engine Restoration - COMPLETE
+| Component | Status | Details |
+|-----------|--------|---------|
+| **PAIntelligenceEnricher** | Created | Queries knowledge, experts, dreams, policies, trends |
+| **ContextAggregator** | Updated | Now includes intelligence_context in aggregation |
+| **DynamicPromptBuilder** | Updated | Formats intelligence for prompt injection |
+| **SuperPlatformCoordinator** | Updated | Includes intelligence metadata in responses |
+| **PersonalAssistantAgent** | Updated | Accepts and uses intelligence_context |
+| **BaseAgent** | Updated | `_build_prompt_with_attribution()` now includes intelligence |
+| **UI Panel** | Added | Collapsible "Intelligence Sources" panel in chat |
 
-- Found `autonomous-thinking-cycle` task was NOT in database scheduler
-- Created PeriodicTask entries for thinking cycle and concern scanning
-- Thinking Engine now runs every 2 hours
-- Created Cycle #2 successfully
+#### How It Works
 
-### 3. Dream Triage Pipeline - COMPLETE
+1. User sends message to PA
+2. ContextAggregator calls PAIntelligenceEnricher.enrich_context()
+3. Enricher classifies intent (trend, strategy, creative, technical, question)
+4. Based on intent, queries:
+   - IntelligenceQueryService (knowledge, experts)
+   - AgentDream (high-value dreams)
+   - AgentDecisionSummary (canonical policies)
+   - SpiderIntelligenceService (trends)
+5. Formatted context injected into PA prompts
+6. Intelligence metadata returned with response
+7. UI shows collapsible "Intelligence Sources (X)" panel
 
-Implemented `triage_dreams` action in Thinking Engine:
-- **HIGH VALUE** (composite >= 0.65, action >= 0.6) -> Boardroom
-- **INSPIRATION** (composite >= 0.5, action < 0.6) -> Mark as shown
-- **STALE LOW** (> 14 days, composite < 0.4) -> Archive
+#### Files Created/Modified
 
-Files modified:
-- `core/services/autonomous_action_executor.py` - Added `_execute_triage_dreams`
-- `core/agents/thinking_agent.py` - Added `triage_dreams` to available actions
+**Created:**
+- `core/services/pa_intelligence_enricher.py` - Main enricher service (~480 lines)
 
-### 4. Live Feed Fix - COMPLETE
+**Modified:**
+- `core/super_platform/context_aggregator.py` - Added intelligence_context field
+- `core/super_platform/prompt_builder.py` - Added _build_intelligence_section()
+- `core/super_platform/coordinator.py` - Pass intelligence to PA, include in result
+- `core/agents/personal_assistant_agent.py` - Accept intelligence_context param
+- `core/agents/base_agent.py` - Updated _build_prompt_with_attribution()
+- `ai_core/templates/partials/js/ai_assistant.html` - Added Intelligence Sources UI
 
-Dreams with empty titles now show meaningful content:
-- Extracts title from content using `. ` or `: ` separators
-- Falls back to first 60 chars if no separator
+#### Verified Working
 
-### 5. Command Center API Fix - COMPLETE
+```python
+# Test shows intelligence context flowing through
+coordinator = SuperPlatformCoordinator(user=None)
+result = coordinator.process('What strategy should I use for building a fitness app?')
 
-Added Command Center APIs to PUBLIC_PATHS in auth middleware:
-- `/api/agents/` - Agent list for main view
-- `/api/agent-conversations/` - Conversations sub-tab
-- `/api/agent-dreams/` - Dreams sub-tab
-- `/api/boardroom/` - Boardroom sub-tab
-- `/api/artifacts/` - Artifacts sub-tab
-- `/api/agent-learning/` - Learning activity
-
-This ensures the Command Center UI loads data consistently.
-
-### 6. Command Center ↔ Research Tab Sync - COMPLETE
-
-Synchronized data between Command Center and Research tabs:
-
-| Fix | Details |
-|-----|---------|
-| **Agent count** | Both tabs now show 67 active agents (was 71 vs 67) |
-| **Conversations API** | Removed `@login_required` decorator conflict |
-| **Boardroom freshness** | Sort by `promoted_at` DESC, then `composite_score` |
-| **Decision freshness** | Created fresh decision records for UI testing |
-
-Files modified:
-- `core/views_agent_dashboard.py` - Filter by `is_active=True`
-- `core/views_agent_learning.py` - Remove decorator, fix sort order
+print(result.metadata.get('intelligence_context'))
+# Output:
+# {
+#   'knowledge_count': 3,
+#   'experts_count': 0,
+#   'dreams_count': 0,
+#   'trends_count': 5,
+#   'attribution': 'Based on 3 knowledge entries from 3 agents, 5 trends from...'
+# }
+```
 
 ---
 
@@ -74,66 +75,62 @@ Files modified:
 |-----------|-------|--------|
 | **Spiders** | 77 | Active |
 | **Agents** | 67 | Active (+ 4 inactive legacy) |
-| **Knowledge Items** | 1,247+ | Growing |
+| **Knowledge Items** | 3,345+ | Growing |
 | **Learning Transfers** | 284+ | Active |
 | **Discord Commands** | ~96 | 4 cogs disabled |
 | **Celery Beat Tasks** | 52+ | Running |
 
 ---
 
-## Session 565 Priorities
+## Session 566 Priorities
 
-### 1. Test Remaining Betting Sub-Tabs
-- [ ] Bankroll tab - may need same event listener fixes
-- [ ] Alerts tab - may need same event listener fixes
+### 1. Test Intelligence Panel in Live UI
+- [ ] Start server and test chat with "Intelligence Sources" panel
+- [ ] Verify panel expands/collapses correctly
+- [ ] Check expert agent badges display
 
-### 2. Mobile-Responsive Improvements
-- [ ] Audit betting dashboard on mobile
-- [ ] Fix table responsiveness
+### 2. Enhance Intent Classification
+- [ ] Add more keywords for better intent detection
+- [ ] Consider ML-based classification for better accuracy
 
-### 3. Agent Learning Enhancement
-- [ ] Verify all 67 agents are participating in learning
-- [ ] Check learning connections for new agents
-- [ ] Monitor knowledge transfer quality
+### 3. Monitor Intelligence Quality
+- [ ] Check logs for 🧠 [Session 565] entries
+- [ ] Verify knowledge retrieval is relevant
+- [ ] Tune confidence thresholds if needed
 
-### 4. Line Movement Data
-- [ ] Celery beat runs `snapshot_odds_for_line_movement()` every 2 hours
-- [ ] After 24 hours, real line movement data will be available
+### 4. Remaining Betting Sub-Tabs
+- [ ] Test Bankroll tab
+- [ ] Test Alerts tab
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start all services (IMPORTANT: includes Celery worker!)
+# 1. Start all services
 make start && make celery
 
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Verify Celery worker is running:
-ps aux | grep "celery.*worker"
+# 3. Test intelligence enrichment in PA chat
+# Ask: "What's the best strategy for building a fitness app?"
+# Should see "Intelligence Sources (X)" button below response
 
-# 4. Manually trigger learning if needed:
-.venv/bin/python manage.py shell -c "from core.tasks import run_agent_learning_cycle; run_agent_learning_cycle()"
+# 4. Verify logs show intelligence flow:
+grep "Session 565" /path/to/logs
+# Should see: "🧠 [Session 565] Intelligence enrichment: X knowledge, Y experts, Z dreams"
 ```
 
 ---
 
-## Commits from Session 564
+## Commits from Session 565
 
-```
-46a90e6 fix(Session 564): Network Graph Agent Details card shows is_active
-412473e feat(Session 564): Autonomous Dream Triage Pipeline
-1a740ee fix(Session 564): Live Feed extracts title from dream content
-cf2e0e8 docs(Session 564): Add handoff and prep Session 565
-5445344 fix(Session 564): Add Command Center APIs to PUBLIC_PATHS
-6bcc610 fix(Session 564): Command Center now shows active agents only
-2d5db4b fix(Session 564): Remove @login_required from conversations API
-37a4ed6 fix(Session 564): Boardroom sorts by promoted_at for freshness
-```
+(To be committed after this session)
+
+- feat(Session 565): Context-Aware PA with Intelligence Enrichment
 
 ---
 
-**Session 564: Network Graph + Thinking Engine + Dream Pipeline + Tab Sync - COMPLETE**
-**Ready for Session 565**
+**Session 565: Context-Aware PA with Platform Intelligence - COMPLETE**
+**Ready for Session 566**
