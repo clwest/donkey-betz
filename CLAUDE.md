@@ -2,7 +2,7 @@
 
 **Last Updated:** December 27, 2025 - Session 562
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
-**Spider Network:** 76 spiders | 20,712+ data records | 88.1% embeddings
+**Spider Network:** 77 spiders | 20,712+ data records | 88.1% embeddings
 **Agent Ecosystem:** 71 agents (47 routable) | Autonomous Content Generation | 3-Agent Debates
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
@@ -96,14 +96,24 @@ All agents in `core/agents/` with learning hooks connected to collective intelli
 
 ---
 
-## Spider Network (72 Spiders)
+## Spider Network (77 Spiders)
 
-Real data sources across 20 categories:
-- **Tech:** TechCrunch, The Verge, Wired, MIT Tech Review, HackerNews API
-- **Jobs:** RemoteOK, WeWorkRemotely, Adzuna API
-- **Financial:** CoinGecko API, Yahoo Finance API, Etherscan
-- **Creative:** Dribbble, Behance, Unsplash API
-- **Community:** Reddit (20+ subreddits)
+Real data sources across 20+ categories. 72 working, 5 need API keys.
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| **News/Media** | 10 | TechCrunch, TheVerge, BBC, CNN, NPR, Reuters, NewsAPI |
+| **Financial** | 9 | CoinGecko, YahooFinance, Polygon, Finnhub, Kalshi, TheOdds |
+| **Tech** | 8 | HackerNews, DevTo, GitHub, Ars Technica, Kickstarter |
+| **Legal** | 6 | CourtListener, FindLaw, LII, Colorado Family Law, Justia |
+| **Education** | 5 | Teachable, Udemy, Coursera, Kaggle |
+| **Specialty Tech** | 5 | DefenseOne, MobiHealthNews, SecurityWeek, Wired, MIT Tech Review |
+| **Community** | 4 | Reddit (8 subs), BlueSky, Discord, HackerNoon |
+| **Entertainment** | 4 | Spotify, Giphy, YouTube, Polygon Gaming |
+| **Lifestyle** | 4 | Lifehacker, Travel, Parenting, Food |
+| **Other** | 22 | Startups, AI/ML, Content, Jobs, Weather, Science, Visual |
+
+**Data Methods:** REST API (32), RSS (30), Web Scraping (10), Playwright (2), JSON (3)
 
 ---
 

@@ -1,38 +1,28 @@
 # Spider Network Reference
 
-**Last Updated:** Session 420 (December 11, 2025)
+**Last Updated:** Session 567 (December 28, 2025) - Complete 77 Spider Audit
 
 ---
 
 ## Overview
 
-The Spider Network consists of **65 registered spiders**, with **60 actually working** after Session 420 additions. Session 420 added the Training Data Collection Spider for agent learning.
+**Total Registered Spiders: 77** | **Working: 72** | **Need API Keys: 5**
 
----
+The Spider Network collects real-time intelligence from 77 data sources across 20+ categories. All spiders are registered in `ai_core/spiders/spider_registry.py` and orchestrated via Celery tasks.
 
-## Session 420 Addition: Training Data Spider
+### Architecture
 
-**New:** `discord_training` spider - Collects high-quality conversation data from HuggingFace datasets for agent training.
-
-| Feature | Details |
-|---------|---------|
-| Datasets | 14 HuggingFace datasets (OpenAssistant, Alpaca, SlimOrca, etc.) |
-| Quality Rate | 94% high quality |
-| Topics | Business, AI, creative, programming, tech |
-| Automation | Daily at 1 AM (50 records), Weekly Sundays (200 records) |
-| Token | Uses `HUGGING_FACE_API` from .env |
-
-### Datasets Configured
-
-**Tier 1 - Best Public (No auth):**
-- OpenAssistant/oasst1, databricks/databricks-dolly-15k, tatsu-lab/alpaca
-- HuggingFaceH4/no_robots, Open-Orca/SlimOrca, LDJnr/Capybara
-
-**Tier 2 - Good Public:**
-- wizard_vicuna_70k, OpenHermes-2.5, WizardLM_evol_instruct, Topical-Chat, airoboros
-
-**Tier 3 - Gated (Requires HF token + terms):**
-- lmsys/lmsys-chat-1m (1M+ conversations!), ultrachat_200k, chatbot_arena
+```
+SpiderRegistry (77 spiders)
+    ↓
+SpiderOrchestrator / SpiderArmyOrchestrator
+    ↓
+SpiderConnectorOrchestrator (Agent-Spider bridge)
+    ↓
+SpiderDataRouter → SpiderData model → Embeddings
+    ↓
+SpiderIntelligenceService (Query interface)
+```
 
 ---
 
@@ -40,23 +30,210 @@ The Spider Network consists of **65 registered spiders**, with **60 actually wor
 
 | Metric | Count |
 |--------|-------|
-| Total Registered | 65 |
-| **Actually Working** | **60** |
-| With Configured URLs | 51 |
-| Legal Spiders (working) | 5 |
-| Training Data Spider | 1 (14 HuggingFace datasets) |
+| **Total Registered** | **77** |
+| Working (no auth needed) | 72 |
+| Need API Keys | 5 |
 | Playwright-Enabled | 2 |
-| Need API Keys | 6 |
-| Records in DB | ~12,250+ |
-| Searchable (with embeddings) | ~11,076+ (91% coverage) |
+| Records in DB | ~20,712+ |
+| With Embeddings | ~88.1% |
+| Data Collection Methods | REST API (32), RSS (30), Web Scraping (10), Playwright (2), JSON (3) |
 
-**Session 403:** Added 2 new Playwright-enabled spiders for Colorado family law:
-- `colorado_family_law` - Colorado Judicial Branch JDF forms
-- `justia_family_law` - Justia family law content (Cloudflare bypass)
+---
 
-**Session 398:** Database cleaned - deleted 6,906 placeholder records from removed spiders, fixed broken RSS feeds
+## Spider Categories (77 Total)
 
-**Session 399:** Spider renames - 6 spiders renamed to match actual data sources (cnn→google_news, dribbble→awwwards, indiehackers→hackernoon, hashnode→freecodecamp, udemy→coursera, indiegogo→techcrunch_startups). Fixed Data Feed API empty string parameter bug.
+### News & Media (10 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | techcrunch | TechCrunch | RSS | ✅ Working |
+| 2 | theverge | The Verge | RSS | ✅ Working |
+| 3 | bbc | BBC News | RSS | ✅ Working |
+| 4 | cnn | CNN | RSS | ✅ Working |
+| 5 | npr | NPR | RSS | ✅ Working |
+| 6 | axios | Axios | RSS | ✅ Working |
+| 7 | reuters_rss | Reuters | RSS | ✅ Working |
+| 8 | variety | Variety | RSS | ✅ Working |
+| 9 | google_news | Google News | RSS | ✅ Working |
+| 10 | newsapi | NewsAPI.org | API | ✅ Working (80k+ sources) |
+
+### Financial & Crypto (9 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | coingecko | CoinGecko | API | ✅ Working |
+| 2 | yahoo_finance | Yahoo Finance | API | ✅ Working |
+| 3 | polygon_finance | Polygon.io | API | ✅ Working |
+| 4 | finnhub | Finnhub | API | ✅ Working |
+| 5 | etherscan | Etherscan | API | ✅ Working |
+| 6 | etherscan_api | Etherscan V2 | API | ✅ Working |
+| 7 | sec_edgar | SEC EDGAR | API | ⚠️ Needs API Key |
+| 8 | kalshi | Kalshi | API | ✅ Working (prediction markets) |
+| 9 | theodds | The Odds API | API | ✅ Working (40+ bookmakers) |
+
+### Tech & Development (8 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | hackernews | Hacker News | JSON | ✅ Working |
+| 2 | devto | Dev.to | API | ✅ Working |
+| 3 | github | GitHub | API | ✅ Working |
+| 4 | github_jobs | GitHub Jobs | API | ✅ Working |
+| 5 | arstechnica | Ars Technica | RSS | ✅ Working |
+| 6 | smashingmagazine | Smashing Magazine | RSS | ✅ Working |
+| 7 | kickstarter | Kickstarter | JSON | ✅ Working |
+| 8 | freecodecamp | freeCodeCamp | RSS | ✅ Working |
+
+### Legal (6 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | courtlistener | CourtListener | API | ✅ Working (court opinions) |
+| 2 | findlaw | FindLaw | Scraper | ✅ Working (legal blogs) |
+| 3 | lii | Cornell LII | Scraper | ✅ Working (US Code, CFR) |
+| 4 | legal_news | Legal News | RSS | ✅ Working |
+| 5 | colorado_family_law | CO Judicial | Playwright | ✅ Working (JDF forms) |
+| 6 | justia_family_law | Justia | Playwright | ✅ Working (family law) |
+
+### Education (5 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | teachable | Teachable/Thinkific | RSS | ✅ Working |
+| 2 | udemy | Udemy (via ClassCentral) | RSS | ✅ Working |
+| 3 | coursera | Coursera | RSS | ✅ Working |
+| 4 | education_rss | EdWeek, EdSurge | RSS | ✅ Working |
+| 5 | kaggle | Kaggle | API | ✅ Working |
+
+### Community & Social (4 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | reddit | Reddit (8+ subreddits) | JSON | ✅ Working |
+| 2 | bluesky | BlueSky | API | ⚠️ Needs Credentials |
+| 3 | discord | Discord | API | ⚠️ Needs Bot Token |
+| 4 | hackernoon | HackerNoon | RSS | ✅ Working |
+
+**Reddit Subreddits:** r/webdev, r/MachineLearning, r/StableDiffusion, r/Entrepreneur, r/freelance, r/startups, r/SideProject, r/ChatGPT
+
+### Design & Creative (2 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | behance | Behance | RSS | ✅ Working |
+| 2 | awwwards | Awwwards/Codrops | RSS | ✅ Working |
+
+### Content & Monetization (3 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | medium | Medium | Scraper | ✅ Working |
+| 2 | substack | Substack | RSS | ✅ Working |
+| 3 | producthunt | Product Hunt | Scraper | ✅ Working |
+
+### Jobs & Freelance (3 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | remoteok | RemoteOK | JSON | ✅ Working |
+| 2 | weworkremotely | WeWorkRemotely | RSS | ✅ Working |
+| 3 | adzuna | Adzuna | API | ✅ Working |
+
+### AI & Machine Learning (3 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | huggingface | HuggingFace | API | ✅ Working |
+| 2 | kaggle | Kaggle | API | ✅ Working |
+| 3 | discord_training | HuggingFace Datasets | API | ✅ Working (14 datasets) |
+
+### Startups & VC (3 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | crunchbase | Crunchbase | RSS | ✅ Working |
+| 2 | venturebeat | VentureBeat | RSS | ✅ Working |
+| 3 | techcrunch_startups | TechCrunch Startups | RSS | ✅ Working |
+
+### Specialty Tech (5 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | defenseone | DefenseOne | RSS | ✅ Working |
+| 2 | mobihealthnews | MobiHealthNews | RSS | ✅ Working |
+| 3 | securityweek | SecurityWeek | RSS | ✅ Working |
+| 4 | wired | Wired | RSS | ✅ Working |
+| 5 | mit_tech_review | MIT Tech Review | RSS | ✅ Working |
+
+### Entertainment (4 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | spotify | Spotify | API | ⚠️ Needs OAuth |
+| 2 | giphy | Giphy | API | ✅ Working |
+| 3 | youtube | YouTube | API | ⚠️ Needs API Key |
+| 4 | polygon_gaming | Polygon Gaming | RSS | ✅ Working |
+
+### Lifestyle (4 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | lifehacker | Lifehacker | RSS | ✅ Working |
+| 2 | travel | Lonely Planet, Skift | RSS | ✅ Working |
+| 3 | parenting | Parents, Fatherly | RSS | ✅ Working |
+| 4 | food | Serious Eats, Epicurious | RSS | ✅ Working |
+
+### Weather (2 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | openmeteo | Open-Meteo | API | ✅ Working |
+| 2 | noaa_weather | NOAA | API | ✅ Working |
+
+### Science & Health (3 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | science | Nature, ScienceDaily | RSS | ✅ Working |
+| 2 | health | WebMD, Healthline | RSS | ✅ Working |
+| 3 | library | Archive.org, arXiv | RSS | ✅ Working |
+
+### Business & Government (2 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | business_news | HBR, Forbes, Inc | RSS | ✅ Working |
+| 2 | government | WhiteHouse, FedRegister | RSS | ✅ Working |
+
+### Visual & Media (2 spiders)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | unsplash | Unsplash | API | ✅ Working |
+| 2 | giphy | Giphy | API | ✅ Working |
+
+### Real Estate (1 spider)
+
+| # | Spider | Source | Type | Status |
+|---|--------|--------|------|--------|
+| 1 | real_estate | Realtor, Zillow, Inman | RSS | ✅ Working |
+
+---
+
+## Training Data Spider (Session 420)
+
+The `discord_training` spider collects high-quality conversation data from HuggingFace:
+
+| Feature | Details |
+|---------|---------|
+| Datasets | 14 HuggingFace datasets |
+| Quality Rate | 94% high quality |
+| Topics | Business, AI, creative, programming |
+| Schedule | Daily 1 AM (50 records), Weekly Sunday (200 records) |
+
+**Tier 1 (Best):** OpenAssistant, Dolly-15k, Alpaca, SlimOrca, Capybara
+**Tier 2 (Good):** WizardVicuna, OpenHermes, Topical-Chat
+**Tier 3 (Gated):** lmsys-chat-1m (1M+ conversations)
 
 ---
 
