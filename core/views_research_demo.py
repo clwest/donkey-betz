@@ -302,11 +302,11 @@ def stats_api(request):
         last_1h = now - timedelta(hours=1)
 
         # Spider stats
-        spider_count = len(spider_registry.get_all_spiders()) if hasattr(spider_registry, 'get_all_spiders') else 75
+        spider_count = len(spider_registry.list_spiders()) if hasattr(spider_registry, 'list_spiders') else 77
         spider_data_24h = SpiderData.objects.filter(created_at__gte=today).count()
 
-        # Agent stats
-        total_agents = Agent.objects.filter(is_active=True).count()
+        # Agent stats (show all agents, not just active)
+        total_agents = Agent.objects.count()
         agents_with_knowledge = AgentKnowledgeSource.objects.filter(
             is_active=True
         ).values('agent_id').distinct().count()
