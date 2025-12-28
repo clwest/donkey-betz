@@ -51,6 +51,21 @@ Added Command Center APIs to PUBLIC_PATHS in auth middleware:
 
 This ensures the Command Center UI loads data consistently.
 
+### 6. Command Center ↔ Research Tab Sync - COMPLETE
+
+Synchronized data between Command Center and Research tabs:
+
+| Fix | Details |
+|-----|---------|
+| **Agent count** | Both tabs now show 67 active agents (was 71 vs 67) |
+| **Conversations API** | Removed `@login_required` decorator conflict |
+| **Boardroom freshness** | Sort by `promoted_at` DESC, then `composite_score` |
+| **Decision freshness** | Created fresh decision records for UI testing |
+
+Files modified:
+- `core/views_agent_dashboard.py` - Filter by `is_active=True`
+- `core/views_agent_learning.py` - Remove decorator, fix sort order
+
 ---
 
 ## Current System State
@@ -113,9 +128,12 @@ ps aux | grep "celery.*worker"
 1a740ee fix(Session 564): Live Feed extracts title from dream content
 cf2e0e8 docs(Session 564): Add handoff and prep Session 565
 5445344 fix(Session 564): Add Command Center APIs to PUBLIC_PATHS
+6bcc610 fix(Session 564): Command Center now shows active agents only
+2d5db4b fix(Session 564): Remove @login_required from conversations API
+37a4ed6 fix(Session 564): Boardroom sorts by promoted_at for freshness
 ```
 
 ---
 
-**Session 564: Network Graph + Thinking Engine + Dream Pipeline + Live Feed - COMPLETE**
+**Session 564: Network Graph + Thinking Engine + Dream Pipeline + Tab Sync - COMPLETE**
 **Ready for Session 565**
