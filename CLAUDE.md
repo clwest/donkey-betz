@@ -13,7 +13,7 @@
 | **Services** | 93 | Business logic layer |
 | **Discord Commands** | 112 | 29 Cog categories |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Sci-Fi Features** | 15 | 9 active, 4 deprecated, 2 bonus |
+| **Sci-Fi Features** | 14 | All active (Session 567 cleanup) |
 
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
