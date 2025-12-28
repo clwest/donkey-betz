@@ -1007,7 +1007,7 @@ app.conf.beat_schedule = {
     # Situation #14: Earnings Surprise Predictor
     # Predicts earnings surprises from financial data
     'autonomous-earnings-predictor': {
-        'task': 'core.tasks.run_earnings_surprise_predictor',
+        'task': 'core.tasks.run_earnings_predictor',
         'schedule': crontab(minute=30, hour='6', day_of_week='1-5'),  # Daily at 6:30 AM on weekdays
         'options': {
             'expires': 86400,  # 24 hours
@@ -1124,6 +1124,25 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=30),  # Every hour at :30
         'options': {
             'expires': 3600,  # 1 hour
+        }
+    },
+    # SESSION 561: LINE MOVEMENT CHARTS - ODDS SNAPSHOT
+    # Capture odds snapshots every 20 minutes for line movement tracking
+    'snapshot-odds-for-line-movement': {
+        'task': 'core.tasks.snapshot_odds_for_line_movement',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes
+        'options': {
+            'expires': 1200,  # Expire after 20 minutes
+        }
+    },
+
+    # SESSION 562: ARBITRAGE ALERTS - PUSH NOTIFICATIONS
+    # Scan for arbs every 5 minutes and send push notifications to subscribers
+    'scan-arbs-and-notify': {
+        'task': 'core.tasks.scan_arbs_and_notify',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {
+            'expires': 300,  # Expire after 5 minutes
         }
     },
 }
