@@ -7,6 +7,8 @@ import json
 from django.urls import re_path
 from channels.db import database_sync_to_async
 from . import consumers
+from . import consumers_sports
+from . import consumers_hallucination
 from . import orchestra_consumers
 from .unified_hub import UnifiedWebSocketHub
 from . import generic_consumer
@@ -126,7 +128,7 @@ websocket_urlpatterns = [
     re_path(r'^ws/arbitrage/$', consumers.ArbitrageConsumer.as_asgi()),
 
     # Sports real-time updates and force refresh
-    re_path(r'^ws/sports/updates/$', consumers.SportsUpdatesConsumer.as_asgi()),
+    re_path(r'^ws/sports/updates/$', consumers_sports.SportsUpdatesConsumer.as_asgi()),
     
     # Assistant chat WebSocket (V2 - new unified UI)
     re_path(r'^ws/assistant/$', PersonalAssistantV2Consumer.as_asgi()),
@@ -151,14 +153,11 @@ websocket_urlpatterns = [
     re_path(r'^ws/mythology/$', consumers.MythologyConsumer.as_asgi()),
 
     # Hallucination Monitor WebSocket for real-time blocking display
-    re_path(r'^ws/hallucination-monitor/$', consumers.HallucinationMonitorConsumer.as_asgi()),
+    re_path(r'^ws/hallucination-monitor/$', consumers_hallucination.HallucinationMonitorConsumer.as_asgi()),
 
     # Project Progress WebSocket for real-time agent work tracking
     re_path(r'^ws/project-progress/(?P<project_id>[^/]+)/$', ProjectProgressConsumer.as_asgi()),
     re_path(r'^ws/all-projects/$', AllProjectsConsumer.as_asgi()),
-
-    # AI Job Market Intelligence Training WebSocket for real-time training loop
-    re_path(r'^ws/ai-training/$', consumers.AITrainingConsumer.as_asgi()),
 
     # Real Agent Orchestra WebSocket for live project building activity
     re_path(r'^ws/real-agent-orchestra/$', consumers.RealAgentOrchestraConsumer.as_asgi()),
