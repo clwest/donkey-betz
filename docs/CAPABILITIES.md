@@ -1,6 +1,21 @@
 # Platform Capabilities
 
-**Last Updated:** Session 496 (December 19, 2025)
+**Last Updated:** Session 567 (December 28, 2025) - Full System Audit
+
+---
+
+## System Overview (Session 567 Audit)
+
+| Component | Count | Details |
+|-----------|-------|---------|
+| **Total Agents** | **71** | 47 routable, 24 sub-agents (5 coordinator teams) |
+| **Total Spiders** | **77** | 72 working, 5 need API keys |
+| **Database Models** | **324+** | 37 categories |
+| **Celery Tasks** | **226** | 53 scheduled via Beat |
+| **Services** | **93** | Business logic layer |
+| **Discord Commands** | **112** | 29 Cog categories |
+| **Advisors** | **25** | Famous figures + domain experts |
+| **Sci-Fi Features** | **15** | 9 active, 4 deprecated, 2 bonus systems |
 
 ---
 
@@ -16,12 +31,10 @@
 | 3D Generation | Complete | Production |
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
-| Spiders | 66 | Active (61 working) |
-| Clean Agents | 17 | Production |
-| **Development Agents** | **4** | **Production (Session 436)** |
-| Legacy Agents | 22 | Production |
+| **Spiders** | **77** | **Active (72 working)** |
+| **Agents** | **71** | **47 routable, 24 sub-agents** |
 | Advisors | 25 | Production |
-| Sci-Fi Features | 15 | Production |
+| Sci-Fi Features | 15 | 9 Active, 4 Deprecated |
 | Style Presets | 80+ | Built-in |
 | Multi-Agent Orchestration | Yes | Production |
 | Collective Intelligence Search | Yes | Production |
@@ -30,7 +43,7 @@
 | **OCR PDF Support** | **Yes** | **Production** |
 | **Document Threading** | **Yes** | **Production (Session 410)** |
 | **Response Session UI** | **Yes** | **Production (Session 410)** |
-| **Discord Integration** | **50 Commands + Voice AI** | **Production (Session 445)** |
+| **Discord Integration** | **112 Commands + Voice AI** | **Production (Session 567)** |
 | **Discord User Linking** | **Yes** | **Production (Session 429)** |
 | **Discord Server Setup** | **3 Templates** | **Production (Session 431)** |
 | **Discord Client Management** | **4 Commands** | **Production (Session 432)** |
@@ -45,8 +58,8 @@
 | **Style Presets UI** | **80+ Organized Options** | **Production (Session 457)** |
 | **AI Series Workflow** | **Multi-Episode Content Series** | **Production (Session 445)** |
 | **Autonomous Loop** | **SEC + Jobs + Content Monitoring** | **Production (Session 460)** |
-| **Blockchain Audit** | **4 Agents + Event Listener** | **Production (Session 461)** |
-| **Stock Audit** | **4 Agents + Coordinator** | **Production (Session 461)** |
+| **Blockchain Audit** | **5 Agents + Event Listener** | **Production (Session 461)** |
+| **Stock Audit** | **9 Agents + Coordinator** | **Production (Session 461)** |
 | **Market Intelligence Desk** | **5 Agents + TTS Briefs + Auto-scheduling** | **Production (Session 465)** |
 | **Autonomous Content Studio** | **4 Agents + Internal Debate + Learning Loop** | **Production (Session 466)** |
 | **Studio Discord Commands** | **7 Commands (+episode view)** | **Production (Session 469)** |
@@ -58,7 +71,9 @@
 | **19 Autonomous Situations** | **ALL Domains (6) + Event-Driven** | **Production (Session 479-481)** |
 | **Event-Driven Triggers** | **29 Types, 34 Defaults, Instant Reaction** | **Production (Session 481)** |
 | **Situation Discord Commands** | **4 Commands (list/status/run/alerts)** | **Production (Session 480)** |
-| **Celery Beat Schedules** | **49 Automated Tasks** | **Production (Session 480)** |
+| **Celery Beat Schedules** | **53 Automated Tasks** | **Production (Session 567)** |
+| **Betting Dashboard** | **8 Sub-tabs + Push Notifications** | **Production (Session 562)** |
+| **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
 
 ---
 
