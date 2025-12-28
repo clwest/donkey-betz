@@ -1582,7 +1582,7 @@ def live_odds_with_scores(request):
                             'away_score': 0,
                         }
                         live_count += 1
-                except:
+                except Exception:
                     pass
 
             # Format bookmakers

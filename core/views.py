@@ -198,7 +198,7 @@ def health_check(request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
         db_status = 'connected'
-    except:
+    except Exception:
         db_status = 'disconnected'
     
     return Response({
@@ -1125,7 +1125,7 @@ def personal_knowledge_list(request):
                     from core.encryption_service import get_encryption_service
                     service = get_encryption_service()
                     content_text = service.decrypt(content_text) or content_text
-                except:
+                except Exception:
                     pass
             
             # Create knowledge entry with full content

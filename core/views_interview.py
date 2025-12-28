@@ -400,7 +400,7 @@ def save_interview_incrementally(user, interview_state: dict):
                 import ast
                 try:
                     work_prefs = ast.literal_eval(work_prefs)
-                except:
+                except Exception:
                     work_prefs = [work_prefs]
             if isinstance(work_prefs, list):
                 profile.preferred_channels = work_prefs
@@ -554,7 +554,7 @@ def add_certification(request):
             import json
             try:
                 skills = json.loads(skills)
-            except:
+            except Exception:
                 skills = [s.strip() for s in skills.split(',') if s.strip()]
 
         cert = UserCertification.objects.create(

@@ -47,7 +47,7 @@ def intelligence_activity_feed(request):
                     from urllib.parse import urlparse
                     parsed = urlparse(item.source_url)
                     source_display = parsed.netloc or item.source_url[:50]
-                except:
+                except Exception:
                     source_display = item.source_url[:50]
 
             activities.append({

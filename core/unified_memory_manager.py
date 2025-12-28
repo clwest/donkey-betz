@@ -384,7 +384,7 @@ class UnifiedMemoryManager:
             profile = EnhancedUserProfile.objects.get(user=user)
             context['communication_style'] = profile.communication_style
             context['current_projects'] = profile.current_projects or []
-        except:
+        except Exception:
             pass
 
         return context
@@ -455,7 +455,7 @@ class UnifiedMemoryManager:
                 'content': memory.content[:100],
                 'source': memory.source
             })
-        except:
+        except Exception:
             pass
 
     def _clear_user_cache(self, user: User):

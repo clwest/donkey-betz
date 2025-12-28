@@ -1433,7 +1433,7 @@ def video_to_video_endpoint(request):
         if file_path:
             try:
                 default_storage.delete(file_path)
-            except:
+            except Exception:
                 pass
 
         # Save to history if successful
@@ -1537,7 +1537,7 @@ def video_upscale_endpoint(request):
         if file_path:
             try:
                 default_storage.delete(file_path)
-            except:
+            except Exception:
                 pass
 
         # Save to history if successful
@@ -1606,7 +1606,7 @@ def extend_video_endpoint(request):
         import json
         try:
             data = json.loads(request.body)
-        except:
+        except Exception:
             data = request.POST.dict()
 
         # Get video URL (must be from gallery)
@@ -1765,7 +1765,7 @@ def character_performance_endpoint(request):
             if image_path:
                 try:
                     default_storage.delete(image_path)
-                except:
+                except Exception:
                     pass
 
             return JsonResponse({
@@ -1789,7 +1789,7 @@ def character_performance_endpoint(request):
                 default_storage.delete(image_path)
             if reference_video_path:
                 default_storage.delete(reference_video_path)
-        except:
+        except Exception:
             pass
 
         # Save to history if successful
@@ -3483,7 +3483,7 @@ def concatenate_videos(request):
         # Clean up concat list
         try:
             os.remove(concat_list_path)
-        except:
+        except Exception:
             pass
 
         if result.returncode != 0:
@@ -3912,7 +3912,7 @@ def fade_video(request):
             probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
             try:
                 duration = float(probe_result.stdout.strip())
-            except:
+            except Exception:
                 duration = 10.0  # Default fallback
 
         # Build video filter
@@ -4164,7 +4164,7 @@ def crop_resize_video(request):
             current_dims = probe_result.stdout.strip().split('x')
             current_width = int(current_dims[0])
             current_height = int(current_dims[1])
-        except:
+        except Exception:
             current_width, current_height = 1280, 720  # Default fallback
 
         # Build filter based on mode
@@ -4655,7 +4655,7 @@ def picture_in_picture(request):
                     resolved_uuid = videos[numeric_id - 1].id
                     logger.info(f"🔄 [Session 162] PiP: Resolved hybrid ID {numeric_id} → {resolved_uuid} (scope: {scope})")
                     return resolved_uuid
-                except:
+                except Exception:
                     return None
 
         bg_uuid = resolve_video_id(bg_video_id, request.user, project_id)
@@ -4717,7 +4717,7 @@ def picture_in_picture(request):
             bg_dims = probe_result.stdout.strip().split('x')
             bg_width = int(bg_dims[0])
             bg_height = int(bg_dims[1])
-        except:
+        except Exception:
             bg_width, bg_height = 1280, 720
 
         # Calculate overlay size
@@ -4847,7 +4847,7 @@ def _video_has_audio(video_path):
         cmd = ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', video_path]
         result = _run_ffmpeg(cmd)
         return 'audio' in result.stdout
-    except:
+    except Exception:
         return True  # Assume it has audio if we can't check
 
 
@@ -7096,7 +7096,7 @@ def video_transition(request):
             result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
             try:
                 return float(result.stdout.strip())
-            except:
+            except Exception:
                 return 5.0
 
         dur1 = get_video_duration(video_path_1)
@@ -7547,7 +7547,7 @@ def auto_caption(request):
         # Clean up temp audio file
         try:
             os.remove(audio_path)
-        except:
+        except Exception:
             pass
 
         # Get project from source video if not specified

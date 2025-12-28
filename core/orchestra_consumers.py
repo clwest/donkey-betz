@@ -1011,7 +1011,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             from django.core.cache import cache
             cache.set('redis_health_check', True, 1)
             return cache.get('redis_health_check', False)
-        except:
+        except Exception:
             return False
 
     async def handle_command(self, command, params):

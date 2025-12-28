@@ -125,7 +125,7 @@ def voice_dubbing(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except:
+        except Exception:
             pass
 
         return JsonResponse(result)
@@ -175,7 +175,7 @@ def speech_to_speech(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except:
+        except Exception:
             pass
 
         return JsonResponse(result)
@@ -220,7 +220,7 @@ def voice_isolation(request):
         # Clean up temp file
         try:
             default_storage.delete(file_path)
-        except:
+        except Exception:
             pass
 
         return JsonResponse(result)

@@ -9567,7 +9567,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     if isinstance(conv.agents_used, str):
                         try:
                             agents_used.extend(json.loads(conv.agents_used))
-                        except:
+                        except Exception:
                             pass
                     elif isinstance(conv.agents_used, list):
                         agents_used.extend(conv.agents_used)

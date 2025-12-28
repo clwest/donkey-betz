@@ -4202,7 +4202,7 @@ def agent_think_and_synthesize():
                 'insights_created': insights_created,
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(f"💭 [THINKING] Synthesis complete: {insights_created} new insights created")
@@ -4676,7 +4676,7 @@ def embed_daily_agent_learning():
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(
@@ -4985,7 +4985,7 @@ def embed_agent_activity(hours: int = 2):
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(
@@ -5443,7 +5443,7 @@ Guidelines:
                     conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                     # Session 359: Validate conclusion for mythology violations
                     conclusion = validate_agent_output("ConversationSynthesizer", conclusion)
-                except:
+                except Exception:
                     conclusion = f"Productive discussion about {topic}"
 
                 conversation.conclude(
@@ -5572,7 +5572,7 @@ Guidelines:
                 },
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(
@@ -6151,7 +6151,7 @@ Provide a 2-3 sentence summary highlighting the key insights and any points of c
                 },
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(
@@ -7241,7 +7241,7 @@ Guidelines:
                 conclusion = conclusion_response.choices[0].message.content.strip() if conclusion_response.choices[0].message.content else f"Productive discussion about {topic}"
                 # Session 359: Validate project conclusion for mythology violations
                 conclusion = validate_agent_output("ProjectConversationSynthesizer", conclusion)
-            except:
+            except Exception:
                 conclusion = f"Productive discussion about {topic}"
 
             conversation.conclude(
@@ -7279,7 +7279,7 @@ Guidelines:
                 'message_count': len(messages),
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(f"🗣️ [PROJECT-CONVERSATION] Complete: {len(messages)} messages between {initiator.name} and {responder.name}")
@@ -7617,7 +7617,7 @@ Guidelines:
                 'stats': stats,
                 'timestamp': timezone.now().isoformat()
             }))
-        except:
+        except Exception:
             pass
 
         logger.info(
@@ -8943,7 +8943,7 @@ NEXT_STEPS:
                             end = insight_part.rfind(']') + 1
                             if start >= 0 and end > start:
                                 insights = json.loads(insight_part[start:end])
-                        except:
+                        except Exception:
                             # Fallback: split by newlines
                             insights = [line.strip().strip('-•').strip()
                                        for line in insight_part.strip().split('\n')
@@ -8995,7 +8995,7 @@ NEXT_STEPS:
                     'knowledge_added': exploration.related_knowledge_added,
                     'timestamp': timezone.now().isoformat()
                 }))
-            except:
+            except Exception:
                 pass
 
             logger.info(
@@ -9309,7 +9309,7 @@ The synthesis should read as a cohesive document, not just a collection of separ
             session = HiveMindSession.objects.get(id=session_id)
             session.status = 'failed'
             session.save()
-        except:
+        except Exception:
             pass
         return {'status': 'failed', 'error': str(e)}
 
@@ -14862,7 +14862,7 @@ def run_blockchain_security_monitor():
                     if isinstance(value, str):
                         try:
                             value = float(value)
-                        except:
+                        except Exception:
                             value = 0
 
                     # Large ETH transfer (> 100 ETH worth ~$300k+)
@@ -14995,7 +14995,7 @@ def run_blockchain_security_monitor():
                 session.error_message = str(e)
                 session.completed_at = timezone.now()
                 session.save()
-        except:
+        except Exception:
             pass
 
         return {'success': False, 'error': str(e)}
@@ -15229,7 +15229,7 @@ def run_stock_market_intelligence():
                 session.error_message = str(e)
                 session.completed_at = timezone.now()
                 session.save()
-        except:
+        except Exception:
             pass
 
         return {'success': False, 'error': str(e)}
@@ -15386,7 +15386,7 @@ def process_trigger_events(event_ids: list):
                     event.status = 'failed'
                     event.error_message = str(e)
                     event.save(update_fields=['status', 'error_message'])
-                except:
+                except Exception:
                     pass
 
         logger.info(
@@ -15462,12 +15462,12 @@ def _create_blockchain_alert_from_trigger(event) -> 'BlockchainSecurityAlert':
         try:
             eth_value = float(str(first_item['value']).replace(',', ''))
             value_usd = Decimal(str(eth_value * 3500))  # Approx ETH price
-        except:
+        except Exception:
             pass
     elif 'market_cap' in first_item:
         try:
             value_usd = Decimal(str(first_item.get('market_cap', 0)))
-        except:
+        except Exception:
             pass
 
     alert = BlockchainSecurityAlert.objects.create(
@@ -15537,7 +15537,7 @@ def _create_stock_alert_from_trigger(event) -> 'StockMarketAlert':
             current_price = Decimal(str(first_item['regularMarketPrice']))
         if 'regularMarketChangePercent' in first_item:
             price_change = Decimal(str(first_item['regularMarketChangePercent']))
-    except:
+    except Exception:
         pass
 
     alert = StockMarketAlert.objects.create(
@@ -15693,7 +15693,7 @@ def start_resolve_render(self, job_id: str, video_ids: list, template: str, colo
             job.status = 'error'
             job.error_message = str(e)
             job.save()
-        except:
+        except Exception:
             pass
         return {'status': 'error', 'error': str(e)}
 
@@ -15802,7 +15802,7 @@ def poll_resolve_job_status(self, job_id: str):
             job.status = 'error'
             job.error_message = 'Render timed out after 30 minutes'
             job.save()
-        except:
+        except Exception:
             pass
         logger.error(f"🎬 [RESOLVE] Render timed out: {job_id}")
         return {'status': 'error', 'error': 'Timeout'}
@@ -17306,7 +17306,7 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
         try:
             total_evolutions = AgentEvolution.objects.count()
             evolved_agents = AgentEvolution.objects.values('agent_id').distinct().count()
-        except:
+        except Exception:
             total_evolutions = 0
             evolved_agents = 0
 
@@ -17316,7 +17316,7 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500):
             spider_data_total = SpiderData.objects.count()
             if total_spiders == 0:
                 total_spiders = 72
-        except:
+        except Exception:
             total_spiders = 72
             spider_data_total = 0
 

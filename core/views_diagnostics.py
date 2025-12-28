@@ -26,7 +26,7 @@ def get_redis_client():
             db=0,
             decode_responses=True
         )
-    except:
+    except Exception:
         return None
 
 @csrf_exempt
@@ -122,7 +122,7 @@ def diagnostic_master_endpoint(request):
                         'skill_level': 'intermediate',
                         'available_hours': 20
                     })
-                except:
+                except Exception:
                     # Last resort - no arguments
                     opportunities = []
 
@@ -256,7 +256,7 @@ def diagnostic_master_endpoint(request):
                             'db': db_num,
                             'keys': db_size
                         })
-                except:
+                except Exception:
                     pass
         else:
             diagnostics['redis_data'] = {'connected': False}
@@ -278,7 +278,7 @@ def diagnostic_master_endpoint(request):
             agents = get_all_agents()
             agent_data['agents'] = agents[:5] if agents else []
             agent_data['total_agents'] = len(agents) if agents else 0
-        except:
+        except Exception:
             pass
 
         try:
@@ -286,7 +286,7 @@ def diagnostic_master_endpoint(request):
             advisors = get_all_advisors()
             agent_data['advisors'] = advisors[:5] if advisors else []
             agent_data['total_advisors'] = len(advisors) if advisors else 0
-        except:
+        except Exception:
             pass
 
         diagnostics['agent_registry'] = agent_data

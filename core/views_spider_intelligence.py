@@ -430,7 +430,7 @@ def market_research_dashboard(request):
                     change = item.get('price_change_percentage_24h') or item.get('change_24h') or 0
                     try:
                         change = float(change)
-                    except:
+                    except Exception:
                         change = 0
 
                     # Get price - coingecko uses current_price

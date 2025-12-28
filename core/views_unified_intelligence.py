@@ -28,7 +28,7 @@ try:
         db=0,
         decode_responses=True
     )
-except:
+except Exception:
     redis_client = redis.StrictRedis(
         host='localhost',
         port=6379,
@@ -61,7 +61,7 @@ def _check_redis_health():
             return 70   # Slow
         else:
             return 50   # Critical
-    except:
+    except Exception:
         return 0  # Redis is down
 
 
@@ -76,7 +76,7 @@ def _check_websocket_status():
             return 100  # WebSocket is configured and ready
         else:
             return 50   # Partially configured
-    except:
+    except Exception:
         return 0  # WebSocket not available
 
 
@@ -145,7 +145,7 @@ def get_unified_intelligence_data(request):
         try:
             implemented_insights = redis_client.smembers('implemented_insights') or set()
             investigated_behaviors = redis_client.smembers('investigated_behaviors') or set()
-        except:
+        except Exception:
             pass
 
         # Add status to insights
@@ -187,7 +187,7 @@ def get_unified_intelligence_data(request):
             for activity_json in redis_client.lrange('recent:activities', 0, 19):  # Get last 20 activities
                 try:
                     recent_activities.append(json.loads(activity_json))
-                except:
+                except Exception:
                     pass
         except Exception as e:
             logger.debug(f"Could not fetch recent activities: {e}")

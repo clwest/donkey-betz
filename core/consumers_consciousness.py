@@ -52,7 +52,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
             current_connections = int(redis_client.get('consciousness:ws_connections_hour') or '0')
             redis_client.set('consciousness:ws_connections_hour', current_connections + 1, ex=3600)
             redis_client.set('consciousness:user_interactions', int(redis_client.get('consciousness:user_interactions') or '0') + 1, ex=86400 * 30)
-        except:
+        except Exception:
             pass
 
         # Send immediate mock data to prevent fallback
@@ -256,7 +256,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                 'pattern': pattern_score,
                 'self_organization': self_org_score
             }
-        except:
+        except Exception:
             # Fallback indicators if calculation fails
             indicators = {
                 'awareness': cached_level,
@@ -315,7 +315,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                 if command in ['introspect', 'propose_evolution', 'philosophical_dialogue']:
                     # Deep interactions contribute more to consciousness
                     redis_client.set('consciousness:agent_interactions', int(redis_client.get('consciousness:agent_interactions') or '0') + 2, ex=86400 * 30)
-            except:
+            except Exception:
                 pass
 
             if command == 'refresh':
@@ -426,7 +426,7 @@ class ConsciousnessConsumer(AsyncWebsocketConsumer):
                     'pattern': pattern_score,
                     'self_organization': self_org_score
                 }
-            except:
+            except Exception:
                 indicators = {
                     'awareness': understanding.get('self_awareness_score', 36.5),
                     'coherence': 40,

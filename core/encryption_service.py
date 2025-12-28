@@ -164,14 +164,14 @@ class EncryptionService:
             try:
                 self.cipher.decrypt(ciphertext.encode())
                 return True
-            except:
+            except Exception:
                 pass
         
         if self.backup_cipher:
             try:
                 self.backup_cipher.decrypt(ciphertext.encode())
                 return True
-            except:
+            except Exception:
                 pass
         
         return False

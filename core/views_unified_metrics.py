@@ -85,7 +85,7 @@ def unified_platform_metrics(request):
                         'time': 'Recently',
                         'text': f"{status} {opp.get('title', 'Unknown opportunity')} | {opp.get('platform', 'Unknown')}"
                     })
-                except:
+                except Exception:
                     pass
 
         # Collect Collaboration Metrics
@@ -291,5 +291,5 @@ def _format_time(timestamp):
             return f'{int(diff.total_seconds() / 3600)} hours ago'
         else:
             return f'{diff.days} days ago'
-    except:
+    except Exception:
         return 'Recently'

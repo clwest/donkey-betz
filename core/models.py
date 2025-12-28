@@ -579,7 +579,7 @@ class UserProfile(models.Model):
                 if url and not url.startswith('http'):
                     return f"http://localhost:8000{url}"
                 return url
-            except:
+            except Exception:
                 # Fallback if file doesn't exist
                 return f"http://localhost:8000/media/{self.avatar_file}"
         elif self.avatar:

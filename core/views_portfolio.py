@@ -270,7 +270,7 @@ def extract_tags_from_project(project_data):
             tags.append('High Value')
         elif value >= 200:
             tags.append('Medium Value')
-    except:
+    except Exception:
         pass
 
     # Complexity tags

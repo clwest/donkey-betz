@@ -158,7 +158,7 @@ class SemanticRoutingService:
         if cached is not None:
             try:
                 return np.array(cached)
-            except:
+            except Exception:
                 pass
 
         # Generate embedding

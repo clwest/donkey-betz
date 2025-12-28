@@ -250,7 +250,7 @@ class ResearchPDFService:
         try:
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             date_str = dt.strftime('%B %d, %Y at %I:%M %p')
-        except:
+        except Exception:
             date_str = timestamp
 
         story.append(Paragraph(
@@ -622,7 +622,7 @@ class ResearchPDFService:
         try:
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             date_str = dt.strftime('%B %d, %Y')
-        except:
+        except Exception:
             date_str = 'Unknown'
 
         story.append(Paragraph(

@@ -127,7 +127,7 @@ class AITrainingConsumer(AsyncWebsocketConsumer):
             for item in history:
                 try:
                     events.append(json.loads(item))
-                except:
+                except Exception:
                     pass
 
             await self.send(json.dumps({

@@ -521,7 +521,7 @@ def logout_enhanced_view(request):
     try:
         # Delete auth token
         request.user.auth_token.delete()
-    except:
+    except Exception:
         pass
     
     return Response({

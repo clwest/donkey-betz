@@ -700,7 +700,7 @@ def audit_contract_by_address(address: str) -> Dict[str, Any]:
                     f"// File: {name}\n{src.get('content', '')}"
                     for name, src in sources.get('sources', {}).items()
                 )
-            except:
+            except Exception:
                 pass  # Use as-is if parsing fails
 
         audit_result = auditor.execute(

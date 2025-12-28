@@ -287,7 +287,7 @@ class LiveSportsConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
             # Still try to accept the connection
             try:
                 await self.accept()
-            except:
+            except Exception:
                 pass
     
     async def disconnect(self, close_code):
@@ -2136,7 +2136,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
         try:
             from core.models import Agent
             return Agent.objects.count()
-        except:
+        except Exception:
             return 151
 
     async def process_natural_language(self, command, agent):
@@ -2233,7 +2233,7 @@ Ask me anything about our capabilities!"""
 
                     if response and not response.startswith("Error"):
                         return response
-                except:
+                except Exception:
                     pass
 
                 return f"""I understand you're asking: "{command[:100]}"
@@ -2302,7 +2302,7 @@ Try asking something specific or type /help for commands!"""
                     try:
                         from spiders.registry import spider_registry
                         spider_count = len(spider_registry.get_all_spiders())
-                    except:
+                    except Exception:
                         pass
 
                     import redis
@@ -2313,7 +2313,7 @@ Try asking something specific or type /help for commands!"""
                         r = redis.Redis(host='localhost', port=6379, decode_responses=True)
                         r.ping()
                         redis_status = "ONLINE"
-                    except:
+                    except Exception:
                         pass
 
                     # Check ML Engine
@@ -2381,7 +2381,7 @@ Example: "Hey Warren Buffett, should I invest in NVDA?"
                 try:
                     from spiders.registry import spider_registry
                     spider_count = len(spider_registry.get_all_spiders())
-                except:
+                except Exception:
                     pass
 
                 return f"✅ System operational. {agent_count} agents ready. {spider_count} spiders deployed."
@@ -2798,7 +2798,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                             'type': 'agent',
                             'timestamp': conv.get('timestamp', datetime.now().isoformat())
                         })
-                    except:
+                    except Exception:
                         pass
 
             if recent_conversations:
@@ -2867,7 +2867,7 @@ class NeuralOrchestraConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
                         'tokens': content.get('tokens_used', 0),
                         'timestamp': content.get('timestamp', datetime.now().isoformat())
                     })
-                except:
+                except Exception:
                     pass
 
             await self.safe_send({
