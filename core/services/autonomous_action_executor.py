@@ -33,6 +33,7 @@ class AutonomousActionExecutor:
             'archive_insight': self._execute_archive_insight,
             'update_strategy': self._execute_update_strategy,
             'schedule_followup': self._execute_schedule_followup,
+            'triage_dreams': self._execute_triage_dreams,  # Session 564: Dream pipeline
         }
 
     def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
@@ -489,6 +490,108 @@ class AutonomousActionExecutor:
             'topic': topic,
             'delay_hours': delay_hours,
             'message': f"Follow-up scheduled on '{topic}' in {delay_hours} hours"
+        }
+
+    def _execute_triage_dreams(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
+        """
+        Session 564: Autonomous Dream Triage Pipeline
+
+        Evaluates pending dreams and routes them:
+        - HIGH VALUE (composite >= 0.65, actionability >= 0.6) -> Boardroom
+        - INSPIRATION (composite >= 0.5, actionability < 0.5) -> Mark as shown
+        - STALE LOW (older than 14 days, composite < 0.4) -> Archive
+        """
+        from core.models_unified_system import AgentDream
+        from datetime import timedelta
+
+        # Get thresholds from params or use defaults
+        boardroom_threshold = params.get('boardroom_threshold', 0.65)
+        boardroom_action_threshold = params.get('boardroom_action_threshold', 0.6)
+        inspiration_threshold = params.get('inspiration_threshold', 0.5)
+        archive_age_days = params.get('archive_age_days', 14)
+        archive_score_threshold = params.get('archive_score_threshold', 0.4)
+        max_to_process = params.get('max_to_process', 50)
+
+        now = timezone.now()
+        results = {
+            'promoted_to_boardroom': [],
+            'marked_as_inspiration': [],
+            'archived': [],
+            'skipped': 0
+        }
+
+        # Get all pending dreams
+        pending = AgentDream.objects.filter(
+            promoted_to_decision=False,
+            shown_to_user=False
+        ).select_related('agent').order_by('-composite_score')[:max_to_process]
+
+        for dream in pending:
+            age_days = (now - dream.dreamed_at).days
+
+            # Route 1: HIGH VALUE -> Boardroom
+            if (dream.composite_score >= boardroom_threshold and
+                dream.actionability_score >= boardroom_action_threshold):
+                dream.promoted_to_decision = True
+                dream.promoted_at = now
+                dream.save()
+                results['promoted_to_boardroom'].append({
+                    'id': str(dream.id),
+                    'title': dream.title[:50],
+                    'score': dream.composite_score,
+                    'agent': dream.agent.name if dream.agent else 'Unknown'
+                })
+
+            # Route 2: STALE LOW -> Archive (mark as shown)
+            elif age_days >= archive_age_days and dream.composite_score < archive_score_threshold:
+                dream.shown_to_user = True
+                dream.shown_at = now
+                dream.user_feedback = 'auto_archived_stale'
+                dream.save()
+                results['archived'].append({
+                    'id': str(dream.id),
+                    'title': dream.title[:50],
+                    'age_days': age_days,
+                    'score': dream.composite_score
+                })
+
+            # Route 3: INSPIRATION (creative but not actionable)
+            elif (dream.composite_score >= inspiration_threshold and
+                  dream.actionability_score < boardroom_action_threshold):
+                dream.shown_to_user = True
+                dream.shown_at = now
+                dream.user_feedback = 'inspiration_archive'
+                dream.save()
+                results['marked_as_inspiration'].append({
+                    'id': str(dream.id),
+                    'title': dream.title[:50],
+                    'score': dream.composite_score,
+                    'creativity': dream.creativity_score
+                })
+            else:
+                results['skipped'] += 1
+
+        # Summary
+        total_processed = (
+            len(results['promoted_to_boardroom']) +
+            len(results['marked_as_inspiration']) +
+            len(results['archived'])
+        )
+
+        logger.info(
+            f"Dream triage complete: {len(results['promoted_to_boardroom'])} to boardroom, "
+            f"{len(results['marked_as_inspiration'])} to inspiration, "
+            f"{len(results['archived'])} archived, {results['skipped']} skipped"
+        )
+
+        return {
+            'total_processed': total_processed,
+            'promoted_to_boardroom': len(results['promoted_to_boardroom']),
+            'marked_as_inspiration': len(results['marked_as_inspiration']),
+            'archived': len(results['archived']),
+            'skipped': results['skipped'],
+            'details': results,
+            'message': f"Triaged {total_processed} dreams: {len(results['promoted_to_boardroom'])} to Boardroom"
         }
 
     def register_concerns_from_thought(self, thought_record) -> Dict[str, Any]:
