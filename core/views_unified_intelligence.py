@@ -329,7 +329,7 @@ def implement_insight(request):
         logger.info(f"Implementing insight {insight_id} in category {category}: {description}")
 
         # Import the ProposalManager to execute real fixes
-        from ai_core.intelligence.proposal_manager import ProposalManager, AIProposal
+        from ai_core.intelligence.proposal_manager import ProposalManager
         proposal_manager = ProposalManager()
 
         # Map consciousness categories to proposal categories

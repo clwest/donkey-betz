@@ -5,7 +5,6 @@ View actual data collected by spiders
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
-import json
 
 from core.models_unified_system import SpiderData
 from ai_core.spiders.spider_registry import SpiderRegistry

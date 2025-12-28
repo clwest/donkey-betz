@@ -11,29 +11,21 @@ No sugarcoating. No false promises. Just cold, hard reality.
 import os
 import json
 import logging
-import asyncio
-import inspect
-import importlib
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple, Union
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 import subprocess
-import re
 
 # Django imports
 try:
-    from django.db import models, connection
-    from django.conf import settings
-    from django.core.cache import cache
-    from django.utils import timezone
+    from django.db import connection
     DJANGO_AVAILABLE = True
 except ImportError:
     DJANGO_AVAILABLE = False
 
 # Redis import
 try:
-    import redis
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False

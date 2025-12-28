@@ -31,7 +31,6 @@ Usage:
 import logging
 import uuid
 from typing import Optional, Tuple, Dict, Any
-from io import BytesIO
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage

@@ -5,9 +5,8 @@ Massive intelligence gathering for job opportunities across multiple platforms
 
 import scrapy
 import re
-import json
-from datetime import datetime, timedelta
-from urllib.parse import urljoin, urlparse
+from datetime import datetime
+from urllib.parse import urljoin
 from .base_spider import JobOpportunitySpider
 
 

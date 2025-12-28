@@ -5,9 +5,8 @@ python manage.py seed_advisor_network
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 import random
-import json
 
 from intelligence.models.advisor_network import (
     Advisor, AdvisorCategory, AdvisorSpecialization,

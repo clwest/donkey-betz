@@ -20,7 +20,6 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
-import uuid
 from datetime import timedelta
 
 from .models.base.models import UnifiedBaseModel
@@ -321,7 +320,6 @@ class PartnershipProject(UnifiedBaseModel):
         Session 324: Merged from CreativeProject for unified model
         """
         # This is a placeholder - will be connected when ProjectWorkflow is migrated
-        pass
 
     def calculate_partnership_roi(self):
         """

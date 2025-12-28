@@ -22,8 +22,6 @@ Usage:
 """
 
 import logging
-import json
-import os
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -667,7 +665,7 @@ class MLScoringEngine:
         from django.utils import timezone
 
         try:
-            from core.models_unified_system import OpportunityOutcome, Opportunity, SpiderData
+            from core.models_unified_system import OpportunityOutcome, SpiderData
 
             cutoff = timezone.now() - timedelta(days=days)
 

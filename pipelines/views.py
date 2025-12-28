@@ -10,9 +10,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import CreativePipelineTemplate, CreativePipelineRun
+from .models import CreativePipelineRun
 from .services import get_available_templates, start_pipeline_run
-from content.minifig_services import create_minifig_asset_from_images, check_and_update_3d_generation
+from content.minifig_services import create_minifig_asset_from_images
 
 logger = logging.getLogger(__name__)
 

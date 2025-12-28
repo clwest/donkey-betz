@@ -30,7 +30,7 @@ Usage:
 import json
 import logging
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

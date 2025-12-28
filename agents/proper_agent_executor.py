@@ -11,9 +11,7 @@ import logging
 from typing import Dict, Any, List
 from django.utils import timezone
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
-from ai_core.agents.concrete_executor import ConcreteAgentExecutor
 from core.models import GeneratedProject, GeneratedCode
 
 logger = logging.getLogger(__name__)

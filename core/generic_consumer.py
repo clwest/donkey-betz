@@ -26,7 +26,6 @@ class GenericWebSocketConsumer(AsyncWebsocketConsumer):
     
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
-        pass
     
     async def receive(self, text_data):
         """Echo back any received messages"""

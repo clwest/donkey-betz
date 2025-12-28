@@ -6,9 +6,8 @@ Provides foundational capabilities for all specialized spiders
 import scrapy
 import json
 import logging
-import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from abc import ABC, abstractmethod
 
 import django
@@ -23,7 +22,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from intelligence.models import SpiderIntelligenceNode
-from core.models.agents_registry import UnifiedAgentTemplate
 
 
 class BaseIntelligenceSpider(scrapy.Spider, ABC):
@@ -107,7 +105,6 @@ class BaseIntelligenceSpider(scrapy.Spider, ABC):
         Parse response and extract intelligence data
         Must be implemented by subclasses
         """
-        pass
 
     def extract_intelligence(self, response, raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """

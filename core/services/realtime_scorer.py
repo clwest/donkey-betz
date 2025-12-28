@@ -10,9 +10,9 @@ import json
 import logging
 import time
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any
 from django.conf import settings
 
 logger = logging.getLogger(__name__)

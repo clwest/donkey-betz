@@ -7,9 +7,8 @@ import json
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 from django.core.cache import cache
 
 from .real_job_simulator import real_job_simulator, AGENT_ROSTER, JOB_TEMPLATES

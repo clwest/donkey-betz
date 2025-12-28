@@ -7,16 +7,14 @@ including handoffs, parallel execution, consensus building, and measurable outco
 
 import json
 import uuid
-import asyncio
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 import redis
 from django.db import models
-from django.utils import timezone
 import logging
-from intelligence.shared_memory import SharedMemorySystem, AgentMemoryInterface
+from intelligence.shared_memory import SharedMemorySystem
 
 logger = logging.getLogger(__name__)
 

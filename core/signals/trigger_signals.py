@@ -27,7 +27,7 @@ def evaluate_triggers_for_spider_data(spider_data):
     This is the core function that makes the system event-driven.
     Called from the post_save signal on SpiderData.
     """
-    from core.models_situation_triggers import SituationTrigger, TriggerEvent
+    from core.models_situation_triggers import SituationTrigger
 
     # Get all active triggers
     triggers = SituationTrigger.objects.filter(is_active=True).order_by('-priority')

@@ -8,23 +8,19 @@ and optional GPT analysis.
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.db.models import Count, Q, Avg
+from django.db.models import Q
 from django.utils import timezone
-from datetime import timedelta
 from .models import StyleMemory, StylePattern, StyleSuggestion, ContentLineage
 from .serializers import (
     StyleMemorySerializer,
-    StylePatternSerializer,
     StyleSuggestionSerializer,
     ContentLineageSerializer,
     InteractionRequestSerializer,
-    StyleInsightsSerializer,
     VariationRequestSerializer
 )
 from .style_extractor import extract_styles
-import random
 import uuid
 import logging
 

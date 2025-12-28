@@ -323,7 +323,6 @@ def workflow_schedule(request, workflow_id):
     DELETE: Remove schedule from workflow
     """
     from core.models_unified_system import CustomWorkflow, ScheduledWorkflow
-    from django.utils import timezone
 
     if request.method == 'POST':
         data = request.data

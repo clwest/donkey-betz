@@ -4,8 +4,7 @@ Autonomous system that optimizes agent collaboration patterns based on learning 
 """
 
 import logging
-from typing import List, Dict, Tuple, Optional
-from django.db.models import Q, Avg, Count
+from typing import List, Dict, Tuple
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
@@ -180,7 +179,6 @@ class AgentCollaborationOptimizer:
         """
         Build a team that works well together based on collaboration history
         """
-        from core.models_unified_system import UserAgentLearning
 
         team = []
 

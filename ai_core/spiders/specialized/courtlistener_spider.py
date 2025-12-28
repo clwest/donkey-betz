@@ -15,7 +15,7 @@ No API key required for basic access!
 """
 
 import requests
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime, timedelta
 import logging
 

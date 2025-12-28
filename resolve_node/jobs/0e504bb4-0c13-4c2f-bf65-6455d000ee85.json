@@ -1,0 +1,17 @@
+{
+  "job_id": "0e504bb4-0c13-4c2f-bf65-6455d000ee85",
+  "timeline_name": null,
+  "clip_paths": [
+    "/Users/donkeyking/development/unified-donkey-betz/media/videos/professional/test_cinematic.mp4"
+  ],
+  "template": "default_mp4",
+  "webhook_url": null,
+  "status": "error",
+  "progress": 0.0,
+  "created_at": "2025-12-17T14:23:33.076407",
+  "started_at": "2025-12-17T14:23:33.078757",
+  "completed_at": "2025-12-17T14:23:33.570761",
+  "output_file": null,
+  "error_message": "Failed to start render",
+  "metadata": {}
+}

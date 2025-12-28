@@ -12,7 +12,7 @@ Features:
 """
 
 import logging
-from typing import Optional, Dict, List
+from typing import Dict, List
 
 from core.models.agents_registry import UnifiedAgentTemplate, AgentPerformanceMetrics
 

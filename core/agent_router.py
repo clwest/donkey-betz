@@ -192,7 +192,6 @@ SEMANTIC_CONFIDENCE_THRESHOLD = 0.35
 
 class AgentNotFoundError(Exception):
     """Raised when an unknown agent is requested."""
-    pass
 
 
 class AgentRouter:

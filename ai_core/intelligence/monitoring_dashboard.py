@@ -6,7 +6,6 @@ agent performance, workflow execution, system health, and learning metrics.
 """
 
 import asyncio
-import json
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta

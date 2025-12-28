@@ -3,7 +3,6 @@ Django management command to wire all agents in the registry
 """
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from agents.agent_wiring_system import UnifiedAgentWiringSystem
 
 

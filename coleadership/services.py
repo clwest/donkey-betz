@@ -19,10 +19,9 @@ Philosophy:
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any
 from django.utils import timezone
-from django.db.models import Count, Q, Avg
+from django.db.models import Avg
 
 from .models import (
     CoLeadershipDecision,

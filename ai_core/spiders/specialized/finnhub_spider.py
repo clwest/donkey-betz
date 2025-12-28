@@ -11,7 +11,7 @@ import requests
 import feedparser
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)

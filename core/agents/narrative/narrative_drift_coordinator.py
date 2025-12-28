@@ -12,10 +12,9 @@ Implements the 5 Autonomous Properties:
 5. Self-Renewal - Scheduled Celery tasks run forever
 """
 
-import json
 import logging
 import re
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from django.utils import timezone
 from decimal import Decimal
@@ -507,10 +506,8 @@ class NarrativeDriftCoordinator(BaseAgent):
     def _run_full_scan(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Run a complete narrative drift scan."""
         from core.models_narrative_drift import (
-            Narrative, NarrativeShift, NarrativeEvidence,
-            NarrativeDomain, NarrativeStatus
+            NarrativeDomain
         )
-        from core.models_unified_system import SpiderData
 
         hours_back = tool_input.get('hours_back', 24)
         cutoff = timezone.now() - timedelta(hours=hours_back)

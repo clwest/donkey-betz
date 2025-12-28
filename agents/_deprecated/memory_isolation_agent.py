@@ -8,8 +8,7 @@ from typing import Dict, List, Any, Tuple
 from datetime import datetime
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from content.models import Document, DocumentEmbedding
-from core.models.agents_registry import UnifiedAgentTemplate
+from content.models import Document
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

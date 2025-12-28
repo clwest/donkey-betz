@@ -33,8 +33,7 @@ from decimal import Decimal
 from typing import Dict, Any, Optional, List
 from datetime import timedelta
 
-from django.db import transaction
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -93,10 +92,7 @@ class PipelineLearningService:
         """
         try:
             from core.models_pipeline_feedback import (
-                PipelineStageFeedback,
-                StylePresetPerformance,
-                VoicePerformance,
-                ResearchQueryPerformance
+                PipelineStageFeedback
             )
             from core.models_ai_series import AISeries, SeriesEpisode
             from django.contrib.auth import get_user_model
@@ -508,12 +504,7 @@ class PipelineLearningService:
             List of generated PipelineLearningInsight instances
         """
         try:
-            from core.models_pipeline_feedback import (
-                PipelineLearningInsight,
-                StylePresetPerformance,
-                VoicePerformance,
-                PipelineStage
-            )
+            pass
 
             insights = []
 

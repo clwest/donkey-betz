@@ -3,13 +3,10 @@ Learning Document Generator
 Automatically creates documents and insights from agent learning events
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
-import json
-import hashlib
 from collections import defaultdict
 
 # Import models

@@ -15,7 +15,6 @@ import json
 import logging
 import time
 from typing import List, Optional, Dict, Any
-from uuid import UUID
 
 from django.db import transaction
 from django.utils import timezone

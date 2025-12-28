@@ -8,12 +8,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from django.db.models import Q, Avg
-import json
 
 from intelligence.models.advisor_network import (
-    Advisor, AdvisorCategory, AdvisorCollaboration,
-    AdvisorVote, AdvisorRecruitment
+    Advisor, AdvisorCategory, AdvisorCollaboration
 )
 from intelligence.services.advisor_network_service import AdvisorNetworkService
 

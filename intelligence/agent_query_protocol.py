@@ -27,10 +27,8 @@ import json
 import logging
 import uuid
 import time
-from typing import Dict, Any, Optional, Callable, List
-from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List
 
-from django.core.cache import cache
 from django.utils import timezone
 import redis
 from django.conf import settings

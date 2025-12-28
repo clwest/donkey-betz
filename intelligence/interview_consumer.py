@@ -7,13 +7,12 @@ Handles real-time interview conversations for building comprehensive user profil
 
 import json
 import logging
-import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from datetime import datetime
 
-from .personal_assistant_interviewer import personal_assistant_interviewer, InterviewPhase
+from .personal_assistant_interviewer import personal_assistant_interviewer
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -423,7 +422,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         """Notify other platform systems about completed profile"""
         try:
             # Notify the unified platform connector
-            from frontend.src.services.UnifiedPlatformConnector import unifiedConnector
+            pass
 
             # Send profile completion to income builder and job matching systems
             await self.channel_layer.group_send(

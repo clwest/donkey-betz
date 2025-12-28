@@ -5,10 +5,10 @@ Provides seamless integration between Personal Assistant and specialized agents.
 
 import logging
 import uuid
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentRegistry
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 from content.ai_providers import AIProviderManager
 from django.contrib.auth import get_user_model
 

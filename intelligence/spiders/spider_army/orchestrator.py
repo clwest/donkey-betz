@@ -3,16 +3,14 @@ Spider Army Orchestrator
 Massive coordination system for deploying and managing thousands of spiders
 """
 
-import asyncio
 import logging
 import json
 import redis
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from scrapy.crawler import CrawlerRunner, CrawlerProcess
+from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
-from twisted.internet import reactor, defer
 import sys
 import os
 
@@ -23,8 +21,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 import django
 django.setup()
 
-from intelligence.models import SpiderIntelligenceNode
-from core.models.agents_registry import UnifiedAgentTemplate
 
 
 @dataclass

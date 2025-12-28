@@ -8,29 +8,23 @@ This module implements the fundamental self-awareness capabilities:
 - Self-healing mechanisms
 """
 
-import os
-import sys
 import ast
 import psutil
 import time
-import hashlib
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
-from django.db import connection, transaction
-from django.core.management import execute_from_command_line
+from django.db import connection
 from django.core.cache import cache
 
 from .models import (
     SystemMetrics,
     CodebaseSnapshot,
     SelfAnalysisReport,
-    SystemEvolution,
-    CodeEmbedding,
     SelfHealingAction
 )
 
@@ -249,7 +243,6 @@ class SystemMonitor:
             
             # Application metrics
             from core.models.agents_registry import Agent
-            from content.models import ContentGeneration
             
             active_agents = Agent.objects.filter(status='running').count()
             pending_tasks = Agent.objects.filter(status='pending').count()

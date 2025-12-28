@@ -22,16 +22,12 @@ import json
 import logging
 import time
 import random
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Any
+from datetime import datetime, timezone
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
 from ...spider_data_router import get_spider_data_router
-from ...agent_data_receiver import create_agent_data_receiver, IntelligenceData
-from ...advisor_data_processor import create_advisor_data_processor
 from ...data_pipeline import IntelligenceMessage
-import uuid
 
 logger = logging.getLogger(__name__)
 

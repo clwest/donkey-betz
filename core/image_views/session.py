@@ -17,9 +17,7 @@ Contains:
 
 import os
 import logging
-from datetime import datetime
 
-from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from PIL import Image as PILImage

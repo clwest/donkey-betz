@@ -4,15 +4,12 @@ API endpoints for saving and managing project portfolios
 """
 
 import json
-import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -474,7 +471,6 @@ def copy_deliverable_file(project_data, project_dir):
 def export_as_zip(project_dir):
     """Export project as ZIP file"""
     import zipfile
-    from django.http import FileResponse
 
     zip_filename = f"{project_dir.name}.zip"
     zip_path = Path("temp") / zip_filename

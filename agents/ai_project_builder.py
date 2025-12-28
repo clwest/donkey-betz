@@ -8,10 +8,8 @@ Session 306: Added learning infrastructure hooks for cross-agent knowledge shari
 
 import json
 import logging
-import os
-import uuid
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import datetime
+from typing import Dict, List, Any
 from pathlib import Path
 
 from core.llm_enforcer import get_llm_enforcer

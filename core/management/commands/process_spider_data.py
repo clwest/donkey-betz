@@ -3,10 +3,7 @@ Process unprocessed spider data and route to appropriate agents
 """
 from django.core.management.base import BaseCommand
 from persistence.models import SpiderData
-from core.models_unified_system import Agent, AgentSolution
 from intelligence.spider_agent_connector import SpiderAgentConnector
-import json
-from datetime import datetime
 
 
 class Command(BaseCommand):

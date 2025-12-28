@@ -6,12 +6,9 @@ Provides complete CRUD operations for A/B tests, variants, events, and goals.
 """
 
 import json
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db.models import Count, Sum, Avg
-from datetime import timedelta
 
 from .models_unified_system import ABTest, ABTestVariant, ABTestEvent, UserGoal
 from .api_helpers import api_success, api_error

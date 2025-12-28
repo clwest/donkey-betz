@@ -9,7 +9,6 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 import asyncio
 import logging
-import json
 import sys
 import os
 
@@ -18,8 +17,7 @@ sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 from ai_core.spiders.lightweight_spider_system import (
-    create_lightweight_orchestrator,
-    run_lightweight_spiders
+    create_lightweight_orchestrator
 )
 
 logger = logging.getLogger(__name__)

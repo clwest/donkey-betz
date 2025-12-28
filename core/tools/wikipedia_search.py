@@ -6,7 +6,7 @@ definitions, and encyclopedic knowledge.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 from django.core.cache import cache
 

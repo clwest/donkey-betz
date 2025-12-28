@@ -2,10 +2,7 @@
 Project Builder Agent Base - Extends AIEnforcedAgent with real project building capabilities
 """
 
-import os
 import subprocess
-import shutil
-import json
 import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path

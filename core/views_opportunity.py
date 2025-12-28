@@ -18,7 +18,6 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.core.paginator import Paginator
 import json
@@ -147,7 +146,7 @@ def opportunity_detail(request, opportunity_id):
     Get detailed information about a specific opportunity.
     """
     try:
-        from core.models_unified_system import Opportunity, OpportunityScore, OpportunityAction
+        from core.models_unified_system import Opportunity, OpportunityScore
 
         opportunity = Opportunity.objects.get(id=opportunity_id)
 
@@ -830,7 +829,7 @@ def opportunity_revenue_list(request, opportunity_id):
     Get all revenue records for an opportunity.
     """
     try:
-        from core.models_unified_system import Opportunity, OpportunityRevenue
+        from core.models_unified_system import Opportunity
 
         opportunity = Opportunity.objects.get(id=opportunity_id)
 
@@ -895,7 +894,7 @@ def revenue_stats(request):
         - days: Look back period (default: 30)
     """
     try:
-        from core.models_unified_system import OpportunityRevenue, Opportunity
+        from core.models_unified_system import OpportunityRevenue
         from django.db.models import Sum, Avg, Count, Q
         from datetime import timedelta
 

@@ -7,14 +7,12 @@ and provides comprehensive ROI analysis for the entire spider-based system.
 """
 
 import logging
-import json
-import asyncio
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 import uuid
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from collections import defaultdict
 import statistics
 

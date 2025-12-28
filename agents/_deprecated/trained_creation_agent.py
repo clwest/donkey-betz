@@ -188,7 +188,6 @@ class TrainedCreationAgent:
             CharacterModel object or None if not found/not completed
         """
         from content.models import CharacterModel
-        from django.db.models import Q
 
         try:
             # Try UUID first
@@ -377,7 +376,6 @@ class TrainedCreationAgent:
         """
         import uuid
         import os
-        from pathlib import Path
         from django.core.files.storage import default_storage
         from django.core.files.base import ContentFile
         from core.views_image import save_to_history

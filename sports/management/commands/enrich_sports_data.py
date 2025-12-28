@@ -3,9 +3,9 @@ Management command to enrich sports data with additional information
 from multiple API sources (ESPN, The Odds API, TheSportsDB, WeatherAPI)
 """
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils import timezone
-from sports.models import League, Team, Game
+from sports.models import Game
 from sports.data_enrichment import data_enricher
 from datetime import datetime, timedelta
 import logging

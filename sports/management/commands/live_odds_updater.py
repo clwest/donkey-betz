@@ -6,11 +6,11 @@ Intelligently updates odds based on game status and cache expiration
 import time
 import signal
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db.models import Q
-from sports.models import Game, BettingMarket
+from sports.models import Game
 from sports.data_enrichment import data_enricher
 import logging
 

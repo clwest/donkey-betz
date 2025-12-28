@@ -5,15 +5,13 @@ This module coordinates multiple specialized betting agents to work together,
 share intelligence, and provide comprehensive betting analysis.
 """
 
-import json
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 channel_layer = get_channel_layer()
@@ -495,7 +493,6 @@ class AgentOrchestrator:
         """Execute real Django agent and return structured result"""
         try:
             # Import Django models and execution function
-            from django.apps import apps
             from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
             from agents.tasks_enhanced import execute_agent_with_tools
             from asgiref.sync import sync_to_async
@@ -860,7 +857,6 @@ async def execute_coordinated_analysis(
     
     # Fetch real-time odds data before creating context
     from sports.models import Game, BettingMarket, OddsLine
-    from django.db.models import Q
     from asgiref.sync import sync_to_async
     
     try:

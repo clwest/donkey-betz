@@ -8,10 +8,9 @@ import logging
 import uuid
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
-import json
 
 # Import components
-from .document_generator import document_generator, DocumentGenerationConfig
+from .document_generator import document_generator
 from .embedding_generator import embedding_generator
 from .knowledge_base_manager import knowledge_base_manager
 

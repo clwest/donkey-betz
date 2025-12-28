@@ -13,14 +13,10 @@ Provides endpoints for:
 
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from typing import Optional, List, Dict, Any
 
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Sum, Count, F, Q
-from django.http import JsonResponse
+from django.db.models import Avg, Sum, Count, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -34,7 +30,6 @@ from .models_unified_system import (
     PerformanceComparison,
     ContentDistribution,
     DistributionPlatform,
-    DistributionAnalytics,
 )
 from .api_helpers import api_success, api_error
 

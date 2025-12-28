@@ -9,11 +9,10 @@ in addition to the generic Application model.
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db.models import Count, Avg
-from typing import Dict, Any
+from typing import Dict
 from django.utils import timezone
 
-from core.models_unified_system import Application, UserAgentLearning, Opportunity
+from core.models_unified_system import Application, UserAgentLearning
 
 logger = logging.getLogger(__name__)
 

@@ -20,9 +20,9 @@ import json
 import logging
 import redis
 from redis import asyncio as aioredis
-from typing import Dict, List, Optional, Any, Callable, Set
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from abc import ABC, abstractmethod
 from enum import Enum
 import uuid
@@ -169,12 +169,10 @@ class AgentSpiderDataReceiver(ABC):
     @abstractmethod
     async def _initialize_agent_subscriptions(self):
         """Initialize agent-specific subscriptions (implemented by each agent)"""
-        pass
 
     @abstractmethod
     async def process_intelligence_data(self, data: IntelligenceData) -> Dict[str, Any]:
         """Process intelligence data (implemented by each agent)"""
-        pass
 
     def add_subscription(self, subscription: AgentDataSubscription):
         """Add a data subscription for this agent"""

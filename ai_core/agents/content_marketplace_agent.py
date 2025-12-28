@@ -7,7 +7,7 @@ import json
 import logging
 import asyncio
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import aiohttp
 import hashlib
 import sys

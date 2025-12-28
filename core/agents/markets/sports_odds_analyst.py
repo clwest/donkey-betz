@@ -12,7 +12,7 @@ Uses The Odds spider for real-time odds from 40+ bookmakers.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import json
 

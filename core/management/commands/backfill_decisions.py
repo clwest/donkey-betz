@@ -12,7 +12,6 @@ Supports both:
 """
 
 from django.core.management.base import BaseCommand
-from django.db.models import Q
 from core.models_unified_system import AgentConversation, HiveMindSession, AgentDecisionSummary
 from core.services.decision_extractor import get_decision_extractor
 import time

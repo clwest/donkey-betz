@@ -6,9 +6,7 @@ Handles step-by-step execution, agent handoffs, and progress tracking.
 """
 
 import logging
-import json
-from typing import Dict, List, Optional, Any
-from datetime import datetime
+from typing import Dict, List, Optional
 from django.utils import timezone
 from django.db import transaction
 from channels.layers import get_channel_layer
@@ -353,7 +351,6 @@ class TeamWorkflowEngine:
         Start executing a workflow.
         Assigns first available steps to agents.
         """
-        from core.models_unified_system import TeamWorkflowStep, AgentTeamMembership
 
         if workflow.status == 'active':
             return {'success': False, 'error': 'Workflow already active'}
@@ -389,7 +386,6 @@ class TeamWorkflowEngine:
 
     def _get_ready_steps(self, workflow) -> List:
         """Get steps that are ready to execute (dependencies satisfied)."""
-        from core.models_unified_system import TeamWorkflowStep
 
         ready = []
         pending_steps = workflow.step_executions.filter(status='pending')
@@ -470,7 +466,6 @@ class TeamWorkflowEngine:
         Execute a workflow step.
         This is where the actual AI work happens.
         """
-        from core.models_unified_system import AgentMessage
 
         if step.status not in ['assigned', 'pending']:
             return {'success': False, 'error': f'Step not ready: {step.status}'}

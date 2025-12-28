@@ -7,13 +7,12 @@ including authentication, rate limiting, security headers, and error handling.
 
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from rest_framework.authtoken.models import Token
-from rest_framework import status
 import logging
 
 logger = logging.getLogger(__name__)

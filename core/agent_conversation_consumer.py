@@ -16,13 +16,10 @@ Session 261 Improvements:
 """
 
 import json
-import asyncio
 import logging
 import random
-import re
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from asgiref.sync import sync_to_async
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -180,8 +177,7 @@ class AgentConversationConsumer(AsyncWebsocketConsumer):
         - Structured outputs (DecisionSummary with insights and features)
         """
         from core.models import (
-            Agent, AgentConversation, ConversationMessage,
-            AgentKnowledgeSource
+            Agent, AgentConversation, ConversationMessage
         )
         from core.conversation_orchestrator import ConversationOrchestrator
 

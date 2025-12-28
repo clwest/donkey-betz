@@ -9,27 +9,19 @@ This command migrates:
 4. Preserves relationships and ensures data integrity
 """
 
-import os
-import sys
-import json
 import logging
 from pathlib import Path
-from decimal import Decimal
-from datetime import datetime, timezone
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.contrib.auth import get_user_model
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentTool
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 from sports.models import (
-    League, Team, Game, Sportsbook, BettingMarket, 
-    OddsLine, BankrollManagement, ArbitrageOpportunity
+    League, Sportsbook
 )
 from content.models import (
-    ContentTemplate, Document, KnowledgeBase, 
-    DocumentEmbedding, ContentGeneration
+    ContentTemplate, KnowledgeBase
 )
-from core.models import UnifiedBaseModel
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -331,7 +323,6 @@ class Command(BaseCommand):
                     content = py_file.read_text()
                     # Look for agent definitions or templates
                     # This would be customized based on the actual structure
-                    pass
                 except Exception as e:
                     logger.warning(f"Could not read {py_file}: {e}")
         

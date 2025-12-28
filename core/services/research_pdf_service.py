@@ -23,21 +23,18 @@ Usage:
 
 import io
 import logging
-import textwrap
 from datetime import datetime
 from typing import Optional, Dict, List
 from dataclasses import dataclass
 
-from django.conf import settings
 
 # PDF generation
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.lib.colors import HexColor, black, white
-from reportlab.pdfgen import canvas
+from reportlab.lib.colors import HexColor
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 
 logger = logging.getLogger(__name__)
 

@@ -15,4 +15,3 @@ class SelfAwarenessConfig(AppConfig):
     def ready(self):
         """Called when Django starts"""
         # Import signal handlers or perform startup tasks
-        pass

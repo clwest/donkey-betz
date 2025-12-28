@@ -15,8 +15,6 @@ from django.conf import settings
 from .realtime_engine import intelligence_engine
 from .income_builder import income_builder, UserProfile, SkillLevel
 from .models import ActionPlan
-from django.contrib.auth.models import AnonymousUser
-import json
 from .agent_instruction_parser import AgentInstructionParser
 from .agent_execution_pipeline import execute_plan_async
 
@@ -807,7 +805,7 @@ class RevenueMetricsView(APIView):
         """Get revenue metrics"""
         try:
             from intelligence.models import OpportunityActionPlan, RevenueMetrics
-            from django.db.models import Sum, Count, Avg
+            from django.db.models import Sum, Avg
             from django.utils import timezone
             from datetime import timedelta
 

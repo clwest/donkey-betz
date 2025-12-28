@@ -8,7 +8,6 @@ This is where the system becomes truly self-improving.
 and then improve based on what you learn." - Ancient AI Wisdom
 """
 
-import os
 import ast
 import re
 import json
@@ -19,9 +18,6 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
 import redis
 import git
-import black
-import autopep8
-import isort
 from dataclasses import dataclass
 
 

@@ -3,18 +3,15 @@ ML Model Retrainer - Session 24
 Automatic model retraining system that learns from evaluated predictions
 """
 
-import os
 import logging
 import joblib
-import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from datetime import timedelta
+from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, log_loss
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
@@ -127,7 +124,7 @@ class ModelRetrainer:
             (X: features DataFrame, y: labels Series) or None if insufficient data
         """
         try:
-            from sports.models import MLPrediction, Game
+            from sports.models import MLPrediction
 
             # Get all evaluated predictions for this sport
             predictions = MLPrediction.objects.filter(

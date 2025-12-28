@@ -10,10 +10,10 @@ Instead of waiting for commands, it observes, thinks, and acts on its own.
 
 import logging
 import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import timedelta
+from typing import Dict, Any
 from django.utils import timezone
-from django.db.models import Count, Avg, Q
+from django.db.models import Count
 
 from .base_agent import BaseAgent
 

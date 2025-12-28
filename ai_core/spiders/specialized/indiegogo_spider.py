@@ -7,7 +7,6 @@ Uses crowdfunding news RSS feeds since Indiegogo has no public API.
 """
 
 import feedparser
-import requests
 import logging
 import re
 from datetime import datetime

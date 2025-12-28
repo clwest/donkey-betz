@@ -23,9 +23,9 @@ import hashlib
 import hmac
 import base64
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
 
 from django.http import JsonResponse
 from django.conf import settings
@@ -38,7 +38,6 @@ from core.models_unified_system import (
     DistributionPlatform,
     UserPlatformAccount,
     ContentDistribution,
-    DistributionAnalytics,
 )
 from core.api_responses import api_success, api_error
 

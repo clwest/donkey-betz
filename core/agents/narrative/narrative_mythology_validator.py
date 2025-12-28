@@ -12,8 +12,7 @@ Integration with Narrative Drift Coordinator to ensure data quality.
 
 import re
 import logging
-import hashlib
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Tuple
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from decimal import Decimal

@@ -8,18 +8,13 @@ No more agents just giving advice - we verify they actually DO something.
 import os
 import subprocess
 import json
-import hashlib
-from datetime import datetime
 from typing import Dict, Any, List, Optional
 from django.utils import timezone
-from django.db import transaction
 
 from ai_core.models.implementation_tracking import (
     ImplementationSession,
     FileModification,
     CommandExecution,
-    DatabaseChange,
-    ImplementationEvidence,
     start_implementation_session,
     complete_implementation_session
 )

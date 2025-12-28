@@ -8,7 +8,6 @@ import sys
 import django
 import redis
 import json
-import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 

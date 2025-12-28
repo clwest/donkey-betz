@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count
 
 logger = logging.getLogger(__name__)
 
@@ -540,7 +540,7 @@ def start_team_workflow(request, workflow_id):
     Start executing a team workflow.
     """
     try:
-        from core.models_unified_system import TeamWorkflow, TeamWorkflowStep, AgentMessage
+        from core.models_unified_system import TeamWorkflow, AgentMessage
 
         workflow = TeamWorkflow.objects.get(id=workflow_id)
 

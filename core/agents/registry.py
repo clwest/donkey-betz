@@ -16,20 +16,17 @@ Session 392: Migrated from agents/registry.py to core/agents/registry.py
 """
 
 import logging
-import asyncio
-from typing import Dict, List, Optional, Any, Tuple, Union
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from datetime import datetime
 from django.core.cache import cache
-from django.db.models import Q, Count, Avg, F
+from django.db.models import Count
 from django.utils import timezone
 
 # Updated import path - use canonical location
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
     AgentExecution,
-    AgentOrchestration,
-    AgentRegistry as AgentRegistryModel,
     AgentSpecialization,
     AgentStatus,
     AgentPriority

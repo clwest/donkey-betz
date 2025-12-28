@@ -6,7 +6,7 @@ Run nightly via cron: python manage.py discover_learning_cohorts
 import logging
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Avg
+from django.db.models import Avg
 from core.models import UserAgentLearning
 
 logger = logging.getLogger(__name__)

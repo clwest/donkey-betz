@@ -4,18 +4,13 @@ Tests all critical systems for 95%+ production readiness
 """
 
 import asyncio
-import json
 import time
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 from django.conf import settings
-from django.test import TestCase
 from channels.testing import WebsocketCommunicator
-from channels.routing import URLRouter
-from channels.auth import AuthMiddlewareStack
 import redis
-import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -134,8 +129,7 @@ class ProductionValidator:
         """Test WebSocket connection stability"""
         test_name = "websocket_stability"
         try:
-            from core.routing import websocket_urlpatterns
-            from django.urls import re_path
+            pass
 
             # Test multiple connections
             stability_score = 100.0
@@ -378,7 +372,6 @@ class ProductionValidator:
         """Test Django Channels performance"""
         test_name = "channel_layer_performance"
         try:
-            from django.conf import settings
             from channels.layers import get_channel_layer
 
             channel_layer = get_channel_layer()

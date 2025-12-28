@@ -19,7 +19,6 @@ import base64
 from openai import OpenAI
 from io import BytesIO
 from datetime import datetime
-from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -37,9 +36,8 @@ from core.decorators import rate_limit
 # Phase 2 P1: Input validation
 from core.validators import validate_prompt, sanitize_prompt, validate_uuid, validate_numeric_range
 # Phase 2 P1: Safe error handling
-from core.responses import safe_error_message, handle_exception
 # Session 487: Creator watermark integration
-from core.services.watermark_integration import watermark_image_bytes, save_watermarked_image
+from core.services.watermark_integration import save_watermarked_image
 
 logger = logging.getLogger(__name__)
 
@@ -1046,7 +1044,6 @@ def optimize_image_prompt(request):
         style_guidance = style_guidance_map.get(style.lower()) if style else None
 
         # Use the Intelligent Prompting System
-        from core.agent_integration import IntelligentPromptOptimizer
         from content.ai_providers import AIProviderManager
 
         # Create a specialized optimization request for image generation
@@ -2042,7 +2039,6 @@ def image_history(request):
                     # Check if this is a shared/public project or user is collaborator
                     # For now, allow read access to all projects (since it's a single-user app)
                     logger.info(f"📸 User {user.id} accessing project owned by {project.user_id}")
-                    pass
             except CreativeProject.DoesNotExist:
                 logger.warning(f"📸 Project not found: {project_id}")
                 return Response({
@@ -4649,7 +4645,6 @@ def list_sessions(request):
     """
     try:
         from content.models import AISession
-        from django.db.models import Q
 
         user = request.user
 
@@ -4749,7 +4744,6 @@ def get_project_sessions(request, project_id):
     """
     try:
         from content.models import AISession, ImageHistory, VideoHistory, CreativeProject
-        from django.db.models import Q
 
         # Verify project exists and belongs to user
         try:
@@ -4958,10 +4952,7 @@ def get_session_analytics(request):
     """
     try:
         from content.models import AISession, ImageHistory, VideoHistory
-        from django.db.models import Count, Avg, Sum, Q
-        from django.db.models.functions import TruncDate
         from collections import Counter
-        import json
 
         user = request.user
 
@@ -5022,7 +5013,6 @@ def get_session_analytics(request):
         top_models = [{'model': model, 'count': count} for model, count in model_counter.most_common(5)]
 
         # Activity by day of week
-        from datetime import datetime
         activity_by_day = {
             'Monday': 0, 'Tuesday': 0, 'Wednesday': 0, 'Thursday': 0,
             'Friday': 0, 'Saturday': 0, 'Sunday': 0
@@ -5299,7 +5289,6 @@ def get_featured_examples(request):
     """
     try:
         from content.models import ImageHistory
-        from django.db.models import Q
 
         # Get diverse examples - ONLY generated images (Session 56: Bug fix)
         # Edited images (upscale, remove bg, etc.) have operation names as prompts,
@@ -5309,7 +5298,6 @@ def get_featured_examples(request):
         # Strategy: Get up to 12 recent generated images with variety
         # Prioritize diverse models and styles to showcase platform capabilities
         # Session 94: Filter out data URI images (they're too large for JSON response)
-        from django.db.models import Q
         examples = ImageHistory.objects.filter(
             user=request.user,
             image_type='generated'  # ONLY show generated images!
@@ -7919,7 +7907,6 @@ def execute_tool(request):
                     except (CreativeProject.DoesNotExist, ValueError, TypeError):
                         # If UUID is invalid or project doesn't exist, just skip project linkage
                         logger.warning(f"Invalid or non-existent project_id: {parameters.get('project_id')}")
-                        pass
 
                 # Create decision
                 decision = start_decision(
@@ -8129,9 +8116,6 @@ def _verify_image_with_vision(image_url, expected_text):
     """
     try:
         import base64
-        import requests
-        from io import BytesIO
-        from PIL import Image
 
         logger.info(f"👁️ Using GPT-4 Vision to verify text: '{expected_text}'")
 
@@ -8281,9 +8265,6 @@ def _execute_generate_image(user, parameters, session=None):
         }
     """
     try:
-        # Session 66: DEBUG - Log ALL parameters to verify expected_text is being passed
-        logger.info(f"🔍 DEBUG: _execute_generate_image received parameters: {parameters}")
-
         prompt = parameters.get('prompt', '').strip()
         model = parameters.get('model', 'sdxl')  # Default to sdxl (best balance)
         style = parameters.get('style', '')  # Optional style
@@ -9718,8 +9699,6 @@ def _execute_create_character_from_prompt(user, parameters):
     """
     try:
         import requests
-        import tempfile
-        import os
         from django.core.files.uploadedfile import SimpleUploadedFile
         from content.character_training import create_character_workflow
         from content.image_generation import ImageGenerationService
@@ -10165,7 +10144,6 @@ def _execute_inpaint(user, parameters):
 
         # Session 66: Use Stability AI Search and Replace API directly
         import requests
-        import base64
         import uuid
         from django.core.files.base import ContentFile
         from django.core.files.storage import default_storage

@@ -21,16 +21,14 @@ The collaboration system allows agents to:
 
 import logging
 import uuid
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 
-from django.db import models, transaction
-from django.db.models import Q, Count, Avg, F, Sum
+from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from django.core.cache import cache
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

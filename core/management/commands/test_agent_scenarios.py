@@ -33,13 +33,11 @@ from dataclasses import dataclass, field
 
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 from core.testing import (
     TEST_SCENARIOS,
     TestScenario,
     get_scenario,
-    get_scenario_summary,
 )
 from core.models_partnership import PartnershipProject
 from core.models_unified_system import BusinessResearchResult

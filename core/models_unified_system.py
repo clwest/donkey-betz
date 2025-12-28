@@ -14,7 +14,6 @@ import json
 import uuid
 import logging
 import warnings
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -3869,7 +3868,7 @@ class SpiderExecutionLog(models.Model):
     def get_spider_health(cls, spider_name: str, days: int = 7):
         """Get health summary for a specific spider."""
         from django.utils import timezone
-        from django.db.models import Count, Avg
+        from django.db.models import Avg
 
         since = timezone.now() - timezone.timedelta(days=days)
         executions = cls.objects.filter(
@@ -4203,7 +4202,6 @@ class StyleEvolution(models.Model):
     def capture_daily_snapshot(cls, user_id: int, domain: str = 'image'):
         """Capture a daily snapshot of user's style preferences."""
         from django.utils import timezone
-        from django.db.models import Count, Sum
 
         today = timezone.now().date()
 
@@ -5084,7 +5082,6 @@ class AgentPerformanceMetric(models.Model):
 
         # 4. Activity Recency (10% weight)
         from django.utils import timezone
-        from datetime import timedelta
 
         now = timezone.now()
         if self.last_execution:
@@ -9200,7 +9197,6 @@ class HiveMindSession(models.Model):
         Select the most relevant agents for a given question.
         Uses keyword matching and agent specializations.
         """
-        from django.db.models import Q
 
         # Keywords to look for in question
         keywords = question.lower().split()
@@ -10064,7 +10060,6 @@ class MemoryCluster(models.Model):
     @staticmethod
     def _kmeans_clustering(embeddings, n_clusters):
         """Cluster using K-means algorithm."""
-        import numpy as np
 
         try:
             from sklearn.cluster import KMeans
@@ -10987,7 +10982,6 @@ class Rivalry(models.Model):
         Args:
             winner: 'challenger', 'defender', or 'draw'
         """
-        from django.utils import timezone
 
         if winner == 'challenger':
             self.challenger_wins += 1
@@ -12467,8 +12461,7 @@ class PredictionStats(models.Model):
 
     def update_stats(self):
         """Recalculate all statistics from predictions."""
-        from django.db.models import Count, Avg
-        from django.utils import timezone
+        from django.db.models import Avg
 
         predictions = AgentPrediction.objects.filter(agent=self.agent)
 
@@ -12959,9 +12952,7 @@ class TimeCapsuleStats(models.Model):
 
     def update_stats(self):
         """Recalculate stats from capsules."""
-        from django.db.models import Avg
         from django.utils import timezone
-        from datetime import timedelta
         from collections import Counter
 
         capsules = self.agent.time_capsules.all()
@@ -17154,7 +17145,7 @@ class PredictionOutcome(models.Model):
             current_price: Current stock price (if checking now)
             days_elapsed: How many days since prediction (7 or 30)
         """
-        from datetime import date, timedelta
+        from datetime import date
 
         if days_elapsed is None:
             # Auto-detect based on date
@@ -17495,7 +17486,6 @@ class AgentAccuracyMetrics(models.Model):
         """
         Calculate all accuracy metrics based on prediction outcomes in this period.
         """
-        from django.db.models import Avg, Count, Q
 
         # Get all predictions for this agent in this period
         predictions = PredictionOutcome.objects.filter(

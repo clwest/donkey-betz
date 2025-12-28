@@ -9,7 +9,6 @@ import logging
 import json
 import traceback
 from typing import Dict, Any, Optional, List
-from datetime import datetime
 from django.utils import timezone
 
 from ai_core.agents.ai_enforced_base import AIEnforcedAgent
@@ -347,7 +346,6 @@ class ConcreteAgentExecutor:
             # Broadcast to WebSocket for frontend display
             try:
                 from channels.layers import get_channel_layer
-                from asgiref.sync import async_to_sync
 
                 channel_layer = get_channel_layer()
 
@@ -502,7 +500,6 @@ class ConcreteAgentExecutor:
             # Broadcast to WebSocket for frontend display
             try:
                 from channels.layers import get_channel_layer
-                from asgiref.sync import async_to_sync
 
                 channel_layer = get_channel_layer()
 

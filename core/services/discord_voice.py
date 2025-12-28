@@ -14,12 +14,10 @@ Features:
 """
 
 import os
-import io
 import logging
 import asyncio
 import tempfile
 import wave
-import struct
 from typing import Optional, Dict, Any, Callable, List
 from datetime import datetime
 from dataclasses import dataclass, field
@@ -32,7 +30,6 @@ import httpx
 
 # Voice receiving extension for discord.py
 try:
-    import discord.ext.voice_recv as voice_recv
     VOICE_RECV_AVAILABLE = True
 except ImportError:
     VOICE_RECV_AVAILABLE = False
@@ -278,7 +275,6 @@ class VoiceRecordingSink:
     def cleanup(self):
         """Called when the sink is stopped."""
         logger.info(f"VoiceRecordingSink cleanup - total packets: {self.packet_count}")
-        pass
 
 
 # =============================================================================

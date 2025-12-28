@@ -3,12 +3,11 @@ Real-time Intelligence Distribution System
 Feeds data from spider army to 102 agents and 25 advisors in real-time
 """
 
-import asyncio
 import logging
 import json
 import redis
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from datetime import datetime
+from typing import Dict, List, Any
 from dataclasses import dataclass
 import sys
 import os
@@ -22,9 +21,8 @@ django.setup()
 
 from intelligence.models import (
     SpiderIntelligenceNode, AgentIntelligenceFeed,
-    AdvisorIntelligenceFeed, SpiderPerformanceMetrics
+    AdvisorIntelligenceFeed
 )
-from core.models.agents_registry import UnifiedAgentTemplate
 
 
 @dataclass

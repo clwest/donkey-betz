@@ -4,7 +4,6 @@ Ensures consistent token validation and security policies across all API endpoin
 """
 
 import logging
-import json
 from typing import Optional
 from django.http import JsonResponse
 from django.contrib.auth.models import AnonymousUser
@@ -16,7 +15,7 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from urllib.parse import parse_qs
 
-from .api_responses import api_unauthorized, api_forbidden, api_error
+from .api_responses import api_unauthorized, api_forbidden
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

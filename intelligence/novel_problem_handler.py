@@ -8,11 +8,8 @@ by analyzing the problem, generating hypotheses, and creating solutions.
 
 import redis
 import json
-import re
-import ast
 from datetime import datetime
-from typing import Dict, Optional, List
-from intelligence.solution_storage import SolutionStorage
+from typing import Dict, Optional
 from intelligence.problem_solver import AgentProblemSolver
 
 

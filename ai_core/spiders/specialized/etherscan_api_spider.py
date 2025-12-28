@@ -17,7 +17,7 @@ Free tier: 5 calls/second, 100k calls/day
 
 import os
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 import requests
 

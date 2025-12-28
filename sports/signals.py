@@ -6,9 +6,8 @@ and real-time notifications through WebSocket channels.
 """
 
 import logging
-from typing import Dict, Any
 
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync

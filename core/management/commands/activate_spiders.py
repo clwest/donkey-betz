@@ -1,13 +1,12 @@
 """
 Management command to activate spider network and collect data
 """
-import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models_unified_system import SpiderData, Agent
+from core.models_unified_system import SpiderData
 from intelligence.spider_agent_connector import SpiderAgentConnector
 
 
@@ -173,7 +172,6 @@ class Command(BaseCommand):
     def _activate_real_spiders(self):
         """Activate real spiders from the spider registry"""
         try:
-            from ai_core.spiders.spider_registry import SpiderRegistry
             from ai_core.spiders.job_spider import JobSpider
             from ai_core.spiders.freelance_spider import FreelanceSpider
 

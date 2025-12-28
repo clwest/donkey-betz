@@ -291,8 +291,7 @@ def stats_api(request):
     """
     from core.models_unified_system import (
         Agent, AgentLearningConnection, KnowledgeTransfer,
-        AgentConversation, AgentDream, SpiderData, AgentKnowledgeSource,
-        MythologyQuarantine
+        SpiderData, AgentKnowledgeSource, MythologyQuarantine
     )
     from django.db.models import Count, Avg, Sum
     from ai_core.spiders.spider_registry import spider_registry

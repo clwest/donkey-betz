@@ -30,7 +30,7 @@ Usage:
 
 import logging
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
@@ -582,7 +582,6 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         # Session 468: Fixed imports - models are in dedicated files
         from core.models_autonomous_studio import ContentChannel, ChannelEpisode, ContentDebate
         from core.models_ai_series import AISeries
-        from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
 
         channel_id = tool_input.get('channel_id')
         topic = tool_input.get('topic')

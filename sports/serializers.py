@@ -6,8 +6,6 @@ odds, analytics, and betting recommendations with advanced filtering and aggrega
 """
 
 from rest_framework import serializers
-from decimal import Decimal
-from datetime import datetime, timedelta
 from django.db import models
 
 from .models import (

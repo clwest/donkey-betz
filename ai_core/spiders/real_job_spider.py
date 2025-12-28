@@ -4,7 +4,6 @@ Phase 1: Real data collection implementation
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime
 from typing import List, Dict, Any

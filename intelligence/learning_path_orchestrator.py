@@ -4,9 +4,8 @@ Detects knowledge gaps and orchestrates dynamic learning from external sources
 """
 import json
 import logging
-import asyncio
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import requests

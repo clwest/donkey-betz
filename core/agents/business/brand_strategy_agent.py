@@ -32,8 +32,7 @@ Tools NOT Available (by design):
 
 import logging
 import time
-import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
 
@@ -829,9 +828,7 @@ Return a comprehensive brand strategy report that builds on existing project res
         # Session 394: Get style library recommendations based on the business idea
         from core.services.style_library import (
             get_brand_recommendations,
-            get_style_library_summary,
-            COLOR_PALETTES,
-            LOGO_DIRECTIONS
+            get_style_library_summary
         )
 
         # Detect industry and get recommendations

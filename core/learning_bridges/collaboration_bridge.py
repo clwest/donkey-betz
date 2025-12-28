@@ -6,7 +6,7 @@ Learns from multi-agent collaboration outcomes to optimize team formation
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from typing import Dict, List
+from typing import Dict
 
 from core.models_unified_system import Collaboration, UserAgentLearning
 

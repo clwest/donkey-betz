@@ -10,16 +10,11 @@ Addresses customer pain points:
 """
 
 import hashlib
-import hmac
 import logging
 import os
-import json
 from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
 from dataclasses import dataclass
 
-from django.utils import timezone
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

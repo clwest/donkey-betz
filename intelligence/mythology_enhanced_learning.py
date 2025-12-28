@@ -10,9 +10,8 @@ import os
 import sys
 import json
 import redis
-import hashlib
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List
 from dotenv import load_dotenv
 
 # Add parent directory to path for imports
@@ -27,7 +26,6 @@ from mythology.services import MythologyDetectionService, MythologyPreventionSer
 
 # Import learning systems
 from intelligence.enhanced_problem_solver import EnhancedProblemSolver
-from config.api_settings import OPENAI_CONFIG, get_openai_client
 
 # Import hallucination publisher
 from intelligence.hallucination_publisher import hallucination_publisher

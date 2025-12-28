@@ -18,7 +18,6 @@ import asyncio
 import logging
 import random
 from abc import abstractmethod
-from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext
 
@@ -271,7 +270,6 @@ class PlaywrightSpider(BaseIntelligenceSpider):
         Fetch data from target using Playwright.
         Must be implemented by subclasses.
         """
-        pass
 
     @abstractmethod
     async def process_data(self, raw_data: Dict[str, Any], target: SpiderTarget) -> Optional[IntelligenceData]:
@@ -279,4 +277,3 @@ class PlaywrightSpider(BaseIntelligenceSpider):
         Process raw data into intelligence.
         Must be implemented by subclasses.
         """
-        pass

@@ -6,15 +6,10 @@ API endpoints that connect the mobile app to the Unified Platform Bridge,
 enabling real money-making functionality across all components.
 """
 
-import json
 import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from asgiref.sync import sync_to_async
 
 from .unified_platform_bridge import platform_bridge
 from .models import UserProfile, ExtendedUserProfile, JobApplication

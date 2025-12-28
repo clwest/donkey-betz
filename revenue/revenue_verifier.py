@@ -8,14 +8,11 @@ with cryptographic proof and external API verification.
 
 import hashlib
 import json
-import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, Optional, Tuple
 import redis
-import requests
-from django.utils import timezone
 from django.conf import settings
 import logging
 

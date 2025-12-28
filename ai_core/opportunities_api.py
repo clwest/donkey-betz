@@ -6,13 +6,12 @@ Provides real data endpoints for the Opportunities Hub with AI automation detect
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 import random
-import json
 import logging
 
 # Import our AI analyzer and agent system
-from core.opportunity_ai_analyzer import OpportunityAIAnalyzer, analyze_opportunity_batch
+from core.opportunity_ai_analyzer import OpportunityAIAnalyzer
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry

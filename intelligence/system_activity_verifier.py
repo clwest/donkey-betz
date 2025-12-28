@@ -12,9 +12,8 @@ import json
 import time
 import redis
 import requests
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-import hashlib
+from datetime import datetime
+from typing import Dict
 import random
 
 class SystemActivityVerifier:

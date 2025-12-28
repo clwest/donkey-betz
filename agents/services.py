@@ -4,8 +4,8 @@ Session 120: Service layer for agent tracking functionality
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-from django.db.models import Count, Avg, Sum, Q, F
+from datetime import timedelta
+from django.db.models import Count, Avg, Sum
 from django.utils import timezone
 from django.core.cache import cache
 import logging

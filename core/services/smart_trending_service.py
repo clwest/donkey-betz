@@ -19,10 +19,9 @@ Features:
 
 import logging
 import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any
 from datetime import datetime, timedelta
 from django.core.cache import cache
-from django.db.models import Count, Q
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

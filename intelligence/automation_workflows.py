@@ -9,9 +9,8 @@ Each workflow coordinates multiple agents to generate continuous income.
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
-from django.http import JsonResponse
+from datetime import datetime
+from typing import Dict, Any
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -19,7 +18,7 @@ from rest_framework.response import Response
 
 from .agent_execution_pipeline import AgentExecutionPipeline
 from .real_agents import AgentFactory
-from .models import ActionPlan, AgentExecution
+from .models import ActionPlan
 
 logger = logging.getLogger(__name__)
 

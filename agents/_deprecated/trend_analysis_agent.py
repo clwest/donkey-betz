@@ -35,7 +35,6 @@ import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
-from collections import Counter
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

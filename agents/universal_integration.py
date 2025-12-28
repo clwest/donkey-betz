@@ -5,24 +5,19 @@ This module provides integration points for ALL 149+ agents across any project t
 enabling any agent to contribute to any project based on capabilities and requirements.
 """
 
-import json
-import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any
 from datetime import datetime
 from enum import Enum
 from django.db import transaction
-from django.core.exceptions import ValidationError
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
     AgentOrchestration,
     AgentRegistry,
     AgentChannel,
-    AgentChannelMessage,
-    AgentSpecialization
+    AgentChannelMessage
 )
-from core.models import GeneratedProject, GeneratedCode
+from core.models import GeneratedProject
 
 
 class UniversalAgentCategories(Enum):

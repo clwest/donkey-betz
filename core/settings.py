@@ -196,7 +196,6 @@ ASGI_APPLICATION = 'core.asgi.application'
 
 # Production-Grade Channels Configuration - SIMPLIFIED
 try:
-    import channels_redis
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',

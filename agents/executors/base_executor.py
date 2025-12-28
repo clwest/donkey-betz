@@ -15,17 +15,15 @@ Key Features:
 """
 
 import asyncio
-import json
 import logging
 import time
 import traceback
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
-import aiohttp
 import openai
 from decimal import Decimal
 
@@ -426,17 +424,14 @@ class BaseAgentExecutor(ABC):
         Returns:
             Dictionary containing the execution output
         """
-        pass
 
     @abstractmethod
     def get_required_tools(self) -> List[str]:
         """Return list of tools required by this agent"""
-        pass
 
     @abstractmethod
     def get_required_apis(self) -> List[str]:
         """Return list of APIs required by this agent"""
-        pass
 
     # Helper methods for common operations
 
@@ -579,7 +574,6 @@ class BaseAgentExecutor(ABC):
         """
         try:
             from django.contrib.auth import get_user_model
-            from core.models.users.models import EnhancedUserProfile
             from core.models.conversations.models import UserMemoryContext
             from core.models.ai_learning.models import UserAgentLearning
 

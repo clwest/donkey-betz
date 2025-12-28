@@ -3,24 +3,19 @@ Sports Analytics Dashboard Views
 Provides comprehensive dashboard endpoints for sports betting analytics
 """
 
-from django.shortcuts import render
-from django.http import JsonResponse
 from django.views.generic import TemplateView
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils.decorators import method_decorator
-from django.db.models import Sum, Avg, Count, Q, F, Max, Min
+from django.db.models import Sum, Avg, Count, Max
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import (
     Game, Bet, BankrollManagement, ArbitrageOpportunity, 
-    BettingRecommendation, SportsAnalytics, OddsLine, LineMovement
+    BettingRecommendation, OddsLine, LineMovement
 )
-from .services import KellyCriterionService, ArbitrageDetectionService
 
 class SportsDashboardView(LoginRequiredMixin, TemplateView):
     """Main sports analytics dashboard"""

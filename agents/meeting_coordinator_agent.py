@@ -14,4 +14,3 @@ warnings.warn(
 )
 
 # Re-export from deprecated location for backwards compatibility
-from agents._deprecated.meeting_coordinator_agent import *

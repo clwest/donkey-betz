@@ -14,11 +14,9 @@ Key Responsibilities:
 6. WebSocket message routing
 """
 
-import asyncio
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import timedelta
+from typing import Dict, List
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -26,8 +24,7 @@ from channels.layers import get_channel_layer
 
 # Import models
 from core.models import (
-    UserProfile, ExtendedUserProfile, JobApplication,
-    ResumeVersion, UserEmbedding, ChatConversation
+    UserProfile, ExtendedUserProfile, JobApplication
 )
 
 User = get_user_model()

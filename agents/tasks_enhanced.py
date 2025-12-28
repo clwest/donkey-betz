@@ -8,13 +8,12 @@ for data access and computation.
 import json
 import logging
 import traceback
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 
 from celery import shared_task
 from django.utils import timezone
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 # Session 392: Updated to use canonical import path
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentStatus

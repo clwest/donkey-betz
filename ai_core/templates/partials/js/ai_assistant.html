@@ -2054,6 +2054,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     });
                     const cleanData = await cleanResponse.json();
                     console.log('📡 Clean Architecture response:', cleanData);
+                    console.log('🔥 SESSION 565 EARLY DEBUG: metadata exists?', !!cleanData.metadata, 'intel exists?', !!cleanData.metadata?.intelligence_context);
 
                     // Format response with agent info
                     let responseHtml = cleanData.response || cleanData.message || '';
@@ -2104,6 +2105,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     }
 
                     // Session 565: Include metadata for intelligence context UI panel
+                    console.log('🧠 Session 565 DEBUG: cleanData.metadata =', cleanData.metadata);
+                    console.log('🧠 Session 565 DEBUG: intelligence_context =', cleanData.metadata?.intelligence_context);
                     return {
                         message: responseHtml,
                         metadata: cleanData.metadata || null

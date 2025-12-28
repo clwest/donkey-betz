@@ -6,13 +6,11 @@ This module implements a personal AI assistant that learns from user profiles,
 tracks patterns, and provides increasingly personalized assistance over time.
 """
 
-import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
-from django.db.models import Q, Count, Avg
+from django.db.models import Count, Avg
 
 from core.models import ExtendedUserProfile, JobApplication, UserEmbedding
 from core.agent_context_middleware import AgentContextMiddleware

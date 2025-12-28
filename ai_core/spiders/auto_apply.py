@@ -7,17 +7,13 @@ for high-scoring opportunities identified by the opportunity scorer.
 """
 
 import logging
-import json
 import asyncio
 import random
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
-import aiohttp
 import hashlib
-from django.conf import settings
-import re
 from .opportunity_scorer import OpportunityScorer
 
 logger = logging.getLogger(__name__)

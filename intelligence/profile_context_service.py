@@ -7,10 +7,10 @@ for personalized recommendations and responses.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -68,8 +68,6 @@ class ProfileContextService:
     async def _build_user_context(self, user_id: str, context_type: str) -> Dict[str, Any]:
         """Build comprehensive user context from all available sources"""
         from django.contrib.auth import get_user_model
-        from core.models import EnhancedUserProfile
-        from django.db import transaction
 
         User = get_user_model()
 
@@ -219,7 +217,6 @@ class ProfileContextService:
     async def _get_session_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get session-based profile data for backward compatibility"""
         try:
-            from django.contrib.sessions.backends.db import SessionStore
             from channels.db import database_sync_to_async
 
             @database_sync_to_async

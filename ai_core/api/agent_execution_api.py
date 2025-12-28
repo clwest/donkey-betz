@@ -6,7 +6,6 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
-import json
 import logging
 from ai_core.agents.execution_queue import execution_queue
 from ai_core.agents.execution_queue import Priority

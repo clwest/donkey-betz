@@ -39,22 +39,18 @@ class LearningBridge(ABC):
         Returns:
             Dict with processing results and insights
         """
-        pass
 
     @abstractmethod
     def _extract_patterns(self, event_data: Any) -> Dict:
         """Extract patterns from event data"""
-        pass
 
     @abstractmethod
     def _update_learning(self, patterns: Dict) -> None:
         """Update learning records based on patterns"""
-        pass
 
     @abstractmethod
     def _generate_insights(self, patterns: Dict) -> List[str]:
         """Generate actionable insights"""
-        pass
 
     def log_event(self, message: str, level: str = 'info'):
         """Log event with bridge context"""

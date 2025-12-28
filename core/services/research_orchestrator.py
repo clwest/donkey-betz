@@ -45,7 +45,6 @@ import time
 import json
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Session 342: Real-time pipeline progress broadcasts
 from core.pipeline_progress_consumer import (

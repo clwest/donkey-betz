@@ -6,10 +6,9 @@ from celery import shared_task
 from celery.schedules import crontab
 from django.core.cache import cache
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
 import asyncio
-from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +144,7 @@ def clean_stale_data():
     logger.info("🧹 Cleaning stale data...")
 
     try:
-        from intelligence.models import OpportunityActionPlan, ActionPlan
+        from intelligence.models import OpportunityActionPlan
 
         # Remove opportunities older than 7 days
         seven_days_ago = timezone.now() - timedelta(days=7)

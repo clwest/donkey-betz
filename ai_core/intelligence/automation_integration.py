@@ -5,7 +5,6 @@ Connects Income Builder plans to revenue tracking and automatic execution
 
 from typing import Dict, Any, List
 from datetime import datetime
-from decimal import Decimal
 from django.db import models
 from core.agents import OpportunityPipelineAgent
 

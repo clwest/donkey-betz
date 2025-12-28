@@ -12,12 +12,11 @@ This orchestrator activates the entire AI ecosystem by:
 
 import asyncio
 import json
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from typing import Dict, List
+from datetime import timedelta
 from django.core.cache import cache
 from django.utils import timezone
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 import logging
 import random
 

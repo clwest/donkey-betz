@@ -6,17 +6,9 @@ This module provides API endpoints for managing legal case documents,
 including upload, analysis, and integration with the LegalDocDrafterAgent.
 """
 
-import json
 import logging
-import uuid
-from datetime import datetime, timedelta
 
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -601,7 +593,6 @@ def export_legal_section(request):
     Returns: File download response
     """
     from django.http import HttpResponse
-    from io import BytesIO
 
     try:
         data = request.data

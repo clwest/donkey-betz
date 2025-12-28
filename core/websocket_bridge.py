@@ -6,11 +6,9 @@ Provides real data streaming for all frontend components that are currently not 
 import json
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from datetime import datetime
+from typing import Dict, Any
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from django.utils import timezone
 import random
 
 logger = logging.getLogger(__name__)

@@ -3,11 +3,9 @@
 Connects AI Income Builder, Content Studio, and all revenue streams
 """
 
-import asyncio
-import json
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from typing import Dict, List, Any
+from dataclasses import dataclass
+from datetime import timedelta
 from enum import Enum
 import logging
 
@@ -912,7 +910,6 @@ def record_potential_earnings(source, amount, application_id=None, opportunity_i
     try:
         from django.utils import timezone
         from intelligence.models import RevenueMetrics
-        from django import models
 
         # Get or create today's revenue metrics
         today = timezone.now().date()

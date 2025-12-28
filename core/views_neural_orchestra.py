@@ -19,7 +19,6 @@ from ai_core.consciousness.neural_orchestra_reality_bridge import (
     get_real_learning_status,
     get_real_learning_feed
 )
-import json
 import logging
 
 logger = logging.getLogger(__name__)

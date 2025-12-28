@@ -9,16 +9,12 @@ This module provides REST API endpoints and views for the self-awareness system:
 - Intelligence dashboard
 """
 
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from datetime import timedelta
+from typing import Dict, Any
 
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 
@@ -37,7 +33,7 @@ from .models import (
 )
 from .core import SelfAwarenessEngine, SystemMonitor
 from .embeddings import CodebaseEmbeddingManager, SemanticCodeSearchEngine, ArchitectureAnalyzer
-from .intelligence import MetaLearningEngine, AutoOptimizer, CodeGenerator, SystemEvolutionAgent
+from .intelligence import AutoOptimizer, SystemEvolutionAgent
 
 
 logger = logging.getLogger(__name__)

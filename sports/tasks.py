@@ -191,7 +191,7 @@ def generate_accuracy_report():
 
     Should be run daily
     """
-    from sports.models import MLPrediction, SportType
+    from sports.models import MLPrediction
 
     logger.info("=" * 80)
     logger.info("SPORTS PREDICTION ACCURACY REPORT")

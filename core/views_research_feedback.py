@@ -5,12 +5,10 @@ API endpoints for submitting and managing research feedback.
 Enables the user feedback loop that trains the agent learning system.
 """
 import logging
-from uuid import UUID
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 
 import json
 
@@ -335,7 +333,6 @@ def trigger_priority_recalculation(request):
     }
     """
     from core.tasks import recalculate_spider_priorities, update_project_spider_priorities
-    from core.services.spider_priority_engine import get_spider_priority_engine
 
     try:
         data = json.loads(request.body) if request.body else {}

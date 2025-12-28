@@ -8,8 +8,6 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from django.core.cache import cache
-from django.conf import settings
-import hashlib
 import numpy as np
 
 logger = logging.getLogger(__name__)

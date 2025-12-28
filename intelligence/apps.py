@@ -19,7 +19,6 @@ class IntelligenceConfig(AppConfig):
 
         try:
             # Import and initialize the intelligence engine
-            from .realtime_engine import intelligence_engine
             logger.info("🧠 Skynet Intelligence Engine initialized")
         except Exception as e:
             logger.error(f"Failed to initialize intelligence engine: {e}")

@@ -7,12 +7,9 @@ enabling the assistant to understand the platform's operational state and provid
 information about what's real vs simulated.
 """
 
-import json
 import logging
 from datetime import datetime, timezone as tz
-from typing import Dict, Any, List, Optional
-from django.conf import settings
-from django.utils import timezone
+from typing import Dict, Any, List
 
 from core.reality_check import (
     SystemRealityChecker,
@@ -20,7 +17,6 @@ from core.reality_check import (
     ComponentType,
     ComponentRealityStatus
 )
-from core.unified_hub import UnifiedWebSocketHub
 from core.component_pipelines import ComponentDataPipeline
 
 logger = logging.getLogger(__name__)

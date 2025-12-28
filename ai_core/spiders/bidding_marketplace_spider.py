@@ -3,7 +3,6 @@ Spider for freelance marketplaces where you can BID on projects
 These are platforms where you submit proposals/bids to win contracts
 """
 import asyncio
-import json
 from datetime import datetime
 from typing import List, Dict
 

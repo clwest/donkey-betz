@@ -10,7 +10,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from .ai_job_matcher import AIJobMatcher
 from .ai_resume_generator import AIResumeGenerator

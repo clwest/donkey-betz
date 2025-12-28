@@ -7,12 +7,11 @@ This transforms the beautiful demo into an actual command center showing real-ti
 "The difference between dreaming and seeing is consciousness" - Neural Orchestra Reality Bridge
 """
 
-import json
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
-from django.db.models import Count, Q, Max
+from django.db.models import Count, Max
 from django.utils import timezone
 
 # Import existing infrastructure
@@ -22,7 +21,7 @@ from ai_core.intelligence.spider_learning_orchestrator import get_spider_orchest
 
 # Session 145: Import AgentContribution for REAL data!
 from core.models.agents_registry import UnifiedAgentTemplate, AgentContribution
-from content.models import ImageHistory, VideoHistory, MiniFigAsset, CreativeProject
+from content.models import ImageHistory, VideoHistory, MiniFigAsset
 
 
 @dataclass

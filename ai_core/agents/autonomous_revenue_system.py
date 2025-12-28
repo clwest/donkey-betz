@@ -3,7 +3,6 @@ Autonomous Revenue Generation System
 30-Day Self-Running Platform with Real Work and Self-Marketing
 """
 
-import json
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -13,7 +12,7 @@ from decimal import Decimal
 
 from .code_agent_executor import code_agent_executor
 from .real_task_executor import real_task_executor
-from .real_job_simulator import real_job_simulator, AGENT_ROSTER
+from .real_job_simulator import AGENT_ROSTER
 
 logger = logging.getLogger(__name__)
 

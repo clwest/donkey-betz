@@ -9,21 +9,17 @@ system status monitoring, and agent execution capabilities.
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from django.db import connection
-from django.db.models import Q, Count, Avg
 from django.utils import timezone
 
-from core.models import ExtendedUserProfile, EnhancedUserProfile, JobApplication, UserEmbedding, UserMemoryContext
-from core.agent_context_middleware import AgentContextMiddleware
+from core.models import EnhancedUserProfile, UserMemoryContext
 from core.personal_ai_assistant import PersonalAIAssistant
 from core.llm_enforcer import LLMEnforcer
-from core.unified_memory_manager import UnifiedMemoryManager, get_memory_manager
+from core.unified_memory_manager import get_memory_manager
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
-from ml.core.ml_engine import MLEngine
 try:
     from self_awareness.embeddings import CodebaseEmbeddings
 except ImportError:
@@ -2053,7 +2049,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         Session 154: Calls the new ffmpeg-based video enhancement views.
         """
         from django.test.client import RequestFactory
-        from django.contrib.auth.models import AnonymousUser
         import json
 
         try:
@@ -3315,7 +3310,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         logger.info(f"📁 CREATE_PROJECT_FROM_RESEARCH TOOL CALLED!")
 
         try:
-            from content.models import CreativeProject, ImageHistory
+            from content.models import CreativeProject
             from core.utils.id_resolver import resolve_image_id
 
             # Session 201: Extract all available project fields
@@ -3861,12 +3856,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             )
 
             logger.info(f"📝 Agent result: success={result.success}")
-            logger.info(f"📝 Session 340 DEBUG: result.data = {result.data}")
-            logger.info(f"📝 Session 340 DEBUG: result.data type = {type(result.data)}")
-            logger.info(f"📝 Session 340 DEBUG: result.data keys = {result.data.keys() if result.data else 'None'}")
-            if result.data and result.data.get('analysis'):
-                logger.info(f"📝 Session 340 DEBUG: analysis type = {type(result.data.get('analysis'))}")
-                logger.info(f"📝 Session 340 DEBUG: analysis[:200] = {str(result.data.get('analysis'))[:200]}")
 
             if result.success:
                 # Session 339: Build data structure for frontend
@@ -3989,12 +3978,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             )
 
             logger.info(f"📣 Agent result: success={result.success}")
-            logger.info(f"📣 Session 340 DEBUG: result.data = {result.data}")
-            logger.info(f"📣 Session 340 DEBUG: result.data type = {type(result.data)}")
-            logger.info(f"📣 Session 340 DEBUG: result.data keys = {result.data.keys() if result.data else 'None'}")
-            if result.data and result.data.get('analysis'):
-                logger.info(f"📣 Session 340 DEBUG: analysis type = {type(result.data.get('analysis'))}")
-                logger.info(f"📣 Session 340 DEBUG: analysis[:200] = {str(result.data.get('analysis'))[:200]}")
 
             if result.success:
                 # Session 339: Build data structure for frontend
@@ -4537,7 +4520,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
 
             from agents.content_executor import DonkeyBetzContentExecutor
             from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
-            import uuid
 
             # Create execution record
             try:
@@ -4865,11 +4847,6 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             target_audience = arguments.get('target_audience', 'general audience')
             word_count = arguments.get('word_count', 1500)
             research = arguments.get('research_context', '')
-
-            # Session 522: Log what GPT passed us
-            logger.info(f"🔍 Session 522 DEBUG: research_context from GPT = '{research[:200] if research else 'EMPTY'}'")
-            logger.info(f"🔍 Session 522 DEBUG: task = '{task}'")
-            logger.info(f"🔍 Session 522 DEBUG: will_fetch_spider_data = {not research and bool(task)}")
 
             # Session 521: Fetch REAL spider data if no research provided
             spider_context = {}
@@ -9632,7 +9609,7 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         if len(conversations) < 2:
             return "new_user"
 
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         now = timezone.now()
         recent_conversations = [

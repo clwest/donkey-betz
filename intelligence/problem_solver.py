@@ -12,7 +12,7 @@ import hashlib
 import timeit
 import tracemalloc
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict
 from intelligence.solution_storage import SolutionStorage
 from intelligence.reallearning.solution import Solution
 

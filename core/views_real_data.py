@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 @csrf_exempt
 @require_http_methods(["GET"])

@@ -8,10 +8,9 @@ import logging
 import asyncio
 import redis.asyncio as redis
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Optional
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
 
 from .llm_enforcer import get_llm_enforcer
 from core.prompts import get_command_center_prompt

@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 import json
 
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
-from agents.tasks_enhanced import execute_agent_with_tools, execute_tool
-from sports.models import Game, Team, League
+from agents.tasks_enhanced import execute_tool
+from sports.models import Game
 from core.tools import ToolRegistry
 
 

@@ -2,7 +2,6 @@
 Management command to deploy spider army
 """
 from django.core.management.base import BaseCommand
-from django.core.cache import cache
 import redis
 from ai_core.spiders.tasks import (
     deploy_full_army,
@@ -10,7 +9,6 @@ from ai_core.spiders.tasks import (
     activate_spider_wave,
     clean_inactive_spiders
 )
-import json
 
 class Command(BaseCommand):
     help = 'Deploy the spider army (1,770 spiders)'

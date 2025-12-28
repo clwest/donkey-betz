@@ -827,7 +827,7 @@ from core.profile_views import (
     upload_avatar_view, delete_avatar_view, update_profile_view, generate_avatar_view
 )
 from core.views_user_profile import (
-    profile_extended, ai_configuration, agents_assigned, execute_command
+    ai_configuration, agents_assigned, execute_command
 )
 from core.views_real_income_builder import (
     real_income_opportunities, analyze_real_opportunities
@@ -1085,9 +1085,9 @@ from core.views_agent_ecosystem import (
     get_ecosystem_status
 )
 from core.views_agent_orchestration import (
-    list_agents, get_agents_by_specialization, execute_agent as execute_agent_orchestration,
-    orchestrate_multi_agent_task, suggest_agent, route_task, get_agent_status, health_check_agents,
-    get_agent_details, refresh_agent_discovery
+    list_agents, get_agents_by_specialization, orchestrate_multi_agent_task,
+    suggest_agent, route_task, get_agent_status, health_check_agents, get_agent_details,
+    refresh_agent_discovery
 )
 from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,

@@ -25,7 +25,7 @@ continuously feeds learning data, enabling true AI learning at scale.
 
 import asyncio
 import logging
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
 import json
@@ -771,27 +771,21 @@ class SpiderLearningOrchestrator:
 
     async def _collect_raw_intelligence(self):
         """Pipeline stage: Collect raw intelligence from all spiders"""
-        pass
 
     async def _normalize_intelligence(self):
         """Pipeline stage: Normalize intelligence to common format"""
-        pass
 
     async def _extract_learning_signals(self):
         """Pipeline stage: Extract learning signals from intelligence"""
-        pass
 
     async def _enrich_with_context(self):
         """Pipeline stage: Enrich signals with contextual data"""
-        pass
 
     async def _route_to_learners(self):
         """Pipeline stage: Route signals to appropriate learners"""
-        pass
 
     async def _cache_for_replay(self):
         """Pipeline stage: Cache signals for replay and analysis"""
-        pass
 
     async def get_spider_statistics(self) -> Dict[str, Any]:
         """Get statistics about spider network including Spider Army"""

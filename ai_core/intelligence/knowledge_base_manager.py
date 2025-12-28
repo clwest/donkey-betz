@@ -3,13 +3,12 @@ Agent Knowledge Base Manager
 Manages persistent knowledge bases for all 152+ agents
 """
 
-import asyncio
 import json
 import logging
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict, Counter
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 # Import models
 try:

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Session 266: Import from central registry
 try:
-    from core.prompts import get_agent_prompt, get_platform_context
+    from core.prompts import get_agent_prompt
     REGISTRY_AVAILABLE = True
 except ImportError:
     REGISTRY_AVAILABLE = False

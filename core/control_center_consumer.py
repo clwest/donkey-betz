@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Count, Q
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

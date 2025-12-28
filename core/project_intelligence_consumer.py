@@ -17,7 +17,6 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +141,7 @@ class ProjectIntelligenceConsumer(AsyncWebsocketConsumer):
         """Fetch learning activity for this project."""
         from core.models_partnership import PartnershipProject
         from core.models_unified_system import AgentKnowledgeSource, ProjectResearchFeedback
-        from core.models import KnowledgeTransfer, Agent
+        from core.models import KnowledgeTransfer
         from django.db.models import Avg
 
         try:

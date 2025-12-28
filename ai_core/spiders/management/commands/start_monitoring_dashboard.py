@@ -23,7 +23,6 @@ import signal
 import sys
 import threading
 from django.core.management.base import BaseCommand
-from django.conf import settings
 
 from ...monitoring_dashboard import create_monitoring_dashboard, create_network_monitor
 

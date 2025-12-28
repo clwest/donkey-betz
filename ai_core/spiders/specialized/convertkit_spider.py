@@ -6,7 +6,6 @@ Session 218: Specialized spider for ConvertKit creator platform.
 Focuses on creator economy, email marketing, and audience building.
 """
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 import feedparser

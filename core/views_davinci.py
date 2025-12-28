@@ -24,7 +24,6 @@ from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.core.files.base import ContentFile
 
 from content.davinci_provider import get_davinci_provider
 from content.models import VideoHistory

@@ -4,7 +4,7 @@ Rendering Tests - Session 105
 Test suite for RenderJob model and API endpoints.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse

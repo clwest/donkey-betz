@@ -64,7 +64,6 @@ class Command(BaseCommand):
             if limit:
                 # For testing, just process a few files manually
                 from self_awareness.models import CodeEmbedding
-                import os
 
                 code_files = manager._get_code_files()[:limit]
                 self.stdout.write(

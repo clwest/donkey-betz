@@ -8,7 +8,6 @@ completion percentages, and deliverable generation.
 """
 
 import json
-import asyncio
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from datetime import datetime

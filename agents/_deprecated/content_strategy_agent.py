@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import json
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from core.super_platform.spider_context_mixin import SpiderContextMixin

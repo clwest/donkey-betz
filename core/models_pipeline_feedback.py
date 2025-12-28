@@ -21,11 +21,9 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Avg, Count, F, Q
-from django.utils import timezone
 
 if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser as User
+    pass
 
 
 # =============================================================================

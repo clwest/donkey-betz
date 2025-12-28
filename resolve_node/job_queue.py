@@ -17,7 +17,7 @@ from queue import Queue, Empty
 import config
 from models import RenderJob, JobStatus
 from resolve_controller import ResolveController
-from utils import logger, get_file_size_mb, format_duration, get_error_response
+from utils import logger, get_file_size_mb, format_duration
 
 
 class JobQueue:

@@ -1,6 +1,7 @@
 # core/llm_ollama.py
 from __future__ import annotations
-import os, json, httpx
+import os
+import httpx
 
 OLLAMA_URL   = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
 OLLAMA_MODEL = os.environ.get("LLM_MODEL", "qwen2.5:14b-instruct")

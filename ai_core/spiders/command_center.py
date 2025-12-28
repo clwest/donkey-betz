@@ -20,17 +20,13 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 import redis
-import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
 from flask import Flask, render_template, jsonify, request
 import threading
 
-from .spider_army_orchestrator import SpiderArmyOrchestrator, ArmyStats, SpiderType
-from .base_spider import SpiderMetrics
+from .spider_army_orchestrator import SpiderArmyOrchestrator
 
 logger = logging.getLogger(__name__)
 

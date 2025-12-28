@@ -11,11 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from core.services.event_bus import (
-    Event, EventStream, EventPriority,
-    get_event_bus,
-    publish_opportunity_scored_event,
-    publish_validation_required_event,
-    publish_system_alert_event
+    Event, EventStream, get_event_bus
 )
 
 logger = logging.getLogger(__name__)

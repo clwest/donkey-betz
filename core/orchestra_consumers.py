@@ -8,8 +8,7 @@ import asyncio
 import logging
 import time
 import random
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
@@ -152,7 +151,6 @@ class NeuralOrchestraConsumer(AsyncWebsocketConsumer):
         """Old implementation - kept for reference"""
         try:
             from ai_core.agents.real_job_simulator import real_job_simulator
-            from ai_core.agents.intelligent_job_matcher import IntelligentJobMatcher
 
             # Get active sessions to show real agent activity
             active_sessions = real_job_simulator.generate_active_sessions(10)
@@ -911,7 +909,7 @@ class ControlConsumer(AsyncWebsocketConsumer):
             from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
             from core.models import Revenue
             from core.models_unified_system import Advisor
-            from datetime import datetime, timedelta
+            from datetime import timedelta
 
             # Get real agent counts
             total_agents_count = UnifiedAgentTemplate.objects.filter(is_active=True).count()

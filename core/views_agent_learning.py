@@ -428,7 +428,6 @@ def get_agent_conversations(request):
     """
     try:
         from django.utils import timezone
-        from datetime import timedelta
         from core.models import AgentConversation, Agent
         from core.models_unified_system import HiveMindSession
 
@@ -1743,7 +1742,7 @@ def get_validation_metrics(request):
     try:
         from core.models_unified_system import DreamImplementation
         from core.models import Agent
-        from django.db.models import Count, Avg, Q
+        from django.db.models import Avg
 
         agent_id = request.GET.get('agent_id')
 
@@ -1984,7 +1983,7 @@ def get_conversation_detail(request, conversation_id):
     Returns complete conversation with all messages from all participants.
     """
     try:
-        from core.models import AgentConversation, ConversationMessage
+        from core.models import AgentConversation
 
         # Get the conversation
         try:

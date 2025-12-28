@@ -22,16 +22,7 @@ class LearningBridgesConfig(AppConfig):
         """
         try:
             # Import all bridge modules to register their signals
-            from . import (
-                agent_execution_bridge,
-                application_outcome_bridge,
-                revenue_attribution_bridge,
-                advisor_feedback_bridge,
-                collaboration_bridge,
-                personalization_bridge,
-                sports_betting_bridge,
-                spider_data_bridge,
-            )
+            pass
 
             logger.info("✅ Learning Bridges initialized - all signals registered")
             logger.info("  - Agent Execution Bridge: ✓")

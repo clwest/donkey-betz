@@ -6,7 +6,6 @@ Handles video generation requests using RunwayML Gen-3 Alpha.
 
 import json
 import logging
-from typing import Dict, Any
 import requests
 from io import BytesIO
 from PIL import Image
@@ -15,7 +14,6 @@ import os
 import subprocess
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -34,7 +32,6 @@ from core.decorators import rate_limit
 # Phase 2 P1: Input validation
 from core.validators import validate_prompt, sanitize_prompt, validate_uuid, validate_numeric_range, validate_url
 # Phase 2 P1: Safe error handling
-from core.responses import safe_error_message, handle_exception
 
 logger = logging.getLogger(__name__)
 
@@ -872,7 +869,6 @@ def check_video_status(request, task_id):
 
             except VideoHistory.DoesNotExist:
                 logger.warning(f"⚠️ No ContentGeneration or VideoHistory found for task: {task_id}")
-                pass
 
         # Return status response
         response_data = {
@@ -1618,11 +1614,6 @@ def extend_video_endpoint(request):
         extension_seconds = int(data.get('extension_seconds', 10))
         prompt = data.get('prompt', '').strip()
 
-        # DEBUG: Print what we received
-        print(f"🔍 DEBUG - Received data: {data}")
-        print(f"🔍 DEBUG - video_url: '{video_url}'")
-        print(f"🔍 DEBUG - extension_seconds: {extension_seconds}")
-
         # Validate video URL provided
         if not video_url:
             return JsonResponse({
@@ -1990,7 +1981,6 @@ def upscale_video(request):
 
         logger.info(f"🚀 Running ffmpeg upscale: {' '.join(cmd)}")
 
-        import subprocess
         result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
@@ -2207,7 +2197,6 @@ def apply_video_effect(request):
 
         logger.info(f"🚀 Running ffmpeg effect: {effect}")
 
-        import subprocess
         result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
@@ -2450,7 +2439,6 @@ def extract_video_frame(request):
 
         logger.info(f"🚀 Running ffmpeg frame extraction: {' '.join(cmd)}")
 
-        import subprocess
         result = _run_ffmpeg(cmd)
 
         if result.returncode != 0:
@@ -2668,7 +2656,6 @@ def reverse_video(request):
         # Reverse video using ffmpeg
         # -vf reverse: reverse video frames
         # -af areverse: reverse audio (optional)
-        import subprocess
 
         if reverse_audio:
             cmd = [
@@ -2943,7 +2930,6 @@ def trim_video(request):
 
         # Trim video using ffmpeg
         # -ss before -i for fast seeking, -to for end time, -c copy for lossless
-        import subprocess
 
         cmd = [
             'ffmpeg',
@@ -5500,9 +5486,8 @@ def stabilize_video(request):
     """
     import tempfile
     import subprocess
-    import uuid
     from django.utils import timezone as tz
-    from content.models import VideoHistory, ImageHistory, CreativeProject
+    from content.models import VideoHistory, CreativeProject
 
     logger.info("🎬 [Session 164] stabilize_video() called")
 

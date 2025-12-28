@@ -7,7 +7,6 @@ import asyncio
 import logging
 from datetime import datetime
 from celery import shared_task
-from django.conf import settings
 from .realtime_engine import intelligence_engine
 
 logger = logging.getLogger(__name__)
@@ -70,8 +69,6 @@ def execute_action_plan(self, action_plan_id):
     from core.agents.registry import agent_registry
     from channels.layers import get_channel_layer
     from asgiref.sync import async_to_sync
-    import time
-    import random
 
     channel_layer = get_channel_layer()
 
@@ -398,7 +395,6 @@ def execute_action_plan(self, action_plan_id):
                     plan.add_log("📄 Creating real files with actual content...", level='info')
 
                     # Create real files with actual researched content
-                    import os
                     from pathlib import Path
 
                     output_dir = Path("income_builder_outputs")
@@ -876,7 +872,6 @@ Execute this task with maximum efficiency and creativity. You have full autonomy
 
                 # Save the generated content with real data to a file
                 if generated_content:
-                    import os
                     from pathlib import Path
                     from intelligence.action_plan_formatter import action_plan_formatter
 

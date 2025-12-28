@@ -26,7 +26,7 @@ Child agents only need to define:
 import logging
 import json
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from abc import abstractmethod
 
 from openai import OpenAI
@@ -251,7 +251,6 @@ class BaseBusinessResearchAgent:
         Child classes MUST implement this to define how their research
         should be synthesized.
         """
-        pass
 
     def _get_synthesis_tool(self) -> Dict:
         """Get the synthesis tool definition for this agent."""

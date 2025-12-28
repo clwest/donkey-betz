@@ -21,7 +21,7 @@ from datetime import datetime
 from .query_classifier import QueryType, ClassificationResult
 
 # Session 266: Central prompt registry
-from core.prompts import DYNAMIC_PROMPT_SECTIONS, QUERY_TYPE_INTROS, get_dynamic_section
+from core.prompts import DYNAMIC_PROMPT_SECTIONS, QUERY_TYPE_INTROS
 
 
 @dataclass
@@ -68,7 +68,6 @@ class DynamicPromptBuilder:
 
     def __init__(self):
         """Initialize the prompt builder."""
-        pass
 
     def build(self, context: PromptContext) -> str:
         """

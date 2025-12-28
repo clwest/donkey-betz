@@ -19,7 +19,7 @@ that improves recommendations over time.
 from __future__ import annotations
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
 from dataclasses import dataclass

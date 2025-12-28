@@ -14,7 +14,7 @@ This service provides:
 from datetime import timedelta
 from collections import Counter, defaultdict
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count
 from typing import Optional
 import json
 import re

@@ -15,8 +15,7 @@ Key Features:
 import json
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-from django.core.cache import cache
+from datetime import timedelta
 from django.utils import timezone
 from celery import shared_task
 import redis

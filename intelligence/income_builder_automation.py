@@ -17,7 +17,7 @@ import asyncio
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from intelligence.task_delegation_orchestrator import TaskDelegationOrchestrator, TaskStatus
 from core.agents import OpportunityPipelineAgent
 
@@ -285,7 +285,6 @@ class IncomeBuilderAutomation:
     async def _send_webhooks(self, delegation: Dict[str, Any], result: Dict[str, Any]):
         """Send webhook notifications"""
         # Implementation for webhook notifications
-        pass
 
     async def _generate_execution_report(self, context: Dict[str, Any]):
         """Generate final execution report"""

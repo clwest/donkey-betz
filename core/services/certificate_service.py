@@ -29,7 +29,6 @@ Usage:
 
 import io
 import logging
-import hashlib
 from datetime import datetime
 from typing import Optional, Dict
 from dataclasses import dataclass
@@ -39,15 +38,11 @@ from django.conf import settings
 # PDF generation
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.lib.colors import HexColor, black, white
+from reportlab.lib.colors import HexColor, white
 from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Paragraph
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # QR code
 import qrcode
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@ Handles real-time updates for the AI agent money-making platform
 import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
 from django.core.cache import cache
 import logging
 
@@ -257,7 +256,6 @@ class AgentPlatformConsumer(AsyncWebsocketConsumer):
 
             if not status:
                 # Generate sample agent breakdown
-                from ai_core.agents.real_job_simulator import real_job_simulator
                 agent_breakdown = []
 
                 # Create a few sample agents with diverse skills

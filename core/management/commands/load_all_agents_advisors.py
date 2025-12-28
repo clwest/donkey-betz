@@ -4,9 +4,7 @@ This is where 18 months of work comes together!
 """
 
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
 from core.models import Agent, Advisor, AgentCategory
-from decimal import Decimal
 import json
 
 class Command(BaseCommand):

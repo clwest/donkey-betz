@@ -18,7 +18,7 @@ Session 558: Initial implementation
 """
 
 import requests
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 import logging
 

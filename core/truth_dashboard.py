@@ -15,19 +15,14 @@ The TruthDashboard provides:
 - Real-time monitoring capabilities
 """
 
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.utils import timezone
 from django.core.cache import cache
-from django.template.loader import render_to_string
-from django.conf import settings
-import os
 
-from .reality_check import system_reality_checker, RealityStatus, ComponentType
+from .reality_check import system_reality_checker, ComponentType
 from .data_flow_tracer import data_flow_tracer, FlowType
 
 logger = logging.getLogger(__name__)

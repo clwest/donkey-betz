@@ -1,14 +1,13 @@
 """
 Spider Celery Tasks for Deploying and Managing Spider Army
 """
-from celery import shared_task, group
-from celery.result import GroupResult
+from celery import shared_task
 import redis
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 

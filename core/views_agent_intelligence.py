@@ -19,10 +19,8 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from typing import Dict, Any
 
 from core.services.ai_content_agents import (
-    AI_CONTENT_AGENTS,
     get_agent,
     get_all_agents,
     get_agents_by_capability,

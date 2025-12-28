@@ -8,9 +8,8 @@ import json
 import asyncio
 import aiohttp
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import hashlib
-from urllib.parse import urlparse
 import redis
 
 logger = logging.getLogger(__name__)

@@ -7,9 +7,8 @@ real outcomes, measuring value created, and verifying user success metrics.
 
 import json
 import uuid
-from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime
+from typing import Dict, Optional, Tuple
 import redis
 import hashlib
 import logging

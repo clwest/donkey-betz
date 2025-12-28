@@ -9,15 +9,11 @@ Architecture:
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 from content.models import CharacterModel
 from content.character_training import (
-    validate_training_image,
-    process_training_images,
-    create_training_zip,
     submit_training_job,
     update_training_status,
     create_character_workflow

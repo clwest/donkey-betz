@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from core.models_unified_system import SpiderData
 
@@ -551,7 +551,7 @@ def spider_health_summary(request):
     Session 484: Get overall spider health summary for dashboard.
     """
     from core.models_unified_system import SpiderExecutionLog, SpiderData
-    from django.db.models import Count, Avg
+    from django.db.models import Count
 
     # Time windows
     now = timezone.now()

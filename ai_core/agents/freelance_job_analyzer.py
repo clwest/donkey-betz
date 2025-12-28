@@ -3,7 +3,7 @@ Freelance Job Analyzer Agent
 Analyzes freelance opportunities and creates detailed project plans
 """
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 import logging
 

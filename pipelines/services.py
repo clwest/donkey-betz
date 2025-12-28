@@ -10,13 +10,11 @@ import logging
 import json
 from typing import Dict, List, Optional, Any
 from django.conf import settings
-from django.db import transaction
 
 from .models import CreativePipelineTemplate, CreativePipelineRun
 from content.models import CreativeProject, AISession, ImageHistory
 from content.image_generation import ImageGenerationService
 from content import minifig_services
-from core.views_video import text_to_video
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)

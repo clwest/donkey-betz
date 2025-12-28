@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 
 from .agent_execution_pipeline import AgentExecutionPipeline
-from ai_core.spiders.spider_army_orchestrator import SpiderArmyOrchestrator
 
 logger = logging.getLogger(__name__)
 

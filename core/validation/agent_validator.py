@@ -10,7 +10,6 @@ Validates the agent ecosystem including:
 """
 
 import logging
-from django.conf import settings
 
 from .base import BaseValidationAgent
 

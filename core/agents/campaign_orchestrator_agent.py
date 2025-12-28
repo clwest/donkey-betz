@@ -19,7 +19,7 @@ Pipeline:
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
@@ -507,7 +507,7 @@ Always provide status updates and be transparent about what's being created."""
     def _run_strategy_phase(self, campaign_id: str) -> Dict[str, Any]:
         """Execute the strategy phase."""
         try:
-            from core.models_campaign import Campaign, CampaignResearch
+            from core.models_campaign import Campaign
 
             campaign = Campaign.objects.get(id=campaign_id)
             campaign.status = 'strategy'

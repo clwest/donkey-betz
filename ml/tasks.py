@@ -151,7 +151,6 @@ def cleanup_old_model_files(keep_versions: int = 5):
         dict: Cleanup statistics
     """
     import os
-    from pathlib import Path
     from ml.models import MLModelVersion
 
     logger.info(f"🧹 Cleaning up old model files (keeping {keep_versions} versions per sport)")

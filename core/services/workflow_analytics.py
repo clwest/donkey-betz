@@ -13,12 +13,12 @@ Provides:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, TypedDict
 from collections import defaultdict
 
-from django.db.models import Avg, Count, Sum, F, Q
-from django.db.models.functions import TruncDate, TruncHour, ExtractHour, ExtractWeekDay
+from django.db.models import Avg, Count, Sum, Q
+from django.db.models.functions import TruncDate, ExtractHour, ExtractWeekDay
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 

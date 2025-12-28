@@ -14,15 +14,14 @@ After 18 months of development - THIS IS THE REAL DEAL!
 
 import asyncio
 import logging
-import json
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any
+from datetime import datetime
 from django.core.cache import cache
 
 # Import our real money-making components
-from .real_client_acquisition import real_client_acquisition, RealJobOpportunity
+from .real_client_acquisition import real_client_acquisition
 from .ai_proposal_engine import ai_proposal_engine, generate_winning_proposal_for_job
-from .automated_job_bot import automated_job_bot, ApplicationResult
+from .automated_job_bot import automated_job_bot
 from .real_work_delivery_engine import real_work_delivery_engine, execute_real_project
 from .real_payment_processor import real_payment_processor, create_client_payment_request
 

@@ -987,7 +987,6 @@ def dashboard_stats(request):
     This is the single source of truth for all dashboard numbers.
     Frontend should call this once and cache for 30 seconds.
     """
-    import os
     from datetime import timedelta
     from django.utils import timezone
 
@@ -1133,7 +1132,6 @@ def spider_data_feed(request):
         offset: Pagination offset
         sort: 'recent' or 'score'
     """
-    from django.utils import timezone
     from core.models_unified_system import SpiderData
 
     try:
@@ -1319,7 +1317,6 @@ def spider_knowledge(request):
         type: Filter by knowledge_type (trend, market, opportunity, etc.)
         limit: Max items (default 50)
     """
-    from django.utils import timezone
     from django.db.models import Count, Avg
     from core.models_unified_system import AgentKnowledgeSource, KnowledgeTransfer, AgentMemory
 
@@ -1358,7 +1355,6 @@ def spider_knowledge(request):
         )
 
         # Session 399: Get DIVERSE transfers (unique agent pairs with counts)
-        from django.db.models import F
 
         # Get unique transfer patterns with counts
         transfer_patterns = list(
@@ -1606,7 +1602,6 @@ def spider_timeline(request):
 
         # Session 399: Count actual browseable items per source (not just records)
         # This helps users know which sources have data they can view
-        from django.db.models import JSONField
 
         browseable_counts = {}
         for spider_name in set(f['spider_name'] for f in freshness):
@@ -1675,7 +1670,7 @@ def intelligence_cross_references(request):
     """
     try:
         from collections import defaultdict
-        from core.models_unified_system import Agent, AgentKnowledgeSource
+        from core.models_unified_system import AgentKnowledgeSource
         from core.models_situation_triggers import SituationTrigger
         from ai_core.spiders.spider_registry import SpiderRegistry
 
@@ -1943,8 +1938,6 @@ def agent_detail(request, agent_name):
     """
     try:
         from core.models_unified_system import Agent, AgentConversation, AgentKnowledgeSource, KnowledgeTransfer
-        from django.utils import timezone
-        from datetime import timedelta
 
         # Find the agent (case-insensitive)
         agent = Agent.objects.filter(name__iexact=agent_name).first()

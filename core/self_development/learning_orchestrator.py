@@ -12,10 +12,9 @@ This is the MASTER CONTROLLER that:
 
 import logging
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, List
 from django.core.cache import cache
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
 

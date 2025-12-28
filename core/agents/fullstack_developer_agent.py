@@ -11,8 +11,7 @@ This agent can:
 
 import json
 import re
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentResult
 

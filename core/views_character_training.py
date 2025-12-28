@@ -19,7 +19,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.uploadedfile import UploadedFile
 
-from content.models import CharacterModel, CharacterTrainingImage
+from content.models import CharacterModel
 from content.character_training import (
     create_character_workflow,
     submit_training_job,

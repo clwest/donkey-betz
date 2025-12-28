@@ -7,11 +7,9 @@ raw market data into actionable insights across all domains.
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from decimal import Decimal
+from typing import Dict, List, Any
 import numpy as np
 from dataclasses import dataclass, asdict
 from channels.layers import get_channel_layer

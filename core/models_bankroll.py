@@ -112,7 +112,7 @@ class Bankroll(models.Model):
 
     def update_stats(self):
         """Recalculate stats from wager history."""
-        from django.db.models import Sum, Count
+        from django.db.models import Sum
 
         wagers = self.wagers.all()
 

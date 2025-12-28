@@ -14,12 +14,10 @@ Features:
 """
 
 import logging
-import asyncio
 import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from django.db import transaction
 from django.utils import timezone
 
 from core.models.agents_registry import (
@@ -30,7 +28,6 @@ from core.models.agents_registry import (
     AgentStatus
 )
 from intelligence.agent_executor import AgentExecutor
-from intelligence.agent_learning import AgentLearningSystem
 
 logger = logging.getLogger(__name__)
 

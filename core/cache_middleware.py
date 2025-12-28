@@ -2,14 +2,9 @@
 Redis caching middleware for API responses
 """
 import json
-import hashlib
-from django.core.cache import cache
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from functools import wraps
 import redis
-from django.conf import settings
 
 # Connect to Redis
 redis_client = redis.Redis(

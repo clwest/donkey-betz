@@ -6,10 +6,9 @@ user context for personalized AI responses and decision making.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from functools import wraps
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,6 @@ import logging
 from typing import Dict, List, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
-import asyncio
-import redis
 import requests
 
 logger = logging.getLogger(__name__)

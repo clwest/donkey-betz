@@ -5,9 +5,7 @@ Serves real-time learning data for the AI-proof jobs learning dashboard
 """
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 import redis
-import json
 from datetime import datetime
 
 def learning_dashboard_data(request):

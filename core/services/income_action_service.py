@@ -12,11 +12,8 @@ This is the missing "action layer" between data collection and revenue.
 """
 
 import logging
-import json
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 from datetime import datetime, timezone
-from django.db import models
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

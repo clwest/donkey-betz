@@ -5,9 +5,6 @@ API endpoints for the Autonomous Revenue System
 from rest_framework import views, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.http import JsonResponse
-import asyncio
-import json
 from datetime import datetime
 from ai_core.agents.autonomous_revenue_system import AutonomousRevenueSystem
 

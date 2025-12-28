@@ -3,7 +3,6 @@ Serializers for the Agent Registry API
 """
 
 from rest_framework import serializers
-from rest_framework.fields import JSONField
 from django.contrib.auth import get_user_model
 
 # Session 392: Updated to use canonical import path

@@ -6,14 +6,11 @@ boardroom decisions) filtered by project. This enables each project to have
 its own intelligence hub.
 """
 import logging
-from uuid import UUID
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 from django.db import models
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -388,7 +385,7 @@ def get_project_intelligence_overview(request, project_id):
             AgentDecisionSummary,
         )
         from core.models import AgentConversation, AgentDream
-        from django.db.models import Avg, Count
+        from django.db.models import Avg
 
         project = PartnershipProject.objects.get(id=project_id)
 
@@ -846,7 +843,7 @@ def post_project_slack_message(request, project_id):
 
     try:
         from core.models_partnership import PartnershipProject
-        from core.models import Agent, AgentChannel, ChannelMessage, ChannelMembership
+        from core.models import Agent, AgentChannel, ChannelMessage
         import re
 
         project = PartnershipProject.objects.get(id=project_id)

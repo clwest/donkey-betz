@@ -4,7 +4,6 @@ Views for categorized opportunities API
 
 import json
 import logging
-from typing import Dict, List, Any
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -12,8 +11,6 @@ from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views import View
 from intelligence.unified_spider_job_bridge import UnifiedSpiderJobBridge
-from ml_pipeline.opportunity_categorizer import get_opportunity_categorizer
-import asyncio
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,6 @@ Endpoints:
 - GET /api/upload/chunked/<uuid>/status/ - Check upload status
 """
 
-import os
 import uuid
 import json
 import subprocess

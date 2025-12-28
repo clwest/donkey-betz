@@ -14,7 +14,7 @@ discuss trending topics with actual research and different perspectives.
 
 import logging
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from django.utils import timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult

@@ -11,10 +11,10 @@ This service replaces the limited "5 recent transfers" approach with:
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from datetime import timedelta
 
-from django.db.models import Q, Count, Avg, F
+from django.db.models import Q, Count, Avg
 from django.db.models.functions import Length
 from django.utils import timezone
 

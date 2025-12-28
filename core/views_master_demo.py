@@ -5,10 +5,8 @@ Master Demo View - Unified AI Learning System Showcase
 from django.shortcuts import render
 from django.http import JsonResponse
 from core.models.agents_registry import UnifiedAgentTemplate
-from core.models import GeneratedProject, GeneratedCode
+from core.models import GeneratedProject
 import redis
-import json
-from datetime import datetime
 
 def master_ai_demo(request):
     """Master demo combining all AI capabilities"""

@@ -30,7 +30,7 @@ Session 290: Simplified Relationships to Synergy, updated service
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.utils import timezone
 from django.core.cache import cache
@@ -250,7 +250,6 @@ class SciFiIntegrationService:
 
     def __init__(self):
         """Initialize the sci-fi integration service."""
-        pass
 
     def get_scifi_context(
         self,
@@ -324,7 +323,7 @@ class SciFiIntegrationService:
     def _get_mood_influence(self, agent_name: str) -> Optional[MoodInfluence]:
         """Get mood influence for an agent."""
         try:
-            from core.models_unified_system import AgentMood, Agent
+            from core.models_unified_system import AgentMood
 
             # Try to find mood by agent name via FK
             # Note: AgentMood uses 'last_updated' not 'updated_at'

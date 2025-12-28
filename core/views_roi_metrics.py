@@ -678,9 +678,9 @@ def roi_dashboard(request):
     """
     try:
         from core.models_unified_system import (
-            ConversionEvent, ROIMetric, AttributionPath, WeeklyIntelligenceBrief
+            ConversionEvent, AttributionPath, WeeklyIntelligenceBrief
         )
-        from django.db.models import Sum, Count
+        from django.db.models import Sum
         from datetime import timedelta
 
         now = timezone.now()

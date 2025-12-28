@@ -5,23 +5,19 @@ This module provides comprehensive metadata tracking for all agent activities,
 project states, performance metrics, and collaboration patterns.
 """
 
-import json
-import hashlib
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 
-from django.db import models, transaction
 from django.core.cache import cache
 from django.utils import timezone
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,
-    AgentExecution,
-    AgentOrchestration
+    AgentExecution
 )
-from core.models import GeneratedProject, GeneratedCode
+from core.models import GeneratedProject
 
 
 @dataclass
@@ -485,7 +481,6 @@ class EnhancedMetadataTracker:
     def _update_agent_aggregates(self, agent: UnifiedAgentTemplate, metrics: Dict[str, Any]) -> None:
         """Update aggregated metrics for an agent"""
         # This would update running averages and totals
-        pass
 
     def _update_project_summary(self, project: GeneratedProject) -> None:
         """Update project summary statistics"""

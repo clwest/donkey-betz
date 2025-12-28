@@ -6,11 +6,8 @@ Supports both synchronous (for development/testing) and asynchronous
 """
 
 import logging
-import json
 import asyncio
-from typing import Dict, Any, Optional, List, Literal
-from datetime import datetime
-from django.utils import timezone
+from typing import Dict, Any, List, Literal
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -244,7 +241,7 @@ class HybridAgentExecutor:
         user=None
     ) -> Dict[str, Any]:
         """Execute agent chain using Celery task chaining"""
-        from celery import chain, group, chord
+        from celery import chain
         from agents.tasks import execute_agent as execute_agent_task
 
         # Build Celery chain

@@ -7,7 +7,7 @@ import asyncio
 import logging
 import hashlib
 import json
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 
 # OpenAI for embeddings

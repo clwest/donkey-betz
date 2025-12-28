@@ -5,12 +5,10 @@ Detects when narratives shift - when the story changes.
 "Something just changed in how people think about X"
 """
 
-import json
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from django.utils import timezone
-from django.db.models import Count, Avg, F
 from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult

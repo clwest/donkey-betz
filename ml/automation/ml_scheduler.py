@@ -9,7 +9,7 @@ import asyncio
 import schedule
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from pathlib import Path
 import threading
 from dataclasses import dataclass
@@ -21,7 +21,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_core.settings')
 django.setup()
 
 from django.core.cache import cache
-from django.utils import timezone
 
 # Local imports
 import sys

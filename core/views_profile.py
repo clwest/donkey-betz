@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 
 # This will use the existing User model and extend it
-from django.contrib.auth.models import User
 
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(login_required, name='dispatch')

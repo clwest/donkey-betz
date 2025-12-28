@@ -6,8 +6,6 @@ to prove that real money is being generated, tracked, and attributed correctly.
 """
 
 import uuid
-from decimal import Decimal
-from datetime import datetime
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -270,7 +268,7 @@ class AgentRevenuePerformance(models.Model):
 
     def update_metrics(self):
         """Recalculate all metrics based on transactions"""
-        from django.db.models import Sum, Avg, Count
+        from django.db.models import Sum
         from datetime import timedelta
 
         now = timezone.now()

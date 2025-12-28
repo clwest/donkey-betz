@@ -2,16 +2,12 @@
 Management command to migrate agents from donkey-betz-agent-orchestra
 """
 
-import os
-import sys
-import json
 import logging
 from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.conf import settings
 
-from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry, AgentTool
+from core.models.agents_registry import UnifiedAgentTemplate, AgentRegistry
 
 
 logger = logging.getLogger(__name__)

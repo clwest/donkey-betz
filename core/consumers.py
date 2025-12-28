@@ -4,7 +4,6 @@ Migrated from DBAO tools-manifest WebSocket capabilities and ai-content-studio.
 """
 
 import json
-import asyncio
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -17,13 +16,10 @@ except ImportError:
     intelligence_engine = None
 
 # Import sports updates consumer
-from .consumers_sports import SportsUpdatesConsumer
 
 # Import hallucination monitor consumer
-from .consumers_hallucination import HallucinationMonitorConsumer
 
 # Import AI Training consumer
-from .consumers_ai_training import AITrainingConsumer
 
 # Import interview consumer
 try:
@@ -722,7 +718,7 @@ class AssistantChatConsumer(SafeWebSocketMixin, AsyncWebsocketConsumer):
         """Notify other platform systems about completed profile"""
         try:
             # Notify the unified platform connector
-            from frontend.src.services.UnifiedPlatformConnector import unifiedConnector
+            pass
 
             # Send profile completion to income builder and job matching systems
             await self.channel_layer.group_send(
@@ -1744,10 +1740,8 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         try:
-            print(f"[DEBUG] CommandCenterConsumer received raw: {text_data}")
             text_data_json = json.loads(text_data)
             message_type = text_data_json.get('type', 'ping')
-            print(f"[DEBUG] Message type: {message_type}")
 
             if message_type == 'ping':
                 await self.safe_send({
@@ -1869,7 +1863,6 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
         """Handle starting an opportunity action plan"""
         try:
             from intelligence.income_builder import income_builder
-            from intelligence.models import ActionPlan, OpportunityActionPlan
 
             user_id = data.get('user_id', 'user_1')
             opportunity_id = data.get('opportunity_id')
@@ -1912,7 +1905,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
     async def handle_update_profile(self, data):
         """Handle user profile updates"""
         try:
-            from intelligence.models import UserIncomeProfile
+            pass
 
             profile_data = data.get('profile', {})
             user_id = profile_data.get('id', 'user_1')
@@ -1941,7 +1934,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
     async def handle_get_earnings(self, data):
         """Handle earnings data request"""
         try:
-            from intelligence.models import EarningRecord
+            pass
 
             user_id = data.get('user_id', 'user_1')
 
@@ -2033,7 +2026,7 @@ class CommandCenterConsumerLegacy(SafeWebSocketMixin, AsyncWebsocketConsumer):
     def save_opportunity_analysis(self, user_profile, analysis):
         """Save opportunity analysis to database"""
         try:
-            from intelligence.models import UserIncomeProfile, OpportunityTracking
+            from intelligence.models import UserIncomeProfile
             from django.contrib.auth.models import User
 
             # Get or create user
@@ -2261,10 +2254,8 @@ Try asking something specific or type /help for commands!"""
     async def handle_command(self, data):
         """Handle general commands from command center"""
         try:
-            print(f"[DEBUG] handle_command received data: {data}")
             command = data.get('content', '')
             agent = data.get('agent', 'system')
-            print(f"[DEBUG] Extracted command: '{command}', agent: '{agent}'")
 
             # Process the command
             response_message = await self.process_command(command, agent)
@@ -2291,7 +2282,6 @@ Try asking something specific or type /help for commands!"""
 
     async def process_command(self, command, agent):
         """Process command and return response"""
-        print(f"[DEBUG] Processing command: '{command}' with agent: '{agent}'")
 
         # Handle different command types
         if command.startswith('/'):

@@ -19,7 +19,7 @@ Run with: python manage.py cleanup_agents
 """
 
 from django.core.management.base import BaseCommand
-from core.models import Agent, Advisor, AgentCategory
+from core.models import Agent, Advisor
 import json
 
 

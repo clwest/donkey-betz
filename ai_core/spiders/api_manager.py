@@ -11,9 +11,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any, List
 from cryptography.fernet import Fernet
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import asyncio
-import aiofiles
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

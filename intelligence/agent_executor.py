@@ -19,10 +19,8 @@ import time
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from decimal import Decimal
 
 from django.utils import timezone
-from django.conf import settings
 
 from core.models.agents_registry import (
     UnifiedAgentTemplate,

@@ -3,17 +3,11 @@ Neural Orchestra Reality Connector
 Transforms mock visualizations into live operational dashboards showing real AI collaboration
 """
 
-import json
 import random
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Tuple
+from datetime import timedelta
+from typing import Dict, List, Any
 from django.utils import timezone
-from django.db.models import Q
-from core.models.agents_registry import (
-    UnifiedAgentTemplate, AgentExecution, AgentOrchestration,
-    AgentSpecialization, AgentStatus, AgentPriority
-)
 
 logger = logging.getLogger(__name__)
 

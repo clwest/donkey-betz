@@ -30,7 +30,7 @@ from enum import Enum
 import uuid
 
 from django.utils import timezone
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)

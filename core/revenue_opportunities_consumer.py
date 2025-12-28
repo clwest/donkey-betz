@@ -628,7 +628,6 @@ class RevenueOpportunitiesConsumer(AsyncWebsocketConsumer):
         from core.models import Revenue
         from django.http import HttpRequest
         from django.utils import timezone
-        import io
 
         # Create mock request
         request = HttpRequest()

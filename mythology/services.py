@@ -4,14 +4,13 @@ Mythology detection and prevention services for unified-donkey-betz.
 
 import re
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
+from typing import Dict, List, Any
 from django.db import transaction
 from django.utils import timezone
 
 from .models import (
     MythologyEvent, MythPattern, MythologyGuard, 
-    MythologyAlert, MythologyCleanup
+    MythologyAlert
 )
 
 logger = logging.getLogger(__name__)

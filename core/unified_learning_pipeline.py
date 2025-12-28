@@ -4,9 +4,6 @@ Cross-domain learning: Sports success → Job matching, Job success → Betting 
 """
 
 from django.db import models
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
-from datetime import timedelta
 
 
 class UnifiedLearningPipeline:

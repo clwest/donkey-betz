@@ -12,16 +12,14 @@ share a unified memory system with bidirectional data flow.
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from django.contrib.auth import get_user_model
-from django.db.models import Q, Count, Avg, F
+from django.db.models import Q, Count, F
 from django.core.cache import cache
 
 from core.models import (
     UserMemoryContext,
-    EnhancedUserProfile,
-    UserEmbedding,
-    ExtendedUserProfile
+    EnhancedUserProfile
 )
 
 logger = logging.getLogger(__name__)

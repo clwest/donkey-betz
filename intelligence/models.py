@@ -6,12 +6,9 @@ Models for Intelligence System - Action Plans and Execution
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
-import json
 import uuid
 
 # Import SpiderQualityMetrics so Django discovers it
-from .spider_quality_tracker import SpiderQualityMetrics
 
 User = get_user_model()
 
@@ -291,7 +288,7 @@ class RevenueMetrics(models.Model):
     @classmethod
     def update_metrics_for_date(cls, date):
         """Update or create metrics for a specific date"""
-        from django.db.models import Count, Avg, Sum
+        from django.db.models import Avg, Sum
 
         metrics, created = cls.objects.get_or_create(date=date)
 

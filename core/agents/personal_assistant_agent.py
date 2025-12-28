@@ -25,7 +25,7 @@ Routing Strategy (Session 293):
 
 import logging
 import time
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 
 from core.agents.base_agent import BaseAgent, AgentResult, KnowledgeAttribution
 from core.agents.routing_config import get_intent_keywords, AGENT_ROUTING_CONFIG

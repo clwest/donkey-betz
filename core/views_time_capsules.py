@@ -16,7 +16,7 @@ import logging
 import random
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models import Count, Avg, F
+from django.db.models import Count, F
 from django.views import View
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt

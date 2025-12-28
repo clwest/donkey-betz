@@ -7,9 +7,8 @@ Every solution is real code that can be executed to solve problems.
 """
 
 import json
-import hashlib
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 class Solution:

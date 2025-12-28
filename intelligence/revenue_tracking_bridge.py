@@ -4,11 +4,10 @@ Connects all income-generating activities to Revenue Dashboard
 """
 
 import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any
+from datetime import timedelta
 from django.utils import timezone
 from django.db import models
-from django.core.cache import cache
 from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)

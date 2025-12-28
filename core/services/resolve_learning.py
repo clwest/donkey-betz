@@ -16,13 +16,12 @@ The learning loop makes the system smarter:
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 from decimal import Decimal
 from datetime import timedelta
-from collections import defaultdict
 
 from django.utils import timezone
-from django.db.models import Avg, Count, Sum, Q
+from django.db.models import Avg, Sum
 
 logger = logging.getLogger(__name__)
 

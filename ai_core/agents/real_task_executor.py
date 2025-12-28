@@ -4,12 +4,9 @@ This module demonstrates agents doing real tasks with verifiable outputs
 """
 
 import json
-import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
-import requests
-import subprocess
+from typing import Dict
 import os
 
 logger = logging.getLogger(__name__)

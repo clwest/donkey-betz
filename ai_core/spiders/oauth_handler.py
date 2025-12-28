@@ -5,8 +5,6 @@ Handles OAuth 2.0 authentication for Twitter, Reddit, LinkedIn, etc.
 """
 
 import os
-import json
-import time
 import base64
 import hashlib
 import secrets
@@ -14,8 +12,8 @@ import asyncio
 import aiohttp
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Any, List, Tuple
-from urllib.parse import urlencode, parse_qs, urlparse
+from typing import Dict, Optional, Any, List
+from urllib.parse import urlencode
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)

@@ -81,7 +81,6 @@ class ContentCreationStudio:
     def _initialize_generators(self):
         """Initialize AI generators for different content types"""
         try:
-            import openai
             import os
             self.api_key = os.getenv('OPENAI_API_KEY')
             if self.api_key:

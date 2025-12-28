@@ -2,24 +2,20 @@
 Views for the mythology lab dashboard and hallucination review system.
 """
 
-from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from datetime import datetime, timedelta
-import uuid
 import logging
-from typing import Dict, Any, List
 
 from .models import (
     FlaggedHallucination, HallucinationReview, MythologyAlert, 
-    MythologyEvent, MythPattern, MythologyGuard
+    MythologyEvent, MythPattern
 )
 from .services import (
-    HallucinationFlaggingService, HallucinationVerificationService,
-    MythologyDetectionService
+    HallucinationFlaggingService, HallucinationVerificationService
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +32,7 @@ def dashboard_stats(request):
     try:
         # Get real data from the models
         from django.utils import timezone
-        from django.db.models import Q, Avg
+        from django.db.models import Avg
         
         today = timezone.now().date()
         
@@ -521,7 +517,6 @@ def flagged_content_list(request):
     """Get flagged content with filtering and pagination"""
     try:
         from django.core.paginator import Paginator
-        from django.utils import timezone
         
         # Get query parameters
         page = int(request.GET.get('page', 1))

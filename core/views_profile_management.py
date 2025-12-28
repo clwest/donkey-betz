@@ -7,20 +7,16 @@ including profile setup, skills management, and completion tracking.
 
 import logging
 from decimal import Decimal
-from typing import Dict, Any
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 import json
 
-from .models import ExtendedUserProfile, JobApplication, ResumeVersion, UserEmbedding
+from .models import ExtendedUserProfile, JobApplication, ResumeVersion
 from .agent_context_middleware import get_user_context_for_agent
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ This module defines the base interface for all tools that agents can use.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,12 +30,10 @@ class BaseTool(ABC):
     @abstractmethod
     def _check_configuration(self) -> bool:
         """Check if the tool is properly configured."""
-        pass
     
     @abstractmethod
     def execute(self, *args, **kwargs) -> Dict[str, Any]:
         """Execute the tool's main functionality."""
-        pass
     
     def validate_input(self, *args, **kwargs) -> bool:
         """Validate input parameters."""

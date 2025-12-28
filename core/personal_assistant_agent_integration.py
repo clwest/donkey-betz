@@ -6,14 +6,12 @@ Connects the Personal Assistant to the 149-agent system for unified orchestratio
 Allows the assistant to route tasks to specialized agents and coordinate complex workflows.
 """
 
-import asyncio
-import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List
 
 from intelligence.agent_execution_pipeline import AgentExecutionPipeline
-from intelligence.agent_instruction_parser import AgentInstruction, AgentInstructionParser
+from intelligence.agent_instruction_parser import AgentInstructionParser
 from intelligence.real_agents import AgentFactory
 from core.agents.registry import get_agent_registry
 

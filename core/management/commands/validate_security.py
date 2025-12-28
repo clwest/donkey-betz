@@ -3,7 +3,6 @@ Management command to validate platform security configuration
 """
 
 from django.core.management.base import BaseCommand
-from django.conf import settings
 from core.security_validator import run_security_validation
 from core.security import validate_environment
 import json

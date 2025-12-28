@@ -13,7 +13,7 @@ from decimal import Decimal
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -238,7 +238,7 @@ class MonetizationHubConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_revenue_analytics(self) -> Dict[str, Any]:
         """Generate revenue analytics"""
-        from core.models import Revenue, JobApplication
+        from core.models import Revenue
         from django.db.models import Sum, Count, Avg
         from django.db.models.functions import TruncMonth, TruncWeek
 

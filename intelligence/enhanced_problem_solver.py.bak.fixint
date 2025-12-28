@@ -11,7 +11,7 @@ import json
 import redis
 import hashlib
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict
 from dotenv import load_dotenv
 
 # Add parent directory to path for imports

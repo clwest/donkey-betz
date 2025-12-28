@@ -10,7 +10,6 @@ Validates the video generation and editing subsystem including:
 """
 
 import logging
-from django.conf import settings
 
 from .base import BaseValidationAgent
 

@@ -19,15 +19,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from django.db.models import Count, Q
-from django.conf import settings
+from django.db.models import Count
 
 from core.models_autonomous_situations import AutonomousSituationSession
 from core.models_situation_triggers import (
     SituationTrigger,
-    TriggerEvent,
-    SituationType,
-    TriggerType
+    TriggerEvent
 )
 
 logger = logging.getLogger(__name__)

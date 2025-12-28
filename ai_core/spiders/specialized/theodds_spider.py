@@ -17,7 +17,7 @@ import os
 import logging
 import requests
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 # Try zoneinfo (Python 3.9+), fall back to pytz
 try:

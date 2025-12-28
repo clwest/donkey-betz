@@ -12,8 +12,8 @@ Uses Kalshi spider data for real-time market intelligence.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
+from datetime import datetime
 import json
 
 from core.agents.base_agent import BaseAgent, AgentResult

@@ -28,8 +28,6 @@ from decimal import Decimal
 from dataclasses import dataclass, field
 
 from django.utils import timezone
-from django.db import transaction
-from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -521,7 +519,7 @@ class RevenueIntegrationService:
         """
         try:
             from core.models_unified_system import Revenue, Opportunity
-            from django.db.models import Sum, Count, Avg
+            from django.db.models import Sum, Count
 
             end_date = timezone.now()
             start_date = end_date - timedelta(days=days)
@@ -797,7 +795,7 @@ class RevenueIntegrationService:
         Shows which agents contributed to revenue generation.
         """
         try:
-            from core.models_unified_system import Revenue, Agent
+            from core.models_unified_system import Agent
             from django.db.models import Sum, Count
 
             cutoff = timezone.now() - timedelta(days=days)

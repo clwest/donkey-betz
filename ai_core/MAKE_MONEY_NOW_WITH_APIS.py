@@ -7,8 +7,6 @@ This will generate REAL content you can sell TODAY.
 import os
 import openai
 import requests
-import json
-from datetime import datetime
 
 print("\n" + "💰" * 30)
 print("    ACTIVATING YOUR MONEY-MAKING APIS!")

@@ -11,7 +11,7 @@ import json
 import time
 import hashlib
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List
 from intelligence.problem_solver import AgentProblemSolver
 from intelligence.knowledge_sharing import KnowledgeSharing
 

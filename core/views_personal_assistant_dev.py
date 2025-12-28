@@ -8,10 +8,7 @@ This version allows testing without authentication in development mode.
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import never_cache
-from django.utils.decorators import method_decorator
-from django.views.decorators.vary import vary_on_headers
 from django.contrib.auth import get_user_model
-from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny

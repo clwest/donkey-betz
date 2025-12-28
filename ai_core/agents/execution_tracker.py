@@ -6,10 +6,9 @@ Created: 9/26/25 11:46 AM MST
 import redis
 import json
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
+from typing import Dict, Any, List
 from django.conf import settings
-from django.utils import timezone as django_timezone
 import pytz
 
 logger = logging.getLogger(__name__)

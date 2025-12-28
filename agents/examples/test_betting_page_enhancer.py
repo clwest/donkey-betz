@@ -6,8 +6,6 @@ Demonstrates how to execute the agent and integrate with the betting page
 
 import os
 import sys
-import json
-from datetime import datetime
 
 # Add project path for Django imports
 project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

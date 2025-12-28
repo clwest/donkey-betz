@@ -19,7 +19,6 @@ import random
 from datetime import datetime
 import uuid
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 class ProjectProgressSimulator:
     def __init__(self):

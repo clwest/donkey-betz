@@ -6,11 +6,10 @@ Syncs performance data, insights, and feedback between isolated sports system an
 """
 
 import logging
-from typing import Dict, List, Optional
 from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Count, Avg, Q, F
+from django.db.models import Count, Avg
 
 logger = logging.getLogger(__name__)
 

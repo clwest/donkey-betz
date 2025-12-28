@@ -13,14 +13,12 @@ IMPORTANT DISCLAIMERS:
 - Users should consult a licensed attorney for specific legal matters
 """
 
-import json
 import logging
 import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from uuid import UUID
 
-from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -865,7 +863,7 @@ class LegalResponseWriter:
         - Proposed order
         - Exhibit list
         """
-        from core.models_legal import LitigationDocument, GeneratedResponse, CaseProfile
+        from core.models_legal import LitigationDocument, GeneratedResponse
 
         try:
             doc = LitigationDocument.objects.get(id=document_id)
@@ -1266,8 +1264,7 @@ IMPORTANT REMINDERS:
         """Create a DOCX file from content."""
         try:
             from docx import Document
-            from docx.shared import Inches, Pt
-            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.shared import Inches
             import io
 
             doc = Document()

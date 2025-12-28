@@ -4,7 +4,6 @@ Consciousness WebSocket Test View
 Simple test page to verify consciousness WebSocket connectivity.
 """
 
-from django.shortcuts import render
 from django.http import HttpResponse
 
 def consciousness_websocket_test(request):

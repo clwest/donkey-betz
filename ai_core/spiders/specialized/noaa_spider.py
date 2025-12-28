@@ -6,7 +6,6 @@ Session 534: Simplified to work with spider network interface.
 Uses NOAA API when available, RSS fallback for weather news.
 """
 
-import os
 import requests
 import feedparser
 import logging

@@ -4,10 +4,6 @@ Intelligence gathering for real estate investment and rental opportunities
 """
 
 import scrapy
-import re
-import json
-from datetime import datetime
-from urllib.parse import urljoin
 from .base_spider import ContentOpportunitySpider
 
 

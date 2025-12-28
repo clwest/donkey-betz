@@ -8,11 +8,8 @@ Session 306: Added learning infrastructure hooks for cross-agent knowledge shari
 
 import json
 import logging
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
-from decimal import Decimal
+from typing import Dict, List, Any
 from django.utils import timezone
-from django.db.models import Q, Avg, Count
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +264,7 @@ class BookmakerAgent(LearningMixin):
         """
         Complete bookmaker analysis of a game
         """
-        from sports.models import Game, BettingMarket, OddsLine
+        from sports.models import Game
 
         try:
             game = Game.objects.get(id=game_id)
@@ -510,7 +507,6 @@ class BookmakerAgent(LearningMixin):
         """
         Calculate true odds removing the vig and accounting for market inefficiencies
         """
-        from sports.models import Team
 
         # Get team stats
         home_team = game.home_team

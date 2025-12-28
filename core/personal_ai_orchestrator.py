@@ -6,9 +6,8 @@ The intelligent layer that connects user profile, preferences, and agents
 to provide truly personalized AI assistance.
 """
 
-import json
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.core.cache import cache

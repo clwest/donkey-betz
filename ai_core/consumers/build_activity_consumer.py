@@ -4,12 +4,9 @@ Created: 9/26/25 11:54 AM MST
 """
 
 import json
-import asyncio
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from ai_core.agents.execution_tracker import execution_tracker
-from datetime import datetime
-import pytz
 
 logger = logging.getLogger(__name__)
 

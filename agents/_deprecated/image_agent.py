@@ -40,11 +40,8 @@ Example Usage:
 from __future__ import annotations
 
 import logging
-import uuid
-from typing import Dict, Any, Optional, List
-from datetime import datetime
+from typing import Dict, Any, Optional
 
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 import json

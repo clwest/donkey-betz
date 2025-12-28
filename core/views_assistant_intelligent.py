@@ -3,7 +3,6 @@ Intelligent Personal Assistant with Agent Integration
 Routes through Intelligent Prompting System and specialized agents for optimal responses.
 """
 
-from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +10,6 @@ from rest_framework.response import Response
 from datetime import datetime
 import uuid
 import logging
-import json
 from typing import Dict, Any, Optional
 
 from .agent_integration import AgentRouter, IntelligentPromptOptimizer

@@ -11,7 +11,6 @@ import random
 from datetime import datetime, timedelta
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
 from django.db.models import Count, Avg, Sum, Q
 from django.utils import timezone
 import logging
@@ -42,7 +41,7 @@ except ImportError:
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentOrchestration, AgentStatus
-from intelligence.models import ActionPlan, OpportunityActionPlan, RevenueMetrics
+from intelligence.models import OpportunityActionPlan, RevenueMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +124,7 @@ class AgentWorkPlatformConsumer(AsyncWebsocketConsumer):
             from ai_core.agents.agent_work_platform import get_agent_work_platform_status
             from django.core.cache import cache
             from core.models.agents_registry import AgentExecution, UnifiedAgentTemplate
-            from intelligence.models import RevenueMetrics, OpportunityActionPlan
+            from intelligence.models import RevenueMetrics
 
             # Get platform status
             platform_status = get_agent_work_platform_status()

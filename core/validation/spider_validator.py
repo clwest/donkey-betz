@@ -10,7 +10,6 @@ Validates the spider data collection system including:
 """
 
 import logging
-from django.conf import settings
 
 from .base import BaseValidationAgent
 

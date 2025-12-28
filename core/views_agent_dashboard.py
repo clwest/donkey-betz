@@ -5,11 +5,10 @@ Provides real data for the unified learning dashboard
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.db.models import Count, Sum, Avg, Q
+from django.db.models import Sum, Avg, Q
 from core.models import Agent, AgentSolution, AgentLearning, Advisor
-from decimal import Decimal
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 @require_http_methods(["GET"])

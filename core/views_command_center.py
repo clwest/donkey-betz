@@ -5,9 +5,9 @@ Handles profile management, AI configuration, and command execution
 
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, List
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,7 +15,6 @@ from django.contrib.auth.decorators import login_required
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.db import transaction
-from django.core.exceptions import ValidationError
 from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -25,7 +24,7 @@ from asgiref.sync import async_to_sync
 import redis
 
 from django.contrib.auth import get_user_model
-from persistence.models import AgentKnowledge, SpiderData, RevenueTracker
+from persistence.models import RevenueTracker
 try:
     from core.models.agents_registry import Agent
 except ImportError:

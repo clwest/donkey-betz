@@ -10,10 +10,9 @@ Fetches and stores comprehensive data from multiple sources:
 
 import requests
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 from django.conf import settings
-from django.db import transaction
 from django.utils import timezone
 
 from .models import Team, Game, BettingMarket, OddsLine, Sportsbook

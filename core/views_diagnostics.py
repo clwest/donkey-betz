@@ -12,7 +12,6 @@ from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
 from django.conf import settings
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 import redis
 import traceback
 

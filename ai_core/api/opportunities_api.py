@@ -2,11 +2,9 @@
 Real-time opportunities API for Income Builder
 Generates and serves actual opportunities with real data
 """
-import asyncio
 import random
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from decimal import Decimal
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt

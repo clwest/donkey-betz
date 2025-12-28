@@ -6,7 +6,7 @@ import asyncio
 import json
 import redis
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from dataclasses import dataclass, asdict
 

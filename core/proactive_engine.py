@@ -6,10 +6,10 @@ Session 234: Complete proactive system implementation
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional
 from decimal import Decimal
-from datetime import datetime, timedelta
-from django.db.models import Sum, Avg, Count, F, Q
+from datetime import timedelta
+from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
@@ -28,7 +28,7 @@ class AlertEngine:
 
     def check_all_alerts(self, user=None) -> List[Dict]:
         """Check all active alerts for a user or all users."""
-        from .models_unified_system import ProactiveAlert, ProactiveNotification
+        from .models_unified_system import ProactiveAlert
 
         triggered_alerts = []
 
@@ -288,7 +288,7 @@ class SuggestionEngine:
     def _analyze_pricing(self, user) -> List[Dict]:
         """Analyze pricing patterns and suggest optimizations."""
         from .models_unified_system import (
-            ContentDistribution, RevenueSale, SuccessPattern, PricingOptimization
+            ContentDistribution, RevenueSale, SuccessPattern
         )
 
         suggestions = []
@@ -358,7 +358,7 @@ class SuggestionEngine:
     def _analyze_platforms(self, user) -> List[Dict]:
         """Analyze platform performance and suggest expansions."""
         from .models_unified_system import (
-            ContentDistribution, RevenueSale, DistributionPlatform, SuccessPattern
+            RevenueSale, SuccessPattern
         )
 
         suggestions = []
@@ -407,7 +407,7 @@ class SuggestionEngine:
 
     def _analyze_timing(self, user) -> List[Dict]:
         """Analyze upload timing and suggest optimal times."""
-        from .models_unified_system import ContentDistribution, RevenueSale, SuccessPattern
+        from .models_unified_system import SuccessPattern
 
         suggestions = []
 
@@ -443,7 +443,7 @@ class SuggestionEngine:
 
     def _analyze_content(self, user) -> List[Dict]:
         """Analyze content performance and suggest improvements."""
-        from .models_unified_system import ContentDistribution, SuccessPattern
+        from .models_unified_system import SuccessPattern
 
         suggestions = []
 
@@ -479,7 +479,7 @@ class SuggestionEngine:
 
     def _analyze_tags(self, user) -> List[Dict]:
         """Analyze tag performance and suggest optimizations."""
-        from .models_unified_system import ContentDistribution, SuccessPattern
+        from .models_unified_system import SuccessPattern
 
         suggestions = []
 
@@ -552,7 +552,7 @@ class AutomationEngine:
 
     def execute_action(self, action, context: dict = None) -> Dict:
         """Execute an automated action."""
-        from .models_unified_system import AutomatedAction, AutomatedActionLog
+        from .models_unified_system import AutomatedActionLog
 
         can_run, reason = action.can_execute()
         if not can_run:
@@ -998,7 +998,7 @@ class ProactiveSystem:
     def get_dashboard_data(self, user) -> Dict:
         """Get all proactive system data for the dashboard."""
         from .models_unified_system import (
-            ProactiveAlert, ProactiveNotification, SmartSuggestion, AutomatedAction
+            ProactiveAlert, SmartSuggestion, AutomatedAction
         )
 
         # Active alerts

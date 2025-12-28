@@ -9,7 +9,6 @@ Uses the Web Push Protocol (RFC 8030) with VAPID authentication.
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-import json
 
 
 class PushSubscription(models.Model):

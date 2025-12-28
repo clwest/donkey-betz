@@ -9,13 +9,12 @@ from io import BytesIO
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import UserProfile, UserStatistics
-import hashlib
+from .models import UserProfile
 
 
 # Create media directories if they don't exist

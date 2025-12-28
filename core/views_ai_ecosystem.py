@@ -3,11 +3,10 @@ API endpoints for the Living AI Ecosystem visualization
 """
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from core.models_unified_system import Agent, AgentSolution, AgentLearning, SpiderData
-from django.db.models import Count, Q, Avg, Sum
+from core.models_unified_system import Agent, AgentSolution, AgentLearning
+from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from datetime import timedelta
-import json
 import random
 
 @csrf_exempt

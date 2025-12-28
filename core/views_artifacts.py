@@ -706,7 +706,6 @@ def generate_review_for_artifact(request, artifact_id):
 
 def _serialize_review(review, full: bool = False):
     """Serialize review document for JSON response."""
-    from core.models_conversation_artifacts import ReviewDocument
 
     data = {
         'id': str(review.id),

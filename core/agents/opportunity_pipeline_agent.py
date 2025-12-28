@@ -44,7 +44,7 @@ Usage:
 
 import logging
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from asgiref.sync import async_to_sync
 
 from core.agents.base_agent import BaseAgent, AgentResult

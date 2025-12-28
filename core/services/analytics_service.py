@@ -16,9 +16,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
-from collections import defaultdict
 
-from django.db.models import Count, Avg, Sum, F, Q
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate, TruncHour
 from django.utils import timezone
 
@@ -94,7 +93,7 @@ class AnalyticsService:
         Returns:
             ChartData with daily performance metrics
         """
-        from core.models_unified_system import AgentPerformanceMetric, CollaborationSession
+        from core.models_unified_system import CollaborationSession
 
         end_date = timezone.now()
         start_date = end_date - timedelta(days=days)
@@ -333,7 +332,7 @@ class AnalyticsService:
         """
         Get success rates by workflow.
         """
-        from content.models import WorkflowExecution, ContentWorkflow
+        from content.models import ContentWorkflow
 
         try:
             # Get stats per workflow
@@ -382,7 +381,6 @@ class AnalyticsService:
         """
         Get average execution duration by workflow.
         """
-        from content.models import WorkflowExecution
 
         try:
             # This requires duration tracking in WorkflowExecution

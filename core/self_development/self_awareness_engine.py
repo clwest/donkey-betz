@@ -11,11 +11,8 @@ The system can now:
 """
 
 import logging
-from typing import Dict, List, Optional
-from django.db.models import Count, Avg, Q, F
-from django.core.cache import cache
-from datetime import timedelta
-from django.utils import timezone
+from typing import Dict, List
+from django.db.models import Count, Avg
 
 logger = logging.getLogger(__name__)
 

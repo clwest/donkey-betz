@@ -5,12 +5,9 @@ Analyzes second-order effects of narrative shifts.
 "If people start believing X instead of Y, what happens next?"
 """
 
-import json
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
 from django.utils import timezone
-from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult
 
@@ -185,7 +182,7 @@ class CulturalImpactAgent(BaseAgent):
 
     def _analyze_shift_impact(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze the impact of a narrative shift."""
-        from core.models_narrative_drift import NarrativeShift, Narrative
+        from core.models_narrative_drift import NarrativeShift
 
         shift_id = tool_input.get('shift_id')
 

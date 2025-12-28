@@ -347,7 +347,7 @@ def generate_pdf_from_section(section: DocumentSection) -> bytes:
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
     from io import BytesIO
 
