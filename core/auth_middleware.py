@@ -61,6 +61,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/intelligence/cross-references/',  # Cross-reference mappings
         '/api/autonomous/situations/',  # Situations list for Command Center
         '/api/autonomous/trigger-events/',  # Trigger events for Command Center
+        '/api/agents/',  # Session 564: Agent list for Command Center
+        '/api/agent-conversations/',  # Session 564: Conversations sub-tab
+        '/api/agent-dreams/',  # Session 564: Dreams sub-tab
+        '/api/boardroom/',  # Session 564: Boardroom sub-tab
+        '/api/artifacts/',  # Session 564: Artifacts sub-tab
+        '/api/agent-learning/',  # Session 564: Learning activity
 
         # Session 542: Research Demo APIs (read-only visualization for research presentations)
         '/api/v1/research/network-graph/',  # D3.js graph data
