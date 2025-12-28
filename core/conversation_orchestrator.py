@@ -230,7 +230,7 @@ class ConversationOrchestrator:
 
         try:
             # Learning events
-            from core.models_unified_system import AgentLearningEvent
+            from ai_core.intelligence.models import AgentLearningEvent
             stats['learning_events'] = AgentLearningEvent.objects.count()
         except Exception as e:
             logger.warning(f"Could not get learning stats: {e}")
