@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 592 (December 29, 2025) - Pilot Readiness Gate Complete
+**Last Updated:** Session 593 (December 29, 2025) - Auto-Gate Creation for Safety Decisions
 
 ---
 
@@ -1773,11 +1773,25 @@ GET /api/intelligence/cross-references/
 
 ---
 
-## Pilot Readiness Gate (Sessions 590-592)
+## Pilot Readiness Gate (Sessions 590-593)
 
-**Status:** COMPLETE - Full Workflow Validated
+**Status:** COMPLETE - Full Workflow + Auto-Gate Creation
 
 The Pilot Readiness Gate system bridges the gap between Boardroom decisions and actual execution, ensuring safety-sensitive work proceeds with appropriate governance.
+
+### Auto-Gate Creation (Session 593)
+
+Gates are now automatically created for safety-sensitive decisions:
+
+| Decision Criteria | Risk Level | Checklist Items |
+|-------------------|------------|-----------------|
+| `impact_area='security'` | HIGH | 6 items |
+| `decision_type='policy'` | MEDIUM | 3 items |
+| Other decisions | None | No gate |
+
+**Integration Points:**
+- DecisionExtractor (AgentConversation + HiveMindSession decisions)
+- WorkflowAgent (PA-initiated Boardroom decisions)
 
 ### Workflow
 

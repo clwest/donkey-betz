@@ -3,6 +3,7 @@ Decision Extractor Service
 Session 323: Boardroom Decisions (original)
 Session 412: Updated to support both AgentConversation and HiveMindSession
 Session 551: Added topic-based deduplication to prevent duplicate decisions
+Session 593: Auto-create Pilot Readiness Gates for safety-sensitive decisions
 
 Extracts structured decisions from agent conversation conclusions.
 Uses GPT-5-mini to parse the conclusion text into structured format.
@@ -13,6 +14,10 @@ This supports BOTH:
 
 The extracted decisions can be promoted to canonical policies
 that influence future agent behavior.
+
+Session 593: Safety-sensitive decisions now automatically get Pilot Readiness Gates:
+- impact_area='security' → HIGH risk gate (6-item checklist)
+- decision_type='policy' → MEDIUM risk gate (3-item checklist)
 """
 
 import logging
@@ -300,6 +305,10 @@ class DecisionExtractor:
             )
 
             logger.info(f"Created decision summary from AgentConversation: {summary}")
+
+            # Session 593: Auto-create Pilot Readiness Gate for safety-sensitive decisions
+            auto_create_gate_for_decision(summary)
+
             return summary
 
         except Exception as e:
@@ -434,6 +443,10 @@ class DecisionExtractor:
             )
 
             logger.info(f"Created decision summary from HiveMindSession: {summary}")
+
+            # Session 593: Auto-create Pilot Readiness Gate for safety-sensitive decisions
+            auto_create_gate_for_decision(summary)
+
             return summary
 
         except Exception as e:
@@ -475,3 +488,77 @@ def get_decision_extractor() -> DecisionExtractor:
     if _extractor_instance is None:
         _extractor_instance = DecisionExtractor()
     return _extractor_instance
+
+
+# =============================================================================
+# Session 593: Auto-Gate Creation for Safety-Sensitive Decisions
+# =============================================================================
+
+def determine_gate_risk_level(decision) -> Optional[str]:
+    """
+    Session 593: Determine if a decision needs a Pilot Readiness Gate and at what risk level.
+
+    Rules:
+    - impact_area='security' → 'high' risk (6-item safety checklist)
+    - decision_type='policy' → 'medium' risk (3-item checklist)
+    - Otherwise → None (no gate needed)
+
+    Args:
+        decision: AgentDecisionSummary instance
+
+    Returns:
+        Risk level string ('high', 'medium') or None if no gate needed
+    """
+    # Security decisions always get HIGH risk gates
+    if decision.impact_area == 'security':
+        logger.info(f"Session 593: Decision '{decision.topic[:50]}...' has impact_area='security' → HIGH risk gate")
+        return 'high'
+
+    # Policy decisions get MEDIUM risk gates
+    if decision.decision_type == 'policy':
+        logger.info(f"Session 593: Decision '{decision.topic[:50]}...' has decision_type='policy' → MEDIUM risk gate")
+        return 'medium'
+
+    # No gate needed for other decisions
+    return None
+
+
+def auto_create_gate_for_decision(decision) -> Optional['PilotReadinessGate']:
+    """
+    Session 593: Automatically create a Pilot Readiness Gate for safety-sensitive decisions.
+
+    This is called after a decision is created. It checks if the decision meets
+    the criteria for requiring a gate (security impact or policy type) and
+    creates one if needed.
+
+    Args:
+        decision: AgentDecisionSummary instance
+
+    Returns:
+        The created PilotReadinessGate, or None if no gate was needed/created
+    """
+    from core.models_pilot_readiness import PilotReadinessGate
+
+    # Check if gate already exists for this decision
+    if hasattr(decision, 'readiness_gate'):
+        try:
+            existing = decision.readiness_gate
+            logger.debug(f"Session 593: Gate already exists for decision {decision.id}")
+            return existing
+        except PilotReadinessGate.DoesNotExist:
+            pass
+
+    # Determine if this decision needs a gate
+    risk_level = determine_gate_risk_level(decision)
+
+    if not risk_level:
+        logger.debug(f"Session 593: No gate needed for decision '{decision.topic[:50]}...' (type={decision.decision_type}, area={decision.impact_area})")
+        return None
+
+    try:
+        gate = PilotReadinessGate.create_for_decision(decision, risk_level=risk_level)
+        logger.info(f"Session 593: Auto-created {risk_level.upper()} risk gate for decision '{decision.topic[:50]}...' → gate {gate.id}")
+        return gate
+    except Exception as e:
+        logger.error(f"Session 593: Failed to create gate for decision {decision.id}: {e}")
+        return None

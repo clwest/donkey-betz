@@ -1,95 +1,80 @@
-# Session 593 - Start Here
+# Session 594 - Start Here
 
-**Previous Session:** 592
+**Previous Session:** 593
 **Date:** December 29, 2025
 **Focus:** Pilot Readiness Gate Extensions
 
 ---
 
-## Session 592 Accomplishments
+## Session 593 Accomplishments
 
-### 1. Completed First Full Gate Workflow (Option A)
+### ThinkingAgent Auto-Gate Integration (Option A from Session 592)
 
-Successfully executed the complete Pilot Readiness Gate workflow for the privacy decision:
+Implemented automatic Pilot Readiness Gate creation for safety-sensitive decisions:
 
-| Step | Status | Details |
-|------|--------|---------|
-| Gate Created | Session 590 | HIGH risk, 6 checklist items |
-| Started Readiness | Session 591 | Status: not_started → in_progress |
-| Completed Checklist | Session 591 | 6/6 items (100%) |
-| Gate Approved | Session 592 | Approved by: human |
-| Pilot Started | Session 592 | Privacy Context Pilot |
-| Pilot Completed | Session 592 | Outcome: SUCCESS |
+| Criteria | Risk Level | Checklist Items |
+|----------|------------|-----------------|
+| `impact_area='security'` | HIGH | 6 items |
+| `decision_type='policy'` | MEDIUM | 3 items |
+| Other decisions | None | No gate created |
 
-### 2. Added Pilot Execution API (2 New Endpoints)
+**Integration Points (3 total):**
+1. `DecisionExtractor.create_decision_from_conversation()` - Legacy AgentConversation
+2. `DecisionExtractor.create_decision_from_hive_session()` - New HiveMindSession
+3. `WorkflowAgent._create_boardroom_decision()` - PA-initiated Boardroom decisions
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/pilot-gates/<gate_id>/pilot/` | POST | Start pilot execution |
-| `/api/pilot-gates/<gate_id>/pilot/<pilot_id>/complete/` | POST | Complete pilot with outcome |
+**Test Results:**
+- Security decision → HIGH gate with 6 items ✓
+- Policy decision → MEDIUM gate with 3 items ✓
+- Regular decision → No gate ✓
 
-### 3. Validated Complete Workflow
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `core/services/decision_extractor.py` | Added `determine_gate_risk_level()` and `auto_create_gate_for_decision()` functions |
+| `core/agents/workflow_agent.py` | Added auto-gate call in `_create_boardroom_decision()` |
+| `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | New handoff document |
+| `docs/CAPABILITIES.md` | Updated Pilot Readiness Gate section |
 
-```
-not_started → in_progress → ready → approved → pilot running → COMPLETED ✓
-```
-
-**Pilot Learnings Captured:**
-- Encryption layer performs well under load
-- Consent flow UX is intuitive
-- Kill switch triggers correctly on threshold breach
-
-### 4. Teaching Diversity Fix (ThinkingAgent Insight Response)
-
-Fixed teaching concentration issue identified by ThinkingAgent Cycle #23:
-
-**Problem:** Top 2 agents (OpportunityScoringAgent, ResearchAgent) accounted for 41% of all teachings. 29 agents weren't teaching at all.
-
-**Root Cause:** Pure random selection of 10 connections per cycle favored agents with more connections (feedback loop).
-
-**Solution Implemented:**
-- **Option B - Minimum Teaching Slots:** 3 slots reserved for underrepresented teachers (lowest transfer counts)
-- **Option A - Weighted Exploration:** 7 slots use inverse-weighted selection (1/(transfers+1))
-
-**Result:**
-- Before: ~3-4 unique teachers per cycle
-- After: 9 unique teachers per cycle
-- Dormant teachers now guaranteed teaching opportunities
-
-**File Modified:** `core/tasks.py:run_agent_learning_cycle()`
+**Before/After:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Total Gates | 1 | 5 |
+| Auto-Gate Coverage | 0% | 100% (new decisions) |
 
 ---
 
-## Session 593 Options
+## Session 594 Options
 
-### Option A: ThinkingAgent Integration
+### Option A: Batch Gate Creation for Existing Decisions
 
-Have ThinkingAgent auto-create gates for safety-sensitive decisions:
-- Decisions with `impact_area='security'` → `risk_level='high'`
-- Decisions with `decision_type='policy'` → `risk_level='medium'`
-- Auto-attach gates when decisions are created
+Create gates for existing decisions that now qualify:
+- 17 security decisions without gates
+- ~68 policy decisions without gates
+- Script to batch-create with appropriate risk levels
 
-### Option B: Latency Dashboard
+### Option B: Gate Status Dashboard
 
-Create visualization showing gate throughput metrics:
-- Average decision → readiness time
-- Average readiness → pilot time
-- Blocked gates count and reasons
-- Pipeline bottleneck identification
+Add a gate pipeline visualization to the ICC panel:
+- Decision backlog (no gate yet)
+- Gates by status (not_started, in_progress, ready, etc.)
+- Average throughput metrics
+- Blocked gates with reasons
 
-### Option C: Gate Creation from Boardroom UI
+### Option C: ThinkingAgent Gate Awareness
 
-Add "Create Pilot Gate" button on Boardroom decisions:
-- Button visible on draft decisions without gates
-- Risk level selection modal
-- Auto-navigate to ICC tab after creation
+Have ThinkingAgent observe gates in its context:
+- Track blocked gates as system friction
+- Generate insights about gate bottlenecks
+- Suggest gate status updates in dreams
+- Flag decisions stuck in "not_started" too long
 
-### Option D: Pilot Learnings → Blog Pipeline
+### Option D: Gate Completion Automation
 
-Connect pilot learnings to the self-blog system:
-- Extract learnings from completed pilots
-- Generate blog posts about operational insights
-- Track which learnings produced valuable content
+Auto-complete low-risk checklist items:
+- "Basic Review" auto-completed for low-risk gates
+- "Success Metrics" auto-populated from decision fields
+- Only safety-critical items require human verification
 
 ---
 
@@ -102,7 +87,7 @@ Connect pilot learnings to the self-blog system:
 | **PA Tools** | 77 |
 | **Decisions (Draft)** | 614 (81.3%) |
 | **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | 1 |
+| **Pilot Readiness Gates** | 5 |
 | **Completed Pilots** | 1 (SUCCESS) |
 
 ---
@@ -116,21 +101,22 @@ make start && make celery
 # List all gates
 curl -s http://localhost:8000/api/pilot-gates/ | python3 -m json.tool
 
-# Get gate detail with pilot executions
-curl -s http://localhost:8000/api/pilot-gates/e92c234f-b6f1-44d1-901c-ad8c99a291ab/ | python3 -m json.tool
+# Test auto-gate with new decision (via WorkflowAgent)
+# Security decision -> should get HIGH gate
+# Policy decision -> should get MEDIUM gate
 
-# Start a new pilot (requires approved gate)
-curl -X POST http://localhost:8000/api/pilot-gates/<gate_id>/pilot/ \
-  -H "Content-Type: application/json" \
-  -d '{"name":"My Pilot","description":"Testing feature X"}'
-
-# Complete a pilot
-curl -X POST http://localhost:8000/api/pilot-gates/<gate_id>/pilot/<pilot_id>/complete/ \
-  -H "Content-Type: application/json" \
-  -d '{"outcome":"success","summary":"All tests passed","learnings":["Learning 1"]}'
-
-# View the UI
-# Navigate to AI Studio → Intelligence Command Center → Pilot Readiness Gates panel
+# View decisions that would get gates
+.venv/bin/python -c "
+import os; os.environ['DJANGO_SETTINGS_MODULE']='core.settings'
+import django; django.setup()
+from core.models_unified_system import AgentDecisionSummary
+from core.models_pilot_readiness import PilotReadinessGate
+existing = PilotReadinessGate.objects.values_list('decision_id', flat=True)
+security = AgentDecisionSummary.objects.filter(impact_area='security').exclude(id__in=existing).count()
+policy = AgentDecisionSummary.objects.filter(decision_type='policy').exclude(id__in=existing).count()
+print(f'Security decisions needing gates: {security}')
+print(f'Policy decisions needing gates: {policy}')
+"
 ```
 
 ---
@@ -139,12 +125,11 @@ curl -X POST http://localhost:8000/api/pilot-gates/<gate_id>/pilot/<pilot_id>/co
 
 | File | Purpose |
 |------|---------|
+| `core/services/decision_extractor.py` | Auto-gate creation functions |
+| `core/agents/workflow_agent.py` | PA Boardroom decision creation |
 | `core/models_pilot_readiness.py` | Gate, Checklist, Execution models |
 | `core/views_agent_learning.py:2218-2690` | All Pilot Gate API endpoints (7 total) |
-| `core/urls.py:2702-2710` | API URL routes |
-| `ai_core/templates/ai_image_studio.html:7130+` | ICC tab with Pilot Gates panel |
-| `docs/handoffs/SESSION_592_PILOT_READINESS_GATE_COMPLETE.md` | Full system documentation |
-| `docs/CAPABILITIES.md:1775+` | Pilot Readiness Gate section |
+| `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | Session 593 handoff |
 
 ---
 
@@ -162,4 +147,4 @@ curl -X POST http://localhost:8000/api/pilot-gates/<gate_id>/pilot/<pilot_id>/co
 
 ---
 
-**Session 592: Pilot Readiness Gate System - COMPLETE**
+**Session 593: ThinkingAgent Auto-Gate Integration - COMPLETE**
