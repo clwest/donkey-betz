@@ -57914,7 +57914,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 case 'approved':
                     return `
                         <div class="mt-2">
-                            <button class="btn btn-sm btn-success" onclick="updateGateStatus('${gate.id}', 'pilot')">
+                            <button class="btn btn-sm btn-success" onclick="startPilot('${gate.id}')">
                                 🚀 Start Pilot
                             </button>
                         </div>
@@ -57958,9 +57958,51 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             }
         }
 
+        // Start pilot execution (separate endpoint from status updates)
+        async function startPilot(gateId) {
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/pilot/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        started_by: 'human',
+                        notes: 'Pilot started from ICC panel'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`🚀 ${data.message}`, 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error starting pilot:', error);
+                showNotification('Error starting pilot', 'danger');
+            }
+        }
+
         // Toggle checklist item status
         async function toggleChecklistItem(gateId, itemId, currentStatus) {
-            const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+            // Map current status to action
+            // API accepts: 'complete' | 'waive' | 'block' | 'start'
+            let action;
+            if (currentStatus === 'completed') {
+                showNotification('✅ Item already completed', 'info');
+                return;
+            } else if (currentStatus === 'blocked') {
+                showNotification('🚫 Item is blocked. Resolve blocker first.', 'warning');
+                return;
+            } else if (currentStatus === 'waived') {
+                showNotification('💨 Item was waived', 'info');
+                return;
+            } else {
+                action = 'complete';  // Complete pending/in_progress items
+            }
 
             try {
                 const response = await fetch(`/api/pilot-gates/${gateId}/items/${itemId}/`, {
@@ -57970,13 +58012,14 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({
-                        status: newStatus,
+                        action: action,
                         completed_by: 'human'
                     })
                 });
 
                 const data = await response.json();
                 if (data.success) {
+                    showNotification('✅ Checklist item completed!', 'success');
                     loadPilotGates();
                 } else {
                     showNotification('Error: ' + data.error, 'danger');
