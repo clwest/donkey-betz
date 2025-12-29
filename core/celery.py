@@ -1091,10 +1091,10 @@ app.conf.beat_schedule = {
     # ==========================================================================
     'autonomous-thinking-cycle': {
         'task': 'core.tasks.run_autonomous_thinking_cycle',
-        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours
+        'schedule': crontab(minute=0),  # Every hour at :00 (Session 579: changed from 2h to 1h)
         'kwargs': {'cycle_type': 'scheduled', 'lookback_hours': 24},
         'options': {
-            'expires': 7200,  # 2 hours
+            'expires': 3600,  # 1 hour
         }
     },
     # SESSION 549: HUMAN ACTION NOTIFICATIONS
