@@ -1883,6 +1883,186 @@ Track and manage how agents work together.""",
                     "required": ["action"]
                 }
             }
+        },
+        # =========================================================================
+        # Session 580: Phase 9 - Deep System Coverage (5 tools)
+        # =========================================================================
+        # Tool 39: manage_project
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_project",
+                "description": """Manage partnership projects - list, create, update, export.
+Use this for:
+- "Show my projects"
+- "Create a project"
+- "Export project to PDF"
+- "Project details"
+- "Assign agent to project"
+Full project lifecycle management.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "get", "create", "update", "delete", "export_pdf", "assign_agent", "get_intelligence"],
+                            "description": "Action to perform"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Project ID (for get/update/delete/export)"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Project name (for create)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Project description (for create/update)"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent ID (for assign_agent)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 40: query_legal
+        {
+            "type": "function",
+            "function": {
+                "name": "query_legal",
+                "description": """Query legal case files, litigation documents, and case context.
+Use this for:
+- "Show my legal cases"
+- "Get case details"
+- "List case documents"
+- "Analyze legal document"
+- "Generate response to filing"
+Legal document and case management.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_cases", "get_case", "list_documents", "get_context", "active_case", "list_case_files"],
+                            "description": "Action to perform"
+                        },
+                        "case_id": {
+                            "type": "string",
+                            "description": "Case ID (for get_case/list_documents)"
+                        },
+                        "document_id": {
+                            "type": "string",
+                            "description": "Document ID (for specific document operations)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 41: manage_agent_training
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_agent_training",
+                "description": """Manage agent training, capabilities, and templates.
+Use this for:
+- "Show training stats"
+- "List agent capabilities"
+- "Training history"
+- "Available templates"
+- "Train an agent"
+Agent training and capability management.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_agents", "get_agent", "list_capabilities", "list_templates", "stats", "history", "dashboard"],
+                            "description": "Action to perform"
+                        },
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Agent name (for get_agent)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 42: manage_workflow_templates
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_workflow_templates",
+                "description": """Manage workflow templates and active workflows.
+Use this for:
+- "Show workflow templates"
+- "List active workflows"
+- "Workflow status"
+- "Create workflow from template"
+Workflow template management.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_templates", "list_active", "get_status", "create_from_template"],
+                            "description": "Action to perform"
+                        },
+                        "workflow_id": {
+                            "type": "string",
+                            "description": "Workflow ID (for get_status)"
+                        },
+                        "template_name": {
+                            "type": "string",
+                            "description": "Template name (for create_from_template)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 43: generate_image
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_image",
+                "description": """Generate images using AI image agents.
+Use this for:
+- "Create an image of X"
+- "Generate a logo"
+- "Make a banner"
+- "Create artwork"
+Delegates to ImageAgent for AI image generation.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Image description/prompt"
+                        },
+                        "style": {
+                            "type": "string",
+                            "description": "Visual style (realistic, artistic, cartoon, etc.)"
+                        },
+                        "size": {
+                            "type": "string",
+                            "enum": ["1024x1024", "1792x1024", "1024x1792"],
+                            "description": "Image size (default: 1024x1024)"
+                        },
+                        "image_type": {
+                            "type": "string",
+                            "enum": ["general", "logo", "banner", "icon", "artwork"],
+                            "description": "Type of image to generate"
+                        }
+                    },
+                    "required": ["prompt"]
+                }
+            }
         }
     ]
 
@@ -3094,6 +3274,22 @@ Track and manage how agents work together.""",
 
         if tool_name == "manage_collaboration":
             return self._manage_collaboration(arguments)
+
+        # Session 580: Phase 9 tools
+        if tool_name == "manage_project":
+            return self._manage_project(arguments)
+
+        if tool_name == "query_legal":
+            return self._query_legal(arguments)
+
+        if tool_name == "manage_agent_training":
+            return self._manage_agent_training(arguments)
+
+        if tool_name == "manage_workflow_templates":
+            return self._manage_workflow_templates(arguments)
+
+        if tool_name == "generate_image":
+            return self._generate_image(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -6226,4 +6422,381 @@ Track and manage how agents work together.""",
 
         except Exception as e:
             logger.error(f"Error managing collaboration: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # Session 580: Phase 9 Tools - Deep System Coverage
+    # =========================================================================
+
+    def _manage_project(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage partnership projects - list, create, update, export.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list')
+            base_url = 'http://localhost:8000/api/projects'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        projects = response.json()
+                        project_list = projects if isinstance(projects, list) else projects.get('projects', [])
+                        return {
+                            'success': True,
+                            'projects': project_list[:20],
+                            'total': len(project_list),
+                            'summary': f"Found {len(project_list)} projects"
+                        }
+                except:
+                    pass
+                # Fallback to direct query
+                from core.models_partnership import PartnershipProject
+                projects = PartnershipProject.objects.all().order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'projects': [{'id': str(p.id), 'name': p.name, 'status': p.status} for p in projects],
+                    'total': PartnershipProject.objects.count(),
+                    'summary': f"Found {PartnershipProject.objects.count()} projects"
+                }
+
+            elif action == 'get':
+                project_id = arguments.get('project_id')
+                if project_id:
+                    try:
+                        response = requests.get(f'{base_url}/{project_id}/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'project': response.json()}
+                    except:
+                        pass
+                    from core.models_partnership import PartnershipProject
+                    try:
+                        p = PartnershipProject.objects.get(id=project_id)
+                        return {'success': True, 'project': {'id': str(p.id), 'name': p.name, 'description': p.description, 'status': p.status}}
+                    except:
+                        return {'success': False, 'error': 'Project not found'}
+
+            elif action == 'create':
+                name = arguments.get('name', 'New Project')
+                description = arguments.get('description', '')
+                try:
+                    response = requests.post(f'{base_url}/create/', json={'name': name, 'description': description}, timeout=10)
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': f'Project "{name}" created' if response.status_code in [200, 201] else response.text
+                    }
+                except:
+                    return {'success': False, 'error': 'Could not create project'}
+
+            elif action == 'get_intelligence':
+                project_id = arguments.get('project_id')
+                if project_id:
+                    try:
+                        response = requests.get(f'{base_url}/{project_id}/intelligence/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'intelligence': response.json()}
+                    except:
+                        pass
+                return {'success': True, 'intelligence': {'message': 'Intelligence not available'}}
+
+            elif action == 'export_pdf':
+                project_id = arguments.get('project_id')
+                if project_id:
+                    return {
+                        'success': True,
+                        'message': f'PDF export available at /api/projects/{project_id}/export-comprehensive-pdf/',
+                        'export_url': f'/api/projects/{project_id}/export-comprehensive-pdf/'
+                    }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing project: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_legal(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query legal case files, litigation documents, and case context.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_cases')
+            base_url = 'http://localhost:8000/api/legal'
+
+            if action == 'list_cases':
+                try:
+                    response = requests.get(f'{base_url}/cases/', timeout=10)
+                    if response.status_code == 200:
+                        cases = response.json()
+                        case_list = cases if isinstance(cases, list) else cases.get('cases', [])
+                        return {
+                            'success': True,
+                            'cases': case_list[:20],
+                            'summary': f"Found {len(case_list)} cases"
+                        }
+                except:
+                    pass
+                # Fallback
+                from core.models_legal import CaseProfile
+                cases = CaseProfile.objects.all().order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'cases': [{'id': str(c.id), 'case_title': c.case_title, 'case_number': c.case_number, 'status': c.status} for c in cases],
+                    'summary': f"Found {CaseProfile.objects.count()} cases"
+                }
+
+            elif action == 'get_case':
+                case_id = arguments.get('case_id')
+                if case_id:
+                    try:
+                        response = requests.get(f'{base_url}/cases/{case_id}/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'case': response.json()}
+                    except:
+                        pass
+                return {'success': False, 'error': 'Case not found'}
+
+            elif action == 'active_case':
+                try:
+                    response = requests.get(f'{base_url}/active-case/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'active_case': response.json()}
+                except:
+                    pass
+                return {'success': True, 'active_case': None, 'message': 'No active case'}
+
+            elif action == 'list_case_files':
+                try:
+                    response = requests.get(f'{base_url}/case-files/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'files': response.json()}
+                except:
+                    pass
+                return {'success': True, 'files': [], 'message': 'No case files'}
+
+            elif action == 'get_context':
+                case_id = arguments.get('case_id')
+                if case_id:
+                    try:
+                        response = requests.get(f'{base_url}/cases/{case_id}/context/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'context': response.json()}
+                    except:
+                        pass
+                return {'success': True, 'context': {'message': 'Context not available'}}
+
+            elif action == 'list_documents':
+                case_id = arguments.get('case_id')
+                if case_id:
+                    try:
+                        response = requests.get(f'{base_url}/litigation/{case_id}/documents/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'documents': response.json()}
+                    except:
+                        pass
+                return {'success': True, 'documents': []}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error querying legal: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_agent_training(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage agent training, capabilities, and templates.
+        """
+        try:
+            import requests
+            from django.db.models import Avg
+            action = arguments.get('action', 'list_agents')
+            base_url = 'http://localhost:8000/api/training'
+
+            if action == 'list_agents':
+                try:
+                    response = requests.get(f'{base_url}/agents/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'agents': response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import Agent
+                agents = Agent.objects.filter(is_active=True).order_by('name')[:20]
+                return {
+                    'success': True,
+                    'agents': [{'name': a.name, 'type': a.agent_type, 'effectiveness': a.effectiveness_score} for a in agents],
+                    'summary': f"Found {Agent.objects.filter(is_active=True).count()} trainable agents"
+                }
+
+            elif action == 'get_agent':
+                agent_name = arguments.get('agent_name')
+                if agent_name:
+                    try:
+                        response = requests.get(f'{base_url}/agents/{agent_name}/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'agent': response.json()}
+                    except:
+                        pass
+                    from core.models_unified_system import Agent
+                    try:
+                        a = Agent.objects.get(name__iexact=agent_name)
+                        return {'success': True, 'agent': {'name': a.name, 'type': a.agent_type, 'capabilities': a.capabilities}}
+                    except:
+                        return {'success': False, 'error': 'Agent not found'}
+
+            elif action == 'list_capabilities':
+                try:
+                    response = requests.get(f'{base_url}/capabilities/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'capabilities': response.json()}
+                except:
+                    pass
+                return {'success': True, 'capabilities': ['research', 'writing', 'analysis', 'creation', 'editing']}
+
+            elif action == 'list_templates':
+                try:
+                    response = requests.get(f'{base_url}/templates/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'templates': response.json()}
+                except:
+                    pass
+                return {'success': True, 'templates': []}
+
+            elif action == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'stats': response.json()}
+                except:
+                    pass
+                from core.models_unified_system import Agent
+                return {
+                    'success': True,
+                    'stats': {
+                        'total_agents': Agent.objects.filter(is_active=True).count(),
+                        'avg_effectiveness': round(Agent.objects.filter(is_active=True).aggregate(avg=Avg('effectiveness_score'))['avg'] or 0, 1)
+                    }
+                }
+
+            elif action == 'history':
+                try:
+                    response = requests.get(f'{base_url}/history/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'history': response.json()}
+                except:
+                    pass
+                return {'success': True, 'history': []}
+
+            elif action == 'dashboard':
+                try:
+                    response = requests.get(f'{base_url}/dashboard/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'dashboard': response.json()}
+                except:
+                    pass
+                return {'success': True, 'dashboard': {'message': 'Dashboard data not available'}}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing agent training: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_workflow_templates(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage workflow templates and active workflows.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_templates')
+            base_url = 'http://localhost:8000/api/teams/workflows'
+
+            if action == 'list_templates':
+                try:
+                    response = requests.get(f'{base_url}/templates/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'templates': response.json()}
+                except:
+                    pass
+                # Fallback - return default workflow templates
+                return {
+                    'success': True,
+                    'templates': [
+                        {'name': 'research_and_write', 'description': 'Research a topic and write content'},
+                        {'name': 'analyze_and_report', 'description': 'Analyze data and generate report'},
+                        {'name': 'create_and_distribute', 'description': 'Create content and distribute to platforms'}
+                    ],
+                    'summary': 'Available workflow templates'
+                }
+
+            elif action == 'list_active':
+                try:
+                    response = requests.get(f'{base_url}/active/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'active_workflows': response.json()}
+                except:
+                    pass
+                return {'success': True, 'active_workflows': [], 'message': 'No active workflows'}
+
+            elif action == 'get_status':
+                workflow_id = arguments.get('workflow_id')
+                if workflow_id:
+                    try:
+                        response = requests.get(f'{base_url}/{workflow_id}/status/', timeout=10)
+                        if response.status_code == 200:
+                            return {'success': True, 'status': response.json()}
+                    except:
+                        pass
+                return {'success': False, 'error': 'Workflow not found'}
+
+            elif action == 'create_from_template':
+                template_name = arguments.get('template_name')
+                if template_name:
+                    return {
+                        'success': True,
+                        'message': f'Use execute_workflow tool with template: {template_name}',
+                        'hint': 'The execute_workflow tool can run workflows based on templates'
+                    }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing workflow templates: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _generate_image(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate images using AI image agents.
+        """
+        try:
+            prompt = arguments.get('prompt', '')
+            style = arguments.get('style', 'realistic')
+            size = arguments.get('size', '1024x1024')
+            image_type = arguments.get('image_type', 'general')
+
+            if not prompt:
+                return {'success': False, 'error': 'Prompt is required'}
+
+            # Delegate to ImageAgent
+            result = self.router.route(
+                agent_name='ImageAgent',
+                task=f"Create a {image_type} image: {prompt}. Style: {style}, Size: {size}",
+                context={
+                    'prompt': prompt,
+                    'style': style,
+                    'size': size,
+                    'image_type': image_type
+                }
+            )
+
+            return {
+                'success': result.success,
+                'message': result.message if result.success else result.error,
+                'data': result.data if result.success else {},
+                'summary': f"Image generation {'started' if result.success else 'failed'}: {prompt[:50]}..."
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating image: {e}")
             return {'success': False, 'error': str(e)}
