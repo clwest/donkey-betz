@@ -347,13 +347,37 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 prompt_parts.append(f"\n**Learning Velocity:** {vel['learnings_this_week']} this week, ")
                 prompt_parts.append(f"{vel['utilization_rate']}% fed to ThinkingAgent\n")
 
-            prompt_parts.append("\n**IMPORTANT - Using Experiment Learnings:**\n")
-            prompt_parts.append("Use these learnings to improve future decisions:\n")
-            prompt_parts.append("- PASS outcomes show proven approaches - replicate them\n")
-            prompt_parts.append("- FAIL outcomes are highest priority - AVOID these patterns\n")
-            prompt_parts.append("- LEARN outcomes provide insights even without success\n")
-            prompt_parts.append("- Use predictive scores to assess new decision risks\n")
-            prompt_parts.append("- Act on system recommendations to improve overall performance\n")
+            # Session 601: Add ChatGPT's weighted learning data
+            weighted = learnings.get('weighted', {})
+            if weighted.get('weighted_learnings'):
+                prompt_parts.append("\n**Weighted Learning Outcomes (ChatGPT Formula):**\n")
+                prompt_parts.append("Formula: `learning_weight = outcome_signal × confidence_weight × decay_weight`\n\n")
+
+                for wl in weighted['weighted_learnings'][:5]:
+                    weight = wl['weight']
+                    weight_emoji = '🟢' if weight['learning_weight'] > 0.3 else '🔴' if weight['learning_weight'] < -0.3 else '🟡'
+                    prompt_parts.append(f"{weight_emoji} **{wl['experiment_name'][:40]}** [{wl['outcome_classification'].upper()}]\n")
+                    prompt_parts.append(f"   Weight: {weight['learning_weight']:.3f} = {weight['outcome_signal']} × {weight['confidence_weight']} × {weight['decay_weight']}\n")
+                    prompt_parts.append(f"   Signal: {weight['signal_type']}, Age: {weight['age_days']:.0f}d, Samples: {weight['sample_size']}\n")
+                    if wl.get('key_insight'):
+                        prompt_parts.append(f"   Insight: {wl['key_insight'][:100]}\n")
+                    prompt_parts.append("\n")
+
+                # Add aggregate stats
+                if weighted.get('aggregate_stats'):
+                    stats = weighted['aggregate_stats']
+                    prompt_parts.append(f"**Aggregate Learning Health:** {stats['learning_health'].upper()}\n")
+                    prompt_parts.append(f"- Net Weight: {stats['net_learning_weight']:.3f}\n")
+                    prompt_parts.append(f"- Positive: +{stats['total_positive_weight']:.3f}, Negative: {stats['total_negative_weight']:.3f}\n\n")
+
+            prompt_parts.append("\n**IMPORTANT - Strategic Reasoning with Weighted Learnings:**\n")
+            prompt_parts.append("Interpret weighted scores as evidence, not absolute truth:\n")
+            prompt_parts.append("- High positive weight (>0.5) → proven success, scale up\n")
+            prompt_parts.append("- High negative weight (<-0.5) with confidence → gate harder\n")
+            prompt_parts.append("- Low confidence (few samples) → keep exploring\n")
+            prompt_parts.append("- Decayed outcomes (old) → may need fresh validation\n")
+            prompt_parts.append("- Safety FAILs (-1.0) are weighted heavily - avoid repeating\n")
+            prompt_parts.append("- Execution FAILs (-0.5) are informative, not fatal\n")
             prompt_parts.append("\n")
 
         # Add the task
@@ -633,6 +657,15 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 logger.info("[Session 600] Added enhanced learning analytics to ThinkingAgent context")
             except Exception as enhanced_error:
                 logger.warning(f"[Session 600] Enhanced learnings failed: {enhanced_error}")
+
+            # Session 601: Add ChatGPT's weighted learning formula
+            try:
+                from core.services.weighted_learning import get_weighted_learnings_for_thinking_agent as get_weighted
+                weighted = get_weighted()
+                context['experiment_learnings']['weighted'] = weighted
+                logger.info("[Session 601] Added weighted learnings (ChatGPT formula) to ThinkingAgent context")
+            except Exception as weighted_error:
+                logger.warning(f"[Session 601] Weighted learnings failed: {weighted_error}")
 
             # Mark learnings as fed to ThinkingAgent
             if recent_learnings:

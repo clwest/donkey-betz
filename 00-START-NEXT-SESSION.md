@@ -1,107 +1,81 @@
-# Session 601 - Start Here
+# Session 602 - Start Here
 
-**Previous Session:** 600
+**Previous Session:** 601
 **Date:** December 29, 2025
-**Focus:** Learning Loop Extensions or New Feature
+**Focus:** Weighted Learning Extensions or New Feature
 
 ---
 
-## Session 600 Accomplishments
+## Session 601 Accomplishments
 
-### ALL THREE Options Implemented!
+### ChatGPT's Weighted Learning Formula - COMPLETE
 
-| Option | Feature | Description |
-|--------|---------|-------------|
-| **A** | Real Metrics Integration | Halt conditions now use real data from AgentExecution, PipelineStageFeedback |
-| **B** | Rollback Automation | Auto-generates remediation checklists, tracks progress, Discord notifications |
-| **C** | ThinkingAgent Enhancement | Outcome classification, weighted insights, predictive scores, recommendations |
+Implemented the sophisticated learning weight formula:
 
-### New Services Created
+```
+learning_weight = outcome_signal × confidence_weight × decay_weight
+```
 
-| Service | Purpose |
-|---------|---------|
-| `ExperimentMetricsService` | Gathers real metrics for halt condition monitoring |
-| `ExperimentRollbackService` | Generates and tracks remediation plans for FAIL experiments |
-| `ExperimentLearningEnhancer` | Provides enhanced analytics for ThinkingAgent |
+| Component | Formula | Purpose |
+|-----------|---------|---------|
+| **Outcome Signal** | PASS=+1.0, LEARN=+0.3, FAIL=-0.5/-1.0 | Base value by type |
+| **Confidence Weight** | `min(1.0, log10(samples+1))` | More data = more weight |
+| **Decay Weight** | `e^(-age_days/21)` | Recent outcomes matter more |
 
-### New API Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/experiments/<uuid>/metrics/` | GET | Real-time metrics for experiment |
-| `/api/experiments/<uuid>/rollback/` | GET | Get rollback/remediation plan |
-| `/api/experiments/<uuid>/remediation/` | POST | Update remediation step progress |
-
-### UI Enhancements
+### Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **📊 Metrics Button** | Shows real-time metrics modal for running experiments |
-| **🔧 Remediate Button** | Shows interactive remediation checklist for FAIL experiments |
-| **Progress Tracking** | Checkbox-based step completion with Discord notifications |
+| **Safety vs Execution FAILs** | Safety failures (-1.0) weighted more than execution (-0.5) |
+| **Confidence Gating** | 1 sample = 0.3 weight, 10 samples = 1.0 weight |
+| **Decay Prevention** | Old failures fade (21-day half-life) |
+| **Permanent Ban Guardrail** | Requires ≥2 safety FAILs across ≥2 pilots with ≥0.8 confidence |
+| **Theme Aggregation** | Cumulative scores with trend direction |
+
+### New Service
+
+`core/services/weighted_learning.py` (450 lines)
+- `calculate_learning_weight()` - Single outcome weight
+- `aggregate_theme_scores()` - Theme-level analysis
+- `check_permanent_ban_eligible()` - Ban guardrail
+- `get_weighted_learnings_for_thinking_agent()` - Full context
 
 ---
 
-## The Learning Loop is COMPLETE!
+## The Complete Learning System
 
 ```
-Session 590: Pilot Readiness Gate
+Session 590-600: Learning Loop Infrastructure
         ↓
-Session 595: Pilot Execution Dashboard
+Session 601: Weighted Learning Formula ← COMPLETE!
         ↓
-Session 596: Experiment Tracking Registry
-        ↓
-Session 597: ExperimentLearning + Pattern Models
-        ↓
-Session 598: Learning Loop UI Dashboard
-        ↓
-Session 599: Fail Fast + Outcome Classification
-        ↓
-Session 600: Real Metrics + Rollback + ThinkingAgent Enhancement ← COMPLETE!
-        ↓
-ThinkingAgent reads weighted learnings → Better Future Decisions
+ThinkingAgent reasons strategically:
+- "High variance, insufficient data → keep exploring"
+- "Consistent negative safety signal → gate harder"
+- "Positive momentum → propose scaled pilot"
 ```
 
 ---
 
-## Session 601 Options
+## Session 602 Options
 
-### Option A: Boardroom Integration
-- Feed predictive scores to Boardroom decisions
-- Pre-assess risk before decision is made
-- Show historical success rate for similar decisions
+### Option A: Integrate with Boardroom
+- Use weighted scores in decision prioritization
+- Show historical success probability before approval
+- Weight-adjusted risk assessment
 
-### Option B: Automated Retry Logic
-- Auto-retry LEARN experiments with adjustments
-- Learn from failure patterns and modify approach
-- Incremental improvement through iteration
+### Option B: Visualize Learning Momentum
+- Dashboard showing weight trends over time
+- Theme-level cumulative score charts
+- Decay visualization
 
-### Option C: Learning Dashboard
-- Dedicated UI for learning analytics
-- Visualize learning velocity over time
-- Track system improvement metrics
+### Option C: Auto-Adjust Pilot Parameters
+- Use weighted learnings to suggest pilot scope
+- Recommend sample size for confidence target
+- Smart defaults based on similar experiments
 
 ### Option D: New Feature
 - User chooses a different direction
-
----
-
-## Current System Stats
-
-| Component | Count |
-|-----------|-------|
-| **Agents** | 71 (47 routable) |
-| **Spiders** | 77 (72 working) |
-| **PA Tools** | 77 |
-| **Decisions (Draft)** | 645 |
-| **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | 77 |
-| **Pilots** | 1 |
-| **Experiments** | 1 |
-| **ExperimentLearnings** | 1 |
-| **DecisionTypeSuccessPatterns** | 1 |
-| **Celery Tasks** | 230 |
-| **New Services (Session 600)** | 3 |
 
 ---
 
@@ -111,27 +85,25 @@ ThinkingAgent reads weighted learnings → Better Future Decisions
 # Start services
 make start && make celery
 
-# Test real metrics
+# Test weighted learning calculation
 .venv/bin/python manage.py shell -c "
-from core.services.experiment_metrics import gather_experiment_metrics
-from core.models_pilot_readiness import Experiment
-exp = Experiment.objects.first()
-if exp:
-    print(gather_experiment_metrics(exp))
+from core.services.weighted_learning import WeightedLearningService
+
+# PASS with 5 samples, 7 days old
+result = WeightedLearningService.calculate_learning_weight('pass', sample_size=5, age_days=7)
+print(f'PASS weight: {result}')
+
+# Safety FAIL with 3 samples
+result = WeightedLearningService.calculate_learning_weight('fail', 'user trust dropped', sample_size=3, age_days=14)
+print(f'Safety FAIL weight: {result}')
 "
 
-# Test enhanced learnings
+# Test full weighted learnings for ThinkingAgent
 .venv/bin/python manage.py shell -c "
-from core.services.experiment_learning_enhancer import get_enhanced_learnings_for_thinking_agent
-enhanced = get_enhanced_learnings_for_thinking_agent()
-print(f'Keys: {enhanced.keys()}')
+from core.services.weighted_learning import get_weighted_learnings_for_thinking_agent
+data = get_weighted_learnings_for_thinking_agent()
+print(f'Stats: {data.get(\"aggregate_stats\", {})}')
 "
-
-# View UI
-open http://localhost:8000/ai-studio/
-# Navigate to Intelligence Command Center > Experiment Tracking Registry
-# - Running experiments have 📊 Metrics button
-# - Failed experiments have 🔧 Remediate button
 ```
 
 ---
@@ -140,12 +112,22 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `core/services/experiment_metrics.py` | Real metrics gathering service |
-| `core/services/experiment_rollback.py` | Rollback automation service |
-| `core/services/experiment_learning_enhancer.py` | Enhanced learning analytics |
-| `core/agents/thinking_agent.py` | Enhanced context with learnings |
-| `docs/handoffs/SESSION_600_COMPLETE_LEARNING_LOOP.md` | Session handoff |
+| `core/services/weighted_learning.py` | Complete weighted learning system |
+| `core/agents/thinking_agent.py` | Uses weighted learnings in context |
+| `docs/handoffs/SESSION_601_WEIGHTED_LEARNING_FORMULA.md` | Session handoff |
 
 ---
 
-**Session 600: Complete Learning Loop - ALL THREE OPTIONS IMPLEMENTED**
+## System Stats After Session 601
+
+| Component | Count |
+|-----------|-------|
+| **Agents** | 71 (47 routable) |
+| **Spiders** | 77 (72 working) |
+| **Services** | 96 (+3 from Session 600, +1 from Session 601) |
+| **Celery Tasks** | 230 |
+| **The Learning Loop** | COMPLETE with weighted formula |
+
+---
+
+**Session 601: Weighted Learning Formula - COMPLETE**
