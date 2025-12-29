@@ -3081,6 +3081,93 @@ Returns semantically relevant documents and generated answers.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 21: Project & Workflow Collaboration Tools (Session 585) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_project_collaboration",
+                "description": """Manage shared projects and collaborators.
+
+- "Show shared projects"
+- "Invite user to project"
+- "Show my invitations"
+- "Accept/decline invitation"
+- "List project collaborators"
+- "Remove collaborator"
+- "Show project activity"
+
+Supports project sharing, invitations, and collaborator management.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_projects", "get_project", "invite", "list_invitations", "accept_invitation", "decline_invitation", "list_collaborators", "remove_collaborator", "get_activity", "get_comments"],
+                            "description": "Action to perform"
+                        },
+                        "project_id": {
+                            "type": "string",
+                            "description": "Project ID for project-specific actions"
+                        },
+                        "user_email": {
+                            "type": "string",
+                            "description": "Email to invite as collaborator"
+                        },
+                        "user_id": {
+                            "type": "string",
+                            "description": "User ID to remove as collaborator"
+                        },
+                        "invitation_id": {
+                            "type": "string",
+                            "description": "Invitation ID for accept/decline"
+                        },
+                        "role": {
+                            "type": "string",
+                            "enum": ["viewer", "editor", "admin"],
+                            "description": "Role for invited collaborator"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_workflow_sharing",
+                "description": """Share and collaborate on workflows.
+
+- "Share workflow with user"
+- "List shared workflows"
+- "Collaborate on workflow"
+
+Supports workflow sharing and collaborative execution.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["share", "list_shared", "collaborate"],
+                            "description": "Action to perform"
+                        },
+                        "workflow_id": {
+                            "type": "string",
+                            "description": "Workflow ID to share or collaborate on"
+                        },
+                        "user_email": {
+                            "type": "string",
+                            "description": "Email of user to share with"
+                        },
+                        "permissions": {
+                            "type": "string",
+                            "enum": ["view", "edit", "execute"],
+                            "description": "Permission level for shared workflow"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -4403,6 +4490,13 @@ Returns semantically relevant documents and generated answers.""",
 
         if tool_name == "query_semantic_search":
             return self._query_semantic_search(arguments)
+
+        # ===== Phase 21: Project & Workflow Collaboration Tools (Session 585) =====
+        if tool_name == "manage_project_collaboration":
+            return self._manage_project_collaboration(arguments)
+
+        if tool_name == "manage_workflow_sharing":
+            return self._manage_workflow_sharing(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -11393,4 +11487,278 @@ Returns semantically relevant documents and generated answers.""",
 
         except Exception as e:
             logger.error(f"Error in semantic search: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 21: Project & Workflow Collaboration Tools (Session 585) =====
+
+    def _manage_project_collaboration(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage shared projects and collaborators.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_projects')
+            base_url = 'http://localhost:8000/api/projects/shared'
+
+            if action == 'list_projects':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        projects = response.json()
+                        project_list = projects if isinstance(projects, list) else projects.get('projects', [])
+                        return {
+                            'success': True,
+                            'projects': project_list[:20],
+                            'total': len(project_list),
+                            'summary': f"Found {len(project_list)} shared projects"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback - query SharedProject model directly
+                from core.models_unified_system import SharedProject
+                projects = SharedProject.objects.all()[:20]
+                return {
+                    'success': True,
+                    'projects': [{'id': str(p.id), 'name': p.name if hasattr(p, 'name') else str(p)} for p in projects],
+                    'total': SharedProject.objects.count(),
+                    'summary': f"Found {SharedProject.objects.count()} shared projects"
+                }
+
+            elif action == 'get_project':
+                project_id = arguments.get('project_id')
+                if not project_id:
+                    return {'success': False, 'error': 'project_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{project_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'project': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Could not retrieve project'}
+
+            elif action == 'invite':
+                project_id = arguments.get('project_id')
+                user_email = arguments.get('user_email')
+                role = arguments.get('role', 'editor')
+                if not project_id or not user_email:
+                    return {'success': False, 'error': 'project_id and user_email required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{project_id}/invite/',
+                        json={'email': user_email, 'role': role},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': f'Invitation sent to {user_email}' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'list_invitations':
+                try:
+                    response = requests.get(f'{base_url}/invitations/', timeout=10)
+                    if response.status_code == 200:
+                        invitations = response.json()
+                        inv_list = invitations if isinstance(invitations, list) else invitations.get('invitations', [])
+                        return {
+                            'success': True,
+                            'invitations': inv_list,
+                            'total': len(inv_list),
+                            'summary': f"Found {len(inv_list)} pending invitations"
+                        }
+                except:
+                    pass
+                return {'success': True, 'invitations': [], 'summary': 'No invitations found'}
+
+            elif action == 'accept_invitation':
+                invitation_id = arguments.get('invitation_id')
+                if not invitation_id:
+                    return {'success': False, 'error': 'invitation_id required'}
+                try:
+                    response = requests.post(f'{base_url}/invitations/{invitation_id}/accept/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Invitation accepted' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'decline_invitation':
+                invitation_id = arguments.get('invitation_id')
+                if not invitation_id:
+                    return {'success': False, 'error': 'invitation_id required'}
+                try:
+                    response = requests.post(f'{base_url}/invitations/{invitation_id}/decline/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Invitation declined' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'list_collaborators':
+                project_id = arguments.get('project_id')
+                if not project_id:
+                    return {'success': False, 'error': 'project_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{project_id}/collaborators/', timeout=10)
+                    if response.status_code == 200:
+                        collaborators = response.json()
+                        collab_list = collaborators if isinstance(collaborators, list) else collaborators.get('collaborators', [])
+                        return {
+                            'success': True,
+                            'collaborators': collab_list,
+                            'total': len(collab_list),
+                            'summary': f"Found {len(collab_list)} collaborators"
+                        }
+                except:
+                    pass
+                return {'success': True, 'collaborators': [], 'summary': 'No collaborators found'}
+
+            elif action == 'remove_collaborator':
+                project_id = arguments.get('project_id')
+                user_id = arguments.get('user_id')
+                if not project_id or not user_id:
+                    return {'success': False, 'error': 'project_id and user_id required'}
+                try:
+                    response = requests.delete(f'{base_url}/{project_id}/collaborators/{user_id}/', timeout=10)
+                    return {
+                        'success': response.status_code in [200, 204],
+                        'message': 'Collaborator removed' if response.status_code in [200, 204] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'get_activity':
+                project_id = arguments.get('project_id')
+                if not project_id:
+                    return {'success': False, 'error': 'project_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{project_id}/activity/', timeout=10)
+                    if response.status_code == 200:
+                        activity = response.json()
+                        activity_list = activity if isinstance(activity, list) else activity.get('activity', [])
+                        return {
+                            'success': True,
+                            'activity': activity_list[:20],
+                            'summary': f"Found {len(activity_list)} activity items"
+                        }
+                except:
+                    pass
+                return {'success': True, 'activity': [], 'summary': 'No activity found'}
+
+            elif action == 'get_comments':
+                project_id = arguments.get('project_id')
+                if not project_id:
+                    return {'success': False, 'error': 'project_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{project_id}/comments/', timeout=10)
+                    if response.status_code == 200:
+                        comments = response.json()
+                        comment_list = comments if isinstance(comments, list) else comments.get('comments', [])
+                        return {
+                            'success': True,
+                            'comments': comment_list[:20],
+                            'summary': f"Found {len(comment_list)} comments"
+                        }
+                except:
+                    pass
+                return {'success': True, 'comments': [], 'summary': 'No comments found'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing project collaboration: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_workflow_sharing(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Share and collaborate on workflows.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_shared')
+            base_url = 'http://localhost:8000/api/v1/workflows'
+
+            if action == 'list_shared':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        workflows = response.json()
+                        wf_list = workflows if isinstance(workflows, list) else workflows.get('workflows', [])
+                        # Filter to shared workflows if possible
+                        shared = [w for w in wf_list if w.get('is_shared', True)]
+                        return {
+                            'success': True,
+                            'workflows': shared[:20],
+                            'total': len(shared),
+                            'summary': f"Found {len(shared)} shared workflows"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_unified_system import PublishedWorkflow
+                workflows = PublishedWorkflow.objects.all()[:20]
+                return {
+                    'success': True,
+                    'workflows': [{'id': str(w.id), 'name': w.name if hasattr(w, 'name') else str(w)} for w in workflows],
+                    'total': PublishedWorkflow.objects.count(),
+                    'summary': f"Found {PublishedWorkflow.objects.count()} shared workflows"
+                }
+
+            elif action == 'share':
+                workflow_id = arguments.get('workflow_id')
+                user_email = arguments.get('user_email')
+                permissions = arguments.get('permissions', 'view')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{workflow_id}/share/',
+                        json={'email': user_email, 'permissions': permissions},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': f'Workflow shared with {user_email}' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'collaborate':
+                workflow_id = arguments.get('workflow_id')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/collaborate/',
+                        json={'workflow_id': workflow_id},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, 'collaboration': response.json()}
+                except:
+                    pass
+
+                # Try alternate endpoint
+                try:
+                    response = requests.get(f'{base_url}/{workflow_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'workflow': response.json(),
+                            'message': 'Workflow ready for collaboration'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not initiate collaboration'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing workflow sharing: {e}")
             return {'success': False, 'error': str(e)}

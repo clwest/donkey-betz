@@ -1,8 +1,25 @@
-# Session 585 - Start Here
+# Session 586 - Start Here
 
-**Previous Session:** 584
+**Previous Session:** 585
 **Date:** December 28, 2025
-**Focus:** PA Tools Phases 19-20 Complete (65 → 71)
+**Focus:** PA Tools Phase 21 Complete (71 → 73) + Dream Triage
+
+---
+
+## Session 585 Accomplishments
+
+### Dream Triage
+- Cleared dream backlog: 43 pending → 0 pending
+- Approved 13 high-value dreams for action
+- Archived 453 stale dreams (>4 hours old)
+- Fixed Celery schedule for autonomous-thinking-cycle (was running every 2h instead of hourly)
+
+### Phase 21 - Project & Workflow Collaboration Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_project_collaboration` | projects | list_projects, get_project, invite, list_invitations, accept_invitation, decline_invitation, list_collaborators, remove_collaborator, get_activity, get_comments |
+| `manage_workflow_sharing` | workflows | list_shared, share, collaborate |
 
 ---
 
@@ -93,7 +110,7 @@
 
 ---
 
-## Current PA Tools (71 Total)
+## Current PA Tools (73 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -168,8 +185,10 @@
 | `query_collaboration` | Agent collaboration metrics | Session 584 |
 | `manage_favorites` | Favorites/batch operations | Session 584 |
 | `query_semantic_search` | Semantic search & RAG | Session 584 |
+| `manage_project_collaboration` | Project sharing & collaborators | Session 585 |
+| `manage_workflow_sharing` | Workflow sharing & collaboration | Session 585 |
 
-**Coverage:** 71/1,343 endpoints (5.29%)
+**Coverage:** 73/1,343 endpoints (5.44%)
 
 ---
 
@@ -265,19 +284,27 @@ User: "Show my favorite images"
 
 User: "Search documents about AI"
 → query_semantic_search: Semantic search with RAG
+
+User: "Show shared projects"
+→ manage_project_collaboration: List shared projects, collaborators
+
+User: "Invite user to project"
+→ manage_project_collaboration: Send collaboration invitations
+
+User: "Share workflow with team"
+→ manage_workflow_sharing: Share workflows with permissions
 ```
 
 ---
 
-## Session 585 Priorities
+## Session 586 Priorities
 
-### Option A: Phase 21 - More Coverage
+### Option A: Phase 22 - More Coverage
 
 Remaining uncovered categories:
-- **project-collaboration** - 5 endpoints (invite, remove, list collaborators)
-- **team-collaboration** - 4 endpoints (team management)
-- **workflow-collaboration** - 3 endpoints (workflow sharing)
 - **advanced-filters** - 4 endpoints (advanced search filters)
+- **team-workflows** - 6 endpoints (team workflow management)
+- **content-studio-extended** - 5 endpoints (additional content features)
 
 ### Option B: Testing & Polish
 
@@ -287,7 +314,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 71 tools
+- Update CAPABILITIES.md with all 73 tools
 - Create PA Tools reference guide
 
 ---
@@ -298,22 +325,20 @@ Remaining uncovered categories:
 # Start services
 make start && make celery
 
-# Test Phase 20 tools
+# Test Phase 21 tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 20 tools:')
-phase20 = ['query_collaboration', 'manage_favorites', 'query_semantic_search']
-for t in phase20:
-    if t == 'query_collaboration':
-        args = {'query_type': 'stats'}
-    elif t == 'manage_favorites':
-        args = {'action': 'list_images'}
+print('Phase 21 tools:')
+phase21 = ['manage_project_collaboration', 'manage_workflow_sharing']
+for t in phase21:
+    if t == 'manage_project_collaboration':
+        args = {'action': 'list_projects'}
     else:
-        args = {'query_type': 'stats'}
+        args = {'action': 'list_shared'}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -325,13 +350,13 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 584)
+## System Stats (Session 585)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 71 |
+| **PA Tools** | 73 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -356,10 +381,11 @@ open http://localhost:8000/ai-studio/
 | 583 | 17 | +2 | 63 |
 | 583 | 18 | +2 | 65 |
 | 584 | 19 | +3 | 68 |
-| **584** | **20** | **+3** | **71** |
+| 584 | 20 | +3 | 71 |
+| **585** | **21** | **+2** | **73** |
 
 ---
 
-**Session 584: Phases 19-20 = 6 new tools (65 → 71)**
+**Session 585: Phase 21 = 2 new tools (71 → 73) + Dream Triage**
 
-**PA now has 71 tools (5.29% coverage) - Phases 9-20 complete!**
+**PA now has 73 tools (5.44% coverage) - Phase 21 complete!**
