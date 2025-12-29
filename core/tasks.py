@@ -19776,3 +19776,135 @@ def auto_triage_dreams(
             'success': False,
             'error': str(e)
         }
+
+
+# ============================================================================
+# Session 589: Governance-Respecting Decision Auto-Promotion
+# ============================================================================
+
+@shared_task
+def auto_promote_low_risk_decisions(dry_run: bool = False):
+    """
+    Session 589: Auto-promote low-risk decisions to close the execution gap.
+
+    This task addresses the execution gap identified in Session 588:
+    - 82% of decisions sitting in DRAFT forever
+    - Only 15% promoted to CANONICAL
+
+    Uses governance-respecting rules:
+    - Tier 1 (Auto-Promote): Low-risk guidelines after 24h aging
+    - Tier 2 (Review Required): Medium-risk decisions need human review
+    - Tier 3 (Never Auto): High-risk decisions (security, architecture) always manual
+
+    This is COMPLEMENTARY to the existing auto_promote_decisions task (Session 362)
+    which uses quality_score. This task uses tiered rules based on decision type
+    and impact area.
+
+    Args:
+        dry_run: If True, report what would be promoted without actually promoting
+
+    Returns:
+        dict with promotion results
+    """
+    from core.services.decision_promotion_rules import run_auto_promotion
+
+    logger.info(f"🏛️ [SESSION 589] Starting governance-respecting auto-promotion (dry_run={dry_run})...")
+
+    try:
+        result = run_auto_promotion(dry_run=dry_run)
+
+        # Log results
+        promoted_or_would = result.get('promoted', 0) or result.get('would_promote', 0)
+        if promoted_or_would > 0:
+            logger.info(
+                f"🏛️ [SESSION 589] {'Would promote' if dry_run else 'Promoted'} "
+                f"{promoted_or_would} low-risk decisions"
+            )
+            for d in result.get('decisions', [])[:3]:
+                logger.info(f"   - [{d['type']}/{d['area']}] {d['topic'][:60]}...")
+        else:
+            logger.info("🏛️ [SESSION 589] No decisions eligible for auto-promotion")
+
+        # Send Discord notification if we promoted any
+        if not dry_run and result.get('promoted', 0) > 0:
+            try:
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
+                message = f"**Execution Gap Reduction**\n"
+                message += f"✅ Auto-promoted {result['promoted']} low-risk guidelines\n"
+                for d in result.get('decisions', [])[:3]:
+                    message += f"  • {d['topic'][:50]}...\n"
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"🏛️ [SESSION 589] Discord notification failed: {e}")
+
+        return {
+            'success': True,
+            'dry_run': dry_run,
+            'promoted': result.get('promoted', 0),
+            'would_promote': result.get('would_promote', 0),
+            'eligible': result.get('eligible', 0),
+            'decisions': result.get('decisions', [])[:10],  # Top 10 for summary
+        }
+
+    except Exception as e:
+        logger.error(f"🏛️ [SESSION 589] Auto-promotion failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def report_execution_gap_metrics():
+    """
+    Session 589: Report execution gap metrics for monitoring.
+
+    Logs the current state of the decision execution gap so operators
+    can track progress over time.
+
+    Schedule: Run daily to track gap trends.
+
+    Returns:
+        dict with gap metrics
+    """
+    from core.services.decision_promotion_rules import get_execution_gap_metrics
+
+    logger.info("🏛️ [SESSION 589] Reporting execution gap metrics...")
+
+    try:
+        metrics = get_execution_gap_metrics()
+        gap = metrics.get('execution_gap', {})
+
+        logger.info(
+            f"🏛️ [EXECUTION GAP] "
+            f"Draft: {gap.get('draft_count', 0)} ({gap.get('draft_percentage', 0):.0f}%) | "
+            f"Canonical: {gap.get('canonical_count', 0)} | "
+            f"Auto-promotable: {metrics.get('auto_promotable', {}).get('count', 0)}"
+        )
+
+        # Log age distribution
+        age_dist = metrics.get('age_distribution', {})
+        if age_dist.get('over_30_days', 0) > 0 or age_dist.get('7_to_30_days', 0) > 50:
+            logger.warning(
+                f"🏛️ [EXECUTION GAP] Stale decisions: "
+                f"7-30 days: {age_dist.get('7_to_30_days', 0)}, "
+                f">30 days: {age_dist.get('over_30_days', 0)}"
+            )
+
+        # Log recommendation
+        recommendation = metrics.get('recommendation', '')
+        if 'CRITICAL' in recommendation:
+            logger.warning(f"🏛️ [EXECUTION GAP] {recommendation}")
+
+        return {
+            'success': True,
+            **metrics
+        }
+
+    except Exception as e:
+        logger.error(f"🏛️ [SESSION 589] Gap metrics failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }

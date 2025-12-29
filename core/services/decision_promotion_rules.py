@@ -1,0 +1,356 @@
+"""
+Decision Promotion Rules Service
+Session 589: Address Execution Gap (82% DRAFT decisions)
+
+This service implements governance-respecting auto-promotion rules
+to close the gap between decisions and actions.
+
+ChatGPT's Strategic Guidance:
+- Don't rush autonomous execution (needs guardrails)
+- Governance-first posture is correct
+- System is in "trust-critical phase"
+
+Tiered Promotion System:
+- Tier 1 (Auto-Promote): Low-risk guidelines after 24h aging
+- Tier 2 (Review Required): Medium-risk decisions need human review
+- Tier 3 (Never Auto): High-risk decisions (security, architecture) always manual
+
+The goal is NOT to automate everything, but to:
+1. Clear the backlog of obvious, low-risk guidelines
+2. Make the execution gap visible to operators
+3. Respect the human-in-the-loop governance model
+"""
+
+import logging
+from datetime import timedelta
+from typing import Dict, List, Tuple, Optional, Any
+from django.utils import timezone
+from django.db.models import Count, Q
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# PROMOTION TIERS - Governance-respecting classification
+# ============================================================
+
+# Tier 1: Auto-promotable after aging period
+# These are low-risk decisions that don't require human review
+AUTO_PROMOTE_ELIGIBLE = {
+    # decision_type: {allowed_impact_areas}
+    'guideline': {
+        'prompting',      # Prompt engineering best practices
+        'product',        # UX improvements
+        'workflow',       # Workflow optimizations
+    },
+}
+
+# Tier 2: Require human review (never auto-promote)
+# These decisions have broader system impact
+REQUIRE_REVIEW = {
+    'architecture',   # Structural changes
+    'pipeline',       # Data flow changes
+    'policy',         # Binding rules
+}
+
+# Tier 3: Never auto-promote (high-risk impact areas)
+# These impact areas always require human judgment
+NEVER_AUTO_AREAS = {
+    'security',       # Security decisions always manual
+    'infrastructure', # Infrastructure changes always manual
+    'agents',         # Agent behavior changes always manual
+}
+
+# Minimum age before auto-promotion (hours)
+MIN_AGING_HOURS = 24
+
+# Maximum decisions to auto-promote per run (prevent runaway)
+MAX_AUTO_PROMOTE_PER_RUN = 10
+
+
+class DecisionPromotionRules:
+    """
+    Governance-respecting decision promotion rules.
+
+    Implements tiered auto-promotion to address the execution gap
+    while respecting human oversight for high-risk decisions.
+    """
+
+    def __init__(self):
+        self.stats = {
+            'eligible': 0,
+            'promoted': 0,
+            'skipped_too_new': 0,
+            'skipped_high_risk': 0,
+            'skipped_review_required': 0,
+        }
+
+    def can_auto_promote(self, decision) -> Tuple[bool, str]:
+        """
+        Check if a decision is eligible for auto-promotion.
+
+        Args:
+            decision: AgentDecisionSummary instance
+
+        Returns:
+            Tuple of (can_promote, reason)
+        """
+        # Already promoted or rejected
+        if decision.status in ('canonical', 'rejected', 'superseded'):
+            return False, f"Already in status: {decision.status}"
+
+        # Check Tier 3: Never auto-promote high-risk areas
+        if decision.impact_area in NEVER_AUTO_AREAS:
+            return False, f"High-risk impact area: {decision.impact_area}"
+
+        # Check Tier 2: Require review for certain types
+        if decision.decision_type in REQUIRE_REVIEW:
+            return False, f"Decision type requires review: {decision.decision_type}"
+
+        # Check Tier 1: Auto-promotable types
+        if decision.decision_type not in AUTO_PROMOTE_ELIGIBLE:
+            return False, f"Decision type not eligible: {decision.decision_type}"
+
+        # Check if impact area is allowed for this type
+        allowed_areas = AUTO_PROMOTE_ELIGIBLE.get(decision.decision_type, set())
+        if decision.impact_area not in allowed_areas:
+            return False, f"Impact area {decision.impact_area} not eligible for {decision.decision_type}"
+
+        # Check aging requirement
+        age_hours = (timezone.now() - decision.created_at).total_seconds() / 3600
+        if age_hours < MIN_AGING_HOURS:
+            return False, f"Too new: {age_hours:.1f}h < {MIN_AGING_HOURS}h minimum"
+
+        # Passed all checks
+        return True, "Eligible for auto-promotion"
+
+    def get_promotable_decisions(self) -> List:
+        """
+        Get all decisions eligible for auto-promotion.
+
+        Returns:
+            List of AgentDecisionSummary instances that can be auto-promoted
+        """
+        from core.models_unified_system import AgentDecisionSummary
+
+        # Age cutoff
+        cutoff = timezone.now() - timedelta(hours=MIN_AGING_HOURS)
+
+        # Get draft decisions older than cutoff
+        candidates = AgentDecisionSummary.objects.filter(
+            status='draft',
+            created_at__lte=cutoff
+        ).order_by('created_at')[:100]  # Limit candidates for performance
+
+        promotable = []
+        for decision in candidates:
+            can_promote, reason = self.can_auto_promote(decision)
+            if can_promote:
+                promotable.append(decision)
+                self.stats['eligible'] += 1
+                if len(promotable) >= MAX_AUTO_PROMOTE_PER_RUN:
+                    break
+            else:
+                # Track why not promotable
+                if 'too new' in reason.lower():
+                    self.stats['skipped_too_new'] += 1
+                elif 'high-risk' in reason.lower():
+                    self.stats['skipped_high_risk'] += 1
+                elif 'requires review' in reason.lower():
+                    self.stats['skipped_review_required'] += 1
+
+        return promotable
+
+    def promote_decision(self, decision, promoted_by: str = 'auto-promotion-rules') -> bool:
+        """
+        Promote a decision to canonical status.
+
+        Args:
+            decision: AgentDecisionSummary instance
+            promoted_by: Who/what triggered the promotion
+
+        Returns:
+            True if successful
+        """
+        try:
+            decision.status = 'canonical'
+            decision.is_canonical = True
+            decision.promoted_at = timezone.now()
+            decision.promoted_by = promoted_by
+            decision.save()
+
+            self.stats['promoted'] += 1
+            logger.info(f"Auto-promoted decision: {decision.topic[:50]}... -> canonical")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to promote decision {decision.id}: {e}")
+            return False
+
+    def run_auto_promotion(self, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Run the auto-promotion process.
+
+        Args:
+            dry_run: If True, don't actually promote, just report what would happen
+
+        Returns:
+            Dict with promotion results and stats
+        """
+        logger.info(f"Starting auto-promotion run (dry_run={dry_run})")
+
+        promotable = self.get_promotable_decisions()
+
+        if not dry_run:
+            for decision in promotable:
+                self.promote_decision(decision)
+
+        result = {
+            'dry_run': dry_run,
+            'eligible': len(promotable),
+            'promoted': self.stats['promoted'] if not dry_run else 0,
+            'would_promote': len(promotable) if dry_run else None,
+            'decisions': [
+                {
+                    'id': str(d.id),
+                    'topic': d.topic[:80],
+                    'type': d.decision_type,
+                    'area': d.impact_area,
+                    'age_hours': round((timezone.now() - d.created_at).total_seconds() / 3600, 1),
+                }
+                for d in promotable
+            ],
+            'stats': self.stats,
+        }
+
+        logger.info(f"Auto-promotion complete: {result['promoted'] or result['would_promote']} decisions")
+        return result
+
+    def get_execution_gap_metrics(self) -> Dict[str, Any]:
+        """
+        Get metrics showing the current execution gap.
+
+        This makes the gap visible to operators so they can
+        prioritize manual review of high-impact decisions.
+
+        Returns:
+            Dict with gap analysis metrics
+        """
+        from core.models_unified_system import AgentDecisionSummary
+
+        # Total decisions by status
+        by_status = dict(
+            AgentDecisionSummary.objects.values('status')
+            .annotate(count=Count('id'))
+            .values_list('status', 'count')
+        )
+
+        total = sum(by_status.values())
+        draft_count = by_status.get('draft', 0)
+        canonical_count = by_status.get('canonical', 0)
+        rejected_count = by_status.get('rejected', 0)
+
+        # Age distribution of drafts
+        now = timezone.now()
+        age_buckets = {
+            'under_24h': 0,
+            '1_to_7_days': 0,
+            '7_to_30_days': 0,
+            'over_30_days': 0,
+        }
+
+        drafts = AgentDecisionSummary.objects.filter(status='draft')
+        for d in drafts:
+            age = now - d.created_at
+            if age < timedelta(hours=24):
+                age_buckets['under_24h'] += 1
+            elif age < timedelta(days=7):
+                age_buckets['1_to_7_days'] += 1
+            elif age < timedelta(days=30):
+                age_buckets['7_to_30_days'] += 1
+            else:
+                age_buckets['over_30_days'] += 1
+
+        # Eligible for auto-promotion
+        promotable = self.get_promotable_decisions()
+
+        # Breakdown by type/area
+        by_type = dict(
+            AgentDecisionSummary.objects.filter(status='draft')
+            .values('decision_type')
+            .annotate(count=Count('id'))
+            .values_list('decision_type', 'count')
+        )
+
+        by_area = dict(
+            AgentDecisionSummary.objects.filter(status='draft')
+            .values('impact_area')
+            .annotate(count=Count('id'))
+            .values_list('impact_area', 'count')
+        )
+
+        gap_percentage = (draft_count / total * 100) if total > 0 else 0
+
+        return {
+            'total_decisions': total,
+            'by_status': by_status,
+            'execution_gap': {
+                'draft_count': draft_count,
+                'draft_percentage': round(gap_percentage, 1),
+                'canonical_count': canonical_count,
+                'rejected_count': rejected_count,
+            },
+            'age_distribution': age_buckets,
+            'auto_promotable': {
+                'count': len(promotable),
+                'percentage_of_drafts': round(len(promotable) / draft_count * 100, 1) if draft_count > 0 else 0,
+            },
+            'by_decision_type': by_type,
+            'by_impact_area': by_area,
+            'recommendation': self._generate_recommendation(gap_percentage, age_buckets, by_type),
+        }
+
+    def _generate_recommendation(
+        self,
+        gap_percentage: float,
+        age_buckets: Dict[str, int],
+        by_type: Dict[str, int]
+    ) -> str:
+        """Generate a human-readable recommendation based on the gap analysis."""
+
+        if gap_percentage < 50:
+            return "Execution gap is healthy. Continue manual review cadence."
+
+        stale_count = age_buckets.get('over_30_days', 0) + age_buckets.get('7_to_30_days', 0)
+        if stale_count > 50:
+            return f"CRITICAL: {stale_count} decisions over 7 days old. Consider batch review or running auto-promotion."
+
+        guideline_count = by_type.get('guideline', 0)
+        if guideline_count > 30:
+            return f"Many guidelines pending ({guideline_count}). Enable auto-promotion for low-risk guidelines."
+
+        return f"Execution gap at {gap_percentage:.0f}%. Review pending architecture/policy decisions first."
+
+
+# Singleton instance
+_rules_instance: Optional[DecisionPromotionRules] = None
+
+
+def get_promotion_rules() -> DecisionPromotionRules:
+    """Get singleton promotion rules instance."""
+    global _rules_instance
+    if _rules_instance is None:
+        _rules_instance = DecisionPromotionRules()
+    return _rules_instance
+
+
+def run_auto_promotion(dry_run: bool = False) -> Dict[str, Any]:
+    """Convenience function to run auto-promotion."""
+    rules = DecisionPromotionRules()  # Fresh instance for clean stats
+    return rules.run_auto_promotion(dry_run=dry_run)
+
+
+def get_execution_gap_metrics() -> Dict[str, Any]:
+    """Convenience function to get gap metrics."""
+    rules = DecisionPromotionRules()
+    return rules.get_execution_gap_metrics()

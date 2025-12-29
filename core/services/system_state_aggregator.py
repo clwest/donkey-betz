@@ -50,6 +50,7 @@ class AttentionItem:
 PRIORITY_SCORES = {
     'critical_alert': 90,
     'security_alert': 85,
+    'execution_gap': 82,    # Session 589: Added for decision execution gap
     'health_failure': 80,
     'execution_failure': 75,
     'overdue_task': 70,
@@ -116,6 +117,12 @@ class SystemStateAggregator:
             items.extend(self._get_research_items(max_per_section))
         except Exception as e:
             self.logger.error(f"Error getting Research items: {e}")
+
+        # Session 589: Add execution gap monitoring
+        try:
+            items.extend(self._get_execution_gap_items())
+        except Exception as e:
+            self.logger.error(f"Error getting Execution Gap items: {e}")
 
         # Deduplicate by hashing title+summary
         seen_hashes = set()
@@ -488,6 +495,75 @@ class SystemStateAggregator:
             pass
 
         return items[:limit]
+
+    def _get_execution_gap_items(self) -> List[AttentionItem]:
+        """
+        Session 589: Get attention items for execution gap (decisions not being enacted).
+
+        This monitors the gap between cognitive decisions and actual execution,
+        a critical system health indicator identified in Session 588.
+
+        Checks:
+        - Percentage of decisions in DRAFT status (gap > 70% is concerning)
+        - Stale drafts (decisions > 7 days old)
+        - Auto-promotable decisions that could reduce gap
+        """
+        items = []
+
+        try:
+            from core.services.decision_promotion_rules import get_execution_gap_metrics
+
+            metrics = get_execution_gap_metrics()
+            gap = metrics.get('execution_gap', {})
+            age_dist = metrics.get('age_distribution', {})
+            auto_promotable = metrics.get('auto_promotable', {})
+
+            gap_pct = gap.get('draft_percentage', 0)
+            stale_count = age_dist.get('7_to_30_days', 0) + age_dist.get('over_30_days', 0)
+            promotable_count = auto_promotable.get('count', 0)
+
+            # Alert if gap > 70%
+            if gap_pct > 70:
+                items.append(AttentionItem(
+                    id='execution_gap_critical',
+                    section='autonomous',
+                    category='execution_gap',
+                    priority=PRIORITY_SCORES['execution_gap'],
+                    title=f"Execution Gap: {gap_pct:.0f}%",
+                    summary=f"{gap.get('draft_count', 0)} decisions in DRAFT vs {gap.get('canonical_count', 0)} canonical",
+                    action_url='/ai-studio/?tab=decisions&subtab=pending'
+                ))
+
+            # Alert if many stale decisions
+            if stale_count > 50:
+                items.append(AttentionItem(
+                    id='execution_gap_stale',
+                    section='autonomous',
+                    category='stale_concern',
+                    priority=PRIORITY_SCORES['stale_concern'] + 5,  # Boost slightly
+                    title=f"Stale Decisions: {stale_count}",
+                    summary=f"Decisions over 7 days old awaiting action",
+                    action_url='/ai-studio/?tab=decisions&subtab=pending'
+                ))
+
+            # Opportunity: auto-promotable decisions available
+            if promotable_count > 0:
+                items.append(AttentionItem(
+                    id='execution_gap_promotable',
+                    section='autonomous',
+                    category='opportunity',
+                    priority=PRIORITY_SCORES['opportunity'] + 15,  # Higher priority opportunity
+                    title=f"Auto-Promotable: {promotable_count}",
+                    summary=f"Low-risk guidelines ready for auto-promotion",
+                    action_url='/ai-studio/?tab=decisions&subtab=auto-promote'
+                ))
+
+        except ImportError as e:
+            self.logger.debug(f"Decision promotion rules not available: {e}")
+        except Exception as e:
+            self.logger.error(f"Error getting execution gap metrics: {e}")
+
+        return items
 
     def format_for_pa_context(self, max_items: int = 10) -> str:
         """
