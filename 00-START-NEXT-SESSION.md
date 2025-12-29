@@ -1,78 +1,85 @@
-# Session 602 - Start Here
+# Session 603 - Start Here
 
-**Previous Session:** 601
+**Previous Session:** 602
 **Date:** December 29, 2025
-**Focus:** Weighted Learning Extensions or New Feature
+**Focus:** Learning Dashboard or Auto-Prioritization
 
 ---
 
-## Session 601 Accomplishments
+## Session 602 Accomplishments
 
-### ChatGPT's Weighted Learning Formula - COMPLETE
+### Boardroom Learning Integration - COMPLETE
 
-Implemented the sophisticated learning weight formula:
-
-```
-learning_weight = outcome_signal × confidence_weight × decay_weight
-```
-
-| Component | Formula | Purpose |
-|-----------|---------|---------|
-| **Outcome Signal** | PASS=+1.0, LEARN=+0.3, FAIL=-0.5/-1.0 | Base value by type |
-| **Confidence Weight** | `min(1.0, log10(samples+1))` | More data = more weight |
-| **Decay Weight** | `e^(-age_days/21)` | Recent outcomes matter more |
-
-### Key Features
+Integrated ChatGPT's weighted learning formula with the Boardroom decision-making UI:
 
 | Feature | Description |
 |---------|-------------|
-| **Safety vs Execution FAILs** | Safety failures (-1.0) weighted more than execution (-0.5) |
-| **Confidence Gating** | 1 sample = 0.3 weight, 10 samples = 1.0 weight |
-| **Decay Prevention** | Old failures fade (21-day half-life) |
-| **Permanent Ban Guardrail** | Requires ≥2 safety FAILs across ≥2 pilots with ≥0.8 confidence |
-| **Theme Aggregation** | Cumulative scores with trend direction |
+| **Success Probability** | Historical likelihood based on similar past experiments |
+| **Risk Level** | Based on safety failures in similar decisions |
+| **AI Recommendation** | approve/pilot_first/defer/gate based on evidence |
+| **Similar Experiments** | Past experiments that inform this decision |
+| **Weighted Insights** | Key learnings with their weights |
 
-### New Service
+### New Components
 
-`core/services/weighted_learning.py` (450 lines)
-- `calculate_learning_weight()` - Single outcome weight
-- `aggregate_theme_scores()` - Theme-level analysis
-- `check_permanent_ban_eligible()` - Ban guardrail
-- `get_weighted_learnings_for_thinking_agent()` - Full context
+| Component | Purpose |
+|-----------|---------|
+| `BoardroomLearningService` | Integrates learning with decisions |
+| `GET /api/boardroom/decisions/{id}/learning/` | Full learning context |
+| `GET /api/boardroom/learning-summary/` | Summary for pending decisions |
+| UI Modal | Displays learning insights with metrics |
 
----
-
-## The Complete Learning System
+### The Complete Learning-Governance Loop
 
 ```
-Session 590-600: Learning Loop Infrastructure
-        ↓
-Session 601: Weighted Learning Formula ← COMPLETE!
-        ↓
-ThinkingAgent reasons strategically:
-- "High variance, insufficient data → keep exploring"
-- "Consistent negative safety signal → gate harder"
-- "Positive momentum → propose scaled pilot"
+Experiments generate learnings →
+Learnings inform Boardroom decisions →
+Decisions become policies/pilots →
+Pilots generate new experiments
 ```
 
 ---
 
-## Session 602 Options
+## The Learning System (Sessions 590-602)
 
-### Option A: Integrate with Boardroom
-- Use weighted scores in decision prioritization
-- Show historical success probability before approval
-- Weight-adjusted risk assessment
+```
+Session 590: Pilot Readiness Gate
+        ↓
+Session 595: Pilot Execution Dashboard
+        ↓
+Session 596: Experiment Tracking Registry
+        ↓
+Session 597: ExperimentLearning + Pattern Models
+        ↓
+Session 598: Learning Loop UI Dashboard
+        ↓
+Session 599: Fail Fast + Outcome Classification
+        ↓
+Session 600: Real Metrics + Rollback + ThinkingAgent Enhancement
+        ↓
+Session 601: ChatGPT's Weighted Learning Formula
+        ↓
+Session 602: Boardroom Integration ← COMPLETE!
+```
 
-### Option B: Visualize Learning Momentum
-- Dashboard showing weight trends over time
-- Theme-level cumulative score charts
-- Decay visualization
+---
 
-### Option C: Auto-Adjust Pilot Parameters
-- Use weighted learnings to suggest pilot scope
-- Recommend sample size for confidence target
-- Smart defaults based on similar experiments
+## Session 603 Options
+
+### Option A: Auto-Prioritize Decision Queue
+- Sort pending decisions by success probability
+- Surface high-probability, low-risk decisions first
+- Flag high-risk decisions for additional review
+
+### Option B: Learning Velocity Dashboard
+- Track how fast the system learns
+- Visualize learning momentum over time
+- Show which themes are improving/declining
+
+### Option C: Experiment Suggestion Engine
+- Based on learning gaps, suggest new experiments
+- Identify themes with insufficient data
+- Recommend sample sizes for confidence targets
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -85,24 +92,22 @@ ThinkingAgent reasons strategically:
 # Start services
 make start && make celery
 
-# Test weighted learning calculation
+# Test boardroom learning context
+curl http://localhost:8000/api/boardroom/learning-summary/ | python -m json.tool
+
+# Test specific decision learning
 .venv/bin/python manage.py shell -c "
-from core.services.weighted_learning import WeightedLearningService
+from core.models_unified_system import AgentDecisionSummary
+from core.services.boardroom_learning import BoardroomLearningService
 
-# PASS with 5 samples, 7 days old
-result = WeightedLearningService.calculate_learning_weight('pass', sample_size=5, age_days=7)
-print(f'PASS weight: {result}')
-
-# Safety FAIL with 3 samples
-result = WeightedLearningService.calculate_learning_weight('fail', 'user trust dropped', sample_size=3, age_days=14)
-print(f'Safety FAIL weight: {result}')
-"
-
-# Test full weighted learnings for ThinkingAgent
-.venv/bin/python manage.py shell -c "
-from core.services.weighted_learning import get_weighted_learnings_for_thinking_agent
-data = get_weighted_learnings_for_thinking_agent()
-print(f'Stats: {data.get(\"aggregate_stats\", {})}')
+decision = AgentDecisionSummary.objects.first()
+if decision:
+    service = BoardroomLearningService()
+    context = service.get_decision_learning_context(decision)
+    print(f'Decision: {decision.topic}')
+    print(f'Success probability: {context[\"learning_context\"][\"success_probability\"]}%')
+    print(f'Risk level: {context[\"learning_context\"][\"risk_level\"]}')
+    print(f'Recommendation: {context[\"recommendation\"][\"action\"]}')
 "
 ```
 
@@ -112,22 +117,23 @@ print(f'Stats: {data.get(\"aggregate_stats\", {})}')
 
 | File | Purpose |
 |------|---------|
-| `core/services/weighted_learning.py` | Complete weighted learning system |
+| `core/services/weighted_learning.py` | ChatGPT's weighted learning formula |
+| `core/services/boardroom_learning.py` | Boardroom integration service |
 | `core/agents/thinking_agent.py` | Uses weighted learnings in context |
-| `docs/handoffs/SESSION_601_WEIGHTED_LEARNING_FORMULA.md` | Session handoff |
+| `docs/handoffs/SESSION_602_BOARDROOM_LEARNING_INTEGRATION.md` | Session handoff |
 
 ---
 
-## System Stats After Session 601
+## System Stats After Session 602
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 96 (+3 from Session 600, +1 from Session 601) |
+| **Services** | 97 (+1 from Session 602) |
 | **Celery Tasks** | 230 |
-| **The Learning Loop** | COMPLETE with weighted formula |
+| **The Learning Loop** | COMPLETE with Boardroom integration |
 
 ---
 
-**Session 601: Weighted Learning Formula - COMPLETE**
+**Session 602: Boardroom Learning Integration - COMPLETE**
