@@ -8265,6 +8265,103 @@ Format: numbered list of steps."""
         return {'status': 'failed', 'error': str(e)}
 
 
+# =============================================================================
+# SESSION 581: AUTOMATIC DREAM CLEANUP
+# =============================================================================
+
+@shared_task(bind=True)
+def cleanup_stale_dreams(self, max_age_hours: int = 72):
+    """
+    Session 581: Automatically archive stale dreams that have been promoted
+    to Boardroom but never received a decision.
+
+    This prevents the ThinkingAgent from repeatedly flagging old dreams as
+    a concern and keeps the decision queue healthy.
+
+    Args:
+        max_age_hours: Dreams older than this (since promotion) get archived
+
+    Returns:
+        Stats about archived dreams
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_unified_system import AgentDream
+
+    logger.info(f"🧹 [DREAM-CLEANUP] Starting cleanup of dreams older than {max_age_hours}h...")
+
+    try:
+        now = timezone.now()
+        cutoff = now - timedelta(hours=max_age_hours)
+
+        # Find stale promoted-but-pending dreams
+        stale_dreams = AgentDream.objects.filter(
+            promoted_to_decision=True,
+            decision_outcome='pending',
+            promoted_at__lt=cutoff
+        )
+
+        count = stale_dreams.count()
+
+        if count == 0:
+            logger.info("🧹 [DREAM-CLEANUP] No stale dreams to archive")
+            return {
+                'status': 'success',
+                'archived': 0,
+                'message': 'No stale dreams found'
+            }
+
+        # Archive them
+        archived = stale_dreams.update(decision_outcome='archived')
+
+        # Get remaining stats
+        remaining_pending = AgentDream.objects.filter(
+            promoted_to_decision=True,
+            decision_outcome='pending'
+        ).count()
+
+        oldest_remaining = AgentDream.objects.filter(
+            promoted_to_decision=True,
+            decision_outcome='pending'
+        ).order_by('promoted_at').first()
+
+        oldest_age = 0
+        if oldest_remaining and oldest_remaining.promoted_at:
+            oldest_age = (now - oldest_remaining.promoted_at).total_seconds() / 3600
+
+        logger.info(
+            f"🧹 [DREAM-CLEANUP] Archived {archived} stale dreams. "
+            f"Remaining pending: {remaining_pending}, oldest: {oldest_age:.0f}h"
+        )
+
+        # Broadcast via WebSocket
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('system_status', json.dumps({
+                'type': 'dream_cleanup',
+                'archived': archived,
+                'remaining_pending': remaining_pending,
+                'oldest_hours': round(oldest_age, 1),
+                'timestamp': now.isoformat()
+            }))
+        except Exception:
+            pass
+
+        return {
+            'status': 'success',
+            'archived': archived,
+            'remaining_pending': remaining_pending,
+            'oldest_hours': round(oldest_age, 1),
+            'timestamp': now.isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"🧹 [DREAM-CLEANUP] Failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
 @shared_task(bind=True)
 def execute_dream_implementations(self, max_implementations: int = 5):
     """

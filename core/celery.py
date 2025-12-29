@@ -1097,6 +1097,16 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+    # SESSION 581: AUTOMATIC DREAM CLEANUP
+    # Archive stale dreams that have been promoted but never decided on
+    'cleanup-stale-dreams': {
+        'task': 'core.tasks.cleanup_stale_dreams',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 6 AM
+        'kwargs': {'max_age_hours': 72},  # Archive dreams older than 3 days
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
     # SESSION 549: HUMAN ACTION NOTIFICATIONS
     # Scan for concerns requiring human policy decisions and create alerts
     'scan-human-action-notifications': {
