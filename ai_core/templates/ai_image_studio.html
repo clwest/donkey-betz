@@ -59372,6 +59372,10 @@ ${item.generated_content}
         // Render alliances grid
         function renderAlliances(alliances) {
             const container = document.getElementById('alliances-grid');
+            // Ensure alliances is an array
+            if (!Array.isArray(alliances)) {
+                alliances = [];
+            }
             if (alliances.length === 0) {
                 container.innerHTML = '<div class="col-12"><p class="text-muted small">No alliances formed yet. Create one to boost collaboration!</p></div>';
                 return;
@@ -59402,6 +59406,10 @@ ${item.generated_content}
         // Render rivalries grid
         function renderRivalries(rivalries) {
             const container = document.getElementById('rivalries-grid');
+            // Ensure rivalries is an array
+            if (!Array.isArray(rivalries)) {
+                rivalries = [];
+            }
             if (rivalries.length === 0) {
                 container.innerHTML = '<div class="col-12"><p class="text-muted small">No rivalries yet. Competition drives innovation!</p></div>';
                 return;
