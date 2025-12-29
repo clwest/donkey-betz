@@ -283,6 +283,9 @@ from core.views_agent_learning import (
     update_gate_status,
     update_checklist_item,
     create_pilot_gate,
+    # Session 592: Pilot Execution
+    start_pilot_execution,
+    complete_pilot_execution,
 )
 
 # Session 250: Hive Mind Mode
@@ -2702,6 +2705,9 @@ urlpatterns = [
     path('api/pilot-gates/<uuid:gate_id>/status/', update_gate_status, name='pilot-gate-status'),
     path('api/pilot-gates/<uuid:gate_id>/items/<uuid:item_id>/', update_checklist_item, name='pilot-gate-item'),
     path('api/pilot-gates/create/<uuid:decision_id>/', create_pilot_gate, name='pilot-gate-create'),
+    # Session 592: Pilot Execution API
+    path('api/pilot-gates/<uuid:gate_id>/pilot/', start_pilot_execution, name='start-pilot-execution'),
+    path('api/pilot-gates/<uuid:gate_id>/pilot/<uuid:pilot_id>/complete/', complete_pilot_execution, name='complete-pilot-execution'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),
