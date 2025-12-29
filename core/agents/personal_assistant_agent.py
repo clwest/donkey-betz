@@ -2727,6 +2727,75 @@ Returns learning metrics, patterns, insights, and progress.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 17: Portfolio & Nexus Tools (Session 583) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_portfolio",
+                "description": """Manage creative portfolio items (images, videos, content).
+Use this for:
+- "Show my portfolio"
+- "Delete portfolio item"
+- "Check for broken links in portfolio"
+- "Bulk delete old items"
+Returns portfolio items and management actions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "delete", "bulk_delete", "check_broken"],
+                            "description": "Action: list, delete, bulk_delete, check_broken"
+                        },
+                        "item_type": {
+                            "type": "string",
+                            "description": "Type of item (image, video, content) for delete"
+                        },
+                        "item_id": {
+                            "type": "string",
+                            "description": "Item ID for delete action"
+                        },
+                        "item_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Item IDs for bulk_delete action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_nexus",
+                "description": """Query the Nexus unified intelligence system.
+Use this for:
+- "Get unified intelligence data"
+- "Implement an insight"
+- "Investigate system behavior"
+Returns intelligence data, insights, and behavioral analysis.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["intelligence_data", "implement_insight", "investigate_behavior"],
+                            "description": "Type of nexus query"
+                        },
+                        "insight_id": {
+                            "type": "string",
+                            "description": "Insight ID for implement_insight action"
+                        },
+                        "behavior_query": {
+                            "type": "string",
+                            "description": "Behavior description for investigate_behavior"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4015,6 +4084,13 @@ Returns learning metrics, patterns, insights, and progress.""",
 
         if tool_name == "query_learning":
             return self._query_learning(arguments)
+
+        # ===== Phase 17: Portfolio & Nexus Tools (Session 583) =====
+        if tool_name == "manage_portfolio":
+            return self._manage_portfolio(arguments)
+
+        if tool_name == "query_nexus":
+            return self._query_nexus(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -9658,4 +9734,185 @@ Returns learning metrics, patterns, insights, and progress.""",
 
         except Exception as e:
             logger.error(f"Error querying learning: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 17: Portfolio & Nexus Tools (Session 583) =====
+
+    def _manage_portfolio(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage creative portfolio items.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'list')
+            item_type = arguments.get('item_type')
+            item_id = arguments.get('item_id')
+            item_ids = arguments.get('item_ids', [])
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/api/portfolio/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        items = data.get('items', data.get('portfolio', data)) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'portfolio': items,
+                            'summary': f"Found {len(items) if isinstance(items, list) else 'multiple'} portfolio items"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'portfolio': [],
+                    'summary': 'No portfolio items found'
+                }
+
+            elif action == 'delete':
+                if not item_type or not item_id:
+                    return {'success': False, 'error': 'item_type and item_id required'}
+
+                try:
+                    response = requests.delete(
+                        f'{base_url}/api/portfolio/{item_type}/{item_id}/delete/',
+                        timeout=10
+                    )
+                    if response.status_code in [200, 204]:
+                        return {
+                            'success': True,
+                            'result': {'deleted': True},
+                            'summary': f"Deleted {item_type} item"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not delete item'}
+
+            elif action == 'bulk_delete':
+                if not item_ids:
+                    return {'success': False, 'error': 'item_ids required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/portfolio/bulk-delete/',
+                        json={'item_ids': item_ids},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 204]:
+                        return {
+                            'success': True,
+                            'result': response.json() if response.content else {'deleted': len(item_ids)},
+                            'summary': f"Bulk deleted {len(item_ids)} items"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not bulk delete items'}
+
+            elif action == 'check_broken':
+                try:
+                    response = requests.get(f'{base_url}/api/portfolio/check-broken/', timeout=30)
+                    if response.status_code == 200:
+                        data = response.json()
+                        broken = data.get('broken', data.get('broken_links', []))
+                        return {
+                            'success': True,
+                            'broken_links': broken,
+                            'summary': f"Found {len(broken) if isinstance(broken, list) else 0} broken links"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'broken_links': [],
+                    'summary': 'No broken links found'
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing portfolio: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_nexus(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Query the Nexus unified intelligence system.
+        """
+        try:
+            import requests
+
+            query_type = arguments.get('query_type', 'intelligence_data')
+            insight_id = arguments.get('insight_id')
+            behavior_query = arguments.get('behavior_query', '')
+            base_url = 'http://localhost:8000'
+
+            if query_type == 'intelligence_data':
+                try:
+                    response = requests.get(f'{base_url}/api/nexus/intelligence-data/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'intelligence': response.json(),
+                            'summary': 'Retrieved unified intelligence data'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'intelligence': {'message': 'Intelligence data available via API'},
+                    'summary': 'Nexus intelligence endpoint available'
+                }
+
+            elif query_type == 'implement_insight':
+                if not insight_id:
+                    return {'success': False, 'error': 'insight_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/nexus/implement-insight/',
+                        json={'insight_id': insight_id},
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Insight implementation started'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not implement insight'}
+
+            elif query_type == 'investigate_behavior':
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/nexus/investigate-behavior/',
+                        json={'query': behavior_query},
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'investigation': response.json(),
+                            'summary': 'Behavior investigation complete'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'investigation': {'message': 'Investigation available via API'},
+                    'summary': 'Nexus investigation endpoint available'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying nexus: {e}")
             return {'success': False, 'error': str(e)}

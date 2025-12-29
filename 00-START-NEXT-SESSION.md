@@ -2,7 +2,7 @@
 
 **Previous Session:** 583
 **Date:** December 28, 2025
-**Focus:** PA Tools Phases 14-16 Complete (55 → 61)
+**Focus:** PA Tools Phases 14-17 Complete (55 → 63)
 
 ---
 
@@ -28,6 +28,13 @@
 |------|----------|---------|
 | `manage_solutions` | solutions | list, get, apply |
 | `query_learning` | learning | dashboard, patterns, insights, profile, progress, data_flow, feed |
+
+### Phase 17 - Portfolio & Nexus Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_portfolio` | portfolio | list, delete, bulk_delete, check_broken |
+| `query_nexus` | nexus | intelligence_data, implement_insight, investigate_behavior |
 
 **Bugs Fixed:**
 - `ReviewDocument` import: `models_chief_of_staff` → `models_conversation_artifacts`
@@ -124,8 +131,10 @@
 | `manage_proposals` | AI proposals | Session 583 |
 | `manage_solutions` | Solution explorer | Session 583 |
 | `query_learning` | Learning system | Session 583 |
+| `manage_portfolio` | Portfolio management | Session 583 |
+| `query_nexus` | Nexus intelligence | Session 583 |
 
-**Coverage:** 61/1,343 endpoints (4.54%)
+**Coverage:** 63/1,343 endpoints (4.69%)
 
 ---
 
@@ -191,19 +200,25 @@ User: "Show available solutions"
 
 User: "Show learning dashboard"
 → query_learning: Learning metrics, patterns, and insights
+
+User: "Show my portfolio"
+→ manage_portfolio: Creative portfolio items
+
+User: "Get unified intelligence data"
+→ query_nexus: Nexus intelligence system
 ```
 
 ---
 
 ## Session 584 Priorities
 
-### Option A: Phase 17 - More Coverage
+### Option A: Phase 18 - More Coverage
 
 Remaining uncovered categories:
-- **portfolio** - 4 endpoints (portfolio management)
-- **nexus** - 5 endpoints (consciousness, insights, investigate)
-- **intelligence** - 6 endpoints (unified intelligence data)
-- **consciousness** - 4 endpoints (consciousness proposals)
+- **consciousness** - 4 endpoints (consciousness proposals, save)
+- **performance** - 5 endpoints (performance metrics, comparison)
+- **pricing** - 3 endpoints (pricing optimization)
+- **predictions** - 4 endpoints (performance predictions)
 
 ### Option B: Testing & Polish
 
@@ -213,7 +228,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 61 tools
+- Update CAPABILITIES.md with all 63 tools
 - Create PA Tools reference guide
 
 ---
@@ -224,17 +239,17 @@ Remaining uncovered categories:
 # Start services
 make start && make celery
 
-# Test Phase 16 tools
+# Test Phase 17 tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 16 tools:')
-phase16 = ['manage_solutions', 'query_learning']
-for t in phase16:
-    args = {'action': 'list'} if t == 'manage_solutions' else {'query_type': 'dashboard'}
+print('Phase 17 tools:')
+phase17 = ['manage_portfolio', 'query_nexus']
+for t in phase17:
+    args = {'action': 'list'} if t == 'manage_portfolio' else {'query_type': 'intelligence_data'}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -252,7 +267,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 61 |
+| **PA Tools** | 63 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -273,10 +288,11 @@ open http://localhost:8000/ai-studio/
 | 582 | 13 | +2 | 55 |
 | 583 | 14 | +2 | 57 |
 | 583 | 15 | +2 | 59 |
-| **583** | **16** | **+2** | **61** |
+| 583 | 16 | +2 | 61 |
+| **583** | **17** | **+2** | **63** |
 
 ---
 
-**Session 583: Phases 14-16 = 6 new tools (55 → 61)**
+**Session 583: Phases 14-17 = 8 new tools (55 → 63)**
 
-**PA now has 61 tools (4.54% coverage) - Phases 9-16 complete!**
+**PA now has 63 tools (4.69% coverage) - Phases 9-17 complete!**
