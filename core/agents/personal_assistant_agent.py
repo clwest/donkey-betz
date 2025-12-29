@@ -693,11 +693,40 @@ ORCHESTRATION:
                     relevant_knowledge = self._get_relevant_knowledge_for_task(task)
                     attribution = self._build_knowledge_attribution(relevant_knowledge)
 
+                    # Session 574: For action follow-ups to WorkflowAgent, inject system state
+                    # So WorkflowAgent knows what "the checklist" or "those tasks" refers to
+                    enhanced_task = task
+                    enhanced_context = context.copy() if context else {}
+
+                    if suggested_agent == 'WorkflowAgent' and getattr(self, '_last_routing_method', '') == 'action_followup':
+                        try:
+                            from core.services.system_state_aggregator import get_system_state_aggregator
+                            aggregator = get_system_state_aggregator()
+                            attention_items = aggregator.get_attention_items()
+
+                            if attention_items:
+                                # Build context about the attention items
+                                items_context = "\n\n## System Attention Items (The tasks/checklist to work on):\n"
+                                for item in attention_items[:10]:
+                                    items_context += f"- [{item.section.upper()}] {item.title}\n"
+                                    items_context += f"  Category: {item.category}, Priority: {item.priority}\n"
+                                    if item.summary:
+                                        items_context += f"  Summary: {item.summary[:150]}...\n"
+
+                                enhanced_task = task + items_context
+                                enhanced_context['system_attention_items'] = [
+                                    {'section': i.section, 'title': i.title, 'category': i.category, 'priority': i.priority}
+                                    for i in attention_items[:10]
+                                ]
+                                logger.info(f"[Session 574] Injected {len(attention_items)} system items into WorkflowAgent context")
+                        except Exception as e:
+                            logger.warning(f"Failed to inject system state for WorkflowAgent: {e}")
+
                     # Delegate to the agent
                     result = self.router.route(
                         agent_name=suggested_agent,
-                        task=task,
-                        context=context
+                        task=enhanced_task,
+                        context=enhanced_context
                     )
 
                     tool_calls_made.append({
