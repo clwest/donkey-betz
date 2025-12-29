@@ -18,7 +18,9 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
 from core.services.agent_learning_service import (
     get_learning_service,
