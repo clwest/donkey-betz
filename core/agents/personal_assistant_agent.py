@@ -611,6 +611,37 @@ ORCHESTRATION:
                     "required": ["agent_name", "task"]
                 }
             }
+        },
+        # Session 575: Direct sports data tool - queries internal API
+        {
+            "type": "function",
+            "function": {
+                "name": "get_sports_data",
+                "description": """Get LIVE sports scores and odds from the system's internal data.
+USE THIS for questions like:
+- "What's the score of the [team] game?"
+- "NFL scores today"
+- "Who's winning the [team] game?"
+- "Current NBA games"
+
+This queries our INTERNAL database - no external lookup needed.
+The system already has real-time data from 40+ bookmakers.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sport": {
+                            "type": "string",
+                            "description": "Sport to query",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "ncaaf", "ncaab", "soccer", "ufc"]
+                        },
+                        "team": {
+                            "type": "string",
+                            "description": "Optional team name to filter results (e.g., 'Chiefs', 'Lakers')"
+                        }
+                    },
+                    "required": ["sport"]
+                }
+            }
         }
     ]
 
@@ -1701,22 +1732,145 @@ ORCHESTRATION:
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute tool call - only delegate_to_agent is supported."""
-        if tool_name != "delegate_to_agent":
-            return {
-                'success': False,
-                'error': f"Unknown tool: {tool_name}"
-            }
+        """Execute tool call - supports delegate_to_agent and get_sports_data."""
 
-        agent_name = arguments.get('agent_name')
-        task = arguments.get('task', '')
-        context = arguments.get('context', {})
+        # Session 575: Handle get_sports_data tool
+        if tool_name == "get_sports_data":
+            return self._get_sports_data(arguments)
+
+        if tool_name == "delegate_to_agent":
+            agent_name = arguments.get('agent_name')
+            task = arguments.get('task', '')
+            context = arguments.get('context', {})
+
+            try:
+                result = self.router.route(agent_name, task, context)
+                return result.to_dict()
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': str(e)
+                }
+
+        return {
+            'success': False,
+            'error': f"Unknown tool: {tool_name}"
+        }
+
+    def _get_sports_data(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 575: Query internal sports API for live scores and odds.
+        This uses data already in the system - no external API calls needed.
+        """
+        import requests
+
+        sport = arguments.get('sport', 'nfl')
+        team_filter = arguments.get('team', '').lower()
+
+        # Map short sport names to API keys
+        sport_map = {
+            'nfl': 'americanfootball_nfl',
+            'nba': 'basketball_nba',
+            'mlb': 'baseball_mlb',
+            'nhl': 'icehockey_nhl',
+            'ncaaf': 'americanfootball_ncaaf',
+            'ncaab': 'basketball_ncaab',
+            'soccer': 'soccer_epl',
+            'ufc': 'mma_mixed_martial_arts',
+        }
+        sport_key = sport_map.get(sport.lower(), 'americanfootball_nfl')
 
         try:
-            result = self.router.route(agent_name, task, context)
-            return result.to_dict()
+            # Call internal API
+            response = requests.get(
+                f'http://localhost:8000/api/v1/sports/live-odds-scores/',
+                params={'sport': sport_key},
+                timeout=10
+            )
+
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'error': f'Sports API returned {response.status_code}'
+                }
+
+            data = response.json()
+
+            # Format games for easy reading
+            games = []
+            for game in data.get('odds', []):
+                home = game.get('home_team', '')
+                away = game.get('away_team', '')
+                live = game.get('live', {})
+
+                # Filter by team if specified
+                if team_filter and team_filter not in home.lower() and team_filter not in away.lower():
+                    continue
+
+                game_info = {
+                    'matchup': f"{away} @ {home}",
+                    'home_team': home,
+                    'away_team': away,
+                    'home_score': live.get('home_score', 0),
+                    'away_score': live.get('away_score', 0),
+                    'status': live.get('status_detail', 'Scheduled'),
+                    'is_live': live.get('is_live', False),
+                    'is_final': live.get('is_final', False),
+                }
+
+                # Add simple score string
+                if live.get('is_live') or live.get('is_final'):
+                    game_info['score'] = f"{away} {live.get('away_score', 0)}, {home} {live.get('home_score', 0)}"
+                else:
+                    game_info['score'] = 'Not started'
+
+                games.append(game_info)
+
+            # Build summary
+            live_games = [g for g in games if g['is_live']]
+            final_games = [g for g in games if g['is_final']]
+            upcoming_games = [g for g in games if not g['is_live'] and not g['is_final']]
+
+            return {
+                'success': True,
+                'sport': sport.upper(),
+                'total_games': len(games),
+                'live_count': len(live_games),
+                'final_count': len(final_games),
+                'upcoming_count': len(upcoming_games),
+                'games': games,
+                'summary': self._format_scores_summary(games, sport)
+            }
+
         except Exception as e:
+            logger.error(f"Error fetching sports data: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
+
+    def _format_scores_summary(self, games: list, sport: str) -> str:
+        """Format games into a readable summary."""
+        lines = [f"**{sport.upper()} Scores:**\n"]
+
+        live = [g for g in games if g['is_live']]
+        final = [g for g in games if g['is_final']]
+        upcoming = [g for g in games if not g['is_live'] and not g['is_final']]
+
+        if live:
+            lines.append("🔴 **LIVE:**")
+            for g in live:
+                lines.append(f"  {g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']} ({g['status']})")
+
+        if final:
+            lines.append("\n✅ **FINAL:**")
+            for g in final[:5]:  # Limit to 5
+                winner = g['away_team'] if g['away_score'] > g['home_score'] else g['home_team']
+                lines.append(f"  {g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']} - {winner} wins")
+
+        if upcoming and not live and not final:
+            lines.append("\n📅 **UPCOMING:**")
+            for g in upcoming[:5]:
+                lines.append(f"  {g['matchup']} - {g['status']}")
+
+        return '\n'.join(lines)
