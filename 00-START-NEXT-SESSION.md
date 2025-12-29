@@ -1,8 +1,22 @@
-# Session 586 - Start Here
+# Session 587 - Start Here
 
-**Previous Session:** 585
+**Previous Session:** 586
 **Date:** December 28, 2025
-**Focus:** PA Tools Phase 21 Complete (71 → 73) + Dream Triage
+**Focus:** PA Tools Phase 22 Complete (73 → 75)
+
+---
+
+## Session 586 Accomplishments
+
+### Phase 22 - Team Workflows & Agent Evolution Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_team_workflows` | teams | create, start, status, list_active, list_templates, execute, run_full, execute_step, complete_step |
+| `query_agent_evolution` | evolution | overview, agent_detail, leaderboard, abilities, xp_gains, award_xp, unlock_ability |
+
+**Bugs Fixed:**
+- Fixed `AgentEvolution` model field names: `level` → `current_level`, `xp` → `total_xp`
 
 ---
 
@@ -110,7 +124,7 @@
 
 ---
 
-## Current PA Tools (73 Total)
+## Current PA Tools (75 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -187,8 +201,10 @@
 | `query_semantic_search` | Semantic search & RAG | Session 584 |
 | `manage_project_collaboration` | Project sharing & collaborators | Session 585 |
 | `manage_workflow_sharing` | Workflow sharing & collaboration | Session 585 |
+| `manage_team_workflows` | Team workflow orchestration | Session 586 |
+| `query_agent_evolution` | Agent XP, levels, abilities | Session 586 |
 
-**Coverage:** 73/1,343 endpoints (5.44%)
+**Coverage:** 75/1,343 endpoints (5.58%)
 
 ---
 
@@ -350,13 +366,13 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 585)
+## System Stats (Session 586)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 73 |
+| **PA Tools** | 75 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -382,10 +398,11 @@ open http://localhost:8000/ai-studio/
 | 583 | 18 | +2 | 65 |
 | 584 | 19 | +3 | 68 |
 | 584 | 20 | +3 | 71 |
-| **585** | **21** | **+2** | **73** |
+| 585 | 21 | +2 | 73 |
+| **586** | **22** | **+2** | **75** |
 
 ---
 
-**Session 585: Phase 21 = 2 new tools (71 → 73) + Dream Triage**
+**Session 586: Phase 22 = 2 new tools (73 → 75)**
 
-**PA now has 73 tools (5.44% coverage) - Phase 21 complete!**
+**PA now has 75 tools (5.58% coverage) - Phase 22 complete!**
