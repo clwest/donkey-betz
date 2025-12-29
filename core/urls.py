@@ -313,6 +313,9 @@ from core.views_agent_learning import (
     # Session 603: Learning Velocity Dashboard
     get_learning_velocity_dashboard,
     get_theme_velocity,
+    # Session 604: Decision Prioritization
+    get_prioritized_decisions,
+    get_decision_priority,
 )
 
 # Session 250: Hive Mind Mode
@@ -2725,6 +2728,9 @@ urlpatterns = [
     path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
     path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
+    # Session 604: Decision Prioritization
+    path('api/boardroom/decisions/prioritized/', get_prioritized_decisions, name='prioritized-decisions'),
+    path('api/boardroom/decisions/<uuid:decision_id>/priority/', get_decision_priority, name='decision-priority'),
     # Session 602: Boardroom Learning Integration
     path('api/boardroom/decisions/<uuid:decision_id>/learning/', get_decision_learning_context, name='decision-learning-context'),
     path('api/boardroom/learning-summary/', get_boardroom_learning_summary, name='boardroom-learning-summary'),
