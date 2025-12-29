@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 593 (December 29, 2025) - Auto-Gate Creation for Safety Decisions
+**Last Updated:** Session 596 (December 29, 2025) - Experiment Tracking Registry
 
 ---
 
@@ -1853,10 +1853,47 @@ not_started → in_progress → ready → approved → [pilot running] → [pilo
 
 | File | Purpose |
 |------|---------|
-| `core/models_pilot_readiness.py` | Gate, Checklist, Execution models |
+| `core/models_pilot_readiness.py` | Gate, Checklist, Execution, Experiment models |
 | `core/views_agent_learning.py:2218+` | API endpoints |
-| `core/urls.py:2702-2710` | URL routes |
+| `core/urls.py:2702-2734` | URL routes |
 | `ai_core/templates/ai_image_studio.html:7130+` | ICC tab UI |
+
+### AI-Powered Governance (Session 594)
+
+Two-layer automatic pilot management:
+
+| Layer | Task | Schedule | Purpose |
+|-------|------|----------|---------|
+| **A** | `auto_complete_pilots` | Every 4h | Auto-SUCCESS after 24h with no issues |
+| **B** | `evaluate_pilots_with_thinking_agent` | Every 6h | AI suggests outcome with reasoning |
+
+**AI Content Generation:** Checklist items can be auto-generated with AI content via "Generate Content" button.
+
+### Pilot Dashboard (Session 595)
+
+**API:** `GET /api/pilots/dashboard/`
+
+Dedicated dashboard showing:
+- Running pilots with auto-complete countdown
+- Completed pilots with outcomes and learnings
+- Success rate metrics
+
+### Experiment Tracking Registry (Session 596)
+
+Connects pilots to formal experiments with KPI ownership:
+
+| API Endpoint | Method | Description |
+|--------------|--------|-------------|
+| `/api/experiments/` | GET | List all experiments |
+| `/api/experiments/portfolio/` | GET | Portfolio metrics & KPI owners |
+| `/api/experiments/<id>/update-kpi/` | POST | Update current KPI value |
+| `/api/experiments/<id>/complete/` | POST | Mark experiment complete |
+
+**Experiment Model:**
+- Auto-created when pilot starts
+- Extracts KPIs from AI-generated success_metrics
+- Tracks: kpi_owner, primary_kpi, target_value, current_value
+- Status: running, success, failure, inconclusive
 
 ---
 

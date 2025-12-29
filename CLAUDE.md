@@ -166,15 +166,15 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| 588 | PA Phase 25 (81 tools) + System Insights UI + Execution Gap | `SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md` |
-| 587 | PA Phase 24 (79 tools) - Hive Mind + Time Capsules | - |
-| 586 | PA Phase 22-23 (77 tools) + Boardroom Noise Filter | `SESSION_586_PA_TOOLS_PHASE_22_23.md` |
-| 585 | PA Phase 21 (73 tools) + Dream Triage | - |
-| 584 | PA Phase 19-20 (71 tools) | - |
-| 583 | PA Phase 14-18 (65 tools) | - |
+| 596 | Experiment Tracking Registry - KPI ownership for pilots | `SESSION_596_EXPERIMENT_TRACKING.md` |
+| 595 | Pilot Dashboard - Monitor running/completed pilots | `SESSION_595_PILOT_DASHBOARD.md` |
+| 594 | AI-Powered Governance - Auto-completion & ThinkingAgent eval | `SESSION_594_PILOT_AUTO_COMPLETION.md` |
+| 593 | ThinkingAgent Auto-Gates - AI generates pilot gates | `SESSION_593_THINKING_AGENT_AUTO_GATES.md` |
+| 592 | Pilot Readiness Gate Complete - Full checklist system | `SESSION_592_PILOT_READINESS_GATE_COMPLETE.md` |
+| 590 | Pilot Readiness Gate - Human-in-the-loop for decisions | Migration `0130` |
+| 588 | PA Phase 25 (81 tools) + System Insights UI | `SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md` |
 | 573 | PA System Awareness + Celery Multi-Queue | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
 | 567 | Full System Audit - 71 agents, 77 spiders | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
-| 562 | Push Notifications for Arb Alerts | `SESSION_562_PUSH_NOTIFICATIONS.md` |
 | 555 | Chief of Staff Layer - Human-in-the-loop | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 
 For older sessions, see `docs/handoffs/` directory.
