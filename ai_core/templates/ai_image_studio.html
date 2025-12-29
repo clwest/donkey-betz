@@ -57835,13 +57835,63 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                                           item.status === 'blocked' ? '🚫' :
                                           item.status === 'in_progress' ? '🔄' : '⬜';
                     const itemClass = `checklist-item checklist-item-${item.status}`;
-                    return `
-                        <div class="${itemClass}" onclick="toggleChecklistItem('${g.id}', '${item.id}', '${item.status}')">
-                            <span style="margin-right: 8px;">${itemStatusIcon}</span>
-                            <span>${item.title}</span>
-                            ${item.is_required ? '<span class="badge bg-danger ms-2" style="font-size: 9px;">Required</span>' : ''}
-                        </div>
-                    `;
+                    const hasContent = item.has_content && item.generated_content;
+                    const contentPreview = hasContent ? item.generated_content.substring(0, 100) + '...' : 'No content generated yet';
+                    const itemId = `item-${item.id}`;
+
+                    // Session 594: Show generated content with approve/regenerate buttons
+                    if (hasContent && item.status !== 'completed') {
+                        return `
+                            <div class="${itemClass}" style="cursor: default;">
+                                <div class="d-flex justify-content-between align-items-center" onclick="toggleItemContent('${itemId}')">
+                                    <div>
+                                        <span style="margin-right: 8px;">🤖</span>
+                                        <span>${item.title}</span>
+                                        ${item.is_required ? '<span class="badge bg-danger ms-2" style="font-size: 9px;">Required</span>' : ''}
+                                        <span class="badge bg-info ms-2" style="font-size: 9px;">AI Ready</span>
+                                    </div>
+                                    <span class="text-muted" style="font-size: 12px;">▼ Review</span>
+                                </div>
+                                <div id="${itemId}" class="checklist-content-panel" style="display: none; margin-top: 10px; padding: 10px; background: #1a1a1a; border-radius: 6px; border-left: 3px solid #14b8a6;">
+                                    <div class="generated-content" style="color: #e5e7eb; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-family: inherit;">
+${item.generated_content}
+                                    </div>
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); approveChecklistItem('${g.id}', '${item.id}')">
+                                            ✅ Approve & Complete
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation(); regenerateItem('${g.id}', '${item.id}')">
+                                            🔄 Regenerate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (item.status === 'completed') {
+                        return `
+                            <div class="${itemClass}" style="cursor: default;">
+                                <span style="margin-right: 8px;">${itemStatusIcon}</span>
+                                <span>${item.title}</span>
+                                ${item.is_required ? '<span class="badge bg-danger ms-2" style="font-size: 9px;">Required</span>' : ''}
+                            </div>
+                        `;
+                    } else {
+                        // No content yet - show generating or manual option
+                        return `
+                            <div class="${itemClass}" style="cursor: pointer;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div onclick="toggleChecklistItem('${g.id}', '${item.id}', '${item.status}')">
+                                        <span style="margin-right: 8px;">${itemStatusIcon}</span>
+                                        <span>${item.title}</span>
+                                        ${item.is_required ? '<span class="badge bg-danger ms-2" style="font-size: 9px;">Required</span>' : ''}
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); regenerateItem('${g.id}', '${item.id}')" title="Generate AI content">
+                                        🤖 Generate
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
                 }).join('');
 
                 const actionButtons = getGateActionButtons(g);
@@ -58098,6 +58148,72 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 console.error('Error updating checklist item:', error);
                 showNotification('Error updating checklist item', 'danger');
+            }
+        }
+
+        // Session 594: Toggle visibility of checklist item content
+        function toggleItemContent(itemId) {
+            const panel = document.getElementById(itemId);
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Session 594: Approve AI-generated content and complete the item
+        async function approveChecklistItem(gateId, itemId) {
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/items/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        action: 'complete',
+                        completed_by: 'human (AI content approved)',
+                        notes: 'AI-generated content reviewed and approved'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('✅ AI content approved and item completed!', 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error approving checklist item:', error);
+                showNotification('Error approving checklist item', 'danger');
+            }
+        }
+
+        // Session 594: Regenerate AI content for a checklist item
+        async function regenerateItem(gateId, itemId) {
+            showNotification('🤖 Generating AI content...', 'info');
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/regenerate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        item_id: itemId
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('🤖 AI content generated! Review and approve.', 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error regenerating content:', error);
+                showNotification('Error regenerating content', 'danger');
             }
         }
 

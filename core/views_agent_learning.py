@@ -2259,8 +2259,12 @@ def get_pilot_readiness_gates(request):
                     'id': str(item.id),
                     'item_type': item.item_type,
                     'title': item.title,
+                    'description': item.description,
                     'status': item.status,
                     'is_required': item.is_required,
+                    # Session 594: Include AI-generated content
+                    'generated_content': item.documentation_notes or None,
+                    'has_content': bool(item.documentation_notes),
                 })
 
             # Session 594: Get running pilot info
@@ -2702,6 +2706,62 @@ def complete_pilot_execution(request, gate_id, pilot_id):
         return JsonResponse({'success': False, 'error': 'Pilot not found'}, status=404)
     except Exception as e:
         logger.error(f"Error completing pilot execution: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def regenerate_checklist_content(request, gate_id):
+    """
+    Session 594: Regenerate AI content for checklist items.
+
+    POST /api/pilot-gates/<gate_id>/regenerate/
+
+    Body (optional):
+    - item_id: Regenerate only this specific item (otherwise all items)
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate
+        from core.services.checklist_content_generator import ChecklistContentGenerator
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+        data = json.loads(request.body) if request.body else {}
+
+        item_id = data.get('item_id')
+        generator = ChecklistContentGenerator()
+
+        if item_id:
+            # Regenerate single item
+            item = gate.checklist_items.get(id=item_id)
+            context = generator._build_decision_context(gate.decision)
+            content = generator.generate_for_item(item.item_type, context)
+            if content:
+                item.documentation_notes = content
+                item.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Regenerated content for {item.title}',
+                    'item_id': str(item.id),
+                    'content': content,
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Failed to generate content'
+                }, status=500)
+        else:
+            # Regenerate all items
+            results = generator.generate_all_items(gate)
+            return JsonResponse({
+                'success': True,
+                'message': f'Regenerated content for {len(results)} items',
+                'items_regenerated': len(results),
+            })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error regenerating checklist content: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 

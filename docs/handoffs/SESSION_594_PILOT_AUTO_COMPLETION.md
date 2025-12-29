@@ -1,14 +1,16 @@
-# Session 594: Pilot Auto-Completion System
+# Session 594: Pilot Auto-Completion + AI Content Generation
 
 **Date:** December 29, 2025
 **Previous Session:** 593 (ThinkingAgent Auto-Gate Integration)
-**Focus:** Automated pilot evaluation and completion
+**Focus:** Automated pilot evaluation, completion, and AI-generated checklist content
 
 ---
 
 ## Executive Summary
 
-Session 594 implemented a two-layer automated pilot evaluation system that reduces manual oversight while maintaining safety controls.
+Session 594 implemented:
+1. **Two-layer automated pilot evaluation system** - Reduces manual oversight while maintaining safety controls
+2. **AI-powered checklist content generation** - System generates threat models, rollback procedures, success metrics, etc. so humans can review/approve instead of writing from scratch
 
 ---
 
@@ -107,6 +109,58 @@ Based on decision type, different metrics are collected:
 
 ---
 
+## AI Content Generation (Layer C)
+
+Transforms checklist items from manual documentation into AI-assisted review.
+
+### How It Works
+
+1. **On Gate Creation**: `generate_checklist_content_async` Celery task queued
+2. **AI Generates**: GPT-4o-mini creates content for each checklist item type
+3. **Human Reviews**: User sees AI content with "Approve & Complete" or "Regenerate" buttons
+4. **Governance Enhanced**: Real threat models, real rollback procedures instead of checkbox clicking
+
+### Supported Item Types
+
+| Item Type | Generated Content |
+|-----------|-------------------|
+| `threat_model` | Identified threats, impact assessment, mitigation strategies |
+| `rollback_procedure` | Triggers, steps, verification, communication plan |
+| `success_metrics` | Primary KPIs, secondary indicators, measurement methods |
+| `kill_switch` | Automatic triggers, manual triggers, mechanism, post-kill actions |
+| `encryption_choice` | Data classification, encryption requirements, access controls |
+| `adversarial_test` | Attack scenarios, test cases, red team checklist |
+| `basic_review` | Decision clarity, stakeholder alignment, resources, timeline |
+
+### New Service
+
+**File:** `core/services/checklist_content_generator.py`
+
+```python
+class ChecklistContentGenerator:
+    def generate_all_items(self, gate) -> Dict[str, str]
+    def generate_for_item(self, item_type, context) -> Optional[str]
+    def _build_decision_context(self, decision) -> Dict[str, Any]
+    def _get_prompt_for_type(self, item_type, context) -> Optional[str]
+```
+
+### New API Endpoint
+
+```
+POST /api/pilot-gates/<gate_id>/regenerate/
+```
+
+Regenerates all checklist content for a gate.
+
+### UI Changes
+
+- Checklist items show "AI Ready" badge when content is generated
+- Click to expand content panel
+- "✅ Approve & Complete" button to accept AI content
+- "🔄 Regenerate" button to request new content
+
+---
+
 ## UI Fixes
 
 ### Fixed: toggleChecklistItem
@@ -119,15 +173,24 @@ Based on decision type, different metrics are collected:
 **Problem:** "Start Pilot" button called `updateGateStatus(id, 'pilot')` but 'pilot' isn't a valid status action
 **Fix:** Created new `startPilot()` function that hits `/api/pilot-gates/<id>/pilot/` endpoint
 
+### Added: Pilot Running Status
+
+**Problem:** After starting a pilot, "Start Pilot" button remained clickable
+**Fix:** API returns `running_pilot` info, UI shows "Pilot Running" badge with elapsed time and complete buttons
+
 ---
 
 ## Files Modified
 
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | +3 functions (~200 lines) |
+| `core/tasks.py` | +4 functions (~250 lines) - auto_complete_pilots, evaluate_pilots_with_thinking_agent, generate_checklist_content_async, collect_pilot_metrics |
 | `core/celery.py` | +2 Beat schedules |
-| `ai_core/templates/ai_image_studio.html` | Fixed JS functions |
+| `core/services/checklist_content_generator.py` | NEW - AI content generation service (~330 lines) |
+| `core/models_pilot_readiness.py` | Modified create_for_decision() to queue content generation |
+| `core/views_agent_learning.py` | Added running_pilot info, generated_content to API, regenerate endpoint |
+| `core/urls.py` | Added /regenerate/ endpoint route |
+| `ai_core/templates/ai_image_studio.html` | Fixed JS functions, added content panels, approve/regenerate buttons |
 
 ---
 
