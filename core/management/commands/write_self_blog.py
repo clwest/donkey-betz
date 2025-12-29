@@ -74,15 +74,19 @@ class Command(BaseCommand):
         total_knowledge = AgentKnowledgeSource.objects.filter(is_active=True).count()
         knowledge_24h = AgentKnowledgeSource.objects.filter(first_discovered_at__gte=last_24h, is_active=True).count()
 
-        # Spider stats
+        # Spider stats - Session 588: Use spider registry for accurate count
         try:
-            total_spiders = SpiderData.objects.values('source').distinct().count()
+            from ai_core.spiders.spider_registry import get_spider_registry
+            spider_registry = get_spider_registry()
+            spider_count_info = spider_registry.get_spider_count()
+            total_spiders = spider_count_info.get('total', 77)
+
+            # Get spider data stats from database
             spider_data_24h = SpiderData.objects.filter(created_at__gte=last_24h).count()
             spider_data_total = SpiderData.objects.count()
-            if total_spiders == 0:
-                total_spiders = 72  # fallback to known spider count
-        except:
-            total_spiders = 72  # fallback
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'   Spider registry error: {e}'))
+            total_spiders = 77  # fallback to current known count
             spider_data_24h = 0
             spider_data_total = 0
 
@@ -152,7 +156,7 @@ describing itself using its own capabilities.
 
 ### Technical Architecture
 - Django + PostgreSQL backend
-- 72 specialized web spiders
+- {total_spiders} specialized web spiders
 - {total_agents} AI agents with GPT-5-mini reasoning
 - Real-time WebSocket updates
 - Celery distributed task processing
