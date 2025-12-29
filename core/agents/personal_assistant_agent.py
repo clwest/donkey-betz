@@ -356,6 +356,15 @@ For SYSTEM STATUS queries (what should I focus on, catch me up, status, what nee
 - Do NOT give generic productivity advice - they want to know about THIS SYSTEM
 - If system items are provided in context, prioritize discussing those
 
+For FOLLOW-UP requests (complete those tasks, do what you suggested, work on those, proceed):
+- IMPORTANT: When the user says "complete the tasks you suggested" or similar, they mean the SYSTEM attention items
+- Look at the Platform Intelligence section for the specific attention items
+- Explain which items CAN be automated vs which NEED user approval
+- Boardroom decisions (pending decisions) = NEED user review/approval in the UI
+- Failed cycles = May need manual investigation
+- Overdue channels = Can trigger content generation
+- If unsure, explain what each item is and how the user can address it
+
 For QUESTIONS (what is, how does, explain, tell me about):
 - Answer directly using your knowledge and any provided context
 
@@ -777,11 +786,30 @@ ORCHESTRATION:
         - "What's trending in AI?" → Answer directly with spider data (informational)
         - "Research AI trends for my report" → Route to ResearchAgent (action request)
 
+        Session 574: Added follow-up detection for "complete the tasks you suggested" patterns.
+
         Returns:
             Tuple of (is_question, question_type)
-            - question_type can be: 'knowledge_question', 'trend_question', 'direct_question', ''
+            - question_type can be: 'knowledge_question', 'trend_question', 'direct_question', 'followup_request', ''
         """
         task_lower = task.lower().strip()
+
+        # Session 574: FOLLOW-UP detection (MUST check before action indicators!)
+        # When user says "complete the tasks" or "do what you suggested", they mean system attention items
+        # These should be answered directly, not routed to WorkflowAgent
+        followup_indicators = [
+            'complete the tasks', 'complete those tasks', 'complete all tasks',
+            'do the tasks', 'do those tasks', 'do what you suggested',
+            'work on those', 'work on the tasks', 'work on those items',
+            'proceed with', 'go ahead', 'yes do it', 'yes, do it',
+            'tasks you suggested', 'items you mentioned', 'things you listed',
+            'address those', 'handle those', 'take care of those',
+            'complete them', 'do them', 'finish them',
+            'the tasks above', 'those items', 'those tasks',
+        ]
+        if any(indicator in task_lower for indicator in followup_indicators):
+            logger.info(f"Detected follow-up request (answering directly): {task[:50]}")
+            return True, 'followup_request'
 
         # Session 454: Check for ACTION indicators first
         # If the user wants us to DO something, it's not a question
@@ -1191,6 +1219,34 @@ ORCHESTRATION:
                 except Exception as e:
                     logger.warning(f"Failed to fetch fresh trends: {e}")
 
+            # Session 574: For follow-up requests, fetch system state and explain what can be done
+            if question_type == 'followup_request':
+                try:
+                    logger.info(f"📋 [Session 574] Fetching system state for follow-up request")
+                    from core.services.system_state_aggregator import get_system_state_aggregator
+                    aggregator = get_system_state_aggregator()
+                    attention_items = aggregator.get_attention_items()
+
+                    if attention_items:
+                        # Build context about the attention items
+                        enhanced_spider_context['followup_context'] = True
+                        enhanced_spider_context['attention_items'] = [
+                            {
+                                'section': item.section,
+                                'category': item.category,
+                                'title': item.title,
+                                'summary': item.summary,
+                                'priority': item.priority,
+                                'action_url': item.action_url,
+                            }
+                            for item in attention_items[:10]
+                        ]
+                        logger.info(f"📋 [Session 574] Found {len(attention_items)} attention items for follow-up")
+                    else:
+                        logger.info(f"📋 [Session 574] No attention items found")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch system state for follow-up: {e}")
+
             # Session 401: Build prompt with attribution to track what knowledge is used
             # Session 565: Now includes platform intelligence context
             intel_ctx = getattr(self, '_intelligence_context', None) or {}
@@ -1258,6 +1314,31 @@ ORCHESTRATION:
                     source_type = "web search" if used_web_search else "spider"
                     logger.info(f"🕷️ [Session 513] Updated attribution with {len(article_sources)} {source_type} sources: {article_sources[:5]}")
 
+            # Session 574: Add attention items and instructions for follow-up requests
+            if question_type == 'followup_request':
+                attention_items = enhanced_spider_context.get('attention_items', [])
+                if attention_items:
+                    prompt += "\n\n## System Attention Items (These are the tasks from your previous response)"
+                    prompt += "\nThe user wants to address these items. Explain which can be done automatically vs. need user action:\n"
+
+                    for item in attention_items:
+                        prompt += f"\n- [{item['section'].upper()}] {item['title']} (Priority: {item['priority']})"
+                        prompt += f"\n  Category: {item['category']}"
+                        if item.get('summary'):
+                            prompt += f"\n  Summary: {item['summary'][:100]}..."
+                        if item.get('action_url'):
+                            prompt += f"\n  Action URL: {item['action_url']}"
+
+                    prompt += "\n\n## How to Respond:"
+                    prompt += "\n- For 'pending_decision' items: These are Boardroom decisions that NEED USER APPROVAL in the UI"
+                    prompt += "\n- For 'overdue_task' items: I can potentially trigger content generation"
+                    prompt += "\n- For 'stale_concern' or 'health_failure' items: Explain how to investigate"
+                    prompt += "\n- Be specific about WHAT the user needs to do for each item"
+                    prompt += "\n- Provide the action URLs where relevant"
+                else:
+                    prompt += "\n\n## No Active Attention Items"
+                    prompt += "\nThere are currently no system items requiring attention. The system is running smoothly!"
+
             # Append instruction to answer directly
             prompt += "\n\nAnswer this question directly without delegating to an agent."
             if question_type == 'trend_question':
@@ -1267,6 +1348,8 @@ ORCHESTRATION:
                     prompt += "Cite specific articles and include URLs where relevant."
                 else:
                     prompt += " Use the trend data and articles provided above to give a current, relevant answer."
+            elif question_type == 'followup_request':
+                prompt += " Explain what each attention item is and how the user can address it. Be specific about which items need manual approval vs. which can be automated."
 
             # Session 566: Increased max_completion_tokens from 1500 to 4000
             # GPT-5-mini uses tokens for reasoning before generating content.
