@@ -799,6 +799,7 @@ ORCHESTRATION:
         # These should be answered directly, not routed to WorkflowAgent
         followup_indicators = [
             'complete the tasks', 'complete those tasks', 'complete all tasks',
+            'complete the checklist', 'complete this checklist', 'complete that checklist',
             'do the tasks', 'do those tasks', 'do what you suggested',
             'work on those', 'work on the tasks', 'work on those items',
             'proceed with', 'go ahead', 'yes do it', 'yes, do it',
@@ -806,6 +807,7 @@ ORCHESTRATION:
             'address those', 'handle those', 'take care of those',
             'complete them', 'do them', 'finish them',
             'the tasks above', 'those items', 'those tasks',
+            'you recommended', 'since you suggested', 'as you suggested',
         ]
         if any(indicator in task_lower for indicator in followup_indicators):
             logger.info(f"Detected follow-up request (answering directly): {task[:50]}")
