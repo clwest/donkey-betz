@@ -34929,9 +34929,86 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 greetingDiv.innerHTML = html;
                 greetingDiv.style.display = 'block';
 
+                // Session 574: Load attention items into the greeting area
+                await loadAttentionItemsIntoGreeting(greetingDiv);
+
             } catch (error) {
                 console.log('📊 Could not load personalized greeting:', error.message);
             }
+        }
+
+        // Session 574: Load attention items and add to greeting card
+        async function loadAttentionItemsIntoGreeting(greetingDiv) {
+            try {
+                const response = await authenticatedFetch('/api/assistant/attention-items/');
+                const data = await response.json();
+
+                if (data.success && data.items && data.items.length > 0) {
+                    const attentionHtml = renderAttentionItemsHtml(data.items);
+                    greetingDiv.innerHTML += attentionHtml;
+                }
+            } catch (error) {
+                console.log('🎯 Could not load attention items:', error.message);
+            }
+        }
+
+        // Session 574: Render attention items HTML
+        function renderAttentionItemsHtml(items) {
+            let html = `
+                <div class="alert mt-3" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(249, 115, 22, 0.15)); border: 1px solid rgba(239, 68, 68, 0.4);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong style="color: #fca5a5; font-size: 14px;">🎯 Needs Your Attention</strong>
+                        <button class="btn btn-sm" onclick="window.aiAssistant.loadAttentionItems()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 10px; padding: 2px 8px;">
+                            ↻
+                        </button>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+            `;
+
+            items.slice(0, 5).forEach((item, index) => {
+                const priorityColor = item.priority >= 80 ? '#ef4444' :
+                                     item.priority >= 60 ? '#f59e0b' :
+                                     item.priority >= 40 ? '#3b82f6' : '#6b7280';
+                const sectionIcon = item.section === 'research' ? '🔬' :
+                                   item.section === 'command_center' ? '⚙️' :
+                                   item.section === 'autonomous' ? '🤖' : '📋';
+
+                html += `
+                    <div onclick="window.aiAssistant.executeAttentionItemByAction('${escapeForJs(item.suggested_action)}')"
+                         style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s;"
+                         onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.borderColor='rgba(239, 68, 68, 0.5)';"
+                         onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(239, 68, 68, 0.2)';">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div style="flex: 1; overflow: hidden;">
+                                <div style="font-size: 12px; font-weight: 600; color: #fca5a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${sectionIcon} ${escapeHtml(item.title)}
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
+                                <span style="font-size: 9px; padding: 2px 6px; border-radius: 10px; background: ${priorityColor}20; color: ${priorityColor}; font-weight: 600;">
+                                    P${item.priority}
+                                </span>
+                                <span style="color: #22c55e; font-size: 14px;">▶</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            return html;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeForJs(text) {
+            if (!text) return '';
+            return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
         }
 
         // ====================================================================
