@@ -849,6 +849,11 @@ ORCHESTRATION:
             'complete them', 'do them', 'finish them', 'execute',
             'you recommended', 'since you suggested', 'as you suggested',
             'lets use', "let's use", 'i choose', 'i pick', 'i select',
+            # Session 574: Triage/planning patterns
+            'triage these', 'triage the', 'triage those', 'triage ',
+            'action plan', 'create a plan', 'draft a plan', 'make a plan',
+            'prioritize these', 'prioritize those', 'prioritize the',
+            'owners and timelines', 'assign owners', 'with owners',
         ]
         if any(indicator in task_lower for indicator in action_followup_indicators):
             # This is an ACTION request - let it flow to _detect_agent() for WorkflowAgent routing
@@ -975,6 +980,11 @@ ORCHESTRATION:
             'lets use', "let's use", 'i choose', 'i pick', 'i select',
             'activate', 'start the sprint', 'create the sprint',
             'set up the', 'configure the', 'implement the',
+            # Session 574: Triage/planning patterns
+            'triage these', 'triage the', 'triage those', 'triage ',
+            'action plan', 'create a plan', 'draft a plan', 'make a plan',
+            'prioritize these', 'prioritize those', 'prioritize the',
+            'owners and timelines', 'assign owners', 'with owners',
         ]
         for pattern in action_followup_patterns:
             if pattern in task_lower:
