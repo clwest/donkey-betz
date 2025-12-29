@@ -683,6 +683,38 @@ class Experiment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Session 599: Automatic Fail Fast - Halt Conditions
+    halt_conditions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Thresholds for automatic experiment halt"
+    )
+    is_halted = models.BooleanField(default=False)
+    halted_at = models.DateTimeField(null=True, blank=True)
+    halted_by = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="'auto' for system halt, or user name for manual halt"
+    )
+    halt_reason = models.TextField(
+        blank=True,
+        help_text="Reason for halt (which condition triggered)"
+    )
+
+    # Session 599: Outcome Classification (PASS/LEARN/FAIL)
+    OUTCOME_CHOICES = [
+        ('pending', 'Pending'),       # Still running or not yet classified
+        ('pass', 'PASS'),             # Proceed to execution
+        ('learn', 'LEARN'),           # Failed but insights extracted
+        ('fail', 'FAIL'),             # Rollback + remediation required
+    ]
+    outcome_classification = models.CharField(
+        max_length=20,
+        choices=OUTCOME_CHOICES,
+        default='pending',
+        help_text="Final outcome: PASS (proceed), LEARN (insights only), FAIL (rollback)"
+    )
+
     class Meta:
         app_label = 'core'
         verbose_name = "Experiment"
@@ -730,24 +762,135 @@ class Experiment(models.Model):
             target_value=target_value,
             extracted_metrics=extracted,
             kpi_owner="Unassigned",  # To be filled in
+            halt_conditions=cls.get_default_halt_conditions(),  # Session 599
         )
 
         return experiment
 
-    def complete(self, status: str, result_summary: str = None, learnings: str = None):
-        """Complete the experiment with results."""
+    def complete(self, status: str, result_summary: str = None, learnings: str = None,
+                 outcome_classification: str = None):
+        """
+        Complete the experiment with results and outcome classification.
+
+        Session 599: Added outcome_classification parameter.
+        If not provided, auto-determines based on status and whether rollback is needed.
+        """
         self.status = status
         self.ended_at = timezone.now()
         if result_summary:
             self.result_summary = result_summary
         if learnings:
             self.learnings = learnings
+
+        # Session 599: Set outcome classification
+        if outcome_classification:
+            self.outcome_classification = outcome_classification
+        else:
+            # Auto-determine outcome classification
+            self.outcome_classification = self._determine_outcome_classification(status)
+
         self.save()
+
+    def _determine_outcome_classification(self, status: str) -> str:
+        """
+        Session 599: Auto-determine outcome classification based on status.
+
+        - success → PASS (proceed to execution)
+        - partial → LEARN (insights extracted, don't proceed)
+        - inconclusive → LEARN (need more data)
+        - failure + is_halted → FAIL (rollback required)
+        - failure (normal) → LEARN (failed but informative)
+        """
+        if status == 'success':
+            return 'pass'
+        elif status in ('partial', 'inconclusive'):
+            return 'learn'
+        elif status == 'failure':
+            # If halted, it's a hard FAIL requiring rollback
+            # If natural failure, it's LEARN (informative failure)
+            return 'fail' if self.is_halted else 'learn'
+        return 'pending'
 
     def update_kpi(self, current_value: str):
         """Update the current KPI value."""
         self.current_value = current_value
         self.save()
+
+    @classmethod
+    def get_default_halt_conditions(cls) -> dict:
+        """
+        Session 599: Default automatic halt conditions.
+        These can be overridden per-experiment.
+        """
+        return {
+            'bias_detection_rate_max': 15.0,      # % in rolling 2-hour window
+            'user_trust_index_min': 3.8,          # Minimum score before halt
+            'integrity_anomaly_detected': True,   # Any anomaly triggers halt
+            'telemetry_kill_switch': True,        # External kill signal support
+            'error_rate_max': 25.0,               # % errors in 1-hour window
+            'enabled': True,                      # Master switch for auto-halt
+        }
+
+    def halt(self, reason: str, halted_by: str = 'auto'):
+        """
+        Session 599: Halt the experiment immediately.
+
+        Args:
+            reason: Why the experiment was halted
+            halted_by: 'auto' for system-triggered, or username for manual
+        """
+        self.is_halted = True
+        self.halted_at = timezone.now()
+        self.halted_by = halted_by
+        self.halt_reason = reason
+        self.status = 'failure'
+        self.ended_at = timezone.now()
+        self.outcome_classification = 'fail'  # Halted experiments are always FAIL
+        self.save()
+
+        return self
+
+    def check_halt_conditions(self, metrics: dict) -> tuple[bool, str]:
+        """
+        Session 599: Check if any halt conditions are triggered.
+
+        Args:
+            metrics: Current metrics to check against halt conditions
+                - bias_detection_rate: Current bias detection rate %
+                - user_trust_index: Current user trust score
+                - integrity_anomaly: Boolean if anomaly detected
+                - telemetry_kill_switch: Boolean if kill signal received
+                - error_rate: Current error rate %
+
+        Returns:
+            (should_halt: bool, reason: str)
+        """
+        conditions = self.halt_conditions or self.get_default_halt_conditions()
+
+        if not conditions.get('enabled', True):
+            return False, ""
+
+        # Check bias detection rate
+        if metrics.get('bias_detection_rate', 0) > conditions.get('bias_detection_rate_max', 15.0):
+            return True, f"Bias detection rate {metrics['bias_detection_rate']}% exceeded threshold {conditions['bias_detection_rate_max']}%"
+
+        # Check user trust index
+        if metrics.get('user_trust_index', 5.0) < conditions.get('user_trust_index_min', 3.8):
+            return True, f"User trust index {metrics['user_trust_index']} dropped below minimum {conditions['user_trust_index_min']}"
+
+        # Check integrity anomaly
+        if conditions.get('integrity_anomaly_detected', True) and metrics.get('integrity_anomaly', False):
+            return True, "Integrity anomaly detected in output logs"
+
+        # Check telemetry kill switch
+        if conditions.get('telemetry_kill_switch', True) and metrics.get('telemetry_kill_switch', False):
+            return True, "Kill-switch telemetry signal triggered"
+
+        # Check error rate
+        if metrics.get('error_rate', 0) > conditions.get('error_rate_max', 25.0):
+            return True, f"Error rate {metrics['error_rate']}% exceeded threshold {conditions['error_rate_max']}%"
+
+        return False, ""
 
 
 # =============================================================================

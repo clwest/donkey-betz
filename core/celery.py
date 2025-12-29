@@ -1216,6 +1216,16 @@ app.conf.beat_schedule = {
             'expires': 21600,  # Expire after 6 hours
         }
     },
+
+    # SESSION 599: EXPERIMENT AUTO-HALT MONITORING
+    # Check running experiments for halt conditions every 10 minutes
+    'monitor-experiment-halt-conditions': {
+        'task': 'core.tasks.monitor_running_experiments',
+        'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'options': {
+            'expires': 600,  # Expire after 10 minutes
+        }
+    },
 }
 
 # Task routing configuration

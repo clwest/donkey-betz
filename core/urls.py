@@ -301,6 +301,8 @@ from core.views_agent_learning import (
     # Session 598: Learning Loop UI
     get_experiment_learnings,
     get_success_patterns,
+    # Session 599: Experiment Halt
+    halt_experiment,
 )
 
 # Session 250: Hive Mind Mode
@@ -2738,6 +2740,8 @@ urlpatterns = [
     # Session 598: Learning Loop UI
     path('api/experiments/learnings/', get_experiment_learnings, name='experiment-learnings'),
     path('api/experiments/patterns/', get_success_patterns, name='experiment-patterns'),
+    # Session 599: Experiment Halt
+    path('api/experiments/<uuid:experiment_id>/halt/', halt_experiment, name='halt-experiment'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

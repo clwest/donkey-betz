@@ -20423,3 +20423,139 @@ def generate_checklist_content_async(gate_id: str):
     except Exception as e:
         logger.error(f"🤖 [SESSION 594] Content generation task failed: {e}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+# =============================================================================
+# Session 599: Experiment Auto-Halt Monitoring
+# =============================================================================
+
+@shared_task(bind=True, name='core.tasks.monitor_running_experiments')
+def monitor_running_experiments(self):
+    """
+    Session 599: Monitor running experiments for automatic halt conditions.
+
+    Runs every 10 minutes to check if any experiments have exceeded
+    their halt condition thresholds. If triggered, automatically halts
+    the experiment and sends a Discord notification.
+
+    Checks:
+    - Bias detection rate > threshold
+    - User trust index < minimum
+    - Integrity anomaly detected
+    - Telemetry kill switch triggered
+    - Error rate > threshold
+    """
+    try:
+        from core.models_pilot_readiness import Experiment
+        from django.utils import timezone
+
+        logger.info("🔍 [SESSION 599] Checking running experiments for halt conditions...")
+
+        # Get all running experiments
+        running_experiments = Experiment.objects.filter(
+            status='running',
+            is_halted=False
+        )
+
+        if not running_experiments.exists():
+            logger.debug("No running experiments to monitor")
+            return {'success': True, 'checked': 0, 'halted': 0}
+
+        halted_count = 0
+        checked_count = 0
+        halted_experiments = []
+
+        for experiment in running_experiments:
+            checked_count += 1
+
+            # Get current metrics for this experiment
+            # In a real implementation, these would come from monitoring systems
+            metrics = _gather_experiment_metrics(experiment)
+
+            # Check if any halt conditions are triggered
+            should_halt, reason = experiment.check_halt_conditions(metrics)
+
+            if should_halt:
+                # Halt the experiment
+                experiment.halt(reason=reason, halted_by='auto')
+                halted_count += 1
+                halted_experiments.append({
+                    'id': str(experiment.id),
+                    'name': experiment.name,
+                    'reason': reason
+                })
+
+                logger.warning(
+                    f"🛑 [SESSION 599] AUTO-HALTED experiment {experiment.id}: {reason}"
+                )
+
+                # Send Discord notification
+                _send_halt_discord_notification(experiment, reason)
+
+        result = {
+            'success': True,
+            'checked': checked_count,
+            'halted': halted_count,
+            'halted_experiments': halted_experiments
+        }
+
+        if halted_count > 0:
+            logger.warning(
+                f"🛑 [SESSION 599] Auto-halted {halted_count}/{checked_count} experiments"
+            )
+        else:
+            logger.info(
+                f"✅ [SESSION 599] All {checked_count} running experiments within thresholds"
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"🛑 [SESSION 599] Experiment monitoring failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+def _gather_experiment_metrics(experiment):
+    """
+    Session 599: Gather current metrics for an experiment.
+
+    In a production system, these would come from:
+    - Monitoring dashboards
+    - User feedback systems
+    - Error tracking systems
+    - Telemetry endpoints
+
+    For now, returns safe defaults. Override with real metrics as they become available.
+    """
+    # TODO: Connect to real monitoring systems
+    # For now, return safe defaults that won't trigger halts
+    return {
+        'bias_detection_rate': 0.0,    # % bias detected
+        'user_trust_index': 5.0,       # 1-5 scale, 5 being highest
+        'integrity_anomaly': False,     # True if anomaly detected
+        'telemetry_kill_switch': False, # True if external kill signal
+        'error_rate': 0.0,             # % errors in rolling window
+    }
+
+
+def _send_halt_discord_notification(experiment, reason):
+    """
+    Session 599: Send Discord notification when an experiment is auto-halted.
+    """
+    try:
+        from core.services.discord_notifications import DiscordNotificationService
+
+        discord = DiscordNotificationService()
+
+        message = f"**🛑 EXPERIMENT AUTO-HALTED**\n\n"
+        message += f"**Experiment:** {experiment.name}\n"
+        message += f"**ID:** `{str(experiment.id)[:8]}...`\n"
+        message += f"**Reason:** {reason}\n\n"
+        message += f"**Outcome Classification:** FAIL (rollback required)\n"
+        message += f"**Action Required:** Review and remediate before retry.\n"
+        message += f"\n_This is an automatic fail-fast response. No human approval required._"
+
+        discord.send_to_channel('system-status', message)
+
+    except Exception as e:
+        logger.debug(f"Discord halt notification failed: {e}")
