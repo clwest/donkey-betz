@@ -194,4 +194,48 @@ This visibility is the first step to closing the gap.
 
 ---
 
-**Session 589: Execution gap infrastructure complete - governance-respecting auto-promotion enabled**
+---
+
+## Spider Telemetry Unification (ChatGPT Review)
+
+ChatGPT reviewed the Self Blog and System Insights and identified a **multi-source desync**:
+
+```
+Self Blog prose:     "72 spiders"      ❌ stale
+Self Blog telemetry: "0 spider data"   ❌ wrong query
+System Insights:     "77 active spiders" ✅ correct
+```
+
+### Root Causes Found
+
+1. **HTML defaults**: `ai_image_studio.html` had hardcoded 72
+2. **Agent prompts**: Business agents mentioned "74 data sources"
+3. **WebSocket fallbacks**: `consumers.py` used 40 as default
+4. **API fallbacks**: `views_project_intelligence.py` used 74
+
+### Fixes Applied
+
+All spider counts now use single source of truth:
+- **Primary**: `spider_registry.get_spider_count()['total']` = 77
+- **Fallback**: 77 (not stale values)
+
+### Files Fixed
+
+| File | Old Value | New Value |
+|------|-----------|-----------|
+| `ai_core/templates/ai_image_studio.html` | 72 | 77 |
+| `core/agents/business/*.py` | 74 | 77 |
+| `core/consumers.py` | 40 | 77 |
+| `core/new_pages_consumer.py` | 40 | 77 |
+| `core/views_project_intelligence.py` | 74 | 77 |
+
+### Verification
+
+```bash
+python manage.py write_self_blog --dry-run
+# Output: "Spiders: 77, Spider Data Points: 10,603" ✅
+```
+
+---
+
+**Session 589: Execution gap infrastructure + Spider telemetry unification complete**
