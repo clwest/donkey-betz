@@ -2558,6 +2558,138 @@ def create_pilot_gate(request, decision_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["POST"])
+def start_pilot_execution(request, gate_id):
+    """
+    Session 592: Create and start a pilot execution for an approved gate.
+
+    POST /api/pilot-gates/<gate_id>/pilot/
+
+    Body (optional):
+    - name: Custom pilot name
+    - description: Pilot description
+    - scope: What is being tested
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+
+        # Verify gate is approved
+        if gate.status not in ('approved', 'waived'):
+            return JsonResponse({
+                'success': False,
+                'error': f'Gate must be approved before starting pilot. Current status: {gate.status}'
+            }, status=400)
+
+        # Parse request body
+        data = json.loads(request.body) if request.body else {}
+
+        # Create default name based on decision
+        default_name = f"Pilot: {gate.decision.topic[:50]}"
+
+        # Create pilot execution
+        pilot = PilotExecution.objects.create(
+            gate=gate,
+            name=data.get('name', default_name),
+            description=data.get('description', f'Pilot execution for {gate.decision.topic}'),
+            scope=data.get('scope', gate.summary),
+            status='planned'
+        )
+
+        # Start the pilot
+        pilot.start()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Pilot started successfully',
+            'pilot': {
+                'id': str(pilot.id),
+                'name': pilot.name,
+                'status': pilot.status,
+                'started_at': pilot.started_at.isoformat() if pilot.started_at else None,
+            },
+            'gate_status': gate.status,
+            'pilot_started_at': gate.pilot_started_at.isoformat() if gate.pilot_started_at else None,
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error starting pilot execution: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def complete_pilot_execution(request, gate_id, pilot_id):
+    """
+    Session 592: Complete a running pilot execution.
+
+    POST /api/pilot-gates/<gate_id>/pilot/<pilot_id>/complete/
+
+    Body:
+    - outcome: 'success' | 'partial' | 'failure' | 'inconclusive'
+    - summary: Outcome summary
+    - learnings: List of learnings (optional)
+    - metrics: Dict of metrics (optional)
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+        pilot = PilotExecution.objects.get(id=pilot_id, gate=gate)
+
+        # Verify pilot is running
+        if pilot.status != 'running':
+            return JsonResponse({
+                'success': False,
+                'error': f'Pilot must be running to complete. Current status: {pilot.status}'
+            }, status=400)
+
+        data = json.loads(request.body) if request.body else {}
+
+        outcome = data.get('outcome', 'success')
+        summary = data.get('summary', 'Pilot completed')
+        learnings = data.get('learnings', [])
+        metrics = data.get('metrics', {})
+
+        # Update metrics if provided
+        if metrics:
+            pilot.metrics = metrics
+            pilot.save()
+
+        # Complete the pilot
+        pilot.complete(outcome=outcome, summary=summary, learnings=learnings)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Pilot completed successfully',
+            'pilot': {
+                'id': str(pilot.id),
+                'name': pilot.name,
+                'status': pilot.status,
+                'outcome': pilot.outcome,
+                'outcome_summary': pilot.outcome_summary,
+                'started_at': pilot.started_at.isoformat() if pilot.started_at else None,
+                'completed_at': pilot.completed_at.isoformat() if pilot.completed_at else None,
+                'duration_hours': pilot.get_duration_hours(),
+                'learnings': pilot.learnings,
+                'metrics': pilot.metrics,
+            },
+            'gate_pilot_completed_at': gate.pilot_completed_at.isoformat() if gate.pilot_completed_at else None,
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except PilotExecution.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Pilot not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error completing pilot execution: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

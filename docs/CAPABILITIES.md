@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 586 (December 29, 2025) - PA Tools Phase 23 + Boardroom Noise Filter
+**Last Updated:** Session 592 (December 29, 2025) - Pilot Readiness Gate Complete
 
 ---
 
@@ -77,6 +77,7 @@
 | **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
 | **PA Tools** | **77 Tools (5.73% coverage)** | **Production (Session 586)** |
 | **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
+| **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
 
 ---
 
@@ -1769,6 +1770,79 @@ GET /api/intelligence/cross-references/
 | `ai_core/templates/components/panels/intelligence_command_center.html` | UI layout |
 | `core/views_spider_intelligence.py` | API endpoints |
 | `core/auth_middleware.py` | PUBLIC_PATHS config |
+
+---
+
+## Pilot Readiness Gate (Sessions 590-592)
+
+**Status:** COMPLETE - Full Workflow Validated
+
+The Pilot Readiness Gate system bridges the gap between Boardroom decisions and actual execution, ensuring safety-sensitive work proceeds with appropriate governance.
+
+### Workflow
+
+```
+Dream → Boardroom Decision → [PILOT READINESS GATE] → Pilot Execution → Full Implementation
+```
+
+### Gate Status Flow
+
+```
+not_started → in_progress → ready → approved → [pilot running] → [pilot completed]
+                              ↓
+                           blocked / waived
+```
+
+### Risk Levels & Auto-Generated Checklists
+
+| Risk Level | Required Items |
+|------------|----------------|
+| **Low** | Basic Review (optional) |
+| **Medium** | Threat Model, Rollback Procedure, Success Metrics |
+| **High** | Threat Model, Consent Lifecycle, Encryption Choice, Adversarial Test, Kill Switch, Rollback |
+| **Critical** | All High items + Executive Approval, Legal Review |
+
+### API Endpoints (7 Total)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/pilot-gates/` | GET | List all gates with status counts |
+| `/api/pilot-gates/<gate_id>/` | GET | Get gate detail with checklist |
+| `/api/pilot-gates/<gate_id>/status/` | POST | Update status (start/ready/approve/block/waive) |
+| `/api/pilot-gates/<gate_id>/items/<item_id>/` | POST | Update checklist item |
+| `/api/pilot-gates/create/<decision_id>/` | POST | Create gate for decision |
+| `/api/pilot-gates/<gate_id>/pilot/` | POST | Start pilot execution |
+| `/api/pilot-gates/<gate_id>/pilot/<pilot_id>/complete/` | POST | Complete pilot |
+
+### Pilot Outcomes
+
+| Outcome | Meaning |
+|---------|---------|
+| `success` | Proceed to full implementation |
+| `partial` | Iterate and re-pilot |
+| `failure` | Do not proceed |
+| `inconclusive` | Need more data |
+
+### Latency Metrics Tracked
+
+- Decision → Readiness start time
+- Readiness duration (checklist completion)
+- Approval wait time
+- Total gate time
+- Pilot execution duration
+
+### UI Location
+
+**Path:** AI Studio → Intelligence Command Center → Pilot Readiness Gates panel
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `core/models_pilot_readiness.py` | Gate, Checklist, Execution models |
+| `core/views_agent_learning.py:2218+` | API endpoints |
+| `core/urls.py:2702-2710` | URL routes |
+| `ai_core/templates/ai_image_studio.html:7130+` | ICC tab UI |
 
 ---
 
