@@ -791,6 +791,133 @@ Returns trending topics, data freshness, and category coverage.""",
                     }
                 }
             }
+        },
+        # Session 577: Phase 2 Tools
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_spider",
+                "description": """Run a specific spider on demand to fetch fresh data.
+USE THIS for requests like:
+- "Run the HackerNews spider"
+- "Fetch latest from TechCrunch"
+- "Update crypto prices"
+- "Get fresh news"
+
+Available categories: tech, finance, news, legal, entertainment, jobs, crypto.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "spider_name": {
+                            "type": "string",
+                            "description": "Spider name (e.g., 'hackernews', 'techcrunch', 'coingecko', 'kalshi')"
+                        },
+                        "category": {
+                            "type": "string",
+                            "enum": ["tech", "finance", "news", "legal", "entertainment", "jobs", "crypto"],
+                            "description": "Run all spiders in a category instead of a specific spider"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum items to fetch (default: 20)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_content",
+                "description": """Trigger content creation workflows (images, videos, blog posts).
+USE THIS for requests like:
+- "Create an image of..."
+- "Generate a blog post about..."
+- "Make a video explaining..."
+- "Design a logo for..."
+
+Routes to ImageAgent, VideoAgent, ContentWriterAgent, etc.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "content_type": {
+                            "type": "string",
+                            "enum": ["image", "video", "blog_post", "social_post", "logo"],
+                            "description": "Type of content to create"
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "Description of what to create"
+                        },
+                        "style": {
+                            "type": "string",
+                            "description": "Style preferences (e.g., 'photorealistic', 'cartoon', 'professional')"
+                        }
+                    },
+                    "required": ["content_type", "prompt"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_content_channel",
+                "description": """Control autonomous content channels (pause, resume, check status).
+USE THIS for requests like:
+- "Pause the AI Weekly channel"
+- "Resume content generation"
+- "Show channel status"
+- "List my content channels"
+
+These are autonomous channels that run forever, creating content on schedule.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "status", "pause", "resume"],
+                            "description": "Action to perform"
+                        },
+                        "channel_id": {
+                            "type": "integer",
+                            "description": "Channel ID (required for status/pause/resume)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_prediction_markets",
+                "description": """Query Kalshi prediction market data for event probabilities.
+USE THIS for requests like:
+- "What are the election odds?"
+- "Show me prediction markets"
+- "What's the probability of X?"
+- "Any interesting markets?"
+
+Returns real-time prediction market data with probabilities and volumes.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query or topic (e.g., 'election', 'fed rate', 'weather')"
+                        },
+                        "category": {
+                            "type": "string",
+                            "enum": ["all", "politics", "economics", "climate", "tech", "sports"],
+                            "description": "Market category filter"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max markets to return (default: 10)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -1903,6 +2030,19 @@ Returns trending topics, data freshness, and category coverage.""",
         if tool_name == "get_spider_intelligence":
             return self._get_spider_intelligence(arguments)
 
+        # Session 577: Phase 2 Tools
+        if tool_name == "execute_spider":
+            return self._execute_spider(arguments)
+
+        if tool_name == "create_content":
+            return self._create_content(arguments)
+
+        if tool_name == "manage_content_channel":
+            return self._manage_content_channel(arguments)
+
+        if tool_name == "query_prediction_markets":
+            return self._query_prediction_markets(arguments)
+
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
             task = arguments.get('task', '')
@@ -2395,6 +2535,392 @@ Returns trending topics, data freshness, and category coverage.""",
 
         except Exception as e:
             logger.error(f"Error getting spider intelligence: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =========================================================================
+    # Session 577: Phase 2 Tool Handlers
+    # =========================================================================
+
+    def _execute_spider(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 577: Run a specific spider on demand to fetch fresh data.
+        """
+        try:
+            from ai_core.spiders.spider_registry import SpiderRegistry
+            import asyncio
+            import inspect
+
+            spider_name = arguments.get('spider_name')
+            category = arguments.get('category')
+            max_results = arguments.get('max_results', 20)
+
+            registry = SpiderRegistry()
+
+            # Category to spider mapping
+            category_spiders = {
+                'tech': ['hackernews', 'techcrunch', 'devto', 'github', 'producthunt'],
+                'finance': ['coingecko', 'yahoo_finance', 'polygon_finance', 'finnhub'],
+                'news': ['cnn', 'bbc', 'npr', 'reuters_rss', 'axios'],
+                'legal': ['courtlistener', 'findlaw', 'colorado_family_law'],
+                'entertainment': ['variety', 'polygon_gaming', 'spotify'],
+                'jobs': ['remoteok', 'weworkremotely', 'adzuna'],
+                'crypto': ['coingecko', 'etherscan_api']
+            }
+
+            # Determine which spiders to run
+            if spider_name:
+                spiders_to_run = [spider_name]
+            elif category and category in category_spiders:
+                spiders_to_run = category_spiders[category]
+            else:
+                return {
+                    'success': False,
+                    'error': 'Please provide either spider_name or category'
+                }
+
+            results = []
+            errors = []
+
+            for name in spiders_to_run:
+                spider_class = registry.get_spider_class(name)
+                if not spider_class or spider_class.__name__ == 'BaseIntelligenceSpider':
+                    errors.append(f"Spider '{name}' not found")
+                    continue
+
+                try:
+                    spider = spider_class()
+
+                    # Run fetch_data
+                    if hasattr(spider, 'fetch_data'):
+                        fetch_method = spider.fetch_data
+
+                        if asyncio.iscoroutinefunction(fetch_method):
+                            # Async spider
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            try:
+                                data = loop.run_until_complete(fetch_method(max_results=max_results))
+                            finally:
+                                loop.close()
+                        else:
+                            # Sync spider
+                            data = fetch_method(max_results=max_results)
+
+                        if data:
+                            item_count = len(data) if isinstance(data, list) else 1
+                            results.append({
+                                'spider': name,
+                                'items_fetched': item_count,
+                                'sample': data[:3] if isinstance(data, list) else data
+                            })
+                    else:
+                        errors.append(f"Spider '{name}' has no fetch_data method")
+
+                except Exception as e:
+                    errors.append(f"Spider '{name}' error: {str(e)[:100]}")
+
+            # Build summary
+            total_items = sum(r['items_fetched'] for r in results)
+            summary_lines = [f"**Spider Execution Results:**\n"]
+
+            if results:
+                summary_lines.append(f"✅ Fetched {total_items} items from {len(results)} spiders:")
+                for r in results:
+                    summary_lines.append(f"  • {r['spider']}: {r['items_fetched']} items")
+            else:
+                summary_lines.append("❌ No data fetched")
+
+            if errors:
+                summary_lines.append(f"\n⚠️ Errors ({len(errors)}):")
+                for e in errors[:3]:
+                    summary_lines.append(f"  • {e}")
+
+            return {
+                'success': len(results) > 0,
+                'spiders_run': len(spiders_to_run),
+                'successful': len(results),
+                'total_items': total_items,
+                'results': results,
+                'errors': errors,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error executing spider: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _create_content(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 577: Trigger content creation by routing to appropriate agent.
+        """
+        try:
+            content_type = arguments.get('content_type', 'image')
+            prompt = arguments.get('prompt', '')
+            style = arguments.get('style', '')
+
+            if not prompt:
+                return {
+                    'success': False,
+                    'error': 'Please provide a prompt describing what to create'
+                }
+
+            # Map content type to agent
+            agent_map = {
+                'image': 'ImageAgent',
+                'video': 'VideoAgent',
+                'blog_post': 'ContentWriterAgent',
+                'social_post': 'SocialMediaAgent',
+                'logo': 'BrandIdentityAgent'
+            }
+
+            agent_name = agent_map.get(content_type)
+            if not agent_name:
+                return {
+                    'success': False,
+                    'error': f"Unknown content type: {content_type}"
+                }
+
+            # Build task with style if provided
+            task = prompt
+            if style:
+                task = f"{prompt} (Style: {style})"
+
+            # Route to agent
+            try:
+                result = self.router.route(agent_name, task, {
+                    'content_type': content_type,
+                    'style': style,
+                    'prompt': prompt
+                })
+
+                return {
+                    'success': True,
+                    'agent': agent_name,
+                    'content_type': content_type,
+                    'result': result.to_dict() if hasattr(result, 'to_dict') else str(result),
+                    'summary': f"**Content Creation Started:**\n\n🎨 Agent: {agent_name}\n📝 Type: {content_type}\n💭 Prompt: {prompt[:100]}..."
+                }
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"Agent routing failed: {str(e)}"
+                }
+
+        except Exception as e:
+            logger.error(f"Error creating content: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _manage_content_channel(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 577: Control autonomous content channels.
+        """
+        try:
+            from core.models_autonomous_studio import ContentChannel, ChannelStatus
+
+            action = arguments.get('action', 'list')
+            channel_id = arguments.get('channel_id')
+
+            if action == 'list':
+                # List all channels
+                channels = ContentChannel.objects.all().order_by('-created_at')[:20]
+
+                if not channels:
+                    return {
+                        'success': True,
+                        'channels': [],
+                        'summary': "**Content Channels:**\n\nNo content channels configured yet."
+                    }
+
+                channel_data = []
+                summary_lines = ["**Content Channels:**\n"]
+
+                for ch in channels:
+                    status_emoji = {
+                        'active': '🟢',
+                        'paused': '⏸️',
+                        'completed': '✅',
+                        'failed': '❌'
+                    }.get(ch.status, '❓')
+
+                    channel_data.append({
+                        'id': ch.id,
+                        'name': ch.name,
+                        'status': ch.status,
+                        'platform': ch.platform,
+                        'frequency': ch.frequency,
+                        'episodes_count': ch.episodes.count() if hasattr(ch, 'episodes') else 0
+                    })
+
+                    summary_lines.append(f"{status_emoji} **{ch.name}** (ID: {ch.id})")
+                    summary_lines.append(f"   Platform: {ch.platform} | Frequency: {ch.frequency}")
+
+                return {
+                    'success': True,
+                    'channels': channel_data,
+                    'total': len(channel_data),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'status':
+                if not channel_id:
+                    return {'success': False, 'error': 'channel_id required for status'}
+
+                channel = ContentChannel.objects.filter(id=channel_id).first()
+                if not channel:
+                    return {'success': False, 'error': f'Channel {channel_id} not found'}
+
+                return {
+                    'success': True,
+                    'channel': {
+                        'id': channel.id,
+                        'name': channel.name,
+                        'status': channel.status,
+                        'platform': channel.platform,
+                        'frequency': channel.frequency,
+                        'created_at': channel.created_at.isoformat(),
+                        'last_run': channel.last_run.isoformat() if channel.last_run else None,
+                        'next_run': channel.next_run.isoformat() if channel.next_run else None
+                    },
+                    'summary': f"**Channel: {channel.name}**\n\nStatus: {channel.status}\nPlatform: {channel.platform}\nFrequency: {channel.frequency}"
+                }
+
+            elif action == 'pause':
+                if not channel_id:
+                    return {'success': False, 'error': 'channel_id required for pause'}
+
+                channel = ContentChannel.objects.filter(id=channel_id).first()
+                if not channel:
+                    return {'success': False, 'error': f'Channel {channel_id} not found'}
+
+                channel.status = ChannelStatus.PAUSED
+                channel.save()
+
+                return {
+                    'success': True,
+                    'channel_id': channel_id,
+                    'name': channel.name,
+                    'new_status': 'paused',
+                    'summary': f"⏸️ **Channel Paused:**\n\n{channel.name} has been paused."
+                }
+
+            elif action == 'resume':
+                if not channel_id:
+                    return {'success': False, 'error': 'channel_id required for resume'}
+
+                channel = ContentChannel.objects.filter(id=channel_id).first()
+                if not channel:
+                    return {'success': False, 'error': f'Channel {channel_id} not found'}
+
+                channel.status = ChannelStatus.ACTIVE
+                channel.save()
+
+                return {
+                    'success': True,
+                    'channel_id': channel_id,
+                    'name': channel.name,
+                    'new_status': 'active',
+                    'summary': f"▶️ **Channel Resumed:**\n\n{channel.name} is now active."
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing content channel: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_prediction_markets(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 577: Query Kalshi prediction market data.
+        """
+        try:
+            from ai_core.spiders.specialized.kalshi_spider import KalshiSpider
+
+            query = arguments.get('query', '').lower()
+            category = arguments.get('category', 'all')
+            limit = arguments.get('limit', 10)
+
+            # Fetch markets from Kalshi spider
+            spider = KalshiSpider()
+            markets = spider.fetch_data(max_results=100)
+
+            # Filter to actual markets (not metadata)
+            prediction_markets = [
+                m for m in markets
+                if m.get('data_type') == 'prediction_market'
+            ]
+
+            # Apply filters
+            if query:
+                prediction_markets = [
+                    m for m in prediction_markets
+                    if query in m.get('title', '').lower() or query in m.get('subtitle', '').lower()
+                ]
+
+            # Category filtering (Kalshi uses category field)
+            category_keywords = {
+                'politics': ['election', 'president', 'congress', 'senate', 'trump', 'biden'],
+                'economics': ['fed', 'rate', 'inflation', 'gdp', 'recession', 'unemployment'],
+                'climate': ['temperature', 'weather', 'climate', 'hurricane'],
+                'tech': ['ai', 'tech', 'apple', 'google', 'tesla'],
+                'sports': ['nfl', 'nba', 'mlb', 'super bowl']
+            }
+
+            if category != 'all' and category in category_keywords:
+                keywords = category_keywords[category]
+                prediction_markets = [
+                    m for m in prediction_markets
+                    if any(kw in m.get('title', '').lower() for kw in keywords)
+                ]
+
+            # Sort by volume (most active markets first)
+            prediction_markets.sort(key=lambda m: -(m.get('volume') or 0))
+
+            # Limit results
+            prediction_markets = prediction_markets[:limit]
+
+            # Build summary
+            summary_lines = [f"**Prediction Markets:**\n"]
+
+            if not prediction_markets:
+                summary_lines.append("No markets found matching your query.")
+            else:
+                for m in prediction_markets[:10]:
+                    title = m.get('title', 'Unknown')[:50]
+                    yes_prob = m.get('yes_price', 0)
+                    volume = m.get('volume', 0)
+                    volume_str = f"${volume:,.0f}" if volume else "N/A"
+
+                    # Format probability nicely
+                    prob_str = f"{yes_prob:.0%}" if yes_prob else "N/A"
+
+                    summary_lines.append(f"📊 **{title}...**")
+                    summary_lines.append(f"   Yes: {prob_str} | Volume: {volume_str}")
+                    summary_lines.append("")
+
+            return {
+                'success': True,
+                'markets': prediction_markets,
+                'total_found': len(prediction_markets),
+                'query': query,
+                'category': category,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying prediction markets: {e}")
             return {
                 'success': False,
                 'error': str(e)
