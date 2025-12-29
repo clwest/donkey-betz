@@ -462,12 +462,14 @@ You orchestrate. You don't create content directly."""
     def _create_boardroom_decision(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Session 574: Create a Boardroom decision from action plan.
+        Session 593: Auto-create Pilot Readiness Gates for safety-sensitive decisions.
 
         This creates an AgentDecisionSummary that appears in the Boardroom
         for human review and agent execution.
         """
         try:
             from core.models_unified_system import AgentDecisionSummary
+            from core.services.decision_extractor import auto_create_gate_for_decision
 
             # Create the decision (Session 412 model doesn't have quality_score)
             decision = AgentDecisionSummary.objects.create(
@@ -484,6 +486,17 @@ You orchestrate. You don't create content directly."""
 
             logger.info(f"[Session 574] Created Boardroom decision: {decision.topic} (ID: {decision.id})")
 
+            # Session 593: Auto-create Pilot Readiness Gate for safety-sensitive decisions
+            gate = auto_create_gate_for_decision(decision)
+            gate_info = None
+            if gate:
+                gate_info = {
+                    'gate_id': str(gate.id),
+                    'risk_level': gate.risk_level,
+                    'checklist_items': gate.checklist_items.count()
+                }
+                logger.info(f"[Session 593] Auto-created {gate.risk_level.upper()} risk gate for decision")
+
             return {
                 'success': True,
                 'message': f"Created Boardroom decision: {decision.topic}",
@@ -491,7 +504,8 @@ You orchestrate. You don't create content directly."""
                 'topic': decision.topic,
                 'owner': arguments.get('owner', 'human'),
                 'priority': arguments.get('priority', 'medium'),
-                'status': 'review'
+                'status': 'review',
+                'gate': gate_info  # Session 593: Include gate info if created
             }
 
         except Exception as e:
