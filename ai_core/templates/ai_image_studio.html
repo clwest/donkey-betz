@@ -10480,6 +10480,69 @@
                     </style>
                     <!-- END BOARDROOM DECISIONS -->
 
+                    <!-- ========== SESSION 590: PILOT READINESS GATES ========== -->
+                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #14b8a6;">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(20, 184, 166, 0.2); border-bottom: 1px solid #14b8a6;">
+                            <h5 class="mb-0" style="color: #14b8a6;">
+                                <span style="font-size: 24px;">🚦</span> Pilot Readiness Gates
+                            </h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge" style="background: #14b8a6;" id="pilot-gates-count">0 Gates</span>
+                                <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #14b8a6; color: #fff;" id="gate-status-filter" onchange="loadPilotGates(this.value)">
+                                    <option value="">All Gates</option>
+                                    <option value="not_started">⬜ Not Started</option>
+                                    <option value="in_progress">🔄 In Progress</option>
+                                    <option value="ready">✅ Ready</option>
+                                    <option value="approved">🎯 Approved</option>
+                                    <option value="blocked">🚫 Blocked</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                            <p class="text-muted small mb-3" style="font-style: italic;">
+                                "Bridge between Boardroom Decisions and Pilot Execution. Complete checklists before launching pilots."
+                            </p>
+                            <div id="pilot-gates-list">
+                                <p class="text-muted text-center">Loading pilot gates...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .gate-card {
+                            background: rgba(20, 184, 166, 0.1);
+                            border-radius: 8px;
+                            border-left: 4px solid #14b8a6;
+                            padding: 12px;
+                            margin-bottom: 12px;
+                            transition: transform 0.2s, box-shadow 0.2s;
+                        }
+                        .gate-card:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+                        }
+                        .gate-status-not_started { border-left-color: #6b7280; }
+                        .gate-status-in_progress { border-left-color: #3b82f6; }
+                        .gate-status-ready { border-left-color: #10b981; }
+                        .gate-status-approved { border-left-color: #f59e0b; }
+                        .gate-status-blocked { border-left-color: #ef4444; }
+                        .gate-status-waived { border-left-color: #8b5cf6; }
+                        .risk-level-low { color: #10b981; }
+                        .risk-level-medium { color: #f59e0b; }
+                        .risk-level-high { color: #ef4444; }
+                        .risk-level-critical { color: #dc2626; font-weight: bold; }
+                        .checklist-item {
+                            padding: 6px 10px;
+                            margin: 4px 0;
+                            border-radius: 4px;
+                            background: rgba(255, 255, 255, 0.05);
+                            font-size: 0.85rem;
+                        }
+                        .checklist-item-pending { opacity: 0.7; }
+                        .checklist-item-completed { background: rgba(16, 185, 129, 0.2); }
+                        .checklist-item-blocked { background: rgba(239, 68, 68, 0.2); }
+                    </style>
+                    <!-- END PILOT READINESS GATES -->
+
                         </div>
                         <!-- END SOCIAL SUB-TAB -->
 
@@ -55720,7 +55783,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.log('  ✓ Boardroom Decisions: loading latest');
             }
 
-            // 7. Session 556: Refresh Review Documents
+            // 7. Session 590: Refresh Pilot Readiness Gates
+            if (typeof loadPilotGates === 'function') {
+                loadPilotGates();
+                console.log('  ✓ Pilot Readiness Gates: loading latest');
+            }
+
+            // 8. Session 556: Refresh Review Documents
             if (typeof loadReviewDocuments === 'function') {
                 loadReviewDocuments();
                 console.log('  ✓ Review Documents: loading latest');
@@ -56243,6 +56312,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadAgentDreams();
                     loadHiveMindSessions();
                     loadBoardroomDecisions();  // Session 323
+                    loadPilotGates();  // Session 590
                 });
             }
 
@@ -57387,6 +57457,308 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 console.error('Error starting research from decision:', error);
                 showNotification('Error starting research project', 'danger');
+            }
+        }
+
+        // =========================================================================
+        // Session 590: Pilot Readiness Gates - Decision to Execution Bridge
+        // =========================================================================
+
+        // Load pilot readiness gates from API
+        async function loadPilotGates(filter = '') {
+            try {
+                let url = '/api/pilot-gates/';
+                if (filter) {
+                    url += `?status=${filter}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    updatePilotGates(data);
+                }
+            } catch (error) {
+                console.error('Error loading pilot gates:', error);
+                document.getElementById('pilot-gates-list').innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">⚠️</span>
+                        <p class="text-muted mt-2">Error loading gates...</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Update the pilot gates UI
+        function updatePilotGates(data) {
+            const container = document.getElementById('pilot-gates-list');
+            const countBadge = document.getElementById('pilot-gates-count');
+
+            if (countBadge) {
+                countBadge.textContent = `${data.gates.length} Gates`;
+            }
+
+            if (!data.gates || data.gates.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <span style="font-size: 48px; opacity: 0.5;">🚦</span>
+                        <p class="text-muted mt-2">No pilot readiness gates yet...</p>
+                        <small class="text-muted">Create gates for decisions that need safety review before piloting</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const statusIcons = {
+                'not_started': '⬜',
+                'in_progress': '🔄',
+                'ready': '✅',
+                'approved': '🎯',
+                'blocked': '🚫',
+                'waived': '💨'
+            };
+
+            const riskColors = {
+                'low': '#10b981',
+                'medium': '#f59e0b',
+                'high': '#ef4444',
+                'critical': '#dc2626'
+            };
+
+            container.innerHTML = data.gates.map(g => {
+                const statusIcon = statusIcons[g.status] || '❓';
+                const riskColor = riskColors[g.risk_level] || '#6b7280';
+                const timeAgo = formatTimeAgo(g.created_at);
+                const progress = g.checklist_completed + '/' + g.checklist_total;
+                const progressPercent = g.checklist_total > 0 ? Math.round((g.checklist_completed / g.checklist_total) * 100) : 0;
+
+                const checklistItems = g.checklist_items.map(item => {
+                    const itemStatusIcon = item.status === 'completed' ? '✅' :
+                                          item.status === 'blocked' ? '🚫' :
+                                          item.status === 'in_progress' ? '🔄' : '⬜';
+                    const itemClass = `checklist-item checklist-item-${item.status}`;
+                    return `
+                        <div class="${itemClass}" onclick="toggleChecklistItem('${g.id}', '${item.id}', '${item.status}')">
+                            <span style="margin-right: 8px;">${itemStatusIcon}</span>
+                            <span>${item.title}</span>
+                            ${item.is_required ? '<span class="badge bg-danger ms-2" style="font-size: 9px;">Required</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                const actionButtons = getGateActionButtons(g);
+
+                return `
+                    <div class="gate-card gate-status-${g.status}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span style="font-size: 18px; margin-right: 8px;">${statusIcon}</span>
+                                <strong style="color: #14b8a6;">${g.decision_topic.substring(0, 50)}${g.decision_topic.length > 50 ? '...' : ''}</strong>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${timeAgo}</small><br>
+                                <span class="badge" style="background: ${riskColor}; font-size: 10px;">${g.risk_level.toUpperCase()} Risk</span>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <span class="badge" style="background: #14b8a6;">${g.status_display}</span>
+                            <span class="badge bg-secondary ms-1">Progress: ${progress} (${progressPercent}%)</span>
+                        </div>
+                        ${g.summary ? `<p style="color: #e5e7eb; font-size: 13px; margin-bottom: 8px;">${g.summary}</p>` : ''}
+                        <div class="mb-2">
+                            <div class="progress" style="height: 6px; background: #333;">
+                                <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; background: #14b8a6;"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1">Checklist Items:</small>
+                            ${checklistItems}
+                        </div>
+                        ${actionButtons}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get action buttons based on gate status
+        function getGateActionButtons(gate) {
+            switch(gate.status) {
+                case 'not_started':
+                    return `
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-info" onclick="updateGateStatus('${gate.id}', 'start')">
+                                ▶️ Start Readiness Work
+                            </button>
+                        </div>
+                    `;
+                case 'in_progress':
+                    return `
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-success me-1" onclick="updateGateStatus('${gate.id}', 'ready')" ${gate.checklist_completed < gate.checklist_total ? 'disabled title="Complete all required items first"' : ''}>
+                                ✅ Mark Ready for Review
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="updateGateStatus('${gate.id}', 'block')">
+                                🚫 Block
+                            </button>
+                        </div>
+                    `;
+                case 'ready':
+                    return `
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-warning me-1" onclick="showApproveGateModal('${gate.id}')">
+                                🎯 Approve for Pilot
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="updateGateStatus('${gate.id}', 'block')">
+                                🚫 Block
+                            </button>
+                        </div>
+                    `;
+                case 'approved':
+                    return `
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-success" onclick="updateGateStatus('${gate.id}', 'pilot')">
+                                🚀 Start Pilot
+                            </button>
+                        </div>
+                    `;
+                case 'blocked':
+                    return `
+                        <div class="mt-2">
+                            <span class="badge bg-danger">Blocked</span>
+                            <button class="btn btn-sm btn-outline-info ms-2" onclick="updateGateStatus('${gate.id}', 'start')">
+                                🔄 Resume Work
+                            </button>
+                        </div>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        // Update gate status
+        async function updateGateStatus(gateId, action) {
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ action: action })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`🚦 ${data.message}`, 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating gate status:', error);
+                showNotification('Error updating gate status', 'danger');
+            }
+        }
+
+        // Toggle checklist item status
+        async function toggleChecklistItem(gateId, itemId, currentStatus) {
+            const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/items/${itemId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        completed_by: 'human'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error updating checklist item:', error);
+                showNotification('Error updating checklist item', 'danger');
+            }
+        }
+
+        // Show approve gate modal
+        function showApproveGateModal(gateId) {
+            const modalHtml = `
+                <div class="modal fade" id="approveGateModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1a1a1a; border: 1px solid #14b8a6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" style="color: #14b8a6;">🎯 Approve Gate for Pilot</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-light">Approved By</label>
+                                    <input type="text" class="form-control bg-dark text-light" id="approveGateBy" placeholder="Your name">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-light">Approval Notes</label>
+                                    <textarea class="form-control bg-dark text-light" id="approveGateNotes" rows="3" placeholder="Any notes about this approval..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-success" onclick="approveGate('${gateId}')">
+                                    ✅ Approve
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if present
+            const existingModal = document.getElementById('approveGateModal');
+            if (existingModal) existingModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('approveGateModal'));
+            modal.show();
+        }
+
+        // Approve gate
+        async function approveGate(gateId) {
+            const approvedBy = document.getElementById('approveGateBy').value || 'anonymous';
+            const notes = document.getElementById('approveGateNotes').value || '';
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        action: 'approve',
+                        approved_by: approvedBy,
+                        notes: notes
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('approveGateModal')).hide();
+                    showNotification(`🎯 Gate approved by ${approvedBy}!`, 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error approving gate:', error);
+                showNotification('Error approving gate', 'danger');
             }
         }
 

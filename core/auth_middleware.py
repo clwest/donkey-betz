@@ -64,6 +64,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-conversations/',  # Session 564: Conversations sub-tab
         '/api/agent-dreams/',  # Session 564: Dreams sub-tab
         '/api/boardroom/',  # Session 564: Boardroom sub-tab
+        '/api/pilot-gates/',  # Session 590: Pilot Readiness Gates
         '/api/artifacts/',  # Session 564: Artifacts sub-tab
         '/api/agent-learning/',  # Session 564: Learning activity
 
