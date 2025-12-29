@@ -1,86 +1,63 @@
-# Session 573 - Start Here
+# Session 574 - Start Here
 
-**Previous Session:** 572
+**Previous Session:** 573
 **Date:** December 28, 2025
 **Focus:** Continue platform improvements
 
 ---
 
-## Session 572 Accomplishments
+## Session 573 Accomplishments
 
-### UI Auto-Refresh for Thinking Engine & Concern Tracking - COMPLETE
+### 1. Celery Multi-Queue Architecture - COMPLETE
 
-Fixed issue where Thinking Engine and Concern Tracking tabs appeared stale because they only loaded data on tab click.
+Fixed "cloggage" from Celery tasks not running properly by implementing 3-worker architecture.
 
-| Component | Fix |
-|-----------|-----|
-| Thinking Engine tab | 30-second auto-refresh when tab is active |
-| Concern Tracking tab | 30-second auto-refresh when tab is active |
+| Worker | Queue | Concurrency | Purpose |
+|--------|-------|-------------|---------|
+| `default@` | default, agents, sports, content, ml | 4 threads | Quick tasks (<1 min) |
+| `long_running@` | long_running | 2 threads | Spider network, agent dreams, conversations |
+| `broadcast@` | broadcast | 2 threads | High-frequency status updates (60-180s) |
 
-**Implementation:** Added `setInterval` that starts on `shown.bs.tab` and clears on `hidden.bs.tab` to prevent unnecessary API calls when not viewing.
+**Files Modified:**
+- `core/settings.py` - Added comprehensive `CELERY_TASK_ROUTES` (25+ routes)
+- `Makefile` - Updated `celery` target for 3 workers + beat
+- `core/celery.py` - Updated comments documenting queue architecture
 
-### Self Blog Diverse Topic Generation - COMPLETE
+### 2. PA System Awareness - COMPLETE
 
-Fixed issue where all 24 self-blogs had nearly identical titles about "The Self-Evolving AI Ecosystem".
+The Personal Assistant now knows what needs attention across all 3 main sections (Command Center, Autonomous, Research).
 
-**Before:** Every blog was about the same topic (the AI platform itself)
+**New Service:** `core/services/system_state_aggregator.py` (500 lines)
 
-**After:** Blogs now randomly pick from 4 topic categories:
+| Section | What It Checks |
+|---------|----------------|
+| Command Center | Failed thinking cycles, recurring/stale concerns |
+| Autonomous | Overdue channels, narrative shifts, trigger events |
+| Research | Stale spiders, high-value pending dreams, decisions |
 
-| Category | Source | Example |
-|----------|--------|---------|
-| `trending` | Spider data | Real articles from TechCrunch, HackerNews, Reddit |
-| `dreams` | Agent dreams | Insights like "Don't Mistake Certainty for Truth" |
-| `conversations` | Agent discussions | Topics agents talked about |
-| `system` | Meta/self-aware | Original behavior (writing about the platform) |
+**Priority Scoring:**
+- Critical alerts: 90
+- Security alerts: 85
+- Health failures: 80
+- Overdue tasks: 70
+- Stale concerns: 60
+- Opportunities: 40
 
-**New parameter:** `topic_category` in `generate_self_blog_task()` - defaults to random selection
+**Conditional Injection:** System state is injected into PA context when:
+1. User asks status questions ("What should I focus on?", "Catch me up", "Status")
+2. There are urgent items (priority >= 80)
 
-### Action Feed Human-Readable Formatting - COMPLETE
+**Files Modified:**
+- `core/services/pa_intelligence_enricher.py` - Added `_query_system_state()` method
+- `core/agents/base_agent.py` - Updated source counting for system state
+- `core/tasks.py` - Added `refresh_system_state_cache()` task
+- `core/celery.py` - Added 60s cache refresh schedule
 
-Fixed issue where the Thinking Engine's Action Feed displayed raw dict/JSON strings like:
-```
-{'conversation_id': '9136daa8-...', 'initiator': 'ContentStrategyAgent'...}
-```
-
-**After fix:** Now shows human-readable summaries:
-- "Conversation between ContentStrategyAgent and ImageAgent about 'Cross-domain insights'"
-- "Research on 'emerging trends': Research initiated"
-- "Created report on 'System Insights' with 5 insights, 4 patterns"
-- "Spawned newsapi spider to gather 'trending' data"
-
-**Implementation:** Added `format_action_result()` helper function in `core/tasks.py` that extracts key information from result dicts and formats it as readable text.
-
-### Agent Cycle Verification
-
-Ran full agent cycle to verify Session 571 database fixes:
-
-| Metric | Count |
-|--------|-------|
-| Dreams generated (Dec 28) | 114 |
-| Conversations (Dec 28) | 76 |
-| Discord notifications | 40+ sent successfully |
-
-### Session 572 Commits
+### Session 573 Commits
 
 ```
-bea33b3 fix(Session 572): Format Action Feed results as human-readable text
-ff6aadd docs(Session 572): Update handoff for Session 573
-8b4432b fix(Session 572): Auto-refresh for Thinking/Concerns + diverse Self Blog topics
+(pending commit for this session)
 ```
-
----
-
-## Session 571 Accomplishments
-
-### Database Audit & Fixes - COMPLETE
-
-| Issue | Status |
-|-------|--------|
-| 6 missing `ai_intelligence_*` tables | Fixed |
-| Broken import in `conversation_orchestrator.py` | Fixed |
-| Missing `django_session` table | Fixed |
-| `stock_market` situation failing | Fixed |
 
 ---
 
@@ -93,42 +70,44 @@ ff6aadd docs(Session 572): Update handoff for Session 573
 | **Database Tables** | 455 | All healthy |
 | **Database Models** | 358 | All have tables |
 | **Applied Migrations** | 264 | All synced |
-| **Celery Tasks** | 226 | 53 scheduled (Beat) |
-| **Services** | 93 | 14 categories |
+| **Celery Tasks** | 227 | 54 scheduled (Beat) - +1 new |
+| **Celery Workers** | 3 | default, long_running, broadcast |
+| **Services** | 94 | 14 categories - +1 new |
 | **Discord Commands** | 112 | 25 Cogs |
 | **Advisors** | 25 | Active |
 | **Sci-Fi Features** | 14 | All active |
 | **ML Model** | v2.0 | Trained |
 | **Triggers** | 34 | Active |
 | **Narratives** | 5 | Tracked |
-| **Self Blogs** | 24 | Now with diverse topics |
 
 ---
 
-## Session 573 Priorities
+## Session 574 Priorities
 
-### 1. Feature Development
+### 1. Test PA System Awareness
+- [ ] Ask PA "What should I focus on?" and verify system state is included
+- [ ] Test with urgent items (create a failed thinking cycle to test)
+- [ ] Verify cache refresh is working via Celery
+
+### 2. Monitor Celery Multi-Queue
+- [ ] Check that long-running tasks are going to `long_running` queue
+- [ ] Verify broadcast tasks are on `broadcast` queue
+- [ ] Monitor for any queue bottlenecks
+
+### 3. Feature Development
 - [ ] Review backlog for next feature priorities
-- [ ] Consider user-facing improvements
+- [ ] Consider extending system awareness to Discord bot
 
-### 2. Performance Optimization
-- [ ] Profile slow endpoints
-- [ ] Optimize database queries if needed
-
-### 3. Testing
-- [ ] Test diverse self-blog generation with different topic categories
-- [ ] Verify auto-refresh working in UI
-
-### 4. Database Health (Recommendation)
-- [ ] Consider adding startup health check for critical tables
-- [ ] Prevent future migration/table mismatches
+### 4. Documentation
+- [ ] Verify all handoff docs are up to date
+- [ ] Update CAPABILITIES.md with new service
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start all services
+# 1. Start all services (now with 3 Celery workers!)
 make start && make celery
 
 # 2. Access AI Studio
@@ -149,12 +128,21 @@ print(f'Celery tasks: {len(app.tasks)}')
 print(f'Beat schedule: {len(app.conf.beat_schedule)}')
 "
 
-# 5. Test diverse self-blog (new!)
-.venv/bin/python manage.py shell -c "
-from core.tasks import generate_self_blog_task
-result = generate_self_blog_task(topic_category='dreams')
-print(result)
+# 5. Test SystemStateAggregator (new!)
+.venv/bin/python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+import django; django.setup()
+from core.services.system_state_aggregator import get_system_state_aggregator
+aggregator = get_system_state_aggregator()
+items = aggregator.get_attention_items()
+print(f'Items needing attention: {len(items)}')
+for item in items[:5]:
+    print(f'  - [{item.section}] {item.title} (priority: {item.priority})')
 "
+
+# 6. Check Celery queue routing
+celery -A core inspect active_queues
 ```
 
 ---
@@ -165,34 +153,50 @@ print(result)
 |-----|---------|
 | `CLAUDE.md` | AI session entry point with system stats |
 | `docs/CAPABILITIES.md` | Full feature list with counts |
+| `docs/handoffs/SESSION_573_PA_SYSTEM_AWARENESS.md` | This session's handoff |
 | `docs/AGENTS.md` | All 71 agents documented |
 | `docs/SPIDERS.md` | All 77 spiders documented |
-| `docs/SERVICES.md` | All 93 services documented |
+| `docs/SERVICES.md` | All 94 services documented |
 | `docs/DISCORD_COMMANDS.md` | All 112 Discord commands |
-| `docs/MODELS.md` | All 358 database models |
-| `docs/SCIFI_FEATURES.md` | All 14 Sci-Fi features |
 
 ---
 
-## Recent Commits
+## Celery Architecture (Session 573)
 
 ```
-8b4432b fix(Session 572): Auto-refresh for Thinking/Concerns + diverse Self Blog topics
-d584ad9 docs(Session 571): Update handoff with database audit fixes
-0ccaa65 fix(Session 571): Database audit fixes
-4b82cb4 fix(Session 570): Fix Research tab spider/agent counts
-5e26883 fix(Session 570): Fix self-blog viewer for single blog display
+                    ┌─────────────────────────────────────────┐
+                    │            Celery Beat                   │
+                    │    (54 scheduled tasks)                  │
+                    └───────────────┬─────────────────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+          ▼                         ▼                         ▼
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   default@      │      │  long_running@  │      │   broadcast@    │
+│   4 threads     │      │   2 threads     │      │   2 threads     │
+├─────────────────┤      ├─────────────────┤      ├─────────────────┤
+│ Quick tasks     │      │ Spider network  │      │ Learning status │
+│ < 1 minute      │      │ Agent dreams    │      │ Conversation    │
+│                 │      │ Conversations   │      │ Dream journal   │
+│ Queues:         │      │ Thinking cycles │      │ Evolution       │
+│ - default       │      │                 │      │ Relationship    │
+│ - agents        │      │ Queue:          │      │ System state    │
+│ - sports        │      │ - long_running  │      │                 │
+│ - content       │      │                 │      │ Queue:          │
+│ - ml            │      │                 │      │ - broadcast     │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
 ```
 
 ---
 
-**Session 572: UI/UX Improvements - COMPLETE**
+**Session 573: Celery + PA System Awareness - COMPLETE**
 
-| Fix | Details |
-|-----|---------|
-| Thinking Engine | Auto-refreshes every 30s when tab active |
-| Concern Tracking | Auto-refreshes every 30s when tab active |
-| Self Blog | Now generates diverse topics from spider data, dreams, conversations |
-| Action Feed | Results now display as human-readable text, not raw JSON |
+| Feature | Details |
+|---------|---------|
+| Celery Multi-Queue | 3 workers handling tasks by type |
+| SystemStateAggregator | Aggregates attention items from 3 sections |
+| PA Context Injection | System state included for status queries |
+| Cache Refresh | 60s background task keeps cache warm |
 
-**Ready for Session 573**
+**Ready for Session 574**

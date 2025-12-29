@@ -165,6 +165,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 573 | PA System Awareness + Celery Multi-Queue Architecture | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
 | 567 | Full System Audit - 71 agents, 77 spiders, 324+ models, 226 Celery tasks, 93 services | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
 | 566 | Intelligence Sources UI panel + GPT-5-mini token fix | - |
 | 565 | Context-Aware PA with Platform Intelligence | - |
@@ -176,7 +177,6 @@ curl http://localhost:8000/health/ping/
 | 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con review documents | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 | 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
 | 552 | Research Demo Tab Complete Fix - APIs, colors, live feed, self-blog | `SESSION_552_RESEARCH_DEMO_FIXES.md` |
-| 551 | Boardroom Deduplication + Pending Dreams Tracking | `SESSION_551_BOARDROOM_DEDUPLICATION.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 

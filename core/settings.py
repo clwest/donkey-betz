@@ -894,11 +894,46 @@ REDIS_KEY_PATTERNS = {
 }
 
 # Celery Task Routing
+# Session 573: Added dedicated queues to prevent bottlenecks
+# - long_running: Tasks that take 1+ minutes (spider network, agent conversations, dreams)
+# - broadcast: High-frequency status broadcast tasks (every 60-180s)
+# - default: Everything else (quick tasks)
 CELERY_TASK_ROUTES = {
+    # Existing module-based routing
     'agents.*': {'queue': 'agents'},
     'sports.*': {'queue': 'sports'},
     'content.*': {'queue': 'content'},
     'ml.*': {'queue': 'ml'},
+
+    # Session 573: Long-running tasks (1+ minutes) - separate worker
+    'core.tasks.run_spider_network': {'queue': 'long_running'},
+    'core.tasks.generate_agent_dreams': {'queue': 'long_running'},
+    'core.tasks.run_agent_conversation': {'queue': 'long_running'},
+    'core.tasks.run_multi_agent_conversation': {'queue': 'long_running'},
+    'core.tasks.run_autonomous_thinking_cycle': {'queue': 'long_running'},
+    'core.tasks.run_agent_learning_cycle': {'queue': 'long_running'},
+    'core.tasks.trigger_spider_conversations': {'queue': 'long_running'},
+    'core.tasks.trigger_project_research': {'queue': 'long_running'},
+    'core.tasks.run_autonomous_intelligence_loop': {'queue': 'long_running'},
+    'core.tasks.agent_think_and_synthesize': {'queue': 'long_running'},
+    'core.tasks.score_and_promote_dreams': {'queue': 'long_running'},
+    'core.tasks.process_approved_dreams': {'queue': 'long_running'},
+    'core.tasks.execute_dream_implementations': {'queue': 'long_running'},
+    'autonomous_studio.run_main_loop': {'queue': 'long_running'},
+    'autonomous.blockchain_security_monitor': {'queue': 'long_running'},
+    'autonomous.stock_market_intelligence': {'queue': 'long_running'},
+
+    # Session 573: High-frequency broadcast tasks (60-180s) - separate worker
+    'core.tasks.broadcast_learning_status': {'queue': 'broadcast'},
+    'core.tasks.broadcast_conversation_status': {'queue': 'broadcast'},
+    'core.tasks.broadcast_dream_journal': {'queue': 'broadcast'},
+    'core.tasks.broadcast_relationship_status': {'queue': 'broadcast'},
+    'core.tasks.broadcast_evolution_status': {'queue': 'broadcast'},
+    'core.tasks.process_realtime_scoring_queue': {'queue': 'broadcast'},
+    'core.tasks.process_event_bus_scoring_queue': {'queue': 'broadcast'},
+    'core.tasks.process_event_bus_validation_queue': {'queue': 'broadcast'},
+    'core.tasks.process_event_bus_analytics_queue': {'queue': 'broadcast'},
+    'core.tasks.refresh_system_state_cache': {'queue': 'broadcast'},  # Session 573: PA system awareness
 }
 
 # Celery Worker Settings
