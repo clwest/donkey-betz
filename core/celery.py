@@ -1196,6 +1196,26 @@ app.conf.beat_schedule = {
             'expires': 300,  # Expire after 5 minutes
         }
     },
+
+    # SESSION 594: PILOT AUTO-COMPLETION
+    # Check running pilots every 4 hours and auto-complete if 24h+ with no issues
+    'auto-complete-pilots': {
+        'task': 'core.tasks.auto_complete_pilots',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {
+            'expires': 14400,  # Expire after 4 hours
+        }
+    },
+
+    # SESSION 594: SMART PILOT EVALUATION (Layer B)
+    # ThinkingAgent evaluates running pilots and suggests outcomes
+    'evaluate-pilots-smart': {
+        'task': 'core.tasks.evaluate_pilots_with_thinking_agent',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+        'options': {
+            'expires': 21600,  # Expire after 6 hours
+        }
+    },
 }
 
 # Task routing configuration

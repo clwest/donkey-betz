@@ -1,92 +1,58 @@
-# Session 594 - Start Here
+# Session 595 - Start Here
 
-**Previous Session:** 593
+**Previous Session:** 594
 **Date:** December 29, 2025
-**Focus:** Pilot Readiness Gate Extensions
+**Focus:** Pilot UI Enhancements
 
 ---
 
-## Session 593 Accomplishments
+## Session 594 Accomplishments
 
-### ThinkingAgent Auto-Gate Integration (Option A from Session 592)
+### Pilot Auto-Completion System (Two Layers)
 
-Implemented automatic Pilot Readiness Gate creation for safety-sensitive decisions:
+| Layer | Task | Schedule | Purpose |
+|-------|------|----------|---------|
+| **A** | `auto_complete_pilots` | Every 4h | Auto-SUCCESS after 24h with no issues |
+| **B** | `evaluate_pilots_with_thinking_agent` | Every 6h | AI suggests outcome with reasoning |
 
-| Criteria | Risk Level | Checklist Items |
-|----------|------------|-----------------|
-| `impact_area='security'` | HIGH | 6 items |
-| `decision_type='policy'` | MEDIUM | 3 items |
-| Other decisions | None | No gate created |
+**Flow:**
+```
+Pilot Started
+    ├── 4h → Layer B: ThinkingAgent evaluates, suggests outcome
+    └── 24h → Layer A: Auto-complete as SUCCESS if no issues
+```
 
-**Integration Points (3 total):**
-1. `DecisionExtractor.create_decision_from_conversation()` - Legacy AgentConversation
-2. `DecisionExtractor.create_decision_from_hive_session()` - New HiveMindSession
-3. `WorkflowAgent._create_boardroom_decision()` - PA-initiated Boardroom decisions
+### UI Bug Fixes
 
-**Test Results:**
-- Security decision → HIGH gate with 6 items ✓
-- Policy decision → MEDIUM gate with 3 items ✓
-- Regular decision → No gate ✓
-
-**Files Modified:**
-| File | Changes |
-|------|---------|
-| `core/services/decision_extractor.py` | Added `determine_gate_risk_level()` and `auto_create_gate_for_decision()` functions |
-| `core/agents/workflow_agent.py` | Added auto-gate call in `_create_boardroom_decision()` |
-| `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | New handoff document |
-| `docs/CAPABILITIES.md` | Updated Pilot Readiness Gate section |
-
-### Batch Gate Creation
-
-Also completed batch creation for all existing qualifying decisions:
-
-| Criteria | Gates Created | Checklist Items |
-|----------|---------------|-----------------|
-| Security decisions | 15 | 6 each (HIGH) |
-| Policy decisions | 57 | 3 each (MEDIUM) |
-| **Total** | **72** | 0 errors |
-
-**Before/After:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Total Gates | 1 | **77** |
-| HIGH Risk Gates | 1 | **18** |
-| MEDIUM Risk Gates | 0 | **59** |
-| Coverage | 1.3% | **100%** |
-
-### Gate Status Dashboard (Option A)
-
-Added comprehensive dashboard visualization to ICC panel:
-
-| Component | Description |
-|-----------|-------------|
-| **Dashboard API** | `GET /api/pilot-gates/dashboard/` - Returns full pipeline stats |
-| **Status Counts** | not_started, in_progress, ready, approved, blocked |
-| **Risk Breakdown** | HIGH (18) and MEDIUM (59) risk level counts |
-| **Throughput Metrics** | Avg time for each phase (decision→readiness: 8.2h) |
-| **Recent Pilots** | List of completed pilots with outcomes and learnings |
-| **Pilot Counts** | Completed (1) and running (0) pilots |
-
-**UI Location:** AI Studio → Intelligence Command Center
+| Fix | Issue | Solution |
+|-----|-------|----------|
+| `toggleChecklistItem` | Sent `status` instead of `action` | Fixed parameter name |
+| `startPilot` | Called wrong endpoint | Created dedicated function |
 
 ---
 
-## Session 594 Options
+## Session 595 Options
 
-### Option A: ThinkingAgent Gate Awareness
+### Option A: Pilot Status UI (In Progress)
 
-Have ThinkingAgent observe gates in its context:
-- Track blocked gates as system friction
-- Generate insights about gate bottlenecks
-- Suggest gate status updates in dreams
-- Flag decisions stuck in "not_started" too long
+Show running pilots with proper status:
+- Disable "Start Pilot" button after clicking
+- Show "Pilot Running" indicator with elapsed time
+- Display ThinkingAgent evaluation when available
 
-### Option B: Gate Completion Automation
+### Option B: Kill Switch UI
 
-Auto-complete low-risk checklist items:
-- "Basic Review" auto-completed for low-risk gates
-- "Success Metrics" auto-populated from decision fields
-- Only safety-critical items require human verification
+Add ability to stop pilots:
+- "Stop Pilot" button with reason input
+- Triggers kill switch
+- Auto-fails the pilot
+
+### Option C: Pilot Dashboard
+
+Dedicated pilots view:
+- All running/completed pilots
+- Learnings aggregation
+- Success rate metrics
 
 ---
 
@@ -99,8 +65,9 @@ Auto-complete low-risk checklist items:
 | **PA Tools** | 77 |
 | **Decisions (Draft)** | 614 (81.3%) |
 | **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | **77** (18 HIGH, 59 MEDIUM) |
-| **Completed Pilots** | 1 (SUCCESS) |
+| **Pilot Readiness Gates** | 77 (18 HIGH, 59 MEDIUM) |
+| **Running Pilots** | 2 |
+| **Celery Tasks** | 228 (+2 from Session 594) |
 
 ---
 
@@ -110,24 +77,23 @@ Auto-complete low-risk checklist items:
 # Start services
 make start && make celery
 
-# List all gates
-curl -s http://localhost:8000/api/pilot-gates/ | python3 -m json.tool
-
-# Test auto-gate with new decision (via WorkflowAgent)
-# Security decision -> should get HIGH gate
-# Policy decision -> should get MEDIUM gate
-
-# View decisions that would get gates
+# Check running pilots
 .venv/bin/python -c "
 import os; os.environ['DJANGO_SETTINGS_MODULE']='core.settings'
 import django; django.setup()
-from core.models_unified_system import AgentDecisionSummary
-from core.models_pilot_readiness import PilotReadinessGate
-existing = PilotReadinessGate.objects.values_list('decision_id', flat=True)
-security = AgentDecisionSummary.objects.filter(impact_area='security').exclude(id__in=existing).count()
-policy = AgentDecisionSummary.objects.filter(decision_type='policy').exclude(id__in=existing).count()
-print(f'Security decisions needing gates: {security}')
-print(f'Policy decisions needing gates: {policy}')
+from core.models_pilot_readiness import PilotExecution
+from django.utils import timezone
+for p in PilotExecution.objects.filter(status='running'):
+    hours = (timezone.now() - p.started_at).total_seconds() / 3600
+    print(f'{p.name}: {hours:.1f}h running')
+"
+
+# Manually run auto-completion check
+.venv/bin/python -c "
+import os; os.environ['DJANGO_SETTINGS_MODULE']='core.settings'
+import django; django.setup()
+from core.tasks import auto_complete_pilots
+print(auto_complete_pilots())
 "
 ```
 
@@ -137,26 +103,12 @@ print(f'Policy decisions needing gates: {policy}')
 
 | File | Purpose |
 |------|---------|
-| `core/services/decision_extractor.py` | Auto-gate creation functions |
-| `core/agents/workflow_agent.py` | PA Boardroom decision creation |
+| `core/tasks.py` | Auto-completion tasks (end of file) |
+| `core/celery.py` | Beat schedules (lines 1200-1218) |
 | `core/models_pilot_readiness.py` | Gate, Checklist, Execution models |
-| `core/views_agent_learning.py:2218-2690` | All Pilot Gate API endpoints (7 total) |
-| `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | Session 593 handoff |
+| `core/views_agent_learning.py:2218-2833` | Pilot Gate API endpoints |
+| `ai_core/templates/ai_image_studio.html` | ICC panel UI + JS functions |
 
 ---
 
-## API Reference (7 Endpoints)
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/pilot-gates/` | GET | List all gates with status counts |
-| `/api/pilot-gates/<gate_id>/` | GET | Get gate detail with checklist |
-| `/api/pilot-gates/<gate_id>/status/` | POST | Update status (start/ready/approve/block/waive) |
-| `/api/pilot-gates/<gate_id>/items/<item_id>/` | POST | Update checklist item |
-| `/api/pilot-gates/create/<decision_id>/` | POST | Create gate for decision |
-| `/api/pilot-gates/<gate_id>/pilot/` | POST | Start pilot execution |
-| `/api/pilot-gates/<gate_id>/pilot/<pilot_id>/complete/` | POST | Complete pilot |
-
----
-
-**Session 593: ThinkingAgent Auto-Gate Integration - COMPLETE**
+**Session 594: Pilot Auto-Completion System - COMPLETE**

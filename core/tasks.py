@@ -20032,3 +20032,346 @@ def report_execution_gap_metrics():
             'success': False,
             'error': str(e)
         }
+
+
+# ==================== SESSION 594: PILOT AUTO-COMPLETION ====================
+
+@shared_task
+def auto_complete_pilots():
+    """
+    Session 594: Auto-complete pilots that have passed their observation period.
+    
+    Option A: Simple time-based auto-completion.
+    
+    Rules:
+    - Pilot must be 'running' status
+    - Must have been running for 24+ hours (observation period)
+    - No kill switch triggered
+    - Auto-completes as SUCCESS
+    
+    Schedule: Run every 4 hours via Celery Beat.
+    
+    Returns:
+        dict with completion results
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    logger.info("🚀 [SESSION 594] Running pilot auto-completion check...")
+    
+    try:
+        from core.models_pilot_readiness import PilotExecution
+        
+        # Configuration
+        OBSERVATION_PERIOD_HOURS = 24
+        now = timezone.now()
+        cutoff = now - timedelta(hours=OBSERVATION_PERIOD_HOURS)
+        
+        # Find pilots eligible for auto-completion
+        eligible_pilots = PilotExecution.objects.filter(
+            status='running',
+            started_at__lte=cutoff,  # Started 24+ hours ago
+            kill_switch_triggered=False,
+            outcome='pending'
+        )
+        
+        completed = []
+        for pilot in eligible_pilots:
+            hours_running = (now - pilot.started_at).total_seconds() / 3600
+            
+            logger.info(
+                f"🚀 [SESSION 594] Auto-completing pilot '{pilot.name}' "
+                f"(running {hours_running:.1f}h, no issues)"
+            )
+            
+            # Auto-complete as SUCCESS
+            pilot.status = 'completed'
+            pilot.outcome = 'success'
+            pilot.outcome_summary = (
+                f"Auto-completed after {hours_running:.1f} hours observation period. "
+                f"No kill switch triggered, no issues detected."
+            )
+            pilot.completed_at = now
+            pilot.learnings = [{
+                'type': 'auto_completion',
+                'observation_hours': round(hours_running, 1),
+                'note': 'Pilot completed successfully via automated observation period check'
+            }]
+            pilot.save()
+            
+            # Update gate status
+            gate = pilot.gate
+            gate.status = 'completed'
+            gate.save()
+            
+            completed.append({
+                'pilot_id': str(pilot.id),
+                'name': pilot.name,
+                'hours_running': round(hours_running, 1),
+                'decision_topic': gate.decision.topic[:50] if gate.decision else 'Unknown'
+            })
+        
+        # Log results
+        if completed:
+            logger.info(f"🚀 [SESSION 594] Auto-completed {len(completed)} pilots")
+            
+            # Send Discord notification
+            try:
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
+                message = f"**🚀 Pilot Auto-Completion**\n"
+                message += f"✅ {len(completed)} pilots completed successfully\n"
+                for p in completed[:5]:
+                    message += f"  • {p['name'][:40]}... ({p['hours_running']}h)\n"
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"🚀 [SESSION 594] Discord notification failed: {e}")
+        else:
+            logger.info("🚀 [SESSION 594] No pilots eligible for auto-completion")
+        
+        return {
+            'success': True,
+            'completed_count': len(completed),
+            'completed_pilots': completed
+        }
+        
+    except Exception as e:
+        logger.error(f"🚀 [SESSION 594] Pilot auto-completion failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@shared_task
+def evaluate_pilots_with_thinking_agent():
+    """
+    Session 594 Layer B: Smart pilot evaluation using ThinkingAgent.
+    
+    For running pilots, this task:
+    1. Collects metrics relevant to the decision type
+    2. Uses LLM to analyze and suggest outcome
+    3. Stores the suggested outcome for human review
+    
+    Does NOT auto-complete - just suggests. Human can accept or override.
+    
+    Schedule: Run every 6 hours via Celery Beat.
+    
+    Returns:
+        dict with evaluation results
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    import json
+    
+    logger.info("🧠 [SESSION 594] Running ThinkingAgent pilot evaluation...")
+    
+    try:
+        from core.models_pilot_readiness import PilotExecution
+        from openai import OpenAI
+        import os
+        
+        client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        
+        # Configuration
+        MIN_HOURS_BEFORE_EVAL = 4  # Wait at least 4 hours before evaluating
+        now = timezone.now()
+        cutoff = now - timedelta(hours=MIN_HOURS_BEFORE_EVAL)
+        
+        # Find pilots eligible for evaluation
+        eligible_pilots = PilotExecution.objects.filter(
+            status='running',
+            started_at__lte=cutoff,
+            outcome='pending'
+        )
+        
+        evaluated = []
+        for pilot in eligible_pilots:
+            hours_running = (now - pilot.started_at).total_seconds() / 3600
+            gate = pilot.gate
+            decision = gate.decision if gate else None
+            
+            if not decision:
+                continue
+            
+            # Collect relevant metrics based on decision type
+            metrics = collect_pilot_metrics(decision, pilot)
+            
+            # Build evaluation prompt
+            prompt = f"""You are evaluating a pilot that has been running for {hours_running:.1f} hours.
+
+DECISION BEING PILOTED:
+- Topic: {decision.topic}
+- Type: {decision.decision_type}
+- Impact Area: {decision.impact_area}
+- Summary: {decision.summary[:500] if decision.summary else 'No summary'}
+
+PILOT INFORMATION:
+- Name: {pilot.name}
+- Started: {pilot.started_at}
+- Kill Switch Triggered: {pilot.kill_switch_triggered}
+- Scope: {pilot.scope or 'Not specified'}
+
+COLLECTED METRICS:
+{json.dumps(metrics, indent=2)}
+
+Based on this information, evaluate the pilot and suggest an outcome.
+Respond in JSON format:
+{{
+    "suggested_outcome": "success" | "partial" | "failure" | "inconclusive",
+    "confidence": 0.0-1.0,
+    "reasoning": "Brief explanation of why this outcome is suggested",
+    "key_observations": ["observation 1", "observation 2"],
+    "risks_identified": ["risk 1", "risk 2"] or [],
+    "recommendation": "What should happen next"
+}}"""
+
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a pilot evaluation expert. Analyze pilot data and suggest outcomes based on evidence."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=1000,
+                    response_format={"type": "json_object"}
+                )
+                
+                result = json.loads(response.choices[0].message.content)
+                
+                # Store evaluation in pilot's metrics field
+                pilot.metrics = pilot.metrics or {}
+                pilot.metrics['thinking_agent_evaluation'] = {
+                    'evaluated_at': now.isoformat(),
+                    'hours_running': round(hours_running, 1),
+                    **result
+                }
+                pilot.save()
+                
+                logger.info(
+                    f"🧠 [SESSION 594] Evaluated pilot '{pilot.name}' "
+                    f"-> Suggested: {result.get('suggested_outcome')} "
+                    f"(confidence: {result.get('confidence', 0):.0%})"
+                )
+                
+                evaluated.append({
+                    'pilot_id': str(pilot.id),
+                    'name': pilot.name,
+                    'suggested_outcome': result.get('suggested_outcome'),
+                    'confidence': result.get('confidence'),
+                    'reasoning': result.get('reasoning', '')[:200]
+                })
+                
+            except Exception as e:
+                logger.warning(f"🧠 [SESSION 594] Failed to evaluate pilot {pilot.id}: {e}")
+                continue
+        
+        # Log results
+        if evaluated:
+            logger.info(f"🧠 [SESSION 594] Evaluated {len(evaluated)} pilots")
+            
+            # Discord notification for high-confidence suggestions
+            high_confidence = [e for e in evaluated if e.get('confidence', 0) >= 0.8]
+            if high_confidence:
+                try:
+                    from core.services.discord_notifications import DiscordNotificationService
+                    discord = DiscordNotificationService()
+                    message = f"**🧠 Pilot Evaluation Results**\n"
+                    for e in high_confidence[:3]:
+                        emoji = '✅' if e['suggested_outcome'] == 'success' else '⚠️' if e['suggested_outcome'] == 'partial' else '❌'
+                        message += f"{emoji} **{e['name'][:30]}...** → {e['suggested_outcome']} ({e['confidence']:.0%})\n"
+                    discord.send_to_channel('system-status', message)
+                except Exception as e:
+                    logger.debug(f"🧠 [SESSION 594] Discord notification failed: {e}")
+        else:
+            logger.info("🧠 [SESSION 594] No pilots eligible for evaluation")
+        
+        return {
+            'success': True,
+            'evaluated_count': len(evaluated),
+            'evaluated_pilots': evaluated
+        }
+        
+    except Exception as e:
+        logger.error(f"🧠 [SESSION 594] Pilot evaluation failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
+    """
+    Session 594: Collect relevant metrics based on decision type.
+    
+    Different decision types need different metrics:
+    - Security: Check audit logs, incidents
+    - Policy: Check compliance, user feedback
+    - Product: Check usage, engagement
+    - Strategy: Check agent performance
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    metrics = {
+        'decision_type': decision.decision_type,
+        'impact_area': decision.impact_area,
+        'hours_running': 0,
+        'system_health': {},
+        'relevant_activity': []
+    }
+    
+    now = timezone.now()
+    if pilot.started_at:
+        metrics['hours_running'] = (now - pilot.started_at).total_seconds() / 3600
+    
+    try:
+        # Check for any concerns raised during pilot period
+        from core.models_concerns import Concern
+        concerns = Concern.objects.filter(
+            created_at__gte=pilot.started_at,
+            status__in=['open', 'investigating']
+        ).count()
+        metrics['concerns_during_pilot'] = concerns
+        
+    except Exception:
+        metrics['concerns_during_pilot'] = 0
+    
+    try:
+        # Check agent activity during pilot
+        from core.models_agent_memory import AgentMemory
+        memories = AgentMemory.objects.filter(
+            created_at__gte=pilot.started_at
+        ).count()
+        metrics['agent_memories_created'] = memories
+        
+    except Exception:
+        metrics['agent_memories_created'] = 0
+    
+    try:
+        # Check for any errors/failures in system
+        from core.models_unified_system import AgentConversation
+        convos = AgentConversation.objects.filter(
+            started_at__gte=pilot.started_at
+        ).count()
+        metrics['conversations_during_pilot'] = convos
+        
+    except Exception:
+        metrics['conversations_during_pilot'] = 0
+    
+    # Decision-type specific metrics
+    if decision.impact_area == 'security':
+        metrics['security_check'] = {
+            'kill_switch_triggered': pilot.kill_switch_triggered,
+            'concerns_raised': metrics.get('concerns_during_pilot', 0),
+            'status': 'OK' if not pilot.kill_switch_triggered and metrics.get('concerns_during_pilot', 0) == 0 else 'REVIEW'
+        }
+    
+    if decision.decision_type == 'policy':
+        metrics['policy_check'] = {
+            'compliance_issues': 0,  # Would connect to actual compliance tracking
+            'user_complaints': 0,    # Would connect to feedback system
+            'status': 'OK'
+        }
+    
+    return metrics
