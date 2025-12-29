@@ -1,35 +1,50 @@
-# Session 579 - Start Here
+# Session 580 - Start Here
 
-**Previous Session:** 578
+**Previous Session:** 579
 **Date:** December 28, 2025
-**Focus:** PA Tools Implementation Complete!
+**Focus:** PA Tools Expansion + System Insights Integration
 
 ---
 
-## Sessions 576-578 Accomplishments
+## Session 579 Accomplishments
 
-### PA Tools Implementation - COMPLETE!
+### PA Tools Expansion - 15 → 26 Tools!
 
-Implemented **14 new tools** across 3 phases (1 → 15 total):
+Implemented **11 new tools** across 3 phases:
 
-| Phase | Session | Tools Added |
-|-------|---------|-------------|
-| Core | 575 | `get_sports_data` |
-| 1 | 576 | `get_system_status`, `promote_boardroom_decision`, `reject_boardroom_decision`, `query_agent_data`, `get_spider_intelligence` |
-| 2 | 577 | `execute_spider`, `create_content`, `manage_content_channel`, `query_prediction_markets` |
-| 3 | 578 | `execute_workflow`, `query_arbitrage`, `manage_bankroll`, `search_knowledge` |
+| Phase | Tools Added |
+|-------|-------------|
+| 4 | `create_boardroom_decision`, `query_dreams`, `manage_situations`, `query_conversations` |
+| 5 | `get_opportunity_pipeline`, `create_project`, `trigger_agent_conversation`, `schedule_content`, `analyze_project_intelligence` |
+| 6 | `query_tracked_concerns`, `get_system_insights` |
 
-### Session Commits
+### Dream Auto-Triage System
+
+Created automated dream backlog management:
+- **Task:** `auto_triage_dreams` in `core/tasks.py`
+- **Schedule:** Every 4 hours at :30
+- **Auto-promotes:** Dreams with composite_score >= 0.75
+- **Auto-archives:** Stale dreams (>7 days, score < 0.4)
+
+### ThinkingAgent Visibility
+
+Verified System Insights reports are working:
+- **49 Self Blog posts** with 6 System Insights reports
+- **21 Tracked Concerns** - 20 resolved, 1 in progress
+- Auto-verification system working properly
+
+### Session 579 Commits
 
 ```
-81f2bf1 feat(Session 578): PA Phase 3 Tools - 4 new advanced tools
-431c9ff feat(Session 577): PA Phase 2 Tools - 4 new tools for spiders, content, markets
-ec25a00 feat(Session 576): PA Core Tools - 5 new tools for system awareness
+54167b1 feat(Session 579): Add ThinkingAgent/System Insights tools to PA
+60fdbc3 feat(Session 579): PA Phase 5 Tools - 5 project & content tools
+7301d92 feat(Session 579): Dream Auto-Triage Celery task
+9577a65 feat(Session 579): PA Phase 4 Tools - 4 new decision/dream tools
 ```
 
 ---
 
-## Current PA Tools (15 Total)
+## Current PA Tools (26 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -48,8 +63,19 @@ ec25a00 feat(Session 576): PA Core Tools - 5 new tools for system awareness
 | `query_arbitrage` | Sports betting arbitrage | Session 578 |
 | `manage_bankroll` | Bankroll and wager tracking | Session 578 |
 | `search_knowledge` | Collective knowledge search | Session 578 |
+| `create_boardroom_decision` | Submit new decisions | Session 579 |
+| `query_dreams` | Get agent dreams/insights | Session 579 |
+| `manage_situations` | Control autonomous situations | Session 579 |
+| `query_conversations` | Agent-to-agent conversations | Session 579 |
+| `get_opportunity_pipeline` | Opportunity scoring pipeline | Session 579 |
+| `create_project` | Create partnership projects | Session 579 |
+| `trigger_agent_conversation` | Start agent discussions | Session 579 |
+| `schedule_content` | Schedule content creation | Session 579 |
+| `analyze_project_intelligence` | Deep project insights | Session 579 |
+| `query_tracked_concerns` | System concerns by status/severity | Session 579 |
+| `get_system_insights` | ThinkingAgent reports | Session 579 |
 
-**Coverage:** 15/1,343 endpoints (1.12%)
+**Coverage:** 26/1,343 endpoints (1.94%)
 
 ---
 
@@ -82,34 +108,47 @@ User: "What do agents know about AI?"
 
 User: "Research AI trends and create logos"
 → execute_workflow: Coordinates multiple agents
+
+User: "What are agents dreaming about?"
+→ query_dreams: Shows recent agent dreams with scores
+
+User: "What concerns need attention?"
+→ query_tracked_concerns: System concerns by status
+
+User: "Show me system insights"
+→ get_system_insights: Latest ThinkingAgent analysis
+
+User: "Create a new project for AI research"
+→ create_project: Creates PartnershipProject
 ```
 
 ---
 
-## Session 579 Priorities
+## Session 580 Priorities
 
-### Option A: More PA Tools (Phase 4)
+### Option A: More PA Tools (Phase 7+)
 
-Additional tools that could be added:
+Remaining tools from roadmap:
 
-| Tool | Purpose |
-|------|---------|
-| `create_boardroom_decision` | Submit new decisions for review |
-| `query_dreams` | Get agent dreams and insights |
-| `manage_situations` | Control autonomous situations |
-| `query_conversations` | Get agent-to-agent conversations |
+| Tool | Purpose | Priority |
+|------|---------|----------|
+| `get_advisor_consultation` | Query legendary advisors | Medium |
+| `manage_agent_evolution` | Control agent learning | Low |
+| `query_revenue_metrics` | Revenue tracking | Medium |
+| `manage_notifications` | Push notification control | Low |
 
-### Option B: Test & Polish
+### Option B: Testing & Polish
 
 - End-to-end testing with actual user queries
-- Performance optimization
+- Performance optimization for tool calls
 - Error handling improvements
-- Documentation updates
+- UI integration testing
 
 ### Option C: Other Priorities
 
 - Check `docs/handoffs/` for other pending work
-- Review other system needs
+- Review dream auto-triage effectiveness
+- Monitor ThinkingAgent concern resolution
 
 ---
 
@@ -119,7 +158,7 @@ Additional tools that could be added:
 # Start services
 make start && make celery
 
-# Test all 15 PA tools
+# Test all 26 PA tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
@@ -131,9 +170,9 @@ print(f'Total: {len(pa.tools)} tools')
 # Quick functionality tests
 tests = [
     ('get_system_status', pa._get_system_status({})),
-    ('execute_spider', pa._execute_spider({'spider_name': 'hackernews', 'max_results': 3})),
-    ('manage_bankroll', pa._manage_bankroll({'action': 'status'})),
-    ('search_knowledge', pa._search_knowledge({'query': 'AI'})),
+    ('query_tracked_concerns', pa._query_tracked_concerns({})),
+    ('get_system_insights', pa._get_system_insights({})),
+    ('query_dreams', pa._query_dreams({})),
 ]
 for name, result in tests:
     status = '✅' if result.get('success') else '❌'
@@ -156,19 +195,19 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 578)
+## System Stats (Session 579)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 15 |
+| **PA Tools** | 26 |
 | **API Endpoints** | 1,343+ |
-| **Celery Tasks** | 226 |
+| **Celery Tasks** | 227 (+1 auto_triage_dreams) |
 | **Services** | 93 |
 
 ---
 
-**Sessions 576-578: 14 PA Tools Implemented - COMPLETE!**
+**Session 579: 11 PA Tools + Dream Auto-Triage + System Insights Integration**
 
-**PA now has 15 tools covering system status, sports, markets, content, workflows, betting, and knowledge.**
+**PA now has 26 tools (1.94% coverage) with full visibility into ThinkingAgent system.**
