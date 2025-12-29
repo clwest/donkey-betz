@@ -293,6 +293,11 @@ from core.views_agent_learning import (
     approve_all_checklist_items,
     # Session 595: Pilot Dashboard
     get_pilot_executions_dashboard,
+    # Session 596: Experiment Tracking
+    get_experiments,
+    update_experiment_kpi,
+    complete_experiment,
+    get_experiment_portfolio,
 )
 
 # Session 250: Hive Mind Mode
@@ -2722,6 +2727,11 @@ urlpatterns = [
     path('api/pilot-gates/<uuid:gate_id>/approve-all/', approve_all_checklist_items, name='approve-all-checklist-items'),
     # Session 595: Pilot Executions Dashboard
     path('api/pilots/dashboard/', get_pilot_executions_dashboard, name='pilot-executions-dashboard'),
+    # Session 596: Experiment Tracking Registry
+    path('api/experiments/', get_experiments, name='get-experiments'),
+    path('api/experiments/portfolio/', get_experiment_portfolio, name='experiment-portfolio'),
+    path('api/experiments/<uuid:experiment_id>/update-kpi/', update_experiment_kpi, name='update-experiment-kpi'),
+    path('api/experiments/<uuid:experiment_id>/complete/', complete_experiment, name='complete-experiment'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

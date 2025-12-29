@@ -7389,6 +7389,97 @@
                 </div>
                 <!-- END PILOT DASHBOARD -->
 
+                <!-- ========== SESSION 596: EXPERIMENT TRACKING REGISTRY ========== -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                                <h5 class="mb-0" style="color: #8b5cf6;">
+                                    <span style="font-size: 24px;">🧪</span> Experiment Tracking Registry
+                                    <small class="text-muted ms-2">Track outcomes & reduce decision fatigue</small>
+                                </h5>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="badge" style="background: #10b981;" id="exp-running-count">0 Running</span>
+                                    <span class="badge" style="background: #6b7280;" id="exp-completed-count">0 Completed</span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="loadExperimentPortfolio()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Portfolio Metrics Row -->
+                                <div class="row mb-4">
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-success-rate" style="color: #10b981;">--%</h2>
+                                            <small class="text-muted">Success Rate</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-total" style="color: #8b5cf6;">0</h2>
+                                            <small class="text-muted">Total Experiments</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-active" style="color: #3b82f6;">0</h2>
+                                            <small class="text-muted">Active</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-success-count" style="color: #10b981;">0</h2>
+                                            <small class="text-muted">Success</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(239, 68, 68, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-failure-count" style="color: #ef4444;">0</h2>
+                                            <small class="text-muted">Failure</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                                            <h2 id="exp-inconclusive-count" style="color: #f59e0b;">0</h2>
+                                            <small class="text-muted">Inconclusive</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- KPI Owner Distribution -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 style="color: #8b5cf6;">📊 KPI Ownership Distribution</h6>
+                                        <div id="exp-kpi-owners" class="d-flex flex-wrap gap-2">
+                                            <span class="text-muted small">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Running and Completed Experiments -->
+                                <div class="row">
+                                    <!-- Running Experiments -->
+                                    <div class="col-md-6">
+                                        <h6 style="color: #3b82f6;">🔬 Running Experiments</h6>
+                                        <div id="exp-running" style="max-height: 400px; overflow-y: auto;">
+                                            <p class="text-muted text-center small">Loading...</p>
+                                        </div>
+                                    </div>
+                                    <!-- Completed Experiments -->
+                                    <div class="col-md-6">
+                                        <h6 style="color: #6b7280;">📋 Recent Completions</h6>
+                                        <div id="exp-completed" style="max-height: 400px; overflow-y: auto;">
+                                            <p class="text-muted text-center small">Loading...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END EXPERIMENT TRACKING REGISTRY -->
+
             </div>
             <!-- Pilot Gates Styles -->
             <style>
@@ -56034,6 +56125,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadPilotDashboard();
                     console.log('  ✓ Pilot Dashboard: loading latest');
                 }
+                // Session 596: Also load Experiment Portfolio
+                if (typeof loadExperimentPortfolio === 'function') {
+                    loadExperimentPortfolio();
+                    console.log('  ✓ Experiment Portfolio: loading latest');
+                }
             }
 
             // 8. Session 556: Refresh Review Documents
@@ -56568,7 +56664,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 iccTabTrigger.addEventListener('shown.bs.tab', function() {
                     loadPilotGates();
                     loadPilotDashboard();  // Session 595
-                    console.log('  ✓ ICC: Loading pilot gates and dashboard');
+                    loadExperimentPortfolio();  // Session 596
+                    console.log('  ✓ ICC: Loading pilot gates, dashboard, and experiments');
                 });
             }
 
@@ -58469,6 +58566,106 @@ ${item.generated_content}
 
             } catch (error) {
                 console.error('Error loading pilot dashboard:', error);
+            }
+        }
+
+        // Session 596: Load Experiment Portfolio
+        async function loadExperimentPortfolio() {
+            try {
+                const response = await fetch('/api/experiments/portfolio/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading experiment portfolio:', data.error);
+                    return;
+                }
+
+                // Update metrics
+                const p = data.portfolio;
+                document.getElementById('exp-success-rate').textContent = p.success_rate + '%';
+                document.getElementById('exp-total').textContent = p.total_experiments;
+                document.getElementById('exp-active').textContent = p.active_count;
+                document.getElementById('exp-success-count').textContent = p.status_counts.success || 0;
+                document.getElementById('exp-failure-count').textContent = p.status_counts.failure || 0;
+                document.getElementById('exp-inconclusive-count').textContent = p.status_counts.inconclusive || 0;
+                document.getElementById('exp-running-count').textContent = (p.status_counts.running || 0) + ' Running';
+                document.getElementById('exp-completed-count').textContent = p.completed_count + ' Completed';
+
+                // Render KPI owners
+                const ownersContainer = document.getElementById('exp-kpi-owners');
+                const owners = Object.entries(p.kpi_owners);
+                if (owners.length === 0) {
+                    ownersContainer.innerHTML = '<span class="text-muted small">No experiments yet</span>';
+                } else {
+                    ownersContainer.innerHTML = owners.map(([owner, count]) => {
+                        const color = owner === 'Unassigned' ? '#6b7280' : '#8b5cf6';
+                        return `<span class="badge" style="background: ${color};">${owner}: ${count}</span>`;
+                    }).join('');
+                }
+
+                // Render running experiments
+                const runningContainer = document.getElementById('exp-running');
+                if (data.running_experiments.length === 0) {
+                    runningContainer.innerHTML = '<p class="text-muted text-center small">No experiments currently running. Start a pilot to create an experiment!</p>';
+                } else {
+                    runningContainer.innerHTML = data.running_experiments.map(exp => {
+                        return `
+                            <div class="experiment-card mb-2 p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <strong style="color: #e5e7eb; font-size: 13px;">${exp.name.substring(0, 40)}${exp.name.length > 40 ? '...' : ''}</strong>
+                                        <div class="mt-1">
+                                            <small style="color: #9ca3af;">${exp.decision_topic.substring(0, 50)}${exp.decision_topic.length > 50 ? '...' : ''}</small>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span style="color: #3b82f6; font-size: 12px;">${exp.days_running || 0}d running</span>
+                                    </div>
+                                </div>
+                                <div class="mt-2" style="font-size: 11px;">
+                                    <span style="color: #8b5cf6;">📊 KPI:</span> ${exp.primary_kpi || 'Not set'}
+                                    <span class="ms-2" style="color: #f59e0b;">🎯 Target:</span> ${exp.target_value || '--'}
+                                    <span class="ms-2" style="color: #10b981;">📈 Current:</span> ${exp.current_value || '--'}
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">Owner: ${exp.kpi_owner || 'Unassigned'}</small>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Render completed experiments
+                const completedContainer = document.getElementById('exp-completed');
+                if (data.recent_completions.length === 0) {
+                    completedContainer.innerHTML = '<p class="text-muted text-center small">No completed experiments yet</p>';
+                } else {
+                    completedContainer.innerHTML = data.recent_completions.map(exp => {
+                        const statusColor = exp.status === 'success' ? '#10b981' : exp.status === 'failure' ? '#ef4444' : '#f59e0b';
+                        const statusIcon = exp.status === 'success' ? '✅' : exp.status === 'failure' ? '❌' : '⚠️';
+
+                        return `
+                            <div class="experiment-card mb-2 p-2" style="background: rgba(107, 114, 128, 0.1); border-radius: 6px; border-left: 3px solid ${statusColor};">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <strong style="color: #e5e7eb; font-size: 13px;">${exp.name.substring(0, 40)}${exp.name.length > 40 ? '...' : ''}</strong>
+                                        <div class="mt-1">
+                                            <span class="badge" style="background: ${statusColor}; font-size: 9px;">${statusIcon} ${exp.status.toUpperCase()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2" style="font-size: 11px;">
+                                    <span style="color: #8b5cf6;">📊 KPI:</span> ${exp.primary_kpi || 'Not set'}
+                                    <span class="ms-2" style="color: #f59e0b;">🎯 Target:</span> ${exp.target_value || '--'}
+                                    <span class="ms-2" style="color: ${statusColor};">📈 Result:</span> ${exp.current_value || '--'}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+            } catch (error) {
+                console.error('Error loading experiment portfolio:', error);
             }
         }
 

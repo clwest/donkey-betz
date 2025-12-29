@@ -1,58 +1,65 @@
-# Session 595 - Start Here
+# Session 597 - Start Here
 
-**Previous Session:** 594
+**Previous Session:** 596
 **Date:** December 29, 2025
-**Focus:** Pilot UI Enhancements
+**Focus:** Experiment Tracking Registry
 
 ---
 
-## Session 594 Accomplishments
+## Session 596 Accomplishments
 
-### Pilot Auto-Completion System (Two Layers)
+### Experiment Tracking Registry (Complete)
 
-| Layer | Task | Schedule | Purpose |
-|-------|------|----------|---------|
-| **A** | `auto_complete_pilots` | Every 4h | Auto-SUCCESS after 24h with no issues |
-| **B** | `evaluate_pilots_with_thinking_agent` | Every 6h | AI suggests outcome with reasoning |
+Built a system to connect pilots to formal experiments with KPI ownership:
 
-**Flow:**
-```
-Pilot Started
-    ├── 4h → Layer B: ThinkingAgent evaluates, suggests outcome
-    └── 24h → Layer A: Auto-complete as SUCCESS if no issues
-```
+| Component | Description |
+|-----------|-------------|
+| **Experiment Model** | Links to PilotExecution, tracks KPI owner, target, current value |
+| **Auto-Create** | Experiment created automatically when pilot starts |
+| **API Endpoints** | 4 new endpoints for experiments |
+| **Dashboard UI** | Full portfolio view in Intelligence Command Center |
 
-### UI Bug Fixes
+### API Endpoints
 
-| Fix | Issue | Solution |
-|-----|-------|----------|
-| `toggleChecklistItem` | Sent `status` instead of `action` | Fixed parameter name |
-| `startPilot` | Called wrong endpoint | Created dedicated function |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/experiments/` | GET | List all experiments |
+| `/api/experiments/portfolio/` | GET | Portfolio metrics & KPI owners |
+| `/api/experiments/<id>/update-kpi/` | POST | Update KPI value |
+| `/api/experiments/<id>/complete/` | POST | Mark experiment complete |
+
+### Database Fix
+
+Resolved migration issue where pilot/experiment tables weren't created despite migrations showing as applied. Tables recreated manually.
+
+**Note:** The 18 pilots from Session 594 were lost during table recreation. Need to restart pilots to populate the system.
 
 ---
 
-## Session 595 Options
+## Session 597 Options
 
-### Option A: Pilot Status UI (In Progress)
+### Option A: Kill Switch Integration
 
-Show running pilots with proper status:
-- Disable "Start Pilot" button after clicking
-- Show "Pilot Running" indicator with elapsed time
-- Display ThinkingAgent evaluation when available
+Add ability to stop experiments mid-run:
+- "Stop Experiment" button on dashboard
+- Reason input required
+- Auto-fails the experiment
+- Discord notification
 
-### Option B: Kill Switch UI
+### Option B: Experiment Learning Loop
 
-Add ability to stop pilots:
-- "Stop Pilot" button with reason input
-- Triggers kill switch
-- Auto-fails the pilot
+Improve future decision-making from outcomes:
+- Capture experiment outcomes when complete
+- Feed learnings back to decision-making
+- Improve future success predictions
+- Track success patterns by decision type
 
-### Option C: Pilot Dashboard
+### Option C: KPI Owner Assignment UI
 
-Dedicated pilots view:
-- All running/completed pilots
-- Learnings aggregation
-- Success rate metrics
+Make accountability explicit:
+- Allow manual KPI owner assignment
+- Send notifications to owners
+- Owner-specific dashboard view
 
 ---
 
@@ -63,11 +70,12 @@ Dedicated pilots view:
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
 | **PA Tools** | 77 |
-| **Decisions (Draft)** | 614 (81.3%) |
+| **Decisions (Draft)** | 645 |
 | **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | 77 (18 HIGH, 59 MEDIUM) |
-| **Running Pilots** | 2 |
-| **Celery Tasks** | 228 (+2 from Session 594) |
+| **Pilot Readiness Gates** | 0 (tables recreated) |
+| **Running Pilots** | 0 (tables recreated) |
+| **Experiments** | 0 (waiting for pilots) |
+| **Celery Tasks** | 228 |
 
 ---
 
@@ -77,24 +85,15 @@ Dedicated pilots view:
 # Start services
 make start && make celery
 
-# Check running pilots
-.venv/bin/python -c "
-import os; os.environ['DJANGO_SETTINGS_MODULE']='core.settings'
-import django; django.setup()
-from core.models_pilot_readiness import PilotExecution
-from django.utils import timezone
-for p in PilotExecution.objects.filter(status='running'):
-    hours = (timezone.now() - p.started_at).total_seconds() / 3600
-    print(f'{p.name}: {hours:.1f}h running')
-"
+# Test experiment API
+curl -s http://localhost:8000/api/experiments/portfolio/ | python3 -m json.tool
 
-# Manually run auto-completion check
-.venv/bin/python -c "
-import os; os.environ['DJANGO_SETTINGS_MODULE']='core.settings'
-import django; django.setup()
-from core.tasks import auto_complete_pilots
-print(auto_complete_pilots())
-"
+# Start a pilot to create experiment
+# 1. Open AI Studio: http://localhost:8000/ai-studio/
+# 2. Go to Intelligence Command Center tab
+# 3. Find a gate with "Ready" status
+# 4. Click "Start Pilot" button
+# 5. Check Experiment Tracking Registry section
 ```
 
 ---
@@ -103,12 +102,12 @@ print(auto_complete_pilots())
 
 | File | Purpose |
 |------|---------|
-| `core/tasks.py` | Auto-completion tasks (end of file) |
-| `core/celery.py` | Beat schedules (lines 1200-1218) |
-| `core/models_pilot_readiness.py` | Gate, Checklist, Execution models |
-| `core/views_agent_learning.py:2218-2833` | Pilot Gate API endpoints |
-| `ai_core/templates/ai_image_studio.html` | ICC panel UI + JS functions |
+| `core/models_pilot_readiness.py` | Gate, Checklist, Execution, Experiment models |
+| `core/views_agent_learning.py:3070-3328` | Experiment API endpoints |
+| `core/urls.py:2730-2734` | Experiment URL routes |
+| `ai_core/templates/ai_image_studio.html` | Experiment Dashboard UI |
+| `docs/handoffs/SESSION_596_EXPERIMENT_TRACKING.md` | Session 596 handoff |
 
 ---
 
-**Session 594: Pilot Auto-Completion System - COMPLETE**
+**Session 596: Experiment Tracking Registry - COMPLETE**
