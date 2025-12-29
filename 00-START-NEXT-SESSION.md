@@ -36,7 +36,7 @@ Implemented automatic Pilot Readiness Gate creation for safety-sensitive decisio
 | `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | New handoff document |
 | `docs/CAPABILITIES.md` | Updated Pilot Readiness Gate section |
 
-### Batch Gate Creation (Option A)
+### Batch Gate Creation
 
 Also completed batch creation for all existing qualifying decisions:
 
@@ -54,19 +54,26 @@ Also completed batch creation for all existing qualifying decisions:
 | MEDIUM Risk Gates | 0 | **59** |
 | Coverage | 1.3% | **100%** |
 
+### Gate Status Dashboard (Option A)
+
+Added comprehensive dashboard visualization to ICC panel:
+
+| Component | Description |
+|-----------|-------------|
+| **Dashboard API** | `GET /api/pilot-gates/dashboard/` - Returns full pipeline stats |
+| **Status Counts** | not_started, in_progress, ready, approved, blocked |
+| **Risk Breakdown** | HIGH (18) and MEDIUM (59) risk level counts |
+| **Throughput Metrics** | Avg time for each phase (decision→readiness: 8.2h) |
+| **Recent Pilots** | List of completed pilots with outcomes and learnings |
+| **Pilot Counts** | Completed (1) and running (0) pilots |
+
+**UI Location:** AI Studio → Intelligence Command Center
+
 ---
 
 ## Session 594 Options
 
-### Option A: Gate Status Dashboard
-
-Add a gate pipeline visualization to the ICC panel:
-- Decision backlog (no gate yet)
-- Gates by status (not_started, in_progress, ready, etc.)
-- Average throughput metrics
-- Blocked gates with reasons
-
-### Option B: ThinkingAgent Gate Awareness
+### Option A: ThinkingAgent Gate Awareness
 
 Have ThinkingAgent observe gates in its context:
 - Track blocked gates as system friction
@@ -74,7 +81,7 @@ Have ThinkingAgent observe gates in its context:
 - Suggest gate status updates in dreams
 - Flag decisions stuck in "not_started" too long
 
-### Option C: Gate Completion Automation
+### Option B: Gate Completion Automation
 
 Auto-complete low-risk checklist items:
 - "Basic Review" auto-completed for low-risk gates

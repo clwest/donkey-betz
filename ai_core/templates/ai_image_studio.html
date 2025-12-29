@@ -7176,9 +7176,11 @@
                             <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
                                 <h5 class="mb-0" style="color: #8b5cf6;">
                                     <span style="font-size: 24px;">📊</span> Gate Pipeline
+                                    <span class="badge ms-2" style="background: #8b5cf6; font-size: 12px;" id="icc-total-gates">0 gates</span>
                                 </h5>
                             </div>
                             <div class="card-body">
+                                <!-- Status Counts Row -->
                                 <div class="row text-center">
                                     <div class="col-4">
                                         <div class="p-2" style="background: rgba(107, 114, 128, 0.2); border-radius: 8px;">
@@ -7213,6 +7215,76 @@
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Risk Level Breakdown -->
+                                <hr style="border-color: #333; margin: 15px 0;">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(239, 68, 68, 0.15); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                            <h4 id="icc-gates-high-risk" style="color: #ef4444;">0</h4>
+                                            <small class="text-muted">🔴 HIGH Risk</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(245, 158, 11, 0.15); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                            <h4 id="icc-gates-medium-risk" style="color: #f59e0b;">0</h4>
+                                            <small class="text-muted">🟡 MEDIUM Risk</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Session 593: Throughput Metrics -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #06b6d4;">
+                            <div class="card-header" style="background: rgba(6, 182, 212, 0.2); border-bottom: 1px solid #06b6d4;">
+                                <h5 class="mb-0" style="color: #06b6d4;">
+                                    <span style="font-size: 24px;">⏱️</span> Throughput Metrics
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Avg Decision → Readiness</small>
+                                            <span id="icc-throughput-decision" style="color: #06b6d4; font-size: 1.2rem;">--</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Avg Readiness Duration</small>
+                                            <span id="icc-throughput-readiness" style="color: #06b6d4; font-size: 1.2rem;">--</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Avg Total Gate Time</small>
+                                            <span id="icc-throughput-total" style="color: #06b6d4; font-size: 1.2rem;">--</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Avg Pilot Duration</small>
+                                            <span id="icc-throughput-pilot" style="color: #06b6d4; font-size: 1.2rem;">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr style="border-color: #333; margin: 10px 0;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <span id="icc-completed-pilots">0</span> completed pilots
+                                    </small>
+                                    <small class="text-muted">
+                                        <span id="icc-running-pilots" style="color: #10b981;">0</span> running
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Session 593: Recent Pilots -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #10b981;">
+                            <div class="card-header" style="background: rgba(16, 185, 129, 0.2); border-bottom: 1px solid #10b981;">
+                                <h5 class="mb-0" style="color: #10b981;">
+                                    <span style="font-size: 24px;">🚀</span> Recent Pilots
+                                </h5>
+                            </div>
+                            <div class="card-body" id="icc-recent-pilots" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted text-center small">No pilots yet</p>
                             </div>
                         </div>
 
@@ -57575,6 +57647,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 if (data.success) {
                     updatePilotGates(data);
                 }
+
+                // Session 593: Also load dashboard data
+                loadGateDashboard();
             } catch (error) {
                 console.error('Error loading pilot gates:', error);
                 const container = document.getElementById('icc-pilot-gates-list');
@@ -57585,6 +57660,114 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <p class="text-muted mt-2">Error loading gates...</p>
                         </div>
                     `;
+                }
+            }
+        }
+
+        // Session 593: Load gate dashboard data (enhanced stats)
+        async function loadGateDashboard() {
+            try {
+                const response = await fetch('/api/pilot-gates/dashboard/');
+                const data = await response.json();
+
+                if (data.success && data.dashboard) {
+                    updateGateDashboard(data.dashboard);
+                }
+            } catch (error) {
+                console.error('Error loading gate dashboard:', error);
+            }
+        }
+
+        // Session 593: Update gate dashboard UI
+        function updateGateDashboard(dashboard) {
+            // Update total gates badge
+            const totalGatesEl = document.getElementById('icc-total-gates');
+            if (totalGatesEl) {
+                totalGatesEl.textContent = `${dashboard.summary?.total_gates || 0} gates`;
+            }
+
+            // Update status counts
+            if (dashboard.status_counts) {
+                const sc = dashboard.status_counts;
+                const elements = {
+                    'icc-gates-not-started': sc.not_started || 0,
+                    'icc-gates-in-progress': sc.in_progress || 0,
+                    'icc-gates-ready': sc.ready || 0,
+                    'icc-gates-approved': sc.approved || 0,
+                    'icc-gates-blocked': sc.blocked || 0
+                };
+                for (const [id, value] of Object.entries(elements)) {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                }
+            }
+
+            // Update risk level counts
+            if (dashboard.risk_counts) {
+                const highEl = document.getElementById('icc-gates-high-risk');
+                const mediumEl = document.getElementById('icc-gates-medium-risk');
+                if (highEl) highEl.textContent = dashboard.risk_counts.high || 0;
+                if (mediumEl) mediumEl.textContent = dashboard.risk_counts.medium || 0;
+            }
+
+            // Update throughput metrics
+            if (dashboard.throughput) {
+                const tp = dashboard.throughput;
+                const formatHours = (h) => h !== null ? `${h}h` : '--';
+
+                const throughputEls = {
+                    'icc-throughput-decision': formatHours(tp.avg_decision_to_readiness_hours),
+                    'icc-throughput-readiness': formatHours(tp.avg_readiness_duration_hours),
+                    'icc-throughput-total': formatHours(tp.avg_total_gate_hours),
+                    'icc-throughput-pilot': formatHours(tp.avg_pilot_duration_hours)
+                };
+                for (const [id, value] of Object.entries(throughputEls)) {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                }
+            }
+
+            // Update pilot counts
+            if (dashboard.summary) {
+                const completedEl = document.getElementById('icc-completed-pilots');
+                const runningEl = document.getElementById('icc-running-pilots');
+                if (completedEl) completedEl.textContent = dashboard.summary.completed_pilots || 0;
+                if (runningEl) runningEl.textContent = dashboard.summary.running_pilots || 0;
+            }
+
+            // Update recent pilots
+            const pilotsContainer = document.getElementById('icc-recent-pilots');
+            if (pilotsContainer && dashboard.recent_pilots) {
+                if (dashboard.recent_pilots.length === 0) {
+                    pilotsContainer.innerHTML = '<p class="text-muted text-center small">No pilots yet</p>';
+                } else {
+                    const outcomeColors = {
+                        'success': '#10b981',
+                        'partial': '#f59e0b',
+                        'failure': '#ef4444',
+                        'inconclusive': '#6b7280'
+                    };
+                    const outcomeIcons = {
+                        'success': '✅',
+                        'partial': '⚠️',
+                        'failure': '❌',
+                        'inconclusive': '❓'
+                    };
+
+                    pilotsContainer.innerHTML = dashboard.recent_pilots.map(pilot => `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+                            <div>
+                                <span style="color: ${outcomeColors[pilot.outcome] || '#fff'};">${outcomeIcons[pilot.outcome] || ''}</span>
+                                <span class="ms-1" style="font-size: 0.85rem;">${pilot.name}</span>
+                                <br>
+                                <small class="text-muted">${pilot.topic || ''}</small>
+                            </div>
+                            <div class="text-end">
+                                <small style="color: ${outcomeColors[pilot.outcome] || '#fff'};">${pilot.outcome?.toUpperCase() || ''}</small>
+                                ${pilot.learnings_count ? `<br><small class="text-muted">${pilot.learnings_count} learnings</small>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
                 }
             }
         }

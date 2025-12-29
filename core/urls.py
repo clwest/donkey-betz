@@ -286,6 +286,8 @@ from core.views_agent_learning import (
     # Session 592: Pilot Execution
     start_pilot_execution,
     complete_pilot_execution,
+    # Session 593: Gate Dashboard
+    get_pilot_gate_dashboard,
 )
 
 # Session 250: Hive Mind Mode
@@ -2708,6 +2710,8 @@ urlpatterns = [
     # Session 592: Pilot Execution API
     path('api/pilot-gates/<uuid:gate_id>/pilot/', start_pilot_execution, name='start-pilot-execution'),
     path('api/pilot-gates/<uuid:gate_id>/pilot/<uuid:pilot_id>/complete/', complete_pilot_execution, name='complete-pilot-execution'),
+    # Session 593: Gate Dashboard
+    path('api/pilot-gates/dashboard/', get_pilot_gate_dashboard, name='pilot-gate-dashboard'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

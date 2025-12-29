@@ -2690,6 +2690,149 @@ def complete_pilot_execution(request, gate_id, pilot_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def get_pilot_gate_dashboard(request):
+    """
+    Session 593: Get comprehensive dashboard data for pilot readiness gates.
+
+    GET /api/pilot-gates/dashboard/
+
+    Returns:
+    - status_counts: Gates by status (not_started, in_progress, etc.)
+    - risk_counts: Gates by risk level (high, medium, low, critical)
+    - backlog: Decisions without gates (security + policy)
+    - throughput: Average time metrics by phase
+    - blocked_gates: List of blocked gates with reasons
+    - recent_pilots: Recently completed pilots
+    """
+    try:
+        from django.db.models import Avg, Count, F
+        from django.db.models.functions import Coalesce
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+        from core.models_unified_system import AgentDecisionSummary
+
+        # 1. Status counts
+        status_counts = {}
+        for status, _ in PilotReadinessGate.GATE_STATUS_CHOICES:
+            status_counts[status] = PilotReadinessGate.objects.filter(status=status).count()
+
+        # 2. Risk level counts
+        risk_counts = {}
+        for level in ['low', 'medium', 'high', 'critical']:
+            risk_counts[level] = PilotReadinessGate.objects.filter(risk_level=level).count()
+
+        # 3. Decision backlog (eligible decisions without gates)
+        existing_gate_ids = set(PilotReadinessGate.objects.values_list('decision_id', flat=True))
+
+        security_backlog = AgentDecisionSummary.objects.filter(
+            impact_area='security'
+        ).exclude(id__in=existing_gate_ids).count()
+
+        policy_backlog = AgentDecisionSummary.objects.filter(
+            decision_type='policy'
+        ).exclude(
+            impact_area='security'
+        ).exclude(id__in=existing_gate_ids).count()
+
+        backlog = {
+            'security': security_backlog,
+            'policy': policy_backlog,
+            'total': security_backlog + policy_backlog
+        }
+
+        # 4. Throughput metrics (average hours in each phase)
+        # Only calculate for gates that have phase timestamps
+        throughput = {
+            'avg_decision_to_readiness_hours': None,
+            'avg_readiness_duration_hours': None,
+            'avg_approval_wait_hours': None,
+            'avg_total_gate_hours': None,
+            'avg_pilot_duration_hours': None
+        }
+
+        # Get latency metrics from completed gates (approved status)
+        approved_gates = PilotReadinessGate.objects.filter(status='approved')
+        if approved_gates.exists():
+            latencies = []
+            for gate in approved_gates:
+                metrics = gate.get_latency_metrics()
+                latencies.append(metrics)
+
+            if latencies:
+                def safe_avg(key):
+                    values = [l.get(key) for l in latencies if l.get(key) is not None]
+                    return round(sum(values) / len(values), 1) if values else None
+
+                throughput['avg_decision_to_readiness_hours'] = safe_avg('decision_to_readiness_hours')
+                throughput['avg_readiness_duration_hours'] = safe_avg('readiness_duration_hours')
+                throughput['avg_approval_wait_hours'] = safe_avg('approval_wait_hours')
+                throughput['avg_total_gate_hours'] = safe_avg('total_gate_hours')
+
+        # Pilot duration from completed pilots
+        completed_pilots = PilotExecution.objects.filter(status='completed')
+        if completed_pilots.exists():
+            pilot_durations = []
+            for pilot in completed_pilots:
+                if pilot.started_at and pilot.completed_at:
+                    duration = (pilot.completed_at - pilot.started_at).total_seconds() / 3600
+                    pilot_durations.append(duration)
+            if pilot_durations:
+                throughput['avg_pilot_duration_hours'] = round(sum(pilot_durations) / len(pilot_durations), 1)
+
+        # 5. Blocked gates with reasons
+        blocked_gates = []
+        for gate in PilotReadinessGate.objects.filter(status='blocked').select_related('decision')[:10]:
+            blocked_items = gate.checklist_items.filter(status='blocked')
+            blocked_gates.append({
+                'gate_id': str(gate.id),
+                'topic': gate.decision.topic[:60],
+                'risk_level': gate.risk_level,
+                'blocked_items': list(blocked_items.values_list('name', flat=True)),
+                'approval_notes': gate.approval_notes or ''
+            })
+
+        # 6. Recent pilots
+        recent_pilots = []
+        for pilot in PilotExecution.objects.select_related('gate', 'gate__decision').order_by('-completed_at')[:5]:
+            recent_pilots.append({
+                'pilot_id': str(pilot.id),
+                'name': pilot.name,
+                'outcome': pilot.outcome,
+                'status': pilot.status,
+                'topic': pilot.gate.decision.topic[:50] if pilot.gate else 'N/A',
+                'completed_at': pilot.completed_at.isoformat() if pilot.completed_at else None,
+                'learnings_count': len(pilot.learnings) if pilot.learnings else 0
+            })
+
+        # 7. Summary stats
+        total_gates = PilotReadinessGate.objects.count()
+        total_decisions = AgentDecisionSummary.objects.count()
+        coverage_pct = round((total_gates / total_decisions * 100), 1) if total_decisions > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'dashboard': {
+                'status_counts': status_counts,
+                'risk_counts': risk_counts,
+                'backlog': backlog,
+                'throughput': throughput,
+                'blocked_gates': blocked_gates,
+                'recent_pilots': recent_pilots,
+                'summary': {
+                    'total_gates': total_gates,
+                    'total_decisions': total_decisions,
+                    'coverage_pct': coverage_pct,
+                    'completed_pilots': PilotExecution.objects.filter(status='completed').count(),
+                    'running_pilots': PilotExecution.objects.filter(status='running').count()
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting pilot gate dashboard: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
