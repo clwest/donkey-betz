@@ -103,9 +103,20 @@ When given a complex task:
 When the task includes a "## System Attention Items" section, these are the ACTUAL items from the platform
 that need action. You MUST:
 1. Use ONLY the items listed in "System Attention Items" - do NOT make up other items
-2. Create action plans for THOSE specific items, not hypothetical ones
-3. For each item, provide: Owner suggestion, Priority, Timeline, Actions
-4. Distinguish between "needs user approval" (boardroom decisions) vs "can be automated"
+2. For EACH item, use create_boardroom_decision to create a tracked decision
+3. Assign appropriate owners (agents or 'human') and priorities
+4. The decisions will appear in the Boardroom for user approval/execution
+
+**When to use create_boardroom_decision (Session 574):**
+Use this tool when the user asks you to "triage", "create action plans", "prioritize", or "handle" items.
+For each item you're triaging, call create_boardroom_decision with:
+- topic: Clear action title
+- decision_type: Usually 'experiment' or 'product' for research items
+- impact_area: Match to the item category
+- recommended_stance: What should be done
+- key_actions: 3-5 specific steps
+- owner: Which agent should handle (ResearchAgent, TrendAnalysisAgent, etc.) or 'human'
+- priority: Based on the item's priority score
 
 Example: If the task says:
 "Complete the checklist!
@@ -169,6 +180,56 @@ You orchestrate. You don't create content directly."""
                         }
                     },
                     "required": ["agent_name", "task"]
+                }
+            }
+        },
+        # Session 574: Create Boardroom decisions from action plans
+        {
+            "type": "function",
+            "function": {
+                "name": "create_boardroom_decision",
+                "description": "Create a tracked decision in the Boardroom for human review and agent execution",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Brief title of the decision (e.g., 'Execute AI Art Fusion Gallery Research')"
+                        },
+                        "decision_type": {
+                            "type": "string",
+                            "description": "Type of decision",
+                            "enum": ["policy", "architecture", "pipeline", "product", "experiment", "guideline"]
+                        },
+                        "impact_area": {
+                            "type": "string",
+                            "description": "Area affected by this decision",
+                            "enum": ["prompting", "memory", "image", "video", "audio", "workflow", "agents", "security", "infrastructure", "product"]
+                        },
+                        "recommended_stance": {
+                            "type": "string",
+                            "description": "The main action or decision being proposed"
+                        },
+                        "key_actions": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of 3-5 specific action steps"
+                        },
+                        "owner": {
+                            "type": "string",
+                            "description": "Suggested owner/agent for this decision (e.g., 'ResearchAgent', 'human', 'TrendAnalysisAgent')"
+                        },
+                        "priority": {
+                            "type": "string",
+                            "description": "Priority level",
+                            "enum": ["critical", "high", "medium", "low"]
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "description": "Why this decision is being proposed"
+                        }
+                    },
+                    "required": ["topic", "decision_type", "impact_area", "recommended_stance", "key_actions", "owner", "priority"]
                 }
             }
         }
@@ -240,6 +301,33 @@ You orchestrate. You don't create content directly."""
                     for tool_call in gpt_response['tool_calls']:
                         tool_name = tool_call['name']
                         arguments = tool_call['arguments']
+
+                        # Session 574: Handle create_boardroom_decision tool
+                        if tool_name == "create_boardroom_decision":
+                            try:
+                                decision_result = self._create_boardroom_decision(arguments)
+                                tool_calls_made.append({
+                                    'tool': 'create_boardroom_decision',
+                                    'topic': arguments.get('topic'),
+                                    'result': decision_result
+                                })
+                                workflow_results.append({
+                                    'agent': 'BoardroomDecision',
+                                    'task': f"Create decision: {arguments.get('topic')}",
+                                    'success': decision_result.get('success', False),
+                                    'summary': decision_result.get('message', 'Decision created'),
+                                    'data': decision_result
+                                })
+                            except Exception as e:
+                                logger.error(f"Failed to create boardroom decision: {e}")
+                                workflow_results.append({
+                                    'agent': 'BoardroomDecision',
+                                    'task': f"Create decision: {arguments.get('topic')}",
+                                    'success': False,
+                                    'summary': f"Error: {str(e)}",
+                                    'data': None
+                                })
+                            continue
 
                         if tool_name != "delegate_to_agent":
                             continue
@@ -370,3 +458,55 @@ You orchestrate. You don't create content directly."""
 
         # Delegation is handled in execute() method
         return {'success': True, 'message': 'Delegation handled in execute()'}
+
+    def _create_boardroom_decision(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 574: Create a Boardroom decision from action plan.
+
+        This creates an AgentDecisionSummary that appears in the Boardroom
+        for human review and agent execution.
+        """
+        try:
+            from core.models_unified_system import AgentDecisionSummary
+
+            # Map priority to quality score
+            priority_map = {
+                'critical': 0.95,
+                'high': 0.8,
+                'medium': 0.6,
+                'low': 0.4
+            }
+            quality_score = priority_map.get(arguments.get('priority', 'medium'), 0.6)
+
+            # Create the decision
+            decision = AgentDecisionSummary.objects.create(
+                topic=arguments.get('topic', 'Untitled Action'),
+                decision_type=arguments.get('decision_type', 'experiment'),
+                impact_area=arguments.get('impact_area', 'workflow'),
+                key_insights=arguments.get('key_actions', []),
+                recommended_stance=arguments.get('recommended_stance', ''),
+                suggested_feature=f"Owner: {arguments.get('owner', 'human')}",
+                rationale=arguments.get('rationale', f"Created by WorkflowAgent triage. Priority: {arguments.get('priority', 'medium')}"),
+                participants=['WorkflowAgent', 'PersonalAssistantAgent'],
+                status='review',  # Put in review status for human approval
+                quality_score=quality_score,
+            )
+
+            logger.info(f"[Session 574] Created Boardroom decision: {decision.topic} (ID: {decision.id})")
+
+            return {
+                'success': True,
+                'message': f"Created Boardroom decision: {decision.topic}",
+                'decision_id': str(decision.id),
+                'topic': decision.topic,
+                'owner': arguments.get('owner', 'human'),
+                'priority': arguments.get('priority', 'medium'),
+                'status': 'review'
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create Boardroom decision: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
