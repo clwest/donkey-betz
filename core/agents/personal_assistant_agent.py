@@ -1422,6 +1422,80 @@ Returns the most recent System Insights report with patterns, concerns, and oppo
                     }
                 }
             }
+        },
+        # Session 579: Phase 7 - Advisor consultation tool
+        {
+            "type": "function",
+            "function": {
+                "name": "get_advisor_consultation",
+                "description": """Query the legendary advisors (Warren Buffett, Cathie Wood, etc.) for insights.
+Use this for:
+- "What would Warren Buffett say about this?"
+- "Get advisor insights"
+- "Consult the advisors about [topic]"
+- "What do the experts think?"
+Returns insights from the 25 legendary advisors with their wisdom and recommendations.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "advisor_name": {
+                            "type": "string",
+                            "description": "Optional: specific advisor to query (e.g., 'Warren Buffett', 'Cathie Wood')"
+                        },
+                        "category": {
+                            "type": "string",
+                            "enum": ["investing", "technology", "business", "leadership", "all"],
+                            "description": "Filter advisors by category (default: all)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Optional: topic to get insights about"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of insights to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        # Session 579: Phase 7 - Revenue metrics tool
+        {
+            "type": "function",
+            "function": {
+                "name": "query_revenue_metrics",
+                "description": """Query revenue metrics, earnings, and financial performance.
+Use this for:
+- "What's our revenue?"
+- "Show me earnings"
+- "Revenue metrics"
+- "Financial performance"
+- "How much have we made?"
+Returns revenue by source, time period, and status with totals and trends.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "time_period": {
+                            "type": "string",
+                            "enum": ["24h", "7d", "30d", "90d", "all"],
+                            "description": "Time range for metrics (default: 30d)"
+                        },
+                        "source_type": {
+                            "type": "string",
+                            "description": "Optional: filter by source (job, gig, investment, betting, content)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["all", "pending", "completed", "cancelled"],
+                            "description": "Filter by status (default: all)"
+                        },
+                        "include_opportunities": {
+                            "type": "boolean",
+                            "description": "Include potential revenue from opportunities (default: true)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -2595,6 +2669,13 @@ Returns the most recent System Insights report with patterns, concerns, and oppo
 
         if tool_name == "get_system_insights":
             return self._get_system_insights(arguments)
+
+        # Session 579: Phase 7 tools
+        if tool_name == "get_advisor_consultation":
+            return self._get_advisor_consultation(arguments)
+
+        if tool_name == "query_revenue_metrics":
+            return self._query_revenue_metrics(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -4693,6 +4774,237 @@ Returns the most recent System Insights report with patterns, concerns, and oppo
 
         except Exception as e:
             logger.error(f"Error getting system insights: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =========================================================================
+    # Session 579: Phase 7 Tools - Advisors and Revenue
+    # =========================================================================
+
+    def _get_advisor_consultation(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query the legendary advisors for insights and wisdom.
+        Returns advisor information and their recent insights.
+        """
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
+            from core.models_unified_system import Advisor, AdvisorInsight
+
+            advisor_name = arguments.get('advisor_name')
+            category = arguments.get('category', 'all')
+            topic = arguments.get('topic')
+            limit = min(arguments.get('limit', 10), 25)
+
+            # Get advisors
+            advisors = Advisor.objects.filter(is_active=True)
+
+            if advisor_name:
+                advisors = advisors.filter(name__icontains=advisor_name)
+
+            if category and category != 'all':
+                advisors = advisors.filter(category__icontains=category)
+
+            advisors = advisors.order_by('-influence_score')[:limit]
+
+            if not advisors.exists():
+                return {
+                    'success': True,
+                    'advisors': [],
+                    'summary': "No advisors found matching your criteria."
+                }
+
+            advisor_list = []
+            for a in advisors:
+                # Get recent insights from this advisor
+                insights = AdvisorInsight.objects.filter(advisor=a).order_by('-created_at')[:3]
+
+                advisor_info = {
+                    'id': str(a.id),
+                    'name': a.name,
+                    'title': a.title,
+                    'category': a.category,
+                    'expertise': a.expertise[:200] if a.expertise else '',
+                    'influence_score': a.influence_score,
+                    'total_consultations': a.total_consultations,
+                    'wisdom': a.wisdom if a.wisdom else {},
+                    'recent_insights': [
+                        {
+                            'content': i.content[:200],
+                            'category': i.category,
+                            'confidence': i.confidence,
+                            'is_actionable': i.is_actionable
+                        } for i in insights
+                    ]
+                }
+                advisor_list.append(advisor_info)
+
+            # Build summary
+            summary_lines = [
+                f"## Advisor Consultation",
+                f"",
+                f"**Found:** {len(advisor_list)} advisor(s)",
+                f""
+            ]
+
+            for a in advisor_list[:5]:
+                summary_lines.append(f"### {a['name']}")
+                summary_lines.append(f"*{a['title']}* (Influence: {a['influence_score']}/100)")
+                summary_lines.append(f"")
+                # Handle wisdom - might be string or dict
+                wisdom = a.get('wisdom', {})
+                if isinstance(wisdom, dict) and wisdom.get('philosophy'):
+                    summary_lines.append(f"**Philosophy:** {wisdom['philosophy'][:150]}...")
+                elif isinstance(wisdom, str) and wisdom:
+                    summary_lines.append(f"**Philosophy:** {wisdom[:150]}...")
+                if a['recent_insights']:
+                    summary_lines.append(f"**Recent Insight:** {a['recent_insights'][0]['content'][:150]}...")
+                summary_lines.append(f"")
+
+            return {
+                'success': True,
+                'advisors': advisor_list,
+                'total_advisors': Advisor.objects.filter(is_active=True).count(),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting advisor consultation: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_revenue_metrics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query revenue metrics, earnings, and financial performance.
+        Returns revenue by source, status, and time period.
+        """
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
+            from django.db.models import Sum, Count, Avg
+            from decimal import Decimal
+            from core.models_unified_system import Revenue, Opportunity
+
+            time_period = arguments.get('time_period', '30d')
+            source_type = arguments.get('source_type')
+            status = arguments.get('status', 'all')
+            include_opportunities = arguments.get('include_opportunities', True)
+
+            # Calculate cutoff
+            now = timezone.now()
+            period_map = {
+                '24h': timedelta(hours=24),
+                '7d': timedelta(days=7),
+                '30d': timedelta(days=30),
+                '90d': timedelta(days=90),
+                'all': timedelta(days=3650)  # ~10 years
+            }
+            cutoff = now - period_map.get(time_period, timedelta(days=30))
+
+            # Query revenue
+            revenue_qs = Revenue.objects.filter(created_at__gte=cutoff)
+
+            if source_type:
+                revenue_qs = revenue_qs.filter(source_type__icontains=source_type)
+
+            if status and status != 'all':
+                revenue_qs = revenue_qs.filter(status=status)
+
+            # Aggregate metrics
+            total_revenue = revenue_qs.aggregate(
+                total=Sum('amount'),
+                count=Count('id'),
+                avg=Avg('amount')
+            )
+
+            # By status
+            by_status = revenue_qs.values('status').annotate(
+                total=Sum('amount'),
+                count=Count('id')
+            )
+
+            # By source type
+            by_source = revenue_qs.values('source_type').annotate(
+                total=Sum('amount'),
+                count=Count('id')
+            ).order_by('-total')[:10]
+
+            # Recent transactions
+            recent = revenue_qs.order_by('-created_at')[:5]
+            recent_list = [
+                {
+                    'amount': float(r.amount),
+                    'source_type': r.source_type,
+                    'status': r.status,
+                    'description': r.description[:100] if r.description else '',
+                    'created_at': r.created_at.isoformat()
+                } for r in recent
+            ]
+
+            results = {
+                'success': True,
+                'time_period': time_period,
+                'total_revenue': float(total_revenue['total'] or 0),
+                'transaction_count': total_revenue['count'] or 0,
+                'average_transaction': float(total_revenue['avg'] or 0),
+                'by_status': {s['status']: {'total': float(s['total'] or 0), 'count': s['count']} for s in by_status},
+                'by_source': {s['source_type']: {'total': float(s['total'] or 0), 'count': s['count']} for s in by_source},
+                'recent_transactions': recent_list
+            }
+
+            # Include opportunities if requested
+            if include_opportunities:
+                opp_qs = Opportunity.objects.filter(
+                    created_at__gte=cutoff,
+                    status='active'
+                )
+                potential = opp_qs.aggregate(
+                    total=Sum('potential_revenue'),
+                    count=Count('id')
+                )
+                results['opportunities'] = {
+                    'potential_revenue': float(potential['total'] or 0),
+                    'active_count': potential['count'] or 0
+                }
+
+            # Build summary
+            summary_lines = [
+                f"## Revenue Metrics ({time_period})",
+                f"",
+                f"**Total Revenue:** ${results['total_revenue']:,.2f}",
+                f"**Transactions:** {results['transaction_count']}",
+                f"**Average:** ${results['average_transaction']:,.2f}",
+                f""
+            ]
+
+            if results.get('by_status'):
+                summary_lines.append("### By Status")
+                for status, data in results['by_status'].items():
+                    summary_lines.append(f"- **{status.title()}:** ${data['total']:,.2f} ({data['count']} transactions)")
+                summary_lines.append("")
+
+            if results.get('by_source'):
+                summary_lines.append("### By Source")
+                for source, data in list(results['by_source'].items())[:5]:
+                    summary_lines.append(f"- **{source.title()}:** ${data['total']:,.2f}")
+                summary_lines.append("")
+
+            if include_opportunities and results.get('opportunities'):
+                opp = results['opportunities']
+                summary_lines.append("### Pipeline")
+                summary_lines.append(f"- **Active Opportunities:** {opp['active_count']}")
+                summary_lines.append(f"- **Potential Revenue:** ${opp['potential_revenue']:,.2f}")
+
+            results['summary'] = '\n'.join(summary_lines)
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error querying revenue metrics: {e}")
             return {
                 'success': False,
                 'error': str(e)
