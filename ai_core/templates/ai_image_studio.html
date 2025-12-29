@@ -7128,6 +7128,157 @@
             <!-- END PROJECTS TAB -->
 
             <!-- ============================================================ -->
+            <!-- Session 530/591: INTELLIGENCE COMMAND CENTER TAB -->
+            <!-- Unified dashboard for Pilot Gates, Decisions, and System Health -->
+            <!-- ============================================================ -->
+            <div class="tab-pane fade" id="intelligence-command-center" role="tabpanel" aria-labelledby="icc-tab">
+                <h3 class="mb-4">🧠 Intelligence Command Center</h3>
+
+                <p class="text-muted mb-4">Unified dashboard for governance, pilot readiness, and system intelligence.</p>
+
+                <div class="row">
+                    <!-- Left Column: Pilot Readiness Gates -->
+                    <div class="col-lg-6">
+                        <!-- ========== SESSION 590: PILOT READINESS GATES ========== -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #14b8a6;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(20, 184, 166, 0.2); border-bottom: 1px solid #14b8a6;">
+                                <h5 class="mb-0" style="color: #14b8a6;">
+                                    <span style="font-size: 24px;">🚦</span> Pilot Readiness Gates
+                                </h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" style="background: #14b8a6;" id="icc-pilot-gates-count">0 Gates</span>
+                                    <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #14b8a6; color: #fff;" id="icc-gate-status-filter" onchange="loadPilotGates(this.value)">
+                                        <option value="">All Gates</option>
+                                        <option value="not_started">⬜ Not Started</option>
+                                        <option value="in_progress">🔄 In Progress</option>
+                                        <option value="ready">✅ Ready</option>
+                                        <option value="approved">🎯 Approved</option>
+                                        <option value="blocked">🚫 Blocked</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                <p class="text-muted small mb-3" style="font-style: italic;">
+                                    "Bridge between Boardroom Decisions and Pilot Execution. Complete checklists before launching pilots."
+                                </p>
+                                <div id="icc-pilot-gates-list">
+                                    <p class="text-muted text-center">Loading pilot gates...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END PILOT READINESS GATES -->
+                    </div>
+
+                    <!-- Right Column: Quick Stats & Actions -->
+                    <div class="col-lg-6">
+                        <!-- Gate Summary Stats -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                            <div class="card-header" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                                <h5 class="mb-0" style="color: #8b5cf6;">
+                                    <span style="font-size: 24px;">📊</span> Gate Pipeline
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="p-2" style="background: rgba(107, 114, 128, 0.2); border-radius: 8px;">
+                                            <h3 id="icc-gates-not-started" style="color: #6b7280;">0</h3>
+                                            <small class="text-muted">Not Started</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                            <h3 id="icc-gates-in-progress" style="color: #3b82f6;">0</h3>
+                                            <small class="text-muted">In Progress</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h3 id="icc-gates-ready" style="color: #10b981;">0</h3>
+                                            <small class="text-muted">Ready</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-3">
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                                            <h3 id="icc-gates-approved" style="color: #f59e0b;">0</h3>
+                                            <small class="text-muted">Approved</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(239, 68, 68, 0.2); border-radius: 8px;">
+                                            <h3 id="icc-gates-blocked" style="color: #ef4444;">0</h3>
+                                            <small class="text-muted">Blocked</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="card-header" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                <h5 class="mb-0" style="color: #f59e0b;">
+                                    <span style="font-size: 24px;">⚡</span> Quick Actions
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <a href="#agents" class="btn btn-outline-warning" onclick="switchToAgentsTab()">
+                                        🏛️ View Boardroom Decisions
+                                    </a>
+                                    <a href="#research-demo" class="btn btn-outline-info" onclick="switchToResearchTab()">
+                                        🔬 View System Insights
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Pilot Gates Styles -->
+            <style>
+                .gate-card {
+                    background: rgba(20, 184, 166, 0.1);
+                    border-radius: 8px;
+                    border-left: 4px solid #14b8a6;
+                    padding: 12px;
+                    margin-bottom: 12px;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                }
+                .gate-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
+                }
+                .gate-status-not_started { border-left-color: #6b7280; }
+                .gate-status-in_progress { border-left-color: #3b82f6; }
+                .gate-status-ready { border-left-color: #10b981; }
+                .gate-status-approved { border-left-color: #f59e0b; }
+                .gate-status-blocked { border-left-color: #ef4444; }
+                .gate-status-waived { border-left-color: #8b5cf6; }
+                .risk-level-low { color: #10b981; }
+                .risk-level-medium { color: #f59e0b; }
+                .risk-level-high { color: #ef4444; }
+                .risk-level-critical { color: #dc2626; font-weight: bold; }
+                .checklist-item {
+                    padding: 6px 10px;
+                    margin: 4px 0;
+                    border-radius: 4px;
+                    background: rgba(255, 255, 255, 0.05);
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                }
+                .checklist-item:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                }
+                .checklist-item-pending { opacity: 0.7; }
+                .checklist-item-completed { background: rgba(16, 185, 129, 0.2); }
+                .checklist-item-blocked { background: rgba(239, 68, 68, 0.2); }
+            </style>
+            <!-- END INTELLIGENCE COMMAND CENTER TAB -->
+
+            <!-- ============================================================ -->
             <!-- Session 542: RESEARCH DEMO TAB - Interactive Knowledge Pipeline -->
             <!-- D3.js Force-Directed Graph showing agents teaching each other -->
             <!-- ============================================================ -->
@@ -10479,69 +10630,6 @@
                         .decision-type-guideline { border-left-color: #6b7280; }
                     </style>
                     <!-- END BOARDROOM DECISIONS -->
-
-                    <!-- ========== SESSION 590: PILOT READINESS GATES ========== -->
-                    <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #14b8a6;">
-                        <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(20, 184, 166, 0.2); border-bottom: 1px solid #14b8a6;">
-                            <h5 class="mb-0" style="color: #14b8a6;">
-                                <span style="font-size: 24px;">🚦</span> Pilot Readiness Gates
-                            </h5>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge" style="background: #14b8a6;" id="pilot-gates-count">0 Gates</span>
-                                <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #14b8a6; color: #fff;" id="gate-status-filter" onchange="loadPilotGates(this.value)">
-                                    <option value="">All Gates</option>
-                                    <option value="not_started">⬜ Not Started</option>
-                                    <option value="in_progress">🔄 In Progress</option>
-                                    <option value="ready">✅ Ready</option>
-                                    <option value="approved">🎯 Approved</option>
-                                    <option value="blocked">🚫 Blocked</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                            <p class="text-muted small mb-3" style="font-style: italic;">
-                                "Bridge between Boardroom Decisions and Pilot Execution. Complete checklists before launching pilots."
-                            </p>
-                            <div id="pilot-gates-list">
-                                <p class="text-muted text-center">Loading pilot gates...</p>
-                            </div>
-                        </div>
-                    </div>
-                    <style>
-                        .gate-card {
-                            background: rgba(20, 184, 166, 0.1);
-                            border-radius: 8px;
-                            border-left: 4px solid #14b8a6;
-                            padding: 12px;
-                            margin-bottom: 12px;
-                            transition: transform 0.2s, box-shadow 0.2s;
-                        }
-                        .gate-card:hover {
-                            transform: translateY(-2px);
-                            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.2);
-                        }
-                        .gate-status-not_started { border-left-color: #6b7280; }
-                        .gate-status-in_progress { border-left-color: #3b82f6; }
-                        .gate-status-ready { border-left-color: #10b981; }
-                        .gate-status-approved { border-left-color: #f59e0b; }
-                        .gate-status-blocked { border-left-color: #ef4444; }
-                        .gate-status-waived { border-left-color: #8b5cf6; }
-                        .risk-level-low { color: #10b981; }
-                        .risk-level-medium { color: #f59e0b; }
-                        .risk-level-high { color: #ef4444; }
-                        .risk-level-critical { color: #dc2626; font-weight: bold; }
-                        .checklist-item {
-                            padding: 6px 10px;
-                            margin: 4px 0;
-                            border-radius: 4px;
-                            background: rgba(255, 255, 255, 0.05);
-                            font-size: 0.85rem;
-                        }
-                        .checklist-item-pending { opacity: 0.7; }
-                        .checklist-item-completed { background: rgba(16, 185, 129, 0.2); }
-                        .checklist-item-blocked { background: rgba(239, 68, 68, 0.2); }
-                    </style>
-                    <!-- END PILOT READINESS GATES -->
 
                         </div>
                         <!-- END SOCIAL SUB-TAB -->
@@ -55783,8 +55871,9 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.log('  ✓ Boardroom Decisions: loading latest');
             }
 
-            // 7. Session 590: Refresh Pilot Readiness Gates
-            if (typeof loadPilotGates === 'function') {
+            // 7. Session 591: Refresh Pilot Gates only if ICC tab is active
+            const iccTab = document.getElementById('intelligence-command-center');
+            if (iccTab && iccTab.classList.contains('active') && typeof loadPilotGates === 'function') {
                 loadPilotGates();
                 console.log('  ✓ Pilot Readiness Gates: loading latest');
             }
@@ -56312,7 +56401,15 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadAgentDreams();
                     loadHiveMindSessions();
                     loadBoardroomDecisions();  // Session 323
-                    loadPilotGates();  // Session 590
+                });
+            }
+
+            // Session 591: Load Pilot Gates when ICC tab is shown
+            const iccTabTrigger = document.querySelector('[data-bs-target="#intelligence-command-center"]');
+            if (iccTabTrigger) {
+                iccTabTrigger.addEventListener('shown.bs.tab', function() {
+                    loadPilotGates();
+                    console.log('  ✓ ICC: Loading pilot gates');
                 });
             }
 
@@ -57480,22 +57577,40 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 }
             } catch (error) {
                 console.error('Error loading pilot gates:', error);
-                document.getElementById('pilot-gates-list').innerHTML = `
-                    <div class="text-center py-4">
-                        <span style="font-size: 48px; opacity: 0.5;">⚠️</span>
-                        <p class="text-muted mt-2">Error loading gates...</p>
-                    </div>
-                `;
+                const container = document.getElementById('icc-pilot-gates-list');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <span style="font-size: 48px; opacity: 0.5;">⚠️</span>
+                            <p class="text-muted mt-2">Error loading gates...</p>
+                        </div>
+                    `;
+                }
             }
         }
 
         // Update the pilot gates UI
         function updatePilotGates(data) {
-            const container = document.getElementById('pilot-gates-list');
-            const countBadge = document.getElementById('pilot-gates-count');
+            const container = document.getElementById('icc-pilot-gates-list');
+            const countBadge = document.getElementById('icc-pilot-gates-count');
 
             if (countBadge) {
                 countBadge.textContent = `${data.gates.length} Gates`;
+            }
+
+            // Update gate pipeline stats
+            if (data.by_status) {
+                const notStartedEl = document.getElementById('icc-gates-not-started');
+                const inProgressEl = document.getElementById('icc-gates-in-progress');
+                const readyEl = document.getElementById('icc-gates-ready');
+                const approvedEl = document.getElementById('icc-gates-approved');
+                const blockedEl = document.getElementById('icc-gates-blocked');
+
+                if (notStartedEl) notStartedEl.textContent = data.by_status.not_started || 0;
+                if (inProgressEl) inProgressEl.textContent = data.by_status.in_progress || 0;
+                if (readyEl) readyEl.textContent = data.by_status.ready || 0;
+                if (approvedEl) approvedEl.textContent = data.by_status.approved || 0;
+                if (blockedEl) blockedEl.textContent = data.by_status.blocked || 0;
             }
 
             if (!data.gates || data.gates.length === 0) {
