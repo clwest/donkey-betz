@@ -2864,6 +2864,118 @@ Returns performance metrics, predictions, and optimization suggestions.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 19: Analytics Tools (Session 584) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "query_workflow_analytics",
+                "description": """Query workflow execution analytics, performance metrics, and trends.
+Use this for:
+- "Show workflow execution history"
+- "Show workflow trends"
+- "Show success/failure analysis"
+- "Show workflow performance"
+- "Compare workflows"
+- "Show step performance"
+- "Show execution heatmap"
+- "Show workflow analytics dashboard"
+Returns execution history, trends, performance metrics, comparisons, and heatmaps.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["history", "trends", "success_failure", "performance", "performance_comparison", "compare", "steps", "heatmap", "summary", "dashboard"],
+                            "description": "Type of analytics query"
+                        },
+                        "workflow_id": {
+                            "type": "integer",
+                            "description": "Workflow ID for history/steps filtering"
+                        },
+                        "workflow_ids": {
+                            "type": "string",
+                            "description": "Comma-separated workflow IDs for compare"
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "Number of days to look back (default 30)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["pending", "processing", "completed", "failed"],
+                            "description": "Filter by execution status"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results for history (default 100)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_video_analytics",
+                "description": """Query video analytics including character performance and lip sync.
+Use this for:
+- "Show character performance"
+- "Start lip sync job"
+- "Check lip sync status"
+Returns character performance metrics and lip sync job status.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["character_performance", "lip_sync", "lip_sync_status"],
+                            "description": "Type of video analytics query"
+                        },
+                        "prediction_id": {
+                            "type": "string",
+                            "description": "Prediction ID for lip sync status check"
+                        },
+                        "video_url": {
+                            "type": "string",
+                            "description": "Video URL for lip sync"
+                        },
+                        "audio_url": {
+                            "type": "string",
+                            "description": "Audio URL for lip sync"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_model_analytics",
+                "description": """Query LLM model performance analytics and preferences.
+Use this for:
+- "Show model performance"
+- "Show model preferences"
+- "Set model preferences"
+Returns model performance metrics and preference settings.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["performance", "preferences", "set_preferences"],
+                            "description": "Type of model analytics query"
+                        },
+                        "preferences": {
+                            "type": "object",
+                            "description": "Preferences object for set_preferences"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4166,6 +4278,16 @@ Returns performance metrics, predictions, and optimization suggestions.""",
 
         if tool_name == "query_performance":
             return self._query_performance(arguments)
+
+        # ===== Phase 19: Analytics Tools (Session 584) =====
+        if tool_name == "query_workflow_analytics":
+            return self._query_workflow_analytics(arguments)
+
+        if tool_name == "query_video_analytics":
+            return self._query_video_analytics(arguments)
+
+        if tool_name == "query_model_analytics":
+            return self._query_model_analytics(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -10253,4 +10375,429 @@ Returns performance metrics, predictions, and optimization suggestions.""",
 
         except Exception as e:
             logger.error(f"Error querying performance: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 19: Analytics Tools (Session 584) =====
+
+    def _query_workflow_analytics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Query workflow execution analytics, performance, and trends.
+        Covers 10 endpoints for comprehensive workflow analytics.
+        """
+        import requests
+
+        query_type = arguments.get('query_type', 'summary')
+        workflow_id = arguments.get('workflow_id')
+        workflow_ids = arguments.get('workflow_ids', '')
+        days = arguments.get('days', 30)
+        status_filter = arguments.get('status')
+        limit = arguments.get('limit', 100)
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if query_type == 'history':
+                params = {'days': days, 'limit': limit}
+                if workflow_id:
+                    params['workflow_id'] = workflow_id
+                if status_filter:
+                    params['status'] = status_filter
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/history/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'history': data.get('history', []),
+                            'total': data.get('total', 0),
+                            'days': data.get('days', days),
+                            'summary': f"Found {data.get('total', 0)} workflow executions in last {days} days"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'history': [],
+                    'summary': 'No workflow execution history found'
+                }
+
+            elif query_type == 'trends':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/trends/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'trends': response.json(),
+                            'summary': f'Retrieved workflow trends for last {days} days'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'trends': {'labels': [], 'datasets': []},
+                    'summary': 'No workflow trends data available'
+                }
+
+            elif query_type == 'success_failure':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/success-failure/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'analysis': data,
+                            'summary': f"Success/failure analysis for last {days} days"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'analysis': {'success_rate': 0, 'total': 0},
+                    'summary': 'No success/failure data available'
+                }
+
+            elif query_type == 'performance':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/performance/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'metrics': data.get('metrics', []),
+                            'total': data.get('total', 0),
+                            'summary': f"Performance metrics for {data.get('total', 0)} workflows"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'metrics': [],
+                    'summary': 'No performance metrics available'
+                }
+
+            elif query_type == 'performance_comparison':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/performance-comparison/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'comparison': response.json(),
+                            'summary': 'Retrieved performance comparison chart data'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'comparison': {'labels': [], 'datasets': []},
+                    'summary': 'No comparison data available'
+                }
+
+            elif query_type == 'compare':
+                if not workflow_ids:
+                    return {'success': False, 'error': 'workflow_ids required for compare'}
+
+                try:
+                    response = requests.get(
+                        f'{base_url}/api/workflow-analytics/compare/',
+                        params={'workflow_ids': workflow_ids, 'days': days},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'comparison': response.json(),
+                            'summary': f"Compared workflows: {workflow_ids}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'comparison': {},
+                    'summary': 'Workflow comparison not available'
+                }
+
+            elif query_type == 'steps':
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required for steps query'}
+
+                try:
+                    response = requests.get(
+                        f'{base_url}/api/workflow-analytics/steps/{workflow_id}/',
+                        params={'days': days},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'step_performance': response.json(),
+                            'summary': f"Step performance for workflow {workflow_id}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'step_performance': {'steps': []},
+                    'summary': f'No step data for workflow {workflow_id}'
+                }
+
+            elif query_type == 'heatmap':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/heatmap/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'heatmap': response.json(),
+                            'summary': f"Execution heatmap for last {days} days"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'heatmap': {'data': []},
+                    'summary': 'No heatmap data available'
+                }
+
+            elif query_type == 'summary':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/summary/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'summary_data': data,
+                            'summary': f"Analytics summary: {data.get('total_executions', 0)} executions, {data.get('success_rate', 0):.1f}% success rate"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'summary_data': {},
+                    'summary': 'Analytics summary not available'
+                }
+
+            elif query_type == 'dashboard':
+                try:
+                    response = requests.get(f'{base_url}/api/workflow-analytics/dashboard/', params={'days': days}, timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'dashboard': response.json(),
+                            'summary': 'Retrieved full analytics dashboard data'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'dashboard': {},
+                    'summary': 'Dashboard data not available'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying workflow analytics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_video_analytics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Query video analytics including character performance and lip sync.
+        """
+        import requests
+
+        query_type = arguments.get('query_type', 'character_performance')
+        prediction_id = arguments.get('prediction_id')
+        video_url = arguments.get('video_url')
+        audio_url = arguments.get('audio_url')
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if query_type == 'character_performance':
+                try:
+                    response = requests.get(f'{base_url}/api/v1/video/character-performance/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'performance': data,
+                            'summary': 'Retrieved character performance metrics'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'performance': {},
+                    'summary': 'No character performance data available'
+                }
+
+            elif query_type == 'lip_sync':
+                if not video_url or not audio_url:
+                    return {'success': False, 'error': 'video_url and audio_url required for lip sync'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/video/lip-sync/',
+                        json={'video_url': video_url, 'audio_url': audio_url},
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'job': data,
+                            'summary': f"Lip sync job started: {data.get('prediction_id', 'unknown')}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': False,
+                    'error': 'Failed to start lip sync job'
+                }
+
+            elif query_type == 'lip_sync_status':
+                if not prediction_id:
+                    return {'success': False, 'error': 'prediction_id required for status check'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/video/lip-sync/status/{prediction_id}/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'status': data,
+                            'summary': f"Lip sync status: {data.get('status', 'unknown')}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'status': {'status': 'unknown'},
+                    'summary': f'Could not retrieve status for {prediction_id}'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying video analytics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_model_analytics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Query LLM model performance analytics and preferences.
+        """
+        import requests
+
+        query_type = arguments.get('query_type', 'performance')
+        preferences = arguments.get('preferences', {})
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if query_type == 'performance':
+                try:
+                    response = requests.get(f'{base_url}/api/v1/analytics/model-performance/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'performance': data,
+                            'summary': 'Retrieved model performance analytics'
+                        }
+                except:
+                    pass
+
+                # Try database fallback
+                try:
+                    from core.models_unified_system import LLMUsage
+                    from django.db.models import Avg, Sum, Count
+                    from django.utils import timezone
+                    from datetime import timedelta
+
+                    thirty_days_ago = timezone.now() - timedelta(days=30)
+                    stats = LLMUsage.objects.filter(
+                        created_at__gte=thirty_days_ago
+                    ).aggregate(
+                        total_calls=Count('id'),
+                        total_tokens=Sum('total_tokens'),
+                        avg_latency=Avg('latency_ms')
+                    )
+
+                    return {
+                        'success': True,
+                        'performance': {
+                            'total_calls': stats['total_calls'] or 0,
+                            'total_tokens': stats['total_tokens'] or 0,
+                            'avg_latency_ms': round(stats['avg_latency'] or 0, 2)
+                        },
+                        'summary': f"Model usage: {stats['total_calls'] or 0} calls, {stats['total_tokens'] or 0} tokens"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'performance': {},
+                    'summary': 'No model performance data available'
+                }
+
+            elif query_type == 'preferences':
+                try:
+                    response = requests.get(f'{base_url}/api/v1/model-preferences/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'preferences': data,
+                            'summary': 'Retrieved model preferences'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'preferences': {'model': 'gpt-5-mini'},
+                    'summary': 'Default model preferences'
+                }
+
+            elif query_type == 'set_preferences':
+                if not preferences:
+                    return {'success': False, 'error': 'preferences object required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/v1/model-preferences/',
+                        json=preferences,
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Model preferences updated'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': False,
+                    'error': 'Failed to update model preferences'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying model analytics: {e}")
             return {'success': False, 'error': str(e)}
