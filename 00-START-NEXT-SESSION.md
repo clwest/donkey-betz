@@ -44,7 +44,7 @@ Verified System Insights reports are working:
 
 ---
 
-## Current PA Tools (26 Total)
+## Current PA Tools (28 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -74,8 +74,10 @@ Verified System Insights reports are working:
 | `analyze_project_intelligence` | Deep project insights | Session 579 |
 | `query_tracked_concerns` | System concerns by status/severity | Session 579 |
 | `get_system_insights` | ThinkingAgent reports | Session 579 |
+| `get_advisor_consultation` | Query legendary advisors for insights | Session 580 |
+| `query_revenue_metrics` | Revenue tracking and financial metrics | Session 580 |
 
-**Coverage:** 26/1,343 endpoints (1.94%)
+**Coverage:** 28/1,343 endpoints (2.08%)
 
 ---
 
@@ -120,21 +122,25 @@ User: "Show me system insights"
 
 User: "Create a new project for AI research"
 → create_project: Creates PartnershipProject
+
+User: "What does Warren Buffett think about AI investing?"
+→ get_advisor_consultation: Queries legendary advisor insights
+
+User: "What's my revenue this month?"
+→ query_revenue_metrics: Financial metrics and earnings
 ```
 
 ---
 
 ## Session 580 Priorities
 
-### Option A: More PA Tools (Phase 7+)
+### Option A: More PA Tools (Phase 8+)
 
 Remaining tools from roadmap:
 
 | Tool | Purpose | Priority |
 |------|---------|----------|
-| `get_advisor_consultation` | Query legendary advisors | Medium |
 | `manage_agent_evolution` | Control agent learning | Low |
-| `query_revenue_metrics` | Revenue tracking | Medium |
 | `manage_notifications` | Push notification control | Low |
 
 ### Option B: Testing & Polish
@@ -195,19 +201,19 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 579)
+## System Stats (Session 580)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 26 |
+| **PA Tools** | 28 |
 | **API Endpoints** | 1,343+ |
-| **Celery Tasks** | 227 (+1 auto_triage_dreams) |
+| **Celery Tasks** | 227 |
 | **Services** | 93 |
 
 ---
 
-**Session 579: 11 PA Tools + Dream Auto-Triage + System Insights Integration**
+**Session 580: Added `get_advisor_consultation` and `query_revenue_metrics` tools**
 
-**PA now has 26 tools (1.94% coverage) with full visibility into ThinkingAgent system.**
+**PA now has 28 tools (2.08% coverage) - Phase 7 complete!**
