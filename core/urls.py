@@ -298,6 +298,9 @@ from core.views_agent_learning import (
     update_experiment_kpi,
     complete_experiment,
     get_experiment_portfolio,
+    # Session 598: Learning Loop UI
+    get_experiment_learnings,
+    get_success_patterns,
 )
 
 # Session 250: Hive Mind Mode
@@ -2732,6 +2735,9 @@ urlpatterns = [
     path('api/experiments/portfolio/', get_experiment_portfolio, name='experiment-portfolio'),
     path('api/experiments/<uuid:experiment_id>/update-kpi/', update_experiment_kpi, name='update-experiment-kpi'),
     path('api/experiments/<uuid:experiment_id>/complete/', complete_experiment, name='complete-experiment'),
+    # Session 598: Learning Loop UI
+    path('api/experiments/learnings/', get_experiment_learnings, name='experiment-learnings'),
+    path('api/experiments/patterns/', get_success_patterns, name='experiment-patterns'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

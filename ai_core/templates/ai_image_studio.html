@@ -7512,6 +7512,90 @@
                 </div>
                 <!-- END EXPERIMENT TRACKING REGISTRY -->
 
+                <!-- ========== SESSION 598: LEARNING LOOP DASHBOARD ========== -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                <h5 class="mb-0" style="color: #f59e0b;">
+                                    <span style="font-size: 24px;">📚</span> Learning Loop Dashboard
+                                    <small class="text-muted ms-2">Experiment outcomes feeding future decisions</small>
+                                </h5>
+                                <div class="d-flex align-items-center gap-3">
+                                    <select class="form-select form-select-sm" id="learning-outcome-filter" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" onchange="loadLearningsDashboard()">
+                                        <option value="">All Outcomes</option>
+                                        <option value="success">✅ Success</option>
+                                        <option value="failure">❌ Failure</option>
+                                        <option value="partial">⚡ Partial</option>
+                                        <option value="inconclusive">❓ Inconclusive</option>
+                                    </select>
+                                    <select class="form-select form-select-sm" id="learning-type-filter" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" onchange="loadLearningsDashboard()">
+                                        <option value="">All Types</option>
+                                        <option value="content_strategy">📝 Content Strategy</option>
+                                        <option value="market_strategy">📈 Market Strategy</option>
+                                        <option value="tech_adoption">💻 Tech Adoption</option>
+                                        <option value="resource_allocation">👥 Resource Allocation</option>
+                                        <option value="general">📋 General</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-light" onclick="loadLearningsDashboard()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Success Patterns Overview -->
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="learning-overall-success" style="color: #10b981;">--%</h2>
+                                            <small class="text-muted">Overall Success Rate</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                                            <h2 id="learning-total-count" style="color: #f59e0b;">0</h2>
+                                            <small class="text-muted">Total Learnings</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="learning-fed-count" style="color: #3b82f6;">0</h2>
+                                            <small class="text-muted">Fed to ThinkingAgent</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="learning-decision-types" style="color: #8b5cf6;">0</h2>
+                                            <small class="text-muted">Decision Types Tracked</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Decision Type Success Patterns -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 style="color: #f59e0b;">📊 Success Patterns by Decision Type</h6>
+                                        <div id="learning-patterns-chart" class="d-flex flex-wrap gap-3">
+                                            <p class="text-muted small">Loading patterns...</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recent Learnings -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6 style="color: #f59e0b;">📖 Recent Experiment Learnings</h6>
+                                        <div id="learning-list" style="max-height: 500px; overflow-y: auto;">
+                                            <p class="text-muted text-center small">Loading learnings...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END LEARNING LOOP DASHBOARD -->
+
             </div>
             <!-- Pilot Gates Styles -->
             <style>
@@ -56162,6 +56246,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadExperimentPortfolio();
                     console.log('  ✓ Experiment Portfolio: loading latest');
                 }
+                // Session 598: Also load Learning Loop Dashboard
+                if (typeof loadLearningsDashboard === 'function') {
+                    loadLearningsDashboard();
+                    console.log('  ✓ Learning Loop Dashboard: loading latest');
+                }
             }
 
             // 8. Session 556: Refresh Review Documents
@@ -56697,7 +56786,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     loadPilotGates();
                     loadPilotDashboard();  // Session 595
                     loadExperimentPortfolio();  // Session 596
-                    console.log('  ✓ ICC: Loading pilot gates, dashboard, and experiments');
+                    loadLearningsDashboard();  // Session 598
+                    console.log('  ✓ ICC: Loading pilot gates, dashboard, experiments, and learnings');
                 });
             }
 
@@ -58794,6 +58884,185 @@ ${item.generated_content}
                 console.error('Error loading experiment portfolio:', error);
             }
         }
+
+        // ========== SESSION 598: LEARNING LOOP DASHBOARD ==========
+
+        async function loadLearningsDashboard() {
+            try {
+                // Get filter values
+                const outcomeFilter = document.getElementById('learning-outcome-filter')?.value || '';
+                const typeFilter = document.getElementById('learning-type-filter')?.value || '';
+
+                // Load learnings and patterns in parallel
+                const [learningsResp, patternsResp] = await Promise.all([
+                    fetch(`/api/experiments/learnings/?outcome=${outcomeFilter}&decision_type=${typeFilter}&limit=20`),
+                    fetch('/api/experiments/patterns/')
+                ]);
+
+                const learningsData = await learningsResp.json();
+                const patternsData = await patternsResp.json();
+
+                // Update learnings metrics
+                if (learningsData.success) {
+                    document.getElementById('learning-total-count').textContent = learningsData.total_count || 0;
+                    document.getElementById('learning-fed-count').textContent = learningsData.fed_to_thinking_agent_count || 0;
+
+                    // Calculate overall success rate from patterns if available
+                    if (patternsData.success && patternsData.patterns.length > 0) {
+                        const totalExp = patternsData.patterns.reduce((sum, p) => sum + p.total_experiments, 0);
+                        const successExp = patternsData.patterns.reduce((sum, p) => sum + p.successful_experiments, 0);
+                        const overallRate = totalExp > 0 ? ((successExp / totalExp) * 100).toFixed(1) : '--';
+                        document.getElementById('learning-overall-success').textContent = overallRate + '%';
+                        document.getElementById('learning-decision-types').textContent = patternsData.patterns.length;
+                    } else {
+                        document.getElementById('learning-overall-success').textContent = '--%';
+                        document.getElementById('learning-decision-types').textContent = '0';
+                    }
+
+                    // Render learnings list
+                    renderLearningsList(learningsData.learnings || []);
+                }
+
+                // Render patterns chart
+                if (patternsData.success) {
+                    renderPatternsChart(patternsData.patterns || []);
+                }
+
+            } catch (error) {
+                console.error('Error loading learnings dashboard:', error);
+            }
+        }
+
+        function renderPatternsChart(patterns) {
+            const container = document.getElementById('learning-patterns-chart');
+
+            if (!patterns || patterns.length === 0) {
+                container.innerHTML = '<p class="text-muted small">No success patterns yet. Complete experiments to generate patterns.</p>';
+                return;
+            }
+
+            // Create bar-like visualization for each decision type
+            container.innerHTML = patterns.map(pattern => {
+                const successRate = pattern.success_rate || 0;
+                const barColor = successRate >= 70 ? '#10b981' : successRate >= 40 ? '#f59e0b' : '#ef4444';
+                const typeLabel = formatDecisionType(pattern.decision_type);
+                const topInsight = pattern.top_insights && pattern.top_insights.length > 0
+                    ? pattern.top_insights[0]
+                    : 'No insights yet';
+
+                return `
+                    <div class="pattern-card p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; min-width: 200px; flex: 1; max-width: 280px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong style="color: #8b5cf6; font-size: 12px;">${typeLabel}</strong>
+                            <span class="badge" style="background: ${barColor};">${successRate.toFixed(1)}%</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 8px; background: rgba(107, 114, 128, 0.3);">
+                            <div class="progress-bar" role="progressbar" style="width: ${successRate}%; background: ${barColor};"></div>
+                        </div>
+                        <div class="d-flex justify-content-between" style="font-size: 11px; color: #9ca3af;">
+                            <span>${pattern.total_experiments} experiments</span>
+                            <span>${pattern.successful_experiments} success</span>
+                        </div>
+                        <div class="mt-2" style="font-size: 10px; color: #6b7280;">
+                            <em>"${topInsight.substring(0, 60)}${topInsight.length > 60 ? '...' : ''}"</em>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderLearningsList(learnings) {
+            const container = document.getElementById('learning-list');
+
+            if (!learnings || learnings.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center small">No experiment learnings yet. Complete experiments to generate learnings.</p>';
+                return;
+            }
+
+            container.innerHTML = learnings.map(learning => {
+                const outcomeColor = learning.outcome === 'success' ? '#10b981'
+                    : learning.outcome === 'failure' ? '#ef4444'
+                    : learning.outcome === 'partial' ? '#f59e0b'
+                    : '#6b7280';
+                const outcomeIcon = learning.outcome === 'success' ? '✅'
+                    : learning.outcome === 'failure' ? '❌'
+                    : learning.outcome === 'partial' ? '⚡'
+                    : '❓';
+                const fedIcon = learning.fed_to_thinking_agent ? '🧠' : '';
+                const typeLabel = formatDecisionType(learning.decision_type);
+
+                return `
+                    <div class="learning-card mb-3 p-3" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; border-left: 4px solid ${outcomeColor};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge" style="background: ${outcomeColor};">${outcomeIcon} ${learning.outcome.toUpperCase()}</span>
+                                    <span class="badge" style="background: #8b5cf6;">${typeLabel}</span>
+                                    ${fedIcon ? `<span title="Fed to ThinkingAgent">${fedIcon}</span>` : ''}
+                                </div>
+                                <strong style="color: #e5e7eb; font-size: 14px;">${learning.experiment_name || 'Unknown Experiment'}</strong>
+                                <p class="mt-2 mb-2" style="color: #9ca3af; font-size: 12px;">${learning.decision_topic || ''}</p>
+                            </div>
+                        </div>
+
+                        ${learning.key_insight ? `
+                            <div class="mb-2" style="background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 4px;">
+                                <span style="color: #10b981; font-size: 11px; font-weight: bold;">💡 KEY INSIGHT:</span>
+                                <p style="color: #d1d5db; font-size: 12px; margin: 4px 0 0 0;">${learning.key_insight}</p>
+                            </div>
+                        ` : ''}
+
+                        <div class="row" style="font-size: 11px;">
+                            ${learning.what_worked ? `
+                                <div class="col-6">
+                                    <span style="color: #10b981;">✓ What Worked:</span>
+                                    <p style="color: #9ca3af; margin: 2px 0;">${learning.what_worked.substring(0, 80)}${learning.what_worked.length > 80 ? '...' : ''}</p>
+                                </div>
+                            ` : ''}
+                            ${learning.what_failed ? `
+                                <div class="col-6">
+                                    <span style="color: #ef4444;">✗ What Failed:</span>
+                                    <p style="color: #9ca3af; margin: 2px 0;">${learning.what_failed.substring(0, 80)}${learning.what_failed.length > 80 ? '...' : ''}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        ${learning.future_recommendation ? `
+                            <div class="mt-2" style="background: rgba(59, 130, 246, 0.1); padding: 8px; border-radius: 4px;">
+                                <span style="color: #3b82f6; font-size: 11px; font-weight: bold;">📋 RECOMMENDATION:</span>
+                                <p style="color: #d1d5db; font-size: 12px; margin: 4px 0 0 0;">${learning.future_recommendation}</p>
+                            </div>
+                        ` : ''}
+
+                        <div class="mt-2 d-flex justify-content-between align-items-center" style="font-size: 10px; color: #6b7280;">
+                            <span>Confidence: ${((learning.confidence_score || 0) * 100).toFixed(0)}%</span>
+                            ${learning.kpi_delta_percent !== null ? `<span>KPI Delta: ${learning.kpi_delta_percent > 0 ? '+' : ''}${learning.kpi_delta_percent?.toFixed(1)}%</span>` : ''}
+                            <span>${formatDate(learning.created_at)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatDecisionType(type) {
+            if (!type) return 'General';
+            const labels = {
+                'content_strategy': '📝 Content',
+                'market_strategy': '📈 Market',
+                'tech_adoption': '💻 Tech',
+                'resource_allocation': '👥 Resources',
+                'general': '📋 General'
+            };
+            return labels[type] || type;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // ========== END SESSION 598: LEARNING LOOP DASHBOARD ==========
 
         // Show approve gate modal
         function showApproveGateModal(gateId) {
