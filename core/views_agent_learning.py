@@ -1382,6 +1382,82 @@ def reject_decision(request, decision_id):
 
 
 # =============================================================================
+# Session 604: Decision Prioritization
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_prioritized_decisions(request):
+    """
+    Get prioritized decision queue based on success probability and risk.
+
+    GET /api/boardroom/decisions/prioritized/
+
+    Query params:
+    - limit: Max decisions to return (default 50)
+    - status: Comma-separated statuses to include (default: draft,review)
+
+    Returns decisions sorted by priority score with:
+    - Priority tier (quick_win, recommended, standard, needs_review, high_risk)
+    - Success probability from learning system
+    - Risk level and flags
+    - Recommendation for action
+    """
+    try:
+        from core.services.decision_prioritization import DecisionPrioritizationService
+
+        limit = int(request.GET.get('limit', 50))
+        status_param = request.GET.get('status', 'draft,review')
+        statuses = [s.strip() for s in status_param.split(',')]
+
+        service = DecisionPrioritizationService()
+        result = service.get_prioritized_queue(
+            statuses=statuses,
+            limit=limit,
+            include_flags=True
+        )
+
+        return JsonResponse({
+            'success': True,
+            **result
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting prioritized decisions: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_decision_priority(request, decision_id):
+    """
+    Get priority details for a single decision.
+
+    GET /api/boardroom/decisions/{decision_id}/priority/
+    """
+    try:
+        from core.services.decision_prioritization import DecisionPrioritizationService
+
+        service = DecisionPrioritizationService()
+        result = service.get_decision_priority(str(decision_id))
+
+        return JsonResponse({
+            'success': True,
+            **result
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting decision priority: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
 # Session 602: Boardroom Learning Integration
 # =============================================================================
 

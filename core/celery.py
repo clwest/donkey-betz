@@ -169,6 +169,7 @@ app.conf.beat_schedule = {
     'backfill-spider-embeddings': {
         'task': 'core.tasks.backfill_spider_embeddings',
         'schedule': crontab(minute='*/10'),  # Every 10 minutes
+        'kwargs': {'batch_size': 500},  # Session 604: Increased from 200 to 500
         'options': {
             'expires': 600,  # Expire after 10 minutes
         }

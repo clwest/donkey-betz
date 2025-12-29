@@ -11039,6 +11039,10 @@
                             </h5>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge" style="background: #f59e0b;" id="canonical-count-badge">0 Policies</span>
+                                <!-- Session 604: Priority Sort Toggle -->
+                                <button class="btn btn-sm" id="priority-sort-toggle" onclick="togglePrioritySort()" style="background: #2d2d2d; border-color: #6b7280; color: #9ca3af;" title="Sort by AI-recommended priority">
+                                    📊 Priority
+                                </button>
                                 <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" id="decision-type-filter" onchange="loadBoardroomDecisions(this.value)">
                                     <option value="">All Decisions</option>
                                     <option value="canonical">✅ Adopted Policies</option>
@@ -11078,6 +11082,54 @@
                         .decision-type-product { border-left-color: #3b82f6; }
                         .decision-type-experiment { border-left-color: #ec4899; }
                         .decision-type-guideline { border-left-color: #6b7280; }
+
+                        /* Session 604: Priority Tier Styles */
+                        .priority-tier-quick_win { border-left-color: #22c55e !important; box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); }
+                        .priority-tier-recommended { border-left-color: #3b82f6 !important; }
+                        .priority-tier-standard { border-left-color: #6b7280 !important; }
+                        .priority-tier-needs_review { border-left-color: #eab308 !important; }
+                        .priority-tier-high_risk { border-left-color: #ef4444 !important; box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+
+                        .priority-badge {
+                            font-size: 11px;
+                            padding: 2px 8px;
+                            border-radius: 12px;
+                            font-weight: 600;
+                        }
+                        .priority-badge-quick_win { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+                        .priority-badge-recommended { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+                        .priority-badge-standard { background: #4b5563; color: white; }
+                        .priority-badge-needs_review { background: linear-gradient(135deg, #eab308, #ca8a04); color: #1a1a1a; }
+                        .priority-badge-high_risk { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; animation: pulse-red 2s infinite; }
+
+                        .priority-score {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 4px;
+                            background: rgba(255, 255, 255, 0.1);
+                            padding: 2px 8px;
+                            border-radius: 8px;
+                            font-size: 12px;
+                            font-weight: 600;
+                        }
+                        .priority-score-high { color: #22c55e; }
+                        .priority-score-medium { color: #eab308; }
+                        .priority-score-low { color: #ef4444; }
+
+                        .priority-flags {
+                            margin-top: 8px;
+                            padding: 8px;
+                            background: rgba(0, 0, 0, 0.3);
+                            border-radius: 6px;
+                            font-size: 11px;
+                        }
+                        .priority-flag { margin-bottom: 4px; color: #d1d5db; }
+                        .priority-flag:last-child { margin-bottom: 0; }
+
+                        @keyframes pulse-red {
+                            0%, 100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+                            50% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.6); }
+                        }
                     </style>
 
                     <!-- Session 602: Decision Learning Context Modal -->
@@ -57810,23 +57862,54 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         // Session 323: Boardroom Decisions - Agent Governance System
         // =========================================================================
 
+        // Session 604: Priority sort mode
+        let boardroomPriorityMode = false;
+
+        // Session 604: Toggle priority sort mode
+        function togglePrioritySort() {
+            boardroomPriorityMode = !boardroomPriorityMode;
+            const btn = document.getElementById('priority-sort-toggle');
+            if (boardroomPriorityMode) {
+                btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                btn.style.borderColor = '#22c55e';
+                btn.style.color = 'white';
+                btn.innerHTML = '📊 Priority ✓';
+            } else {
+                btn.style.background = '#2d2d2d';
+                btn.style.borderColor = '#6b7280';
+                btn.style.color = '#9ca3af';
+                btn.innerHTML = '📊 Priority';
+            }
+            loadBoardroomDecisions(document.getElementById('decision-type-filter').value);
+        }
+
         // Load boardroom decisions from API
         async function loadBoardroomDecisions(filter = '') {
             try {
-                let url = '/api/boardroom/decisions/?limit=20';
+                let url;
+                let isPrioritized = false;
 
-                // Handle special "canonical" filter vs decision_type filters
-                if (filter === 'canonical') {
-                    url += '&canonical_only=true';
-                } else if (filter) {
-                    url += `&decision_type=${filter}`;
+                // Session 604: Use prioritized endpoint when in priority mode (for draft/review only)
+                if (boardroomPriorityMode && filter !== 'canonical') {
+                    url = '/api/boardroom/decisions/prioritized/?limit=20&status=draft,review';
+                    isPrioritized = true;
+                } else {
+                    url = '/api/boardroom/decisions/?limit=20';
+
+                    // Handle special "canonical" filter vs decision_type filters
+                    if (filter === 'canonical') {
+                        url += '&canonical_only=true';
+                    } else if (filter) {
+                        url += `&decision_type=${filter}`;
+                    }
                 }
 
                 const response = await fetch(url);
                 const data = await response.json();
 
                 if (data.success) {
-                    updateBoardroomDecisions(data);
+                    // Session 604: Pass priority mode flag to update function
+                    updateBoardroomDecisions(data, isPrioritized);
                 }
             } catch (error) {
                 console.error('Error loading boardroom decisions:', error);
@@ -57834,11 +57917,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
         }
 
         // Update the decisions UI
-        function updateBoardroomDecisions(data) {
+        // Session 604: Added isPrioritized flag for priority mode
+        function updateBoardroomDecisions(data, isPrioritized = false) {
             const container = document.getElementById('boardroom-decisions-list');
             const canonicalBadge = document.getElementById('canonical-count-badge');
 
-            if (canonicalBadge) {
+            if (canonicalBadge && data.canonical_count !== undefined) {
                 canonicalBadge.textContent = `${data.canonical_count} Policies`;
             }
 
@@ -57871,11 +57955,30 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 'guideline': '📖'
             };
 
-            container.innerHTML = data.decisions.map(d => {
+            // Session 604: Build priority stats header if in priority mode
+            let priorityStatsHtml = '';
+            if (isPrioritized && data.stats) {
+                const s = data.stats;
+                priorityStatsHtml = `
+                    <div class="mb-3 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid #22c55e;">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span style="color: #22c55e; font-weight: 600;">📊 Priority Queue</span>
+                            <div class="d-flex gap-2 flex-wrap">
+                                ${s.quick_win_count > 0 ? `<span class="badge priority-badge priority-badge-quick_win">🚀 ${s.quick_win_count} Quick Wins</span>` : ''}
+                                ${s.high_risk_count > 0 ? `<span class="badge priority-badge priority-badge-high_risk">🚨 ${s.high_risk_count} High Risk</span>` : ''}
+                                <span class="badge" style="background: #374151;">Avg Score: ${s.avg_priority}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const decisionsHtml = data.decisions.map(d => {
                 const color = typeColors[d.decision_type] || '#6b7280';
                 const icon = typeIcons[d.decision_type] || '📄';
                 const timeAgo = formatTimeAgo(d.created_at);
-                const insights = d.key_insights.slice(0, 3).map(i =>
+                const keyInsights = d.key_insights || [];
+                const insights = keyInsights.slice(0, 3).map(i =>
                     `<li style="color: #d1d5db; font-size: 12px;">${i}</li>`
                 ).join('');
 
@@ -57922,32 +58025,76 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     ? '<span class="badge" style="background: #8b5cf6; font-size: 10px;">Hive Mind</span>'
                     : '<span class="badge" style="background: #374151; font-size: 10px;">Conversation</span>';
 
+                // Session 604: Priority information when in priority mode
+                let priorityBadgeHtml = '';
+                let priorityScoreHtml = '';
+                let priorityFlagsHtml = '';
+                let priorityTierClass = '';
+
+                if (isPrioritized && d.priority) {
+                    const p = d.priority;
+                    const l = d.learning || {};
+                    priorityTierClass = ` priority-tier-${p.tier}`;
+
+                    // Priority tier badge
+                    priorityBadgeHtml = `<span class="badge priority-badge priority-badge-${p.tier} ms-2">${p.tier_display}</span>`;
+
+                    // Priority score indicator
+                    const scoreClass = p.score >= 70 ? 'high' : (p.score >= 40 ? 'medium' : 'low');
+                    priorityScoreHtml = `
+                        <span class="priority-score priority-score-${scoreClass}">
+                            Score: ${p.score}
+                        </span>
+                    `;
+
+                    // Flags section
+                    if (d.flags && d.flags.length > 0) {
+                        const flagsHtml = d.flags.map(f => `<div class="priority-flag">${f}</div>`).join('');
+                        priorityFlagsHtml = `<div class="priority-flags">${flagsHtml}</div>`;
+                    }
+
+                    // Add recommendation if available
+                    if (d.recommendation) {
+                        priorityFlagsHtml += `<div class="mt-2"><small style="color: #22c55e;">${d.recommendation}</small></div>`;
+                    }
+                }
+
+                const topic = d.topic || 'Untitled';
+                const participants = d.participants || [];
+                const recommendedStance = d.recommended_stance || '';
+
                 return `
-                    <div class="decision-card decision-type-${d.decision_type}">
+                    <div class="decision-card decision-type-${d.decision_type}${priorityTierClass}">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
                                 <span style="font-size: 18px; margin-right: 8px;">${icon}</span>
-                                <strong style="color: ${color};">${d.topic.substring(0, 60)}${d.topic.length > 60 ? '...' : ''}</strong>
+                                <strong style="color: ${color};">${topic.substring(0, 60)}${topic.length > 60 ? '...' : ''}</strong>
                                 ${canonicalBadge}
+                                ${priorityBadgeHtml}
                             </div>
                             <div class="text-end">
-                                <small class="text-muted">${timeAgo}</small><br>
+                                ${priorityScoreHtml}
+                                <small class="text-muted d-block">${timeAgo}</small>
                                 ${sourceBadge}
                             </div>
                         </div>
                         <div class="mb-2">
-                            <span class="badge" style="background: ${color};">${d.decision_type_display}</span>
-                            <span class="badge bg-secondary ms-1">${d.impact_area_display}</span>
+                            <span class="badge" style="background: ${color};">${d.decision_type_display || d.decision_type}</span>
+                            <span class="badge bg-secondary ms-1">${d.impact_area_display || d.impact_area}</span>
                         </div>
-                        <p style="color: #e5e7eb; font-size: 14px; margin-bottom: 8px;">${d.recommended_stance}</p>
+                        <p style="color: #e5e7eb; font-size: 14px; margin-bottom: 8px;">${recommendedStance}</p>
                         <ul style="margin: 0; padding-left: 20px;">${insights}</ul>
+                        ${priorityFlagsHtml}
                         <div class="mt-2">
-                            <small class="text-muted">${sourceIcon} Participants: ${d.participants.join(', ')}</small>
+                            <small class="text-muted">${sourceIcon} Participants: ${participants.join(', ')}</small>
                         </div>
                         ${actionButtons}
                     </div>
                 `;
             }).join('');
+
+            // Session 604: Prepend priority stats if in priority mode
+            container.innerHTML = priorityStatsHtml + decisionsHtml;
         }
 
         // Promote a decision to canonical policy
