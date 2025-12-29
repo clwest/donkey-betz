@@ -3356,6 +3356,155 @@ def get_experiment_portfolio(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# =============================================================================
+# Session 598: Learning Loop UI API Endpoints
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_experiment_learnings(request):
+    """
+    Session 598: Get experiment learnings with filters.
+
+    GET /api/experiments/learnings/
+
+    Query params:
+    - outcome: Filter by outcome (success, failure, partial, inconclusive)
+    - decision_type: Filter by decision type
+    - limit: Number of results (default 20)
+    - offset: Pagination offset
+    """
+    try:
+        from core.models_pilot_readiness import ExperimentLearning
+
+        # Get query params
+        outcome = request.GET.get('outcome')
+        decision_type = request.GET.get('decision_type')
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+
+        # Build queryset
+        queryset = ExperimentLearning.objects.select_related(
+            'experiment',
+            'experiment__pilot',
+            'experiment__pilot__gate',
+            'experiment__pilot__gate__decision'
+        ).order_by('-extracted_at')
+
+        # Apply filters
+        if outcome:
+            queryset = queryset.filter(outcome=outcome)
+        if decision_type:
+            queryset = queryset.filter(decision_type=decision_type)
+
+        # Get total count before pagination
+        total_count = queryset.count()
+
+        # Apply pagination
+        learnings = queryset[offset:offset + limit]
+
+        # Build response
+        results = []
+        for learning in learnings:
+            experiment_name = learning.experiment.name if learning.experiment else "Unknown"
+            decision_topic = "Unknown"
+            if learning.experiment and learning.experiment.pilot and learning.experiment.pilot.gate:
+                if learning.experiment.pilot.gate.decision:
+                    decision_topic = learning.experiment.pilot.gate.decision.topic[:80]
+
+            results.append({
+                'id': str(learning.id),
+                'experiment_id': str(learning.experiment.id) if learning.experiment else None,
+                'experiment_name': experiment_name[:60],
+                'decision_topic': decision_topic,
+                'outcome': learning.outcome,
+                'decision_type': learning.decision_type,
+                'what_worked': learning.what_worked,
+                'what_failed': learning.what_failed,
+                'key_insight': learning.key_insight,
+                'future_recommendation': learning.future_recommendation,
+                'target_kpi': learning.target_kpi,
+                'actual_kpi': learning.actual_kpi,
+                'kpi_delta_percent': learning.kpi_delta_percent,
+                'confidence_score': learning.confidence_score,
+                'extracted_at': learning.extracted_at.isoformat() if learning.extracted_at else None,
+                'fed_to_thinking_agent': learning.fed_to_thinking_agent,
+            })
+
+        # Get distinct decision types for filter dropdown
+        decision_types = list(ExperimentLearning.objects.values_list(
+            'decision_type', flat=True
+        ).distinct().order_by('decision_type'))
+
+        return JsonResponse({
+            'success': True,
+            'total': total_count,
+            'limit': limit,
+            'offset': offset,
+            'results': results,
+            'filters': {
+                'outcomes': ['success', 'failure', 'partial', 'inconclusive'],
+                'decision_types': [dt for dt in decision_types if dt],
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting experiment learnings: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_success_patterns(request):
+    """
+    Session 598: Get success patterns by decision type.
+
+    GET /api/experiments/patterns/
+
+    Returns aggregated success patterns for visualization.
+    """
+    try:
+        from core.models_pilot_readiness import DecisionTypeSuccessPattern, ExperimentLearning
+
+        patterns = DecisionTypeSuccessPattern.objects.order_by('-total_experiments')
+
+        results = []
+        for pattern in patterns:
+            results.append({
+                'decision_type': pattern.decision_type,
+                'total_experiments': pattern.total_experiments,
+                'successful_experiments': pattern.successful_experiments,
+                'failed_experiments': pattern.failed_experiments,
+                'partial_success_experiments': pattern.partial_success_experiments,
+                'inconclusive_experiments': pattern.inconclusive_experiments,
+                'success_rate': round(pattern.success_rate, 1),
+                'avg_kpi_delta_percent': round(pattern.avg_kpi_delta_percent, 1) if pattern.avg_kpi_delta_percent else None,
+                'common_success_factors': pattern.common_success_factors[:3] if pattern.common_success_factors else [],
+                'common_failure_factors': pattern.common_failure_factors[:3] if pattern.common_failure_factors else [],
+                'top_insights': pattern.top_insights[:3] if pattern.top_insights else [],
+            })
+
+        # Overall stats
+        total_learnings = ExperimentLearning.objects.count()
+        successful = ExperimentLearning.objects.filter(outcome='success').count()
+        failed = ExperimentLearning.objects.filter(outcome='failure').count()
+        overall_success_rate = round((successful / total_learnings * 100), 1) if total_learnings > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'patterns': results,
+            'summary': {
+                'total_learnings': total_learnings,
+                'total_patterns': len(results),
+                'overall_success_rate': overall_success_rate,
+                'successful_count': successful,
+                'failed_count': failed,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting success patterns: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

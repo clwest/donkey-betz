@@ -1,52 +1,51 @@
-# Session 598 - Start Here
+# Session 599 - Start Here
 
-**Previous Session:** 597
+**Previous Session:** 598
 **Date:** December 29, 2025
-**Focus:** Learning Loop UI or AI-Enhanced Learning Extraction
+**Focus:** Learning Loop Enhancements or Kill Switch or AI-Enhanced Learning
 
 ---
 
-## Session 597 Accomplishments
+## Session 598 Accomplishments
 
-### Experiment Learning Loop (Complete)
+### Learning Loop UI Dashboard (Complete)
 
-Built a feedback system that connects experiment outcomes back to decision-making:
+Built a visual dashboard for the experiment learning loop:
 
 | Component | Description |
 |-----------|-------------|
-| **ExperimentLearning Model** | Captures structured learnings from completed experiments |
-| **DecisionTypeSuccessPattern Model** | Aggregates success patterns by decision type |
-| **Auto-Learning Extraction** | Learning created automatically when experiment completes |
-| **ThinkingAgent Integration** | Learnings fed into ThinkingAgent context |
+| **GET /api/experiments/learnings/** | Filterable API for experiment learnings |
+| **GET /api/experiments/patterns/** | Success patterns by decision type |
+| **Learning Loop Dashboard** | UI section in Intelligence Command Center |
+| **Success Pattern Visualization** | Progress bars + cards per decision type |
+| **Filters** | Outcome and decision type dropdowns |
 
-### The Learning Loop Flow
+### The Complete Learning Loop
 
 ```
-Boardroom Decision → Pilot Gate → Pilot Started → Experiment
+Session 590: Pilot Readiness Gate
         ↓
-Experiment Completed → Learning Extracted → Pattern Updated
+Session 595: Pilot Execution Dashboard
         ↓
-ThinkingAgent Reads Learnings → Future Decisions Improved
+Session 596: Experiment Tracking Registry
+        ↓
+Session 597: ExperimentLearning + Pattern Models
+        ↓
+Session 598: Learning Loop UI Dashboard ← YOU ARE HERE
+        ↓
+ThinkingAgent Context → Better Future Decisions
 ```
-
-### Decision Type Classification
-
-System auto-classifies decisions:
-- `content_strategy`: content, video, post, blog topics
-- `market_strategy`: market, price, competitor topics
-- `tech_adoption`: tech, platform, tool, api topics
-- `resource_allocation`: team, hire, resource topics
-- `general`: all other topics
 
 ---
 
-## Session 598 Options
+## Session 599 Options
 
-### Option A: Learning Loop UI
-- Dashboard to view experiment learnings
-- Success pattern visualization
-- Decision type performance charts
-- Filter by outcome, date, decision type
+### Option A: Kill Switch for Experiments
+- Add "Stop Experiment" button to running experiments
+- Required reason input before stopping
+- Auto-fails the experiment with reason
+- Discord notification of early termination
+- Learning created even for stopped experiments
 
 ### Option B: AI-Enhanced Learning Extraction
 - Use LLM to extract richer learnings from experiment outcomes
@@ -54,11 +53,11 @@ System auto-classifies decisions:
 - Smart recommendations based on similar past experiments
 - Confidence scoring improvements
 
-### Option C: Kill Switch Integration
-- Add "Stop Experiment" button to dashboard
-- Reason input required
-- Auto-fails the experiment
-- Discord notification of early termination
+### Option C: Learning Loop Enhancements
+- Learning comparison view (A vs B experiments)
+- Export learnings to CSV/PDF
+- Learning quality scoring
+- Pattern trend analysis over time
 
 ---
 
@@ -71,11 +70,11 @@ System auto-classifies decisions:
 | **PA Tools** | 77 |
 | **Decisions (Draft)** | 645 |
 | **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | 0 (tables recreated) |
-| **Running Pilots** | 0 (tables recreated) |
-| **Experiments** | 0 (waiting for pilots) |
-| **ExperimentLearnings** | 0 (waiting for completed experiments) |
-| **DecisionTypeSuccessPatterns** | 0 (auto-created on first learning) |
+| **Pilot Readiness Gates** | 77 |
+| **Pilots** | 1 |
+| **Experiments** | 1 |
+| **ExperimentLearnings** | 1 |
+| **DecisionTypeSuccessPatterns** | 1 |
 | **Celery Tasks** | 228 |
 
 ---
@@ -86,25 +85,17 @@ System auto-classifies decisions:
 # Start services
 make start && make celery
 
-# Verify learning loop models
+# Verify learning loop data
 .venv/bin/python manage.py shell -c "
 from core.models_pilot_readiness import ExperimentLearning, DecisionTypeSuccessPattern
 print(f'ExperimentLearning: {ExperimentLearning.objects.count()}')
 print(f'DecisionTypeSuccessPattern: {DecisionTypeSuccessPattern.objects.count()}')
 "
 
-# Test complete experiment with learning
-curl -X POST http://localhost:8000/api/experiments/<uuid>/complete/ \
-  -H "Content-Type: application/json" \
-  -d '{"status": "success", "learnings": "Test insight", "what_worked": "This worked", "recommendation": "Do this next time"}'
-
-# To populate the learning loop:
-# 1. Open AI Studio: http://localhost:8000/ai-studio/
-# 2. Go to Intelligence Command Center tab
-# 3. Create Pilot Readiness Gate for a decision
-# 4. Complete checklist and start pilot
-# 5. Run the pilot and complete the experiment
-# 6. Learning will be auto-created and fed to ThinkingAgent
+# View Learning Loop Dashboard
+# 1. Open http://localhost:8000/ai-studio/
+# 2. Navigate to Intelligence Command Center tab
+# 3. Scroll to Learning Loop Dashboard section
 ```
 
 ---
@@ -113,12 +104,11 @@ curl -X POST http://localhost:8000/api/experiments/<uuid>/complete/ \
 
 | File | Purpose |
 |------|---------|
-| `core/models_pilot_readiness.py` | Gate, Checklist, Execution, Experiment, Learning, Pattern models |
-| `core/views_agent_learning.py:3192-3258` | complete_experiment() with auto-learning |
-| `core/agents/thinking_agent.py:551-601` | Experiment learnings gathering |
-| `core/agents/thinking_agent.py:293-322` | Learnings formatting for context |
-| `docs/handoffs/SESSION_597_EXPERIMENT_LEARNING_LOOP.md` | Session 597 handoff |
+| `core/views_agent_learning.py:3364-3505` | Learning Loop API endpoints |
+| `ai_core/templates/ai_image_studio.html:7515-7597` | Learning Loop Dashboard HTML |
+| `ai_core/templates/ai_image_studio.html:58882-59059` | Learning Loop Dashboard JS |
+| `docs/handoffs/SESSION_598_LEARNING_LOOP_UI.md` | Session 598 handoff |
 
 ---
 
-**Session 597: Experiment Learning Loop - COMPLETE**
+**Session 598: Learning Loop UI Dashboard - COMPLETE**
