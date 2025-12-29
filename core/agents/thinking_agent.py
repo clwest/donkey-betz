@@ -291,11 +291,23 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append("\n")
 
         # Session 597: Add experiment learnings context
+        # Session 600: Enhanced with outcome classification, predictions, and weighted insights
         if 'experiment_learnings' in context and context['experiment_learnings']:
             learnings = context['experiment_learnings']
             prompt_parts.append("### Experiment Learnings (Past Outcomes)\n")
             prompt_parts.append(f"- Total Learnings: {learnings.get('total', 0)}\n")
             prompt_parts.append(f"- Success Rate: {learnings.get('overall_success_rate', 0):.1f}%\n\n")
+
+            # Session 600: Add outcome distribution (PASS/LEARN/FAIL)
+            enhanced = learnings.get('enhanced', {})
+            if enhanced.get('outcome_distribution'):
+                dist = enhanced['outcome_distribution']
+                prompt_parts.append("**Outcome Classification Distribution:**\n")
+                for classification, data in dist.get('by_classification', {}).items():
+                    prompt_parts.append(f"- {classification.upper()}: {data['count']} ({data['percentage']}%)\n")
+                if dist.get('trend', {}).get('improving'):
+                    prompt_parts.append("📈 Trend: IMPROVING (more PASS outcomes recently)\n")
+                prompt_parts.append("\n")
 
             if learnings.get('recent_learnings'):
                 prompt_parts.append("**Recent Learnings from Completed Experiments:**\n")
@@ -314,11 +326,34 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                     if pattern.get('top_insight'):
                         prompt_parts.append(f"  - Key insight: {pattern['top_insight'][:150]}\n")
 
+            # Session 600: Add predictive success scores
+            if enhanced.get('predictive_scores'):
+                prompt_parts.append("\n**Predictive Success Scores (Use for new decisions):**\n")
+                for dec_type, pred in list(enhanced['predictive_scores'].items())[:5]:
+                    prompt_parts.append(f"- {dec_type}: {pred['predicted_success_rate']}% predicted success\n")
+                    prompt_parts.append(f"  - {pred['recommendation'][:100]}\n")
+
+            # Session 600: Add actionable recommendations
+            if enhanced.get('actionable_recommendations'):
+                prompt_parts.append("\n**System Recommendations Based on Learnings:**\n")
+                for rec in enhanced['actionable_recommendations'][:3]:
+                    priority_emoji = '🔴' if rec['priority'] == 'high' else '🟡' if rec['priority'] == 'medium' else '🟢'
+                    prompt_parts.append(f"{priority_emoji} [{rec['priority'].upper()}] {rec['recommendation']}\n")
+                    prompt_parts.append(f"  → Action: {rec['action']}\n")
+
+            # Session 600: Add learning velocity
+            if enhanced.get('learning_velocity'):
+                vel = enhanced['learning_velocity']
+                prompt_parts.append(f"\n**Learning Velocity:** {vel['learnings_this_week']} this week, ")
+                prompt_parts.append(f"{vel['utilization_rate']}% fed to ThinkingAgent\n")
+
             prompt_parts.append("\n**IMPORTANT - Using Experiment Learnings:**\n")
             prompt_parts.append("Use these learnings to improve future decisions:\n")
-            prompt_parts.append("- Decision types with low success rates need different approaches\n")
-            prompt_parts.append("- Apply successful tactics from past experiments to new opportunities\n")
-            prompt_parts.append("- Avoid known failure patterns when making new decisions\n")
+            prompt_parts.append("- PASS outcomes show proven approaches - replicate them\n")
+            prompt_parts.append("- FAIL outcomes are highest priority - AVOID these patterns\n")
+            prompt_parts.append("- LEARN outcomes provide insights even without success\n")
+            prompt_parts.append("- Use predictive scores to assess new decision risks\n")
+            prompt_parts.append("- Act on system recommendations to improve overall performance\n")
             prompt_parts.append("\n")
 
         # Add the task
@@ -549,10 +584,12 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             logger.warning(f"Error getting previous thoughts: {e}")
 
         # Session 597: Gather experiment learnings for feedback loop
+        # Session 600: Enhanced with outcome classification, weighted insights, and predictions
         try:
             from core.models_pilot_readiness import ExperimentLearning, DecisionTypeSuccessPattern
+            from core.services.experiment_learning_enhancer import get_enhanced_learnings_for_thinking_agent
 
-            # Get recent learnings
+            # Get recent learnings (basic)
             recent_learnings = []
             for learning in ExperimentLearning.objects.order_by('-extracted_at')[:10]:
                 recent_learnings.append({
@@ -588,6 +625,14 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 'recent_learnings': recent_learnings,
                 'success_patterns': success_patterns,
             }
+
+            # Session 600: Add enhanced learning analytics
+            try:
+                enhanced = get_enhanced_learnings_for_thinking_agent()
+                context['experiment_learnings']['enhanced'] = enhanced
+                logger.info("[Session 600] Added enhanced learning analytics to ThinkingAgent context")
+            except Exception as enhanced_error:
+                logger.warning(f"[Session 600] Enhanced learnings failed: {enhanced_error}")
 
             # Mark learnings as fed to ThinkingAgent
             if recent_learnings:
