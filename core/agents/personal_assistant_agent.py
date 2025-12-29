@@ -3405,6 +3405,106 @@ Query types:
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 24: Hive Mind & Time Capsules Tools (Session 587) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_hive_mind",
+                "description": """Manage Hive Mind sessions - multi-agent collective intelligence.
+
+Actions:
+- start: Start new Hive Mind session with a question
+- status: Get session status and contributions
+- list: List recent Hive Mind sessions
+- agents: Get available agents for Hive Mind
+- preview: Preview which agents would be selected for a question""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["start", "status", "list", "agents", "preview"],
+                            "description": "Action to perform"
+                        },
+                        "question": {
+                            "type": "string",
+                            "description": "Question for the Hive Mind (for start/preview)"
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Additional context (for start)"
+                        },
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session UUID (for status)"
+                        },
+                        "max_agents": {
+                            "type": "integer",
+                            "description": "Maximum agents to involve (default: 8, max: 12)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of sessions to return (for list)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_time_capsules",
+                "description": """Manage agent time capsules - messages from agents to their future selves.
+
+Actions:
+- overview: Get time capsule statistics and recent capsules
+- list_agent: List capsules for a specific agent
+- create: Create new time capsule for an agent
+- detail: Get time capsule details
+- reveal: Reveal a capsule that's ready to open
+- react: Add reaction to a revealed capsule
+- ready: Get capsules ready to reveal
+- generate: Auto-generate capsules for agents""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["overview", "list_agent", "create", "detail", "reveal", "react", "ready", "generate"],
+                            "description": "Action to perform"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent UUID (for list_agent/create)"
+                        },
+                        "capsule_id": {
+                            "type": "string",
+                            "description": "Capsule UUID (for detail/reveal/react)"
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "Time capsule message (for create)"
+                        },
+                        "reveal_days": {
+                            "type": "integer",
+                            "description": "Days until capsule can be revealed (for create, default: 7)"
+                        },
+                        "capsule_type": {
+                            "type": "string",
+                            "enum": ["prediction", "reflection", "goal", "milestone", "wisdom", "confession"],
+                            "description": "Type of time capsule (for create)"
+                        },
+                        "reaction": {
+                            "type": "string",
+                            "enum": ["nostalgic", "proud", "surprised", "amused", "inspired", "reflective"],
+                            "description": "Reaction type (for react)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -4748,6 +4848,13 @@ Query types:
 
         if tool_name == "query_agent_relationships":
             return self._query_agent_relationships(arguments)
+
+        # ===== Phase 24: Hive Mind & Time Capsules Tools (Session 587) =====
+        if tool_name == "manage_hive_mind":
+            return self._manage_hive_mind(arguments)
+
+        if tool_name == "manage_time_capsules":
+            return self._manage_time_capsules(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -12809,4 +12916,371 @@ Query types:
 
         except Exception as e:
             logger.error(f"Error querying agent relationships: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 24: Hive Mind & Time Capsules (Session 587) =====
+
+    def _manage_hive_mind(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 587: Manage Hive Mind sessions - multi-agent collective intelligence.
+        """
+        action = arguments.get('action', 'list')
+        base_url = 'http://localhost:8000/api/hive-mind'
+
+        try:
+            if action == 'start':
+                question = arguments.get('question')
+                if not question:
+                    return {'success': False, 'error': 'question required to start Hive Mind session'}
+
+                context = arguments.get('context', '')
+                max_agents = min(arguments.get('max_agents', 8), 12)
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/start/',
+                        json={
+                            'question': question,
+                            'context': context,
+                            'max_agents': max_agents
+                        },
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'session_id': data.get('session_id'),
+                            'status': data.get('status'),
+                            'participants': data.get('participants', []),
+                            'participant_count': data.get('participant_count', 0),
+                            'message': data.get('message', 'Hive Mind session started')
+                        }
+                    return {'success': False, 'error': response.text}
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'status':
+                session_id = arguments.get('session_id')
+                if not session_id:
+                    return {'success': False, 'error': 'session_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/session/{session_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                    return {'success': False, 'error': 'Session not found'}
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'list':
+                limit = arguments.get('limit', 10)
+                try:
+                    response = requests.get(f'{base_url}/sessions/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct DB query
+                from core.models import HiveMindSession
+                sessions = HiveMindSession.objects.order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'sessions': [
+                        {
+                            'id': str(s.id),
+                            'question': s.question[:100] if s.question else '',
+                            'status': s.status,
+                            'participant_count': len(s.participant_ids) if s.participant_ids else 0,
+                            'created_at': s.created_at.isoformat() if s.created_at else None
+                        }
+                        for s in sessions
+                    ],
+                    'total': sessions.count()
+                }
+
+            elif action == 'agents':
+                try:
+                    response = requests.get(f'{base_url}/agents/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct DB query
+                from core.models_unified_system import Agent
+                agents = Agent.objects.filter(is_active=True).order_by('name')[:20]
+                return {
+                    'success': True,
+                    'agents': [
+                        {
+                            'id': str(a.id),
+                            'name': a.name,
+                            'specialization': a.specialization or ''
+                        }
+                        for a in agents
+                    ]
+                }
+
+            elif action == 'preview':
+                question = arguments.get('question')
+                if not question:
+                    return {'success': False, 'error': 'question required for preview'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/preview/',
+                        json={'question': question, 'max_agents': arguments.get('max_agents', 8)},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Preview not available'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing Hive Mind: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_time_capsules(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 587: Manage agent time capsules - messages from agents to their future selves.
+        """
+        action = arguments.get('action', 'overview')
+        base_url = 'http://localhost:8000/api/time-capsules'
+
+        try:
+            if action == 'overview':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct DB query
+                from core.models_unified_system import TimeCapsule
+                from django.utils import timezone
+                total = TimeCapsule.objects.count()
+                revealed = TimeCapsule.objects.filter(status='revealed').count()
+                ready = TimeCapsule.objects.filter(
+                    status='sealed',
+                    reveal_at__lte=timezone.now()
+                ).count()
+                recent = TimeCapsule.objects.order_by('-created_at')[:5]
+                return {
+                    'success': True,
+                    'stats': {
+                        'total': total,
+                        'revealed': revealed,
+                        'sealed': total - revealed,
+                        'ready_to_reveal': ready
+                    },
+                    'recent': [
+                        {
+                            'id': str(c.id),
+                            'title': c.title or '',
+                            'trigger': c.trigger or '',
+                            'status': c.status,
+                            'reveal_at': c.reveal_at.isoformat() if c.reveal_at else None,
+                            'created_at': c.created_at.isoformat()
+                        }
+                        for c in recent
+                    ]
+                }
+
+            elif action == 'list_agent':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.get(f'{base_url}/agent/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import TimeCapsule
+                capsules = TimeCapsule.objects.filter(agent_id=agent_id).order_by('-created_at')[:10]
+                return {
+                    'success': True,
+                    'capsules': [
+                        {
+                            'id': str(c.id),
+                            'title': c.title or '',
+                            'trigger': c.trigger or '',
+                            'status': c.status,
+                            'reveal_at': c.reveal_at.isoformat() if c.reveal_at else None
+                        }
+                        for c in capsules
+                    ]
+                }
+
+            elif action == 'create':
+                agent_id = arguments.get('agent_id')
+                message = arguments.get('message')
+                if not agent_id or not message:
+                    return {'success': False, 'error': 'agent_id and message required'}
+
+                capsule_type = arguments.get('capsule_type', 'reflection')
+                reveal_days = arguments.get('reveal_days', 7)
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/agent/{agent_id}/',
+                        json={
+                            'message': message,
+                            'capsule_type': capsule_type,
+                            'reveal_days': reveal_days
+                        },
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct creation
+                from core.models_unified_system import TimeCapsule, Agent
+                from django.utils import timezone
+                from datetime import timedelta
+                try:
+                    agent = Agent.objects.get(id=agent_id)
+                    capsule = TimeCapsule.objects.create(
+                        agent=agent,
+                        title='Time Capsule Message',
+                        message=message,
+                        trigger=capsule_type,  # Uses 'trigger' field
+                        status='sealed',
+                        reveal_at=timezone.now() + timedelta(days=reveal_days)
+                    )
+                    return {
+                        'success': True,
+                        'capsule_id': str(capsule.id),
+                        'reveal_at': capsule.reveal_at.isoformat(),
+                        'message': f'Time capsule created for {agent.name}'
+                    }
+                except Agent.DoesNotExist:
+                    return {'success': False, 'error': 'Agent not found'}
+
+            elif action == 'detail':
+                capsule_id = arguments.get('capsule_id')
+                if not capsule_id:
+                    return {'success': False, 'error': 'capsule_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{capsule_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import TimeCapsule
+                try:
+                    capsule = TimeCapsule.objects.select_related('agent').get(id=capsule_id)
+                    is_revealed = capsule.status == 'revealed'
+                    return {
+                        'success': True,
+                        'capsule': {
+                            'id': str(capsule.id),
+                            'title': capsule.title or '',
+                            'agent_name': capsule.agent.name if capsule.agent else 'Unknown',
+                            'trigger': capsule.trigger or '',
+                            'message': capsule.message if is_revealed else '[SEALED]',
+                            'status': capsule.status,
+                            'reveal_at': capsule.reveal_at.isoformat() if capsule.reveal_at else None,
+                            'created_at': capsule.created_at.isoformat()
+                        }
+                    }
+                except TimeCapsule.DoesNotExist:
+                    return {'success': False, 'error': 'Capsule not found'}
+
+            elif action == 'reveal':
+                capsule_id = arguments.get('capsule_id')
+                if not capsule_id:
+                    return {'success': False, 'error': 'capsule_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{capsule_id}/reveal/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import TimeCapsule
+                from django.utils import timezone
+                try:
+                    capsule = TimeCapsule.objects.get(id=capsule_id)
+                    if capsule.status == 'revealed':
+                        return {'success': False, 'error': 'Capsule already revealed'}
+                    if capsule.reveal_at and capsule.reveal_at > timezone.now():
+                        return {'success': False, 'error': f'Capsule not ready until {capsule.reveal_at}'}
+                    capsule.status = 'revealed'
+                    capsule.revealed_at = timezone.now()
+                    capsule.save()
+                    return {
+                        'success': True,
+                        'message': capsule.message,
+                        'revealed_at': capsule.revealed_at.isoformat()
+                    }
+                except TimeCapsule.DoesNotExist:
+                    return {'success': False, 'error': 'Capsule not found'}
+
+            elif action == 'react':
+                capsule_id = arguments.get('capsule_id')
+                reaction = arguments.get('reaction')
+                if not capsule_id or not reaction:
+                    return {'success': False, 'error': 'capsule_id and reaction required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{capsule_id}/react/',
+                        json={'reaction': reaction},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Failed to add reaction'}
+
+            elif action == 'ready':
+                try:
+                    response = requests.get(f'{base_url}/ready-to-reveal/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import TimeCapsule
+                from django.utils import timezone
+                capsules = TimeCapsule.objects.filter(
+                    status='sealed',
+                    reveal_at__lte=timezone.now()
+                ).select_related('agent').order_by('reveal_at')[:10]
+                return {
+                    'success': True,
+                    'ready_capsules': [
+                        {
+                            'id': str(c.id),
+                            'title': c.title or '',
+                            'agent_name': c.agent.name if c.agent else 'Unknown',
+                            'trigger': c.trigger or '',
+                            'reveal_at': c.reveal_at.isoformat() if c.reveal_at else None
+                        }
+                        for c in capsules
+                    ],
+                    'count': capsules.count()
+                }
+
+            elif action == 'generate':
+                try:
+                    response = requests.post(f'{base_url}/generate/', timeout=30)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Auto-generation not available'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing time capsules: {e}")
             return {'success': False, 'error': str(e)}
