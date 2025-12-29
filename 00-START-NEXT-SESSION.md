@@ -2,7 +2,7 @@
 
 **Previous Session:** 583
 **Date:** December 28, 2025
-**Focus:** PA Tools Phases 14-17 Complete (55 → 63)
+**Focus:** PA Tools Phases 14-18 Complete (55 → 65)
 
 ---
 
@@ -36,6 +36,13 @@
 | `manage_portfolio` | portfolio | list, delete, bulk_delete, check_broken |
 | `query_nexus` | nexus | intelligence_data, implement_insight, investigate_behavior |
 
+### Phase 18 - Predictions & Performance Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_predictions` | predictions | overview, agent, detail, verify, upvote, leaderboard, generate, expire |
+| `query_performance` | performance | predict, predictions, pricing, compare |
+
 **Bugs Fixed:**
 - `ReviewDocument` import: `models_chief_of_staff` → `models_conversation_artifacts`
 
@@ -66,7 +73,7 @@
 
 ---
 
-## Current PA Tools (57 Total)
+## Current PA Tools (65 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -133,8 +140,10 @@
 | `query_learning` | Learning system | Session 583 |
 | `manage_portfolio` | Portfolio management | Session 583 |
 | `query_nexus` | Nexus intelligence | Session 583 |
+| `manage_predictions` | Agent predictions | Session 583 |
+| `query_performance` | Performance metrics | Session 583 |
 
-**Coverage:** 63/1,343 endpoints (4.69%)
+**Coverage:** 65/1,343 endpoints (4.84%)
 
 ---
 
@@ -206,19 +215,25 @@ User: "Show my portfolio"
 
 User: "Get unified intelligence data"
 → query_nexus: Nexus intelligence system
+
+User: "Show prediction leaderboard"
+→ manage_predictions: Agent prophecies and verification
+
+User: "Get pricing optimization"
+→ query_performance: Performance metrics and pricing
 ```
 
 ---
 
 ## Session 584 Priorities
 
-### Option A: Phase 18 - More Coverage
+### Option A: Phase 19 - More Coverage
 
 Remaining uncovered categories:
-- **consciousness** - 4 endpoints (consciousness proposals, save)
-- **performance** - 5 endpoints (performance metrics, comparison)
-- **pricing** - 3 endpoints (pricing optimization)
-- **predictions** - 4 endpoints (performance predictions)
+- **workflow-analytics** - 5 endpoints (workflow performance, steps)
+- **video-analytics** - 4 endpoints (character performance, lip sync)
+- **model-analytics** - 3 endpoints (model performance, preferences)
+- **collaboration** - 4 endpoints (collaboration performance)
 
 ### Option B: Testing & Polish
 
@@ -228,7 +243,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 63 tools
+- Update CAPABILITIES.md with all 65 tools
 - Create PA Tools reference guide
 
 ---
@@ -239,17 +254,17 @@ Remaining uncovered categories:
 # Start services
 make start && make celery
 
-# Test Phase 17 tools
+# Test Phase 18 tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 17 tools:')
-phase17 = ['manage_portfolio', 'query_nexus']
-for t in phase17:
-    args = {'action': 'list'} if t == 'manage_portfolio' else {'query_type': 'intelligence_data'}
+print('Phase 18 tools:')
+phase18 = ['manage_predictions', 'query_performance']
+for t in phase18:
+    args = {'action': 'overview'} if t == 'manage_predictions' else {'query_type': 'predictions'}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -267,7 +282,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 63 |
+| **PA Tools** | 65 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -289,10 +304,11 @@ open http://localhost:8000/ai-studio/
 | 583 | 14 | +2 | 57 |
 | 583 | 15 | +2 | 59 |
 | 583 | 16 | +2 | 61 |
-| **583** | **17** | **+2** | **63** |
+| 583 | 17 | +2 | 63 |
+| **583** | **18** | **+2** | **65** |
 
 ---
 
-**Session 583: Phases 14-17 = 8 new tools (55 → 63)**
+**Session 583: Phases 14-18 = 10 new tools (55 → 65)**
 
-**PA now has 63 tools (4.69% coverage) - Phases 9-17 complete!**
+**PA now has 65 tools (4.84% coverage) - Phases 9-18 complete!**

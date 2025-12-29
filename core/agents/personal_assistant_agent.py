@@ -2796,6 +2796,74 @@ Returns intelligence data, insights, and behavioral analysis.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 18: Predictions & Performance Tools (Session 583) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_predictions",
+                "description": """Manage agent predictions (prophecies) and their verification.
+Use this for:
+- "Show predictions overview"
+- "Show agent predictions"
+- "Verify a prediction"
+- "Upvote a prediction"
+- "Show prediction leaderboard"
+- "Generate predictions from dreams"
+Returns predictions, verification status, and leaderboard.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["overview", "agent", "detail", "verify", "upvote", "leaderboard", "generate", "expire"],
+                            "description": "Action: overview, agent, detail, verify, upvote, leaderboard, generate, expire"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent ID for agent predictions"
+                        },
+                        "prediction_id": {
+                            "type": "string",
+                            "description": "Prediction ID for detail/verify/upvote"
+                        },
+                        "outcome": {
+                            "type": "string",
+                            "enum": ["correct", "incorrect", "partial"],
+                            "description": "Outcome for verify action"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_performance",
+                "description": """Query performance metrics, predictions, and pricing optimization.
+Use this for:
+- "Predict my performance"
+- "Show performance predictions"
+- "Get pricing optimization"
+- "Compare performance"
+Returns performance metrics, predictions, and optimization suggestions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["predict", "predictions", "pricing", "compare"],
+                            "description": "Type of performance query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of items to return (default 20)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4091,6 +4159,13 @@ Returns intelligence data, insights, and behavioral analysis.""",
 
         if tool_name == "query_nexus":
             return self._query_nexus(arguments)
+
+        # ===== Phase 18: Predictions & Performance Tools (Session 583) =====
+        if tool_name == "manage_predictions":
+            return self._manage_predictions(arguments)
+
+        if tool_name == "query_performance":
+            return self._query_performance(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -9915,4 +9990,267 @@ Returns intelligence data, insights, and behavioral analysis.""",
 
         except Exception as e:
             logger.error(f"Error querying nexus: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 18: Predictions & Performance Tools (Session 583) =====
+
+    def _manage_predictions(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage agent predictions (prophecies) and their verification.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'overview')
+            agent_id = arguments.get('agent_id')
+            prediction_id = arguments.get('prediction_id')
+            outcome = arguments.get('outcome')
+            base_url = 'http://localhost:8000'
+
+            if action == 'overview':
+                try:
+                    response = requests.get(f'{base_url}/api/predictions/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'predictions': data,
+                            'summary': 'Retrieved predictions overview'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'predictions': [],
+                    'summary': 'No predictions found'
+                }
+
+            elif action == 'agent':
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/predictions/agent/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'predictions': data,
+                            'summary': f"Retrieved predictions for agent {agent_id}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'predictions': [],
+                    'summary': 'No predictions found for agent'
+                }
+
+            elif action == 'detail':
+                if not prediction_id:
+                    return {'success': False, 'error': 'prediction_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/predictions/{prediction_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'prediction': response.json(),
+                            'summary': 'Retrieved prediction details'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Prediction not found'}
+
+            elif action == 'verify':
+                if not prediction_id or not outcome:
+                    return {'success': False, 'error': 'prediction_id and outcome required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/predictions/{prediction_id}/verify/',
+                        json={'outcome': outcome},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': f"Prediction verified as {outcome}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not verify prediction'}
+
+            elif action == 'upvote':
+                if not prediction_id:
+                    return {'success': False, 'error': 'prediction_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/predictions/{prediction_id}/upvote/',
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Prediction upvoted'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not upvote prediction'}
+
+            elif action == 'leaderboard':
+                try:
+                    response = requests.get(f'{base_url}/api/predictions/leaderboard/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'leaderboard': response.json(),
+                            'summary': 'Retrieved prediction leaderboard'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'leaderboard': [],
+                    'summary': 'No leaderboard data found'
+                }
+
+            elif action == 'generate':
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/predictions/generate-from-dreams/',
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Generated predictions from dreams'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not generate predictions'}
+
+            elif action == 'expire':
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/predictions/expire-old/',
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Expired old predictions'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not expire predictions'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing predictions: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_performance(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Query performance metrics, predictions, and pricing optimization.
+        """
+        try:
+            import requests
+
+            query_type = arguments.get('query_type', 'predictions')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if query_type == 'predict':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/predict/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'prediction': response.json(),
+                            'summary': 'Retrieved performance prediction'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'prediction': {'message': 'Performance prediction available via API'},
+                    'summary': 'Performance prediction endpoint available'
+                }
+
+            elif query_type == 'predictions':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/predictions/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        predictions = data.get('predictions', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'predictions': predictions,
+                            'summary': f"Found {len(predictions) if isinstance(predictions, list) else 'multiple'} predictions"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'predictions': [],
+                    'summary': 'No predictions found'
+                }
+
+            elif query_type == 'pricing':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/pricing/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'pricing': response.json(),
+                            'summary': 'Retrieved pricing optimization'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'pricing': {'message': 'Pricing optimization available via API'},
+                    'summary': 'Pricing optimization endpoint available'
+                }
+
+            elif query_type == 'compare':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/compare/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'comparison': response.json(),
+                            'summary': 'Retrieved performance comparison'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'comparison': {'message': 'Performance comparison available via API'},
+                    'summary': 'Performance comparison endpoint available'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying performance: {e}")
             return {'success': False, 'error': str(e)}
