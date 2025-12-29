@@ -1,8 +1,22 @@
-# Session 583 - Start Here
+# Session 584 - Start Here
 
-**Previous Session:** 582
+**Previous Session:** 583
 **Date:** December 28, 2025
-**Focus:** PA Tools Phases 11-13 Complete (49 → 55)
+**Focus:** PA Tools Phase 14 Complete (55 → 57)
+
+---
+
+## Session 583 Accomplishments
+
+### Phase 14 - Artifact & Review Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_artifacts` | artifacts | List, get, decide (approve/reject), execute, executions, execution_status |
+| `manage_reviews` | reviews | List, get, ask_pro, ask_con, decide, generate, trigger_auto, stats |
+
+**Bug Fixed:**
+- `ReviewDocument` import: `models_chief_of_staff` → `models_conversation_artifacts`
 
 ---
 
@@ -29,73 +43,9 @@
 | `query_system_health` | monitoring | Health for agents, spiders, ML, content studio, etc. |
 | `query_activity_metrics` | monitoring | Activity stream, ROI metrics, provenance chain |
 
-### Session 582 Commits
-
-```
-e5c68c8 feat(Session 582): PA Phase 13 - 2 Monitoring Tools (53 → 55)
-be13fbe docs(Session 582): Update session doc - Phases 11 & 12 complete (53 tools)
-067fdf9 feat(Session 582): PA Phase 12 - 2 Export/Scheduler Tools (51 → 53)
-72dc0c9 docs(Session 582): Update session doc - Phase 11 complete (51 tools)
-9db54b1 feat(Session 582): PA Phase 11 - 2 Notification Tools (49 → 51)
-9931a9f docs(Session 581): Add dream cleanup task to session doc
-```
-
 ---
 
-## Session 581 Accomplishments
-
-### Phase 9 + Phase 10 = 11 New Tools! (38 → 49)
-
-#### Phase 9 - Projects/Legal/Training (5 tools)
-
-| Tool | Category | Purpose |
-|------|----------|---------|
-| `manage_project` | projects | Project CRUD, PDF export, intelligence |
-| `query_legal` | legal | Cases, case files, litigation context |
-| `manage_agent_training` | training | Agent training data and capabilities |
-| `manage_workflow_templates` | workflows | Workflow template management |
-| `generate_image` | creation | Image generation via ImageAgent |
-
-#### Phase 10 - Betting/Sports (6 tools)
-
-| Tool | Category | Purpose |
-|------|----------|---------|
-| `query_live_odds` | betting | Live odds from 40+ sportsbooks |
-| `query_games` | sports | Today's games, trending, analytics |
-| `query_line_movements` | betting | Line movement, sharp money tracking |
-| `query_futures` | betting | Championship/MVP/conference futures |
-| `query_player_props` | betting | Player prop bets by event/player |
-| `query_betting_recommendations` | betting | AI-generated betting picks |
-
-### Automatic Dream Cleanup Task
-
-Added `cleanup_stale_dreams` Celery task to prevent stale dream backlog:
-
-| Setting | Value |
-|---------|-------|
-| **Schedule** | Daily at 6 AM |
-| **Threshold** | 72 hours |
-| **Action** | Archives dreams promoted to Boardroom but never decided |
-
-**Background:** Found 56 dreams in pending state, oldest 560 hours old. Manually archived 13 stale dreams, then added automatic cleanup to prevent future accumulation.
-
-### Session 581 Commits
-
-```
-bf8cfb7 feat(Session 581): Add automatic dream cleanup task
-6baabf1 feat(Session 581): PA Phase 10 - 6 Betting/Sports Tools (43 → 49)
-3a6bbae docs(Session 581): Update session doc - Phase 9 complete (43 tools)
-fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
-```
-
-### Bugs Fixed
-- `PartnershipProject` import: `models_unified_system` → `models_partnership`
-- `CaseProfile` query: field `name` → `case_title`
-- 560-hour stale dream backlog: Manually archived 13 dreams, added auto-cleanup
-
----
-
-## Current PA Tools (49 Total)
+## Current PA Tools (57 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -154,8 +104,10 @@ fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 | `manage_scheduler` | Schedule management | Session 582 |
 | `query_system_health` | System health monitoring | Session 582 |
 | `query_activity_metrics` | Activity/ROI/provenance | Session 582 |
+| `manage_artifacts` | Artifact management | Session 583 |
+| `manage_reviews` | Chief of Staff reviews | Session 583 |
 
-**Coverage:** 55/1,343 endpoints (4.10%)
+**Coverage:** 57/1,343 endpoints (4.24%)
 
 ---
 
@@ -203,19 +155,25 @@ User: "How is the system doing?"
 
 User: "What's the ROI?"
 → query_activity_metrics: Activity stream, ROI, provenance
+
+User: "Show pending artifacts"
+→ manage_artifacts: Pending artifacts awaiting review
+
+User: "Show review documents"
+→ manage_reviews: Chief of Staff Pro/Con analysis documents
 ```
 
 ---
 
-## Session 583 Priorities
+## Session 584 Priorities
 
-### Option A: Phase 14 - More Coverage
+### Option A: Phase 15 - More Coverage
 
 Remaining uncovered categories:
-- **artifacts** - 12 endpoints (reviews, executions, Chief of Staff)
 - **journeys** - 8 endpoints (learning journeys)
 - **solutions** - 6 endpoints (solution explorer)
 - **proposals** - 6 endpoints (AI proposals)
+- **portfolio** - 4 endpoints (portfolio management)
 
 ### Option B: Testing & Polish
 
@@ -225,7 +183,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 55 tools
+- Update CAPABILITIES.md with all 57 tools
 - Create PA Tools reference guide
 
 ---
@@ -236,17 +194,17 @@ Remaining uncovered categories:
 # Start services
 make start && make celery
 
-# Test all 49 PA tools
+# Test Phase 14 tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 13 tools:')
-phase13 = ['query_system_health', 'query_activity_metrics']
-for t in phase13:
-    args = {'subsystem': 'agents'} if t == 'query_system_health' else {'metric_type': 'roi'}
+print('Phase 14 tools:')
+phase14 = ['manage_artifacts', 'manage_reviews']
+for t in phase14:
+    args = {'action': 'list', 'limit': 5}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -258,13 +216,13 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 582)
+## System Stats (Session 583)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 55 |
+| **PA Tools** | 57 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -282,10 +240,11 @@ open http://localhost:8000/ai-studio/
 | 581 | 10 | +6 | 49 |
 | 582 | 11 | +2 | 51 |
 | 582 | 12 | +2 | 53 |
-| **582** | **13** | **+2** | **55** |
+| 582 | 13 | +2 | 55 |
+| **583** | **14** | **+2** | **57** |
 
 ---
 
-**Session 582: Phases 11-13 = 6 new tools (49 → 55)**
+**Session 583: Phase 14 = 2 new tools (55 → 57)**
 
-**PA now has 55 tools (4.10% coverage) - Phases 9-13 complete!**
+**PA now has 57 tools (4.24% coverage) - Phases 9-14 complete!**

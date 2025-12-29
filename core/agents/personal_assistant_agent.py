@@ -2497,6 +2497,97 @@ Returns activity logs, ROI calculations, and provenance chains.""",
                     "required": ["metric_type"]
                 }
             }
+        },
+        # ===== Phase 14: Artifact & Review Tools (Session 582) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_artifacts",
+                "description": """Manage AI-generated artifacts and their execution.
+Use this for:
+- "Show pending artifacts"
+- "List all artifacts"
+- "Execute that artifact"
+- "Approve/reject artifact"
+- "Show artifact executions"
+Returns artifacts, execution status, and management actions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "pending", "get", "decide", "execute", "executions", "execution_status"],
+                            "description": "Action: list, pending, get, decide, execute, executions, execution_status"
+                        },
+                        "artifact_id": {
+                            "type": "string",
+                            "description": "Artifact ID for get/decide/execute/executions actions"
+                        },
+                        "decision": {
+                            "type": "string",
+                            "enum": ["approve", "reject"],
+                            "description": "Decision for decide action"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason for decision"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max items to return (default: 20)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_reviews",
+                "description": """Manage Chief of Staff review documents (Pro/Con analysis).
+Use this for:
+- "Show review documents"
+- "Get review details"
+- "Ask the pro side a question"
+- "Ask the con side a question"
+- "Decide on review"
+- "Generate review for artifact"
+- "Trigger auto-reviews"
+Returns review documents, pro/con arguments, and decisions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "get", "ask_pro", "ask_con", "decide", "generate", "trigger_auto", "stats"],
+                            "description": "Action: list, get, ask_pro, ask_con, decide, generate, trigger_auto, stats"
+                        },
+                        "review_id": {
+                            "type": "string",
+                            "description": "Review ID for get/ask_pro/ask_con/decide actions"
+                        },
+                        "artifact_id": {
+                            "type": "string",
+                            "description": "Artifact ID for generate action"
+                        },
+                        "question": {
+                            "type": "string",
+                            "description": "Question for ask_pro/ask_con actions"
+                        },
+                        "decision": {
+                            "type": "string",
+                            "enum": ["approve", "reject"],
+                            "description": "Decision for decide action"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason for decision"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -3764,6 +3855,13 @@ Returns activity logs, ROI calculations, and provenance chains.""",
 
         if tool_name == "query_activity_metrics":
             return self._query_activity_metrics(arguments)
+
+        # ===== Phase 14: Artifact & Review Tools (Session 583) =====
+        if tool_name == "manage_artifacts":
+            return self._manage_artifacts(arguments)
+
+        if tool_name == "manage_reviews":
+            return self._manage_reviews(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -8481,4 +8579,434 @@ Returns activity logs, ROI calculations, and provenance chains.""",
 
         except Exception as e:
             logger.error(f"Error querying activity metrics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 14: Artifact & Review Tools (Session 583) =====
+
+    def _manage_artifacts(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage AI-generated artifacts and their execution.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'list')
+            artifact_id = arguments.get('artifact_id')
+            decision = arguments.get('decision')
+            reason = arguments.get('reason', '')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/api/artifacts/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        artifacts = data.get('results', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'artifacts': artifacts[:limit] if isinstance(artifacts, list) else artifacts,
+                            'summary': f"Found {len(artifacts) if isinstance(artifacts, list) else 'multiple'} artifacts"
+                        }
+                except:
+                    pass
+
+                # Fallback: Query database
+                from core.models_artifacts import Artifact
+                artifacts = Artifact.objects.order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'artifacts': [
+                        {
+                            'id': str(a.id),
+                            'name': a.name,
+                            'artifact_type': a.artifact_type,
+                            'status': a.status,
+                            'created_at': a.created_at.isoformat()
+                        }
+                        for a in artifacts
+                    ],
+                    'summary': f"Found {len(artifacts)} artifacts"
+                }
+
+            elif action == 'pending':
+                try:
+                    response = requests.get(f'{base_url}/api/artifacts/pending/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'pending_artifacts': data.get('results', data),
+                            'summary': 'Retrieved pending artifacts for review'
+                        }
+                except:
+                    pass
+
+                from core.models_artifacts import Artifact
+                pending = Artifact.objects.filter(status='pending').order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'pending_artifacts': [
+                        {
+                            'id': str(a.id),
+                            'name': a.name,
+                            'artifact_type': a.artifact_type,
+                            'created_at': a.created_at.isoformat()
+                        }
+                        for a in pending
+                    ],
+                    'summary': f"Found {len(pending)} pending artifacts"
+                }
+
+            elif action == 'get':
+                if not artifact_id:
+                    return {'success': False, 'error': 'artifact_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/artifacts/{artifact_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'artifact': response.json(),
+                            'summary': 'Retrieved artifact details'
+                        }
+                except:
+                    pass
+
+                from core.models_artifacts import Artifact
+                try:
+                    artifact = Artifact.objects.get(id=artifact_id)
+                    return {
+                        'success': True,
+                        'artifact': {
+                            'id': str(artifact.id),
+                            'name': artifact.name,
+                            'artifact_type': artifact.artifact_type,
+                            'content': artifact.content if hasattr(artifact, 'content') else None,
+                            'status': artifact.status,
+                            'created_at': artifact.created_at.isoformat()
+                        },
+                        'summary': f"Retrieved artifact: {artifact.name}"
+                    }
+                except Artifact.DoesNotExist:
+                    return {'success': False, 'error': 'Artifact not found'}
+
+            elif action == 'decide':
+                if not artifact_id or not decision:
+                    return {'success': False, 'error': 'artifact_id and decision required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/artifacts/{artifact_id}/decide/',
+                        json={'decision': decision, 'reason': reason},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': f"Artifact {decision}d successfully"
+                        }
+                except:
+                    pass
+
+                from core.models_artifacts import Artifact
+                try:
+                    artifact = Artifact.objects.get(id=artifact_id)
+                    artifact.status = 'approved' if decision == 'approve' else 'rejected'
+                    artifact.save()
+                    return {
+                        'success': True,
+                        'result': {'status': artifact.status},
+                        'summary': f"Artifact {decision}d: {artifact.name}"
+                    }
+                except Artifact.DoesNotExist:
+                    return {'success': False, 'error': 'Artifact not found'}
+
+            elif action == 'execute':
+                if not artifact_id:
+                    return {'success': False, 'error': 'artifact_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/artifacts/{artifact_id}/execute/',
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201, 202]:
+                        return {
+                            'success': True,
+                            'execution': response.json(),
+                            'summary': 'Artifact execution started'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not execute artifact via API'}
+
+            elif action == 'executions':
+                try:
+                    response = requests.get(f'{base_url}/api/artifact-executions/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'executions': data.get('results', data),
+                            'summary': 'Retrieved artifact executions'
+                        }
+                except:
+                    pass
+
+                from core.models_artifacts import ArtifactExecution
+                executions = ArtifactExecution.objects.order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'executions': [
+                        {
+                            'id': str(e.id),
+                            'artifact_id': str(e.artifact_id) if hasattr(e, 'artifact_id') else None,
+                            'status': e.status,
+                            'created_at': e.created_at.isoformat()
+                        }
+                        for e in executions
+                    ],
+                    'summary': f"Found {len(executions)} executions"
+                }
+
+            elif action == 'execution_status':
+                if not artifact_id:
+                    return {'success': False, 'error': 'artifact_id (execution_id) required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/artifact-executions/{artifact_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'execution': response.json(),
+                            'summary': 'Retrieved execution status'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Execution not found'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing artifacts: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_reviews(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage Chief of Staff review documents (Pro/Con analysis).
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'list')
+            review_id = arguments.get('review_id')
+            artifact_id = arguments.get('artifact_id')
+            question = arguments.get('question', '')
+            decision = arguments.get('decision')
+            reason = arguments.get('reason', '')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/api/review-documents/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        reviews = data.get('results', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'reviews': reviews[:limit] if isinstance(reviews, list) else reviews,
+                            'summary': f"Found {len(reviews) if isinstance(reviews, list) else 'multiple'} review documents"
+                        }
+                except:
+                    pass
+
+                # Fallback: Query database
+                from core.models_conversation_artifacts import ReviewDocument
+                reviews = ReviewDocument.objects.order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'reviews': [
+                        {
+                            'id': str(r.id),
+                            'artifact_id': str(r.artifact_id) if hasattr(r, 'artifact_id') else None,
+                            'status': r.status,
+                            'created_at': r.created_at.isoformat()
+                        }
+                        for r in reviews
+                    ],
+                    'summary': f"Found {len(reviews)} review documents"
+                }
+
+            elif action == 'get':
+                if not review_id:
+                    return {'success': False, 'error': 'review_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/review-documents/{review_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'review': response.json(),
+                            'summary': 'Retrieved review document'
+                        }
+                except:
+                    pass
+
+                from core.models_conversation_artifacts import ReviewDocument
+                try:
+                    review = ReviewDocument.objects.get(id=review_id)
+                    return {
+                        'success': True,
+                        'review': {
+                            'id': str(review.id),
+                            'status': review.status,
+                            'pro_arguments': review.pro_arguments if hasattr(review, 'pro_arguments') else None,
+                            'con_arguments': review.con_arguments if hasattr(review, 'con_arguments') else None,
+                            'created_at': review.created_at.isoformat()
+                        },
+                        'summary': 'Retrieved review document'
+                    }
+                except ReviewDocument.DoesNotExist:
+                    return {'success': False, 'error': 'Review document not found'}
+
+            elif action == 'ask_pro':
+                if not review_id or not question:
+                    return {'success': False, 'error': 'review_id and question required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/review-documents/{review_id}/ask-pro/',
+                        json={'question': question},
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'pro_response': response.json(),
+                            'summary': 'Pro side responded to question'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not get Pro response'}
+
+            elif action == 'ask_con':
+                if not review_id or not question:
+                    return {'success': False, 'error': 'review_id and question required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/review-documents/{review_id}/ask-con/',
+                        json={'question': question},
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'con_response': response.json(),
+                            'summary': 'Con side responded to question'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not get Con response'}
+
+            elif action == 'decide':
+                if not review_id or not decision:
+                    return {'success': False, 'error': 'review_id and decision required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/review-documents/{review_id}/decide/',
+                        json={'decision': decision, 'reason': reason},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': f"Review decision: {decision}"
+                        }
+                except:
+                    pass
+
+                from core.models_conversation_artifacts import ReviewDocument
+                try:
+                    review = ReviewDocument.objects.get(id=review_id)
+                    review.status = 'approved' if decision == 'approve' else 'rejected'
+                    review.decision_reason = reason
+                    review.save()
+                    return {
+                        'success': True,
+                        'result': {'status': review.status},
+                        'summary': f"Review decision recorded: {decision}"
+                    }
+                except ReviewDocument.DoesNotExist:
+                    return {'success': False, 'error': 'Review document not found'}
+
+            elif action == 'generate':
+                if not artifact_id:
+                    return {'success': False, 'error': 'artifact_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/review-documents/generate/',
+                        json={'artifact_id': artifact_id},
+                        timeout=60
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'review': response.json(),
+                            'summary': 'Review document generated'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not generate review document'}
+
+            elif action == 'trigger_auto':
+                try:
+                    response = requests.post(f'{base_url}/api/review-documents/trigger-auto-review/', timeout=30)
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Auto-review triggered'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not trigger auto-review'}
+
+            elif action == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/api/review-documents/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'stats': response.json(),
+                            'summary': 'Review statistics retrieved'
+                        }
+                except:
+                    pass
+
+                from core.models_conversation_artifacts import ReviewDocument
+                from django.db.models import Count
+                stats = ReviewDocument.objects.values('status').annotate(count=Count('id'))
+                return {
+                    'success': True,
+                    'stats': {s['status']: s['count'] for s in stats},
+                    'summary': 'Review statistics from database'
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing reviews: {e}")
             return {'success': False, 'error': str(e)}
