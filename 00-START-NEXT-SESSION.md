@@ -2,7 +2,31 @@
 
 **Previous Session:** 588
 **Date:** December 29, 2025
-**Focus:** PA Tools Phase 25 Complete (79 → 81)
+**Focus:** PA Tools Phase 25 + System Insights UI + EXECUTION GAP DISCOVERY
+
+---
+
+## ⚠️ CRITICAL: Execution Gap Identified
+
+ChatGPT analyzed System Insights and found a **phase transition signal**:
+
+```
+Decisions: 754 total
+  Draft (not enacted): 623 (82%) ← THE GAP
+  Canonical (enacted):  117 (15%)
+```
+
+**The system is better at deciding what to do than doing it.**
+
+- ✅ Thinking is fast
+- ✅ Governance is active
+- ✅ Idea generation is high
+- ✅ Sensing (spiders) is healthy
+- ⚠️ **Execution is lagging behind cognition**
+
+82% of Boardroom decisions sit in DRAFT forever. The execution machinery works (69 actions all completed) - the gap is in the **promotion pipeline**.
+
+**Session 589 Priority:** Address this execution gap.
 
 ---
 
@@ -14,6 +38,19 @@
 |------|----------|---------|
 | `manage_ab_testing` | optimization | dashboard, list, create, detail, start, pause, complete, results, add_variant, record_event |
 | `manage_memory_clusters` | memory | overview, list_agent, generate, detail, add_memory, remove_memory, evolution, find_similar, visualization, generate_all |
+
+### System Insights Tab (New UI)
+
+- Added "📊 System Insights" tab to Research Demo
+- API: `/api/v1/research/system-insights/`
+- Shows ThinkingAgent reports with Insights/Patterns/Opportunities/Concerns
+- Archive of 12 historical reports
+
+### Bug Fixes
+
+- **Spider Count:** Self Blog now shows correct 77 spiders (was showing 0)
+  - Root cause: Was counting SpiderData sources, not registry
+  - Fix: Now uses `spider_registry.get_spider_count()['total']`
 
 ---
 

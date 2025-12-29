@@ -166,18 +166,16 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| 586 | PA Tools Phase 22-23 (77 tools) + Boardroom Noise Filter | `SESSION_586_PA_TOOLS_PHASE_22_23.md` |
-| 585 | PA Tools Phase 21 (73 tools) + Dream Triage | - |
-| 584 | PA Tools Phase 19-20 (71 tools) | - |
-| 583 | PA Tools Phase 14-18 (65 tools) | - |
-| 582 | PA Tools Phase 11-13 (55 tools) | - |
-| 581 | PA Tools Phase 9-10 (49 tools) | - |
-| 580 | PA Tools Phase 7-8 (38 tools) | - |
-| 575-579 | PA Tools Phase 1-6 (26 tools) | - |
-| 573 | PA System Awareness + Celery Multi-Queue Architecture | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
-| 567 | Full System Audit - 71 agents, 77 spiders, 324+ models | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
+| 588 | PA Phase 25 (81 tools) + System Insights UI + Execution Gap | `SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md` |
+| 587 | PA Phase 24 (79 tools) - Hive Mind + Time Capsules | - |
+| 586 | PA Phase 22-23 (77 tools) + Boardroom Noise Filter | `SESSION_586_PA_TOOLS_PHASE_22_23.md` |
+| 585 | PA Phase 21 (73 tools) + Dream Triage | - |
+| 584 | PA Phase 19-20 (71 tools) | - |
+| 583 | PA Phase 14-18 (65 tools) | - |
+| 573 | PA System Awareness + Celery Multi-Queue | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
+| 567 | Full System Audit - 71 agents, 77 spiders | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
 | 562 | Push Notifications for Arb Alerts | `SESSION_562_PUSH_NOTIFICATIONS.md` |
-| 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
+| 555 | Chief of Staff Layer - Human-in-the-loop | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
