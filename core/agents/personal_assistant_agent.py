@@ -642,6 +642,155 @@ The system already has real-time data from 40+ bookmakers.""",
                     "required": ["sport"]
                 }
             }
+        },
+        # Session 576: System Status Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "get_system_status",
+                "description": """Get system attention items, pending decisions, and health status.
+USE THIS for questions like:
+- "What needs my attention?"
+- "System status"
+- "What decisions are pending?"
+- "Show me action items"
+- "What should I focus on?"
+
+Returns pending boardroom decisions, failed cycles, stale concerns, and overdue content.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "type": "string",
+                            "enum": ["all", "decisions", "health", "content", "urgent"],
+                            "description": "Filter by category (default: all)"
+                        },
+                        "max_items": {
+                            "type": "integer",
+                            "description": "Maximum items to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        # Session 576: Promote Boardroom Decision Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "promote_boardroom_decision",
+                "description": """Approve a pending decision from the boardroom.
+USE THIS when user says:
+- "Approve that decision"
+- "Yes, let's go with that"
+- "Promote the policy"
+- "Accept the recommendation"
+
+Requires the decision_id from get_system_status or attention items.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "decision_id": {
+                            "type": "string",
+                            "description": "The UUID of the decision to approve"
+                        }
+                    },
+                    "required": ["decision_id"]
+                }
+            }
+        },
+        # Session 576: Reject Boardroom Decision Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "reject_boardroom_decision",
+                "description": """Reject a pending decision from the boardroom.
+USE THIS when user says:
+- "Reject that decision"
+- "No, that won't work"
+- "Decline the recommendation"
+
+Requires the decision_id and a reason for rejection.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "decision_id": {
+                            "type": "string",
+                            "description": "The UUID of the decision to reject"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason for rejection"
+                        }
+                    },
+                    "required": ["decision_id", "reason"]
+                }
+            }
+        },
+        # Session 576: Query Agent Data Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "query_agent_data",
+                "description": """Query agent activity, learning progress, and performance metrics.
+USE THIS for questions like:
+- "Which agents are most active?"
+- "Show me agent progress"
+- "What did agents do today?"
+- "How is ResearchAgent performing?"
+
+Returns agent activity levels, XP, levels, and recent contributions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Specific agent to query (optional)"
+                        },
+                        "metric_type": {
+                            "type": "string",
+                            "enum": ["activity", "learning", "performance", "all"],
+                            "description": "Type of data to retrieve (default: all)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max agents to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        # Session 576: Spider Intelligence Tool
+        {
+            "type": "function",
+            "function": {
+                "name": "get_spider_intelligence",
+                "description": """Query spider network for trending topics and fresh data.
+USE THIS for questions like:
+- "What's trending in tech?"
+- "Any fresh news?"
+- "What are spiders finding?"
+- "Show me recent data"
+
+Returns trending topics, data freshness, and category coverage.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "type": "string",
+                            "enum": ["all", "tech", "finance", "sports", "news", "legal", "entertainment"],
+                            "description": "Data category to query (default: all)"
+                        },
+                        "hours": {
+                            "type": "integer",
+                            "description": "How many hours back to look (default: 24)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max items to return (default: 10)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -1732,11 +1881,27 @@ The system already has real-time data from 40+ bookmakers.""",
         tool_name: str,
         arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Execute tool call - supports delegate_to_agent and get_sports_data."""
+        """Execute tool call - supports multiple PA tools."""
 
         # Session 575: Handle get_sports_data tool
         if tool_name == "get_sports_data":
             return self._get_sports_data(arguments)
+
+        # Session 576: Handle system status tools
+        if tool_name == "get_system_status":
+            return self._get_system_status(arguments)
+
+        if tool_name == "promote_boardroom_decision":
+            return self._promote_boardroom_decision(arguments)
+
+        if tool_name == "reject_boardroom_decision":
+            return self._reject_boardroom_decision(arguments)
+
+        if tool_name == "query_agent_data":
+            return self._query_agent_data(arguments)
+
+        if tool_name == "get_spider_intelligence":
+            return self._get_spider_intelligence(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -1874,3 +2039,363 @@ The system already has real-time data from 40+ bookmakers.""",
                 lines.append(f"  {g['matchup']} - {g['status']}")
 
         return '\n'.join(lines)
+
+    # =========================================================================
+    # Session 576: System Status & Intelligence Tools
+    # =========================================================================
+
+    def _get_system_status(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 576: Query SystemStateAggregator for attention items.
+        Returns pending decisions, failed cycles, stale concerns, etc.
+        """
+        try:
+            from core.services.system_state_aggregator import SystemStateAggregator
+
+            category = arguments.get('category', 'all')
+            max_items = arguments.get('max_items', 10)
+
+            aggregator = SystemStateAggregator()
+            items = aggregator.get_attention_items(max_per_section=max_items)
+
+            # Convert to dicts for JSON serialization
+            items_data = [item.to_dict() for item in items]
+
+            # Filter by category if specified
+            if category != 'all':
+                category_map = {
+                    'decisions': ['decision', 'boardroom'],
+                    'health': ['health', 'alert', 'failed'],
+                    'content': ['overdue', 'channel', 'content'],
+                    'urgent': None  # Special case - filter by priority
+                }
+
+                if category == 'urgent':
+                    items_data = [i for i in items_data if i.get('priority', 0) >= 80]
+                elif category in category_map:
+                    keywords = category_map[category]
+                    items_data = [i for i in items_data
+                                  if any(kw in i.get('category', '').lower() for kw in keywords)]
+
+            # Build summary
+            summary_lines = ["**System Status:**\n"]
+
+            if not items_data:
+                summary_lines.append("✅ No items need immediate attention.")
+            else:
+                # Group by section
+                by_section = {}
+                for item in items_data[:max_items]:
+                    section = item.get('section', 'other')
+                    if section not in by_section:
+                        by_section[section] = []
+                    by_section[section].append(item)
+
+                section_icons = {
+                    'command_center': '🎯',
+                    'autonomous': '🤖',
+                    'research': '🔬',
+                    'boardroom': '🏛️'
+                }
+
+                for section, section_items in by_section.items():
+                    icon = section_icons.get(section, '📋')
+                    summary_lines.append(f"\n{icon} **{section.replace('_', ' ').title()}:**")
+                    for item in section_items[:5]:
+                        priority_icon = '🔴' if item.get('priority', 0) >= 80 else '🟡' if item.get('priority', 0) >= 60 else '🟢'
+                        summary_lines.append(f"  {priority_icon} {item.get('title', 'Unknown')}")
+                        if item.get('id'):
+                            summary_lines.append(f"     ID: {item.get('id')}")
+
+            return {
+                'success': True,
+                'total_items': len(items_data),
+                'urgent_count': len([i for i in items_data if i.get('priority', 0) >= 80]),
+                'items': items_data[:max_items],
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting system status: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _promote_boardroom_decision(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 576: Approve a pending boardroom decision.
+        Wraps /api/boardroom/decisions/{id}/promote/
+        """
+        import requests
+
+        decision_id = arguments.get('decision_id')
+
+        if not decision_id:
+            return {
+                'success': False,
+                'error': 'decision_id is required'
+            }
+
+        try:
+            # Call internal API
+            response = requests.post(
+                f'http://localhost:8000/api/boardroom/decisions/{decision_id}/promote/',
+                headers={'Content-Type': 'application/json'},
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'success': True,
+                    'message': data.get('message', f'Decision {decision_id} approved'),
+                    'decision_id': decision_id
+                }
+            elif response.status_code == 404:
+                return {
+                    'success': False,
+                    'error': f'Decision {decision_id} not found'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'API returned {response.status_code}: {response.text}'
+                }
+
+        except Exception as e:
+            logger.error(f"Error promoting decision: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _reject_boardroom_decision(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 576: Reject a pending boardroom decision.
+        Wraps /api/boardroom/decisions/{id}/reject/
+        """
+        import requests
+
+        decision_id = arguments.get('decision_id')
+        reason = arguments.get('reason', '')
+
+        if not decision_id:
+            return {
+                'success': False,
+                'error': 'decision_id is required'
+            }
+
+        if not reason:
+            return {
+                'success': False,
+                'error': 'reason is required for rejection'
+            }
+
+        try:
+            # Call internal API
+            response = requests.post(
+                f'http://localhost:8000/api/boardroom/decisions/{decision_id}/reject/',
+                json={'reason': reason},
+                headers={'Content-Type': 'application/json'},
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'success': True,
+                    'message': data.get('message', f'Decision {decision_id} rejected'),
+                    'decision_id': decision_id,
+                    'reason': reason
+                }
+            elif response.status_code == 404:
+                return {
+                    'success': False,
+                    'error': f'Decision {decision_id} not found'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'API returned {response.status_code}: {response.text}'
+                }
+
+        except Exception as e:
+            logger.error(f"Error rejecting decision: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_agent_data(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 576: Query agent activity, learning, and performance data.
+        """
+        try:
+            from core.models_unified_system import Agent
+            from django.db.models import Count, Sum
+            from django.utils import timezone
+            from datetime import timedelta
+
+            agent_name = arguments.get('agent_name')
+            metric_type = arguments.get('metric_type', 'all')
+            limit = arguments.get('limit', 10)
+
+            # Build query
+            agents = Agent.objects.all()
+
+            if agent_name:
+                agents = agents.filter(name__icontains=agent_name)
+
+            # Get agent stats
+            agents_data = []
+            for agent in agents[:limit]:
+                agent_info = {
+                    'name': agent.name,
+                    'level': getattr(agent, 'level', 1),
+                    'xp': getattr(agent, 'xp', 0),
+                    'is_active': getattr(agent, 'is_active', True),
+                }
+
+                # Add learning stats if requested
+                if metric_type in ['learning', 'all']:
+                    agent_info['skills'] = list(getattr(agent, 'skills', []) or [])[:5]
+                    agent_info['specialties'] = list(getattr(agent, 'specialties', []) or [])[:5]
+
+                # Add activity stats if requested
+                if metric_type in ['activity', 'all']:
+                    # Try to get execution count
+                    try:
+                        from core.models_unified_system import AgentExecution
+                        recent = timezone.now() - timedelta(hours=24)
+                        exec_count = AgentExecution.objects.filter(
+                            agent_name=agent.name,
+                            created_at__gte=recent
+                        ).count()
+                        agent_info['executions_24h'] = exec_count
+                    except Exception:
+                        agent_info['executions_24h'] = 0
+
+                agents_data.append(agent_info)
+
+            # Sort by XP or activity
+            if metric_type == 'learning':
+                agents_data.sort(key=lambda x: x.get('xp', 0), reverse=True)
+            elif metric_type == 'activity':
+                agents_data.sort(key=lambda x: x.get('executions_24h', 0), reverse=True)
+
+            # Build summary
+            summary_lines = ["**Agent Status:**\n"]
+
+            if not agents_data:
+                summary_lines.append("No agents found matching criteria.")
+            else:
+                for agent in agents_data[:10]:
+                    level = agent.get('level', 1)
+                    xp = agent.get('xp', 0)
+                    execs = agent.get('executions_24h', 0)
+                    status = '🟢' if agent.get('is_active') else '🔴'
+                    summary_lines.append(f"{status} **{agent['name']}** - Level {level} ({xp} XP)")
+                    if execs > 0:
+                        summary_lines.append(f"   📊 {execs} executions in last 24h")
+
+            return {
+                'success': True,
+                'total_agents': len(agents_data),
+                'agents': agents_data,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying agent data: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _get_spider_intelligence(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 576: Query spider network for trending topics and fresh data.
+        """
+        try:
+            from core.models_unified_system import SpiderData
+            from django.utils import timezone
+            from datetime import timedelta
+            from django.db.models import Count
+
+            category = arguments.get('category', 'all')
+            hours = arguments.get('hours', 24)
+            limit = arguments.get('limit', 10)
+
+            # Time filter
+            since = timezone.now() - timedelta(hours=hours)
+
+            # Build query
+            query = SpiderData.objects.filter(created_at__gte=since)
+
+            # Category mapping
+            category_map = {
+                'tech': ['hackernews', 'techcrunch', 'devto', 'github', 'producthunt'],
+                'finance': ['coingecko', 'yahoo_finance', 'polygon_finance', 'kalshi'],
+                'sports': ['theodds', 'espn'],
+                'news': ['cnn', 'bbc', 'npr', 'reuters', 'axios'],
+                'legal': ['courtlistener', 'findlaw', 'colorado_family_law'],
+                'entertainment': ['variety', 'polygon_gaming', 'spotify']
+            }
+
+            if category != 'all' and category in category_map:
+                spiders = category_map[category]
+                query = query.filter(spider_name__in=spiders)
+
+            # Get spider stats
+            spider_stats = query.values('spider_name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:limit]
+
+            # Get recent items
+            recent_items = query.order_by('-created_at')[:limit]
+
+            items_data = []
+            for item in recent_items:
+                items_data.append({
+                    'spider': item.spider_name,
+                    'title': getattr(item, 'title', '')[:100] if hasattr(item, 'title') else '',
+                    'category': getattr(item, 'category', 'general'),
+                    'collected_at': item.created_at.isoformat() if item.created_at else None
+                })
+
+            # Build summary
+            summary_lines = [f"**Spider Intelligence ({hours}h):**\n"]
+
+            if not spider_stats:
+                summary_lines.append("No recent spider data found.")
+            else:
+                summary_lines.append("📊 **Data by Spider:**")
+                for stat in spider_stats[:10]:
+                    summary_lines.append(f"  • {stat['spider_name']}: {stat['count']} items")
+
+                if items_data:
+                    summary_lines.append("\n📰 **Recent Items:**")
+                    for item in items_data[:5]:
+                        title = item.get('title', 'Untitled')[:50]
+                        spider = item.get('spider', 'unknown')
+                        summary_lines.append(f"  • [{spider}] {title}...")
+
+            total_items = query.count()
+
+            return {
+                'success': True,
+                'category': category,
+                'hours': hours,
+                'total_items': total_items,
+                'spider_stats': list(spider_stats),
+                'recent_items': items_data,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting spider intelligence: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
