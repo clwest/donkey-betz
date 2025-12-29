@@ -2263,6 +2263,20 @@ def get_pilot_readiness_gates(request):
                     'is_required': item.is_required,
                 })
 
+            # Session 594: Get running pilot info
+            running_pilot = gate.pilot_executions.filter(status='running').first()
+            pilot_info = None
+            if running_pilot:
+                from django.utils import timezone
+                hours_running = (timezone.now() - running_pilot.started_at).total_seconds() / 3600 if running_pilot.started_at else 0
+                pilot_info = {
+                    'id': str(running_pilot.id),
+                    'name': running_pilot.name,
+                    'status': running_pilot.status,
+                    'hours_running': round(hours_running, 1),
+                    'started_at': running_pilot.started_at.isoformat() if running_pilot.started_at else None,
+                }
+
             gates_data.append({
                 'id': str(gate.id),
                 'decision_id': str(gate.decision.id),
@@ -2282,6 +2296,7 @@ def get_pilot_readiness_gates(request):
                 'created_at': gate.created_at.isoformat(),
                 'decision_made_at': gate.decision_made_at.isoformat() if gate.decision_made_at else None,
                 'gate_approved_at': gate.gate_approved_at.isoformat() if gate.gate_approved_at else None,
+                'running_pilot': pilot_info,  # Session 594: Include pilot info
             })
 
         # Get summary stats
