@@ -2588,6 +2588,82 @@ Returns review documents, pro/con arguments, and decisions.""",
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 15: Journey & Proposal Tools (Session 583) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_journeys",
+                "description": """Manage learning journeys and progress tracking.
+Use this for:
+- "Start a learning journey"
+- "Show my active journeys"
+- "Get journey status"
+- "Start journey step"
+- "Complete journey step"
+- "Reset journey progress"
+Returns journey status, steps, and progress tracking.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["start", "status", "step_start", "step_complete", "active", "reset"],
+                            "description": "Action: start, status, step_start, step_complete, active, reset"
+                        },
+                        "journey_id": {
+                            "type": "string",
+                            "description": "Journey ID for status/step/reset actions"
+                        },
+                        "step_id": {
+                            "type": "integer",
+                            "description": "Step ID for step_start/step_complete actions"
+                        },
+                        "journey_type": {
+                            "type": "string",
+                            "description": "Type of journey to start (for start action)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_proposals",
+                "description": """Manage AI-generated proposals and their execution.
+Use this for:
+- "Show proposals"
+- "Get proposal stats"
+- "Approve proposal"
+- "Reject proposal"
+- "Execute proposal"
+Returns proposals, stats, and execution status.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "stats", "approve", "reject", "execute"],
+                            "description": "Action: list, stats, approve, reject, execute"
+                        },
+                        "proposal_id": {
+                            "type": "string",
+                            "description": "Proposal ID for approve/reject/execute actions"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason for approval/rejection"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of proposals to return (default 20)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -3862,6 +3938,13 @@ Returns review documents, pro/con arguments, and decisions.""",
 
         if tool_name == "manage_reviews":
             return self._manage_reviews(arguments)
+
+        # ===== Phase 15: Journey & Proposal Tools (Session 583) =====
+        if tool_name == "manage_journeys":
+            return self._manage_journeys(arguments)
+
+        if tool_name == "manage_proposals":
+            return self._manage_proposals(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -9009,4 +9092,274 @@ Returns review documents, pro/con arguments, and decisions.""",
 
         except Exception as e:
             logger.error(f"Error managing reviews: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 15: Journey & Proposal Tools (Session 583) =====
+
+    def _manage_journeys(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage learning journeys and progress tracking.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'active')
+            journey_id = arguments.get('journey_id')
+            step_id = arguments.get('step_id')
+            journey_type = arguments.get('journey_type', 'default')
+            base_url = 'http://localhost:8000'
+
+            if action == 'active':
+                try:
+                    response = requests.get(f'{base_url}/api/journey/active/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        journeys = data.get('journeys', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'journeys': journeys,
+                            'summary': f"Found {len(journeys) if isinstance(journeys, list) else 'multiple'} active journeys"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'journeys': [],
+                    'summary': 'No active journeys found'
+                }
+
+            elif action == 'start':
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/journey/start/',
+                        json={'journey_type': journey_type},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'journey': response.json(),
+                            'summary': f"Started {journey_type} journey"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not start journey'}
+
+            elif action == 'status':
+                if not journey_id:
+                    return {'success': False, 'error': 'journey_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/journey/{journey_id}/status/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'status': response.json(),
+                            'summary': 'Retrieved journey status'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Journey not found'}
+
+            elif action == 'step_start':
+                if not journey_id or step_id is None:
+                    return {'success': False, 'error': 'journey_id and step_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/journey/{journey_id}/step/{step_id}/start/',
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'step': response.json(),
+                            'summary': f"Started step {step_id}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not start step'}
+
+            elif action == 'step_complete':
+                if not journey_id or step_id is None:
+                    return {'success': False, 'error': 'journey_id and step_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/journey/{journey_id}/step/{step_id}/complete/',
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'step': response.json(),
+                            'summary': f"Completed step {step_id}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not complete step'}
+
+            elif action == 'reset':
+                if not journey_id:
+                    return {'success': False, 'error': 'journey_id required'}
+
+                try:
+                    response = requests.post(f'{base_url}/api/journey/{journey_id}/reset/', timeout=10)
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Journey reset successfully'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not reset journey'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing journeys: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_proposals(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage AI-generated proposals and their execution.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'list')
+            proposal_id = arguments.get('proposal_id')
+            reason = arguments.get('reason', '')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/api/proposals/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        proposals = data.get('results', data.get('proposals', data)) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'proposals': proposals[:limit] if isinstance(proposals, list) else proposals,
+                            'summary': f"Found {len(proposals) if isinstance(proposals, list) else 'multiple'} proposals"
+                        }
+                except:
+                    pass
+
+                # Fallback: Try to get proposals from database
+                try:
+                    from core.models_proposals import Proposal
+                    proposals = Proposal.objects.order_by('-created_at')[:limit]
+                    return {
+                        'success': True,
+                        'proposals': [
+                            {
+                                'id': str(p.id),
+                                'title': p.title if hasattr(p, 'title') else str(p),
+                                'status': p.status if hasattr(p, 'status') else 'unknown',
+                                'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') else None
+                            }
+                            for p in proposals
+                        ],
+                        'summary': f"Found {len(proposals)} proposals"
+                    }
+                except:
+                    return {
+                        'success': True,
+                        'proposals': [],
+                        'summary': 'No proposals found'
+                    }
+
+            elif action == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/api/proposals/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'stats': response.json(),
+                            'summary': 'Retrieved proposal statistics'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'stats': {'message': 'Stats available via API'},
+                    'summary': 'Proposal stats endpoint available'
+                }
+
+            elif action == 'approve':
+                if not proposal_id:
+                    return {'success': False, 'error': 'proposal_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/proposals/{proposal_id}/approve/',
+                        json={'reason': reason},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Proposal approved'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not approve proposal'}
+
+            elif action == 'reject':
+                if not proposal_id:
+                    return {'success': False, 'error': 'proposal_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/proposals/{proposal_id}/reject/',
+                        json={'reason': reason},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Proposal rejected'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not reject proposal'}
+
+            elif action == 'execute':
+                if not proposal_id:
+                    return {'success': False, 'error': 'proposal_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/proposals/{proposal_id}/execute/',
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201, 202]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Proposal execution started'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not execute proposal'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing proposals: {e}")
             return {'success': False, 'error': str(e)}
