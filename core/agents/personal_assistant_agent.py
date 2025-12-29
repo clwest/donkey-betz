@@ -2275,6 +2275,87 @@ Returns AI-analyzed betting recommendations with confidence scores.""",
                     "required": []
                 }
             }
+        },
+        # ===== Phase 11: Notification Tools (Session 582) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_notifications",
+                "description": """Manage proactive notifications.
+Use this for:
+- "Show my notifications"
+- "Any unread notifications?"
+- "Mark all notifications as read"
+- "Dismiss that notification"
+- "Update my notification preferences"
+Returns notification list, counts, and management actions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "read", "dismiss", "read_all", "preferences", "counts"],
+                            "description": "Action: list, read (mark as read), dismiss, read_all, preferences, counts"
+                        },
+                        "notification_id": {
+                            "type": "string",
+                            "description": "Notification ID (for read/dismiss actions)"
+                        },
+                        "unread_only": {
+                            "type": "boolean",
+                            "description": "Only show unread notifications (default: false)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max notifications to return (default: 20)"
+                        },
+                        "preferences": {
+                            "type": "object",
+                            "description": "Preference updates for preferences action",
+                            "properties": {
+                                "email_enabled": {"type": "boolean"},
+                                "push_enabled": {"type": "boolean"},
+                                "digest_frequency": {"type": "string", "enum": ["realtime", "hourly", "daily", "weekly"]}
+                            }
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_push_notifications",
+                "description": """Manage Web Push notification settings.
+Use this for:
+- "Check push notification status"
+- "Am I subscribed to push notifications?"
+- "Send me a test notification"
+- "Update my push preferences"
+- "Enable/disable arb alerts"
+Returns push subscription status and settings.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["status", "preferences", "test"],
+                            "description": "Action: status (check subscription), preferences (get/set), test (send test push)"
+                        },
+                        "preferences": {
+                            "type": "object",
+                            "description": "Preference updates for preferences action",
+                            "properties": {
+                                "notifications_enabled": {"type": "boolean"},
+                                "arb_alerts_enabled": {"type": "boolean"},
+                                "arb_min_profit_pct": {"type": "number", "description": "Minimum profit % for arb alerts (default: 1.0)"}
+                            }
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -3521,6 +3602,13 @@ Returns AI-analyzed betting recommendations with confidence scores.""",
 
         if tool_name == "query_betting_recommendations":
             return self._query_betting_recommendations(arguments)
+
+        # Phase 11: Notification Tools (Session 582)
+        if tool_name == "manage_notifications":
+            return self._manage_notifications(arguments)
+
+        if tool_name == "manage_push_notifications":
+            return self._manage_push_notifications(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -7437,4 +7525,303 @@ Returns AI-analyzed betting recommendations with confidence scores.""",
 
         except Exception as e:
             logger.error(f"Error querying betting recommendations: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 11: Notification Tools (Session 582) =====
+
+    def _manage_notifications(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Manage proactive notifications.
+        """
+        try:
+            import requests
+            from django.utils import timezone
+
+            action = arguments.get('action', 'list')
+            notification_id = arguments.get('notification_id')
+            unread_only = arguments.get('unread_only', False)
+            limit = arguments.get('limit', 20)
+            preferences = arguments.get('preferences', {})
+
+            base_url = 'http://localhost:8000/api/proactive/notifications'
+
+            if action == 'list':
+                params = {'limit': limit}
+                if unread_only:
+                    params['unread'] = 'true'
+                try:
+                    response = requests.get(f'{base_url}/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'notifications': data.get('notifications', []),
+                            'total': data.get('total', 0),
+                            'unread_count': data.get('unread_count', 0),
+                            'summary': f"Found {data.get('total', 0)} notifications ({data.get('unread_count', 0)} unread)"
+                        }
+                except:
+                    pass
+
+                # Fallback: Query database directly
+                from core.models_unified_system import ProactiveNotification
+                notifications = ProactiveNotification.objects.all()
+                if unread_only:
+                    notifications = notifications.filter(is_read=False, is_dismissed=False)
+                notifications = notifications.order_by('-created_at')[:limit]
+                total = ProactiveNotification.objects.count()
+                unread = ProactiveNotification.objects.filter(is_read=False, is_dismissed=False).count()
+
+                return {
+                    'success': True,
+                    'notifications': [
+                        {
+                            'id': str(n.id),
+                            'type': n.notification_type,
+                            'priority': n.priority,
+                            'title': n.title,
+                            'message': n.message,
+                            'is_read': n.is_read,
+                            'created_at': n.created_at.isoformat()
+                        }
+                        for n in notifications
+                    ],
+                    'total': total,
+                    'unread_count': unread,
+                    'summary': f"Found {total} notifications ({unread} unread)"
+                }
+
+            elif action == 'counts':
+                try:
+                    response = requests.get(f'{base_url}/', params={'limit': 1}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'total': data.get('total', 0),
+                            'unread_count': data.get('unread_count', 0),
+                            'summary': f"{data.get('unread_count', 0)} unread of {data.get('total', 0)} total"
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ProactiveNotification
+                total = ProactiveNotification.objects.count()
+                unread = ProactiveNotification.objects.filter(is_read=False, is_dismissed=False).count()
+                return {
+                    'success': True,
+                    'total': total,
+                    'unread_count': unread,
+                    'summary': f"{unread} unread of {total} total"
+                }
+
+            elif action == 'read':
+                if not notification_id:
+                    return {'success': False, 'error': 'notification_id required for read action'}
+                try:
+                    response = requests.post(f'{base_url}/{notification_id}/read/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'notification_id': notification_id,
+                            'message': 'Notification marked as read'
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ProactiveNotification
+                try:
+                    notification = ProactiveNotification.objects.get(id=notification_id)
+                    notification.is_read = True
+                    notification.read_at = timezone.now()
+                    notification.save()
+                    return {
+                        'success': True,
+                        'notification_id': notification_id,
+                        'message': 'Notification marked as read'
+                    }
+                except ProactiveNotification.DoesNotExist:
+                    return {'success': False, 'error': 'Notification not found'}
+
+            elif action == 'dismiss':
+                if not notification_id:
+                    return {'success': False, 'error': 'notification_id required for dismiss action'}
+                try:
+                    response = requests.post(f'{base_url}/{notification_id}/dismiss/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'notification_id': notification_id,
+                            'message': 'Notification dismissed'
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ProactiveNotification
+                try:
+                    notification = ProactiveNotification.objects.get(id=notification_id)
+                    notification.is_dismissed = True
+                    notification.dismissed_at = timezone.now()
+                    notification.save()
+                    return {
+                        'success': True,
+                        'notification_id': notification_id,
+                        'message': 'Notification dismissed'
+                    }
+                except ProactiveNotification.DoesNotExist:
+                    return {'success': False, 'error': 'Notification not found'}
+
+            elif action == 'read_all':
+                try:
+                    response = requests.post(f'{base_url}/read-all/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'updated_count': data.get('updated_count', 0),
+                            'message': f"Marked {data.get('updated_count', 0)} notifications as read"
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ProactiveNotification
+                updated = ProactiveNotification.objects.filter(is_read=False).update(
+                    is_read=True, read_at=timezone.now()
+                )
+                return {
+                    'success': True,
+                    'updated_count': updated,
+                    'message': f'Marked {updated} notifications as read'
+                }
+
+            elif action == 'preferences':
+                try:
+                    if preferences:
+                        response = requests.put(f'{base_url}/preferences/', json=preferences, timeout=10)
+                    else:
+                        response = requests.get(f'{base_url}/preferences/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'preferences': data.get('preferences', data),
+                            'message': 'Preferences updated' if preferences else 'Current preferences'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'preferences': {'email_enabled': True, 'push_enabled': True, 'digest_frequency': 'realtime'},
+                    'message': 'Default preferences (API unavailable)'
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing notifications: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_push_notifications(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Manage Web Push notification settings.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'status')
+            preferences = arguments.get('preferences', {})
+
+            base_url = 'http://localhost:8000/api/v1/push'
+
+            if action == 'status':
+                try:
+                    response = requests.get(f'{base_url}/status/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'subscribed': data.get('subscribed', False),
+                            'subscription_count': data.get('subscription_count', 0),
+                            'summary': 'Push notifications enabled' if data.get('subscribed') else 'Not subscribed to push notifications'
+                        }
+                except:
+                    pass
+
+                # Fallback: Query database
+                from core.models_push_notifications import PushSubscription
+                count = PushSubscription.objects.filter(is_active=True).count()
+                return {
+                    'success': True,
+                    'subscribed': count > 0,
+                    'subscription_count': count,
+                    'summary': f'{count} active push subscription(s)' if count else 'No active push subscriptions'
+                }
+
+            elif action == 'preferences':
+                try:
+                    if preferences:
+                        response = requests.put(f'{base_url}/preferences/', json=preferences, timeout=10)
+                    else:
+                        response = requests.get(f'{base_url}/preferences/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'preferences': data.get('preferences', data),
+                            'message': 'Preferences updated' if preferences else 'Current push preferences'
+                        }
+                except:
+                    pass
+
+                # Fallback: Query database
+                from core.models_push_notifications import NotificationPreference
+                try:
+                    pref = NotificationPreference.objects.first()
+                    if pref:
+                        return {
+                            'success': True,
+                            'preferences': {
+                                'notifications_enabled': pref.notifications_enabled,
+                                'arb_alerts_enabled': pref.arb_alerts_enabled,
+                                'arb_min_profit_pct': float(pref.arb_min_profit_pct)
+                            },
+                            'message': 'Current push preferences'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'preferences': {
+                        'notifications_enabled': True,
+                        'arb_alerts_enabled': True,
+                        'arb_min_profit_pct': 1.0
+                    },
+                    'message': 'Default preferences'
+                }
+
+            elif action == 'test':
+                try:
+                    response = requests.post(f'{base_url}/test/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'sent': data.get('sent', False),
+                            'message': 'Test notification sent' if data.get('sent') else 'No active subscription to send to'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'sent': False,
+                    'message': 'Test notification requires active browser subscription'
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing push notifications: {e}")
             return {'success': False, 'error': str(e)}
