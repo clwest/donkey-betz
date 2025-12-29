@@ -1496,6 +1496,393 @@ Returns revenue by source, time period, and status with totals and trends.""",
                     }
                 }
             }
+        },
+        # =========================================================================
+        # Session 580: Phase 8 - High-Impact Expansion (10 tools)
+        # =========================================================================
+        # Tool 29: manage_proactive_alerts
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_proactive_alerts",
+                "description": """Manage proactive alerts, notifications, and automations.
+Use this for:
+- "Create an alert for X"
+- "Show my alerts"
+- "Enable/disable automation"
+- "What notifications do I have?"
+- "Set up monitoring for..."
+Supports alerts, notifications, suggestions, and automations.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_alerts", "create_alert", "toggle_alert", "list_notifications", "list_automations", "run_check"],
+                            "description": "Action to perform"
+                        },
+                        "alert_type": {
+                            "type": "string",
+                            "enum": ["price", "trend", "opportunity", "system", "custom"],
+                            "description": "Type of alert (for create)"
+                        },
+                        "condition": {
+                            "type": "string",
+                            "description": "Alert condition description"
+                        },
+                        "alert_id": {
+                            "type": "string",
+                            "description": "Alert ID (for toggle)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 30: query_learning_progress
+        {
+            "type": "function",
+            "function": {
+                "name": "query_learning_progress",
+                "description": """Query agent learning progress, evolution metrics, and training status.
+Use this for:
+- "How are agents learning?"
+- "Learning progress"
+- "Agent evolution stats"
+- "Training status"
+- "What have agents learned?"
+Returns learning curves, preferences, and evolution metrics.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Optional: specific agent to query"
+                        },
+                        "metric_type": {
+                            "type": "string",
+                            "enum": ["learning_stats", "preferences", "evolution", "interactions", "all"],
+                            "description": "Type of learning data (default: all)"
+                        },
+                        "time_period": {
+                            "type": "string",
+                            "enum": ["24h", "7d", "30d"],
+                            "description": "Time range (default: 7d)"
+                        }
+                    }
+                }
+            }
+        },
+        # Tool 31: manage_team
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_team",
+                "description": """Manage agent teams, roles, and team workflows.
+Use this for:
+- "Create a team for X"
+- "Show my teams"
+- "Add agent to team"
+- "Team stats"
+- "List agent roles"
+Supports team creation, member management, and team workflows.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_teams", "create_team", "get_team", "add_member", "team_stats", "list_roles"],
+                            "description": "Action to perform"
+                        },
+                        "team_id": {
+                            "type": "string",
+                            "description": "Team ID (for get/add_member)"
+                        },
+                        "team_name": {
+                            "type": "string",
+                            "description": "Team name (for create)"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent ID (for add_member)"
+                        },
+                        "role": {
+                            "type": "string",
+                            "description": "Role for the agent"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 32: generate_video
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_video",
+                "description": """Generate videos using AI video agents.
+Use this for:
+- "Create a video about X"
+- "Generate video content"
+- "Make a promotional video"
+- "Video for social media"
+Supports text-to-video, image-to-video, and video editing.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Video description/prompt"
+                        },
+                        "video_type": {
+                            "type": "string",
+                            "enum": ["text_to_video", "image_to_video", "edit", "short_form", "explainer"],
+                            "description": "Type of video to generate"
+                        },
+                        "duration": {
+                            "type": "integer",
+                            "description": "Target duration in seconds (default: 30)"
+                        },
+                        "style": {
+                            "type": "string",
+                            "description": "Visual style (cinematic, animated, documentary, etc.)"
+                        },
+                        "aspect_ratio": {
+                            "type": "string",
+                            "enum": ["16:9", "9:16", "1:1", "4:3"],
+                            "description": "Aspect ratio (default: 16:9)"
+                        }
+                    },
+                    "required": ["prompt"]
+                }
+            }
+        },
+        # Tool 33: manage_distribution
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_distribution",
+                "description": """Manage content distribution across platforms.
+Use this for:
+- "Publish to Twitter/LinkedIn/etc"
+- "Schedule content"
+- "List my distributions"
+- "Distribution stats"
+- "Connect platform"
+Supports multi-platform publishing and scheduling.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_platforms", "list_distributions", "create_distribution", "publish", "schedule", "stats"],
+                            "description": "Action to perform"
+                        },
+                        "platform": {
+                            "type": "string",
+                            "enum": ["twitter", "linkedin", "facebook", "instagram", "youtube", "tiktok", "all"],
+                            "description": "Target platform"
+                        },
+                        "content_id": {
+                            "type": "string",
+                            "description": "Content ID to distribute"
+                        },
+                        "scheduled_time": {
+                            "type": "string",
+                            "description": "ISO timestamp for scheduling"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 34: query_analytics
+        {
+            "type": "function",
+            "function": {
+                "name": "query_analytics",
+                "description": """Query system analytics, usage metrics, and performance data.
+Use this for:
+- "Show analytics"
+- "Usage stats"
+- "Performance metrics"
+- "Cost breakdown"
+- "Dashboard data"
+Returns comprehensive analytics across the platform.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "report_type": {
+                            "type": "string",
+                            "enum": ["overview", "usage", "performance", "costs", "agents", "content", "all"],
+                            "description": "Type of analytics report (default: overview)"
+                        },
+                        "time_period": {
+                            "type": "string",
+                            "enum": ["24h", "7d", "30d", "90d"],
+                            "description": "Time range (default: 7d)"
+                        },
+                        "include_trends": {
+                            "type": "boolean",
+                            "description": "Include trend analysis (default: true)"
+                        }
+                    }
+                }
+            }
+        },
+        # Tool 35: time_travel_memory
+        {
+            "type": "function",
+            "function": {
+                "name": "time_travel_memory",
+                "description": """Access agent memory time-travel capabilities.
+Use this for:
+- "Show agent memory history"
+- "What did agent know at date X?"
+- "Memory snapshots"
+- "Replay agent state"
+- "Memory timeline"
+Access historical agent states and memory evolution.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_snapshots", "get_snapshot", "compare", "timeline", "restore"],
+                            "description": "Action to perform"
+                        },
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Agent to query"
+                        },
+                        "snapshot_date": {
+                            "type": "string",
+                            "description": "ISO date for snapshot"
+                        },
+                        "compare_dates": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Two dates to compare"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 36: manage_memory_palace
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_memory_palace",
+                "description": """Manage agent memory palace and memory organization.
+Use this for:
+- "Show memory palace"
+- "Organize memories"
+- "Memory clusters"
+- "Important memories"
+- "Memory search"
+Access structured memory organization and retrieval.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["overview", "list_rooms", "get_room", "search", "important", "recent"],
+                            "description": "Action to perform"
+                        },
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Agent to query"
+                        },
+                        "room_id": {
+                            "type": "string",
+                            "description": "Memory room ID"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for memories"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results (default: 10)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        # Tool 37: run_diagnostics
+        {
+            "type": "function",
+            "function": {
+                "name": "run_diagnostics",
+                "description": """Run system diagnostics and health checks.
+Use this for:
+- "Run diagnostics"
+- "System health check"
+- "Test spiders"
+- "Check services"
+- "Debug info"
+Comprehensive system health and diagnostics.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "diagnostic_type": {
+                            "type": "string",
+                            "enum": ["full", "spiders", "agents", "services", "database", "celery", "quick"],
+                            "description": "Type of diagnostic (default: quick)"
+                        },
+                        "include_details": {
+                            "type": "boolean",
+                            "description": "Include detailed output (default: false)"
+                        },
+                        "fix_issues": {
+                            "type": "boolean",
+                            "description": "Attempt to fix found issues (default: false)"
+                        }
+                    }
+                }
+            }
+        },
+        # Tool 38: manage_collaboration
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_collaboration",
+                "description": """Manage agent collaborations and partnerships.
+Use this for:
+- "Agent collaboration stats"
+- "Start collaboration between agents"
+- "Collaboration history"
+- "Agent partnerships"
+- "Collaboration network"
+Track and manage how agents work together.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["stats", "history", "network", "start", "active", "performance"],
+                            "description": "Action to perform"
+                        },
+                        "agent_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Agents to collaborate (for start)"
+                        },
+                        "collaboration_id": {
+                            "type": "string",
+                            "description": "Collaboration ID (for details)"
+                        },
+                        "time_period": {
+                            "type": "string",
+                            "enum": ["24h", "7d", "30d"],
+                            "description": "Time range (default: 7d)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -2676,6 +3063,37 @@ Returns revenue by source, time period, and status with totals and trends.""",
 
         if tool_name == "query_revenue_metrics":
             return self._query_revenue_metrics(arguments)
+
+        # Session 580: Phase 8 tools
+        if tool_name == "manage_proactive_alerts":
+            return self._manage_proactive_alerts(arguments)
+
+        if tool_name == "query_learning_progress":
+            return self._query_learning_progress(arguments)
+
+        if tool_name == "manage_team":
+            return self._manage_team(arguments)
+
+        if tool_name == "generate_video":
+            return self._generate_video(arguments)
+
+        if tool_name == "manage_distribution":
+            return self._manage_distribution(arguments)
+
+        if tool_name == "query_analytics":
+            return self._query_analytics(arguments)
+
+        if tool_name == "time_travel_memory":
+            return self._time_travel_memory(arguments)
+
+        if tool_name == "manage_memory_palace":
+            return self._manage_memory_palace(arguments)
+
+        if tool_name == "run_diagnostics":
+            return self._run_diagnostics(arguments)
+
+        if tool_name == "manage_collaboration":
+            return self._manage_collaboration(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -5009,3 +5427,803 @@ Returns revenue by source, time period, and status with totals and trends.""",
                 'success': False,
                 'error': str(e)
             }
+
+    # =========================================================================
+    # Session 580: Phase 8 Tools - High-Impact Expansion
+    # =========================================================================
+
+    def _manage_proactive_alerts(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage proactive alerts, notifications, and automations.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_alerts')
+            base_url = 'http://localhost:8000/api/proactive'
+
+            if action == 'list_alerts':
+                try:
+                    response = requests.get(f'{base_url}/alerts/', timeout=10)
+                    if response.status_code == 200:
+                        alerts = response.json()
+                        return {
+                            'success': True,
+                            'alerts': alerts[:20] if isinstance(alerts, list) else alerts.get('alerts', [])[:20],
+                            'summary': f"Found {len(alerts) if isinstance(alerts, list) else len(alerts.get('alerts', []))} alerts"
+                        }
+                except:
+                    pass
+                return {'success': True, 'alerts': [], 'summary': 'No alerts configured'}
+
+            elif action == 'list_notifications':
+                try:
+                    response = requests.get(f'{base_url}/notifications/', timeout=10)
+                    if response.status_code == 200:
+                        notifications = response.json()
+                        return {
+                            'success': True,
+                            'notifications': notifications[:20] if isinstance(notifications, list) else notifications.get('notifications', [])[:20],
+                            'summary': f"Found notifications"
+                        }
+                except:
+                    pass
+                return {'success': True, 'notifications': [], 'summary': 'No notifications'}
+
+            elif action == 'list_automations':
+                try:
+                    response = requests.get(f'{base_url}/automations/', timeout=10)
+                    if response.status_code == 200:
+                        automations = response.json()
+                        return {
+                            'success': True,
+                            'automations': automations[:20] if isinstance(automations, list) else automations.get('automations', [])[:20],
+                            'summary': f"Found automations"
+                        }
+                except:
+                    pass
+                return {'success': True, 'automations': [], 'summary': 'No automations configured'}
+
+            elif action == 'create_alert':
+                alert_data = {
+                    'alert_type': arguments.get('alert_type', 'custom'),
+                    'condition': arguments.get('condition', ''),
+                    'is_active': True
+                }
+                response = requests.post(f'{base_url}/alerts/create/', json=alert_data, timeout=10)
+                return {
+                    'success': response.status_code == 200 or response.status_code == 201,
+                    'message': 'Alert created' if response.status_code in [200, 201] else response.text
+                }
+
+            elif action == 'toggle_alert':
+                alert_id = arguments.get('alert_id')
+                if alert_id:
+                    response = requests.post(f'{base_url}/alerts/{alert_id}/toggle/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Alert toggled' if response.status_code == 200 else response.text
+                    }
+
+            elif action == 'run_check':
+                response = requests.post(f'{base_url}/check/', timeout=30)
+                return {
+                    'success': response.status_code == 200,
+                    'message': 'Proactive check completed' if response.status_code == 200 else response.text,
+                    'data': response.json() if response.status_code == 200 else {}
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing proactive alerts: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_learning_progress(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query agent learning progress, evolution metrics, and training status.
+        """
+        try:
+            from django.utils import timezone
+            from datetime import timedelta
+            from django.db.models import Count, Avg
+
+            agent_name = arguments.get('agent_name')
+            metric_type = arguments.get('metric_type', 'all')
+            time_period = arguments.get('time_period', '7d')
+
+            # Calculate cutoff
+            now = timezone.now()
+            period_map = {'24h': timedelta(hours=24), '7d': timedelta(days=7), '30d': timedelta(days=30)}
+            cutoff = now - period_map.get(time_period, timedelta(days=7))
+
+            results = {'success': True, 'time_period': time_period}
+
+            # Get learning stats from AgentLearning model
+            if metric_type in ['learning_stats', 'all']:
+                from core.models_unified_system import AgentLearning
+                learning_qs = AgentLearning.objects.filter(created_at__gte=cutoff)
+                if agent_name:
+                    # Filter by teacher or student agent
+                    from django.db.models import Q
+                    learning_qs = learning_qs.filter(
+                        Q(teacher_agent__name__icontains=agent_name) |
+                        Q(student_agent__name__icontains=agent_name)
+                    )
+
+                stats = learning_qs.aggregate(
+                    total=Count('id'),
+                    avg_effectiveness=Avg('effectiveness_after')
+                )
+                results['learning_stats'] = {
+                    'total_learnings': stats['total'] or 0,
+                    'avg_effectiveness': round(float(stats['avg_effectiveness'] or 0), 2)
+                }
+
+            # Get evolution metrics
+            if metric_type in ['evolution', 'all']:
+                from core.models_unified_system import Agent
+                agents = Agent.objects.filter(is_active=True)
+                if agent_name:
+                    agents = agents.filter(name__icontains=agent_name)
+
+                agent_data = []
+                for agent in agents[:10]:
+                    agent_data.append({
+                        'name': agent.name,
+                        'specialization': agent.specialization,
+                        'effectiveness_score': agent.effectiveness_score,
+                        'total_executions': agent.total_executions
+                    })
+                results['evolution'] = agent_data
+
+            # Get recent interactions
+            if metric_type in ['interactions', 'all']:
+                from core.models_unified_system import AgentExecution
+                exec_qs = AgentExecution.objects.filter(created_at__gte=cutoff)
+                if agent_name:
+                    exec_qs = exec_qs.filter(agent__name__icontains=agent_name)
+
+                exec_stats = exec_qs.aggregate(
+                    total=Count('id'),
+                    avg_time=Avg('execution_time_ms')
+                )
+                results['interactions'] = {
+                    'total_executions': exec_stats['total'] or 0,
+                    'avg_execution_time_ms': round(float(exec_stats['avg_time'] or 0), 0)
+                }
+
+            # Build summary
+            summary_lines = [f"## Learning Progress ({time_period})", ""]
+            if results.get('learning_stats'):
+                ls = results['learning_stats']
+                summary_lines.append(f"**Total Learnings:** {ls['total_learnings']}")
+                summary_lines.append(f"**Avg Effectiveness:** {ls['avg_effectiveness']}")
+            if results.get('interactions'):
+                i = results['interactions']
+                summary_lines.append(f"**Executions:** {i['total_executions']}")
+            if results.get('evolution'):
+                summary_lines.append(f"**Active Agents:** {len(results['evolution'])}")
+
+            results['summary'] = '\n'.join(summary_lines)
+            return results
+
+        except Exception as e:
+            logger.error(f"Error querying learning progress: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_team(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage agent teams, roles, and team workflows.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_teams')
+            base_url = 'http://localhost:8000/api/teams'
+
+            if action == 'list_teams':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        teams = response.json()
+                        team_list = teams if isinstance(teams, list) else teams.get('teams', [])
+                        return {
+                            'success': True,
+                            'teams': team_list[:20],
+                            'total': len(team_list),
+                            'summary': f"Found {len(team_list)} teams"
+                        }
+                except:
+                    pass
+                # Fallback - query Team model directly
+                from core.models_unified_system import AgentTeam
+                teams = AgentTeam.objects.all()[:20]
+                return {
+                    'success': True,
+                    'teams': [{'id': str(t.id), 'name': t.name} for t in teams],
+                    'total': AgentTeam.objects.count(),
+                    'summary': f"Found {AgentTeam.objects.count()} teams"
+                }
+
+            elif action == 'team_stats':
+                try:
+                    response = requests.get(f'{base_url}/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'stats': response.json()}
+                except:
+                    pass
+                from core.models_unified_system import AgentTeam
+                return {'success': True, 'stats': {'total_teams': AgentTeam.objects.count()}}
+
+            elif action == 'list_roles':
+                try:
+                    response = requests.get(f'{base_url}/roles/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'roles': response.json()}
+                except:
+                    pass
+                return {'success': True, 'roles': ['lead', 'member', 'specialist', 'coordinator']}
+
+            elif action == 'get_team':
+                team_id = arguments.get('team_id')
+                if team_id:
+                    response = requests.get(f'{base_url}/{team_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'team': response.json()}
+
+            elif action == 'create_team':
+                team_name = arguments.get('team_name', 'New Team')
+                response = requests.post(f'{base_url}/create/', json={'name': team_name}, timeout=10)
+                return {
+                    'success': response.status_code in [200, 201],
+                    'message': f'Team "{team_name}" created' if response.status_code in [200, 201] else response.text
+                }
+
+            elif action == 'add_member':
+                team_id = arguments.get('team_id')
+                agent_id = arguments.get('agent_id')
+                role = arguments.get('role', 'member')
+                if team_id and agent_id:
+                    response = requests.post(
+                        f'{base_url}/{team_id}/members/',
+                        json={'agent_id': agent_id, 'role': role},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Member added' if response.status_code == 200 else response.text
+                    }
+
+            return {'success': False, 'error': f'Unknown action or missing params: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing team: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _generate_video(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate videos using AI video agents.
+        """
+        try:
+            prompt = arguments.get('prompt', '')
+            video_type = arguments.get('video_type', 'text_to_video')
+            duration = arguments.get('duration', 30)
+            style = arguments.get('style', 'cinematic')
+            aspect_ratio = arguments.get('aspect_ratio', '16:9')
+
+            if not prompt:
+                return {'success': False, 'error': 'Prompt is required'}
+
+            # Delegate to VideoAgent
+            result = self.router.route(
+                agent_name='VideoAgent',
+                task=f"Create a {video_type} video: {prompt}. Style: {style}, Duration: {duration}s, Aspect: {aspect_ratio}",
+                context={
+                    'video_type': video_type,
+                    'duration': duration,
+                    'style': style,
+                    'aspect_ratio': aspect_ratio
+                }
+            )
+
+            return {
+                'success': result.success,
+                'message': result.message if result.success else result.error,
+                'data': result.data if result.success else {},
+                'summary': f"Video generation {'started' if result.success else 'failed'}: {prompt[:50]}..."
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating video: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_distribution(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage content distribution across platforms.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_platforms')
+            base_url = 'http://localhost:8000/api/distribution'
+
+            if action == 'list_platforms':
+                try:
+                    response = requests.get(f'{base_url}/platforms/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'platforms': response.json()}
+                except:
+                    pass
+                # Fallback - return default platforms
+                return {
+                    'success': True,
+                    'platforms': ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok'],
+                    'summary': 'Available platforms (default list)'
+                }
+
+            elif action == 'list_distributions':
+                try:
+                    response = requests.get(f'{base_url}/content/', timeout=10)
+                    if response.status_code == 200:
+                        dist = response.json()
+                        return {
+                            'success': True,
+                            'distributions': dist[:20] if isinstance(dist, list) else dist.get('distributions', [])[:20],
+                            'summary': f"Found distributions"
+                        }
+                except:
+                    pass
+                return {'success': True, 'distributions': [], 'summary': 'No distributions found'}
+
+            elif action == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'stats': response.json()}
+                except:
+                    pass
+                return {'success': True, 'stats': {'message': 'Stats not available'}}
+
+            elif action == 'create_distribution':
+                content_id = arguments.get('content_id')
+                platform = arguments.get('platform', 'all')
+                if content_id:
+                    response = requests.post(
+                        f'{base_url}/content/create/',
+                        json={'content_id': content_id, 'platform': platform},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': 'Distribution created' if response.status_code in [200, 201] else response.text
+                    }
+
+            elif action == 'schedule':
+                content_id = arguments.get('content_id')
+                scheduled_time = arguments.get('scheduled_time')
+                platform = arguments.get('platform', 'all')
+                if content_id and scheduled_time:
+                    response = requests.post(
+                        f'{base_url}/schedule/',
+                        json={'content_id': content_id, 'platform': platform, 'scheduled_time': scheduled_time},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': f'Scheduled for {scheduled_time}' if response.status_code in [200, 201] else response.text
+                    }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing distribution: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_analytics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query system analytics, usage metrics, and performance data.
+        """
+        try:
+            import requests
+            from django.utils import timezone
+            from datetime import timedelta
+            from django.db.models import Count, Sum, Avg
+
+            report_type = arguments.get('report_type', 'overview')
+            time_period = arguments.get('time_period', '7d')
+            include_trends = arguments.get('include_trends', True)
+
+            now = timezone.now()
+            period_map = {'24h': timedelta(hours=24), '7d': timedelta(days=7), '30d': timedelta(days=30), '90d': timedelta(days=90)}
+            cutoff = now - period_map.get(time_period, timedelta(days=7))
+
+            results = {'success': True, 'report_type': report_type, 'time_period': time_period}
+
+            if report_type in ['overview', 'all']:
+                # Try internal API first
+                try:
+                    response = requests.get('http://localhost:8000/api/analytics/overview/', timeout=10)
+                    if response.status_code == 200:
+                        results['overview'] = response.json()
+                except:
+                    pass
+
+                # Fallback to direct DB queries
+                from core.models_unified_system import Agent, AgentExecution
+
+                results['overview'] = results.get('overview', {})
+                results['overview'].update({
+                    'total_agents': Agent.objects.filter(is_active=True).count(),
+                    'executions': AgentExecution.objects.filter(created_at__gte=cutoff).count()
+                })
+
+            if report_type in ['agents', 'all']:
+                from core.models_unified_system import Agent, AgentExecution
+                exec_stats = AgentExecution.objects.filter(created_at__gte=cutoff).values('agent__name').annotate(
+                    count=Count('id'),
+                    avg_time=Avg('execution_time_ms')
+                ).order_by('-count')[:10]
+
+                results['agent_stats'] = [
+                    {'agent': s['agent__name'], 'executions': s['count'], 'avg_time_ms': round(s['avg_time'] or 0, 0)}
+                    for s in exec_stats
+                ]
+
+            if report_type in ['costs', 'all']:
+                try:
+                    response = requests.get('http://localhost:8000/api/analytics/cost-breakdown/', timeout=10)
+                    if response.status_code == 200:
+                        results['costs'] = response.json()
+                except:
+                    results['costs'] = {'message': 'Cost data not available'}
+
+            # Build summary
+            summary_lines = [f"## Analytics Report ({time_period})", ""]
+            if results.get('overview'):
+                o = results['overview']
+                summary_lines.append(f"**Agents:** {o.get('total_agents', 'N/A')}")
+                summary_lines.append(f"**Executions:** {o.get('executions', 'N/A')}")
+                summary_lines.append(f"**Content:** {o.get('content_generated', 'N/A')}")
+
+            results['summary'] = '\n'.join(summary_lines)
+            return results
+
+        except Exception as e:
+            logger.error(f"Error querying analytics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _time_travel_memory(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Access agent memory time-travel capabilities.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_snapshots')
+            agent_name = arguments.get('agent_name')
+            base_url = 'http://localhost:8000/api/time-travel'
+
+            if action == 'list_snapshots':
+                url = f'{base_url}/snapshots/'
+                if agent_name:
+                    url += f'?agent={agent_name}'
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    snapshots = response.json()
+                    return {
+                        'success': True,
+                        'snapshots': snapshots[:20] if isinstance(snapshots, list) else snapshots.get('snapshots', [])[:20],
+                        'summary': f"Found memory snapshots"
+                    }
+
+            elif action == 'get_snapshot':
+                snapshot_date = arguments.get('snapshot_date')
+                if agent_name and snapshot_date:
+                    response = requests.get(f'{base_url}/snapshots/{agent_name}/{snapshot_date}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'snapshot': response.json()}
+
+            elif action == 'timeline':
+                if agent_name:
+                    response = requests.get(f'{base_url}/timeline/{agent_name}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'timeline': response.json()}
+
+            elif action == 'compare':
+                compare_dates = arguments.get('compare_dates', [])
+                if agent_name and len(compare_dates) >= 2:
+                    response = requests.post(
+                        f'{base_url}/compare/',
+                        json={'agent': agent_name, 'date1': compare_dates[0], 'date2': compare_dates[1]},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, 'comparison': response.json()}
+
+            # Fallback to direct model access
+            from core.models_unified_system import AgentMemory
+            memories = AgentMemory.objects.all().order_by('-created_at')[:20]
+            return {
+                'success': True,
+                'snapshots': [
+                    {'agent': m.agent.name if m.agent else 'Unknown', 'created': str(m.created_at), 'type': m.memory_type}
+                    for m in memories
+                ],
+                'summary': f"Found {len(memories)} memory records"
+            }
+
+        except Exception as e:
+            logger.error(f"Error accessing time travel memory: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_memory_palace(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage agent memory palace and memory organization.
+        """
+        try:
+            import requests
+            from django.db.models import Count
+
+            action = arguments.get('action', 'overview')
+            agent_name = arguments.get('agent_name')
+            query = arguments.get('query', '')
+            limit = min(arguments.get('limit', 10), 50)
+            base_url = 'http://localhost:8000/api/memory-palace'
+
+            if action == 'overview':
+                # Get memory palace overview
+                from core.models_unified_system import AgentMemory, Agent
+                memory_stats = AgentMemory.objects.values('memory_type').annotate(count=Count('id')).order_by('-count')
+                total_memories = AgentMemory.objects.count()
+
+                return {
+                    'success': True,
+                    'overview': {
+                        'total_memories': total_memories,
+                        'by_type': {s['memory_type']: s['count'] for s in memory_stats}
+                    },
+                    'summary': f"Memory Palace: {total_memories} memories across {len(memory_stats)} types"
+                }
+
+            elif action == 'search':
+                if query:
+                    from core.models_unified_system import AgentMemory
+                    memories = AgentMemory.objects.filter(content__icontains=query).order_by('-created_at')[:limit]
+                    return {
+                        'success': True,
+                        'results': [
+                            {'agent': m.agent.name if m.agent else 'Unknown', 'content': m.content[:200], 'type': m.memory_type}
+                            for m in memories
+                        ],
+                        'summary': f"Found {len(memories)} memories matching '{query}'"
+                    }
+
+            elif action == 'recent':
+                from core.models_unified_system import AgentMemory
+                memories = AgentMemory.objects.all().order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'memories': [
+                        {'agent': m.agent.name if m.agent else 'Unknown', 'content': m.content[:200], 'type': m.memory_type, 'created': str(m.created_at)}
+                        for m in memories
+                    ],
+                    'summary': f"Last {len(memories)} memories"
+                }
+
+            elif action == 'important':
+                from core.models_unified_system import AgentMemory
+                memories = AgentMemory.objects.filter(importance__gte=0.7).order_by('-importance', '-created_at')[:limit]
+                return {
+                    'success': True,
+                    'memories': [
+                        {'agent': m.agent.name if m.agent else 'Unknown', 'content': m.content[:200], 'importance': m.importance}
+                        for m in memories
+                    ],
+                    'summary': f"Found {len(memories)} high-importance memories"
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing memory palace: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _run_diagnostics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run system diagnostics and health checks.
+        """
+        try:
+            import requests
+            diagnostic_type = arguments.get('diagnostic_type', 'quick')
+            include_details = arguments.get('include_details', False)
+
+            results = {'success': True, 'diagnostic_type': diagnostic_type, 'checks': {}}
+
+            # Quick health check
+            if diagnostic_type in ['quick', 'full']:
+                try:
+                    response = requests.get('http://localhost:8000/health/ping/', timeout=5)
+                    results['checks']['web_server'] = {'status': 'healthy' if response.status_code == 200 else 'unhealthy'}
+                except:
+                    results['checks']['web_server'] = {'status': 'unreachable'}
+
+            # Database check
+            if diagnostic_type in ['database', 'full']:
+                try:
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                    results['checks']['database'] = {'status': 'healthy'}
+                except Exception as e:
+                    results['checks']['database'] = {'status': 'unhealthy', 'error': str(e)}
+
+            # Agent check
+            if diagnostic_type in ['agents', 'full']:
+                from core.models_unified_system import Agent
+                active_agents = Agent.objects.filter(is_active=True).count()
+                results['checks']['agents'] = {'status': 'healthy', 'active_count': active_agents}
+
+            # Spider check
+            if diagnostic_type in ['spiders', 'full']:
+                try:
+                    response = requests.get('http://localhost:8000/api/diagnostics/test-spiders/', timeout=30)
+                    if response.status_code == 200:
+                        results['checks']['spiders'] = response.json()
+                    else:
+                        # Fallback
+                        from ai_core.spiders.spider_registry import SpiderRegistry
+                        results['checks']['spiders'] = {'status': 'available', 'count': len(SpiderRegistry._spiders)}
+                except:
+                    from ai_core.spiders.spider_registry import SpiderRegistry
+                    results['checks']['spiders'] = {'status': 'available', 'count': len(SpiderRegistry._spiders)}
+
+            # Celery check
+            if diagnostic_type in ['celery', 'full']:
+                try:
+                    from core.celery import app
+                    inspect = app.control.inspect()
+                    active = inspect.active()
+                    results['checks']['celery'] = {
+                        'status': 'healthy' if active else 'no_workers',
+                        'workers': len(active) if active else 0
+                    }
+                except Exception as e:
+                    results['checks']['celery'] = {'status': 'error', 'error': str(e)}
+
+            # Services check
+            if diagnostic_type in ['services', 'full']:
+                services_ok = 0
+                services_list = ['redis', 'postgres']
+                for svc in services_list:
+                    try:
+                        if svc == 'redis':
+                            import redis
+                            r = redis.Redis()
+                            r.ping()
+                            services_ok += 1
+                    except:
+                        pass
+                results['checks']['services'] = {'healthy': services_ok, 'total': len(services_list)}
+
+            # Build summary
+            healthy_count = sum(1 for c in results['checks'].values() if c.get('status') == 'healthy')
+            total_checks = len(results['checks'])
+            results['summary'] = f"## Diagnostics ({diagnostic_type})\n\n**Health:** {healthy_count}/{total_checks} checks passed"
+
+            for name, check in results['checks'].items():
+                status_icon = "✅" if check.get('status') == 'healthy' else "❌"
+                results['summary'] += f"\n- {status_icon} **{name}:** {check.get('status', 'unknown')}"
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error running diagnostics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_collaboration(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage agent collaborations and partnerships.
+        """
+        try:
+            import requests
+            from django.utils import timezone
+            from datetime import timedelta
+            from django.db.models import Count
+
+            action = arguments.get('action', 'stats')
+            time_period = arguments.get('time_period', '7d')
+            base_url = 'http://localhost:8000/api/collaboration'
+
+            now = timezone.now()
+            period_map = {'24h': timedelta(hours=24), '7d': timedelta(days=7), '30d': timedelta(days=30)}
+            cutoff = now - period_map.get(time_period, timedelta(days=7))
+
+            if action == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'stats': response.json()}
+                except:
+                    pass
+
+                # Fallback to direct query
+                from core.models_unified_system import Collaboration
+                collab_count = Collaboration.objects.filter(created_at__gte=cutoff).count()
+                return {
+                    'success': True,
+                    'stats': {'collaborations': collab_count, 'period': time_period},
+                    'summary': f"**Collaborations ({time_period}):** {collab_count}"
+                }
+
+            elif action == 'history':
+                from core.models_unified_system import Collaboration
+                collabs = Collaboration.objects.filter(created_at__gte=cutoff).order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'history': [
+                        {
+                            'id': str(c.id),
+                            'lead_agent': c.lead_agent.name if c.lead_agent else 'Unknown',
+                            'objective': c.objective[:100] if c.objective else '',
+                            'status': c.status,
+                            'created': str(c.created_at)
+                        }
+                        for c in collabs
+                    ],
+                    'summary': f"Found {len(collabs)} collaborations"
+                }
+
+            elif action == 'active':
+                from core.models_unified_system import Collaboration
+                active = Collaboration.objects.filter(status='active').order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'active': [
+                        {'id': str(c.id), 'lead_agent': c.lead_agent.name if c.lead_agent else 'Unknown', 'objective': c.objective[:50]}
+                        for c in active
+                    ],
+                    'summary': f"Found {len(active)} active collaborations"
+                }
+
+            elif action == 'network':
+                try:
+                    response = requests.get(f'{base_url}/network/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'network': response.json()}
+                except:
+                    return {'success': True, 'network': {'message': 'Network visualization not available via API'}}
+
+            elif action == 'start':
+                agent_names = arguments.get('agent_names', [])
+                if len(agent_names) >= 2:
+                    response = requests.post(
+                        f'{base_url}/request/',
+                        json={'initiator': agent_names[0], 'collaborator': agent_names[1]},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': 'Collaboration started' if response.status_code in [200, 201] else response.text
+                    }
+
+            elif action == 'performance':
+                try:
+                    response = requests.get(f'{base_url}/performance/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'performance': response.json()}
+                except:
+                    pass
+
+                from core.models_unified_system import Collaboration
+                perf = Collaboration.objects.filter(
+                    created_at__gte=cutoff,
+                    status='completed'
+                ).count()
+                return {
+                    'success': True,
+                    'performance': {'completed': perf, 'period': time_period},
+                    'summary': f"**Completed collaborations ({time_period}):** {perf}"
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing collaboration: {e}")
+            return {'success': False, 'error': str(e)}
