@@ -2297,11 +2297,12 @@ Try asking something specific or type /help for commands!"""
                 if full_cmd == '/system status':
                     # Get real system status - use database_sync_to_async for Django models
                     agent_count = await self.get_agent_count()
-                    spider_count = 40
+                    spider_count = 77  # Session 589: Updated fallback
 
                     try:
-                        from spiders.registry import spider_registry
-                        spider_count = len(spider_registry.get_all_spiders())
+                        from ai_core.spiders.spider_registry import get_spider_registry
+                        spider_registry = get_spider_registry()
+                        spider_count = spider_registry.get_spider_count().get('total', 77)
                     except Exception:
                         pass
 
@@ -2376,11 +2377,12 @@ Example: "Hey Warren Buffett, should I invest in NVDA?"
             elif cmd == '/status':
                 # Get real system status
                 agent_count = await self.get_agent_count()
-                spider_count = 40
+                spider_count = 77  # Session 589: Updated fallback
 
                 try:
-                    from spiders.registry import spider_registry
-                    spider_count = len(spider_registry.get_all_spiders())
+                    from ai_core.spiders.spider_registry import get_spider_registry
+                    spider_registry = get_spider_registry()
+                    spider_count = spider_registry.get_spider_count().get('total', 77)
                 except Exception:
                     pass
 

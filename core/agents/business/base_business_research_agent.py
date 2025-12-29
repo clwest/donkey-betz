@@ -123,7 +123,7 @@ class BaseBusinessResearchAgent:
             "type": "function",
             "function": {
                 "name": "refresh_spider_data",
-                "description": "Trigger spider network to fetch fresh, real-time data from 74 spiders across 20 categories.",
+                "description": "Trigger spider network to fetch fresh, real-time data from 77 spiders across 20 categories.",
                 "parameters": {
                     "type": "object",
                     "properties": {
