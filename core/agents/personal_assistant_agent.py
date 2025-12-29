@@ -3505,6 +3505,121 @@ Actions:
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 25: A/B Testing & Memory Clusters Tools (Session 587) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_ab_testing",
+                "description": """Manage A/B testing experiments for optimization.
+
+Actions:
+- dashboard: Get A/B testing overview and statistics
+- list: List all A/B tests
+- create: Create new A/B test
+- detail: Get test details
+- start: Start a test
+- pause: Pause a running test
+- complete: Complete a test
+- results: Get test results
+- add_variant: Add variant to test
+- record_event: Record event for variant""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["dashboard", "list", "create", "detail", "start", "pause", "complete", "results", "add_variant", "record_event"],
+                            "description": "Action to perform"
+                        },
+                        "test_id": {
+                            "type": "string",
+                            "description": "Test UUID (for detail/start/pause/complete/results/add_variant)"
+                        },
+                        "variant_id": {
+                            "type": "string",
+                            "description": "Variant UUID (for record_event)"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Test name (for create)"
+                        },
+                        "test_type": {
+                            "type": "string",
+                            "enum": ["prompt", "model", "workflow", "ui", "pricing"],
+                            "description": "Type of test (for create)"
+                        },
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Test hypothesis (for create)"
+                        },
+                        "variant_name": {
+                            "type": "string",
+                            "description": "Variant name (for add_variant)"
+                        },
+                        "variant_config": {
+                            "type": "object",
+                            "description": "Variant configuration (for add_variant)"
+                        },
+                        "event_type": {
+                            "type": "string",
+                            "description": "Event type (for record_event)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": ["draft", "running", "paused", "completed"],
+                            "description": "Filter by status (for list)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_memory_clusters",
+                "description": """Manage agent memory clusters - semantic grouping of memories.
+
+Actions:
+- overview: Get clusters overview across all agents
+- list_agent: List clusters for specific agent
+- generate: Generate clusters for an agent
+- detail: Get cluster details
+- add_memory: Add memory to cluster
+- remove_memory: Remove memory from cluster
+- evolution: Get cluster evolution history
+- find_similar: Find similar clusters
+- visualization: Get visualization data
+- generate_all: Generate clusters for all agents""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["overview", "list_agent", "generate", "detail", "add_memory", "remove_memory", "evolution", "find_similar", "visualization", "generate_all"],
+                            "description": "Action to perform"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent UUID (for list_agent/generate/evolution/visualization)"
+                        },
+                        "cluster_id": {
+                            "type": "string",
+                            "description": "Cluster UUID (for detail/add_memory/remove_memory)"
+                        },
+                        "memory_id": {
+                            "type": "string",
+                            "description": "Memory UUID (for add_memory/remove_memory)"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (for find_similar)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -4855,6 +4970,13 @@ Actions:
 
         if tool_name == "manage_time_capsules":
             return self._manage_time_capsules(arguments)
+
+        # ===== Phase 25: A/B Testing & Memory Clusters Tools (Session 587) =====
+        if tool_name == "manage_ab_testing":
+            return self._manage_ab_testing(arguments)
+
+        if tool_name == "manage_memory_clusters":
+            return self._manage_memory_clusters(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -13283,4 +13405,438 @@ Actions:
 
         except Exception as e:
             logger.error(f"Error managing time capsules: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 25: A/B Testing & Memory Clusters (Session 587) =====
+
+    def _manage_ab_testing(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 587: Manage A/B testing experiments.
+        """
+        action = arguments.get('action', 'dashboard')
+        base_url = 'http://localhost:8000/api/ab-testing'
+
+        try:
+            if action == 'dashboard':
+                try:
+                    response = requests.get(f'{base_url}/dashboard/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct DB query
+                from core.models_unified_system import ABTest
+                tests = ABTest.objects.all()
+                status_counts = {
+                    'draft': tests.filter(status='draft').count(),
+                    'running': tests.filter(status='running').count(),
+                    'paused': tests.filter(status='paused').count(),
+                    'completed': tests.filter(status='completed').count(),
+                }
+                return {
+                    'success': True,
+                    'status_counts': status_counts,
+                    'total_tests': sum(status_counts.values())
+                }
+
+            elif action == 'list':
+                status_filter = arguments.get('status')
+                try:
+                    params = {'status': status_filter} if status_filter else {}
+                    response = requests.get(f'{base_url}/tests/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                tests = ABTest.objects.all()
+                if status_filter:
+                    tests = tests.filter(status=status_filter)
+                tests = tests.order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'tests': [
+                        {
+                            'id': str(t.id),
+                            'name': t.name,
+                            'test_type': t.test_type,
+                            'status': t.status,
+                            'created_at': t.created_at.isoformat()
+                        }
+                        for t in tests
+                    ]
+                }
+
+            elif action == 'create':
+                name = arguments.get('name')
+                test_type = arguments.get('test_type')
+                if not name or not test_type:
+                    return {'success': False, 'error': 'name and test_type required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/tests/create/',
+                        json={
+                            'name': name,
+                            'test_type': test_type,
+                            'hypothesis': arguments.get('hypothesis', ''),
+                            'description': arguments.get('description', '')
+                        },
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                test = ABTest.objects.create(
+                    name=name,
+                    test_type=test_type,
+                    hypothesis=arguments.get('hypothesis', ''),
+                    description=arguments.get('description', ''),
+                    status='draft'
+                )
+                return {
+                    'success': True,
+                    'test_id': str(test.id),
+                    'message': f'A/B test "{name}" created'
+                }
+
+            elif action == 'detail':
+                test_id = arguments.get('test_id')
+                if not test_id:
+                    return {'success': False, 'error': 'test_id required'}
+                try:
+                    response = requests.get(f'{base_url}/tests/{test_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                try:
+                    test = ABTest.objects.get(id=test_id)
+                    return {
+                        'success': True,
+                        'test': {
+                            'id': str(test.id),
+                            'name': test.name,
+                            'test_type': test.test_type,
+                            'status': test.status,
+                            'hypothesis': test.hypothesis,
+                            'created_at': test.created_at.isoformat()
+                        }
+                    }
+                except ABTest.DoesNotExist:
+                    return {'success': False, 'error': 'Test not found'}
+
+            elif action == 'start':
+                test_id = arguments.get('test_id')
+                if not test_id:
+                    return {'success': False, 'error': 'test_id required'}
+                try:
+                    response = requests.post(f'{base_url}/tests/{test_id}/start/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                from django.utils import timezone
+                try:
+                    test = ABTest.objects.get(id=test_id)
+                    test.status = 'running'
+                    test.start_date = timezone.now()
+                    test.save()
+                    return {'success': True, 'message': f'Test "{test.name}" started'}
+                except ABTest.DoesNotExist:
+                    return {'success': False, 'error': 'Test not found'}
+
+            elif action == 'pause':
+                test_id = arguments.get('test_id')
+                if not test_id:
+                    return {'success': False, 'error': 'test_id required'}
+                try:
+                    response = requests.post(f'{base_url}/tests/{test_id}/pause/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                try:
+                    test = ABTest.objects.get(id=test_id)
+                    test.status = 'paused'
+                    test.save()
+                    return {'success': True, 'message': f'Test "{test.name}" paused'}
+                except ABTest.DoesNotExist:
+                    return {'success': False, 'error': 'Test not found'}
+
+            elif action == 'complete':
+                test_id = arguments.get('test_id')
+                if not test_id:
+                    return {'success': False, 'error': 'test_id required'}
+                try:
+                    response = requests.post(f'{base_url}/tests/{test_id}/complete/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import ABTest
+                from django.utils import timezone
+                try:
+                    test = ABTest.objects.get(id=test_id)
+                    test.status = 'completed'
+                    test.end_date = timezone.now()
+                    test.save()
+                    return {'success': True, 'message': f'Test "{test.name}" completed'}
+                except ABTest.DoesNotExist:
+                    return {'success': False, 'error': 'Test not found'}
+
+            elif action == 'results':
+                test_id = arguments.get('test_id')
+                if not test_id:
+                    return {'success': False, 'error': 'test_id required'}
+                try:
+                    response = requests.get(f'{base_url}/tests/{test_id}/results/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Results not available'}
+
+            elif action == 'add_variant':
+                test_id = arguments.get('test_id')
+                variant_name = arguments.get('variant_name')
+                if not test_id or not variant_name:
+                    return {'success': False, 'error': 'test_id and variant_name required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/tests/{test_id}/variants/',
+                        json={
+                            'name': variant_name,
+                            'config': arguments.get('variant_config', {})
+                        },
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Failed to add variant'}
+
+            elif action == 'record_event':
+                variant_id = arguments.get('variant_id')
+                event_type = arguments.get('event_type')
+                if not variant_id or not event_type:
+                    return {'success': False, 'error': 'variant_id and event_type required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/variants/{variant_id}/event/',
+                        json={'event_type': event_type},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Failed to record event'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing A/B testing: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_memory_clusters(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 587: Manage agent memory clusters - semantic grouping of memories.
+        """
+        action = arguments.get('action', 'overview')
+        base_url = 'http://localhost:8000/api/memory-clusters'
+
+        try:
+            if action == 'overview':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback to direct DB query
+                from core.models_unified_system import MemoryCluster
+                total_clusters = MemoryCluster.objects.count()
+                clusters_by_agent = {}
+                for cluster in MemoryCluster.objects.select_related('agent').all()[:50]:
+                    agent_name = cluster.agent.name if cluster.agent else 'Cross-Agent'
+                    if agent_name not in clusters_by_agent:
+                        clusters_by_agent[agent_name] = 0
+                    clusters_by_agent[agent_name] += 1
+                return {
+                    'success': True,
+                    'stats': {
+                        'total_clusters': total_clusters,
+                        'agents_with_clusters': len(clusters_by_agent)
+                    },
+                    'clusters_by_agent': clusters_by_agent
+                }
+
+            elif action == 'list_agent':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.get(f'{base_url}/agent/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import MemoryCluster
+                clusters = MemoryCluster.objects.filter(agent_id=agent_id).order_by('-created_at')[:20]
+                return {
+                    'success': True,
+                    'clusters': [
+                        {
+                            'id': str(c.id),
+                            'name': c.name,
+                            'description': c.description or '',
+                            'memory_count': c.memories.count(),
+                            'coherence_score': c.coherence_score,
+                            'created_at': c.created_at.isoformat()
+                        }
+                        for c in clusters
+                    ]
+                }
+
+            elif action == 'generate':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.post(f'{base_url}/agent/{agent_id}/', timeout=60)
+                    if response.status_code in [200, 201]:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Cluster generation not available'}
+
+            elif action == 'detail':
+                cluster_id = arguments.get('cluster_id')
+                if not cluster_id:
+                    return {'success': False, 'error': 'cluster_id required'}
+                try:
+                    response = requests.get(f'{base_url}/cluster/{cluster_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                # Fallback
+                from core.models_unified_system import MemoryCluster
+                try:
+                    cluster = MemoryCluster.objects.select_related('agent').get(id=cluster_id)
+                    return {
+                        'success': True,
+                        'cluster': {
+                            'id': str(cluster.id),
+                            'name': cluster.name,
+                            'description': cluster.description or '',
+                            'agent_name': cluster.agent.name if cluster.agent else 'Cross-Agent',
+                            'memory_count': cluster.memories.count(),
+                            'coherence_score': cluster.coherence_score,
+                            'keywords': cluster.keywords or [],
+                            'created_at': cluster.created_at.isoformat()
+                        }
+                    }
+                except MemoryCluster.DoesNotExist:
+                    return {'success': False, 'error': 'Cluster not found'}
+
+            elif action == 'add_memory':
+                cluster_id = arguments.get('cluster_id')
+                memory_id = arguments.get('memory_id')
+                if not cluster_id or not memory_id:
+                    return {'success': False, 'error': 'cluster_id and memory_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/cluster/{cluster_id}/add-memory/',
+                        json={'memory_id': memory_id},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Failed to add memory to cluster'}
+
+            elif action == 'remove_memory':
+                cluster_id = arguments.get('cluster_id')
+                memory_id = arguments.get('memory_id')
+                if not cluster_id or not memory_id:
+                    return {'success': False, 'error': 'cluster_id and memory_id required'}
+                try:
+                    response = requests.delete(
+                        f'{base_url}/cluster/{cluster_id}/memory/{memory_id}/',
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, 'message': 'Memory removed from cluster'}
+                except:
+                    pass
+                return {'success': False, 'error': 'Failed to remove memory from cluster'}
+
+            elif action == 'evolution':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.get(f'{base_url}/evolution/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Evolution data not available'}
+
+            elif action == 'find_similar':
+                query = arguments.get('query')
+                if not query:
+                    return {'success': False, 'error': 'query required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/find-similar/',
+                        json={'query': query},
+                        timeout=15
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Similar cluster search not available'}
+
+            elif action == 'visualization':
+                agent_id = arguments.get('agent_id')
+                url = f'{base_url}/visualization/{agent_id}/' if agent_id else f'{base_url}/visualization/'
+                try:
+                    response = requests.get(url, timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Visualization data not available'}
+
+            elif action == 'generate_all':
+                try:
+                    response = requests.post(f'{base_url}/generate-all/', timeout=120)
+                    if response.status_code == 200:
+                        return {'success': True, **response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Cluster generation for all agents not available'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing memory clusters: {e}")
             return {'success': False, 'error': str(e)}
