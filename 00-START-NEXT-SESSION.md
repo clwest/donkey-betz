@@ -31,9 +31,22 @@
 | `query_player_props` | betting | Player prop bets by event/player |
 | `query_betting_recommendations` | betting | AI-generated betting picks |
 
+### Automatic Dream Cleanup Task
+
+Added `cleanup_stale_dreams` Celery task to prevent stale dream backlog:
+
+| Setting | Value |
+|---------|-------|
+| **Schedule** | Daily at 6 AM |
+| **Threshold** | 72 hours |
+| **Action** | Archives dreams promoted to Boardroom but never decided |
+
+**Background:** Found 56 dreams in pending state, oldest 560 hours old. Manually archived 13 stale dreams, then added automatic cleanup to prevent future accumulation.
+
 ### Session 581 Commits
 
 ```
+bf8cfb7 feat(Session 581): Add automatic dream cleanup task
 6baabf1 feat(Session 581): PA Phase 10 - 6 Betting/Sports Tools (43 → 49)
 3a6bbae docs(Session 581): Update session doc - Phase 9 complete (43 tools)
 fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
@@ -42,6 +55,7 @@ fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 ### Bugs Fixed
 - `PartnershipProject` import: `models_unified_system` → `models_partnership`
 - `CaseProfile` query: field `name` → `case_title`
+- 560-hour stale dream backlog: Manually archived 13 dreams, added auto-cleanup
 
 ---
 
@@ -192,7 +206,7 @@ open http://localhost:8000/ai-studio/
 | **Spiders** | 77 (72 working) |
 | **PA Tools** | 49 |
 | **API Endpoints** | 1,343+ |
-| **Celery Tasks** | 227 |
+| **Celery Tasks** | 228 |
 | **Services** | 93 |
 
 ---
@@ -209,6 +223,8 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Session 581: Phase 9 + Phase 10 = 11 new tools (38 → 49)**
+**Session 581: Phase 9 + Phase 10 = 11 new tools (38 → 49) + Dream Cleanup Task**
 
 **PA now has 49 tools (3.65% coverage) - Phases 9 & 10 complete!**
+
+**Celery: 228 tasks (+1 cleanup_stale_dreams)**
