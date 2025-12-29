@@ -2800,6 +2800,121 @@ def approve_all_checklist_items(request, gate_id):
 
 
 @require_http_methods(["GET"])
+def get_pilot_executions_dashboard(request):
+    """
+    Session 595: Get comprehensive dashboard for pilot executions.
+
+    GET /api/pilots/dashboard/
+
+    Returns:
+    - running_pilots: Currently running pilots with status info
+    - completed_pilots: Recently completed pilots with outcomes
+    - metrics: Success rates, averages, counts
+    """
+    try:
+        from django.db.models import Avg, Count
+        from django.utils import timezone
+        from core.models_pilot_readiness import PilotExecution
+
+        now = timezone.now()
+
+        # 1. Running pilots
+        running = PilotExecution.objects.filter(status='running').select_related('gate', 'gate__decision').order_by('-started_at')
+        running_pilots = []
+        for p in running:
+            hours_running = (now - p.started_at).total_seconds() / 3600
+            auto_complete_in = max(0, 24 - hours_running)
+
+            # Get ThinkingAgent evaluation if available
+            thinking_eval = None
+            if p.metrics and 'thinking_agent_evaluation' in p.metrics:
+                thinking_eval = p.metrics['thinking_agent_evaluation']
+
+            running_pilots.append({
+                'id': str(p.id),
+                'gate_id': str(p.gate.id),
+                'decision_topic': p.gate.decision.topic if p.gate.decision else 'Unknown',
+                'decision_type': p.gate.decision.decision_type if p.gate.decision else 'unknown',
+                'risk_level': p.gate.risk_level,
+                'started_at': p.started_at.isoformat(),
+                'hours_running': round(hours_running, 1),
+                'auto_complete_in_hours': round(auto_complete_in, 1),
+                'kill_switch_triggered': p.kill_switch_triggered,
+                'thinking_agent_evaluation': thinking_eval,
+            })
+
+        # 2. Completed pilots (last 20)
+        completed = PilotExecution.objects.filter(status='completed').select_related('gate', 'gate__decision').order_by('-completed_at')[:20]
+        completed_pilots = []
+        for p in completed:
+            duration_hours = None
+            if p.started_at and p.completed_at:
+                duration_hours = (p.completed_at - p.started_at).total_seconds() / 3600
+
+            thinking_eval = None
+            if p.metrics and 'thinking_agent_evaluation' in p.metrics:
+                thinking_eval = p.metrics['thinking_agent_evaluation']
+
+            completed_pilots.append({
+                'id': str(p.id),
+                'gate_id': str(p.gate.id),
+                'decision_topic': p.gate.decision.topic if p.gate.decision else 'Unknown',
+                'decision_type': p.gate.decision.decision_type if p.gate.decision else 'unknown',
+                'risk_level': p.gate.risk_level,
+                'outcome': p.outcome,
+                'started_at': p.started_at.isoformat() if p.started_at else None,
+                'completed_at': p.completed_at.isoformat() if p.completed_at else None,
+                'duration_hours': round(duration_hours, 1) if duration_hours else None,
+                'learnings': p.learnings,
+                'thinking_agent_evaluation': thinking_eval,
+            })
+
+        # 3. Metrics
+        all_pilots = PilotExecution.objects.all()
+        total_pilots = all_pilots.count()
+        completed_count = all_pilots.filter(status='completed').count()
+        success_count = all_pilots.filter(outcome='success').count()
+        failure_count = all_pilots.filter(outcome='failure').count()
+        partial_count = all_pilots.filter(outcome='partial_success').count()
+
+        # Calculate average duration for completed pilots
+        avg_duration = None
+        completed_with_times = PilotExecution.objects.filter(
+            status='completed',
+            started_at__isnull=False,
+            completed_at__isnull=False
+        )
+        if completed_with_times.exists():
+            durations = [(p.completed_at - p.started_at).total_seconds() / 3600 for p in completed_with_times]
+            avg_duration = sum(durations) / len(durations)
+
+        # Success rate
+        success_rate = round((success_count / completed_count * 100), 1) if completed_count > 0 else 0
+
+        metrics = {
+            'total_pilots': total_pilots,
+            'running_count': len(running_pilots),
+            'completed_count': completed_count,
+            'success_count': success_count,
+            'failure_count': failure_count,
+            'partial_count': partial_count,
+            'success_rate': success_rate,
+            'avg_duration_hours': round(avg_duration, 1) if avg_duration else None,
+        }
+
+        return JsonResponse({
+            'success': True,
+            'running_pilots': running_pilots,
+            'completed_pilots': completed_pilots,
+            'metrics': metrics,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting pilot executions dashboard: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
 def get_pilot_gate_dashboard(request):
     """
     Session 593: Get comprehensive dashboard data for pilot readiness gates.

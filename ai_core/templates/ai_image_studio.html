@@ -7308,6 +7308,87 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ========== SESSION 595: PILOT DASHBOARD ========== -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #ec4899;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                                <h5 class="mb-0" style="color: #ec4899;">
+                                    <span style="font-size: 24px;">🎯</span> Pilot Dashboard
+                                </h5>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="badge" style="background: #10b981;" id="pilot-dash-running-count">0 Running</span>
+                                    <span class="badge" style="background: #6b7280;" id="pilot-dash-completed-count">0 Completed</span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="loadPilotDashboard()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Metrics Row -->
+                                <div class="row mb-4">
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-dash-success-rate" style="color: #10b981;">--%</h2>
+                                            <small class="text-muted">Success Rate</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-dash-total" style="color: #3b82f6;">0</h2>
+                                            <small class="text-muted">Total Pilots</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-dash-success" style="color: #10b981;">0</h2>
+                                            <small class="text-muted">Success</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(239, 68, 68, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-dash-failure" style="color: #ef4444;">0</h2>
+                                            <small class="text-muted">Failure</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-dash-partial" style="color: #f59e0b;">0</h2>
+                                            <small class="text-muted">Partial</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 8px;">
+                                            <h3 id="pilot-dash-avg-duration" style="color: #8b5cf6;">--h</h3>
+                                            <small class="text-muted">Avg Duration</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Running and Completed Pilots -->
+                                <div class="row">
+                                    <!-- Running Pilots -->
+                                    <div class="col-md-6">
+                                        <h6 style="color: #10b981;">🔄 Running Pilots</h6>
+                                        <div id="pilot-dash-running" style="max-height: 400px; overflow-y: auto;">
+                                            <p class="text-muted text-center small">Loading...</p>
+                                        </div>
+                                    </div>
+                                    <!-- Completed Pilots -->
+                                    <div class="col-md-6">
+                                        <h6 style="color: #6b7280;">✅ Completed Pilots</h6>
+                                        <div id="pilot-dash-completed" style="max-height: 400px; overflow-y: auto;">
+                                            <p class="text-muted text-center small">Loading...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END PILOT DASHBOARD -->
+
             </div>
             <!-- Pilot Gates Styles -->
             <style>
@@ -55948,6 +56029,11 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (iccTab && iccTab.classList.contains('active') && typeof loadPilotGates === 'function') {
                 loadPilotGates();
                 console.log('  ✓ Pilot Readiness Gates: loading latest');
+                // Session 595: Also load Pilot Dashboard
+                if (typeof loadPilotDashboard === 'function') {
+                    loadPilotDashboard();
+                    console.log('  ✓ Pilot Dashboard: loading latest');
+                }
             }
 
             // 8. Session 556: Refresh Review Documents
@@ -56481,7 +56567,8 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             if (iccTabTrigger) {
                 iccTabTrigger.addEventListener('shown.bs.tab', function() {
                     loadPilotGates();
-                    console.log('  ✓ ICC: Loading pilot gates');
+                    loadPilotDashboard();  // Session 595
+                    console.log('  ✓ ICC: Loading pilot gates and dashboard');
                 });
             }
 
@@ -58282,6 +58369,106 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error approving all items:', error);
                 showNotification('Error approving items', 'danger');
+            }
+        }
+
+        // Session 595: Load Pilot Dashboard
+        async function loadPilotDashboard() {
+            try {
+                const response = await fetch('/api/pilots/dashboard/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading pilot dashboard:', data.error);
+                    return;
+                }
+
+                // Update metrics
+                const m = data.metrics;
+                document.getElementById('pilot-dash-success-rate').textContent = m.success_rate + '%';
+                document.getElementById('pilot-dash-total').textContent = m.total_pilots;
+                document.getElementById('pilot-dash-success').textContent = m.success_count;
+                document.getElementById('pilot-dash-failure').textContent = m.failure_count;
+                document.getElementById('pilot-dash-partial').textContent = m.partial_count;
+                document.getElementById('pilot-dash-avg-duration').textContent = m.avg_duration_hours ? m.avg_duration_hours + 'h' : '--h';
+                document.getElementById('pilot-dash-running-count').textContent = m.running_count + ' Running';
+                document.getElementById('pilot-dash-completed-count').textContent = m.completed_count + ' Completed';
+
+                // Render running pilots
+                const runningContainer = document.getElementById('pilot-dash-running');
+                if (data.running_pilots.length === 0) {
+                    runningContainer.innerHTML = '<p class="text-muted text-center small">No pilots currently running</p>';
+                } else {
+                    runningContainer.innerHTML = data.running_pilots.map(p => {
+                        const riskColor = p.risk_level === 'high' ? '#ef4444' : p.risk_level === 'medium' ? '#f59e0b' : '#10b981';
+                        const thinkingEval = p.thinking_agent_evaluation ?
+                            `<div class="mt-2 p-2" style="background: rgba(139, 92, 246, 0.2); border-radius: 4px; font-size: 11px;">
+                                <strong style="color: #8b5cf6;">🧠 ThinkingAgent:</strong>
+                                ${p.thinking_agent_evaluation.suggested_outcome || 'Evaluating...'}
+                                (${p.thinking_agent_evaluation.confidence || '--'}% confidence)
+                            </div>` : '';
+
+                        return `
+                            <div class="pilot-card mb-2 p-2" style="background: rgba(16, 185, 129, 0.1); border-radius: 6px; border-left: 3px solid #10b981;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <strong style="color: #e5e7eb; font-size: 13px;">${p.decision_topic.substring(0, 45)}${p.decision_topic.length > 45 ? '...' : ''}</strong>
+                                        <div class="mt-1">
+                                            <span class="badge" style="background: ${riskColor}; font-size: 9px;">${p.risk_level.toUpperCase()}</span>
+                                            <span class="badge bg-secondary" style="font-size: 9px;">${p.decision_type}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span style="color: #10b981; font-size: 12px;">${p.hours_running}h running</span><br>
+                                        <small class="text-muted">Auto-complete in ${p.auto_complete_in_hours}h</small>
+                                    </div>
+                                </div>
+                                ${thinkingEval}
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-success me-1" onclick="completePilot('${p.gate_id}', '${p.id}', 'success')" style="font-size: 10px;">
+                                        ✅ Success
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="completePilot('${p.gate_id}', '${p.id}', 'failure')" style="font-size: 10px;">
+                                        ❌ Failure
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Render completed pilots
+                const completedContainer = document.getElementById('pilot-dash-completed');
+                if (data.completed_pilots.length === 0) {
+                    completedContainer.innerHTML = '<p class="text-muted text-center small">No completed pilots yet</p>';
+                } else {
+                    completedContainer.innerHTML = data.completed_pilots.map(p => {
+                        const outcomeColor = p.outcome === 'success' ? '#10b981' : p.outcome === 'failure' ? '#ef4444' : '#f59e0b';
+                        const outcomeIcon = p.outcome === 'success' ? '✅' : p.outcome === 'failure' ? '❌' : '⚠️';
+                        const riskColor = p.risk_level === 'high' ? '#ef4444' : p.risk_level === 'medium' ? '#f59e0b' : '#10b981';
+
+                        return `
+                            <div class="pilot-card mb-2 p-2" style="background: rgba(107, 114, 128, 0.1); border-radius: 6px; border-left: 3px solid ${outcomeColor};">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div style="flex: 1;">
+                                        <strong style="color: #e5e7eb; font-size: 13px;">${p.decision_topic.substring(0, 45)}${p.decision_topic.length > 45 ? '...' : ''}</strong>
+                                        <div class="mt-1">
+                                            <span class="badge" style="background: ${outcomeColor}; font-size: 9px;">${outcomeIcon} ${p.outcome.toUpperCase()}</span>
+                                            <span class="badge" style="background: ${riskColor}; font-size: 9px;">${p.risk_level.toUpperCase()}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span style="color: #6b7280; font-size: 12px;">${p.duration_hours || '--'}h duration</span>
+                                    </div>
+                                </div>
+                                ${p.learnings ? `<div class="mt-1" style="font-size: 11px; color: #9ca3af;"><em>${p.learnings.substring(0, 100)}${p.learnings.length > 100 ? '...' : ''}</em></div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+            } catch (error) {
+                console.error('Error loading pilot dashboard:', error);
             }
         }
 

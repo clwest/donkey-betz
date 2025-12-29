@@ -291,6 +291,8 @@ from core.views_agent_learning import (
     # Session 594: Regenerate content & Approve all
     regenerate_checklist_content,
     approve_all_checklist_items,
+    # Session 595: Pilot Dashboard
+    get_pilot_executions_dashboard,
 )
 
 # Session 250: Hive Mind Mode
@@ -2718,6 +2720,8 @@ urlpatterns = [
     # Session 594: Regenerate checklist content & Approve all
     path('api/pilot-gates/<uuid:gate_id>/regenerate/', regenerate_checklist_content, name='regenerate-checklist-content'),
     path('api/pilot-gates/<uuid:gate_id>/approve-all/', approve_all_checklist_items, name='approve-all-checklist-items'),
+    # Session 595: Pilot Executions Dashboard
+    path('api/pilots/dashboard/', get_pilot_executions_dashboard, name='pilot-executions-dashboard'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),
