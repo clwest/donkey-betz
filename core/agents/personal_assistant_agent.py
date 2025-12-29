@@ -854,6 +854,11 @@ ORCHESTRATION:
             'action plan', 'create a plan', 'draft a plan', 'make a plan',
             'prioritize these', 'prioritize those', 'prioritize the',
             'owners and timelines', 'assign owners', 'with owners',
+            # Session 574: Draft/create for items patterns
+            'draft the', 'create the', 'write the', 'prepare the',
+            'for those items', 'for those research', 'for the items',
+            'decision briefs', 'action items', 'those three', 'those five',
+            'the three', 'the five', 'all three', 'all five',
         ]
         if any(indicator in task_lower for indicator in action_followup_indicators):
             # This is an ACTION request - let it flow to _detect_agent() for WorkflowAgent routing
@@ -985,6 +990,11 @@ ORCHESTRATION:
             'action plan', 'create a plan', 'draft a plan', 'make a plan',
             'prioritize these', 'prioritize those', 'prioritize the',
             'owners and timelines', 'assign owners', 'with owners',
+            # Session 574: Draft/create for items patterns
+            'draft the', 'create the', 'write the', 'prepare the',
+            'for those items', 'for those research', 'for the items',
+            'decision briefs', 'action items', 'those three', 'those five',
+            'the three', 'the five', 'all three', 'all five',
         ]
         for pattern in action_followup_patterns:
             if pattern in task_lower:
