@@ -3168,6 +3168,97 @@ Supports workflow sharing and collaborative execution.""",
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 22: Team Workflows & Agent Evolution Tools (Session 585) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_team_workflows",
+                "description": """Manage team workflows - create, start, execute, and monitor team-based workflows.
+
+- "Create team workflow"
+- "Start team workflow"
+- "Show team workflow status"
+- "List active team workflows"
+- "Execute workflow step"
+- "Complete workflow step"
+
+Supports team-based workflow orchestration.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["create", "start", "status", "list_active", "list_templates", "execute", "run_full", "execute_step", "complete_step"],
+                            "description": "Action to perform"
+                        },
+                        "workflow_id": {
+                            "type": "string",
+                            "description": "Workflow ID for workflow-specific actions"
+                        },
+                        "step_id": {
+                            "type": "string",
+                            "description": "Step ID for step-specific actions"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Workflow name (for create)"
+                        },
+                        "steps": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                            "description": "Workflow steps (for create)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_agent_evolution",
+                "description": """Query agent evolution, XP, levels, and abilities.
+
+- "Show agent evolution overview"
+- "Show agent XP and level"
+- "Show evolution leaderboard"
+- "List available abilities"
+- "Show recent XP gains"
+
+Tracks agent growth and progression.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["overview", "agent_detail", "leaderboard", "abilities", "xp_gains", "award_xp", "unlock_ability"],
+                            "description": "Type of evolution query"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent ID for agent-specific queries"
+                        },
+                        "ability_id": {
+                            "type": "string",
+                            "description": "Ability ID for unlock action"
+                        },
+                        "xp_amount": {
+                            "type": "integer",
+                            "description": "XP amount to award"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason for XP award"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results (default 10)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4497,6 +4588,13 @@ Supports workflow sharing and collaborative execution.""",
 
         if tool_name == "manage_workflow_sharing":
             return self._manage_workflow_sharing(arguments)
+
+        # ===== Phase 22: Team Workflows & Agent Evolution Tools (Session 585) =====
+        if tool_name == "manage_team_workflows":
+            return self._manage_team_workflows(arguments)
+
+        if tool_name == "query_agent_evolution":
+            return self._query_agent_evolution(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -11761,4 +11859,323 @@ Supports workflow sharing and collaborative execution.""",
 
         except Exception as e:
             logger.error(f"Error managing workflow sharing: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 22: Team Workflows & Agent Evolution Tools (Session 585) =====
+
+    def _manage_team_workflows(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage team workflows - create, start, execute, and monitor.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list_active')
+            base_url = 'http://localhost:8000/api/teams/workflows'
+
+            if action == 'list_active':
+                try:
+                    response = requests.get(f'{base_url}/active/', timeout=10)
+                    if response.status_code == 200:
+                        workflows = response.json()
+                        wf_list = workflows if isinstance(workflows, list) else workflows.get('workflows', [])
+                        return {
+                            'success': True,
+                            'workflows': wf_list[:20],
+                            'total': len(wf_list),
+                            'summary': f"Found {len(wf_list)} active team workflows"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_unified_system import TeamWorkflow
+                workflows = TeamWorkflow.objects.filter(status='active')[:20]
+                return {
+                    'success': True,
+                    'workflows': [{'id': str(w.id), 'name': w.name} for w in workflows],
+                    'total': workflows.count(),
+                    'summary': f"Found {workflows.count()} active team workflows"
+                }
+
+            elif action == 'list_templates':
+                try:
+                    response = requests.get(f'{base_url}/templates/', timeout=10)
+                    if response.status_code == 200:
+                        templates = response.json()
+                        tmpl_list = templates if isinstance(templates, list) else templates.get('templates', [])
+                        return {
+                            'success': True,
+                            'templates': tmpl_list[:20],
+                            'total': len(tmpl_list),
+                            'summary': f"Found {len(tmpl_list)} workflow templates"
+                        }
+                except:
+                    pass
+                return {'success': True, 'templates': [], 'summary': 'No templates found'}
+
+            elif action == 'create':
+                name = arguments.get('name', 'New Workflow')
+                steps = arguments.get('steps', [])
+                try:
+                    response = requests.post(
+                        f'{base_url}/',
+                        json={'name': name, 'steps': steps},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': f'Workflow "{name}" created' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'start':
+                workflow_id = arguments.get('workflow_id')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{workflow_id}/start/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Workflow started' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'status':
+                workflow_id = arguments.get('workflow_id')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{workflow_id}/status/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'status': response.json()}
+                except:
+                    pass
+
+                # Try getting workflow detail
+                try:
+                    response = requests.get(f'{base_url}/{workflow_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'workflow': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Could not get workflow status'}
+
+            elif action == 'execute':
+                workflow_id = arguments.get('workflow_id')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{workflow_id}/execute/', timeout=30)
+                    return {
+                        'success': response.status_code == 200,
+                        'result': response.json() if response.status_code == 200 else None,
+                        'message': 'Workflow executed' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'run_full':
+                workflow_id = arguments.get('workflow_id')
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{workflow_id}/run/', timeout=60)
+                    return {
+                        'success': response.status_code == 200,
+                        'result': response.json() if response.status_code == 200 else None,
+                        'message': 'Full workflow run completed' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'execute_step':
+                workflow_id = arguments.get('workflow_id')
+                step_id = arguments.get('step_id')
+                if not workflow_id or not step_id:
+                    return {'success': False, 'error': 'workflow_id and step_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{workflow_id}/steps/{step_id}/execute/', timeout=30)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Step executed' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'complete_step':
+                workflow_id = arguments.get('workflow_id')
+                step_id = arguments.get('step_id')
+                if not workflow_id or not step_id:
+                    return {'success': False, 'error': 'workflow_id and step_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{workflow_id}/steps/{step_id}/complete/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Step completed' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing team workflows: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_agent_evolution(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query agent evolution, XP, levels, and abilities.
+        """
+        try:
+            import requests
+            query_type = arguments.get('query_type', 'overview')
+            limit = arguments.get('limit', 10)
+            base_url = 'http://localhost:8000/api/agent-evolution'
+
+            if query_type == 'overview':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'overview': data,
+                            'summary': f"Evolution overview retrieved"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_unified_system import AgentEvolution
+                evolutions = AgentEvolution.objects.all()[:limit]
+                return {
+                    'success': True,
+                    'evolutions': [
+                        {
+                            'agent': e.agent.name if e.agent else 'Unknown',
+                            'level': e.current_level,
+                            'xp': e.total_xp
+                        }
+                        for e in evolutions
+                    ],
+                    'total': AgentEvolution.objects.count(),
+                    'summary': f"Found {AgentEvolution.objects.count()} agent evolutions"
+                }
+
+            elif query_type == 'agent_detail':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.get(f'{base_url}/agent/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'evolution': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Could not retrieve agent evolution'}
+
+            elif query_type == 'leaderboard':
+                try:
+                    response = requests.get(f'{base_url}/leaderboard/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        leaders = data if isinstance(data, list) else data.get('leaderboard', [])
+                        return {
+                            'success': True,
+                            'leaderboard': leaders[:limit],
+                            'summary': f"Top {min(limit, len(leaders))} agents by XP"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_unified_system import AgentEvolution
+                leaders = AgentEvolution.objects.order_by('-total_xp')[:limit]
+                return {
+                    'success': True,
+                    'leaderboard': [
+                        {
+                            'rank': i + 1,
+                            'agent': e.agent.name if e.agent else 'Unknown',
+                            'level': e.current_level,
+                            'xp': e.total_xp
+                        }
+                        for i, e in enumerate(leaders)
+                    ],
+                    'summary': f"Top {leaders.count()} agents by XP"
+                }
+
+            elif query_type == 'abilities':
+                try:
+                    response = requests.get(f'{base_url}/abilities/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        abilities = data if isinstance(data, list) else data.get('abilities', [])
+                        return {
+                            'success': True,
+                            'abilities': abilities[:20],
+                            'total': len(abilities),
+                            'summary': f"Found {len(abilities)} available abilities"
+                        }
+                except:
+                    pass
+                return {'success': True, 'abilities': [], 'summary': 'No abilities found'}
+
+            elif query_type == 'xp_gains':
+                try:
+                    response = requests.get(f'{base_url}/xp-gains/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        gains = data if isinstance(data, list) else data.get('xp_gains', [])
+                        return {
+                            'success': True,
+                            'xp_gains': gains[:limit],
+                            'summary': f"Found {len(gains)} recent XP gains"
+                        }
+                except:
+                    pass
+                return {'success': True, 'xp_gains': [], 'summary': 'No XP gains found'}
+
+            elif query_type == 'award_xp':
+                agent_id = arguments.get('agent_id')
+                xp_amount = arguments.get('xp_amount', 10)
+                reason = arguments.get('reason', 'Manual award')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/agent/{agent_id}/award-xp/',
+                        json={'xp': xp_amount, 'reason': reason},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': f'Awarded {xp_amount} XP' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'unlock_ability':
+                agent_id = arguments.get('agent_id')
+                ability_id = arguments.get('ability_id')
+                if not agent_id or not ability_id:
+                    return {'success': False, 'error': 'agent_id and ability_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/agent/{agent_id}/unlock/{ability_id}/',
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Ability unlocked' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying agent evolution: {e}")
             return {'success': False, 'error': str(e)}
