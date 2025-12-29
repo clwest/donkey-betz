@@ -400,10 +400,10 @@ class SystemStateAggregator:
 
             recent_source_names = {s['spider_name'] for s in recent_sources if s['spider_name']}
 
-            # Expected active sources (these should have data)
+            # Expected active sources (critical spiders that should have data)
             expected_sources = [
-                'hackernews', 'techcrunch', 'reddit', 'coindesk',
-                'adzuna', 'remoteok', 'weworkremotely'
+                'hackernews', 'techcrunch', 'reddit', 'coingecko',
+                'adzuna', 'remoteok', 'weworkremotely', 'newsapi'
             ]
 
             stale_sources = [s for s in expected_sources if s not in recent_source_names]
