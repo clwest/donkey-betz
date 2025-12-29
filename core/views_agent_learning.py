@@ -2765,6 +2765,40 @@ def regenerate_checklist_content(request, gate_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["POST"])
+def approve_all_checklist_items(request, gate_id):
+    """
+    Session 594: Approve all checklist items that have AI-generated content.
+
+    POST /api/pilot-gates/<gate_id>/approve-all/
+    """
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+
+        approved_count = 0
+        for item in gate.checklist_items.filter(status='pending'):
+            # Only approve items that have generated content
+            if item.documentation_notes:
+                item.status = 'completed'
+                item.save()
+                approved_count += 1
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Approved {approved_count} items',
+            'items_approved': approved_count,
+            'checklist_complete': gate.checklist_complete,
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error approving all checklist items: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 @require_http_methods(["GET"])
 def get_pilot_gate_dashboard(request):
     """

@@ -57921,9 +57921,14 @@ ${item.generated_content}
                         <div class="mb-2">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <small class="text-muted">Checklist Items:</small>
-                                <button class="btn btn-sm btn-outline-info" onclick="generateAllContent('${g.id}')" style="font-size: 10px; padding: 2px 8px;">
-                                    🤖 Generate All
-                                </button>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-info me-1" onclick="generateAllContent('${g.id}')" style="font-size: 10px; padding: 2px 8px;">
+                                        🤖 Generate All
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="approveAllItems('${g.id}')" style="font-size: 10px; padding: 2px 8px;">
+                                        ✅ Approve All
+                                    </button>
+                                </div>
                             </div>
                             ${checklistItems}
                         </div>
@@ -58038,7 +58043,7 @@ ${item.generated_content}
                     showNotification(`🚦 ${data.message}`, 'success');
                     loadPilotGates();
                 } else {
-                    showNotification('Error: ' + data.error, 'danger');
+                    showNotification('⚠️ ' + (data.message || data.error || 'Action failed'), 'warning');
                 }
             } catch (error) {
                 console.error('Error updating gate status:', error);
@@ -58246,6 +58251,37 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error generating all content:', error);
                 showNotification('Error generating content', 'danger');
+            }
+        }
+
+        // Session 594: Approve ALL checklist items with AI content
+        async function approveAllItems(gateId) {
+            showNotification('✅ Approving all AI-generated items...', 'info');
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/approve-all/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    if (data.checklist_complete) {
+                        showNotification(`✅ Approved ${data.items_approved} items! Checklist complete - ready for review.`, 'success');
+                    } else {
+                        showNotification(`✅ Approved ${data.items_approved} items.`, 'success');
+                    }
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + (data.error || data.message), 'danger');
+                }
+            } catch (error) {
+                console.error('Error approving all items:', error);
+                showNotification('Error approving items', 'danger');
             }
         }
 
