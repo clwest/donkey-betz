@@ -447,6 +447,16 @@ app.conf.beat_schedule = {
             'expires': 1200,  # 20 minutes
         }
     },
+    # Session 579: Dream Auto-Triage
+    # Auto-promote high-scoring dreams, archive stale low-scoring ones
+    # Addresses: 422 dreams/day generated vs 83 decisions/day processed
+    'dream-auto-triage': {
+        'task': 'core.tasks.auto_triage_dreams',
+        'schedule': crontab(hour='*/4', minute=30),  # Every 4 hours at :30
+        'options': {
+            'expires': 14400,  # 4 hours
+        }
+    },
     # Session 252: Agent Mood System
     # Check for expired moods and reset them periodically
     'check-mood-expirations': {
