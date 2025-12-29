@@ -3259,6 +3259,152 @@ Tracks agent growth and progression.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 23: Voice Marketplace & Agent Relationships Tools (Session 586) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_voice_marketplace",
+                "description": """Manage voice cloning and text-to-speech marketplace.
+
+Actions:
+- browse: Browse available voices in marketplace
+- my_voices: List your created/owned voices
+- earnings: View voice earnings summary
+- transactions: View transaction history
+- create: Create new voice from ElevenLabs
+- clone_start: Start voice cloning request
+- clone_status: Check clone request status
+- detail: Get voice details
+- publish: Publish voice to marketplace
+- unpublish: Remove voice from marketplace
+- update: Update voice settings
+- generate: Generate speech from voice
+- preview: Preview voice sample
+- add_review: Add review to voice""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["browse", "my_voices", "earnings", "transactions", "create", "clone_start", "clone_status", "detail", "publish", "unpublish", "update", "generate", "preview", "add_review"],
+                            "description": "Action to perform"
+                        },
+                        "voice_id": {
+                            "type": "string",
+                            "description": "Voice UUID (for detail/publish/unpublish/update/generate/preview/add_review)"
+                        },
+                        "request_id": {
+                            "type": "string",
+                            "description": "Clone request UUID (for clone_status)"
+                        },
+                        "text": {
+                            "type": "string",
+                            "description": "Text to generate speech (for generate)"
+                        },
+                        "elevenlabs_voice_id": {
+                            "type": "string",
+                            "description": "ElevenLabs voice ID (for create)"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Voice name (for create/update)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Voice description (for update)"
+                        },
+                        "price": {
+                            "type": "number",
+                            "description": "Price per use (for publish)"
+                        },
+                        "rating": {
+                            "type": "integer",
+                            "description": "Rating 1-5 (for add_review)"
+                        },
+                        "review_text": {
+                            "type": "string",
+                            "description": "Review text (for add_review)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_agent_relationships",
+                "description": """Query agent relationships, alliances, and rivalries.
+
+Query types:
+- overview: Get relationships overview for all agents
+- agent_detail: Get specific agent's relationships
+- create: Create new relationship between agents
+- interact: Record interaction between agents
+- events: Get relationship events history
+- auto_generate: Auto-generate relationships based on activity
+- alliance_detail: Get alliance details
+- alliance_create: Create new alliance
+- alliance_add: Add member to alliance
+- alliance_disband: Disband alliance
+- rivalry_detail: Get rivalry details
+- rivalry_create: Create rivalry between agents
+- rivalry_compete: Record competition result
+- rivalry_end: End rivalry""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["overview", "agent_detail", "create", "interact", "events", "auto_generate", "alliance_detail", "alliance_create", "alliance_add", "alliance_disband", "rivalry_detail", "rivalry_create", "rivalry_compete", "rivalry_end"],
+                            "description": "Type of query"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Agent UUID (for agent_detail)"
+                        },
+                        "relationship_id": {
+                            "type": "string",
+                            "description": "Relationship UUID (for interact/events)"
+                        },
+                        "alliance_id": {
+                            "type": "string",
+                            "description": "Alliance UUID (for alliance operations)"
+                        },
+                        "rivalry_id": {
+                            "type": "string",
+                            "description": "Rivalry UUID (for rivalry operations)"
+                        },
+                        "agent_a_id": {
+                            "type": "string",
+                            "description": "First agent UUID (for create/rivalry_create)"
+                        },
+                        "agent_b_id": {
+                            "type": "string",
+                            "description": "Second agent UUID (for create/rivalry_create)"
+                        },
+                        "relationship_type": {
+                            "type": "string",
+                            "description": "Type of relationship (mentor/peer/collaborator)"
+                        },
+                        "alliance_name": {
+                            "type": "string",
+                            "description": "Alliance name (for alliance_create)"
+                        },
+                        "member_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Member agent UUIDs (for alliance_create)"
+                        },
+                        "winner_id": {
+                            "type": "string",
+                            "description": "Winner agent UUID (for rivalry_compete)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4595,6 +4741,13 @@ Tracks agent growth and progression.""",
 
         if tool_name == "query_agent_evolution":
             return self._query_agent_evolution(arguments)
+
+        # ===== Phase 23: Voice Marketplace & Agent Relationships Tools (Session 586) =====
+        if tool_name == "manage_voice_marketplace":
+            return self._manage_voice_marketplace(arguments)
+
+        if tool_name == "query_agent_relationships":
+            return self._query_agent_relationships(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -12178,4 +12331,482 @@ Tracks agent growth and progression.""",
 
         except Exception as e:
             logger.error(f"Error querying agent evolution: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 23: Voice Marketplace & Agent Relationships Tools (Session 586) =====
+
+    def _manage_voice_marketplace(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Manage voice cloning and TTS marketplace."""
+        try:
+            import requests
+            action = arguments.get('action')
+            base_url = 'http://localhost:8000/api/voice-marketplace'
+
+            if action == 'browse':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        voices = data if isinstance(data, list) else data.get('voices', [])
+                        return {
+                            'success': True,
+                            'voices': voices[:20],
+                            'total': len(voices),
+                            'summary': f"Found {len(voices)} voices in marketplace"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_voice_marketplace import Voice
+                voices = Voice.objects.filter(is_published=True)[:20]
+                return {
+                    'success': True,
+                    'voices': [
+                        {
+                            'id': str(v.id),
+                            'name': v.name,
+                            'description': v.description[:100] if v.description else '',
+                            'price': float(v.price_per_use) if hasattr(v, 'price_per_use') else 0
+                        }
+                        for v in voices
+                    ],
+                    'total': Voice.objects.filter(is_published=True).count(),
+                    'summary': f"Found {voices.count()} published voices"
+                }
+
+            elif action == 'my_voices':
+                try:
+                    response = requests.get(f'{base_url}/my-voices/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'voices': response.json()}
+                except:
+                    pass
+                return {'success': True, 'voices': [], 'message': 'No voices found'}
+
+            elif action == 'earnings':
+                try:
+                    response = requests.get(f'{base_url}/earnings/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'earnings': response.json()}
+                except:
+                    pass
+                return {'success': True, 'earnings': {'total': 0, 'pending': 0}}
+
+            elif action == 'transactions':
+                try:
+                    response = requests.get(f'{base_url}/transactions/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'transactions': response.json()}
+                except:
+                    pass
+                return {'success': True, 'transactions': []}
+
+            elif action == 'detail':
+                voice_id = arguments.get('voice_id')
+                if not voice_id:
+                    return {'success': False, 'error': 'voice_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{voice_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'voice': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Voice not found'}
+
+            elif action == 'create':
+                elevenlabs_id = arguments.get('elevenlabs_voice_id')
+                name = arguments.get('name')
+                if not elevenlabs_id or not name:
+                    return {'success': False, 'error': 'elevenlabs_voice_id and name required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/create/',
+                        json={'elevenlabs_voice_id': elevenlabs_id, 'name': name},
+                        timeout=30
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'voice': response.json() if response.status_code in [200, 201] else None,
+                        'message': 'Voice created' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'clone_start':
+                try:
+                    response = requests.post(f'{base_url}/clone/start/', json=arguments, timeout=30)
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'request': response.json() if response.status_code in [200, 201] else None
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'clone_status':
+                request_id = arguments.get('request_id')
+                if not request_id:
+                    return {'success': False, 'error': 'request_id required'}
+                try:
+                    response = requests.get(f'{base_url}/clone/{request_id}/status/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'status': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Clone request not found'}
+
+            elif action == 'publish':
+                voice_id = arguments.get('voice_id')
+                if not voice_id:
+                    return {'success': False, 'error': 'voice_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{voice_id}/publish/',
+                        json={'price': arguments.get('price', 0)},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Voice published' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'unpublish':
+                voice_id = arguments.get('voice_id')
+                if not voice_id:
+                    return {'success': False, 'error': 'voice_id required'}
+                try:
+                    response = requests.post(f'{base_url}/{voice_id}/unpublish/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Voice unpublished' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'generate':
+                voice_id = arguments.get('voice_id')
+                text = arguments.get('text')
+                if not voice_id or not text:
+                    return {'success': False, 'error': 'voice_id and text required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{voice_id}/generate/',
+                        json={'text': text},
+                        timeout=60
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'audio_url': response.json().get('audio_url') if response.status_code == 200 else None,
+                        'message': 'Speech generated' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'preview':
+                voice_id = arguments.get('voice_id')
+                if not voice_id:
+                    return {'success': False, 'error': 'voice_id required'}
+                try:
+                    response = requests.get(f'{base_url}/{voice_id}/preview/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'preview': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Preview not available'}
+
+            elif action == 'add_review':
+                voice_id = arguments.get('voice_id')
+                rating = arguments.get('rating')
+                review_text = arguments.get('review_text', '')
+                if not voice_id or not rating:
+                    return {'success': False, 'error': 'voice_id and rating required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/{voice_id}/reviews/',
+                        json={'rating': rating, 'text': review_text},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'message': 'Review added' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif action == 'update':
+                voice_id = arguments.get('voice_id')
+                if not voice_id:
+                    return {'success': False, 'error': 'voice_id required'}
+                update_data = {}
+                if arguments.get('name'):
+                    update_data['name'] = arguments['name']
+                if arguments.get('description'):
+                    update_data['description'] = arguments['description']
+                try:
+                    response = requests.post(
+                        f'{base_url}/{voice_id}/update/',
+                        json=update_data,
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Voice updated' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing voice marketplace: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_agent_relationships(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Query agent relationships, alliances, and rivalries."""
+        try:
+            import requests
+            query_type = arguments.get('query_type')
+            base_url = 'http://localhost:8000/api/agent-relationships'
+
+            if query_type == 'overview':
+                try:
+                    response = requests.get(f'{base_url}/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'relationships': data,
+                            'summary': f"Agent relationships overview"
+                        }
+                except Exception as e:
+                    logger.debug(f"API call failed: {e}")
+
+                # Fallback
+                from core.models_unified_system import AgentRelationship
+                relationships = AgentRelationship.objects.all()[:20]
+                return {
+                    'success': True,
+                    'relationships': [
+                        {
+                            'id': str(r.id),
+                            'agent_from': r.agent_from.name if r.agent_from else 'Unknown',
+                            'agent_to': r.agent_to.name if r.agent_to else 'Unknown',
+                            'type': r.relationship_type,
+                            'strength': r.strength
+                        }
+                        for r in relationships
+                    ],
+                    'total': AgentRelationship.objects.count(),
+                    'summary': f"Found {relationships.count()} relationships"
+                }
+
+            elif query_type == 'agent_detail':
+                agent_id = arguments.get('agent_id')
+                if not agent_id:
+                    return {'success': False, 'error': 'agent_id required'}
+                try:
+                    response = requests.get(f'{base_url}/agent/{agent_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'relationships': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Could not retrieve agent relationships'}
+
+            elif query_type == 'create':
+                agent_a_id = arguments.get('agent_a_id')
+                agent_b_id = arguments.get('agent_b_id')
+                rel_type = arguments.get('relationship_type', 'peer')
+                if not agent_a_id or not agent_b_id:
+                    return {'success': False, 'error': 'agent_a_id and agent_b_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/create/',
+                        json={
+                            'agent_a_id': agent_a_id,
+                            'agent_b_id': agent_b_id,
+                            'relationship_type': rel_type
+                        },
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'relationship': response.json() if response.status_code in [200, 201] else None,
+                        'message': 'Relationship created' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'interact':
+                relationship_id = arguments.get('relationship_id')
+                if not relationship_id:
+                    return {'success': False, 'error': 'relationship_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/relationship/{relationship_id}/interact/',
+                        json=arguments,
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Interaction recorded' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'events':
+                relationship_id = arguments.get('relationship_id')
+                if not relationship_id:
+                    return {'success': False, 'error': 'relationship_id required'}
+                try:
+                    response = requests.get(
+                        f'{base_url}/relationship/{relationship_id}/events/',
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {'success': True, 'events': response.json()}
+                except:
+                    pass
+                return {'success': True, 'events': []}
+
+            elif query_type == 'auto_generate':
+                try:
+                    response = requests.post(f'{base_url}/auto-generate/', timeout=30)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Relationships auto-generated' if response.status_code == 200 else response.text,
+                        'result': response.json() if response.status_code == 200 else None
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'alliance_detail':
+                alliance_id = arguments.get('alliance_id')
+                if not alliance_id:
+                    return {'success': False, 'error': 'alliance_id required'}
+                try:
+                    response = requests.get(f'{base_url}/alliances/{alliance_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'alliance': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Alliance not found'}
+
+            elif query_type == 'alliance_create':
+                alliance_name = arguments.get('alliance_name')
+                member_ids = arguments.get('member_ids', [])
+                if not alliance_name:
+                    return {'success': False, 'error': 'alliance_name required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/alliances/create/',
+                        json={'name': alliance_name, 'member_ids': member_ids},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'alliance': response.json() if response.status_code in [200, 201] else None,
+                        'message': 'Alliance created' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'alliance_add':
+                alliance_id = arguments.get('alliance_id')
+                agent_id = arguments.get('agent_id')
+                if not alliance_id or not agent_id:
+                    return {'success': False, 'error': 'alliance_id and agent_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/alliances/{alliance_id}/add/',
+                        json={'agent_id': agent_id},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Member added to alliance' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'alliance_disband':
+                alliance_id = arguments.get('alliance_id')
+                if not alliance_id:
+                    return {'success': False, 'error': 'alliance_id required'}
+                try:
+                    response = requests.post(f'{base_url}/alliances/{alliance_id}/disband/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Alliance disbanded' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'rivalry_detail':
+                rivalry_id = arguments.get('rivalry_id')
+                if not rivalry_id:
+                    return {'success': False, 'error': 'rivalry_id required'}
+                try:
+                    response = requests.get(f'{base_url}/rivalries/{rivalry_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'rivalry': response.json()}
+                except:
+                    pass
+                return {'success': False, 'error': 'Rivalry not found'}
+
+            elif query_type == 'rivalry_create':
+                agent_a_id = arguments.get('agent_a_id')
+                agent_b_id = arguments.get('agent_b_id')
+                if not agent_a_id or not agent_b_id:
+                    return {'success': False, 'error': 'agent_a_id and agent_b_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/rivalries/create/',
+                        json={'agent_a_id': agent_a_id, 'agent_b_id': agent_b_id},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code in [200, 201],
+                        'rivalry': response.json() if response.status_code in [200, 201] else None,
+                        'message': 'Rivalry created' if response.status_code in [200, 201] else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'rivalry_compete':
+                rivalry_id = arguments.get('rivalry_id')
+                winner_id = arguments.get('winner_id')
+                if not rivalry_id or not winner_id:
+                    return {'success': False, 'error': 'rivalry_id and winner_id required'}
+                try:
+                    response = requests.post(
+                        f'{base_url}/rivalries/{rivalry_id}/compete/',
+                        json={'winner_id': winner_id},
+                        timeout=10
+                    )
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Competition recorded' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            elif query_type == 'rivalry_end':
+                rivalry_id = arguments.get('rivalry_id')
+                if not rivalry_id:
+                    return {'success': False, 'error': 'rivalry_id required'}
+                try:
+                    response = requests.post(f'{base_url}/rivalries/{rivalry_id}/end/', timeout=10)
+                    return {
+                        'success': response.status_code == 200,
+                        'message': 'Rivalry ended' if response.status_code == 200 else response.text
+                    }
+                except Exception as e:
+                    return {'success': False, 'error': str(e)}
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying agent relationships: {e}")
             return {'success': False, 'error': str(e)}
