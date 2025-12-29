@@ -42,6 +42,57 @@ def normalize_topic(topic: str) -> str:
     normalized = re.sub(r'\s+', ' ', normalized)
     return normalized
 
+
+# Session 586: Noise filter patterns
+# These topics are too generic to warrant Boardroom decisions
+NOISE_TOPICS = {
+    'ai',
+    'learned',
+    'discussion',
+    'panel',
+    'general',
+    'update',
+    'misc',
+    'other',
+    'test',
+    'debug',
+}
+
+
+def is_noise_topic(topic: str) -> bool:
+    """
+    Session 586: Filter out noise topics that shouldn't become Boardroom decisions.
+
+    Returns True if the topic is noise and should be filtered out.
+
+    Noise criteria:
+    1. Normalized topic is too short (< 5 chars)
+    2. Normalized topic is a known noise word
+    3. Topic is just prefixes with no substance
+    """
+    if not topic:
+        return True
+
+    normalized = normalize_topic(topic)
+
+    # Too short after normalization
+    if len(normalized) < 5:
+        logger.debug(f"Noise filter: topic too short after normalization: '{topic}' -> '{normalized}'")
+        return True
+
+    # Known noise words
+    if normalized in NOISE_TOPICS:
+        logger.debug(f"Noise filter: topic matches noise word: '{topic}' -> '{normalized}'")
+        return True
+
+    # Just a single common word
+    words = normalized.split()
+    if len(words) == 1 and normalized in {'ai', 'ml', 'api', 'ui', 'ux', 'db', 'test'}:
+        logger.debug(f"Noise filter: single generic word: '{topic}'")
+        return True
+
+    return False
+
 EXTRACTION_PROMPT = """
 Analyze this agent conversation conclusion and extract a structured decision summary.
 
@@ -225,6 +276,11 @@ class DecisionExtractor:
         if self._has_recent_decision_for_topic(conversation.topic):
             return None
 
+        # Session 586: Filter out noise topics
+        if is_noise_topic(conversation.topic):
+            logger.debug(f"Skipping noise topic for conversation {conversation.id}: {conversation.topic}")
+            return None
+
         extracted = self.extract_decision(conversation)
         if not extracted:
             return None
@@ -352,6 +408,11 @@ class DecisionExtractor:
 
         # Session 551: Check for recent decision on same topic (topic-based dedup)
         if self._has_recent_decision_for_topic(fallback_topic):
+            return None
+
+        # Session 586: Filter out noise topics
+        if is_noise_topic(fallback_topic):
+            logger.debug(f"Skipping noise topic for HiveMindSession {session.id}: {fallback_topic}")
             return None
 
         extracted = self.extract_decision_from_hive_session(session)
