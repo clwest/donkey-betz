@@ -20517,25 +20517,30 @@ def monitor_running_experiments(self):
 
 def _gather_experiment_metrics(experiment):
     """
-    Session 599: Gather current metrics for an experiment.
+    Session 599/600: Gather current metrics for an experiment.
 
-    In a production system, these would come from:
-    - Monitoring dashboards
-    - User feedback systems
-    - Error tracking systems
-    - Telemetry endpoints
+    Session 600 UPDATE: Now uses ExperimentMetricsService for real metrics.
+    Connects to:
+    - AgentExecution for error rates
+    - PipelineStageFeedback for user trust index
+    - Output analysis for bias detection
+    - PilotExecution for kill switch status
 
-    For now, returns safe defaults. Override with real metrics as they become available.
+    Falls back to safe defaults if service fails.
     """
-    # TODO: Connect to real monitoring systems
-    # For now, return safe defaults that won't trigger halts
-    return {
-        'bias_detection_rate': 0.0,    # % bias detected
-        'user_trust_index': 5.0,       # 1-5 scale, 5 being highest
-        'integrity_anomaly': False,     # True if anomaly detected
-        'telemetry_kill_switch': False, # True if external kill signal
-        'error_rate': 0.0,             # % errors in rolling window
-    }
+    try:
+        from core.services.experiment_metrics import gather_experiment_metrics
+        return gather_experiment_metrics(experiment)
+    except Exception as e:
+        logger.warning(f"[Session 600] Metrics service failed, using defaults: {e}")
+        # Fallback to safe defaults
+        return {
+            'bias_detection_rate': 0.0,
+            'user_trust_index': 5.0,
+            'integrity_anomaly': False,
+            'telemetry_kill_switch': False,
+            'error_rate': 0.0,
+        }
 
 
 def _send_halt_discord_notification(experiment, reason):

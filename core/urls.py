@@ -303,6 +303,10 @@ from core.views_agent_learning import (
     get_success_patterns,
     # Session 599: Experiment Halt
     halt_experiment,
+    # Session 600: Experiment Metrics & Rollback
+    get_experiment_metrics,
+    get_rollback_plan,
+    update_remediation_step,
 )
 
 # Session 250: Hive Mind Mode
@@ -2742,6 +2746,10 @@ urlpatterns = [
     path('api/experiments/patterns/', get_success_patterns, name='experiment-patterns'),
     # Session 599: Experiment Halt
     path('api/experiments/<uuid:experiment_id>/halt/', halt_experiment, name='halt-experiment'),
+    # Session 600: Experiment Metrics & Rollback
+    path('api/experiments/<uuid:experiment_id>/metrics/', get_experiment_metrics, name='experiment-metrics'),
+    path('api/experiments/<uuid:experiment_id>/rollback/', get_rollback_plan, name='experiment-rollback'),
+    path('api/experiments/<uuid:experiment_id>/remediation/', update_remediation_step, name='experiment-remediation'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

@@ -3353,6 +3353,175 @@ def halt_experiment(request, experiment_id):
 
 
 @require_http_methods(["GET"])
+def get_experiment_metrics(request, experiment_id):
+    """
+    Session 600: Get current real-time metrics for an experiment.
+
+    GET /api/experiments/<uuid:experiment_id>/metrics/
+
+    Returns current values for all halt condition metrics:
+    - error_rate: % of failed operations in window
+    - user_trust_index: Average user rating (1-5 scale)
+    - bias_detection_rate: % of outputs flagged for bias
+    - integrity_anomaly: Boolean if anomaly detected
+    - telemetry_kill_switch: Boolean if external kill signal
+
+    Also includes comparison to thresholds and status (OK/ALERT).
+    """
+    try:
+        from core.models_pilot_readiness import Experiment
+        from core.services.experiment_metrics import ExperimentMetricsService
+
+        exp = Experiment.objects.get(id=experiment_id)
+
+        # Get metrics service
+        service = ExperimentMetricsService(exp)
+
+        # Get both raw metrics and summary with thresholds
+        raw_metrics = service.gather_all_metrics()
+        summary = service.get_metrics_summary()
+
+        # Check if any conditions would trigger halt
+        should_halt, halt_reason = exp.check_halt_conditions(raw_metrics)
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'experiment_name': exp.name,
+            'status': exp.status,
+            'is_halted': exp.is_halted,
+            'metrics': raw_metrics,
+            'metrics_summary': summary,
+            'would_halt': should_halt,
+            'would_halt_reason': halt_reason,
+            'halt_conditions': exp.halt_conditions or Experiment.get_default_halt_conditions(),
+            'timestamp': timezone.now().isoformat()
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting experiment metrics: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_rollback_plan(request, experiment_id):
+    """
+    Session 600: Get the rollback plan for a failed experiment.
+
+    GET /api/experiments/<uuid:experiment_id>/rollback/
+
+    Returns the rollback plan with remediation steps and progress.
+    """
+    try:
+        from core.models_pilot_readiness import Experiment
+        from core.services.experiment_rollback import ExperimentRollbackService
+
+        exp = Experiment.objects.get(id=experiment_id)
+
+        if exp.outcome_classification != 'fail':
+            return JsonResponse({
+                'success': False,
+                'error': 'Rollback plan only available for FAIL outcomes'
+            }, status=400)
+
+        service = ExperimentRollbackService(exp)
+        plan = service.get_rollback_plan()
+
+        if not plan:
+            # Generate plan if not exists
+            plan = service.save_rollback_plan()
+
+        progress = service.get_remediation_progress()
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'plan': plan,
+            'progress': progress,
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting rollback plan: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_remediation_step(request, experiment_id):
+    """
+    Session 600: Update the completion status of a remediation step.
+
+    POST /api/experiments/<uuid:experiment_id>/remediation/
+
+    Body:
+    {
+        "step_id": 1,
+        "completed": true,
+        "notes": "Optional notes about completion"
+    }
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import Experiment
+        from core.services.experiment_rollback import ExperimentRollbackService
+
+        exp = Experiment.objects.get(id=experiment_id)
+
+        if exp.outcome_classification != 'fail':
+            return JsonResponse({
+                'success': False,
+                'error': 'Remediation only available for FAIL outcomes'
+            }, status=400)
+
+        data = json.loads(request.body) if request.body else {}
+        step_id = data.get('step_id')
+        completed = data.get('completed', True)
+        notes = data.get('notes', '')
+
+        if not step_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'step_id is required'
+            }, status=400)
+
+        service = ExperimentRollbackService(exp)
+        updated_plan = service.update_remediation_step(step_id, completed, notes)
+        progress = service.get_remediation_progress()
+
+        # If all required steps complete, send Discord notification
+        if progress['status'] == 'completed':
+            try:
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
+                message = f"**✅ REMEDIATION COMPLETE**\n\n"
+                message += f"**Experiment:** {exp.name}\n"
+                message += f"**Steps Completed:** {progress['completed_steps']}/{progress['total_steps']}\n"
+                message += f"**Status:** All required remediation steps finished"
+                discord.send_to_channel('system-status', message)
+            except Exception as discord_error:
+                logger.debug(f"Discord notification failed: {discord_error}")
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'plan': updated_plan,
+            'progress': progress,
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating remediation step: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
 def get_experiment_portfolio(request):
     """
     Session 596: Get experiment portfolio metrics and KPI ownership summary.

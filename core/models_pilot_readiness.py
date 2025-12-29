@@ -831,13 +831,14 @@ class Experiment(models.Model):
             'enabled': True,                      # Master switch for auto-halt
         }
 
-    def halt(self, reason: str, halted_by: str = 'auto'):
+    def halt(self, reason: str, halted_by: str = 'auto', trigger_rollback: bool = True):
         """
-        Session 599: Halt the experiment immediately.
+        Session 599/600: Halt the experiment immediately.
 
         Args:
             reason: Why the experiment was halted
             halted_by: 'auto' for system-triggered, or username for manual
+            trigger_rollback: Whether to auto-trigger rollback (Session 600)
         """
         self.is_halted = True
         self.halted_at = timezone.now()
@@ -847,6 +848,17 @@ class Experiment(models.Model):
         self.ended_at = timezone.now()
         self.outcome_classification = 'fail'  # Halted experiments are always FAIL
         self.save()
+
+        # Session 600: Auto-trigger rollback for FAIL outcomes
+        if trigger_rollback:
+            try:
+                from core.services.experiment_rollback import trigger_rollback
+                trigger_rollback(self)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"[Session 600] Failed to trigger rollback for {self.id}: {e}"
+                )
 
         return self
 
