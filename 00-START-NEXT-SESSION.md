@@ -1,63 +1,47 @@
-# Session 590 - Start Here
+# Session 591 - Start Here
 
-**Previous Session:** 589
+**Previous Session:** 590
 **Date:** December 29, 2025
-**Focus:** Execution Gap Phase 1 Complete - Auto-Promotion Infrastructure
+**Focus:** System Insights Ordering Fix + Session 589 Infrastructure Ready
 
 ---
 
-## Session 589 Accomplishments
+## Session 590 Accomplishments
 
-### Execution Gap Infrastructure (ChatGPT Recommendation)
+### Fixed System Insights API Ordering Bug
 
-Addressed the 82% execution gap identified in Session 588:
+The `system_insights_api` in `core/views_research_demo.py` wasn't ordering results by `-created_at`, causing the UI to potentially show older insights instead of the latest.
 
-| Component | Purpose |
-|-----------|---------|
-| `decision_promotion_rules.py` | Tiered governance-respecting auto-promotion |
-| System State Aggregator | Execution gap monitoring as attention item |
-| Celery Tasks | `auto_promote_low_risk_decisions`, `report_execution_gap_metrics` |
-| Beat Schedules | 6-hourly promotion, daily metrics report |
+**Fix:** Added `.order_by('-created_at')` to the query (line 646).
 
-**Tier System:**
-- **Tier 1 (Auto)**: `guideline` type with `product/prompting/workflow` impact - auto-promoted after 24h
-- **Tier 2 (Review)**: `policy`, `architecture`, `pipeline` - requires human review
-- **Tier 3 (Never)**: Any decision with `security/infrastructure/agents` impact - always manual
+### Session 589 Infrastructure Verified Working
 
-**Current Gap:**
-```
-Draft: 624 (82.6%)
-Canonical: 117 (15.5%)
-Auto-Promotable: 10 (1.6% of drafts)
-```
+All execution gap infrastructure from Session 589 is operational:
+- Auto-promotion task ran successfully (10 decisions promoted)
+- Execution gap reduced from 82.6% to 81.3%
+- ThinkingAgent Cycle #14 generated 5 insights, 4 patterns, 3 concerns
 
 ---
 
-## Session 590 Options
+## Session 591 Options
 
-### Option A: Run First Auto-Promotion Cycle
+### Option A: Continue Auto-Promotion
 
-Now that infrastructure is in place, run the first actual auto-promotion:
+Run another promotion cycle to further reduce the execution gap:
 
 ```bash
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
 from core.tasks import auto_promote_low_risk_decisions
-result = auto_promote_low_risk_decisions(dry_run=False)  # Actually promote!
+result = auto_promote_low_risk_decisions(dry_run=False)
 print(f'Promoted: {result.get(\"promoted\", 0)} decisions')
 "
 ```
 
-This will promote 10 low-risk guidelines and begin reducing the gap.
-
 ### Option B: Expand Tier 1 Criteria
 
-Current Tier 1 is very conservative:
-- Only `guideline` type
-- Only `product`, `prompting`, `workflow` impact areas
-
-Could expand to include:
-- `product` decision type (currently 299 in draft)
+Current Tier 1 only promotes `guideline` type decisions. Could expand to:
+- `product` decision type (299 in draft)
 - `research` impact area
 
 ### Option C: Continue PA Tools Phase 26
@@ -66,7 +50,7 @@ Could expand to include:
 
 ### Option D: ActionIntent Model
 
-Design the ActionIntent model that ChatGPT recommended:
+Design the ActionIntent model (ChatGPT recommendation):
 - Bridge between decisions and execution
 - Audit trail from decision → action
 - Governance checkpoints
@@ -83,8 +67,8 @@ Design the ActionIntent model that ChatGPT recommended:
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 230 |
 | **Services** | 94 |
-| **Decisions (Draft)** | 624 |
-| **Decisions (Canonical)** | 117 |
+| **Decisions (Draft)** | 614 (81.3%) |
+| **Decisions (Canonical)** | 127 |
 
 ---
 
@@ -105,12 +89,12 @@ print(f'Draft: {gap[\"draft_count\"]} | Canonical: {gap[\"canonical_count\"]}')
 print(f'Auto-promotable: {metrics[\"auto_promotable\"][\"count\"]}')
 "
 
-# Dry run auto-promotion
+# Trigger ThinkingAgent cycle
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
-from core.tasks import auto_promote_low_risk_decisions
-result = auto_promote_low_risk_decisions(dry_run=True)
-print(f'Would promote: {result.get(\"would_promote\", 0)} decisions')
+from core.tasks import run_autonomous_thinking_cycle
+result = run_autonomous_thinking_cycle()
+print(f'Cycle #{result.get(\"cycle_number\")}: {result.get(\"insights_count\")} insights')
 "
 
 # Access AI Studio
@@ -123,26 +107,11 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
+| `core/views_research_demo.py` | Session 590 - Fixed system insights ordering |
 | `core/services/decision_promotion_rules.py` | Session 589 - Promotion rules |
 | `core/services/system_state_aggregator.py` | Session 589 - Gap monitoring |
-| `core/tasks.py` | New tasks at lines 19780-19911 |
-| `core/celery.py` | New beat schedules at lines 382-403 |
-| `docs/handoffs/SESSION_589_EXECUTION_GAP_INFRASTRUCTURE.md` | Session handoff |
+| `core/tasks.py` | Auto-promotion tasks at lines 19780-19911 |
 
 ---
 
-## Spider Telemetry Fix (ChatGPT Review)
-
-ChatGPT identified spider count desync across Self Blog, System Insights, and UI.
-
-**Fixed 8 files** with stale hardcoded values (72, 74, 40 → 77):
-- HTML defaults in `ai_image_studio.html`
-- Business agent prompts
-- WebSocket consumers
-- API fallbacks
-
-All spider counts now use `spider_registry.get_spider_count()['total'] = 77`
-
----
-
-**Session 589: Execution gap infrastructure + Spider telemetry unification complete**
+**Session 590: System Insights ordering fix + Execution gap infrastructure verified**

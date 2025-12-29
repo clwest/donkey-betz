@@ -642,7 +642,8 @@ def system_insights_api(request):
         from core.models_unified_system import SelfBlog
 
         # Get all System Insights (auto_generated = True in stats_snapshot)
-        all_blogs = SelfBlog.objects.all()
+        # Session 590: Order by created_at descending so latest is first
+        all_blogs = SelfBlog.objects.order_by('-created_at')
 
         # Filter for System Insights
         system_insights = []
