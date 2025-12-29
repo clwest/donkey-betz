@@ -562,3 +562,80 @@ def auto_create_gate_for_decision(decision) -> Optional['PilotReadinessGate']:
     except Exception as e:
         logger.error(f"Session 593: Failed to create gate for decision {decision.id}: {e}")
         return None
+
+
+def batch_create_gates_for_existing_decisions(dry_run: bool = True) -> Dict[str, Any]:
+    """
+    Session 593: Batch create Pilot Readiness Gates for existing decisions that qualify.
+
+    This retroactively creates gates for decisions that were made before the
+    auto-gate feature was implemented.
+
+    Args:
+        dry_run: If True, only count what would be created. If False, create gates.
+
+    Returns:
+        Dict with counts and results:
+        - security_count: Number of security decisions processed
+        - policy_count: Number of policy decisions processed
+        - gates_created: Number of gates actually created
+        - errors: List of any errors encountered
+    """
+    from core.models_unified_system import AgentDecisionSummary
+    from core.models_pilot_readiness import PilotReadinessGate
+
+    results = {
+        'dry_run': dry_run,
+        'security_count': 0,
+        'policy_count': 0,
+        'gates_created': 0,
+        'errors': []
+    }
+
+    # Get existing gate decision IDs to avoid duplicates
+    existing_gate_ids = set(PilotReadinessGate.objects.values_list('decision_id', flat=True))
+
+    # Security decisions needing HIGH risk gates
+    security_decisions = AgentDecisionSummary.objects.filter(
+        impact_area='security'
+    ).exclude(id__in=existing_gate_ids)
+
+    results['security_count'] = security_decisions.count()
+    logger.info(f"Session 593 Batch: Found {results['security_count']} security decisions needing HIGH gates")
+
+    if not dry_run:
+        for decision in security_decisions:
+            try:
+                gate = PilotReadinessGate.create_for_decision(decision, risk_level='high')
+                results['gates_created'] += 1
+                logger.info(f"  Created HIGH gate for: {decision.topic[:50]}...")
+            except Exception as e:
+                error_msg = f"Failed to create gate for {decision.id}: {e}"
+                results['errors'].append(error_msg)
+                logger.error(f"  {error_msg}")
+
+    # Policy decisions needing MEDIUM risk gates (exclude security to avoid duplicates)
+    policy_decisions = AgentDecisionSummary.objects.filter(
+        decision_type='policy'
+    ).exclude(
+        impact_area='security'
+    ).exclude(id__in=existing_gate_ids)
+
+    results['policy_count'] = policy_decisions.count()
+    logger.info(f"Session 593 Batch: Found {results['policy_count']} policy decisions needing MEDIUM gates")
+
+    if not dry_run:
+        for decision in policy_decisions:
+            try:
+                gate = PilotReadinessGate.create_for_decision(decision, risk_level='medium')
+                results['gates_created'] += 1
+                logger.info(f"  Created MEDIUM gate for: {decision.topic[:50]}...")
+            except Exception as e:
+                error_msg = f"Failed to create gate for {decision.id}: {e}"
+                results['errors'].append(error_msg)
+                logger.error(f"  {error_msg}")
+
+    total_eligible = results['security_count'] + results['policy_count']
+    logger.info(f"Session 593 Batch: Complete - {results['gates_created']}/{total_eligible} gates created")
+
+    return results

@@ -36,24 +36,29 @@ Implemented automatic Pilot Readiness Gate creation for safety-sensitive decisio
 | `docs/handoffs/SESSION_593_THINKING_AGENT_AUTO_GATES.md` | New handoff document |
 | `docs/CAPABILITIES.md` | Updated Pilot Readiness Gate section |
 
+### Batch Gate Creation (Option A)
+
+Also completed batch creation for all existing qualifying decisions:
+
+| Criteria | Gates Created | Checklist Items |
+|----------|---------------|-----------------|
+| Security decisions | 15 | 6 each (HIGH) |
+| Policy decisions | 57 | 3 each (MEDIUM) |
+| **Total** | **72** | 0 errors |
+
 **Before/After:**
 | Metric | Before | After |
 |--------|--------|-------|
-| Total Gates | 1 | 5 |
-| Auto-Gate Coverage | 0% | 100% (new decisions) |
+| Total Gates | 1 | **77** |
+| HIGH Risk Gates | 1 | **18** |
+| MEDIUM Risk Gates | 0 | **59** |
+| Coverage | 1.3% | **100%** |
 
 ---
 
 ## Session 594 Options
 
-### Option A: Batch Gate Creation for Existing Decisions
-
-Create gates for existing decisions that now qualify:
-- 17 security decisions without gates
-- ~68 policy decisions without gates
-- Script to batch-create with appropriate risk levels
-
-### Option B: Gate Status Dashboard
+### Option A: Gate Status Dashboard
 
 Add a gate pipeline visualization to the ICC panel:
 - Decision backlog (no gate yet)
@@ -61,7 +66,7 @@ Add a gate pipeline visualization to the ICC panel:
 - Average throughput metrics
 - Blocked gates with reasons
 
-### Option C: ThinkingAgent Gate Awareness
+### Option B: ThinkingAgent Gate Awareness
 
 Have ThinkingAgent observe gates in its context:
 - Track blocked gates as system friction
@@ -69,7 +74,7 @@ Have ThinkingAgent observe gates in its context:
 - Suggest gate status updates in dreams
 - Flag decisions stuck in "not_started" too long
 
-### Option D: Gate Completion Automation
+### Option C: Gate Completion Automation
 
 Auto-complete low-risk checklist items:
 - "Basic Review" auto-completed for low-risk gates
@@ -87,7 +92,7 @@ Auto-complete low-risk checklist items:
 | **PA Tools** | 77 |
 | **Decisions (Draft)** | 614 (81.3%) |
 | **Decisions (Canonical)** | 127 |
-| **Pilot Readiness Gates** | 5 |
+| **Pilot Readiness Gates** | **77** (18 HIGH, 59 MEDIUM) |
 | **Completed Pilots** | 1 (SUCCESS) |
 
 ---
