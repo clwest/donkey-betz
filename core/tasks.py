@@ -17422,13 +17422,15 @@ def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_ca
             evolved_agents = 0
 
         # ========== SPIDER STATS ==========
+        # Session 588: Use spider registry for accurate count
         try:
-            total_spiders = SpiderData.objects.values('source').distinct().count()
+            from ai_core.spiders.spider_registry import get_spider_registry
+            spider_registry = get_spider_registry()
+            spider_count_info = spider_registry.get_spider_count()
+            total_spiders = spider_count_info.get('total', 77)
             spider_data_total = SpiderData.objects.count()
-            if total_spiders == 0:
-                total_spiders = 72
         except Exception:
-            total_spiders = 72
+            total_spiders = 77  # Updated fallback
             spider_data_total = 0
 
         # Top agents by knowledge
