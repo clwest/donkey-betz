@@ -53,12 +53,24 @@ class WeightedLearningService:
         'fail_execution': -0.5, # Execution/quality failure - informative negative
     }
 
-    # Keywords that indicate safety/trust failures vs execution failures
-    SAFETY_FAIL_KEYWORDS = [
-        'bias', 'trust', 'safety', 'integrity', 'security', 'privacy',
-        'harmful', 'offensive', 'discriminat', 'anomaly', 'kill_switch',
-        'user_trust', 'data_breach', 'compliance'
+    # =========================================================================
+    # SAFETY FAIL KEYWORD CLASSIFICATION (v1.1 - Strong/Weak system)
+    # =========================================================================
+    # Strong keywords: Single hit is enough to classify as safety FAIL
+    # Weak keywords: Need 2 weak hits OR 1 weak + 1 strong to classify
+
+    STRONG_SAFETY_KEYWORDS = [
+        'kill_switch', 'harmful', 'security', 'integrity_anomaly',
+        'data_breach', 'offensive', 'discriminat', 'compliance_violation'
     ]
+
+    WEAK_SAFETY_KEYWORDS = [
+        'privacy', 'bias', 'trust', 'anomaly', 'user_trust',
+        'safety', 'integrity', 'compliance'
+    ]
+
+    # Minimum samples for reliable evidence (novelty penalty threshold)
+    INSUFFICIENT_EVIDENCE_THRESHOLD = 3
 
     # =========================================================================
     # CONFIDENCE WEIGHT
@@ -75,9 +87,10 @@ class WeightedLearningService:
         Formula: confidence_weight = min(1.0, log10(sample_size + 1))
 
         Examples:
-        - 10 samples → ~1.0 (strong)
-        - 3 samples → ~0.6
-        - 1 sample → ~0.3
+        - 9+ samples → 1.0 (full confidence) [log10(10) = 1.0]
+        - 5 samples → ~0.78
+        - 3 samples → ~0.60
+        - 1 sample → ~0.30
 
         This avoids knee-jerk learning from small samples.
         """
@@ -126,6 +139,31 @@ class WeightedLearningService:
     # =========================================================================
 
     @classmethod
+    def _is_safety_failure(cls, halt_reason: str) -> bool:
+        """
+        Determine if a halt reason indicates a safety failure.
+
+        Uses strong/weak keyword classification (v1.1):
+        - Strong keyword: Single hit = safety failure
+        - Weak keywords: Need 2 weak hits OR 1 weak + 1 strong
+
+        This prevents false positives from neutral mentions of "privacy" etc.
+        """
+        halt_reason_lower = (halt_reason or '').lower()
+
+        # Count strong keyword hits
+        strong_hits = sum(1 for kw in cls.STRONG_SAFETY_KEYWORDS if kw in halt_reason_lower)
+
+        # Count weak keyword hits
+        weak_hits = sum(1 for kw in cls.WEAK_SAFETY_KEYWORDS if kw in halt_reason_lower)
+
+        # Classification rules:
+        # 1. Any strong keyword = safety failure
+        # 2. 2+ weak keywords = safety failure
+        # 3. 1 weak + 1 strong = safety failure (covered by rule 1)
+        return strong_hits >= 1 or weak_hits >= 2
+
+    @classmethod
     def determine_outcome_signal(cls, outcome_classification: str, halt_reason: str = None) -> Tuple[float, str]:
         """
         Determine the outcome signal value and type.
@@ -133,6 +171,8 @@ class WeightedLearningService:
         For FAIL outcomes, distinguishes between:
         - Safety/trust failures (strong negative: -1.0)
         - Execution/quality failures (informative negative: -0.5)
+
+        Uses strong/weak keyword classification to reduce false positives.
 
         Returns:
             (signal_value, signal_type)
@@ -142,11 +182,8 @@ class WeightedLearningService:
         elif outcome_classification == 'learn':
             return cls.OUTCOME_SIGNALS['learn'], 'learn'
         elif outcome_classification == 'fail':
-            # Check if it's a safety failure
-            halt_reason_lower = (halt_reason or '').lower()
-            is_safety_fail = any(kw in halt_reason_lower for kw in cls.SAFETY_FAIL_KEYWORDS)
-
-            if is_safety_fail:
+            # Check if it's a safety failure using strong/weak classification
+            if cls._is_safety_failure(halt_reason):
                 return cls.OUTCOME_SIGNALS['fail_safety'], 'fail_safety'
             else:
                 return cls.OUTCOME_SIGNALS['fail_execution'], 'fail_execution'
@@ -170,7 +207,8 @@ class WeightedLearningService:
 
         Formula: learning_weight = outcome_signal × confidence_weight × decay_weight
 
-        Returns dict with all components for transparency.
+        Returns dict with all components for transparency, including
+        insufficient_evidence flag for novelty penalty.
         """
         # Get outcome signal
         outcome_signal, signal_type = cls.determine_outcome_signal(outcome_classification, halt_reason)
@@ -182,6 +220,9 @@ class WeightedLearningService:
         # Calculate final weight
         learning_weight = outcome_signal * confidence_weight * decay_weight
 
+        # Check for insufficient evidence (novelty penalty)
+        insufficient_evidence = sample_size < cls.INSUFFICIENT_EVIDENCE_THRESHOLD
+
         return {
             'learning_weight': round(learning_weight, 4),
             'outcome_signal': outcome_signal,
@@ -190,6 +231,8 @@ class WeightedLearningService:
             'decay_weight': decay_weight,
             'sample_size': sample_size,
             'age_days': round(age_days, 1),
+            'insufficient_evidence': insufficient_evidence,
+            'evidence_status': 'promising' if insufficient_evidence else 'proven',
             'components': {
                 'formula': 'outcome_signal × confidence_weight × decay_weight',
                 'calculation': f'{outcome_signal} × {confidence_weight} × {decay_weight}',
@@ -369,11 +412,8 @@ class WeightedLearningService:
         now = timezone.now()
 
         for exp in related_experiments.filter(outcome_classification='fail'):
-            # Check if safety failure
-            halt_reason_lower = (exp.halt_reason or '').lower()
-            is_safety_fail = any(kw in halt_reason_lower for kw in self.SAFETY_FAIL_KEYWORDS)
-
-            if is_safety_fail:
+            # Check if safety failure using strong/weak classification
+            if self._is_safety_failure(exp.halt_reason):
                 # Calculate confidence
                 age_days = (now - (exp.ended_at or exp.updated_at)).total_seconds() / 86400
                 # Use 5 as default sample size for individual experiment
@@ -467,6 +507,12 @@ class WeightedLearningService:
             if w['weight']['learning_weight'] < 0
         )
 
+        # Count experiments with insufficient evidence
+        insufficient_count = sum(
+            1 for w in weighted_learnings
+            if w['weight'].get('insufficient_evidence', False)
+        )
+
         return {
             'weighted_learnings': weighted_learnings[:10],  # Top 10 most impactful
             'aggregate_stats': {
@@ -474,6 +520,7 @@ class WeightedLearningService:
                 'total_positive_weight': round(total_positive, 3),
                 'total_negative_weight': round(total_negative, 3),
                 'net_learning_weight': round(total_positive + total_negative, 3),
+                'insufficient_evidence_count': insufficient_count,
                 'learning_health': (
                     'positive' if total_positive > abs(total_negative)
                     else 'negative' if abs(total_negative) > total_positive
@@ -486,6 +533,11 @@ class WeightedLearningService:
                 'confidence_formula': 'min(1.0, log10(sample_size + 1))',
                 'decay_formula': f'e^(-age_days / {self.DECAY_CONSTANT_DAYS})',
                 'decay_constant_days': self.DECAY_CONSTANT_DAYS,
+                'insufficient_evidence_threshold': self.INSUFFICIENT_EVIDENCE_THRESHOLD,
+            },
+            'evidence_guidance': {
+                'proven': 'Has sufficient samples (≥3) - treat as reliable signal',
+                'promising': 'Few samples (<3) - treat as promising, not proven',
             },
         }
 

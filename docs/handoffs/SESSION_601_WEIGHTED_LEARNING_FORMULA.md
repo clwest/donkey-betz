@@ -33,7 +33,14 @@ This replaces simple static weights with an evidence-based learning system that:
 | FAIL (safety/trust) | -1.0 | Strong negative - avoid |
 | FAIL (execution/quality) | -0.5 | Informative, not fatal |
 
-Safety failures detected by keywords: `bias, trust, safety, integrity, security, privacy, harmful, offensive, anomaly, kill_switch`
+**Safety FAIL Classification (v1.1 - Strong/Weak System):**
+
+| Keyword Type | Examples | Rule |
+|--------------|----------|------|
+| **Strong** | kill_switch, harmful, security, integrity_anomaly, data_breach | Single hit = safety FAIL |
+| **Weak** | privacy, bias, trust, anomaly, safety | Need 2+ weak hits to classify |
+
+This prevents false positives from neutral mentions of "privacy" etc.
 
 ### 2. Confidence Weight (Sample-Based)
 
@@ -43,7 +50,7 @@ confidence_weight = min(1.0, log10(sample_size + 1))
 
 | Samples | Confidence |
 |---------|------------|
-| 10+ | ~1.0 (full) |
+| 9+ | 1.0 (full) [log10(10) = 1.0] |
 | 5 | ~0.78 |
 | 3 | ~0.60 |
 | 1 | ~0.30 |
@@ -64,6 +71,22 @@ decay_weight = e^(-age_in_days / 21)
 | 42 | ~0.14 |
 
 Recent outcomes matter more. Old failures don't haunt the system forever.
+
+### 4. Insufficient Evidence Flag (v1.1 - Novelty Penalty)
+
+When a theme has very few samples, even PASS outcomes can be misleading.
+
+```python
+insufficient_evidence = sample_size < 3
+evidence_status = 'promising' if insufficient_evidence else 'proven'
+```
+
+| Samples | Status | ThinkingAgent Guidance |
+|---------|--------|------------------------|
+| < 3 | `promising` | "Treat as promising, not proven" |
+| ≥ 3 | `proven` | "Treat as reliable signal" |
+
+This prevents premature conclusions from early spikes.
 
 ---
 
