@@ -2,7 +2,7 @@
 
 **Previous Session:** 586
 **Date:** December 28, 2025
-**Focus:** PA Tools Phase 22 Complete (73 → 75)
+**Focus:** PA Tools Phase 22-23 Complete (73 → 77)
 
 ---
 
@@ -15,8 +15,16 @@
 | `manage_team_workflows` | teams | create, start, status, list_active, list_templates, execute, run_full, execute_step, complete_step |
 | `query_agent_evolution` | evolution | overview, agent_detail, leaderboard, abilities, xp_gains, award_xp, unlock_ability |
 
+### Phase 23 - Voice Marketplace & Agent Relationships Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_voice_marketplace` | voice | browse, my_voices, earnings, transactions, create, clone_start, clone_status, detail, publish, unpublish, update, generate, preview, add_review |
+| `query_agent_relationships` | relationships | overview, agent_detail, create, interact, events, auto_generate, alliance_detail, alliance_create, alliance_add, alliance_disband, rivalry_detail, rivalry_create, rivalry_compete, rivalry_end |
+
 **Bugs Fixed:**
 - Fixed `AgentEvolution` model field names: `level` → `current_level`, `xp` → `total_xp`
+- Fixed `AgentRelationship` model import and field names: `agent_a/b` → `agent_from/to`
 
 ---
 
@@ -124,7 +132,7 @@
 
 ---
 
-## Current PA Tools (75 Total)
+## Current PA Tools (77 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -203,8 +211,10 @@
 | `manage_workflow_sharing` | Workflow sharing & collaboration | Session 585 |
 | `manage_team_workflows` | Team workflow orchestration | Session 586 |
 | `query_agent_evolution` | Agent XP, levels, abilities | Session 586 |
+| `manage_voice_marketplace` | Voice cloning & TTS marketplace | Session 586 |
+| `query_agent_relationships` | Agent alliances & rivalries | Session 586 |
 
-**Coverage:** 75/1,343 endpoints (5.58%)
+**Coverage:** 77/1,343 endpoints (5.73%)
 
 ---
 
@@ -372,7 +382,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 75 |
+| **PA Tools** | 77 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -399,10 +409,11 @@ open http://localhost:8000/ai-studio/
 | 584 | 19 | +3 | 68 |
 | 584 | 20 | +3 | 71 |
 | 585 | 21 | +2 | 73 |
-| **586** | **22** | **+2** | **75** |
+| 586 | 22 | +2 | 75 |
+| **586** | **23** | **+2** | **77** |
 
 ---
 
-**Session 586: Phase 22 = 2 new tools (73 → 75)**
+**Session 586: Phase 22-23 = 4 new tools (73 → 77)**
 
-**PA now has 75 tools (5.58% coverage) - Phase 22 complete!**
+**PA now has 77 tools (5.73% coverage) - Phase 23 complete!**
