@@ -794,24 +794,37 @@ ORCHESTRATION:
         """
         task_lower = task.lower().strip()
 
-        # Session 574: FOLLOW-UP detection (MUST check before action indicators!)
-        # When user says "complete the tasks" or "do what you suggested", they mean system attention items
-        # These should be answered directly, not routed to WorkflowAgent
-        followup_indicators = [
+        # Session 574: FOLLOW-UP detection - Split into INFORMATIONAL vs ACTION
+        # INFORMATIONAL follow-ups = answer directly (explain the tasks)
+        # ACTION follow-ups = route to agents (actually DO the tasks)
+
+        # INFORMATIONAL patterns - user wants info about previous response
+        info_followup_indicators = [
+            'what were those', 'what are those', 'tell me more about',
+            'explain those', 'describe those', 'which tasks',
+            'what tasks', 'what items', 'list those',
+        ]
+        if any(indicator in task_lower for indicator in info_followup_indicators):
+            logger.info(f"Detected INFO follow-up (answering directly): {task[:50]}")
+            return True, 'followup_request'
+
+        # ACTION follow-up patterns - these should route to WorkflowAgent!
+        # We detect them here but return False so they go through _detect_agent()
+        action_followup_indicators = [
             'complete the tasks', 'complete those tasks', 'complete all tasks',
             'complete the checklist', 'complete this checklist', 'complete that checklist',
             'do the tasks', 'do those tasks', 'do what you suggested',
             'work on those', 'work on the tasks', 'work on those items',
-            'proceed with', 'go ahead', 'yes do it', 'yes, do it',
-            'tasks you suggested', 'items you mentioned', 'things you listed',
+            'proceed with', 'go ahead and', 'yes do it', 'yes, do it',
             'address those', 'handle those', 'take care of those',
-            'complete them', 'do them', 'finish them',
-            'the tasks above', 'those items', 'those tasks',
+            'complete them', 'do them', 'finish them', 'execute',
             'you recommended', 'since you suggested', 'as you suggested',
+            'lets use', "let's use", 'i choose', 'i pick', 'i select',
         ]
-        if any(indicator in task_lower for indicator in followup_indicators):
-            logger.info(f"Detected follow-up request (answering directly): {task[:50]}")
-            return True, 'followup_request'
+        if any(indicator in task_lower for indicator in action_followup_indicators):
+            # This is an ACTION request - let it flow to _detect_agent() for WorkflowAgent routing
+            logger.info(f"Detected ACTION follow-up (routing to agents): {task[:50]}")
+            return False, ''  # NOT a question - route to agents!
 
         # Session 454: Check for ACTION indicators first
         # If the user wants us to DO something, it's not a question
@@ -917,6 +930,27 @@ ORCHESTRATION:
         for pattern in workflow_patterns:
             if pattern in task_lower:
                 self._last_routing_method = 'workflow'  # Session 454: Track method
+                return 'WorkflowAgent'
+
+        # =========================================================================
+        # Session 574: ACTION FOLLOW-UP patterns → WorkflowAgent
+        # When user says "complete the checklist" or "do those tasks", route to
+        # WorkflowAgent for orchestration of the action items
+        # =========================================================================
+        action_followup_patterns = [
+            'complete the checklist', 'complete the tasks', 'complete those',
+            'do the tasks', 'do those tasks', 'do what you suggested',
+            'do what you recommended', 'do what you', 'do it',
+            'proceed with', 'go ahead and do', 'execute the plan',
+            'work on those', 'address those', 'handle those',
+            'lets use', "let's use", 'i choose', 'i pick', 'i select',
+            'activate', 'start the sprint', 'create the sprint',
+            'set up the', 'configure the', 'implement the',
+        ]
+        for pattern in action_followup_patterns:
+            if pattern in task_lower:
+                logger.info(f"[Session 574] Action follow-up detected: '{pattern}' -> WorkflowAgent")
+                self._last_routing_method = 'action_followup'
                 return 'WorkflowAgent'
 
         # =========================================================================
