@@ -29257,6 +29257,16 @@
                 }
             }
 
+            // Session 574: Execute attention item by action string (called from greeting card)
+            executeAttentionItemByAction(action) {
+                console.log('🚀 Executing attention item:', action);
+                const input = document.getElementById('tabAssistantInput');
+                if (input) {
+                    input.value = action;
+                    this.sendMessage('tab');
+                }
+            }
+
             // Session 189: Wrapper to call global loadStyleInsights function
             loadStyleInsights() {
                 // Call the global function (defined outside this class)

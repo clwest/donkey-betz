@@ -1,6 +1,7 @@
 """
 Session 565: PA Intelligence Enricher
 Session 573: Added System State Awareness
+Session 574: Added Platform Intelligence Briefing - Omniscient PA
 
 Enriches Personal Assistant context with platform intelligence before generating responses.
 This bridges the gap between 3,345+ knowledge entries and user queries.
@@ -12,6 +13,7 @@ The PA can now answer questions informed by:
 - Canonical policies (boardroom decisions)
 - Spider trends (recent discoveries from data network)
 - System state (Session 573: urgent items needing attention)
+- Platform Briefing (Session 574: comprehensive awareness of all platform activity)
 """
 
 import logging
@@ -27,6 +29,7 @@ from core.models_unified_system import (
 )
 from core.services.intelligence_query import IntelligenceQueryService
 from core.services.spider_intelligence import SpiderIntelligenceService
+from core.services.platform_intelligence_briefing import get_platform_intelligence_service
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,15 @@ SYSTEM_STATE_KEYWORDS = [
     'attention', 'priority', 'urgent', 'focus on',
     'system state', 'overview', 'summary', 'whats going on',
     "what's going on", 'happening', 'to do', 'action items'
+]
+
+# Session 574: Keywords that trigger full platform briefing
+PLATFORM_BRIEFING_KEYWORDS = [
+    'briefing', 'platform', 'whats happening', "what's happening",
+    'agents doing', 'learning', 'learned', 'conversations',
+    'who taught', 'knowledge transfer', 'boardroom', 'decisions',
+    'dreams', 'insights', 'catch me up', 'summary', 'overview',
+    'everything', 'full status', 'all activity', 'whats new', "what's new"
 ]
 
 
@@ -64,7 +76,8 @@ class PAIntelligenceEnricher:
                 - include_policies: bool (default True)
                 - include_trends: bool (default True)
                 - include_system_state: bool (default True) - Session 573
-                - max_context_chars: int (default 2000)
+                - include_platform_briefing: bool (default True) - Session 574
+                - max_context_chars: int (default 3000)
         """
         self.config = config or {}
         self.include_knowledge = self.config.get('include_knowledge', True)
@@ -72,7 +85,8 @@ class PAIntelligenceEnricher:
         self.include_policies = self.config.get('include_policies', True)
         self.include_trends = self.config.get('include_trends', True)
         self.include_system_state = self.config.get('include_system_state', True)  # Session 573
-        self.max_context_chars = self.config.get('max_context_chars', 2000)
+        self.include_platform_briefing = self.config.get('include_platform_briefing', True)  # Session 574
+        self.max_context_chars = self.config.get('max_context_chars', 3000)  # Increased for briefing
 
         self.intelligence_service = IntelligenceQueryService()
         self.spider_service = SpiderIntelligenceService()
@@ -110,6 +124,7 @@ class PAIntelligenceEnricher:
                 'policies': [],
                 'spider_trends': [],
                 'system_state': [],  # Session 573
+                'platform_briefing': None,  # Session 574: Full platform awareness
                 'attribution': '',
                 'context_text': '',
                 'metadata': {
@@ -119,6 +134,7 @@ class PAIntelligenceEnricher:
                     'policies_count': 0,
                     'trends_count': 0,
                     'system_state_count': 0,  # Session 573
+                    'has_platform_briefing': False,  # Session 574
                     'intent': intent,
                     'spider_sources': []
                 }
@@ -159,6 +175,12 @@ class PAIntelligenceEnricher:
                 result['metadata']['system_state_count'] = len(result['system_state'])
                 result['metadata']['has_urgent'] = system_state_result.get('has_urgent', False)
 
+            # Session 574: Get platform intelligence briefing (for overview/catch-up requests)
+            if self.include_platform_briefing and self._should_include_briefing(message):
+                briefing_result = self._get_platform_briefing()
+                result['platform_briefing'] = briefing_result
+                result['metadata']['has_platform_briefing'] = briefing_result is not None
+
             # Build formatted context and attribution
             result['context_text'] = self._format_context(result, intent)
             result['attribution'] = self._build_attribution(result)
@@ -169,7 +191,8 @@ class PAIntelligenceEnricher:
                 f"{result['metadata']['dreams_count']} dreams, "
                 f"{result['metadata']['policies_count']} policies, "
                 f"{result['metadata']['trends_count']} trends, "
-                f"{result['metadata']['system_state_count']} system items"  # Session 573
+                f"{result['metadata']['system_state_count']} system items, "  # Session 573
+                f"briefing: {result['metadata'].get('has_platform_briefing', False)}"  # Session 574
             )
 
             return result
@@ -448,6 +471,31 @@ class PAIntelligenceEnricher:
             self.logger.error(f"Error querying system state: {e}")
             return {'items': [], 'has_urgent': False}
 
+    def _should_include_briefing(self, message: str) -> bool:
+        """
+        Session 574: Determine if the message warrants a full platform briefing.
+
+        Returns True if the user is asking for an overview, catch-up, or
+        wants to know about platform activity.
+        """
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in PLATFORM_BRIEFING_KEYWORDS)
+
+    def _get_platform_briefing(self) -> str:
+        """
+        Session 574: Get the formatted platform intelligence briefing.
+
+        Returns the pre-formatted briefing text from PlatformIntelligenceBriefingService.
+        """
+        try:
+            service = get_platform_intelligence_service()
+            briefing_text = service.get_formatted_briefing()
+            self.logger.info("Platform intelligence briefing retrieved successfully")
+            return briefing_text
+        except Exception as e:
+            self.logger.warning(f"Could not get platform briefing: {e}")
+            return None
+
     def _format_context(self, data: dict, intent: str) -> str:
         """
         Format the intelligence data into a context string for prompt injection.
@@ -455,6 +503,11 @@ class PAIntelligenceEnricher:
         Keeps the output concise and relevant to the intent.
         """
         parts = []
+
+        # Session 574: Platform briefing comes FIRST (most comprehensive)
+        if data.get('platform_briefing'):
+            parts.append(data['platform_briefing'])
+            parts.append("")  # Blank line separator
 
         # Format knowledge entries
         if data['knowledge']:
