@@ -2442,6 +2442,61 @@ Returns scheduled items and management actions.""",
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 13: Monitoring Tools (Session 582) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "query_system_health",
+                "description": """Get system health and status information.
+Use this for:
+- "How is the system doing?"
+- "Check system health"
+- "Content studio status"
+- "ML scoring status"
+- "Spider health"
+- "Agent health check"
+Returns health metrics and status for various subsystems.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "subsystem": {
+                            "type": "string",
+                            "enum": ["unified", "content_studio", "narrative_drift", "market_intelligence", "ml_scoring", "agents", "spiders", "all"],
+                            "description": "Subsystem to check (default: unified)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_activity_metrics",
+                "description": """Get activity streams, ROI metrics, and provenance data.
+Use this for:
+- "Show recent activity"
+- "What's the ROI?"
+- "Show activity stream"
+- "Track content provenance"
+Returns activity logs, ROI calculations, and provenance chains.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "metric_type": {
+                            "type": "string",
+                            "enum": ["activity", "roi", "provenance"],
+                            "description": "Type of metrics: activity stream, ROI, or provenance"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max items to return (default: 20)"
+                        }
+                    },
+                    "required": ["metric_type"]
+                }
+            }
         }
     ]
 
@@ -3702,6 +3757,13 @@ Returns scheduled items and management actions.""",
 
         if tool_name == "manage_scheduler":
             return self._manage_scheduler(arguments)
+
+        # Phase 13: Monitoring Tools (Session 582)
+        if tool_name == "query_system_health":
+            return self._query_system_health(arguments)
+
+        if tool_name == "query_activity_metrics":
+            return self._query_activity_metrics(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -8224,4 +8286,199 @@ Returns scheduled items and management actions.""",
 
         except Exception as e:
             logger.error(f"Error managing scheduler: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 13: Monitoring Tools (Session 582) =====
+
+    def _query_system_health(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Get system health and status information.
+        """
+        try:
+            import requests
+
+            subsystem = arguments.get('subsystem', 'unified')
+            base_url = 'http://localhost:8000'
+
+            results = {}
+
+            if subsystem in ['unified', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/health/', timeout=15)
+                    if response.status_code == 200:
+                        data = response.json()
+                        results['unified'] = data.get('data', data)
+                except:
+                    results['unified'] = {'status': 'unknown', 'error': 'API unavailable'}
+
+            if subsystem in ['content_studio', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/content-studio/', timeout=10)
+                    if response.status_code == 200:
+                        results['content_studio'] = response.json()
+                except:
+                    results['content_studio'] = {'status': 'unknown'}
+
+            if subsystem in ['narrative_drift', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/narrative-drift/', timeout=10)
+                    if response.status_code == 200:
+                        results['narrative_drift'] = response.json()
+                except:
+                    results['narrative_drift'] = {'status': 'unknown'}
+
+            if subsystem in ['market_intelligence', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/market-intelligence/', timeout=10)
+                    if response.status_code == 200:
+                        results['market_intelligence'] = response.json()
+                except:
+                    results['market_intelligence'] = {'status': 'unknown'}
+
+            if subsystem in ['ml_scoring', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/ml-scoring/', timeout=10)
+                    if response.status_code == 200:
+                        results['ml_scoring'] = response.json()
+                except:
+                    results['ml_scoring'] = {'status': 'unknown'}
+
+            if subsystem in ['agents', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/v1/agents/health/', timeout=10)
+                    if response.status_code == 200:
+                        results['agents'] = response.json()
+                    else:
+                        raise Exception('API error')
+                except:
+                    # Fallback: count agents
+                    from core.models_unified_system import Agent
+                    results['agents'] = {
+                        'total': Agent.objects.count(),
+                        'active': Agent.objects.filter(is_active=True).count(),
+                        'status': 'ok'
+                    }
+
+            if subsystem in ['spiders', 'all']:
+                try:
+                    response = requests.get(f'{base_url}/api/spider-health/summary/', timeout=10)
+                    if response.status_code == 200:
+                        results['spiders'] = response.json()
+                    else:
+                        raise Exception('API error')
+                except:
+                    # Fallback: count spiders
+                    from ai_core.spiders.spider_registry import SpiderRegistry
+                    registry = SpiderRegistry()
+                    results['spiders'] = {
+                        'total': registry.get_spider_count(),
+                        'status': 'ok'
+                    }
+
+            # Generate summary
+            healthy_count = sum(1 for v in results.values() if isinstance(v, dict) and v.get('status') != 'error')
+            total_count = len(results)
+
+            return {
+                'success': True,
+                'health': results,
+                'subsystems_checked': list(results.keys()),
+                'summary': f"Checked {total_count} subsystem(s): {healthy_count} healthy"
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying system health: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_activity_metrics(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Get activity streams, ROI metrics, and provenance data.
+        """
+        try:
+            import requests
+
+            metric_type = arguments.get('metric_type', 'activity')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if metric_type == 'activity':
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/activity/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        activities = data.get('activities', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'activities': activities[:limit] if isinstance(activities, list) else activities,
+                            'summary': f"Found {len(activities) if isinstance(activities, list) else 'multiple'} recent activities"
+                        }
+                except:
+                    pass
+
+                # Fallback: Query recent agent executions
+                from core.models_unified_system import AgentExecution
+                executions = AgentExecution.objects.order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'activities': [
+                        {
+                            'type': 'agent_execution',
+                            'agent': e.agent.name if hasattr(e, 'agent') and e.agent else 'Unknown',
+                            'status': e.status,
+                            'created_at': e.created_at.isoformat()
+                        }
+                        for e in executions
+                    ],
+                    'summary': f"Found {len(executions)} recent agent executions"
+                }
+
+            elif metric_type == 'roi':
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/roi/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'roi_metrics': data,
+                            'summary': 'ROI metrics retrieved'
+                        }
+                except:
+                    pass
+
+                # Fallback: Basic revenue stats
+                from core.models_unified_system import Revenue
+                from django.db.models import Sum
+                total = Revenue.objects.aggregate(total=Sum('amount'))['total'] or 0
+                return {
+                    'success': True,
+                    'roi_metrics': {
+                        'total_revenue': float(total),
+                        'currency': 'USD'
+                    },
+                    'summary': f'Total revenue: ${total:.2f}'
+                }
+
+            elif metric_type == 'provenance':
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/provenance/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'provenance': data,
+                            'summary': 'Provenance chain retrieved'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'provenance': [],
+                    'message': 'Provenance tracking available via API'
+                }
+
+            return {'success': False, 'error': f'Unknown metric type: {metric_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying activity metrics: {e}")
             return {'success': False, 'error': str(e)}
