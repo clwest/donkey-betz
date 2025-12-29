@@ -748,3 +748,335 @@ class Experiment(models.Model):
         """Update the current KPI value."""
         self.current_value = current_value
         self.save()
+
+
+# =============================================================================
+# Session 597: Experiment Learning Loop Models
+# =============================================================================
+
+class ExperimentLearning(models.Model):
+    """
+    Captures structured learnings from completed experiments.
+    These learnings are fed back to ThinkingAgent to improve future decisions.
+
+    Session 597: Part of the Experiment Learning Loop feature.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    experiment = models.OneToOneField(
+        Experiment,
+        on_delete=models.CASCADE,
+        related_name='learning'
+    )
+
+    # Outcome classification
+    outcome = models.CharField(
+        max_length=20,
+        choices=[
+            ('success', 'Success'),
+            ('failure', 'Failure'),
+            ('partial', 'Partial Success'),
+            ('inconclusive', 'Inconclusive'),
+        ]
+    )
+
+    # What worked
+    what_worked = models.TextField(
+        blank=True,
+        help_text="Specific tactics/approaches that contributed to success"
+    )
+
+    # What didn't work
+    what_failed = models.TextField(
+        blank=True,
+        help_text="Specific tactics/approaches that didn't work"
+    )
+
+    # Key insight - the main takeaway
+    key_insight = models.TextField(
+        blank=True,
+        help_text="Single most important learning from this experiment"
+    )
+
+    # Decision context for pattern matching
+    decision_type = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Category of decision (e.g., 'content_strategy', 'market_entry', 'tech_adoption')"
+    )
+
+    decision_tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Tags for pattern matching (e.g., ['video', 'engagement', 'youtube'])"
+    )
+
+    # Metrics comparison
+    target_kpi = models.CharField(max_length=100, blank=True)
+    actual_kpi = models.CharField(max_length=100, blank=True)
+    kpi_delta_percent = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Percentage difference from target (positive = exceeded, negative = missed)"
+    )
+
+    # Recommendations for future
+    future_recommendation = models.TextField(
+        blank=True,
+        help_text="Actionable recommendation for similar future decisions"
+    )
+
+    # Confidence in learnings
+    confidence_score = models.FloatField(
+        default=0.5,
+        help_text="0-1 score indicating confidence in these learnings"
+    )
+
+    # Metadata
+    extracted_at = models.DateTimeField(auto_now_add=True)
+    extracted_by = models.CharField(
+        max_length=50,
+        default='system',
+        help_text="Who/what extracted these learnings (system, human, agent)"
+    )
+
+    # ThinkingAgent integration
+    fed_to_thinking_agent = models.BooleanField(default=False)
+    fed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'pilot_experiment_learning'
+        ordering = ['-extracted_at']
+        verbose_name = 'Experiment Learning'
+        verbose_name_plural = 'Experiment Learnings'
+
+    def __str__(self):
+        return f"Learning from {self.experiment.name}: {self.outcome}"
+
+    @classmethod
+    def create_from_experiment(cls, experiment: 'Experiment', analysis: dict = None):
+        """
+        Create a learning record from a completed experiment.
+
+        Args:
+            experiment: The completed Experiment instance
+            analysis: Optional dict with pre-analyzed learnings
+        """
+        if not analysis:
+            analysis = {}
+
+        # Map experiment status to outcome
+        status_to_outcome = {
+            'success': 'success',
+            'failure': 'failure',
+            'inconclusive': 'inconclusive',
+        }
+        outcome = status_to_outcome.get(experiment.status, 'inconclusive')
+
+        # Calculate KPI delta if we have target and current values
+        kpi_delta = None
+        if experiment.target_value and experiment.current_value:
+            try:
+                # Try to extract numeric values
+                import re
+                target_num = float(re.sub(r'[^\d.]', '', experiment.target_value) or 0)
+                current_num = float(re.sub(r'[^\d.]', '', experiment.current_value) or 0)
+                if target_num > 0:
+                    kpi_delta = ((current_num - target_num) / target_num) * 100
+            except (ValueError, ZeroDivisionError):
+                pass
+
+        # Infer decision type from experiment/decision context
+        decision_type = analysis.get('decision_type', '')
+        if not decision_type and experiment.pilot and experiment.pilot.gate:
+            decision = experiment.pilot.gate.decision
+            if decision:
+                # Simple classification based on topic keywords
+                topic_lower = decision.topic.lower()
+                if any(kw in topic_lower for kw in ['content', 'video', 'post', 'blog']):
+                    decision_type = 'content_strategy'
+                elif any(kw in topic_lower for kw in ['market', 'price', 'competitor']):
+                    decision_type = 'market_strategy'
+                elif any(kw in topic_lower for kw in ['tech', 'platform', 'tool', 'api']):
+                    decision_type = 'tech_adoption'
+                elif any(kw in topic_lower for kw in ['team', 'hire', 'resource']):
+                    decision_type = 'resource_allocation'
+                else:
+                    decision_type = 'general'
+
+        return cls.objects.create(
+            experiment=experiment,
+            outcome=outcome,
+            what_worked=analysis.get('what_worked', ''),
+            what_failed=analysis.get('what_failed', ''),
+            key_insight=analysis.get('key_insight', experiment.learnings or ''),
+            decision_type=decision_type,
+            decision_tags=analysis.get('tags', []),
+            target_kpi=experiment.target_value or '',
+            actual_kpi=experiment.current_value or '',
+            kpi_delta_percent=kpi_delta,
+            future_recommendation=analysis.get('recommendation', ''),
+            confidence_score=analysis.get('confidence', 0.5),
+        )
+
+    def to_thinking_context(self) -> str:
+        """Format this learning for injection into ThinkingAgent context."""
+        delta_str = ""
+        if self.kpi_delta_percent is not None:
+            delta_str = f" ({self.kpi_delta_percent:+.1f}% vs target)"
+
+        return f"""
+### Past Experiment Learning: {self.experiment.name}
+- **Outcome:** {self.outcome.upper()}{delta_str}
+- **Decision Type:** {self.decision_type}
+- **Key Insight:** {self.key_insight}
+- **What Worked:** {self.what_worked}
+- **What Failed:** {self.what_failed}
+- **Recommendation:** {self.future_recommendation}
+"""
+
+
+class DecisionTypeSuccessPattern(models.Model):
+    """
+    Aggregated success patterns by decision type.
+    Used to predict success likelihood for similar future decisions.
+
+    Session 597: Part of the Experiment Learning Loop feature.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Decision type identifier
+    decision_type = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Category of decision (e.g., 'content_strategy', 'market_entry')"
+    )
+
+    # Aggregated metrics
+    total_experiments = models.IntegerField(default=0)
+    successful_experiments = models.IntegerField(default=0)
+    failed_experiments = models.IntegerField(default=0)
+    partial_success_experiments = models.IntegerField(default=0)
+    inconclusive_experiments = models.IntegerField(default=0)
+
+    # Success rate (cached for quick access)
+    success_rate = models.FloatField(
+        default=0.0,
+        help_text="Percentage of experiments that succeeded (0-100)"
+    )
+
+    # Average KPI performance
+    avg_kpi_delta_percent = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Average KPI delta across all experiments"
+    )
+
+    # Common success factors
+    common_success_factors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of frequently occurring success factors"
+    )
+
+    # Common failure factors
+    common_failure_factors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of frequently occurring failure factors"
+    )
+
+    # Key insights aggregated
+    top_insights = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Most impactful insights from this decision type"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'pilot_decision_type_success_pattern'
+        ordering = ['-success_rate', '-total_experiments']
+        verbose_name = 'Decision Type Success Pattern'
+        verbose_name_plural = 'Decision Type Success Patterns'
+
+    def __str__(self):
+        return f"{self.decision_type}: {self.success_rate:.1f}% success ({self.total_experiments} experiments)"
+
+    @classmethod
+    def update_from_learning(cls, learning: ExperimentLearning):
+        """
+        Update or create a pattern record from a new learning.
+        """
+        if not learning.decision_type:
+            return None
+
+        pattern, created = cls.objects.get_or_create(
+            decision_type=learning.decision_type
+        )
+
+        # Update counts
+        pattern.total_experiments += 1
+        if learning.outcome == 'success':
+            pattern.successful_experiments += 1
+        elif learning.outcome == 'failure':
+            pattern.failed_experiments += 1
+        elif learning.outcome == 'partial':
+            pattern.partial_success_experiments += 1
+        else:
+            pattern.inconclusive_experiments += 1
+
+        # Recalculate success rate
+        if pattern.total_experiments > 0:
+            pattern.success_rate = (pattern.successful_experiments / pattern.total_experiments) * 100
+
+        # Update average KPI delta
+        if learning.kpi_delta_percent is not None:
+            all_learnings = ExperimentLearning.objects.filter(
+                decision_type=learning.decision_type,
+                kpi_delta_percent__isnull=False
+            )
+            deltas = list(all_learnings.values_list('kpi_delta_percent', flat=True))
+            if deltas:
+                pattern.avg_kpi_delta_percent = sum(deltas) / len(deltas)
+
+        # Update success factors (simple aggregation)
+        if learning.what_worked and learning.outcome == 'success':
+            factors = pattern.common_success_factors or []
+            if learning.what_worked not in factors:
+                factors.append(learning.what_worked)
+                pattern.common_success_factors = factors[-10:]  # Keep last 10
+
+        # Update failure factors
+        if learning.what_failed and learning.outcome == 'failure':
+            factors = pattern.common_failure_factors or []
+            if learning.what_failed not in factors:
+                factors.append(learning.what_failed)
+                pattern.common_failure_factors = factors[-10:]  # Keep last 10
+
+        # Update top insights
+        if learning.key_insight:
+            insights = pattern.top_insights or []
+            if learning.key_insight not in insights:
+                insights.append(learning.key_insight)
+                pattern.top_insights = insights[-5:]  # Keep last 5
+
+        pattern.save()
+        return pattern
+
+    def to_thinking_context(self) -> str:
+        """Format this pattern for injection into ThinkingAgent context."""
+        success_factors_str = "\n  - ".join(self.common_success_factors[:3]) if self.common_success_factors else "None documented"
+        failure_factors_str = "\n  - ".join(self.common_failure_factors[:3]) if self.common_failure_factors else "None documented"
+
+        return f"""
+### Historical Pattern: {self.decision_type}
+- **Success Rate:** {self.success_rate:.1f}% ({self.successful_experiments}/{self.total_experiments} experiments)
+- **Avg KPI Performance:** {self.avg_kpi_delta_percent:+.1f}% vs target
+- **Common Success Factors:**
+  - {success_factors_str}
+- **Common Failure Factors:**
+  - {failure_factors_str}
+"""
