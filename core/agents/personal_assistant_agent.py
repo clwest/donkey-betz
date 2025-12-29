@@ -918,6 +918,128 @@ Returns real-time prediction market data with probabilities and volumes.""",
                     }
                 }
             }
+        },
+        # Session 578: Phase 3 Tools
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_workflow",
+                "description": """Execute a multi-step workflow that coordinates multiple agents.
+USE THIS for complex requests like:
+- "Research AI trends and create 3 logo concepts"
+- "Analyze competitors and write a strategy report"
+- "Create a blog post with images"
+
+Workflows coordinate multiple agents to complete complex tasks.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "workflow_description": {
+                            "type": "string",
+                            "description": "Description of what the workflow should accomplish"
+                        },
+                        "workflow_type": {
+                            "type": "string",
+                            "enum": ["research_to_content", "content_pipeline", "analysis_report", "custom"],
+                            "description": "Type of workflow to execute"
+                        }
+                    },
+                    "required": ["workflow_description"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_arbitrage",
+                "description": """Find sports betting arbitrage opportunities across bookmakers.
+USE THIS for requests like:
+- "Any arbitrage opportunities?"
+- "Show me arb alerts"
+- "Check for sure bets"
+- "Find guaranteed profit bets"
+
+Returns opportunities where you can bet both sides for guaranteed profit.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "ncaaf", "ncaab", "soccer", "all"],
+                            "description": "Sport to check (default: all)"
+                        },
+                        "min_profit": {
+                            "type": "number",
+                            "description": "Minimum profit percentage (default: 0.5%)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max opportunities to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_bankroll",
+                "description": """Query and manage your betting bankroll and wager history.
+USE THIS for requests like:
+- "What's my bankroll?"
+- "Show betting history"
+- "How am I doing on bets?"
+- "Track my wagers"
+
+Returns balance, win rate, ROI, and recent wagers.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["status", "history", "stats", "pending"],
+                            "description": "Action to perform"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max wagers to return for history (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_knowledge",
+                "description": """Search the collective knowledge base learned by agents.
+USE THIS for requests like:
+- "What do agents know about X?"
+- "Search our knowledge for Y"
+- "Find insights about Z"
+- "What have we learned about..."
+
+Searches knowledge accumulated from spider data and agent learning.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "knowledge_type": {
+                            "type": "string",
+                            "enum": ["all", "trend", "market", "opportunity", "competitor", "content_idea"],
+                            "description": "Type of knowledge to search"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results to return (default: 10)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
         }
     ]
 
@@ -2043,6 +2165,19 @@ Returns real-time prediction market data with probabilities and volumes.""",
         if tool_name == "query_prediction_markets":
             return self._query_prediction_markets(arguments)
 
+        # Session 578: Phase 3 Tools
+        if tool_name == "execute_workflow":
+            return self._execute_workflow(arguments)
+
+        if tool_name == "query_arbitrage":
+            return self._query_arbitrage(arguments)
+
+        if tool_name == "manage_bankroll":
+            return self._manage_bankroll(arguments)
+
+        if tool_name == "search_knowledge":
+            return self._search_knowledge(arguments)
+
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
             task = arguments.get('task', '')
@@ -2921,6 +3056,347 @@ Returns real-time prediction market data with probabilities and volumes.""",
 
         except Exception as e:
             logger.error(f"Error querying prediction markets: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =========================================================================
+    # Session 578: Phase 3 Tool Handlers
+    # =========================================================================
+
+    def _execute_workflow(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 578: Execute a multi-step workflow using WorkflowAgent.
+        """
+        try:
+            from core.agents.workflow_agent import WorkflowAgent
+
+            workflow_description = arguments.get('workflow_description', '')
+            workflow_type = arguments.get('workflow_type', 'custom')
+
+            if not workflow_description:
+                return {
+                    'success': False,
+                    'error': 'Please provide a workflow_description'
+                }
+
+            # Create workflow agent and execute
+            workflow_agent = WorkflowAgent(user=self.user)
+
+            # Build context
+            context = {
+                'workflow_type': workflow_type,
+                'requested_by': 'PersonalAssistant'
+            }
+
+            # Execute workflow
+            result = workflow_agent.execute(
+                task=workflow_description,
+                context=context,
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Build summary
+            if hasattr(result, 'to_dict'):
+                result_dict = result.to_dict()
+            else:
+                result_dict = {'output': str(result)}
+
+            return {
+                'success': True,
+                'workflow_type': workflow_type,
+                'description': workflow_description,
+                'result': result_dict,
+                'summary': f"**Workflow Executed:**\n\n🔄 Type: {workflow_type}\n📝 Task: {workflow_description[:100]}...\n\n{result_dict.get('content', result_dict.get('output', 'Completed'))[:500]}"
+            }
+
+        except Exception as e:
+            logger.error(f"Error executing workflow: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_arbitrage(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 578: Find sports betting arbitrage opportunities.
+        """
+        try:
+            from core.agents.markets.arbitrage_detector import ArbitrageDetector
+
+            sport = arguments.get('sport', 'all')
+            min_profit = arguments.get('min_profit', 0.5)
+            limit = arguments.get('limit', 10)
+
+            # Use ArbitrageDetector agent
+            detector = ArbitrageDetector()
+
+            # Execute detection
+            result = detector.execute(
+                task=f"Find arbitrage opportunities for {sport} with minimum {min_profit}% profit",
+                context={'sport': sport, 'min_profit': min_profit, 'limit': limit},
+                scifi_context={},
+                spider_context={}
+            )
+
+            if hasattr(result, 'to_dict'):
+                result_dict = result.to_dict()
+            else:
+                result_dict = {'output': str(result)}
+
+            # Extract opportunities from result
+            opportunities = result_dict.get('opportunities', [])
+            content = result_dict.get('content', '')
+
+            # Build summary
+            summary_lines = ["**Arbitrage Opportunities:**\n"]
+
+            if not opportunities and not content:
+                summary_lines.append("No arbitrage opportunities found at this time.")
+                summary_lines.append("\nArbitrage opportunities are rare - they occur when odds")
+                summary_lines.append("across bookmakers create guaranteed profit situations.")
+            else:
+                if opportunities:
+                    for opp in opportunities[:limit]:
+                        profit = opp.get('profit_percentage', 0)
+                        event = opp.get('event', 'Unknown event')
+                        summary_lines.append(f"💰 **{profit:.2f}% profit** - {event[:50]}")
+                elif content:
+                    summary_lines.append(content[:500])
+
+            return {
+                'success': True,
+                'sport': sport,
+                'min_profit': min_profit,
+                'opportunities': opportunities[:limit],
+                'raw_result': result_dict,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying arbitrage: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _manage_bankroll(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 578: Query and manage betting bankroll.
+        """
+        try:
+            from core.models_bankroll import Bankroll, Wager
+
+            action = arguments.get('action', 'status')
+            limit = arguments.get('limit', 10)
+
+            # Try to get user's bankroll
+            bankroll = None
+            if self.user:
+                bankroll = Bankroll.objects.filter(user=self.user).first()
+
+            if not bankroll:
+                # Return demo/sample data if no bankroll exists
+                return {
+                    'success': True,
+                    'has_bankroll': False,
+                    'summary': "**Bankroll Status:**\n\nNo bankroll configured yet.\n\nTo set up your bankroll, visit the Betting Dashboard in AI Studio."
+                }
+
+            if action == 'status':
+                summary_lines = ["**Bankroll Status:**\n"]
+                summary_lines.append(f"💰 **Balance:** ${bankroll.current_balance:,.2f}")
+                summary_lines.append(f"📈 **Initial:** ${bankroll.initial_balance:,.2f}")
+                summary_lines.append(f"📊 **P/L:** ${bankroll.profit_loss:+,.2f}")
+                summary_lines.append(f"🎯 **Win Rate:** {bankroll.win_rate:.1f}%")
+                summary_lines.append(f"📉 **ROI:** {bankroll.roi:.1f}%")
+                summary_lines.append(f"\n**Record:** {bankroll.total_won}W - {bankroll.total_lost}L - {bankroll.total_pushed}P")
+                summary_lines.append(f"**Pending:** {bankroll.total_pending} wagers")
+
+                return {
+                    'success': True,
+                    'has_bankroll': True,
+                    'bankroll': {
+                        'current_balance': float(bankroll.current_balance),
+                        'initial_balance': float(bankroll.initial_balance),
+                        'profit_loss': float(bankroll.profit_loss),
+                        'win_rate': float(bankroll.win_rate),
+                        'roi': float(bankroll.roi),
+                        'total_won': bankroll.total_won,
+                        'total_lost': bankroll.total_lost,
+                        'total_pending': bankroll.total_pending
+                    },
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'history':
+                wagers = Wager.objects.filter(bankroll=bankroll).order_by('-created_at')[:limit]
+
+                summary_lines = ["**Recent Wagers:**\n"]
+                wager_data = []
+
+                for w in wagers:
+                    status_emoji = {
+                        'pending': '⏳',
+                        'won': '✅',
+                        'lost': '❌',
+                        'pushed': '➖'
+                    }.get(w.status, '❓')
+
+                    wager_data.append({
+                        'id': w.id,
+                        'event': w.event_description,
+                        'amount': float(w.amount),
+                        'odds': float(w.odds),
+                        'status': w.status,
+                        'profit': float(w.profit) if w.profit else 0
+                    })
+
+                    summary_lines.append(f"{status_emoji} ${w.amount:.2f} @ {w.odds:+.0f} - {w.event_description[:40]}...")
+
+                return {
+                    'success': True,
+                    'has_bankroll': True,
+                    'wagers': wager_data,
+                    'total': len(wager_data),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'pending':
+                pending = Wager.objects.filter(bankroll=bankroll, status='pending').order_by('-created_at')
+
+                summary_lines = ["**Pending Wagers:**\n"]
+                pending_data = []
+
+                for w in pending:
+                    pending_data.append({
+                        'id': w.id,
+                        'event': w.event_description,
+                        'amount': float(w.amount),
+                        'odds': float(w.odds),
+                        'potential_profit': float(w.potential_profit)
+                    })
+                    summary_lines.append(f"⏳ ${w.amount:.2f} @ {w.odds:+.0f} - {w.event_description[:40]}...")
+
+                if not pending_data:
+                    summary_lines.append("No pending wagers.")
+
+                return {
+                    'success': True,
+                    'has_bankroll': True,
+                    'pending_wagers': pending_data,
+                    'total': len(pending_data),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'stats':
+                summary_lines = ["**Betting Statistics:**\n"]
+                summary_lines.append(f"📊 **Total Wagers:** {bankroll.total_wagers}")
+                summary_lines.append(f"💵 **Total Wagered:** ${bankroll.total_wagered:,.2f}")
+                summary_lines.append(f"💰 **Total Profit:** ${bankroll.total_profit:+,.2f}")
+                summary_lines.append(f"\n🔥 **Current Streak:** {bankroll.current_streak:+d}")
+                summary_lines.append(f"📈 **Best Streak:** {bankroll.best_streak}")
+                summary_lines.append(f"📉 **Worst Streak:** {bankroll.worst_streak}")
+                summary_lines.append(f"\n🏆 **Highest Balance:** ${bankroll.highest_balance:,.2f}")
+                summary_lines.append(f"📉 **Lowest Balance:** ${bankroll.lowest_balance:,.2f}")
+
+                return {
+                    'success': True,
+                    'has_bankroll': True,
+                    'stats': {
+                        'total_wagers': bankroll.total_wagers,
+                        'total_wagered': float(bankroll.total_wagered),
+                        'total_profit': float(bankroll.total_profit),
+                        'current_streak': bankroll.current_streak,
+                        'best_streak': bankroll.best_streak,
+                        'worst_streak': bankroll.worst_streak
+                    },
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing bankroll: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _search_knowledge(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 578: Search the collective knowledge base.
+        """
+        try:
+            from core.models_unified_system import AgentKnowledgeSource
+            from django.db.models import Q
+
+            query = arguments.get('query', '')
+            knowledge_type = arguments.get('knowledge_type', 'all')
+            limit = arguments.get('limit', 10)
+
+            if not query:
+                return {
+                    'success': False,
+                    'error': 'Please provide a search query'
+                }
+
+            # Build search query
+            search_filter = Q(title__icontains=query) | Q(summary__icontains=query)
+
+            knowledge_query = AgentKnowledgeSource.objects.filter(
+                search_filter,
+                is_active=True
+            )
+
+            # Filter by knowledge type
+            if knowledge_type != 'all':
+                knowledge_query = knowledge_query.filter(knowledge_type=knowledge_type)
+
+            # Order by relevance (confidence + freshness)
+            knowledge_items = knowledge_query.order_by('-confidence_score', '-freshness_score')[:limit]
+
+            # Build results
+            results = []
+            summary_lines = [f"**Knowledge Search: '{query}'**\n"]
+
+            if not knowledge_items:
+                summary_lines.append("No matching knowledge found.")
+                summary_lines.append("\nTry a different search term or check agent learning dashboard.")
+            else:
+                summary_lines.append(f"Found {knowledge_items.count()} results:\n")
+
+                for item in knowledge_items:
+                    results.append({
+                        'id': str(item.id),
+                        'title': item.title,
+                        'type': item.knowledge_type,
+                        'agent': item.agent.name if item.agent else 'Unknown',
+                        'summary': item.summary[:200],
+                        'confidence': item.confidence_score,
+                        'freshness': item.freshness_score
+                    })
+
+                    confidence_emoji = '🟢' if item.confidence_score > 0.7 else '🟡' if item.confidence_score > 0.4 else '🔴'
+                    summary_lines.append(f"{confidence_emoji} **{item.title[:50]}...**")
+                    summary_lines.append(f"   Type: {item.knowledge_type} | Agent: {item.agent.name if item.agent else 'Unknown'}")
+                    summary_lines.append(f"   {item.summary[:100]}...")
+                    summary_lines.append("")
+
+            return {
+                'success': True,
+                'query': query,
+                'knowledge_type': knowledge_type,
+                'results': results,
+                'total_found': len(results),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error searching knowledge: {e}")
             return {
                 'success': False,
                 'error': str(e)
