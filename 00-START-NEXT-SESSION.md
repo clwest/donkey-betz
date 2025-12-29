@@ -96,7 +96,7 @@ make start && make celery
 curl -s http://localhost:8000/api/pilot-gates/ | python3 -m json.tool
 
 # View the UI
-# Navigate to AI Studio → Agents → Social tab → Scroll to "Pilot Readiness Gates"
+# Navigate to AI Studio → Command Center tab → Pilot Readiness Gates panel
 ```
 
 ---
@@ -108,8 +108,8 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -m json.tool
 | `core/models_pilot_readiness.py` | Pilot Readiness Gate models |
 | `core/views_agent_learning.py:2218+` | Pilot Gates API endpoints |
 | `core/urls.py:2699-2704` | API URL routes |
-| `ai_core/templates/ai_image_studio.html:10483+` | UI panel |
-| `ai_core/templates/ai_image_studio.html:57456+` | JavaScript functions |
+| `ai_core/templates/ai_image_studio.html:7130+` | ICC tab with Pilot Gates panel |
+| `ai_core/templates/ai_image_studio.html:57550+` | JavaScript functions |
 
 ---
 
@@ -118,7 +118,9 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -m json.tool
 | Commit | Description |
 |--------|-------------|
 | `3c30426` | feat(Session 590): Pilot Readiness Gate UI - Boardroom Panel |
+| `4c05808` | docs(Session 591): Update session start doc |
+| `b671f66` | refactor(Session 591): Move Pilot Gates to Intelligence Command Center tab |
 
 ---
 
-**Session 591: Pilot Readiness Gate UI complete - Decision → Execution bridge visible in Boardroom**
+**Session 591: Pilot Readiness Gate UI in Command Center - Decision → Execution bridge ready**
