@@ -593,6 +593,14 @@ class BaseAgent(ABC, TimeTravelMixin):
         # Build the prompt (using the already-retrieved knowledge)
         parts = [self.system_prompt]
 
+        # Session 575: Add current date/time context so agents know they have recent data
+        from datetime import datetime
+        from django.utils import timezone
+        current_time = timezone.now()
+        parts.append(f"\n\n## CURRENT DATE & TIME")
+        parts.append(f"Today is {current_time.strftime('%A, %B %d, %Y at %I:%M %p %Z')}.")
+        parts.append("You have access to real-time data through your spider network. Do NOT say your knowledge cutoff is 2024.")
+
         # Add relevant learned knowledge to prompt
         if relevant_knowledge:
             parts.append(f"\n\n## Relevant Knowledge from Past Learning")
