@@ -19524,3 +19524,156 @@ def refresh_system_state_cache():
             'success': False,
             'error': str(e)
         }
+
+
+# ==================== SESSION 579: DREAM AUTO-TRIAGE ====================
+
+@shared_task
+def auto_triage_dreams(
+    promote_threshold: float = 0.75,
+    archive_age_days: int = 7,
+    archive_score_threshold: float = 0.4,
+    max_promote: int = 20,
+    max_archive: int = 50
+):
+    """
+    Session 579: Auto-triage dreams to reduce decision backlog.
+
+    This task addresses the dream bottleneck identified by ThinkingAgent:
+    - 422 dreams/day generated vs 83 decisions/day
+    - 558 hours (23+ days) oldest pending dream
+
+    Strategy:
+    1. AUTO-PROMOTE: High-scoring dreams (composite >= 0.75) go straight to Boardroom
+    2. AUTO-ARCHIVE: Stale dreams (>7 days old, score < 0.4) get archived
+
+    Runs every 4 hours to keep the pipeline flowing.
+
+    Args:
+        promote_threshold: Minimum composite_score to auto-promote (default 0.75)
+        archive_age_days: Days before a low-score dream is considered stale (default 7)
+        archive_score_threshold: Dreams below this score get archived (default 0.4)
+        max_promote: Maximum dreams to promote per run (default 20)
+        max_archive: Maximum dreams to archive per run (default 50)
+    """
+    try:
+        from django.utils import timezone
+        from core.models_unified_system import AgentDream
+        from core.services.discord_notifications import DiscordNotificationService
+
+        logger.info("🎯 [DREAM-TRIAGE] Starting auto-triage cycle...")
+
+        stats = {
+            'promoted': 0,
+            'archived': 0,
+            'errors': 0,
+            'promoted_titles': [],
+            'archived_count_by_type': {}
+        }
+
+        # ============ PHASE 1: AUTO-PROMOTE HIGH-SCORING DREAMS ============
+        # Find dreams with high scores that haven't been promoted yet
+        high_score_dreams = AgentDream.objects.filter(
+            promoted_to_decision=False,
+            composite_score__gte=promote_threshold
+        ).select_related('agent').order_by('-composite_score', '-actionability_score')[:max_promote]
+
+        for dream in high_score_dreams:
+            try:
+                # Use the model's built-in promote method
+                dream.promote_to_boardroom()
+                stats['promoted'] += 1
+                stats['promoted_titles'].append({
+                    'title': dream.title[:50],
+                    'agent': dream.agent.name if dream.agent else 'Unknown',
+                    'score': float(dream.composite_score)
+                })
+                logger.info(
+                    f"🎯 [DREAM-TRIAGE] Promoted: '{dream.title[:40]}' "
+                    f"(score: {dream.composite_score:.2f}, agent: {dream.agent.name if dream.agent else 'Unknown'})"
+                )
+            except Exception as e:
+                stats['errors'] += 1
+                logger.warning(f"🎯 [DREAM-TRIAGE] Failed to promote dream {dream.id}: {e}")
+
+        # ============ PHASE 2: ARCHIVE STALE LOW-SCORING DREAMS ============
+        # Find old dreams with low scores that haven't been actioned
+        stale_cutoff = timezone.now() - timezone.timedelta(days=archive_age_days)
+
+        stale_dreams = AgentDream.objects.filter(
+            promoted_to_decision=False,
+            dreamed_at__lt=stale_cutoff,
+            composite_score__lt=archive_score_threshold
+        ).select_related('agent').order_by('dreamed_at')[:max_archive]
+
+        for dream in stale_dreams:
+            try:
+                # Mark as deferred (archived) - not promoted, just cleared from backlog
+                dream.promoted_to_decision = True  # Mark as processed
+                dream.promoted_at = timezone.now()
+                dream.decision_outcome = 'deferred'  # Auto-archived due to staleness
+                dream.save(update_fields=['promoted_to_decision', 'promoted_at', 'decision_outcome'])
+
+                stats['archived'] += 1
+                dream_type = dream.dream_type or 'unknown'
+                stats['archived_count_by_type'][dream_type] = stats['archived_count_by_type'].get(dream_type, 0) + 1
+
+            except Exception as e:
+                stats['errors'] += 1
+                logger.warning(f"🎯 [DREAM-TRIAGE] Failed to archive dream {dream.id}: {e}")
+
+        # ============ PHASE 3: REPORT RESULTS ============
+        # Get remaining backlog count
+        remaining_backlog = AgentDream.objects.filter(
+            promoted_to_decision=False
+        ).count()
+
+        oldest_pending = AgentDream.objects.filter(
+            promoted_to_decision=False
+        ).order_by('dreamed_at').first()
+
+        oldest_hours = None
+        if oldest_pending and oldest_pending.dreamed_at:
+            oldest_hours = (timezone.now() - oldest_pending.dreamed_at).total_seconds() / 3600
+
+        stats['remaining_backlog'] = remaining_backlog
+        stats['oldest_pending_hours'] = oldest_hours
+
+        logger.info(
+            f"🎯 [DREAM-TRIAGE] Complete: "
+            f"promoted={stats['promoted']}, archived={stats['archived']}, "
+            f"errors={stats['errors']}, remaining={remaining_backlog}"
+        )
+
+        # Send Discord notification if we did significant work
+        if stats['promoted'] > 0 or stats['archived'] > 5:
+            try:
+                discord = DiscordNotificationService()
+                message = f"**Dream Triage Complete**\n"
+                message += f"✅ Promoted: {stats['promoted']} high-value dreams\n"
+                message += f"📦 Archived: {stats['archived']} stale dreams\n"
+                message += f"📊 Remaining backlog: {remaining_backlog}\n"
+                if oldest_hours:
+                    message += f"⏰ Oldest pending: {oldest_hours:.0f} hours"
+
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"🎯 [DREAM-TRIAGE] Discord notification failed: {e}")
+
+        return {
+            'success': True,
+            'promoted': stats['promoted'],
+            'archived': stats['archived'],
+            'errors': stats['errors'],
+            'remaining_backlog': remaining_backlog,
+            'oldest_pending_hours': oldest_hours,
+            'promoted_titles': stats['promoted_titles'][:5],  # Top 5 for summary
+            'archived_by_type': stats['archived_count_by_type']
+        }
+
+    except Exception as e:
+        logger.error(f"🎯 [DREAM-TRIAGE] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
