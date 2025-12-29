@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 567 (December 28, 2025) - Full System Audit
+**Last Updated:** Session 586 (December 29, 2025) - PA Tools Phase 23 + Boardroom Noise Filter
 
 ---
 
@@ -10,6 +10,7 @@
 |-----------|-------|---------|
 | **Total Agents** | **71** | 47 routable, 24 sub-agents (5 coordinator teams) |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
+| **PA Tools** | **77** | 5.73% endpoint coverage (Session 586) |
 | **Database Models** | **324+** | 37 categories |
 | **Celery Tasks** | **226** | 53 scheduled via Beat |
 | **Services** | **93** | Business logic layer |
@@ -74,6 +75,49 @@
 | **Celery Beat Schedules** | **53 Automated Tasks** | **Production (Session 567)** |
 | **Betting Dashboard** | **8 Sub-tabs + Push Notifications** | **Production (Session 562)** |
 | **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
+| **PA Tools** | **77 Tools (5.73% coverage)** | **Production (Session 586)** |
+| **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
+
+---
+
+## Personal Assistant Tools (77 Total)
+
+Session 586 brought PA tools to 77, covering sports, betting, content, agents, spiders, legal, and more.
+
+### Tool Categories
+
+| Category | Tools | Examples |
+|----------|-------|----------|
+| **Sports & Betting** | 8 | `get_sports_data`, `query_live_odds`, `query_arbitrage`, `query_futures` |
+| **Content & Media** | 6 | `create_content`, `generate_image`, `generate_video`, `schedule_content` |
+| **Agent Intelligence** | 8 | `delegate_to_agent`, `query_agent_data`, `query_dreams`, `query_conversations` |
+| **System Status** | 6 | `get_system_status`, `query_system_health`, `run_diagnostics`, `query_activity_metrics` |
+| **Boardroom & Decisions** | 4 | `promote_boardroom_decision`, `reject_boardroom_decision`, `create_boardroom_decision` |
+| **Spider Network** | 2 | `get_spider_intelligence`, `execute_spider` |
+| **Workflows** | 5 | `execute_workflow`, `manage_team_workflows`, `manage_workflow_templates` |
+| **Learning & Memory** | 6 | `search_knowledge`, `query_learning`, `time_travel_memory`, `manage_memory_palace` |
+| **Analytics** | 6 | `query_analytics`, `query_workflow_analytics`, `query_video_analytics`, `query_model_analytics` |
+| **Collaboration** | 4 | `manage_collaboration`, `query_collaboration`, `manage_project_collaboration` |
+| **Notifications** | 2 | `manage_notifications`, `manage_push_notifications` |
+| **Legal** | 1 | `query_legal` |
+| **Revenue** | 2 | `query_revenue_metrics`, `manage_bankroll` |
+| **Predictions** | 3 | `query_prediction_markets`, `manage_predictions`, `query_performance` |
+| **Voice & Relationships** | 2 | `manage_voice_marketplace`, `query_agent_relationships` |
+| **Evolution** | 2 | `query_agent_evolution`, `manage_team_workflows` |
+| **Other** | 10 | Exports, scheduler, favorites, semantic search, etc. |
+
+### Phase History
+
+| Session | Phase | Tools Added | Total |
+|---------|-------|-------------|-------|
+| 575-579 | 1-6 | 26 | 26 |
+| 580 | 7-8 | 12 | 38 |
+| 581 | 9-10 | 11 | 49 |
+| 582 | 11-13 | 6 | 55 |
+| 583 | 14-18 | 10 | 65 |
+| 584 | 19-20 | 6 | 71 |
+| 585 | 21 | 2 | 73 |
+| 586 | 22-23 | 4 | 77 |
 
 ---
 

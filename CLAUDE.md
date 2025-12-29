@@ -1,13 +1,14 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 28, 2025 - Session 567
+**Last Updated:** December 29, 2025 - Session 586
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
 
-## System Stats (Session 567 Full Audit)
+## System Stats (Session 586)
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 71 | 47 routable, 24 sub-agents |
 | **Spiders** | 77 | 72 working, 5 need API keys |
+| **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Database Models** | 324+ | 37 categories |
 | **Celery Tasks** | 226 | 53 scheduled (Beat) |
 | **Services** | 93 | Business logic layer |
@@ -15,7 +16,7 @@
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Sci-Fi Features** | 14 | All active (Session 567 cleanup) |
 
-**Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation
+**Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation + Noise Filter
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
 **Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
@@ -165,18 +166,18 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 586 | PA Tools Phase 22-23 (77 tools) + Boardroom Noise Filter | `SESSION_586_PA_TOOLS_PHASE_22_23.md` |
+| 585 | PA Tools Phase 21 (73 tools) + Dream Triage | - |
+| 584 | PA Tools Phase 19-20 (71 tools) | - |
+| 583 | PA Tools Phase 14-18 (65 tools) | - |
+| 582 | PA Tools Phase 11-13 (55 tools) | - |
+| 581 | PA Tools Phase 9-10 (49 tools) | - |
+| 580 | PA Tools Phase 7-8 (38 tools) | - |
+| 575-579 | PA Tools Phase 1-6 (26 tools) | - |
 | 573 | PA System Awareness + Celery Multi-Queue Architecture | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
-| 567 | Full System Audit - 71 agents, 77 spiders, 324+ models, 226 Celery tasks, 93 services | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
-| 566 | Intelligence Sources UI panel + GPT-5-mini token fix | - |
-| 565 | Context-Aware PA with Platform Intelligence | - |
-| 562 | Push Notifications for Arb Alerts - Web Push API, service worker, preferences UI | `SESSION_562_PUSH_NOTIFICATIONS.md` |
-| 561 | Line Movement Charts - Historical odds tracking, movement visualization, movers API | `SESSION_561_LINE_MOVEMENT_CHARTS.md` |
-| 560 | Betting Dashboard Enhancements - Futures tab, Kelly Calculator, Bet Logging, WebSocket updates | `SESSION_560_BETTING_DASHBOARD_ENHANCEMENTS.md` |
-| 559 | Betting Dashboard UI - Web interface for odds, arbitrage, bankroll tracking | `SESSION_559_BETTING_DASHBOARD_UI.md` |
-| 556 | Chief of Staff Extensions - Discord commands, Boardroom UI, auto-reviews, dream reviews | `SESSION_556_CHIEF_OF_STAFF_EXTENSIONS.md` |
-| 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con review documents | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
-| 553 | PA ↔ Intelligence Mapping - 99.8% of knowledge invisible to PA | `SESSION_553_PA_INTELLIGENCE_MAPPING.md` |
-| 552 | Research Demo Tab Complete Fix - APIs, colors, live feed, self-blog | `SESSION_552_RESEARCH_DEMO_FIXES.md` |
+| 567 | Full System Audit - 71 agents, 77 spiders, 324+ models | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
+| 562 | Push Notifications for Arb Alerts | `SESSION_562_PUSH_NOTIFICATIONS.md` |
+| 555 | Chief of Staff Layer - Human-in-the-loop with Pro/Con | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
