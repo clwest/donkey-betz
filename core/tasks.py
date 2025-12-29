@@ -3816,9 +3816,15 @@ def run_agent_learning_cycle():
     2. For each connection, transfer relevant knowledge
     3. Track what was learned and how useful it was
     4. Update connection strength based on successful transfers
+
+    Session 592: Teaching Diversity Fix
+    Problem: Teaching was concentrated in few agents (top 2 = 41% of transfers)
+    Solution: Minimum slots for underrepresented + weighted exploration
     """
     import random
+    from datetime import timedelta
     from django.utils import timezone
+    from django.db.models import Count
     from core.models import (
         Agent, AgentLearningConnection, AgentKnowledgeSource, KnowledgeTransfer,
         MythologyQuarantine  # Session 541: Quarantine for blocked transfers
@@ -3827,10 +3833,128 @@ def run_agent_learning_cycle():
     logger.info("🧠 [LEARNING] Starting autonomous agent learning cycle...")
 
     try:
-        # Get active learning connections
-        connections = AgentLearningConnection.objects.filter(
+        # =================================================================
+        # Session 592: Teaching Diversity Selection
+        # =================================================================
+        # Instead of pure random selection which favors high-connection agents,
+        # we use a two-tier approach:
+        # 1. MIN_DIVERSITY_SLOTS: Reserved for underrepresented teachers
+        # 2. EXPLORATION_SLOTS: Weighted selection favoring low-transfer agents
+        # =================================================================
+
+        TOTAL_SLOTS = 10
+        MIN_DIVERSITY_SLOTS = 3  # Guaranteed slots for underrepresented teachers
+        EXPLORATION_SLOTS = 7   # Weighted exploration slots
+
+        # Get transfer counts per teacher in last 24h
+        since_24h = timezone.now() - timedelta(hours=24)
+        transfer_counts = KnowledgeTransfer.objects.filter(
+            created_at__gte=since_24h
+        ).values('connection__teacher_agent_id').annotate(count=Count('id'))
+        transfer_map = {t['connection__teacher_agent_id']: t['count'] for t in transfer_counts}
+
+        # Get all active connections
+        all_connections = list(AgentLearningConnection.objects.filter(
             is_active=True
-        ).select_related('teacher_agent', 'student_agent').order_by('?')[:10]  # Random 10
+        ).select_related('teacher_agent', 'student_agent'))
+
+        if not all_connections:
+            logger.warning("🧠 [LEARNING] No active connections found")
+            return {'transfers': 0, 'events': []}
+
+        # Group connections by teacher
+        teachers_by_transfers = {}
+        for conn in all_connections:
+            teacher_id = conn.teacher_agent_id
+            count = transfer_map.get(teacher_id, 0)
+            if teacher_id not in teachers_by_transfers:
+                teachers_by_transfers[teacher_id] = {'count': count, 'connections': [], 'name': conn.teacher_agent.name}
+            teachers_by_transfers[teacher_id]['connections'].append(conn)
+
+        # =================================================================
+        # Option B: Minimum Teaching Slots
+        # Sort teachers by transfer count (ascending) and give slots to lowest
+        # =================================================================
+        sorted_teachers = sorted(teachers_by_transfers.items(), key=lambda x: x[1]['count'])
+
+        diversity_connections = []
+        diversity_teachers = set()
+        for teacher_id, data in sorted_teachers:
+            if len(diversity_connections) >= MIN_DIVERSITY_SLOTS:
+                break
+            # Pick one random connection from this underrepresented teacher
+            conn = random.choice(data['connections'])
+            diversity_connections.append(conn)
+            diversity_teachers.add(teacher_id)
+            logger.debug(f"🎯 [DIVERSITY] Reserved slot for {data['name']} (transfers: {data['count']})")
+
+        # =================================================================
+        # Option A: Weighted Exploration
+        # Weight = 1 / (transfer_count + 1) so low-transfer agents get higher probability
+        # This breaks the feedback loop where popular agents get more popular
+        # =================================================================
+        remaining_connections = [c for c in all_connections if c not in diversity_connections]
+
+        exploration_connections = []
+        if remaining_connections and EXPLORATION_SLOTS > 0:
+            # Calculate weights - inverse of transfer count
+            weights = []
+            for conn in remaining_connections:
+                teacher_id = conn.teacher_agent_id
+                count = transfer_map.get(teacher_id, 0)
+                # Inverse weighting: agents with 0 transfers get weight 1.0
+                # agents with 10 transfers get weight 0.09
+                weight = 1.0 / (count + 1)
+                weights.append(weight)
+
+            # Normalize weights
+            total_weight = sum(weights)
+            if total_weight > 0:
+                weights = [w / total_weight for w in weights]
+
+                try:
+                    # Weighted random selection without replacement
+                    exploration_connections = []
+                    remaining_pool = list(zip(remaining_connections, weights))
+
+                    for _ in range(min(EXPLORATION_SLOTS, len(remaining_pool))):
+                        if not remaining_pool:
+                            break
+                        conns, wts = zip(*remaining_pool)
+                        # Renormalize weights
+                        total_wt = sum(wts)
+                        if total_wt == 0:
+                            break
+                        norm_wts = [w / total_wt for w in wts]
+                        # Select one
+                        selected = random.choices(list(conns), weights=norm_wts, k=1)[0]
+                        exploration_connections.append(selected)
+                        # Remove selected from pool
+                        remaining_pool = [(c, w) for c, w in remaining_pool if c != selected]
+
+                except Exception as e:
+                    logger.warning(f"⚠️ [LEARNING] Weighted selection failed, using random: {e}")
+                    exploration_connections = random.sample(
+                        remaining_connections,
+                        min(EXPLORATION_SLOTS, len(remaining_connections))
+                    )
+            else:
+                # No weights, fall back to random
+                exploration_connections = random.sample(
+                    remaining_connections,
+                    min(EXPLORATION_SLOTS, len(remaining_connections))
+                )
+
+        # Combine diversity + exploration slots
+        connections = diversity_connections + exploration_connections
+
+        # Log selection stats
+        diversity_count = len(diversity_connections)
+        exploration_count = len(exploration_connections)
+        unique_teachers = len(set(c.teacher_agent_id for c in connections))
+        logger.info(f"🧠 [LEARNING] Selected {len(connections)} connections: "
+                   f"{diversity_count} diversity + {exploration_count} exploration, "
+                   f"{unique_teachers} unique teachers")
 
         transfers_made = 0
         mythology_blocks = 0  # Session 541: Track mythology validation blocks

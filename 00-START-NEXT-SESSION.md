@@ -39,6 +39,25 @@ not_started → in_progress → ready → approved → pilot running → COMPLET
 - Consent flow UX is intuitive
 - Kill switch triggers correctly on threshold breach
 
+### 4. Teaching Diversity Fix (ThinkingAgent Insight Response)
+
+Fixed teaching concentration issue identified by ThinkingAgent Cycle #23:
+
+**Problem:** Top 2 agents (OpportunityScoringAgent, ResearchAgent) accounted for 41% of all teachings. 29 agents weren't teaching at all.
+
+**Root Cause:** Pure random selection of 10 connections per cycle favored agents with more connections (feedback loop).
+
+**Solution Implemented:**
+- **Option B - Minimum Teaching Slots:** 3 slots reserved for underrepresented teachers (lowest transfer counts)
+- **Option A - Weighted Exploration:** 7 slots use inverse-weighted selection (1/(transfers+1))
+
+**Result:**
+- Before: ~3-4 unique teachers per cycle
+- After: 9 unique teachers per cycle
+- Dormant teachers now guaranteed teaching opportunities
+
+**File Modified:** `core/tasks.py:run_agent_learning_cycle()`
+
 ---
 
 ## Session 593 Options
