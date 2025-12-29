@@ -184,7 +184,7 @@ class NewPagesConsumer(AsyncWebsocketConsumer):
         success_rate = (successful_executions / total_executions * 100) if total_executions > 0 else 0
 
         # Get REAL spider data from SpiderRegistry and SpiderQualityMetrics
-        total_spiders = 40  # From spider registry registration
+        total_spiders = 77  # Session 589: Updated fallback
         active_spiders = 0
         crawling_spiders = 0
         opportunities_found = 0

@@ -605,7 +605,7 @@ def get_project_spiders(request, project_id):
             registry = SpiderRegistry()
             spider_count = len(registry.list_spiders())
         except Exception:
-            spider_count = 74  # Default fallback
+            spider_count = 77  # Default fallback - Session 589 updated
 
         return JsonResponse({
             'success': True,

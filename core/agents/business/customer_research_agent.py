@@ -88,7 +88,7 @@ You have these tools:
 - refresh_spider_data: Optional - trigger fresh data collection
 
 CRITICAL - You MUST call spider_query:
-Session 325: The spider_query tool connects to our real-time spider network with 74 spiders across 24 sources.
+Session 325: The spider_query tool connects to our real-time spider network with 77 spiders across 24 sources.
 You MUST call spider_query to get actual discussions from Reddit, HackerNews, YouTube, tech news, etc.
 WITHOUT spider_query data, you cannot provide a proper customer research report - you'd be guessing!
 Prior research (get_prior_research) is just context - it does NOT replace calling spider_query!

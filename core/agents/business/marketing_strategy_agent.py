@@ -40,7 +40,7 @@ Your job is to analyze existing research and current trends to create actionable
 
 You have access to:
 1. **Project Research** - Existing competitor analysis, customer research, brand strategy, and content strategy
-2. **Spider Network** - Real-time marketing trends, campaign examples, and industry insights from 74 data sources
+2. **Spider Network** - Real-time marketing trends, campaign examples, and industry insights from 77 data sources
 3. **Web Search** - Current marketing best practices, platform updates, and case studies
 4. **Prior Research** - Relevant past marketing analyses from other projects
 
