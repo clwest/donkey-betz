@@ -469,27 +469,17 @@ You orchestrate. You don't create content directly."""
         try:
             from core.models_unified_system import AgentDecisionSummary
 
-            # Map priority to quality score
-            priority_map = {
-                'critical': 0.95,
-                'high': 0.8,
-                'medium': 0.6,
-                'low': 0.4
-            }
-            quality_score = priority_map.get(arguments.get('priority', 'medium'), 0.6)
-
-            # Create the decision
+            # Create the decision (Session 412 model doesn't have quality_score)
             decision = AgentDecisionSummary.objects.create(
                 topic=arguments.get('topic', 'Untitled Action'),
                 decision_type=arguments.get('decision_type', 'experiment'),
                 impact_area=arguments.get('impact_area', 'workflow'),
                 key_insights=arguments.get('key_actions', []),
                 recommended_stance=arguments.get('recommended_stance', ''),
-                suggested_feature=f"Owner: {arguments.get('owner', 'human')}",
+                suggested_feature=f"Owner: {arguments.get('owner', 'human')} | Priority: {arguments.get('priority', 'medium')}",
                 rationale=arguments.get('rationale', f"Created by WorkflowAgent triage. Priority: {arguments.get('priority', 'medium')}"),
                 participants=['WorkflowAgent', 'PersonalAssistantAgent'],
                 status='review',  # Put in review status for human approval
-                quality_score=quality_score,
             )
 
             logger.info(f"[Session 574] Created Boardroom decision: {decision.topic} (ID: {decision.id})")
