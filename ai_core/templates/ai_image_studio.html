@@ -7297,10 +7297,10 @@
                             </div>
                             <div class="card-body">
                                 <div class="d-grid gap-2">
-                                    <a href="#agents" class="btn btn-outline-warning" onclick="switchToAgentsTab()">
+                                    <a href="#agents" class="btn btn-outline-warning" onclick="switchToTab('agents-tab'); return false;">
                                         🏛️ View Boardroom Decisions
                                     </a>
-                                    <a href="#research-demo" class="btn btn-outline-info" onclick="switchToResearchTab()">
+                                    <a href="#research-demo" class="btn btn-outline-info" onclick="switchToTab('research-demo-tab'); return false;">
                                         🔬 View System Insights
                                     </a>
                                 </div>
@@ -7320,6 +7320,9 @@
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="badge" style="background: #10b981;" id="pilot-dash-running-count">0 Running</span>
                                     <span class="badge" style="background: #6b7280;" id="pilot-dash-completed-count">0 Completed</span>
+                                    <button class="btn btn-sm btn-success" onclick="showCreatePilotModal()">
+                                        ➕ Create Pilot
+                                    </button>
                                     <button class="btn btn-sm btn-outline-light" onclick="loadPilotDashboard()">
                                         🔄 Refresh
                                     </button>
@@ -7388,6 +7391,35 @@
                     </div>
                 </div>
                 <!-- END PILOT DASHBOARD -->
+
+                <!-- Session 597: Create Pilot Gate Modal -->
+                <div class="modal fade" id="createPilotModal" tabindex="-1" aria-labelledby="createPilotModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg" style="margin: 50px auto;">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #ec4899;">
+                            <div class="modal-header" style="background: rgba(236, 72, 153, 0.2); border-bottom: 1px solid #ec4899;">
+                                <h5 class="modal-title" id="createPilotModalLabel" style="color: #ec4899;">
+                                    ➕ Create Pilot Gate from Decision
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted mb-3">Select a Boardroom decision to create a Pilot Readiness Gate:</p>
+                                <div class="mb-3">
+                                    <input type="text" id="pilotDecisionSearch" class="form-control" placeholder="🔍 Search decisions..."
+                                           style="background: #2a2a2a; border-color: #444; color: #e5e7eb;"
+                                           oninput="filterPilotDecisions()">
+                                </div>
+                                <div id="pilotDecisionsList" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted text-center">Loading decisions...</p>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Create Pilot Modal -->
 
                 <!-- ========== SESSION 596: EXPERIMENT TRACKING REGISTRY ========== -->
                 <div class="row mt-4">
@@ -58566,6 +58598,100 @@ ${item.generated_content}
 
             } catch (error) {
                 console.error('Error loading pilot dashboard:', error);
+            }
+        }
+
+        // Session 597: Create Pilot Gate functionality
+        let availableDecisionsForPilot = [];
+
+        async function showCreatePilotModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createPilotModal'));
+            modal.show();
+            await loadDecisionsForPilot();
+        }
+
+        async function loadDecisionsForPilot() {
+            const container = document.getElementById('pilotDecisionsList');
+            container.innerHTML = '<p class="text-muted text-center">Loading decisions...</p>';
+
+            try {
+                // Get canonical decisions without existing pilot gates
+                const response = await authenticatedFetch('/api/boardroom/decisions/?is_canonical=true&limit=100');
+                const decisions = response.results || [];
+
+                // Get existing gates to filter out
+                const gatesResponse = await authenticatedFetch('/api/pilot-gates/');
+                const existingGateDecisionIds = (gatesResponse.results || []).map(g => g.decision_id);
+
+                // Filter to only decisions without gates
+                availableDecisionsForPilot = decisions.filter(d => !existingGateDecisionIds.includes(d.id));
+
+                renderPilotDecisions(availableDecisionsForPilot);
+            } catch (error) {
+                console.error('Error loading decisions for pilot:', error);
+                container.innerHTML = '<p class="text-danger text-center">Error loading decisions</p>';
+            }
+        }
+
+        function renderPilotDecisions(decisions) {
+            const container = document.getElementById('pilotDecisionsList');
+
+            if (decisions.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No decisions available for pilot creation.<br><small>All canonical decisions already have pilot gates.</small></p>';
+                return;
+            }
+
+            container.innerHTML = decisions.map(d => {
+                const stanceColor = d.recommended_stance === 'proceed' ? '#10b981' :
+                                   d.recommended_stance === 'reject' ? '#ef4444' : '#f59e0b';
+                return `
+                    <div class="decision-item p-3 mb-2" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px; border-left: 3px solid ${stanceColor}; cursor: pointer;"
+                         onclick="createPilotGate('${d.id}')">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <strong style="color: #e5e7eb;">${d.topic.substring(0, 60)}${d.topic.length > 60 ? '...' : ''}</strong>
+                                <div class="mt-1">
+                                    <span class="badge" style="background: ${stanceColor}; font-size: 10px;">${(d.recommended_stance || 'pending').toUpperCase()}</span>
+                                    <span class="badge bg-secondary" style="font-size: 10px;">${d.decision_type || 'general'}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-success">Create Gate</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterPilotDecisions() {
+            const search = document.getElementById('pilotDecisionSearch').value.toLowerCase();
+            const filtered = availableDecisionsForPilot.filter(d =>
+                d.topic.toLowerCase().includes(search) ||
+                (d.decision_type || '').toLowerCase().includes(search)
+            );
+            renderPilotDecisions(filtered);
+        }
+
+        async function createPilotGate(decisionId) {
+            try {
+                const response = await authenticatedFetch(`/api/pilot-gates/create/${decisionId}/`, {
+                    method: 'POST'
+                });
+
+                if (response.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('createPilotModal')).hide();
+
+                    // Reload pilot dashboard
+                    loadPilotDashboard();
+
+                    // Show success message
+                    alert('✅ Pilot Gate created successfully!\n\nThe AI is generating checklist items. Refresh in a moment to see them.');
+                } else {
+                    alert('❌ Error creating pilot gate: ' + (response.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error creating pilot gate:', error);
+                alert('❌ Error creating pilot gate: ' + error.message);
             }
         }
 
