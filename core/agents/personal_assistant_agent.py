@@ -1365,6 +1365,63 @@ Returns agent learnings, conversations, dreams, and spider data related to the p
                     "required": ["project_name"]
                 }
             }
+        },
+        # Session 579: Query tracked concerns from ThinkingAgent
+        {
+            "type": "function",
+            "function": {
+                "name": "query_tracked_concerns",
+                "description": """Query the system's tracked concerns and their resolution status.
+Use this for:
+- "What concerns need attention?"
+- "Show me system concerns"
+- "What issues have been resolved?"
+- "What is the thinking engine tracking?"
+- "What problems is the system aware of?"
+Returns concerns identified by ThinkingAgent with their status, severity, and resolution details.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["all", "in_progress", "resolved", "pending"],
+                            "description": "Filter by status (default: all)"
+                        },
+                        "severity": {
+                            "type": "string",
+                            "enum": ["all", "high", "medium", "low"],
+                            "description": "Filter by severity (default: all)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of concerns to return (default: 20)"
+                        }
+                    }
+                }
+            }
+        },
+        # Session 579: Get latest System Insights report
+        {
+            "type": "function",
+            "function": {
+                "name": "get_system_insights",
+                "description": """Get the latest System Insights report from the ThinkingAgent.
+Use this for:
+- "Show me system insights"
+- "What did the thinking engine find?"
+- "Get the latest thinking report"
+- "What's the system analysis?"
+Returns the most recent System Insights report with patterns, concerns, and opportunities.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of recent reports to retrieve (default: 1, max: 5)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -2531,6 +2588,13 @@ Returns agent learnings, conversations, dreams, and spider data related to the p
 
         if tool_name == "analyze_project_intelligence":
             return self._analyze_project_intelligence(arguments)
+
+        # Session 579: ThinkingAgent/System Insights tools
+        if tool_name == "query_tracked_concerns":
+            return self._query_tracked_concerns(arguments)
+
+        if tool_name == "get_system_insights":
+            return self._get_system_insights(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -4474,6 +4538,161 @@ Returns agent learnings, conversations, dreams, and spider data related to the p
 
         except Exception as e:
             logger.error(f"Error analyzing project intelligence: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =========================================================================
+    # Session 579: ThinkingAgent/System Insights Tools
+    # =========================================================================
+
+    def _query_tracked_concerns(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query the system's tracked concerns and their resolution status.
+        Returns concerns identified by ThinkingAgent with status, severity, and resolution.
+        """
+        try:
+            from core.models_unified_system import TrackedConcern
+
+            status_filter = arguments.get('status', 'all')
+            severity_filter = arguments.get('severity', 'all')
+            limit = min(arguments.get('limit', 20), 50)  # Cap at 50
+
+            # Build query
+            concerns = TrackedConcern.objects.all()
+
+            if status_filter != 'all':
+                concerns = concerns.filter(status=status_filter)
+
+            if severity_filter != 'all':
+                concerns = concerns.filter(severity=severity_filter)
+
+            # Order by severity (high first), then by updated_at
+            severity_order = {'high': 0, 'medium': 1, 'low': 2}
+            concerns = concerns.order_by('-updated_at')[:limit]
+
+            # Build summary
+            status_counts = {
+                'in_progress': TrackedConcern.objects.filter(status='in_progress').count(),
+                'resolved': TrackedConcern.objects.filter(status='resolved').count(),
+                'pending': TrackedConcern.objects.filter(status='pending').count()
+            }
+
+            concern_list = []
+            for c in concerns:
+                status_icon = '✅' if c.status == 'resolved' else '🔄' if c.status == 'in_progress' else '⏳'
+                # Get action count (ManyToMany)
+                actions_count = c.actions_taken.count()
+                concern_list.append({
+                    'id': c.id,
+                    'status_icon': status_icon,
+                    'status': c.status,
+                    'severity': c.severity,
+                    'category': c.category,
+                    'concern': c.concern_text[:200] + ('...' if len(c.concern_text) > 200 else ''),
+                    'times_detected': c.times_detected,
+                    'verification_metric': c.verification_metric or 'manual',
+                    'resolution_notes': c.resolution_notes[:150] if c.resolution_notes else None,
+                    'actions_taken_count': actions_count,
+                    'updated_at': c.updated_at.isoformat()
+                })
+
+            # Build summary message
+            summary_lines = [
+                f"## Tracked Concerns Overview",
+                f"",
+                f"**Total:** {sum(status_counts.values())} concerns",
+                f"- 🔄 In Progress: {status_counts['in_progress']}",
+                f"- ✅ Resolved: {status_counts['resolved']}",
+                f"- ⏳ Pending: {status_counts['pending']}",
+                f""
+            ]
+
+            if status_counts['in_progress'] > 0:
+                summary_lines.append("### Active Concerns (In Progress)")
+                in_progress = [c for c in concern_list if c['status'] == 'in_progress']
+                for c in in_progress[:5]:
+                    summary_lines.append(f"- **[{c['severity'].upper()}]** {c['concern'][:80]}...")
+
+            return {
+                'success': True,
+                'status_counts': status_counts,
+                'concerns': concern_list,
+                'summary': '\n'.join(summary_lines),
+                'filters_applied': {
+                    'status': status_filter,
+                    'severity': severity_filter,
+                    'limit': limit
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying tracked concerns: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _get_system_insights(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get the latest System Insights reports from the ThinkingAgent.
+        Returns the most recent report(s) with patterns, concerns, and opportunities.
+        """
+        try:
+            from django.utils import timezone
+            from core.models_unified_system import SelfBlog
+
+            limit = min(arguments.get('limit', 1), 5)  # Cap at 5
+
+            # Get System Insights reports
+            reports = SelfBlog.objects.filter(
+                title__icontains='System Insights'
+            ).order_by('-created_at')[:limit]
+
+            if not reports.exists():
+                return {
+                    'success': True,
+                    'reports': [],
+                    'summary': "No System Insights reports found. The ThinkingAgent may not have run yet."
+                }
+
+            report_list = []
+            for r in reports:
+                hours_ago = (timezone.now() - r.created_at).total_seconds() / 3600
+                report_list.append({
+                    'id': r.id,
+                    'title': r.title,
+                    'created_at': r.created_at.isoformat(),
+                    'hours_ago': round(hours_ago, 1),
+                    'content': r.full_text[:3000] if r.full_text else 'No content',  # Truncate for response
+                    'stats_snapshot': r.stats_snapshot if hasattr(r, 'stats_snapshot') else None
+                })
+
+            # Summary for the most recent report
+            latest = report_list[0]
+            summary_lines = [
+                f"## Latest System Insights",
+                f"",
+                f"**Generated:** {latest['hours_ago']} hours ago",
+                f"",
+                f"---",
+                f""
+            ]
+
+            # Include the full content of the latest report
+            if latest['content']:
+                summary_lines.append(latest['content'][:2500])
+
+            return {
+                'success': True,
+                'reports': report_list,
+                'total_reports': SelfBlog.objects.filter(title__icontains='System Insights').count(),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting system insights: {e}")
             return {
                 'success': False,
                 'error': str(e)
