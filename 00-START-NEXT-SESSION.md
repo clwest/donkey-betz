@@ -2,15 +2,15 @@
 
 **Previous Session:** 581
 **Date:** December 28, 2025
-**Focus:** PA Tools Expansion Complete - Phase 9
+**Focus:** PA Tools Massive Expansion - Phases 9 & 10 Complete
 
 ---
 
 ## Session 581 Accomplishments
 
-### Phase 9 Complete - 38 → 43 Tools!
+### Phase 9 + Phase 10 = 11 New Tools! (38 → 49)
 
-Implemented **5 new tools** covering projects, legal, training, workflows, and images:
+#### Phase 9 - Projects/Legal/Training (5 tools)
 
 | Tool | Category | Purpose |
 |------|----------|---------|
@@ -20,9 +20,22 @@ Implemented **5 new tools** covering projects, legal, training, workflows, and i
 | `manage_workflow_templates` | workflows | Workflow template management |
 | `generate_image` | creation | Image generation via ImageAgent |
 
+#### Phase 10 - Betting/Sports (6 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `query_live_odds` | betting | Live odds from 40+ sportsbooks |
+| `query_games` | sports | Today's games, trending, analytics |
+| `query_line_movements` | betting | Line movement, sharp money tracking |
+| `query_futures` | betting | Championship/MVP/conference futures |
+| `query_player_props` | betting | Player prop bets by event/player |
+| `query_betting_recommendations` | betting | AI-generated betting picks |
+
 ### Session 581 Commits
 
 ```
+6baabf1 feat(Session 581): PA Phase 10 - 6 Betting/Sports Tools (43 → 49)
+3a6bbae docs(Session 581): Update session doc - Phase 9 complete (43 tools)
 fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 ```
 
@@ -32,7 +45,7 @@ fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 
 ---
 
-## Current PA Tools (43 Total)
+## Current PA Tools (49 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -79,8 +92,14 @@ fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 | `manage_agent_training` | Agent training data | Session 581 |
 | `manage_workflow_templates` | Workflow templates | Session 581 |
 | `generate_image` | Image generation | Session 581 |
+| `query_live_odds` | Live odds from sportsbooks | Session 581 |
+| `query_games` | Games schedule and analytics | Session 581 |
+| `query_line_movements` | Line movement tracking | Session 581 |
+| `query_futures` | Futures betting odds | Session 581 |
+| `query_player_props` | Player prop bets | Session 581 |
+| `query_betting_recommendations` | AI betting picks | Session 581 |
 
-**Coverage:** 43/1,343 endpoints (3.2%)
+**Coverage:** 49/1,343 endpoints (3.65%)
 
 ---
 
@@ -93,38 +112,36 @@ User: "What's the NFL score?"
 User: "What needs my attention?"
 → get_system_status: Pending decisions, failed cycles
 
-User: "Run diagnostics"
-→ run_diagnostics: Web server, database, celery health
+User: "What are the odds for the Chiefs game?"
+→ query_live_odds: Spreads, moneylines, totals from 40+ books
+
+User: "Show line movements for tonight"
+→ query_line_movements: Sharp money indicators, biggest movers
+
+User: "Who's favored to win the Super Bowl?"
+→ query_futures: Championship futures odds
+
+User: "Best bets today"
+→ query_betting_recommendations: AI-analyzed picks
 
 User: "Show me my legal cases"
 → query_legal: Case profiles, case files, litigation context
 
-User: "List all projects"
-→ manage_project: Partnership projects with intelligence
-
 User: "Create an image of a sunset"
 → generate_image: Delegates to ImageAgent
-
-User: "What workflow templates exist?"
-→ manage_workflow_templates: List/manage templates
-
-User: "Show agent training data"
-→ manage_agent_training: Training records and capabilities
 ```
 
 ---
 
 ## Session 582 Priorities
 
-### Option A: Phase 10 - Betting/Sports Tools
+### Option A: Phase 11 - More Coverage
 
-Major uncovered category:
-- **v1 (betting/sports)** - 294 endpoints, ~5-8 tools
-  - `query_odds` - Live odds from multiple books
-  - `manage_bets` - Bet tracking and history
-  - `query_line_movements` - Line movement tracking
-  - `manage_futures` - Futures betting
-  - `query_player_props` - Player prop bets
+Remaining uncovered categories:
+- **notifications** - 15 endpoints
+- **webhooks** - 12 endpoints
+- **exports** - 10 endpoints
+- **imports** - 8 endpoints
 
 ### Option B: Testing & Polish
 
@@ -134,7 +151,7 @@ Major uncovered category:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 43 tools
+- Update CAPABILITIES.md with all 49 tools
 - Create PA Tools reference guide
 
 ---
@@ -145,18 +162,18 @@ Major uncovered category:
 # Start services
 make start && make celery
 
-# Test all 43 PA tools
+# Test all 49 PA tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 9 tools:')
-phase9 = ['manage_project', 'query_legal', 'manage_agent_training',
-          'manage_workflow_templates', 'generate_image']
-for t in phase9:
-    result = getattr(pa, f'_{t}')({} if t != 'generate_image' else {'prompt': 'test'})
+print('Phase 10 tools:')
+phase10 = ['query_live_odds', 'query_games', 'query_line_movements',
+           'query_futures', 'query_player_props', 'query_betting_recommendations']
+for t in phase10:
+    result = getattr(pa, f'_{t}')({})
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
 "
@@ -173,7 +190,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 43 |
+| **PA Tools** | 49 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 227 |
 | **Services** | 93 |
@@ -187,10 +204,11 @@ open http://localhost:8000/ai-studio/
 | 575-579 | 1-6 | 26 | 26 |
 | 580 | 7 | +2 | 28 |
 | 580 | 8 | +10 | 38 |
-| **581** | **9** | **+5** | **43** |
+| 581 | 9 | +5 | 43 |
+| **581** | **10** | **+6** | **49** |
 
 ---
 
-**Session 581: Phase 9 = 5 new tools (38 → 43)**
+**Session 581: Phase 9 + Phase 10 = 11 new tools (38 → 49)**
 
-**PA now has 43 tools (3.2% coverage) - Phase 9 complete!**
+**PA now has 49 tools (3.65% coverage) - Phases 9 & 10 complete!**
