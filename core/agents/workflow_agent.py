@@ -99,6 +99,22 @@ When given a complex task:
 3. Execute steps in the right order (research before creation, creation before editing)
 4. Combine results
 
+**CRITICAL - System Attention Items (Session 574):**
+When the task includes a "## System Attention Items" section, these are the ACTUAL items from the platform
+that need action. You MUST:
+1. Use ONLY the items listed in "System Attention Items" - do NOT make up other items
+2. Create action plans for THOSE specific items, not hypothetical ones
+3. For each item, provide: Owner suggestion, Priority, Timeline, Actions
+4. Distinguish between "needs user approval" (boardroom decisions) vs "can be automated"
+
+Example: If the task says:
+"Complete the checklist!
+## System Attention Items:
+- [RESEARCH] AI Artistry Redefined: Brands Unite
+- [RESEARCH] Interactive AI Art Fusion Gallery"
+
+Then create an action plan for THOSE TWO items specifically, not random other items.
+
 Example workflow: "Research cyberpunk trends and create 3 logos"
 1. delegate_to_agent("ResearchAgent", "find current cyberpunk design trends")
 2. Use research results to inform the next step
