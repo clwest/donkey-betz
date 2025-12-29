@@ -1,47 +1,38 @@
-# Session 581 - Start Here
+# Session 582 - Start Here
 
-**Previous Session:** 580
+**Previous Session:** 581
 **Date:** December 28, 2025
-**Focus:** PA Tools Massive Expansion - Phase 7 & 8
+**Focus:** PA Tools Expansion Complete - Phase 9
 
 ---
 
-## Session 580 Accomplishments
+## Session 581 Accomplishments
 
-### PA Tools Explosion - 26 → 38 Tools!
+### Phase 9 Complete - 38 → 43 Tools!
 
-Implemented **12 new tools** across 2 phases:
+Implemented **5 new tools** covering projects, legal, training, workflows, and images:
 
-| Phase | Tools Added |
-|-------|-------------|
-| 7 | `get_advisor_consultation`, `query_revenue_metrics` |
-| 8 | `manage_proactive_alerts`, `query_learning_progress`, `manage_team`, `generate_video`, `manage_distribution`, `query_analytics`, `time_travel_memory`, `manage_memory_palace`, `run_diagnostics`, `manage_collaboration` |
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `manage_project` | projects | Project CRUD, PDF export, intelligence |
+| `query_legal` | legal | Cases, case files, litigation context |
+| `manage_agent_training` | training | Agent training data and capabilities |
+| `manage_workflow_templates` | workflows | Workflow template management |
+| `generate_image` | creation | Image generation via ImageAgent |
 
-### Phase 8 Categories Covered
-
-| Tool | Category | Endpoints |
-|------|----------|-----------|
-| `manage_proactive_alerts` | proactive | 21 |
-| `query_learning_progress` | learning | 33 |
-| `manage_team` | teams | 20 |
-| `generate_video` | video | 27 |
-| `manage_distribution` | distribution | 43 |
-| `query_analytics` | analytics | 17 |
-| `time_travel_memory` | time-travel | 16 |
-| `manage_memory_palace` | memory-palace | 12 |
-| `run_diagnostics` | diagnostics | 10+ |
-| `manage_collaboration` | collaboration | 18 |
-
-### Session 580 Commits
+### Session 581 Commits
 
 ```
-892cce2 feat(Session 580): PA Phase 8 - 10 High-Impact Tools (28 → 38)
-3d573d6 feat(Session 580): PA Phase 7 Tools - Advisors and Revenue
+fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 ```
+
+### Bugs Fixed
+- `PartnershipProject` import: `models_unified_system` → `models_partnership`
+- `CaseProfile` query: field `name` → `case_title`
 
 ---
 
-## Current PA Tools (38 Total)
+## Current PA Tools (43 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -83,8 +74,13 @@ Implemented **12 new tools** across 2 phases:
 | `manage_memory_palace` | Memory organization | Session 580 |
 | `run_diagnostics` | System health checks | Session 580 |
 | `manage_collaboration` | Agent collaboration | Session 580 |
+| `manage_project` | Project CRUD and export | Session 581 |
+| `query_legal` | Legal cases and files | Session 581 |
+| `manage_agent_training` | Agent training data | Session 581 |
+| `manage_workflow_templates` | Workflow templates | Session 581 |
+| `generate_image` | Image generation | Session 581 |
 
-**Coverage:** 38/1,343 endpoints (2.83%)
+**Coverage:** 43/1,343 endpoints (3.2%)
 
 ---
 
@@ -100,43 +96,46 @@ User: "What needs my attention?"
 User: "Run diagnostics"
 → run_diagnostics: Web server, database, celery health
 
-User: "Show me agent learning progress"
-→ query_learning_progress: Learning stats, evolution metrics
+User: "Show me my legal cases"
+→ query_legal: Case profiles, case files, litigation context
 
-User: "Create a video about AI"
-→ generate_video: Delegates to VideoAgent
+User: "List all projects"
+→ manage_project: Partnership projects with intelligence
 
-User: "Publish to Twitter"
-→ manage_distribution: Multi-platform content publishing
+User: "Create an image of a sunset"
+→ generate_image: Delegates to ImageAgent
 
-User: "What's in the memory palace?"
-→ manage_memory_palace: Memory organization and search
+User: "What workflow templates exist?"
+→ manage_workflow_templates: List/manage templates
 
-User: "Show system analytics"
-→ query_analytics: Usage, performance, costs
-
-User: "Start a collaboration between Research and Content agents"
-→ manage_collaboration: Agent partnership management
+User: "Show agent training data"
+→ manage_agent_training: Training records and capabilities
 ```
 
 ---
 
-## Session 581 Priorities
+## Session 582 Priorities
 
-### Option A: Phase 9 - More Tools
+### Option A: Phase 10 - Betting/Sports Tools
 
-Major uncovered categories:
-- **v1 (betting/sports)** - 294 endpoints, ~5 tools
-- **projects** - 63 endpoints, ~3 tools
-- **legal** - 26 endpoints, 0 tools
-- **workflows** - 25 endpoints, ~1 tool
-- **training** - 13 endpoints, 0 tools
+Major uncovered category:
+- **v1 (betting/sports)** - 294 endpoints, ~5-8 tools
+  - `query_odds` - Live odds from multiple books
+  - `manage_bets` - Bet tracking and history
+  - `query_line_movements` - Line movement tracking
+  - `manage_futures` - Futures betting
+  - `query_player_props` - Player prop bets
 
 ### Option B: Testing & Polish
 
 - End-to-end testing with actual user queries
 - Performance optimization
 - Error handling improvements
+
+### Option C: Documentation
+
+- Update CAPABILITIES.md with all 43 tools
+- Create PA Tools reference guide
 
 ---
 
@@ -146,19 +145,18 @@ Major uncovered categories:
 # Start services
 make start && make celery
 
-# Test all 38 PA tools
+# Test all 43 PA tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 8 tools:')
-phase8 = ['manage_proactive_alerts', 'query_learning_progress', 'manage_team',
-          'generate_video', 'manage_distribution', 'query_analytics',
-          'time_travel_memory', 'manage_memory_palace', 'run_diagnostics', 'manage_collaboration']
-for t in phase8:
-    result = getattr(pa, f'_{t}')({})
+print('Phase 9 tools:')
+phase9 = ['manage_project', 'query_legal', 'manage_agent_training',
+          'manage_workflow_templates', 'generate_image']
+for t in phase9:
+    result = getattr(pa, f'_{t}')({} if t != 'generate_image' else {'prompt': 'test'})
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
 "
@@ -169,19 +167,30 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## System Stats (Session 580)
+## System Stats (Session 581)
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 38 |
+| **PA Tools** | 43 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 227 |
 | **Services** | 93 |
 
 ---
 
-**Session 580: Phase 7 + Phase 8 = 12 new tools (26 → 38)**
+## PA Tools Progress
 
-**PA now has 38 tools (2.83% coverage) - Phases 7 & 8 complete!**
+| Session | Phase | Tools Added | Total |
+|---------|-------|-------------|-------|
+| 575-579 | 1-6 | 26 | 26 |
+| 580 | 7 | +2 | 28 |
+| 580 | 8 | +10 | 38 |
+| **581** | **9** | **+5** | **43** |
+
+---
+
+**Session 581: Phase 9 = 5 new tools (38 → 43)**
+
+**PA now has 43 tools (3.2% coverage) - Phase 9 complete!**
