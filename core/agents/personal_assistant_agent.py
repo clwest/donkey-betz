@@ -1170,6 +1170,201 @@ Conversations are where agents share knowledge and insights.""",
                     }
                 }
             }
+        },
+        # Session 579: Phase 5 Tools - Medium Priority from Roadmap
+        {
+            "type": "function",
+            "function": {
+                "name": "get_opportunity_pipeline",
+                "description": """Query the revenue opportunity pipeline.
+Use this for:
+- "Show me top opportunities"
+- "What's our revenue potential?"
+- "What opportunities are in the pipeline?"
+- "Any high-value opportunities?"
+Returns opportunities with scores, sources, and revenue potential.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["all", "new", "scored", "actioned", "converted"],
+                            "description": "Filter by opportunity status"
+                        },
+                        "min_score": {
+                            "type": "number",
+                            "description": "Minimum opportunity score (0-100)"
+                        },
+                        "opportunity_type": {
+                            "type": "string",
+                            "enum": ["all", "job", "gig", "freelance", "business", "investment"],
+                            "description": "Type of opportunity"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max opportunities to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "create_project",
+                "description": """Create a new project from conversation.
+Use this for:
+- "Create a project for [topic]"
+- "Start a new research project"
+- "Organize this into a project"
+- "I want to start a project called..."
+Creates a PartnershipProject with the specified details.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Project name (required)"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Project description"
+                        },
+                        "category": {
+                            "type": "string",
+                            "enum": ["general", "research", "creative", "business", "development", "content"],
+                            "description": "Project category"
+                        },
+                        "goal": {
+                            "type": "string",
+                            "description": "What the project aims to achieve"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Tags for the project"
+                        }
+                    },
+                    "required": ["name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "trigger_agent_conversation",
+                "description": """Start an agent-to-agent conversation/debate on a topic.
+Use this for:
+- "Have agents discuss this"
+- "Get diverse perspectives on [topic]"
+- "Start a debate about [issue]"
+- "What do agents think about...?"
+Triggers a multi-agent conversation where agents share perspectives.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic for agents to discuss (required)"
+                        },
+                        "agent_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Specific agents to include (optional - auto-selects if not provided)"
+                        },
+                        "max_rounds": {
+                            "type": "integer",
+                            "description": "Maximum conversation rounds (default: 3)"
+                        },
+                        "conversation_type": {
+                            "type": "string",
+                            "enum": ["discussion", "debate", "brainstorm", "analysis"],
+                            "description": "Type of conversation"
+                        }
+                    },
+                    "required": ["topic"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "schedule_content",
+                "description": """Schedule content for distribution to platforms.
+Use this for:
+- "Publish this to Twitter and LinkedIn"
+- "Schedule content for tomorrow"
+- "Multi-platform distribution"
+- "Post this to social media"
+Creates content distribution entries for the specified platforms.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Content title (required)"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Content body/description (required)"
+                        },
+                        "platforms": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["twitter", "linkedin", "youtube", "instagram", "medium", "substack"]
+                            },
+                            "description": "Platforms to distribute to"
+                        },
+                        "schedule_time": {
+                            "type": "string",
+                            "description": "ISO datetime to publish (optional - publishes immediately if not set)"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Tags/hashtags for the content"
+                        }
+                    },
+                    "required": ["title", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "analyze_project_intelligence",
+                "description": """Get deep intelligence and insights for a specific project.
+Use this for:
+- "Show me project intelligence"
+- "What have agents learned about this project?"
+- "Project deep-dive"
+- "Give me insights on [project]"
+Returns agent learnings, conversations, dreams, and spider data related to the project.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "project_name": {
+                            "type": "string",
+                            "description": "Project name to analyze (required)"
+                        },
+                        "include_sections": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["learnings", "conversations", "dreams", "spider_data", "recommendations"]
+                            },
+                            "description": "Sections to include (default: all)"
+                        },
+                        "time_period": {
+                            "type": "string",
+                            "enum": ["24h", "7d", "30d", "all"],
+                            "description": "Time range for data"
+                        }
+                    },
+                    "required": ["project_name"]
+                }
+            }
         }
     ]
 
@@ -2320,6 +2515,22 @@ Conversations are where agents share knowledge and insights.""",
 
         if tool_name == "query_conversations":
             return self._query_conversations(arguments)
+
+        # Session 579: Phase 5 Tools
+        if tool_name == "get_opportunity_pipeline":
+            return self._get_opportunity_pipeline(arguments)
+
+        if tool_name == "create_project":
+            return self._create_project(arguments)
+
+        if tool_name == "trigger_agent_conversation":
+            return self._trigger_agent_conversation(arguments)
+
+        if tool_name == "schedule_content":
+            return self._schedule_content(arguments)
+
+        if tool_name == "analyze_project_intelligence":
+            return self._analyze_project_intelligence(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -3836,6 +4047,433 @@ Conversations are where agents share knowledge and insights.""",
 
         except Exception as e:
             logger.error(f"Error querying conversations: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # ==================== SESSION 579: PHASE 5 TOOLS ====================
+
+    def _get_opportunity_pipeline(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Query the opportunity pipeline.
+        """
+        try:
+            from core.models_unified_system import Opportunity
+            from django.utils import timezone
+            from datetime import timedelta
+
+            status = arguments.get('status', 'all')
+            min_score = arguments.get('min_score', 0)
+            opportunity_type = arguments.get('opportunity_type', 'all')
+            limit = arguments.get('limit', 10)
+
+            # Build query
+            opps_query = Opportunity.objects.all()
+
+            if status != 'all':
+                opps_query = opps_query.filter(status=status)
+
+            if min_score > 0:
+                opps_query = opps_query.filter(overall_score__gte=min_score)
+
+            if opportunity_type != 'all':
+                opps_query = opps_query.filter(opportunity_type=opportunity_type)
+
+            # Order by score descending, recent first
+            opps = opps_query.order_by('-overall_score', '-created_at')[:limit]
+
+            # Build results
+            results = []
+            summary_lines = ["**Opportunity Pipeline:**\n"]
+            total_revenue = 0
+
+            if not opps:
+                summary_lines.append("No opportunities found matching criteria.")
+                summary_lines.append("\nOpportunities are discovered by spiders and scored by agents.")
+            else:
+                for opp in opps:
+                    score = getattr(opp, 'overall_score', 0) or 0
+                    revenue = getattr(opp, 'potential_revenue', 0) or 0
+                    total_revenue += revenue
+
+                    results.append({
+                        'id': str(opp.id),
+                        'title': opp.title[:100] if opp.title else 'Untitled',
+                        'type': getattr(opp, 'opportunity_type', 'unknown'),
+                        'source': getattr(opp, 'source', 'unknown'),
+                        'score': score,
+                        'status': getattr(opp, 'status', 'new'),
+                        'estimated_revenue': revenue,
+                        'created_at': opp.created_at.isoformat() if hasattr(opp, 'created_at') and opp.created_at else None
+                    })
+
+                    # Score emoji
+                    if score >= 80:
+                        emoji = '🔥'
+                    elif score >= 60:
+                        emoji = '⭐'
+                    else:
+                        emoji = '📋'
+
+                    title_short = opp.title[:45] if opp.title else 'Untitled'
+                    summary_lines.append(f"{emoji} **{title_short}...** (Score: {score})")
+
+                summary_lines.append(f"\n📊 Total: {len(results)} opportunities")
+                if total_revenue > 0:
+                    summary_lines.append(f"💰 Est. Revenue: ${total_revenue:,.0f}")
+
+            return {
+                'success': True,
+                'opportunities': results,
+                'total_count': len(results),
+                'total_estimated_revenue': total_revenue,
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying opportunity pipeline: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _create_project(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Create a new project.
+        """
+        try:
+            from core.models_partnership import PartnershipProject
+            from django.utils import timezone
+
+            name = arguments.get('name', '').strip()
+            if not name:
+                return {
+                    'success': False,
+                    'error': 'Project name is required'
+                }
+
+            description = arguments.get('description', '')
+            category = arguments.get('category', 'general')
+            goal = arguments.get('goal', '')
+            tags = arguments.get('tags', [])
+
+            # Create the project
+            project = PartnershipProject.objects.create(
+                user=self.user,
+                project_name=name,
+                project_type=category,
+                description=description,
+                goal=goal,
+                status='planning',
+                category=category,
+                tags=tags if isinstance(tags, list) else [],
+                ai_contribution_percent=50,
+                human_contribution_percent=50
+            )
+
+            logger.info(f"✅ PA created project: {project.project_name}")
+
+            return {
+                'success': True,
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'summary': f"**Project Created!**\n\n📁 **{project.project_name}**\n- Category: {category}\n- Status: planning\n- Goal: {goal[:100] if goal else 'Not specified'}\n\nYou can now assign agents and start work on this project."
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating project: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _trigger_agent_conversation(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Trigger an agent-to-agent conversation.
+        """
+        try:
+            from core.models_unified_system import HiveMindSession, Agent
+            from core.tasks import run_multi_agent_conversation
+            from django.utils import timezone
+            import random
+
+            topic = arguments.get('topic', '').strip()
+            if not topic:
+                return {
+                    'success': False,
+                    'error': 'Topic is required for agent conversation'
+                }
+
+            agent_names = arguments.get('agent_names', [])
+            max_rounds = arguments.get('max_rounds', 3)
+            conversation_type = arguments.get('conversation_type', 'discussion')
+
+            # If no agents specified, pick relevant ones
+            if not agent_names:
+                # Get active agents and pick 3-4 randomly
+                active_agents = Agent.objects.filter(
+                    is_active=True
+                ).exclude(
+                    name__in=['PersonalAssistantAgent', 'ThinkingAgent']
+                ).order_by('?')[:4]
+                agent_names = [a.name for a in active_agents]
+
+            if len(agent_names) < 2:
+                return {
+                    'success': False,
+                    'error': 'Need at least 2 agents for a conversation'
+                }
+
+            # Create HiveMindSession for the conversation
+            session = HiveMindSession.objects.create(
+                session_mode='conversation',
+                question=topic,
+                conversation_topic=topic,
+                context={
+                    'conversation_type': conversation_type,
+                    'max_rounds': max_rounds,
+                    'triggered_by': 'personal_assistant'
+                },
+                status='active',
+                participant_ids=[str(a.id) for a in Agent.objects.filter(name__in=agent_names)]
+            )
+
+            # Trigger the conversation task asynchronously
+            try:
+                run_multi_agent_conversation.delay(
+                    max_conversations=1,
+                    participants_per_conversation=len(agent_names),
+                    max_rounds=max_rounds
+                )
+            except Exception as task_error:
+                logger.warning(f"Could not trigger async conversation: {task_error}")
+
+            return {
+                'success': True,
+                'session_id': str(session.id),
+                'topic': topic,
+                'participants': agent_names,
+                'summary': f"**Agent Conversation Started!**\n\n💬 Topic: {topic}\n👥 Participants: {', '.join(agent_names[:4])}\n🔄 Type: {conversation_type}\n\nAgents are now discussing this topic. Check back soon for insights!"
+            }
+
+        except Exception as e:
+            logger.error(f"Error triggering agent conversation: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _schedule_content(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Schedule content for distribution.
+        """
+        try:
+            from core.models_unified_system import ContentDistribution
+            from django.utils import timezone
+            from django.utils.dateparse import parse_datetime
+
+            title = arguments.get('title', '').strip()
+            content = arguments.get('content', '').strip()
+
+            if not title:
+                return {
+                    'success': False,
+                    'error': 'Content title is required'
+                }
+
+            if not content:
+                return {
+                    'success': False,
+                    'error': 'Content body is required'
+                }
+
+            platforms = arguments.get('platforms', ['twitter'])
+            schedule_time_str = arguments.get('schedule_time')
+            tags = arguments.get('tags', [])
+
+            # Parse schedule time if provided
+            schedule_time = None
+            if schedule_time_str:
+                schedule_time = parse_datetime(schedule_time_str)
+
+            created_distributions = []
+            summary_lines = ["**Content Scheduled:**\n"]
+
+            for platform in platforms:
+                try:
+                    dist = ContentDistribution.objects.create(
+                        user=self.user,
+                        title=title,
+                        description=content,
+                        content_type='post',
+                        tags=tags if isinstance(tags, list) else [],
+                        platform_listing_id=None,  # Will be set when actually published
+                    )
+                    created_distributions.append({
+                        'id': str(dist.id),
+                        'platform': platform,
+                        'scheduled_for': schedule_time.isoformat() if schedule_time else 'immediate'
+                    })
+
+                    time_str = schedule_time.strftime('%Y-%m-%d %H:%M') if schedule_time else 'Now'
+                    summary_lines.append(f"📤 **{platform.title()}** - {time_str}")
+
+                except Exception as platform_error:
+                    logger.warning(f"Failed to schedule for {platform}: {platform_error}")
+
+            if not created_distributions:
+                return {
+                    'success': False,
+                    'error': 'Failed to schedule content for any platform'
+                }
+
+            summary_lines.append(f"\n📝 Title: {title[:50]}...")
+            if tags:
+                summary_lines.append(f"🏷️ Tags: {', '.join(tags[:5])}")
+
+            return {
+                'success': True,
+                'distributions': created_distributions,
+                'count': len(created_distributions),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error scheduling content: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _analyze_project_intelligence(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Get deep intelligence for a project.
+        """
+        try:
+            from core.models_partnership import PartnershipProject
+            from core.models_unified_system import (
+                AgentKnowledgeSource, HiveMindSession, AgentDream, SpiderData
+            )
+            from django.utils import timezone
+            from datetime import timedelta
+
+            project_name = arguments.get('project_name', '').strip()
+            if not project_name:
+                return {
+                    'success': False,
+                    'error': 'Project name is required'
+                }
+
+            include_sections = arguments.get('include_sections', ['learnings', 'conversations', 'dreams', 'spider_data', 'recommendations'])
+            time_period = arguments.get('time_period', '7d')
+
+            # Find the project
+            project = PartnershipProject.objects.filter(
+                project_name__icontains=project_name
+            ).first()
+
+            if not project:
+                return {
+                    'success': False,
+                    'error': f'Project "{project_name}" not found'
+                }
+
+            # Time filter
+            time_map = {
+                '24h': timedelta(hours=24),
+                '7d': timedelta(days=7),
+                '30d': timedelta(days=30),
+                'all': timedelta(days=365*10)
+            }
+            cutoff = timezone.now() - time_map.get(time_period, timedelta(days=7))
+
+            results = {
+                'project_id': str(project.id),
+                'project_name': project.project_name,
+                'status': project.status,
+                'sections': {}
+            }
+            summary_lines = [f"**Project Intelligence: {project.project_name}**\n"]
+
+            # Learnings
+            if 'learnings' in include_sections:
+                learnings = AgentKnowledgeSource.objects.filter(
+                    project=project,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:10]
+
+                results['sections']['learnings'] = {
+                    'count': learnings.count(),
+                    'items': [{'title': l.title[:50], 'agent': l.source_agent.name if l.source_agent else 'Unknown'} for l in learnings[:5]]
+                }
+                summary_lines.append(f"📚 **Learnings:** {learnings.count()} knowledge items")
+
+            # Conversations
+            if 'conversations' in include_sections:
+                conversations = HiveMindSession.objects.filter(
+                    project=project,
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:10]
+
+                results['sections']['conversations'] = {
+                    'count': conversations.count(),
+                    'items': [{'topic': c.conversation_topic or c.question or 'Untitled', 'status': c.status} for c in conversations[:5]]
+                }
+                summary_lines.append(f"💬 **Conversations:** {conversations.count()} agent discussions")
+
+            # Dreams
+            if 'dreams' in include_sections:
+                dreams = AgentDream.objects.filter(
+                    project=project,
+                    dreamed_at__gte=cutoff
+                ).order_by('-composite_score')[:10]
+
+                results['sections']['dreams'] = {
+                    'count': dreams.count(),
+                    'items': [{'title': d.title[:50], 'score': float(d.composite_score)} for d in dreams[:5]]
+                }
+                summary_lines.append(f"💭 **Dreams:** {dreams.count()} creative ideas")
+
+            # Spider data
+            if 'spider_data' in include_sections:
+                # Check for project-related spider data via tags or topics
+                project_keywords = project.project_name.lower().split()
+                spider_count = SpiderData.objects.filter(
+                    created_at__gte=cutoff
+                ).count()  # Simplified - would need proper project linking
+
+                results['sections']['spider_data'] = {
+                    'count': spider_count,
+                    'note': 'Spider data related to project topics'
+                }
+                summary_lines.append(f"🕷️ **Spider Data:** {spider_count} recent items")
+
+            # Recommendations
+            if 'recommendations' in include_sections:
+                recommendations = []
+                if results['sections'].get('dreams', {}).get('count', 0) > 5:
+                    recommendations.append("Consider reviewing high-score dreams for actionable ideas")
+                if results['sections'].get('conversations', {}).get('count', 0) < 3:
+                    recommendations.append("Trigger more agent conversations to generate insights")
+                if results['sections'].get('learnings', {}).get('count', 0) > 20:
+                    recommendations.append("Rich knowledge base - consider synthesizing key learnings")
+
+                results['sections']['recommendations'] = recommendations
+                if recommendations:
+                    summary_lines.append(f"\n💡 **Recommendations:**")
+                    for rec in recommendations[:3]:
+                        summary_lines.append(f"  - {rec}")
+
+            results['summary'] = '\n'.join(summary_lines)
+
+            return {
+                'success': True,
+                **results
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing project intelligence: {e}")
             return {
                 'success': False,
                 'error': str(e)
