@@ -41,6 +41,9 @@ from .models_push_notifications import *
 # Import betting models (Session 563 - Bet Tracking)
 from .models_betting import *
 
+# Import pilot readiness models (Session 590 - Gate between decision and action)
+from .models_pilot_readiness import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
