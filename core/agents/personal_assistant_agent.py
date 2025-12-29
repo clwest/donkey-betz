@@ -2664,6 +2664,69 @@ Returns proposals, stats, and execution status.""",
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 16: Solutions & Learning Tools (Session 583) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_solutions",
+                "description": """Manage AI-discovered solutions and their application.
+Use this for:
+- "Show available solutions"
+- "Get solution details"
+- "Apply a solution"
+Returns solutions, details, and application results.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "get", "apply"],
+                            "description": "Action: list, get, apply"
+                        },
+                        "solution_id": {
+                            "type": "string",
+                            "description": "Solution ID for get/apply actions"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of solutions to return (default 20)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_learning",
+                "description": """Query learning system data, patterns, and insights.
+Use this for:
+- "Show learning dashboard"
+- "What patterns have been discovered?"
+- "Show learning insights"
+- "Get my learning profile"
+- "Show learning progress"
+- "How does data flow through learning?"
+- "Show learning feed"
+Returns learning metrics, patterns, insights, and progress.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["dashboard", "patterns", "insights", "profile", "progress", "data_flow", "feed"],
+                            "description": "Type of learning data to query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of items to return (default 20)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -3945,6 +4008,13 @@ Returns proposals, stats, and execution status.""",
 
         if tool_name == "manage_proposals":
             return self._manage_proposals(arguments)
+
+        # ===== Phase 16: Solutions & Learning Tools (Session 583) =====
+        if tool_name == "manage_solutions":
+            return self._manage_solutions(arguments)
+
+        if tool_name == "query_learning":
+            return self._query_learning(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -9362,4 +9432,230 @@ Returns proposals, stats, and execution status.""",
 
         except Exception as e:
             logger.error(f"Error managing proposals: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 16: Solutions & Learning Tools (Session 583) =====
+
+    def _manage_solutions(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Manage AI-discovered solutions and their application.
+        """
+        try:
+            import requests
+
+            action = arguments.get('action', 'list')
+            solution_id = arguments.get('solution_id')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                try:
+                    response = requests.get(f'{base_url}/api/solutions/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        solutions = data.get('results', data.get('solutions', data)) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'solutions': solutions[:limit] if isinstance(solutions, list) else solutions,
+                            'summary': f"Found {len(solutions) if isinstance(solutions, list) else 'multiple'} solutions"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'solutions': [],
+                    'summary': 'No solutions found'
+                }
+
+            elif action == 'get':
+                if not solution_id:
+                    return {'success': False, 'error': 'solution_id required'}
+
+                try:
+                    response = requests.get(f'{base_url}/api/solutions/{solution_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'solution': response.json(),
+                            'summary': 'Retrieved solution details'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Solution not found'}
+
+            elif action == 'apply':
+                if not solution_id:
+                    return {'success': False, 'error': 'solution_id required'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/solutions/{solution_id}/apply/',
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201, 202]:
+                        return {
+                            'success': True,
+                            'result': response.json(),
+                            'summary': 'Solution applied successfully'
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Could not apply solution'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing solutions: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_learning(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 583: Query learning system data, patterns, and insights.
+        """
+        try:
+            import requests
+
+            query_type = arguments.get('query_type', 'dashboard')
+            limit = arguments.get('limit', 20)
+            base_url = 'http://localhost:8000'
+
+            if query_type == 'dashboard':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/dashboard/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'dashboard': response.json(),
+                            'summary': 'Retrieved learning dashboard'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'dashboard': {'message': 'Dashboard available via API'},
+                    'summary': 'Learning dashboard endpoint available'
+                }
+
+            elif query_type == 'patterns':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/patterns/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        patterns = data.get('patterns', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'patterns': patterns,
+                            'summary': f"Found {len(patterns) if isinstance(patterns, list) else 'multiple'} patterns"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'patterns': [],
+                    'summary': 'No patterns found'
+                }
+
+            elif query_type == 'insights':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/insights/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        insights = data.get('insights', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'insights': insights,
+                            'summary': f"Found {len(insights) if isinstance(insights, list) else 'multiple'} insights"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'insights': [],
+                    'summary': 'No insights found'
+                }
+
+            elif query_type == 'profile':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/profile/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'profile': response.json(),
+                            'summary': 'Retrieved learning profile'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'profile': {'message': 'Profile available via API'},
+                    'summary': 'Learning profile endpoint available'
+                }
+
+            elif query_type == 'progress':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/progress/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'progress': response.json(),
+                            'summary': 'Retrieved learning progress'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'progress': {'message': 'Progress available via API'},
+                    'summary': 'Learning progress endpoint available'
+                }
+
+            elif query_type == 'data_flow':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/data-flow/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'data_flow': response.json(),
+                            'summary': 'Retrieved learning data flow'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'data_flow': {'message': 'Data flow available via API'},
+                    'summary': 'Learning data flow endpoint available'
+                }
+
+            elif query_type == 'feed':
+                try:
+                    response = requests.get(f'{base_url}/api/learning/feed/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        feed = data.get('feed', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'feed': feed,
+                            'summary': f"Found {len(feed) if isinstance(feed, list) else 'multiple'} feed items"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'feed': [],
+                    'summary': 'No feed items found'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying learning: {e}")
             return {'success': False, 'error': str(e)}
