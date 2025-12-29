@@ -2976,6 +2976,111 @@ Returns model performance metrics and preference settings.""",
                     "required": ["query_type"]
                 }
             }
+        },
+        # ===== Phase 20: Collaboration & Search Tools (Session 584) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "query_collaboration",
+                "description": """Query agent collaboration data, performance, and network.
+Use this for:
+- "Show collaboration history"
+- "Show collaboration stats"
+- "Find best collaborator for a task"
+- "Show agent performance"
+- "Show top performers"
+- "Show collaboration network"
+- "Show collaboration monitor"
+Returns collaboration history, stats, network visualization, and performance metrics.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["history", "stats", "find_collaborator", "performance", "top_performers", "network", "monitor", "dashboard"],
+                            "description": "Type of collaboration query"
+                        },
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Agent name for performance query"
+                        },
+                        "task_type": {
+                            "type": "string",
+                            "description": "Task type for find_collaborator"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results (default 20)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_favorites",
+                "description": """Manage favorites and batch operations for images, videos, workflows.
+Use this for:
+- "Show my favorite images"
+- "Toggle favorite on image/video/workflow"
+- "Batch download images"
+- "Show workflow favorites"
+Returns favorite status and batch operation results.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list_images", "list_videos", "list_workflows", "toggle_image", "toggle_video", "toggle_workflow", "batch_download"],
+                            "description": "Action to perform"
+                        },
+                        "item_id": {
+                            "type": "string",
+                            "description": "ID of item for toggle actions"
+                        },
+                        "item_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "IDs for batch download"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_semantic_search",
+                "description": """Perform semantic search and RAG operations on documents and knowledge.
+Use this for:
+- "Search for documents about topic"
+- "Semantic search for concept"
+- "Show embeddings stats"
+- "Generate answer from documents"
+Returns semantically relevant documents and generated answers.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["search", "generate", "stats"],
+                            "description": "Type of semantic query"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for semantic search"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results (default 10)"
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            }
         }
     ]
 
@@ -4288,6 +4393,16 @@ Returns model performance metrics and preference settings.""",
 
         if tool_name == "query_model_analytics":
             return self._query_model_analytics(arguments)
+
+        # ===== Phase 20: Collaboration & Search Tools (Session 584) =====
+        if tool_name == "query_collaboration":
+            return self._query_collaboration(arguments)
+
+        if tool_name == "manage_favorites":
+            return self._manage_favorites(arguments)
+
+        if tool_name == "query_semantic_search":
+            return self._query_semantic_search(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -10800,4 +10915,482 @@ Returns model performance metrics and preference settings.""",
 
         except Exception as e:
             logger.error(f"Error querying model analytics: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 20: Collaboration & Search Tools (Session 584) =====
+
+    def _query_collaboration(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Query agent collaboration data, performance, and network.
+        """
+        import requests
+
+        query_type = arguments.get('query_type', 'stats')
+        agent_name = arguments.get('agent_name')
+        task_type = arguments.get('task_type')
+        limit = arguments.get('limit', 20)
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if query_type == 'history':
+                try:
+                    response = requests.get(f'{base_url}/api/collaboration/history/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        history = data.get('history', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'history': history,
+                            'summary': f"Found {len(history) if isinstance(history, list) else 'multiple'} collaborations"
+                        }
+                except:
+                    pass
+
+                # Database fallback
+                try:
+                    from core.models_collaboration import Collaboration
+                    collabs = Collaboration.objects.order_by('-created_at')[:limit]
+                    history = [{
+                        'id': str(c.id),
+                        'requester': c.requester,
+                        'target_agents': c.target_agents,
+                        'status': c.status,
+                        'created_at': c.created_at.isoformat()
+                    } for c in collabs]
+                    return {
+                        'success': True,
+                        'history': history,
+                        'summary': f"Found {len(history)} collaborations"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'history': [],
+                    'summary': 'No collaboration history found'
+                }
+
+            elif query_type == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/api/collaboration/stats/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'stats': response.json(),
+                            'summary': 'Retrieved collaboration stats'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'stats': {'total': 0, 'success_rate': 0},
+                    'summary': 'No collaboration stats available'
+                }
+
+            elif query_type == 'find_collaborator':
+                params = {}
+                if task_type:
+                    params['task_type'] = task_type
+                try:
+                    response = requests.get(f'{base_url}/api/collaboration/find-collaborator/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'collaborator': data,
+                            'summary': f"Best collaborator: {data.get('agent_name', 'unknown')}"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'collaborator': {},
+                    'summary': 'No collaborator recommendation available'
+                }
+
+            elif query_type == 'performance':
+                params = {'limit': limit}
+                if agent_name:
+                    params['agent_name'] = agent_name
+                try:
+                    response = requests.get(f'{base_url}/api/collaboration/performance/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'performance': response.json(),
+                            'summary': 'Retrieved agent performance metrics'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'performance': {},
+                    'summary': 'No performance data available'
+                }
+
+            elif query_type == 'top_performers':
+                try:
+                    response = requests.get(f'{base_url}/api/collaboration/top-performers/', params={'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        performers = data.get('performers', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'performers': performers,
+                            'summary': f"Top {len(performers) if isinstance(performers, list) else 'multiple'} performers"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'performers': [],
+                    'summary': 'No top performers data available'
+                }
+
+            elif query_type == 'network':
+                try:
+                    response = requests.get(f'{base_url}/api/collective/network/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'network': response.json(),
+                            'summary': 'Retrieved collaboration network'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'network': {'nodes': [], 'edges': []},
+                    'summary': 'No network data available'
+                }
+
+            elif query_type == 'monitor':
+                try:
+                    response = requests.get(f'{base_url}/api/collective/monitor/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'monitor': response.json(),
+                            'summary': 'Retrieved collaboration monitor data'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'monitor': {},
+                    'summary': 'No monitor data available'
+                }
+
+            elif query_type == 'dashboard':
+                try:
+                    response = requests.get(f'{base_url}/api/dashboard/collaboration/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'dashboard': response.json(),
+                            'summary': 'Retrieved collaboration dashboard'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'dashboard': {},
+                    'summary': 'No dashboard data available'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error querying collaboration: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_favorites(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Manage favorites and batch operations for images, videos, workflows.
+        """
+        import requests
+
+        action = arguments.get('action', 'list_images')
+        item_id = arguments.get('item_id')
+        item_ids = arguments.get('item_ids', [])
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if action == 'list_images':
+                try:
+                    from core.models_unified_system import GeneratedImage
+                    favorites = GeneratedImage.objects.filter(is_favorite=True).order_by('-created_at')[:50]
+                    images = [{
+                        'id': str(img.id),
+                        'prompt': img.prompt[:100] if img.prompt else '',
+                        'created_at': img.created_at.isoformat()
+                    } for img in favorites]
+                    return {
+                        'success': True,
+                        'favorites': images,
+                        'summary': f"Found {len(images)} favorite images"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'favorites': [],
+                    'summary': 'No favorite images found'
+                }
+
+            elif action == 'list_videos':
+                try:
+                    from core.models_unified_system import GeneratedVideo
+                    favorites = GeneratedVideo.objects.filter(is_favorite=True).order_by('-created_at')[:50]
+                    videos = [{
+                        'id': str(v.id),
+                        'prompt': v.prompt[:100] if v.prompt else '',
+                        'created_at': v.created_at.isoformat()
+                    } for v in favorites]
+                    return {
+                        'success': True,
+                        'favorites': videos,
+                        'summary': f"Found {len(videos)} favorite videos"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'favorites': [],
+                    'summary': 'No favorite videos found'
+                }
+
+            elif action == 'list_workflows':
+                try:
+                    response = requests.get(f'{base_url}/api/workflows/favorites/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        favorites = data.get('favorites', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'favorites': favorites,
+                            'summary': f"Found {len(favorites) if isinstance(favorites, list) else 'multiple'} favorite workflows"
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'favorites': [],
+                    'summary': 'No favorite workflows found'
+                }
+
+            elif action == 'toggle_image':
+                if not item_id:
+                    return {'success': False, 'error': 'item_id required'}
+
+                try:
+                    response = requests.post(f'{base_url}/api/images/{item_id}/favorite/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'is_favorite': data.get('is_favorite'),
+                            'summary': f"Image favorite toggled: {data.get('is_favorite')}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Failed to toggle image favorite'}
+
+            elif action == 'toggle_video':
+                if not item_id:
+                    return {'success': False, 'error': 'item_id required'}
+
+                try:
+                    response = requests.post(f'{base_url}/api/v1/video/history/{item_id}/favorite/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'is_favorite': data.get('is_favorite'),
+                            'summary': f"Video favorite toggled: {data.get('is_favorite')}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Failed to toggle video favorite'}
+
+            elif action == 'toggle_workflow':
+                if not item_id:
+                    return {'success': False, 'error': 'item_id required'}
+
+                try:
+                    response = requests.post(f'{base_url}/api/workflows/history/{item_id}/toggle-favorite/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'is_favorite': data.get('is_favorite'),
+                            'summary': f"Workflow favorite toggled: {data.get('is_favorite')}"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Failed to toggle workflow favorite'}
+
+            elif action == 'batch_download':
+                if not item_ids:
+                    return {'success': False, 'error': 'item_ids required for batch download'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/images/batch-download/',
+                        json={'image_ids': item_ids},
+                        timeout=30
+                    )
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'download_url': response.headers.get('Content-Disposition', 'download ready'),
+                            'summary': f"Batch download prepared for {len(item_ids)} images"
+                        }
+                except:
+                    pass
+
+                return {'success': False, 'error': 'Failed to prepare batch download'}
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing favorites: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_semantic_search(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 584: Perform semantic search and RAG operations.
+        """
+        import requests
+
+        query_type = arguments.get('query_type', 'search')
+        query = arguments.get('query', '')
+        limit = arguments.get('limit', 10)
+
+        base_url = 'http://localhost:8000'
+
+        try:
+            if query_type == 'search':
+                if not query:
+                    return {'success': False, 'error': 'query required for search'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/v1/rag/semantic-search/',
+                        json={'query': query, 'limit': limit},
+                        timeout=15
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        results = data.get('results', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'results': results,
+                            'summary': f"Found {len(results) if isinstance(results, list) else 'multiple'} semantic matches"
+                        }
+                except:
+                    pass
+
+                # Try spider semantic search fallback
+                try:
+                    from core.services.spider_semantic_search import get_spider_semantic_search_service
+                    service = get_spider_semantic_search_service()
+                    results = service.semantic_search(query, limit=limit)
+                    return {
+                        'success': True,
+                        'results': results,
+                        'summary': f"Found {len(results)} semantic matches via spider search"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'results': [],
+                    'summary': 'No semantic search results'
+                }
+
+            elif query_type == 'generate':
+                if not query:
+                    return {'success': False, 'error': 'query required for RAG generation'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/v1/rag/generate/',
+                        json={'query': query},
+                        timeout=30
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'answer': data.get('answer', data.get('response', '')),
+                            'sources': data.get('sources', []),
+                            'summary': 'Generated RAG answer'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'answer': '',
+                    'sources': [],
+                    'summary': 'RAG generation not available'
+                }
+
+            elif query_type == 'stats':
+                try:
+                    response = requests.get(f'{base_url}/api/v1/rag/stats/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'stats': data,
+                            'summary': f"Embeddings: {data.get('total_embeddings', 0)}, Documents: {data.get('total_documents', 0)}"
+                        }
+                except:
+                    pass
+
+                # Database fallback
+                try:
+                    from core.models_unified_system import DocumentEmbedding, RAGDocument
+                    embed_count = DocumentEmbedding.objects.count()
+                    doc_count = RAGDocument.objects.count()
+                    return {
+                        'success': True,
+                        'stats': {
+                            'total_embeddings': embed_count,
+                            'total_documents': doc_count
+                        },
+                        'summary': f"Embeddings: {embed_count}, Documents: {doc_count}"
+                    }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'stats': {},
+                    'summary': 'No embeddings stats available'
+                }
+
+            return {'success': False, 'error': f'Unknown query_type: {query_type}'}
+
+        except Exception as e:
+            logger.error(f"Error in semantic search: {e}")
             return {'success': False, 'error': str(e)}

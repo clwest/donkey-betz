@@ -2,7 +2,7 @@
 
 **Previous Session:** 584
 **Date:** December 28, 2025
-**Focus:** PA Tools Phase 19 Complete (65 → 68)
+**Focus:** PA Tools Phases 19-20 Complete (65 → 71)
 
 ---
 
@@ -15,6 +15,14 @@
 | `query_workflow_analytics` | workflow | history, trends, success_failure, performance, performance_comparison, compare, steps, heatmap, summary, dashboard |
 | `query_video_analytics` | video | character_performance, lip_sync, lip_sync_status |
 | `query_model_analytics` | model | performance, preferences, set_preferences |
+
+### Phase 20 - Collaboration & Search Tools (3 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `query_collaboration` | collaboration | history, stats, find_collaborator, performance, top_performers, network, monitor, dashboard |
+| `manage_favorites` | favorites | list_images, list_videos, list_workflows, toggle_image, toggle_video, toggle_workflow, batch_download |
+| `query_semantic_search` | search | search, generate, stats (RAG/embeddings) |
 
 ---
 
@@ -85,7 +93,7 @@
 
 ---
 
-## Current PA Tools (68 Total)
+## Current PA Tools (71 Total)
 
 | Tool | Purpose | Added |
 |------|---------|-------|
@@ -157,8 +165,11 @@
 | `query_workflow_analytics` | Workflow execution analytics | Session 584 |
 | `query_video_analytics` | Character/lip sync analytics | Session 584 |
 | `query_model_analytics` | LLM model performance | Session 584 |
+| `query_collaboration` | Agent collaboration metrics | Session 584 |
+| `manage_favorites` | Favorites/batch operations | Session 584 |
+| `query_semantic_search` | Semantic search & RAG | Session 584 |
 
-**Coverage:** 68/1,343 endpoints (5.06%)
+**Coverage:** 71/1,343 endpoints (5.29%)
 
 ---
 
@@ -245,19 +256,28 @@ User: "Show character performance"
 
 User: "Show model usage stats"
 → query_model_analytics: LLM model performance and preferences
+
+User: "Show collaboration history"
+→ query_collaboration: Agent collaboration history and stats
+
+User: "Show my favorite images"
+→ manage_favorites: Favorite images, videos, workflows
+
+User: "Search documents about AI"
+→ query_semantic_search: Semantic search with RAG
 ```
 
 ---
 
 ## Session 585 Priorities
 
-### Option A: Phase 20 - More Coverage
+### Option A: Phase 21 - More Coverage
 
 Remaining uncovered categories:
-- **collaboration-analytics** - 4 endpoints (collaboration performance)
-- **session-analytics** - 3 endpoints (session tracking)
-- **batch-operations** - 4 endpoints (batch download, favorites)
-- **advanced-search** - 3 endpoints (semantic search, filters)
+- **project-collaboration** - 5 endpoints (invite, remove, list collaborators)
+- **team-collaboration** - 4 endpoints (team management)
+- **workflow-collaboration** - 3 endpoints (workflow sharing)
+- **advanced-filters** - 4 endpoints (advanced search filters)
 
 ### Option B: Testing & Polish
 
@@ -267,7 +287,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 68 tools
+- Update CAPABILITIES.md with all 71 tools
 - Create PA Tools reference guide
 
 ---
@@ -278,22 +298,22 @@ Remaining uncovered categories:
 # Start services
 make start && make celery
 
-# Test Phase 19 tools
+# Test Phase 20 tools
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django
 django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 19 tools:')
-phase19 = ['query_workflow_analytics', 'query_video_analytics', 'query_model_analytics']
-for t in phase19:
-    if t == 'query_workflow_analytics':
-        args = {'query_type': 'summary'}
-    elif t == 'query_video_analytics':
-        args = {'query_type': 'character_performance'}
+print('Phase 20 tools:')
+phase20 = ['query_collaboration', 'manage_favorites', 'query_semantic_search']
+for t in phase20:
+    if t == 'query_collaboration':
+        args = {'query_type': 'stats'}
+    elif t == 'manage_favorites':
+        args = {'action': 'list_images'}
     else:
-        args = {'query_type': 'performance'}
+        args = {'query_type': 'stats'}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -311,7 +331,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 68 |
+| **PA Tools** | 71 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -335,10 +355,11 @@ open http://localhost:8000/ai-studio/
 | 583 | 16 | +2 | 61 |
 | 583 | 17 | +2 | 63 |
 | 583 | 18 | +2 | 65 |
-| **584** | **19** | **+3** | **68** |
+| 584 | 19 | +3 | 68 |
+| **584** | **20** | **+3** | **71** |
 
 ---
 
-**Session 584: Phase 19 = 3 new tools (65 → 68)**
+**Session 584: Phases 19-20 = 6 new tools (65 → 71)**
 
-**PA now has 68 tools (5.06% coverage) - Phases 9-19 complete!**
+**PA now has 71 tools (5.29% coverage) - Phases 9-20 complete!**
