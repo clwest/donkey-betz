@@ -57919,7 +57919,12 @@ ${item.generated_content}
                             </div>
                         </div>
                         <div class="mb-2">
-                            <small class="text-muted d-block mb-1">Checklist Items:</small>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted">Checklist Items:</small>
+                                <button class="btn btn-sm btn-outline-info" onclick="generateAllContent('${g.id}')" style="font-size: 10px; padding: 2px 8px;">
+                                    🤖 Generate All
+                                </button>
+                            </div>
                             ${checklistItems}
                         </div>
                         ${actionButtons}
@@ -58214,6 +58219,33 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error regenerating content:', error);
                 showNotification('Error regenerating content', 'danger');
+            }
+        }
+
+        // Session 594: Generate AI content for ALL checklist items
+        async function generateAllContent(gateId) {
+            showNotification('🤖 Generating AI content for all items... This may take a moment.', 'info');
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/regenerate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({})  // No item_id = regenerate all
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`🤖 Generated content for ${data.items_regenerated} items! Review and approve.`, 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error generating all content:', error);
+                showNotification('Error generating content', 'danger');
             }
         }
 
