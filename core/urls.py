@@ -277,6 +277,12 @@ from core.views_agent_learning import (
     get_hivemind_detail,
     get_decision_detail,
     get_dream_detail,
+    # Session 590: Pilot Readiness Gate
+    get_pilot_readiness_gates,
+    get_pilot_gate_detail,
+    update_gate_status,
+    update_checklist_item,
+    create_pilot_gate,
 )
 
 # Session 250: Hive Mind Mode
@@ -2689,6 +2695,13 @@ urlpatterns = [
     path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
     path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
+
+    # Session 590: Pilot Readiness Gate API
+    path('api/pilot-gates/', get_pilot_readiness_gates, name='pilot-gates'),
+    path('api/pilot-gates/<uuid:gate_id>/', get_pilot_gate_detail, name='pilot-gate-detail'),
+    path('api/pilot-gates/<uuid:gate_id>/status/', update_gate_status, name='pilot-gate-status'),
+    path('api/pilot-gates/<uuid:gate_id>/items/<uuid:item_id>/', update_checklist_item, name='pilot-gate-item'),
+    path('api/pilot-gates/create/<uuid:decision_id>/', create_pilot_gate, name='pilot-gate-create'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

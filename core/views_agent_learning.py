@@ -2215,6 +2215,349 @@ def get_dream_detail(request, dream_id):
         }, status=500)
 
 
+# =============================================================================
+# Session 590: Pilot Readiness Gate API
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_pilot_readiness_gates(request):
+    """
+    Get all pilot readiness gates with their checklist status.
+
+    GET /api/pilot-gates/
+
+    Query params:
+    - status: Filter by gate status (not_started, in_progress, ready, approved, blocked, waived)
+    - risk_level: Filter by risk level (low, medium, high, critical)
+    - limit: Max gates to return (default 20)
+    """
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+
+        limit = int(request.GET.get('limit', 20))
+        status = request.GET.get('status')
+        risk_level = request.GET.get('risk_level')
+
+        queryset = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if risk_level:
+            queryset = queryset.filter(risk_level=risk_level)
+
+        gates = queryset[:limit]
+
+        gates_data = []
+        for gate in gates:
+            progress = gate.checklist_progress
+            latency = gate.get_latency_metrics()
+
+            # Get checklist items for UI display
+            checklist_items = []
+            for item in gate.checklist_items.all().order_by('item_type'):
+                checklist_items.append({
+                    'id': str(item.id),
+                    'item_type': item.item_type,
+                    'title': item.title,
+                    'status': item.status,
+                    'is_required': item.is_required,
+                })
+
+            gates_data.append({
+                'id': str(gate.id),
+                'decision_id': str(gate.decision.id),
+                'decision_topic': gate.decision.topic,
+                'decision_type': gate.decision.decision_type,
+                'impact_area': gate.decision.impact_area,
+                'status': gate.status,
+                'status_display': gate.get_status_display(),
+                'risk_level': gate.risk_level,
+                'summary': gate.summary,
+                'checklist_total': progress['total'],
+                'checklist_completed': progress['completed'],
+                'checklist_percentage': progress['percentage'],
+                'checklist_items': checklist_items,
+                'latency': latency,
+                'approved_by': gate.approved_by,
+                'created_at': gate.created_at.isoformat(),
+                'decision_made_at': gate.decision_made_at.isoformat() if gate.decision_made_at else None,
+                'gate_approved_at': gate.gate_approved_at.isoformat() if gate.gate_approved_at else None,
+            })
+
+        # Get summary stats
+        total_gates = PilotReadinessGate.objects.count()
+        by_status = {}
+        for s, _ in PilotReadinessGate.GATE_STATUS_CHOICES:
+            by_status[s] = PilotReadinessGate.objects.filter(status=s).count()
+
+        return JsonResponse({
+            'success': True,
+            'gates': gates_data,
+            'total': total_gates,
+            'by_status': by_status,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting pilot gates: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_pilot_gate_detail(request, gate_id):
+    """
+    Get detailed info for a specific pilot readiness gate.
+
+    GET /api/pilot-gates/<gate_id>/
+    """
+    try:
+        from core.models_pilot_readiness import PilotReadinessGate
+
+        gate = PilotReadinessGate.objects.select_related('decision').get(id=gate_id)
+        progress = gate.checklist_progress
+        latency = gate.get_latency_metrics()
+
+        # Get checklist items
+        items = []
+        for item in gate.checklist_items.all().order_by('item_type'):
+            items.append({
+                'id': str(item.id),
+                'item_type': item.item_type,
+                'title': item.title,
+                'description': item.description,
+                'status': item.status,
+                'is_required': item.is_required,
+                'documentation_url': item.documentation_url,
+                'documentation_notes': item.documentation_notes,
+                'assigned_to': item.assigned_to,
+                'completed_by': item.completed_by,
+                'completed_at': item.completed_at.isoformat() if item.completed_at else None,
+                'completion_notes': item.completion_notes,
+            })
+
+        # Get pilot executions
+        executions = []
+        for exec in gate.pilot_executions.all().order_by('-created_at'):
+            executions.append({
+                'id': str(exec.id),
+                'name': exec.name,
+                'status': exec.status,
+                'outcome': exec.outcome,
+                'outcome_summary': exec.outcome_summary,
+                'kill_switch_triggered': exec.kill_switch_triggered,
+                'started_at': exec.started_at.isoformat() if exec.started_at else None,
+                'completed_at': exec.completed_at.isoformat() if exec.completed_at else None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'gate': {
+                'id': str(gate.id),
+                'decision': {
+                    'id': str(gate.decision.id),
+                    'topic': gate.decision.topic,
+                    'decision_type': gate.decision.decision_type,
+                    'impact_area': gate.decision.impact_area,
+                    'status': gate.decision.status,
+                    'recommended_stance': gate.decision.recommended_stance,
+                },
+                'status': gate.status,
+                'risk_level': gate.risk_level,
+                'risk_factors': gate.risk_factors,
+                'summary': gate.summary,
+                'success_criteria': gate.success_criteria,
+                'failure_criteria': gate.failure_criteria,
+                'approved_by': gate.approved_by,
+                'approval_notes': gate.approval_notes,
+                'checklist': {
+                    'total': progress['total'],
+                    'completed': progress['completed'],
+                    'percentage': progress['percentage'],
+                    'items': items,
+                },
+                'latency': latency,
+                'executions': executions,
+                'created_at': gate.created_at.isoformat(),
+            }
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting pilot gate detail: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def update_gate_status(request, gate_id):
+    """
+    Update gate status (start, ready, approve, block).
+
+    POST /api/pilot-gates/<gate_id>/status/
+
+    Body:
+    - action: 'start' | 'ready' | 'approve' | 'block' | 'waive'
+    - notes: Optional notes (required for approve/block)
+    - approved_by: Required for approve action
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+        data = json.loads(request.body)
+
+        action = data.get('action')
+        notes = data.get('notes', '')
+        approved_by = data.get('approved_by', 'human')
+
+        if action == 'start':
+            success = gate.start_readiness()
+            message = 'Gate started' if success else 'Could not start gate'
+        elif action == 'ready':
+            success = gate.mark_ready()
+            message = 'Gate marked ready' if success else 'Checklist incomplete'
+        elif action == 'approve':
+            success = gate.approve(approved_by=approved_by, notes=notes)
+            message = 'Gate approved' if success else 'Could not approve gate'
+        elif action == 'block':
+            success = gate.block(reason=notes)
+            message = 'Gate blocked' if success else 'Could not block gate'
+        elif action == 'waive':
+            success = gate.waive(reason=notes)
+            message = 'Gate waived' if success else 'Only low-risk gates can be waived'
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown action: {action}'}, status=400)
+
+        return JsonResponse({
+            'success': success,
+            'message': message,
+            'new_status': gate.status,
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error updating gate status: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def update_checklist_item(request, gate_id, item_id):
+    """
+    Update a checklist item status.
+
+    POST /api/pilot-gates/<gate_id>/items/<item_id>/
+
+    Body:
+    - action: 'complete' | 'waive' | 'block' | 'start'
+    - completed_by: Who completed it
+    - notes: Completion notes
+    - documentation_url: Link to artifact
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate, ReadinessChecklistItem
+
+        gate = PilotReadinessGate.objects.get(id=gate_id)
+        item = gate.checklist_items.get(id=item_id)
+        data = json.loads(request.body)
+
+        action = data.get('action')
+        completed_by = data.get('completed_by', 'human')
+        notes = data.get('notes', '')
+        documentation_url = data.get('documentation_url', '')
+
+        if action == 'complete':
+            item.complete(
+                completed_by=completed_by,
+                notes=notes,
+                documentation_url=documentation_url
+            )
+            message = f'Item "{item.title}" completed'
+        elif action == 'waive':
+            item.waive(waived_by=completed_by, reason=notes)
+            message = f'Item "{item.title}" waived'
+        elif action == 'block':
+            item.block(reason=notes)
+            message = f'Item "{item.title}" blocked'
+        elif action == 'start':
+            item.status = 'in_progress'
+            item.save()
+            message = f'Item "{item.title}" started'
+        else:
+            return JsonResponse({'success': False, 'error': f'Unknown action: {action}'}, status=400)
+
+        # Return updated gate progress
+        progress = gate.checklist_progress
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'item_status': item.status,
+            'gate_status': gate.status,
+            'checklist_progress': progress,
+        })
+
+    except PilotReadinessGate.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Gate not found'}, status=404)
+    except ReadinessChecklistItem.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error updating checklist item: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def create_pilot_gate(request, decision_id):
+    """
+    Create a pilot readiness gate for a decision.
+
+    POST /api/pilot-gates/create/<decision_id>/
+
+    Body:
+    - risk_level: 'low' | 'medium' | 'high' | 'critical'
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import PilotReadinessGate
+        from core.models_unified_system import AgentDecisionSummary
+
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+
+        # Check if gate already exists
+        if hasattr(decision, 'readiness_gate'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Gate already exists for this decision',
+                'gate_id': str(decision.readiness_gate.id)
+            }, status=400)
+
+        data = json.loads(request.body) if request.body else {}
+        risk_level = data.get('risk_level', 'medium')
+
+        # Auto-determine risk level based on impact area
+        if decision.impact_area in ('security', 'infrastructure'):
+            risk_level = 'high'
+        elif decision.decision_type in ('policy', 'architecture'):
+            risk_level = max(risk_level, 'medium')
+
+        gate = PilotReadinessGate.create_for_decision(decision, risk_level=risk_level)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Gate created with {gate.checklist_items.count()} checklist items',
+            'gate_id': str(gate.id),
+            'risk_level': gate.risk_level,
+            'checklist_count': gate.checklist_items.count(),
+        })
+
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Decision not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error creating pilot gate: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
