@@ -57880,6 +57880,33 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
 
         // Get action buttons based on gate status
         function getGateActionButtons(gate) {
+            // Session 594: Check if pilot is running
+            if (gate.running_pilot) {
+                const hoursRunning = gate.running_pilot.hours_running || 0;
+                const autoCompleteIn = Math.max(0, 24 - hoursRunning);
+                return `
+                    <div class="mt-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary me-2" style="animation: pulse 2s infinite;">
+                                🔄 Pilot Running
+                            </span>
+                            <small class="text-muted">${hoursRunning.toFixed(1)}h elapsed</small>
+                        </div>
+                        <div class="mt-1">
+                            <small class="text-info">Auto-completes in ${autoCompleteIn.toFixed(0)}h if no issues</small>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-success me-1" onclick="completePilot('${gate.id}', '${gate.running_pilot.id}', 'success')">
+                                ✅ Complete: Success
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="completePilot('${gate.id}', '${gate.running_pilot.id}', 'failure')">
+                                ❌ Complete: Failure
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
             switch(gate.status) {
                 case 'not_started':
                     return `
@@ -57926,6 +57953,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                             <button class="btn btn-sm btn-outline-info ms-2" onclick="updateGateStatus('${gate.id}', 'start')">
                                 🔄 Resume Work
                             </button>
+                        </div>
+                    `;
+                case 'completed':
+                    return `
+                        <div class="mt-2">
+                            <span class="badge bg-success">✅ Pilot Completed</span>
                         </div>
                     `;
                 default:
@@ -57983,6 +58016,44 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             } catch (error) {
                 console.error('Error starting pilot:', error);
                 showNotification('Error starting pilot', 'danger');
+            }
+        }
+
+        // Session 594: Complete pilot execution (success or failure)
+        async function completePilot(gateId, pilotId, outcome) {
+            const outcomeEmoji = outcome === 'success' ? '✅' : '❌';
+            const confirmMsg = outcome === 'success'
+                ? 'Mark this pilot as SUCCESSFUL? The decision will proceed to implementation.'
+                : 'Mark this pilot as FAILED? The decision will need revision.';
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/pilot-gates/${gateId}/pilot/${pilotId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        outcome: outcome,
+                        completed_by: 'human',
+                        notes: `Manually completed from ICC panel as ${outcome}`
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showNotification(`${outcomeEmoji} Pilot completed: ${outcome.toUpperCase()}`, 'success');
+                    loadPilotGates();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Error completing pilot:', error);
+                showNotification('Error completing pilot', 'danger');
             }
         }
 
