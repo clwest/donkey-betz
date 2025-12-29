@@ -2063,6 +2063,218 @@ Delegates to ImageAgent for AI image generation.""",
                     "required": ["prompt"]
                 }
             }
+        },
+        # Session 581: Phase 10 - Betting/Sports Tools
+        # Tool 44: query_live_odds
+        {
+            "type": "function",
+            "function": {
+                "name": "query_live_odds",
+                "description": """Get detailed live odds from multiple sportsbooks.
+Use this for:
+- "What are the odds for the Chiefs game?"
+- "Show me spreads for tonight's NBA games"
+- "Compare odds across bookmakers"
+- "What's the moneyline for the Lakers?"
+Returns spreads, moneylines, totals from 40+ bookmakers.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "ncaaf", "ncaab", "soccer", "mma"],
+                            "description": "Sport to query (default: nfl)"
+                        },
+                        "market_type": {
+                            "type": "string",
+                            "enum": ["spreads", "h2h", "totals", "all"],
+                            "description": "Market type: spreads, h2h (moneyline), totals, or all"
+                        },
+                        "team": {
+                            "type": "string",
+                            "description": "Optional: filter by team name"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 45: query_games
+        {
+            "type": "function",
+            "function": {
+                "name": "query_games",
+                "description": """Query sports games - today's matchups, trending games, and analytics.
+Use this for:
+- "What games are on today?"
+- "Show trending NFL games"
+- "Game analytics for Lakers vs Celtics"
+- "This week's schedule"
+Returns game schedules, analytics, and betting metrics.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["today", "trending", "this_week", "analytics", "search"],
+                            "description": "Action: today, trending, this_week, analytics, search"
+                        },
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "ncaaf", "ncaab", "all"],
+                            "description": "Sport filter (default: all)"
+                        },
+                        "game_id": {
+                            "type": "string",
+                            "description": "Game ID for analytics action"
+                        },
+                        "team": {
+                            "type": "string",
+                            "description": "Team name to search for"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 46: query_line_movements
+        {
+            "type": "function",
+            "function": {
+                "name": "query_line_movements",
+                "description": """Track betting line movements and identify sharp money.
+Use this for:
+- "Show line movement for Chiefs game"
+- "Which games have the biggest line moves?"
+- "Sharp money indicators"
+- "Line history for tonight's game"
+Returns line movement history and sharp action indicators.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["game", "movers", "sharp"],
+                            "description": "Action: game (specific game), movers (biggest moves), sharp (sharp money)"
+                        },
+                        "game_id": {
+                            "type": "string",
+                            "description": "Game ID for specific line history"
+                        },
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "all"],
+                            "description": "Sport filter for movers"
+                        },
+                        "min_movement": {
+                            "type": "number",
+                            "description": "Minimum line movement points (default: 0.5)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 47: query_futures
+        {
+            "type": "function",
+            "function": {
+                "name": "query_futures",
+                "description": """Get futures betting odds for championships, MVPs, etc.
+Use this for:
+- "Who's favored to win the Super Bowl?"
+- "NBA championship odds"
+- "MVP futures odds"
+- "World Series winner odds"
+Returns futures odds from multiple sportsbooks.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "ncaaf", "ncaab"],
+                            "description": "Sport for futures"
+                        },
+                        "market": {
+                            "type": "string",
+                            "enum": ["championship", "conference", "division", "mvp", "all"],
+                            "description": "Futures market type (default: championship)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 48: query_player_props
+        {
+            "type": "function",
+            "function": {
+                "name": "query_player_props",
+                "description": """Get player prop betting odds for specific games.
+Use this for:
+- "Mahomes passing yards props"
+- "LeBron points props tonight"
+- "Player props for the Chiefs game"
+- "Touchdown scorer odds"
+Returns player prop lines from multiple books.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "event_id": {
+                            "type": "string",
+                            "description": "Event/game ID for props"
+                        },
+                        "player": {
+                            "type": "string",
+                            "description": "Player name to search for"
+                        },
+                        "prop_type": {
+                            "type": "string",
+                            "enum": ["points", "rebounds", "assists", "passing_yards", "rushing_yards", "touchdowns", "all"],
+                            "description": "Type of prop (default: all)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        },
+        # Tool 49: query_betting_recommendations
+        {
+            "type": "function",
+            "function": {
+                "name": "query_betting_recommendations",
+                "description": """Get AI-generated betting recommendations and picks.
+Use this for:
+- "Best bets today"
+- "Your top picks for NFL"
+- "Recommended bets this week"
+- "High confidence picks"
+Returns AI-analyzed betting recommendations with confidence scores.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "generate", "top_picks", "history"],
+                            "description": "Action: list, generate new, top_picks, or history"
+                        },
+                        "sport": {
+                            "type": "string",
+                            "enum": ["nfl", "nba", "mlb", "nhl", "all"],
+                            "description": "Sport filter"
+                        },
+                        "min_confidence": {
+                            "type": "number",
+                            "description": "Minimum confidence score 0-100 (default: 60)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max recommendations to return (default: 10)"
+                        }
+                    },
+                    "required": []
+                }
+            }
         }
     ]
 
@@ -3290,6 +3502,25 @@ Delegates to ImageAgent for AI image generation.""",
 
         if tool_name == "generate_image":
             return self._generate_image(arguments)
+
+        # Session 581: Phase 10 - Betting/Sports tools
+        if tool_name == "query_live_odds":
+            return self._query_live_odds(arguments)
+
+        if tool_name == "query_games":
+            return self._query_games(arguments)
+
+        if tool_name == "query_line_movements":
+            return self._query_line_movements(arguments)
+
+        if tool_name == "query_futures":
+            return self._query_futures(arguments)
+
+        if tool_name == "query_player_props":
+            return self._query_player_props(arguments)
+
+        if tool_name == "query_betting_recommendations":
+            return self._query_betting_recommendations(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -6799,4 +7030,411 @@ Delegates to ImageAgent for AI image generation.""",
 
         except Exception as e:
             logger.error(f"Error generating image: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # Session 581: Phase 10 - Betting/Sports Tools
+    # =========================================================================
+
+    def _query_live_odds(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get detailed live odds from multiple sportsbooks.
+        """
+        try:
+            import requests
+            sport = arguments.get('sport', 'nfl')
+            market_type = arguments.get('market_type', 'all')
+            team = arguments.get('team', '')
+
+            # Try API first
+            try:
+                params = {'sport': sport}
+                if market_type != 'all':
+                    params['markets'] = market_type
+                response = requests.get(
+                    'http://localhost:8000/api/v1/sports/live-odds/',
+                    params=params,
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    odds_list = data if isinstance(data, list) else data.get('odds', [])
+
+                    # Filter by team if specified
+                    if team:
+                        team_lower = team.lower()
+                        odds_list = [o for o in odds_list if team_lower in str(o).lower()]
+
+                    return {
+                        'success': True,
+                        'odds': odds_list[:20],
+                        'sport': sport,
+                        'market_type': market_type,
+                        'total': len(odds_list),
+                        'summary': f"Found {len(odds_list)} {sport.upper()} odds"
+                    }
+            except:
+                pass
+
+            # Fallback to SportsOddsAnalyst
+            result = self.router.route(
+                agent_name='SportsOddsAnalyst',
+                task=f"Get live {market_type} odds for {sport}" + (f" filtered by {team}" if team else ""),
+                context={'sport': sport, 'market_type': market_type, 'team': team}
+            )
+
+            return {
+                'success': result.success,
+                'odds': result.data.get('odds', []) if result.success else [],
+                'summary': result.message if result.success else result.error
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying live odds: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_games(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query sports games - today's matchups, trending games, analytics.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'today')
+            sport = arguments.get('sport', 'all')
+            game_id = arguments.get('game_id', '')
+            team = arguments.get('team', '')
+
+            base_url = 'http://localhost:8000/api/v1/sports'
+
+            if action == 'today':
+                try:
+                    response = requests.get(f'{base_url}/games/', params={'today': 'true', 'sport': sport}, timeout=10)
+                    if response.status_code == 200:
+                        games = response.json()
+                        game_list = games if isinstance(games, list) else games.get('results', games.get('games', []))
+                        return {
+                            'success': True,
+                            'games': game_list[:20],
+                            'total': len(game_list),
+                            'summary': f"Found {len(game_list)} games today"
+                        }
+                except:
+                    pass
+
+            elif action == 'trending':
+                try:
+                    response = requests.get(f'{base_url}/games/trending/', params={'sport': sport}, timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'games': response.json(), 'summary': 'Trending games retrieved'}
+                except:
+                    pass
+
+            elif action == 'this_week':
+                try:
+                    response = requests.get(f'{base_url}/games/', params={'this_week': 'true', 'sport': sport}, timeout=10)
+                    if response.status_code == 200:
+                        games = response.json()
+                        game_list = games if isinstance(games, list) else games.get('results', games.get('games', []))
+                        return {
+                            'success': True,
+                            'games': game_list[:30],
+                            'total': len(game_list),
+                            'summary': f"Found {len(game_list)} games this week"
+                        }
+                except:
+                    pass
+
+            elif action == 'analytics' and game_id:
+                try:
+                    response = requests.get(f'{base_url}/games/{game_id}/analytics/', timeout=10)
+                    if response.status_code == 200:
+                        return {'success': True, 'analytics': response.json(), 'summary': 'Game analytics retrieved'}
+                except:
+                    pass
+
+            elif action == 'search' and team:
+                try:
+                    response = requests.get(f'{base_url}/games/', params={'search': team}, timeout=10)
+                    if response.status_code == 200:
+                        games = response.json()
+                        game_list = games if isinstance(games, list) else games.get('results', games.get('games', []))
+                        return {
+                            'success': True,
+                            'games': game_list[:20],
+                            'total': len(game_list),
+                            'summary': f"Found {len(game_list)} games matching '{team}'"
+                        }
+                except:
+                    pass
+
+            # Fallback: use sports summary
+            try:
+                response = requests.get(f'{base_url}/summary/', timeout=10)
+                if response.status_code == 200:
+                    return {'success': True, 'data': response.json(), 'summary': 'Sports summary retrieved'}
+            except:
+                pass
+
+            return {'success': True, 'games': [], 'summary': 'No games data available'}
+
+        except Exception as e:
+            logger.error(f"Error querying games: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_line_movements(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Track betting line movements and identify sharp money.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'movers')
+            game_id = arguments.get('game_id', '')
+            sport = arguments.get('sport', 'all')
+            min_movement = arguments.get('min_movement', 0.5)
+
+            base_url = 'http://localhost:8000/api/v1/betting'
+
+            if action == 'game' and game_id:
+                try:
+                    response = requests.get(f'{base_url}/line-movement/{game_id}/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'movements': response.json(),
+                            'game_id': game_id,
+                            'summary': f'Line movement history for game {game_id}'
+                        }
+                except:
+                    pass
+
+            elif action == 'movers':
+                try:
+                    params = {'min_movement': min_movement}
+                    if sport != 'all':
+                        params['sport'] = sport
+                    response = requests.get(f'{base_url}/movers/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        movers = response.json()
+                        mover_list = movers if isinstance(movers, list) else movers.get('movers', [])
+                        return {
+                            'success': True,
+                            'movers': mover_list[:15],
+                            'total': len(mover_list),
+                            'summary': f"Found {len(mover_list)} games with significant line movement"
+                        }
+                except:
+                    pass
+
+            elif action == 'sharp':
+                try:
+                    response = requests.get(f'{base_url}/movers/', params={'sharp': 'true'}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'sharp_action': data,
+                            'summary': 'Sharp money indicators retrieved'
+                        }
+                except:
+                    pass
+
+            return {'success': True, 'movements': [], 'summary': 'No line movement data available'}
+
+        except Exception as e:
+            logger.error(f"Error querying line movements: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_futures(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get futures betting odds for championships, MVPs, etc.
+        """
+        try:
+            import requests
+            sport = arguments.get('sport', 'nfl')
+            market = arguments.get('market', 'championship')
+
+            try:
+                params = {'sport': sport, 'market': market}
+                response = requests.get(
+                    'http://localhost:8000/api/v1/betting/futures/',
+                    params=params,
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    futures = data if isinstance(data, list) else data.get('futures', data.get('odds', []))
+                    return {
+                        'success': True,
+                        'futures': futures[:25],
+                        'sport': sport,
+                        'market': market,
+                        'total': len(futures),
+                        'summary': f"Found {len(futures)} {sport.upper()} {market} futures odds"
+                    }
+            except:
+                pass
+
+            # Fallback: delegate to SportsOddsAnalyst
+            result = self.router.route(
+                agent_name='SportsOddsAnalyst',
+                task=f"Get {market} futures odds for {sport}",
+                context={'sport': sport, 'market': market, 'futures': True}
+            )
+
+            return {
+                'success': result.success,
+                'futures': result.data.get('futures', []) if result.success else [],
+                'summary': result.message if result.success else result.error
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying futures: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_player_props(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get player prop betting odds for specific games.
+        """
+        try:
+            import requests
+            event_id = arguments.get('event_id', '')
+            player = arguments.get('player', '')
+            prop_type = arguments.get('prop_type', 'all')
+
+            # If we have an event_id, use the props endpoint
+            if event_id:
+                try:
+                    response = requests.get(
+                        f'http://localhost:8000/api/v1/sports/events/{event_id}/props/',
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        props = response.json()
+                        prop_list = props if isinstance(props, list) else props.get('props', [])
+
+                        # Filter by player if specified
+                        if player:
+                            player_lower = player.lower()
+                            prop_list = [p for p in prop_list if player_lower in str(p).lower()]
+
+                        # Filter by prop type if specified
+                        if prop_type != 'all':
+                            prop_list = [p for p in prop_list if prop_type.lower() in str(p).lower()]
+
+                        return {
+                            'success': True,
+                            'props': prop_list[:30],
+                            'event_id': event_id,
+                            'total': len(prop_list),
+                            'summary': f"Found {len(prop_list)} player props"
+                        }
+                except:
+                    pass
+
+            # Fallback: delegate to SportsOddsAnalyst for player search
+            if player:
+                result = self.router.route(
+                    agent_name='SportsOddsAnalyst',
+                    task=f"Get {prop_type} props for player {player}",
+                    context={'player': player, 'prop_type': prop_type}
+                )
+
+                return {
+                    'success': result.success,
+                    'props': result.data.get('props', []) if result.success else [],
+                    'summary': result.message if result.success else result.error
+                }
+
+            return {
+                'success': True,
+                'props': [],
+                'summary': 'Provide an event_id or player name to get props'
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying player props: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _query_betting_recommendations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get AI-generated betting recommendations and picks.
+        """
+        try:
+            import requests
+            action = arguments.get('action', 'list')
+            sport = arguments.get('sport', 'all')
+            min_confidence = arguments.get('min_confidence', 60)
+            limit = arguments.get('limit', 10)
+
+            base_url = 'http://localhost:8000/api/v1/sports/recommendations'
+
+            if action == 'list':
+                try:
+                    params = {'limit': limit}
+                    if sport != 'all':
+                        params['sport'] = sport
+                    if min_confidence > 0:
+                        params['min_confidence'] = min_confidence
+                    response = requests.get(f'{base_url}/', params=params, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        recs = data if isinstance(data, list) else data.get('results', data.get('recommendations', []))
+                        return {
+                            'success': True,
+                            'recommendations': recs[:limit],
+                            'total': len(recs),
+                            'summary': f"Found {len(recs)} betting recommendations"
+                        }
+                except:
+                    pass
+
+            elif action == 'generate':
+                try:
+                    response = requests.post(f'{base_url}/generate/', json={'sport': sport}, timeout=30)
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'recommendations': response.json(),
+                            'summary': 'New recommendations generated'
+                        }
+                except:
+                    pass
+
+            elif action == 'top_picks':
+                try:
+                    response = requests.get(f'{base_url}/', params={'ordering': '-confidence', 'limit': 5}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        recs = data if isinstance(data, list) else data.get('results', data.get('recommendations', []))
+                        return {
+                            'success': True,
+                            'top_picks': recs[:5],
+                            'summary': f"Top {len(recs[:5])} high-confidence picks"
+                        }
+                except:
+                    pass
+
+            elif action == 'history':
+                try:
+                    response = requests.get(f'{base_url}/', params={'status': 'completed', 'limit': limit}, timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        recs = data if isinstance(data, list) else data.get('results', data.get('recommendations', []))
+                        return {
+                            'success': True,
+                            'history': recs[:limit],
+                            'summary': f"Found {len(recs)} past recommendations"
+                        }
+                except:
+                    pass
+
+            # Fallback: return graceful message when no recommendations available
+            return {
+                'success': True,
+                'recommendations': [],
+                'summary': 'No betting recommendations available at this time. Try during active game times.'
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying betting recommendations: {e}")
             return {'success': False, 'error': str(e)}
