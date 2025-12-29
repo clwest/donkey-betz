@@ -1040,6 +1040,136 @@ Searches knowledge accumulated from spider data and agent learning.""",
                     "required": ["query"]
                 }
             }
+        },
+        # Session 579: Phase 4 Tools
+        {
+            "type": "function",
+            "function": {
+                "name": "create_boardroom_decision",
+                "description": """Submit a new decision to the Boardroom for review.
+USE THIS for requests like:
+- "Create a decision about X"
+- "Submit this for boardroom review"
+- "Propose a new policy"
+
+Creates structured decisions that can be promoted to canonical policies.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Title of the decision"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Full description and rationale"
+                        },
+                        "decision_type": {
+                            "type": "string",
+                            "enum": ["policy", "architecture", "tool", "workflow", "best_practice"],
+                            "description": "Type of decision"
+                        },
+                        "priority": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high", "critical"],
+                            "description": "Priority level (default: medium)"
+                        }
+                    },
+                    "required": ["title", "description"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_dreams",
+                "description": """Query agent dreams - creative ideas generated during idle time.
+USE THIS for requests like:
+- "What are agents dreaming about?"
+- "Show me agent dreams"
+- "Any creative ideas from agents?"
+
+Dreams are speculative concepts and 'what if' scenarios.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Filter by specific agent"
+                        },
+                        "dream_type": {
+                            "type": "string",
+                            "enum": ["all", "product_idea", "feature_request", "integration", "optimization", "creative"],
+                            "description": "Type of dream to query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max dreams to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_situations",
+                "description": """Control autonomous situations that run continuously.
+USE THIS for requests like:
+- "Show autonomous situations"
+- "What situations are running?"
+- "Pause the job matching situation"
+
+Situations are Tier 1 Autonomous systems that run forever.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "status", "history"],
+                            "description": "Action to perform"
+                        },
+                        "situation_type": {
+                            "type": "string",
+                            "description": "Filter by situation type (e.g., 'job_matching', 'content_studio')"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max items to return (default: 10)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_conversations",
+                "description": """Query agent-to-agent conversations.
+USE THIS for requests like:
+- "What are agents discussing?"
+- "Show agent conversations"
+- "What have agents talked about?"
+
+Conversations are where agents share knowledge and insights.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Filter by conversation topic"
+                        },
+                        "agent_name": {
+                            "type": "string",
+                            "description": "Filter by participating agent"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max conversations to return (default: 10)"
+                        }
+                    }
+                }
+            }
         }
     ]
 
@@ -2177,6 +2307,19 @@ Searches knowledge accumulated from spider data and agent learning.""",
 
         if tool_name == "search_knowledge":
             return self._search_knowledge(arguments)
+
+        # Session 579: Phase 4 Tools
+        if tool_name == "create_boardroom_decision":
+            return self._create_boardroom_decision(arguments)
+
+        if tool_name == "query_dreams":
+            return self._query_dreams(arguments)
+
+        if tool_name == "manage_situations":
+            return self._manage_situations(arguments)
+
+        if tool_name == "query_conversations":
+            return self._query_conversations(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -3397,6 +3540,302 @@ Searches knowledge accumulated from spider data and agent learning.""",
 
         except Exception as e:
             logger.error(f"Error searching knowledge: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =========================================================================
+    # Session 579: Phase 4 Tool Handlers
+    # =========================================================================
+
+    def _create_boardroom_decision(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Create a new boardroom decision for review.
+        """
+        try:
+            from core.models_unified_system import AgentDecisionSummary
+            import uuid
+
+            title = arguments.get('title', '')
+            description = arguments.get('description', '')
+            decision_type = arguments.get('decision_type', 'policy')
+            priority = arguments.get('priority', 'medium')
+
+            if not title or not description:
+                return {
+                    'success': False,
+                    'error': 'Both title and description are required'
+                }
+
+            # Create the decision
+            decision = AgentDecisionSummary.objects.create(
+                decision_id=f"decision_{uuid.uuid4()}",
+                title=title[:200],
+                summary=description,
+                decision_type=decision_type,
+                priority=priority,
+                status='pending',
+                source='personal_assistant'
+            )
+
+            return {
+                'success': True,
+                'decision_id': decision.decision_id,
+                'title': title,
+                'decision_type': decision_type,
+                'priority': priority,
+                'summary': f"**Boardroom Decision Created:**\n\n📋 **{title}**\n\nType: {decision_type}\nPriority: {priority}\nStatus: Pending\n\nID: {decision.decision_id}\n\nThe decision is now available in the Boardroom for review and promotion."
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating boardroom decision: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_dreams(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Query agent dreams.
+        """
+        try:
+            from core.models_unified_system import AgentDream, Agent
+
+            agent_name = arguments.get('agent_name')
+            dream_type = arguments.get('dream_type', 'all')
+            limit = arguments.get('limit', 10)
+
+            # Build query
+            dreams_query = AgentDream.objects.all()
+
+            if agent_name:
+                agent = Agent.objects.filter(name__icontains=agent_name).first()
+                if agent:
+                    dreams_query = dreams_query.filter(agent=agent)
+
+            if dream_type != 'all':
+                dreams_query = dreams_query.filter(dream_type=dream_type)
+
+            # Get recent dreams
+            dreams = dreams_query.order_by('-dreamed_at')[:limit]
+
+            # Build results
+            results = []
+            summary_lines = ["**Agent Dreams:**\n"]
+
+            if not dreams:
+                summary_lines.append("No dreams found.")
+                summary_lines.append("\nDreams are generated when agents have idle time to be creative.")
+            else:
+                for dream in dreams:
+                    results.append({
+                        'id': str(dream.id),
+                        'agent': dream.agent.name if dream.agent else 'Unknown',
+                        'dream_type': dream.dream_type,
+                        'title': dream.title if hasattr(dream, 'title') else 'Untitled',
+                        'content': dream.content[:200] if dream.content else '',
+                        'actionability': getattr(dream, 'actionability_score', 0),
+                        'dreamed_at': dream.dreamed_at.isoformat() if dream.dreamed_at else None
+                    })
+
+                    emoji = '💡' if getattr(dream, 'actionability_score', 0) > 0.7 else '💭'
+                    agent_name_display = dream.agent.name if dream.agent else 'Unknown'
+                    title = getattr(dream, 'title', dream.content[:50] if dream.content else 'Untitled')
+                    summary_lines.append(f"{emoji} **{agent_name_display}**: {title[:60]}...")
+
+            return {
+                'success': True,
+                'dreams': results,
+                'total_found': len(results),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying dreams: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _manage_situations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Manage autonomous situations.
+        """
+        try:
+            from core.models_autonomous_situations import AutonomousSituationSession
+
+            action = arguments.get('action', 'list')
+            situation_type = arguments.get('situation_type')
+            limit = arguments.get('limit', 10)
+
+            if action == 'list':
+                # Get unique situation types with their latest sessions
+                from django.db.models import Max, Count
+
+                sessions = AutonomousSituationSession.objects.values('situation_type').annotate(
+                    last_run=Max('started_at'),
+                    count=Count('id')
+                ).order_by('-last_run')[:limit]
+
+                summary_lines = ["**Autonomous Situations:**\n"]
+                situations = []
+
+                situation_emojis = {
+                    'design_trends': '🎨',
+                    'job_matching': '💼',
+                    'content_studio': '📺',
+                    'stock_market': '📈',
+                    'blockchain': '⛓️',
+                    'market_intelligence': '🔍',
+                    'narrative_drift': '📊',
+                    'crypto_sentiment': '🪙',
+                }
+
+                for s in sessions:
+                    situations.append({
+                        'type': s['situation_type'],
+                        'last_run': s['last_run'].isoformat() if s['last_run'] else None,
+                        'total_sessions': s['count']
+                    })
+
+                    emoji = situation_emojis.get(s['situation_type'], '🔄')
+                    summary_lines.append(f"{emoji} **{s['situation_type']}** ({s['count']} sessions)")
+
+                if not sessions:
+                    summary_lines.append("No autonomous situations have run yet.")
+
+                return {
+                    'success': True,
+                    'situations': situations,
+                    'total': len(situations),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'history':
+                # Get recent sessions
+                sessions_query = AutonomousSituationSession.objects.all()
+
+                if situation_type:
+                    sessions_query = sessions_query.filter(situation_type=situation_type)
+
+                sessions = sessions_query.order_by('-started_at')[:limit]
+
+                summary_lines = ["**Situation History:**\n"]
+                history = []
+
+                for s in sessions:
+                    history.append({
+                        'id': str(s.id),
+                        'type': s.situation_type,
+                        'started_at': s.started_at.isoformat(),
+                        'status': getattr(s, 'status', 'completed')
+                    })
+
+                    summary_lines.append(f"🔄 {s.situation_type} - {s.started_at.strftime('%Y-%m-%d %H:%M')}")
+
+                return {
+                    'success': True,
+                    'history': history,
+                    'total': len(history),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            elif action == 'status':
+                # Get current status of all situations
+                from django.utils import timezone
+                from datetime import timedelta
+
+                recent = timezone.now() - timedelta(hours=24)
+                recent_sessions = AutonomousSituationSession.objects.filter(
+                    started_at__gte=recent
+                ).values('situation_type').annotate(
+                    count=models.Count('id')
+                )
+
+                summary_lines = ["**Situation Status (24h):**\n"]
+
+                if recent_sessions:
+                    for s in recent_sessions:
+                        summary_lines.append(f"✅ {s['situation_type']}: {s['count']} runs")
+                else:
+                    summary_lines.append("No situations have run in the last 24 hours.")
+
+                return {
+                    'success': True,
+                    'recent_activity': list(recent_sessions),
+                    'summary': '\n'.join(summary_lines)
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing situations: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _query_conversations(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 579: Query agent-to-agent conversations.
+        """
+        try:
+            from core.models_unified_system import HiveMindSession, Agent
+
+            topic = arguments.get('topic', '')
+            agent_name = arguments.get('agent_name')
+            limit = arguments.get('limit', 10)
+
+            # Query HiveMindSession with conversation mode
+            conversations_query = HiveMindSession.objects.filter(
+                session_mode='conversation'
+            )
+
+            if topic:
+                conversations_query = conversations_query.filter(conversation_topic__icontains=topic)
+
+            if agent_name:
+                agent = Agent.objects.filter(name__icontains=agent_name).first()
+                if agent:
+                    conversations_query = conversations_query.filter(participant_ids__contains=[str(agent.id)])
+
+            conversations = conversations_query.order_by('-created_at')[:limit]
+
+            # Build results
+            results = []
+            summary_lines = ["**Agent Conversations:**\n"]
+
+            if not conversations:
+                summary_lines.append("No recent conversations found.")
+                summary_lines.append("\nConversations happen during agent collaboration and knowledge sharing.")
+            else:
+                for conv in conversations:
+                    participant_ids = getattr(conv, 'participant_ids', []) or []
+                    results.append({
+                        'id': str(conv.id),
+                        'topic': conv.conversation_topic or conv.question or 'Untitled',
+                        'participant_ids': participant_ids[:5],
+                        'status': conv.status,
+                        'created_at': conv.created_at.isoformat(),
+                        'synthesis': (conv.synthesis_summary or conv.synthesis or '')[:200]
+                    })
+
+                    participant_str = f"{len(participant_ids)} agents" if participant_ids else 'Unknown'
+                    topic_display = (conv.conversation_topic or conv.question or 'Untitled')[:40]
+                    summary_lines.append(f"💬 **{topic_display}...**")
+                    summary_lines.append(f"   Participants: {participant_str}")
+
+            return {
+                'success': True,
+                'conversations': results,
+                'total_found': len(results),
+                'summary': '\n'.join(summary_lines)
+            }
+
+        except Exception as e:
+            logger.error(f"Error querying conversations: {e}")
             return {
                 'success': False,
                 'error': str(e)
