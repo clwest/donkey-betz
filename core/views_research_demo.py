@@ -630,3 +630,56 @@ def self_blog_by_id_api(request, blog_id):
     except Exception as e:
         logger.error(f"Error in self_blog_by_id_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def system_insights_api(request):
+    """
+    Session 588: Get System Insights reports - AI-generated analysis of system state.
+    These are auto-generated reports from the ThinkingAgent, distinct from regular self-blogs.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        # Get all System Insights (auto_generated = True in stats_snapshot)
+        all_blogs = SelfBlog.objects.all()
+
+        # Filter for System Insights
+        system_insights = []
+        for blog in all_blogs:
+            if blog.stats_snapshot and blog.stats_snapshot.get('auto_generated'):
+                system_insights.append({
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'meta_description': blog.meta_description,
+                    'intro': blog.intro,
+                    'sections': blog.sections,
+                    'conclusion': blog.conclusion,
+                    'tags': blog.tags,
+                    'full_text': blog.full_text,
+                    'tone': blog.tone,
+                    'word_count': blog.word_count,
+                    'stats_snapshot': blog.stats_snapshot,
+                    'created_at': blog.created_at.isoformat(),
+                })
+
+        if system_insights:
+            return JsonResponse({
+                'success': True,
+                'has_insights': True,
+                'count': len(system_insights),
+                'latest': system_insights[0],
+                'all_insights': system_insights[:20],  # Limit to 20 most recent
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'has_insights': False,
+                'count': 0,
+                'message': 'No System Insights generated yet. These are created by the ThinkingAgent.',
+                'all_insights': [],
+            })
+
+    except Exception as e:
+        logger.error(f"Error in system_insights_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
