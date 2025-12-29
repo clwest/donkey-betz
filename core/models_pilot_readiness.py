@@ -303,11 +303,16 @@ class PilotReadinessGate(models.Model):
     # =========================================================================
 
     @classmethod
-    def create_for_decision(cls, decision, risk_level='medium'):
+    def create_for_decision(cls, decision, risk_level='medium', auto_generate_content=True):
         """
         Create a readiness gate for a Boardroom decision.
 
         Automatically sets decision_made_at from decision.created_at.
+
+        Args:
+            decision: The AgentDecisionSummary to create a gate for
+            risk_level: Risk level ('low', 'medium', 'high', 'critical')
+            auto_generate_content: If True, queue AI content generation (Session 594)
         """
         gate = cls.objects.create(
             decision=decision,
@@ -318,6 +323,21 @@ class PilotReadinessGate(models.Model):
 
         # Auto-create standard checklist items based on risk level
         gate.create_standard_checklist()
+
+        # Session 594: Queue AI content generation for checklist items
+        if auto_generate_content:
+            try:
+                from core.tasks import generate_checklist_content_async
+                generate_checklist_content_async.delay(str(gate.id))
+                import logging
+                logging.getLogger(__name__).info(
+                    f"Session 594: Queued content generation for gate {gate.id}"
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Session 594: Failed to queue content generation: {e}"
+                )
 
         return gate
 

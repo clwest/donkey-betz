@@ -20375,3 +20375,51 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
         }
     
     return metrics
+
+
+@shared_task
+def generate_checklist_content_async(gate_id: str):
+    """
+    Session 594: Generate AI content for all checklist items on a gate.
+    
+    Called asynchronously after gate creation to populate checklist
+    items with AI-generated content for human review.
+    
+    Args:
+        gate_id: UUID of the PilotReadinessGate
+        
+    Returns:
+        dict with generation results
+    """
+    logger.info(f"🤖 [SESSION 594] Generating checklist content for gate {gate_id}...")
+    
+    try:
+        from core.services.checklist_content_generator import generate_checklist_content_for_gate
+        
+        result = generate_checklist_content_for_gate(gate_id)
+        
+        if result['success']:
+            logger.info(
+                f"🤖 [SESSION 594] Generated content for {result['items_generated']} "
+                f"checklist items on gate {gate_id}"
+            )
+            
+            # Discord notification
+            try:
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
+                message = f"**🤖 Checklist Content Generated**\n"
+                message += f"Gate: `{gate_id[:8]}...`\n"
+                message += f"Items generated: {result['items_generated']}\n"
+                message += f"Ready for human review!"
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"Discord notification failed: {e}")
+        else:
+            logger.warning(f"🤖 [SESSION 594] Content generation failed: {result.get('error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"🤖 [SESSION 594] Content generation task failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
