@@ -10989,6 +10989,26 @@
                         .decision-type-experiment { border-left-color: #ec4899; }
                         .decision-type-guideline { border-left-color: #6b7280; }
                     </style>
+
+                    <!-- Session 602: Decision Learning Context Modal -->
+                    <div class="modal fade" id="decision-learning-modal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid #0ea5e9;">
+                                <div class="modal-header" style="background: rgba(14, 165, 233, 0.2); border-bottom: 1px solid #0ea5e9;">
+                                    <h5 class="modal-title" style="color: #0ea5e9;">
+                                        📊 Learning-Based Decision Insights
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" id="decision-learning-content">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-info" role="status"></div>
+                                        <p class="text-muted mt-2">Analyzing historical data...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- END BOARDROOM DECISIONS -->
 
                         </div>
@@ -57779,9 +57799,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                     </button>
                 ` : '';
 
+                // Session 602: Learning insight button for all decisions
+                const learningButton = `
+                    <button class="btn btn-sm btn-outline-info ms-1" onclick="showDecisionLearningContext('${d.id}', '${encodeURIComponent(d.topic)}')" title="View learning-based success probability">
+                        📊 Learning Insight
+                    </button>
+                `;
+
                 const actionButtons = d.is_canonical ? `
                     <div class="mt-2">
                         <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active Policy</span>
+                        ${learningButton}
                         ${researchButton}
                     </div>
                 ` : `
@@ -57792,6 +57820,7 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                         <button class="btn btn-sm btn-outline-secondary" onclick="rejectDecision('${d.id}')">
                             ❌ Reject
                         </button>
+                        ${learningButton}
                         ${researchButton}
                     </div>
                 `;
@@ -57870,6 +57899,188 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 console.error('Error rejecting decision:', error);
                 showNotification('Error rejecting decision', 'danger');
             }
+        }
+
+        // Session 602: Show learning-based decision insights
+        async function showDecisionLearningContext(decisionId, encodedTopic) {
+            const topic = decodeURIComponent(encodedTopic);
+            const modal = new bootstrap.Modal(document.getElementById('decision-learning-modal'));
+            modal.show();
+
+            const container = document.getElementById('decision-learning-content');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p class="text-muted mt-2">Analyzing historical data for: "${topic.substring(0, 50)}..."</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/boardroom/decisions/${decisionId}/learning/`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderLearningContext(data);
+                } else {
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Error:</strong> ${data.error || 'Failed to load learning context'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading learning context:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to connect to learning service
+                    </div>
+                `;
+            }
+        }
+
+        // Render the learning context in the modal
+        function renderLearningContext(data) {
+            const container = document.getElementById('decision-learning-content');
+            const ctx = data.learning_context;
+            const rec = data.recommendation;
+
+            // Success probability color
+            const probColor = ctx.success_probability >= 70 ? '#10b981' :
+                              ctx.success_probability >= 50 ? '#f59e0b' : '#ef4444';
+
+            // Risk level badge
+            const riskColors = {
+                'minimal': '#10b981',
+                'low': '#22c55e',
+                'medium': '#f59e0b',
+                'high': '#ef4444',
+                'critical': '#dc2626',
+                'unknown': '#6b7280'
+            };
+            const riskColor = riskColors[ctx.risk_level] || '#6b7280';
+
+            // Recommendation action badge
+            const actionColors = {
+                'approve': '#10b981',
+                'approve_with_monitoring': '#22c55e',
+                'pilot_first': '#f59e0b',
+                'defer': '#ef4444',
+                'gate': '#dc2626'
+            };
+            const actionIcons = {
+                'approve': '✅',
+                'approve_with_monitoring': '📊',
+                'pilot_first': '🧪',
+                'defer': '⏸️',
+                'gate': '🛑'
+            };
+            const actionColor = actionColors[rec.action] || '#6b7280';
+            const actionIcon = actionIcons[rec.action] || '❓';
+
+            // Build similar experiments HTML
+            const experimentsHtml = data.similar_experiments.length > 0 ?
+                data.similar_experiments.slice(0, 5).map(exp => {
+                    const expColor = exp.outcome === 'pass' ? '#10b981' :
+                                     exp.outcome === 'fail' ? '#ef4444' : '#f59e0b';
+                    const expIcon = exp.outcome === 'pass' ? '🟢' :
+                                    exp.outcome === 'fail' ? '🔴' : '🟡';
+                    const evidenceStatus = exp.weight.insufficient_evidence ?
+                        '<span class="badge bg-warning text-dark ms-1" style="font-size: 10px;">Preliminary</span>' : '';
+                    return `
+                        <div class="mb-2 p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid ${expColor};">
+                            <div class="d-flex justify-content-between">
+                                <strong style="color: #e5e7eb;">${expIcon} ${exp.name.substring(0, 40)}${exp.name.length > 40 ? '...' : ''}</strong>
+                                <span style="color: ${expColor};">Weight: ${exp.weight.learning_weight.toFixed(3)}</span>
+                            </div>
+                            <small class="text-muted">
+                                ${exp.outcome.toUpperCase()} • ${exp.age_days.toFixed(0)} days ago • Relevance: ${(exp.relevance_score * 100).toFixed(0)}%
+                                ${evidenceStatus}
+                            </small>
+                            ${exp.key_insight ? `<p class="mb-0 mt-1" style="color: #9ca3af; font-size: 12px;">"${exp.key_insight.substring(0, 100)}${exp.key_insight.length > 100 ? '...' : ''}"</p>` : ''}
+                        </div>
+                    `;
+                }).join('') :
+                '<p class="text-muted text-center">No similar experiments found. This is a novel decision.</p>';
+
+            // Build weighted insights HTML
+            const insightsHtml = data.weighted_insights.length > 0 ?
+                data.weighted_insights.slice(0, 5).map(insight => `
+                    <li style="margin-bottom: 8px;">
+                        <span>${insight.icon}</span>
+                        <strong style="color: #e5e7eb;">${insight.experiment.substring(0, 30)}:</strong>
+                        <span style="color: #9ca3af;">${insight.insight?.substring(0, 80) || 'No insight recorded'}${insight.insight?.length > 80 ? '...' : ''}</span>
+                    </li>
+                `).join('') :
+                '<li class="text-muted">No weighted insights available</li>';
+
+            container.innerHTML = `
+                <!-- Decision Topic -->
+                <div class="mb-4 p-3" style="background: rgba(14, 165, 233, 0.1); border-radius: 8px;">
+                    <h5 style="color: #0ea5e9; margin-bottom: 8px;">📋 ${data.decision_topic}</h5>
+                    <span class="badge" style="background: #3b82f6;">${data.decision_type}</span>
+                    <span class="badge bg-secondary ms-1">${data.impact_area}</span>
+                </div>
+
+                <!-- Key Metrics Row -->
+                <div class="row mb-4">
+                    <div class="col-md-4 text-center">
+                        <div class="p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <h2 style="color: ${probColor}; margin: 0;">${ctx.success_probability}%</h2>
+                            <small class="text-muted">Success Probability</small>
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">${ctx.confidence_level} confidence</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <h2 style="color: ${riskColor}; margin: 0; text-transform: uppercase;">${ctx.risk_level}</h2>
+                            <small class="text-muted">Risk Level</small>
+                            <div class="mt-2">
+                                <span class="badge" style="background: ${riskColor};">${ctx.risk_factors?.length || 0} factors</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                            <h2 style="color: ${actionColor}; margin: 0;">${actionIcon}</h2>
+                            <small class="text-muted">Recommendation</small>
+                            <div class="mt-2">
+                                <span class="badge" style="background: ${actionColor};">${rec.action.replace(/_/g, ' ')}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation -->
+                <div class="mb-4 p-3" style="background: rgba(${actionColor === '#10b981' ? '16, 185, 129' : actionColor === '#ef4444' ? '239, 68, 68' : '245, 158, 11'}, 0.1); border-radius: 8px; border-left: 4px solid ${actionColor};">
+                    <h6 style="color: ${actionColor};">${actionIcon} AI Recommendation</h6>
+                    <p style="color: #e5e7eb; margin-bottom: 8px;">${rec.reasoning}</p>
+                    <small class="text-muted">${rec.confidence_note}</small>
+                </div>
+
+                <!-- Similar Experiments -->
+                <div class="mb-4">
+                    <h6 style="color: #0ea5e9;">📊 Similar Experiments (${data.similar_experiments.length} found)</h6>
+                    ${experimentsHtml}
+                </div>
+
+                <!-- Weighted Insights -->
+                <div class="mb-3">
+                    <h6 style="color: #0ea5e9;">💡 Key Learnings</h6>
+                    <ul style="color: #9ca3af; padding-left: 20px;">
+                        ${insightsHtml}
+                    </ul>
+                </div>
+
+                <!-- Evidence Status -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Evidence Status: <span class="badge bg-secondary">${ctx.evidence_status}</span> •
+                        Analyzed at: ${new Date(data.timestamp).toLocaleString()}
+                    </small>
+                </div>
+            `;
         }
 
         // Session 351: Start research project from boardroom product decision

@@ -307,6 +307,9 @@ from core.views_agent_learning import (
     get_experiment_metrics,
     get_rollback_plan,
     update_remediation_step,
+    # Session 602: Boardroom Learning Integration
+    get_decision_learning_context,
+    get_boardroom_learning_summary,
 )
 
 # Session 250: Hive Mind Mode
@@ -2719,6 +2722,9 @@ urlpatterns = [
     path('api/boardroom/decisions/', get_boardroom_decisions, name='boardroom-decisions'),
     path('api/boardroom/decisions/<uuid:decision_id>/promote/', promote_decision, name='promote-decision'),
     path('api/boardroom/decisions/<uuid:decision_id>/reject/', reject_decision, name='reject-decision'),
+    # Session 602: Boardroom Learning Integration
+    path('api/boardroom/decisions/<uuid:decision_id>/learning/', get_decision_learning_context, name='decision-learning-context'),
+    path('api/boardroom/learning-summary/', get_boardroom_learning_summary, name='boardroom-learning-summary'),
 
     # Session 590: Pilot Readiness Gate API
     path('api/pilot-gates/', get_pilot_readiness_gates, name='pilot-gates'),

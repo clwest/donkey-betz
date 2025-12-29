@@ -1382,6 +1382,107 @@ def reject_decision(request, decision_id):
 
 
 # =============================================================================
+# Session 602: Boardroom Learning Integration
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_decision_learning_context(request, decision_id):
+    """
+    Session 602: Get learning context for a Boardroom decision.
+
+    GET /api/boardroom/decisions/{decision_id}/learning/
+
+    Returns:
+    - success_probability: Estimated chance of success (0-100%)
+    - risk_level: low/medium/high/critical
+    - confidence_level: Based on amount of relevant data
+    - similar_experiments: Past experiments that inform this decision
+    - weighted_insights: Key learnings with weights
+    - recommendation: AI-generated guidance for decision-making
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+        from core.services.boardroom_learning import BoardroomLearningService
+
+        decision = AgentDecisionSummary.objects.get(id=decision_id)
+        service = BoardroomLearningService()
+        context = service.get_decision_learning_context(decision)
+
+        return JsonResponse({
+            'success': True,
+            **context
+        })
+
+    except AgentDecisionSummary.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Decision not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting decision learning context: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_boardroom_learning_summary(request):
+    """
+    Session 602: Get learning summary for all pending Boardroom decisions.
+
+    GET /api/boardroom/learning-summary/
+
+    Query params:
+    - limit: Max decisions to analyze (default 10)
+    - status: Filter by status (default 'draft' - pending decisions)
+
+    Returns learning insights for decisions awaiting approval.
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+        from core.services.boardroom_learning import BoardroomLearningService
+
+        limit = int(request.GET.get('limit', 10))
+        status = request.GET.get('status', 'draft')
+
+        decisions = AgentDecisionSummary.objects.filter(
+            status=status
+        ).order_by('-created_at')[:limit]
+
+        service = BoardroomLearningService()
+        enriched = service.enrich_decisions_list(decisions)
+
+        # Calculate aggregate stats
+        high_probability = sum(1 for d in enriched if d['learning_summary']['success_probability'] >= 70)
+        high_risk = sum(1 for d in enriched if d['learning_summary']['risk_level'] in ('high', 'critical'))
+        low_confidence = sum(1 for d in enriched if d['learning_summary']['confidence'] == 'insufficient')
+
+        return JsonResponse({
+            'success': True,
+            'decisions': enriched,
+            'count': len(enriched),
+            'summary': {
+                'high_probability_count': high_probability,
+                'high_risk_count': high_risk,
+                'low_confidence_count': low_confidence,
+                'recommendation': (
+                    f'{high_probability} decisions look promising, '
+                    f'{high_risk} need extra review, '
+                    f'{low_confidence} need more data'
+                ),
+            },
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting boardroom learning summary: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
 # Session 368: Dream Validation & Implementation UI APIs
 # =============================================================================
 
