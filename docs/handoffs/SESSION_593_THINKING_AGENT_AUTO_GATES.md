@@ -156,12 +156,22 @@ Auto-complete low-risk checklist items:
 
 ## Key Metrics
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Total Gates | 1 | 5 |
-| Security Decisions with Gates | 1 | 3 |
-| Policy Decisions with Gates | 0 | 2 |
-| Auto-Gate Coverage | 0% | 100% (new decisions) |
+| Metric | Before Session 593 | After Auto-Gate | After Batch Creation |
+|--------|-------------------|-----------------|---------------------|
+| Total Gates | 1 | 5 | **77** |
+| HIGH Risk Gates | 1 | 3 | **18** |
+| MEDIUM Risk Gates | 0 | 2 | **59** |
+| Coverage | 1.3% | 6.5% | **100%** |
+
+### Batch Gate Creation Results
+
+Session 593 also included batch creation for existing decisions:
+
+```
+Security decisions → 15 HIGH risk gates (6 items each)
+Policy decisions  → 57 MEDIUM risk gates (3 items each)
+Total created     → 72 gates (0 errors)
+```
 
 ---
 
@@ -173,7 +183,16 @@ Session 593 implemented automatic Pilot Readiness Gate creation for safety-sensi
 2. Policy decisions (`decision_type='policy'`) now get MEDIUM risk gates with 3-item checklists
 3. All three decision creation paths are integrated
 4. Gates created automatically without user intervention
+5. **Batch creation function** added for retroactive gate creation on existing decisions
 
-The system now enforces governance on safety-sensitive decisions by default.
+### New Functions
 
-**Session 593: ThinkingAgent Auto-Gate Integration - COMPLETE**
+| Function | Purpose |
+|----------|---------|
+| `determine_gate_risk_level(decision)` | Returns 'high', 'medium', or None |
+| `auto_create_gate_for_decision(decision)` | Creates gate for single decision |
+| `batch_create_gates_for_existing_decisions(dry_run)` | Batch creates gates for all eligible decisions |
+
+The system now enforces governance on safety-sensitive decisions by default, with 100% coverage of all qualifying decisions.
+
+**Session 593: ThinkingAgent Auto-Gate Integration + Batch Creation - COMPLETE**
