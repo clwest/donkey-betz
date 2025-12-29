@@ -379,6 +379,28 @@ app.conf.beat_schedule = {
             'max_promotions': 3,  # Max decisions to promote per run
         }
     },
+    # Session 589: Governance-Respecting Low-Risk Decision Auto-Promotion
+    # Complements quality-score-based promotion with tiered rules
+    # Addresses the 82% execution gap identified in Session 588
+    'auto-promote-low-risk-decisions': {
+        'task': 'core.tasks.auto_promote_low_risk_decisions',
+        'schedule': crontab(hour='*/6'),  # Every 6 hours - conservative cadence
+        'options': {
+            'expires': 3600 * 5,  # 5 hours
+        },
+        'kwargs': {
+            'dry_run': False,  # Set True to report without promoting
+        }
+    },
+    # Session 589: Daily Execution Gap Metrics Report
+    # Tracks progress on closing the decision-action gap
+    'report-execution-gap-metrics': {
+        'task': 'core.tasks.report_execution_gap_metrics',
+        'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
     # Session 373: Auto-Resolve Knowledge Gaps
     # Automatically fills knowledge gaps from spider data and best practices
     'auto-resolve-knowledge-gaps': {
