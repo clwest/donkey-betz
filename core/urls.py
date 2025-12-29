@@ -310,6 +310,9 @@ from core.views_agent_learning import (
     # Session 602: Boardroom Learning Integration
     get_decision_learning_context,
     get_boardroom_learning_summary,
+    # Session 603: Learning Velocity Dashboard
+    get_learning_velocity_dashboard,
+    get_theme_velocity,
 )
 
 # Session 250: Hive Mind Mode
@@ -2725,6 +2728,10 @@ urlpatterns = [
     # Session 602: Boardroom Learning Integration
     path('api/boardroom/decisions/<uuid:decision_id>/learning/', get_decision_learning_context, name='decision-learning-context'),
     path('api/boardroom/learning-summary/', get_boardroom_learning_summary, name='boardroom-learning-summary'),
+
+    # Session 603: Learning Velocity Dashboard
+    path('api/learning/velocity/', get_learning_velocity_dashboard, name='learning-velocity-dashboard'),
+    path('api/learning/velocity/theme/<str:theme>/', get_theme_velocity, name='theme-velocity'),
 
     # Session 590: Pilot Readiness Gate API
     path('api/pilot-gates/', get_pilot_readiness_gates, name='pilot-gates'),
