@@ -2083,6 +2083,21 @@
                                         </div>
                                     </div>
 
+                                    <!-- Session 574: Attention Items Panel - Click to Execute -->
+                                    <div id="attentionItemsPanel" class="mb-4" style="display: none;">
+                                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 16px;">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <strong style="color: #fca5a5;">🎯 Needs Your Attention</strong>
+                                                <button class="btn btn-sm" onclick="window.aiAssistant.refreshAttentionItems()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 11px;">
+                                                    ↻ Refresh
+                                                </button>
+                                            </div>
+                                            <div id="attentionItemsList" class="d-flex flex-column gap-2">
+                                                <!-- Items loaded dynamically -->
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Example Commands - More Diverse -->
                                     <div class="text-muted mb-3" style="font-size: 14px;">
                                         <strong style="color: #fcd34d;">💡 Try these commands:</strong>

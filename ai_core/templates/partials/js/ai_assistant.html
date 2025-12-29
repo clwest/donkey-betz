@@ -123,6 +123,8 @@
                 this.loadStyleInsights();
                 // Load projects for dropdown
                 this.loadProjects();
+                // Session 574: Load attention items for click-to-execute
+                this.loadAttentionItems();
             }
 
             setupEventListeners() {
@@ -717,6 +719,92 @@
                 console.log(`✅ Active project: ${projectName} (${projectId})`);
 
                 // Future: Update session creation to use this project
+            }
+
+            // Session 574: Attention Items - Click to Execute
+            async loadAttentionItems() {
+                console.log('🎯 Loading attention items...');
+                try {
+                    const response = await authenticatedFetch('/api/assistant/attention-items/');
+                    const data = await response.json();
+
+                    if (data.success && data.items && data.items.length > 0) {
+                        this.renderAttentionItems(data.items);
+                        document.getElementById('attentionItemsPanel').style.display = 'block';
+                    } else {
+                        document.getElementById('attentionItemsPanel').style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading attention items:', error);
+                    document.getElementById('attentionItemsPanel').style.display = 'none';
+                }
+            }
+
+            refreshAttentionItems() {
+                this.loadAttentionItems();
+            }
+
+            renderAttentionItems(items) {
+                const container = document.getElementById('attentionItemsList');
+                if (!container) return;
+
+                container.innerHTML = items.map((item, index) => {
+                    const priorityColor = item.priority >= 80 ? '#ef4444' :
+                                         item.priority >= 60 ? '#f59e0b' :
+                                         item.priority >= 40 ? '#3b82f6' : '#6b7280';
+                    const sectionIcon = item.section === 'research' ? '🔬' :
+                                       item.section === 'command_center' ? '⚙️' :
+                                       item.section === 'autonomous' ? '🤖' : '📋';
+
+                    return `
+                        <div class="attention-item" onclick="window.aiAssistant.executeAttentionItem(${index})"
+                             style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;"
+                             onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.borderColor='rgba(239, 68, 68, 0.5)';"
+                             onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='rgba(239, 68, 68, 0.2)';"
+                             data-action="${this.escapeHtml(item.suggested_action)}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 13px; font-weight: 600; color: #fca5a5; margin-bottom: 4px;">
+                                        ${sectionIcon} ${this.escapeHtml(item.title)}
+                                    </div>
+                                    <div style="font-size: 11px; color: #9ca3af;">
+                                        ${this.escapeHtml(item.summary || '')}
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 10px; padding: 2px 8px; border-radius: 12px; background: ${priorityColor}20; color: ${priorityColor}; font-weight: 600;">
+                                        P${item.priority}
+                                    </span>
+                                    <span style="color: #22c55e; font-size: 16px;">▶</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Store items for click handler
+                this.attentionItems = items;
+            }
+
+            async executeAttentionItem(index) {
+                const item = this.attentionItems[index];
+                if (!item) return;
+
+                console.log('🚀 Executing attention item:', item.title);
+
+                // Set the input and send
+                const input = document.getElementById('tabAssistantInput');
+                if (input) {
+                    input.value = item.suggested_action;
+                    this.sendMessage('tab');
+                }
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
 
             toggle() {

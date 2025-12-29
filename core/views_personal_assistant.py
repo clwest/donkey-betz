@@ -513,3 +513,63 @@ def transcribe_only(request):
             'error': 'Failed to transcribe audio',
             'details': str(e)
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_attention_items(request):
+    """
+    Session 574: Get attention items for the PA UI.
+
+    Returns actionable items from SystemStateAggregator that need user attention.
+    Each item can be clicked to execute via PA.
+    """
+    try:
+        from core.services.system_state_aggregator import get_system_state_aggregator
+
+        aggregator = get_system_state_aggregator()
+        items = aggregator.get_attention_items()
+
+        # Convert to serializable format
+        attention_items = []
+        for item in items[:10]:  # Max 10 items
+            attention_items.append({
+                'id': item.id,
+                'section': item.section,
+                'category': item.category,
+                'priority': item.priority,
+                'title': item.title[:80] if item.title else '',
+                'summary': item.summary[:150] if item.summary else '',
+                'action_url': item.action_url if hasattr(item, 'action_url') else '',
+                # Suggested action for click-to-execute
+                'suggested_action': _get_suggested_action(item),
+            })
+
+        return Response({
+            'success': True,
+            'items': attention_items,
+            'count': len(attention_items),
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting attention items: {e}")
+        return Response({
+            'success': False,
+            'items': [],
+            'error': str(e)
+        })
+
+
+def _get_suggested_action(item):
+    """Generate a suggested action command for an attention item."""
+    section = item.section.lower() if item.section else ''
+    title = item.title or 'this item'
+
+    if section == 'research':
+        return f"Execute research on: {title[:50]}"
+    elif section == 'command_center':
+        return f"Review and address: {title[:50]}"
+    elif section == 'autonomous':
+        return f"Check autonomous status for: {title[:50]}"
+    else:
+        return f"Work on: {title[:50]}"
