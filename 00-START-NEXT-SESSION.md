@@ -1,41 +1,42 @@
-# Session 604 - Start Here
+# Session 605 - Start Here
 
-**Previous Session:** 603
+**Previous Session:** 604
 **Date:** December 29, 2025
-**Focus:** Auto-Prioritization, Experiment Suggestions, or Velocity Alerts
+**Focus:** Experiment Suggestions, Velocity Alerts, or New Feature
 
 ---
 
-## Session 603 Accomplishments
+## Session 604 Accomplishments
 
-### Learning Velocity Dashboard - COMPLETE
+### Auto-Prioritize Decision Queue - COMPLETE
 
-Built a dashboard that tracks how fast the system learns and visualizes momentum:
+Built a Decision Prioritization system to sort Boardroom decisions by AI-recommended priority:
 
 | Component | Description |
 |-----------|-------------|
-| **Health Score** | 0-100 score based on net weight, volume, declining themes |
-| **Velocity Trend** | Accelerating/stable/decelerating (7-day rolling average) |
-| **Theme Momentum** | Per-theme tracking with health indicators |
-| **Daily Chart** | ASCII-style velocity visualization (last 14 days) |
-| **Weekly Summary** | Pass rates and weight per week |
+| **Priority Score** | 0-100 score based on success probability, risk, confidence |
+| **Priority Tiers** | QUICK_WIN, RECOMMENDED, STANDARD, NEEDS_REVIEW, HIGH_RISK |
+| **Risk Weights** | minimal=0, low=5, medium=15, high=30, critical=50 |
+| **Confidence Multipliers** | high=1.0, medium=0.85, low=0.7, insufficient=0.5 |
+| **UI Toggle** | "Priority" button in Boardroom header |
+| **Visual Styling** | Green glow for quick wins, red pulse for high risk |
 
 ### New Service
 
 | File | Purpose |
 |------|---------|
-| `core/services/learning_velocity.py` | Velocity metrics and calculations |
+| `core/services/decision_prioritization.py` | Priority scoring and queue sorting |
 
 ### API Endpoints
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/learning/velocity/` | Full velocity dashboard |
-| `GET /api/learning/velocity/theme/<theme>/` | Theme-specific velocity |
+| `GET /api/boardroom/decisions/prioritized/` | Prioritized queue with stats |
+| `GET /api/boardroom/decisions/{id}/priority/` | Single decision priority |
 
 ---
 
-## The Complete Learning System (Sessions 590-603)
+## The Complete Learning System (Sessions 590-604)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -56,30 +57,32 @@ Session 601: ChatGPT's Weighted Learning Formula
         ↓
 Session 602: Boardroom Integration
         ↓
-Session 603: Learning Velocity Dashboard ← COMPLETE!
+Session 603: Learning Velocity Dashboard
+        ↓
+Session 604: Decision Prioritization ← COMPLETE!
 ```
 
 ---
 
-## Session 604 Options
+## Session 605 Options
 
-### Option A: Auto-Prioritize Decision Queue
-- Sort pending Boardroom decisions by success probability
-- Surface high-probability, low-risk decisions first
-- Flag high-risk decisions for additional review
-- Add priority score to decision cards
-
-### Option B: Experiment Suggestion Engine
+### Option A: Experiment Suggestion Engine
 - Based on learning gaps, suggest new experiments
 - Identify themes with insufficient data (< 3 samples)
 - Recommend sample sizes for confidence targets
 - Generate experiment ideas from patterns
 
-### Option C: Velocity Alerts
+### Option B: Velocity Alerts
 - Notify when velocity is declining
 - Alert on themes that need attention
 - Surface stale themes with no recent activity
-- Add to notification system
+- Add to notification system (Discord/Web Push)
+
+### Option C: Learning Insights for Personal Assistant
+- Surface learning insights in PA context
+- "Based on 5 similar experiments, this approach has 73% success rate"
+- Integrate weighted learning into PA responses
+- Show relevant past experiments when making decisions
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -92,17 +95,22 @@ Session 603: Learning Velocity Dashboard ← COMPLETE!
 # Start services
 make start && make celery
 
-# Test velocity dashboard
-.venv/bin/python manage.py shell -c "
-from core.services.learning_velocity import LearningVelocityService
-service = LearningVelocityService()
-dashboard = service.get_velocity_dashboard(30)
-print(f'Health: {dashboard[\"overall_health\"][\"status\"]} ({dashboard[\"overall_health\"][\"score\"]})')
-print(f'Trend: {dashboard[\"velocity_trend\"][\"direction\"]}')
+# Test decision prioritization
+curl "http://localhost:8000/api/boardroom/decisions/prioritized/?limit=5" | python -m json.tool
+
+# Check priority stats
+curl "http://localhost:8000/api/boardroom/decisions/prioritized/" | python -c "
+import sys,json
+d=json.load(sys.stdin)
+s=d.get('stats',{})
+print(f'Total: {s.get(\"total\",0)}')
+print(f'Quick Wins: {s.get(\"quick_win_count\",0)}')
+print(f'High Risk: {s.get(\"high_risk_count\",0)}')
+print(f'Avg Priority: {s.get(\"avg_priority\",0)}')
 "
 
-# Test boardroom learning
-curl http://localhost:8000/api/boardroom/learning-summary/ | python -m json.tool
+# Test velocity dashboard
+curl http://localhost:8000/api/learning/velocity/ | python -m json.tool
 ```
 
 ---
@@ -111,23 +119,23 @@ curl http://localhost:8000/api/boardroom/learning-summary/ | python -m json.tool
 
 | File | Purpose |
 |------|---------|
+| `core/services/decision_prioritization.py` | Session 604 - Priority scoring |
 | `core/services/learning_velocity.py` | Session 603 - Velocity metrics |
 | `core/services/weighted_learning.py` | Session 601 - Weighted formula |
 | `core/services/boardroom_learning.py` | Session 602 - Boardroom integration |
-| `docs/handoffs/SESSION_603_LEARNING_VELOCITY_DASHBOARD.md` | Session handoff |
 
 ---
 
-## System Stats After Session 603
+## System Stats After Session 604
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 98 (+1 from Session 603) |
+| **Services** | 99 (+1 from Session 604) |
 | **Celery Tasks** | 230 |
-| **The Learning Loop** | COMPLETE with Velocity Dashboard |
+| **The Learning Loop** | COMPLETE with Decision Prioritization |
 
 ---
 
-**Session 603: Learning Velocity Dashboard - COMPLETE**
+**Session 604: Auto-Prioritize Decision Queue - COMPLETE**
