@@ -19482,3 +19482,45 @@ def maintain_dream_backlog():
             'success': False,
             'error': str(e)
         }
+
+
+# ==================== SESSION 573: SYSTEM STATE AGGREGATOR CACHE REFRESH ====================
+
+@shared_task
+def refresh_system_state_cache():
+    """
+    Session 573: Refresh the system state aggregator cache.
+
+    Runs every 60 seconds to keep the PA's system awareness current.
+    This is a broadcast task - quick, low impact, high frequency.
+
+    The SystemStateAggregator caches attention items from:
+    - Command Center (failed cycles, concerns)
+    - Autonomous (overdue channels, narrative shifts, triggers)
+    - Research (stale spiders, pending dreams, decisions)
+    """
+    try:
+        from core.services.system_state_aggregator import get_system_state_aggregator
+
+        aggregator = get_system_state_aggregator()
+
+        # Force refresh the cache
+        items = aggregator.get_attention_items(force_refresh=True)
+
+        # Count urgent items
+        urgent_count = len([i for i in items if i.priority >= 80])
+
+        logger.info(f"🔄 [SYSTEM-STATE] Cache refreshed: {len(items)} items, {urgent_count} urgent")
+
+        return {
+            'success': True,
+            'total_items': len(items),
+            'urgent_items': urgent_count
+        }
+
+    except Exception as e:
+        logger.error(f"🔄 [SYSTEM-STATE] Cache refresh failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }

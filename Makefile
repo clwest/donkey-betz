@@ -208,17 +208,46 @@ davinci-bridge-logs: ## Tail DaVinci Bridge logs
 	@touch $(DAVINCI_BRIDGE_LOG)
 	@tail -f $(DAVINCI_BRIDGE_LOG)
 
-# ---------- Celery helpers (Session 207, updated Session 550) ----------
-celery: ## Start Celery worker + beat (background) for spider scheduling
-	@echo "==> Starting Celery services..."
-	@# Start Celery worker if not running
-	@# Session 550: Changed from --pool=solo (1 task) to --pool=threads --concurrency=4
-	@# This allows 4 tasks to run concurrently, preventing backlog with 90+ scheduled tasks
-	@if pgrep -f "celery.*worker" >/dev/null 2>&1; then \
-		echo "-> Celery worker already running"; \
+# ---------- Celery helpers (Session 207, updated Session 573) ----------
+# Session 573: Multi-queue architecture to prevent bottlenecks
+# - default worker: Quick tasks (4 threads)
+# - long_running worker: Spider network, agent conversations, dreams (2 threads)
+# - broadcast worker: High-frequency status updates (2 threads)
+CELERY_LONG_RUNNING_LOG ?= celery-long-running.log
+CELERY_BROADCAST_LOG ?= celery-broadcast.log
+CELERY_LONG_RUNNING_PIDFILE ?= .celery-long-running.pid
+CELERY_BROADCAST_PIDFILE ?= .celery-broadcast.pid
+
+celery: ## Start Celery workers + beat (background) with multi-queue architecture
+	@echo "==> Starting Celery services (multi-queue architecture)..."
+	@# Start default queue worker (quick tasks)
+	@if pgrep -f "celery.*worker.*default" >/dev/null 2>&1; then \
+		echo "-> Celery default worker already running"; \
 	else \
-		echo "-> Starting Celery worker (background, threads pool, 4 concurrent)..."; \
-		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=4 > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
+		echo "-> Starting Celery default worker (4 threads, default queue)..."; \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=4 \
+			--queues=default,agents,sports,content,ml \
+			--hostname=default@%h > $(CELERY_LOG) 2>&1 & echo $$! > $(CELERY_PIDFILE); \
+		sleep 1; \
+	fi
+	@# Start long_running queue worker (slow tasks)
+	@if pgrep -f "celery.*worker.*long_running" >/dev/null 2>&1; then \
+		echo "-> Celery long_running worker already running"; \
+	else \
+		echo "-> Starting Celery long_running worker (2 threads)..."; \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
+			--queues=long_running \
+			--hostname=long_running@%h > $(CELERY_LONG_RUNNING_LOG) 2>&1 & echo $$! > $(CELERY_LONG_RUNNING_PIDFILE); \
+		sleep 1; \
+	fi
+	@# Start broadcast queue worker (high-frequency status tasks)
+	@if pgrep -f "celery.*worker.*broadcast" >/dev/null 2>&1; then \
+		echo "-> Celery broadcast worker already running"; \
+	else \
+		echo "-> Starting Celery broadcast worker (2 threads)..."; \
+		nohup .venv/bin/celery -A core worker --loglevel=info --pool=threads --concurrency=2 \
+			--queues=broadcast \
+			--hostname=broadcast@%h > $(CELERY_BROADCAST_LOG) 2>&1 & echo $$! > $(CELERY_BROADCAST_PIDFILE); \
 		sleep 1; \
 	fi
 	@# Start Celery beat if not running
@@ -229,22 +258,44 @@ celery: ## Start Celery worker + beat (background) for spider scheduling
 		nohup .venv/bin/celery -A core beat --loglevel=info > $(CELERY_BEAT_LOG) 2>&1 & echo $$! > $(CELERY_BEAT_PIDFILE); \
 		sleep 1; \
 	fi
-	@echo "✓ Celery services started."
-	@echo "  - Worker log: $(CELERY_LOG)"
-	@echo "  - Beat log: $(CELERY_BEAT_LOG)"
+	@echo "✓ Celery services started (3 workers + beat)."
+	@echo "  - Default worker (4 threads): $(CELERY_LOG)"
+	@echo "  - Long-running worker (2 threads): $(CELERY_LONG_RUNNING_LOG)"
+	@echo "  - Broadcast worker (2 threads): $(CELERY_BROADCAST_LOG)"
+	@echo "  - Beat scheduler: $(CELERY_BEAT_LOG)"
 
-celery-stop: ## Stop Celery worker and beat
+celery-stop: ## Stop all Celery workers and beat
 	@echo "==> Stopping Celery services..."
+	@# Stop default worker
 	@if [ -f $(CELERY_PIDFILE) ]; then \
 		PID=$$(cat $(CELERY_PIDFILE)); \
 		if ps -p $$PID >/dev/null 2>&1; then \
-			echo "-> Killing Celery worker (PID $$PID)..."; \
+			echo "-> Killing Celery default worker (PID $$PID)..."; \
 			kill $$PID || true; \
 		fi; \
 		rm -f $(CELERY_PIDFILE); \
-	else \
-		pkill -f "celery.*worker" 2>/dev/null || true; \
 	fi
+	@# Stop long_running worker
+	@if [ -f $(CELERY_LONG_RUNNING_PIDFILE) ]; then \
+		PID=$$(cat $(CELERY_LONG_RUNNING_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Celery long_running worker (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(CELERY_LONG_RUNNING_PIDFILE); \
+	fi
+	@# Stop broadcast worker
+	@if [ -f $(CELERY_BROADCAST_PIDFILE) ]; then \
+		PID=$$(cat $(CELERY_BROADCAST_PIDFILE)); \
+		if ps -p $$PID >/dev/null 2>&1; then \
+			echo "-> Killing Celery broadcast worker (PID $$PID)..."; \
+			kill $$PID || true; \
+		fi; \
+		rm -f $(CELERY_BROADCAST_PIDFILE); \
+	fi
+	@# Fallback: kill any remaining celery workers
+	@pkill -f "celery.*worker" 2>/dev/null || true
+	@# Stop beat
 	@if [ -f $(CELERY_BEAT_PIDFILE) ]; then \
 		PID=$$(cat $(CELERY_BEAT_PIDFILE)); \
 		if ps -p $$PID >/dev/null 2>&1; then \
@@ -258,15 +309,20 @@ celery-stop: ## Stop Celery worker and beat
 	@echo "✓ Celery services stopped."
 
 celery-status: ## Check Celery worker and beat status
-	@echo "==> Celery status"
-	@if pgrep -f "celery.*worker" >/dev/null 2>&1; then echo "✓ Celery worker running"; else echo "✗ Celery worker not running"; fi
-	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then echo "✓ Celery beat running"; else echo "✗ Celery beat not running"; fi
+	@echo "==> Celery status (multi-queue architecture)"
+	@echo "Workers:"
+	@if pgrep -f "hostname=default" >/dev/null 2>&1; then echo "  ✓ Default worker (quick tasks)"; else echo "  ✗ Default worker not running"; fi
+	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then echo "  ✓ Long-running worker (slow tasks)"; else echo "  ✗ Long-running worker not running"; fi
+	@if pgrep -f "hostname=broadcast" >/dev/null 2>&1; then echo "  ✓ Broadcast worker (status updates)"; else echo "  ✗ Broadcast worker not running"; fi
+	@echo "Scheduler:"
+	@if pgrep -f "celery.*beat" >/dev/null 2>&1; then echo "  ✓ Celery beat running"; else echo "  ✗ Celery beat not running"; fi
+	@echo ""
 	@echo "Celery processes:"
 	@ps aux | grep -E "celery" | grep -v grep || echo "  No Celery processes found"
 
-celery-logs: ## Tail Celery logs
-	@echo "==> Tailing Celery logs (ctrl-c to stop)"
-	@tail -f $(CELERY_LOG) $(CELERY_BEAT_LOG)
+celery-logs: ## Tail all Celery logs
+	@echo "==> Tailing all Celery logs (ctrl-c to stop)"
+	@tail -f $(CELERY_LOG) $(CELERY_LONG_RUNNING_LOG) $(CELERY_BROADCAST_LOG) $(CELERY_BEAT_LOG)
 
 # ---------- Selfpatch helpers (LLM-driven patches) ----------
 # These retained as wrappers but do NOT assume ollama is present.

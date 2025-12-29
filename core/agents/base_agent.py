@@ -668,6 +668,7 @@ class BaseAgent(ABC, TimeTravelMixin):
                     parts.append(f"Trending topics: {', '.join(trend_names)}")
 
         # Session 565: Add platform intelligence context
+        # Session 573: Now includes system state awareness
         if intelligence_context and intelligence_context.get('context_text'):
             intel_text = intelligence_context.get('context_text', '')
             intel_attribution = intelligence_context.get('attribution', '')
@@ -678,7 +679,8 @@ class BaseAgent(ABC, TimeTravelMixin):
                 intel_metadata.get('experts_count', 0) +
                 intel_metadata.get('dreams_count', 0) +
                 intel_metadata.get('policies_count', 0) +
-                intel_metadata.get('trends_count', 0)
+                intel_metadata.get('trends_count', 0) +
+                intel_metadata.get('system_state_count', 0)  # Session 573
             )
 
             if total_sources > 0:

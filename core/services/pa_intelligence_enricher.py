@@ -1,5 +1,6 @@
 """
 Session 565: PA Intelligence Enricher
+Session 573: Added System State Awareness
 
 Enriches Personal Assistant context with platform intelligence before generating responses.
 This bridges the gap between 3,345+ knowledge entries and user queries.
@@ -10,6 +11,7 @@ The PA can now answer questions informed by:
 - High-value dreams (actionable ideas from agents)
 - Canonical policies (boardroom decisions)
 - Spider trends (recent discoveries from data network)
+- System state (Session 573: urgent items needing attention)
 """
 
 import logging
@@ -27,6 +29,14 @@ from core.services.intelligence_query import IntelligenceQueryService
 from core.services.spider_intelligence import SpiderIntelligenceService
 
 logger = logging.getLogger(__name__)
+
+# Session 573: Keywords that trigger system state injection
+SYSTEM_STATE_KEYWORDS = [
+    'status', 'what should i', 'catch me up', 'what needs',
+    'attention', 'priority', 'urgent', 'focus on',
+    'system state', 'overview', 'summary', 'whats going on',
+    "what's going on", 'happening', 'to do', 'action items'
+]
 
 
 class PAIntelligenceEnricher:
@@ -53,6 +63,7 @@ class PAIntelligenceEnricher:
                 - include_dreams: bool (default True)
                 - include_policies: bool (default True)
                 - include_trends: bool (default True)
+                - include_system_state: bool (default True) - Session 573
                 - max_context_chars: int (default 2000)
         """
         self.config = config or {}
@@ -60,6 +71,7 @@ class PAIntelligenceEnricher:
         self.include_dreams = self.config.get('include_dreams', True)
         self.include_policies = self.config.get('include_policies', True)
         self.include_trends = self.config.get('include_trends', True)
+        self.include_system_state = self.config.get('include_system_state', True)  # Session 573
         self.max_context_chars = self.config.get('max_context_chars', 2000)
 
         self.intelligence_service = IntelligenceQueryService()
@@ -97,6 +109,7 @@ class PAIntelligenceEnricher:
                 'dreams': [],
                 'policies': [],
                 'spider_trends': [],
+                'system_state': [],  # Session 573
                 'attribution': '',
                 'context_text': '',
                 'metadata': {
@@ -105,6 +118,7 @@ class PAIntelligenceEnricher:
                     'dreams_count': 0,
                     'policies_count': 0,
                     'trends_count': 0,
+                    'system_state_count': 0,  # Session 573
                     'intent': intent,
                     'spider_sources': []
                 }
@@ -138,6 +152,13 @@ class PAIntelligenceEnricher:
                 result['metadata']['trends_count'] = len(result['spider_trends'])
                 result['metadata']['spider_sources'] = trends_result.get('sources', [])
 
+            # Session 573: Query system state (for status/overview requests or when urgent)
+            if self.include_system_state:
+                system_state_result = self._query_system_state(message)
+                result['system_state'] = system_state_result.get('items', [])
+                result['metadata']['system_state_count'] = len(result['system_state'])
+                result['metadata']['has_urgent'] = system_state_result.get('has_urgent', False)
+
             # Build formatted context and attribution
             result['context_text'] = self._format_context(result, intent)
             result['attribution'] = self._build_attribution(result)
@@ -147,7 +168,8 @@ class PAIntelligenceEnricher:
                 f"{result['metadata']['experts_count']} experts, "
                 f"{result['metadata']['dreams_count']} dreams, "
                 f"{result['metadata']['policies_count']} policies, "
-                f"{result['metadata']['trends_count']} trends"
+                f"{result['metadata']['trends_count']} trends, "
+                f"{result['metadata']['system_state_count']} system items"  # Session 573
             )
 
             return result
@@ -160,6 +182,7 @@ class PAIntelligenceEnricher:
                 'dreams': [],
                 'policies': [],
                 'spider_trends': [],
+                'system_state': [],  # Session 573
                 'attribution': '',
                 'context_text': '',
                 'metadata': {'error': str(e)},
@@ -370,6 +393,61 @@ class PAIntelligenceEnricher:
 
         return None  # Return None for general search
 
+    def _query_system_state(self, message: str) -> dict:
+        """
+        Session 573: Query system state for attention items.
+
+        Conditionally includes system state based on:
+        1. Message contains status/overview keywords
+        2. There are urgent items (priority >= 80)
+
+        Returns:
+            Dict with 'items' list and 'has_urgent' boolean
+        """
+        try:
+            from core.services.system_state_aggregator import get_system_state_aggregator
+
+            aggregator = get_system_state_aggregator()
+
+            # Check if message triggers full system state
+            message_lower = message.lower()
+            wants_status = any(kw in message_lower for kw in SYSTEM_STATE_KEYWORDS)
+
+            # Check for urgent items
+            urgent_items = aggregator.get_urgent_items(threshold=80)
+            has_urgent = len(urgent_items) > 0
+
+            # Include system state if:
+            # 1. User explicitly asks for status/overview
+            # 2. There are urgent items that should be surfaced
+            if wants_status:
+                # Full system state for status requests
+                all_items = aggregator.get_attention_items(max_per_section=5)
+                self.logger.info(f"System state requested: {len(all_items)} total items, {len(urgent_items)} urgent")
+                return {
+                    'items': [item.to_dict() for item in all_items],
+                    'has_urgent': has_urgent,
+                    'triggered_by': 'user_request'
+                }
+            elif has_urgent:
+                # Just urgent items for proactive surfacing
+                self.logger.info(f"Proactively surfacing {len(urgent_items)} urgent items")
+                return {
+                    'items': [item.to_dict() for item in urgent_items],
+                    'has_urgent': True,
+                    'triggered_by': 'urgent_items'
+                }
+            else:
+                # No system state needed
+                return {'items': [], 'has_urgent': False}
+
+        except ImportError as e:
+            self.logger.warning(f"Could not import SystemStateAggregator: {e}")
+            return {'items': [], 'has_urgent': False}
+        except Exception as e:
+            self.logger.error(f"Error querying system state: {e}")
+            return {'items': [], 'has_urgent': False}
+
     def _format_context(self, data: dict, intent: str) -> str:
         """
         Format the intelligence data into a context string for prompt injection.
@@ -426,6 +504,23 @@ class PAIntelligenceEnricher:
                 elif isinstance(trend, str):
                     parts.append(f"- {trend}")
 
+        # Session 573: Format system state items
+        if data.get('system_state'):
+            urgent = [i for i in data['system_state'] if i.get('priority', 0) >= 80]
+            important = [i for i in data['system_state'] if 50 <= i.get('priority', 0) < 80]
+
+            if urgent:
+                parts.append("\n### URGENT - Needs Immediate Attention:")
+                for item in urgent[:5]:
+                    section = item.get('section', '').replace('_', ' ').title()
+                    parts.append(f"- [{section}] {item.get('title', '')}: {item.get('summary', '')}")
+
+            if important:
+                parts.append("\n### Important System Items:")
+                for item in important[:5]:
+                    section = item.get('section', '').replace('_', ' ').title()
+                    parts.append(f"- [{section}] {item.get('title', '')}")
+
         # Join and truncate if needed
         context = "\n".join(parts)
 
@@ -469,6 +564,15 @@ class PAIntelligenceEnricher:
             sources = data['metadata'].get('spider_sources', [])[:3]
             source_str = ', '.join(sources) if sources else 'spider network'
             parts.append(f"{trends_count} trends from {source_str}")
+
+        # Session 573: Include system state in attribution
+        system_state_count = data['metadata'].get('system_state_count', 0)
+        if system_state_count > 0:
+            has_urgent = data['metadata'].get('has_urgent', False)
+            if has_urgent:
+                parts.append(f"{system_state_count} system items (URGENT)")
+            else:
+                parts.append(f"{system_state_count} system items")
 
         if not parts:
             return "No relevant platform intelligence found."

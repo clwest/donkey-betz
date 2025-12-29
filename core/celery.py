@@ -395,6 +395,15 @@ app.conf.beat_schedule = {
             'expires': 115,
         }
     },
+    # Session 573: System State Aggregator Cache Refresh
+    # Keeps PA's system awareness current by aggregating attention items
+    'refresh-system-state-cache': {
+        'task': 'core.tasks.refresh_system_state_cache',
+        'schedule': 60.0,  # Every 60 seconds
+        'options': {
+            'expires': 55,
+        }
+    },
     # Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
     # Agents dream up creative ideas when they're idle
     'agent-dream-cycle': {
@@ -1147,10 +1156,14 @@ app.conf.beat_schedule = {
     },
 }
 
-# Spider-specific task routing configuration
-app.conf.task_routes = {
-    'ai_core.spiders.tasks.*': {'queue': 'spider_queue'},
-}
+# Task routing configuration
+# Session 573: Task routes are now defined in settings.py (CELERY_TASK_ROUTES)
+# Multi-queue architecture:
+#   - default: Quick tasks (most core.tasks.*)
+#   - long_running: Spider network, agent conversations, dreams (1+ min tasks)
+#   - broadcast: High-frequency status updates (30-180s interval tasks)
+#   - agents, sports, content, ml: Module-specific queues
+# See settings.py CELERY_TASK_ROUTES for full configuration
 app.conf.task_default_queue = 'default'
 app.conf.task_default_exchange = 'default'
 app.conf.task_default_routing_key = 'default'
