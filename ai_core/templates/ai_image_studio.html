@@ -7596,6 +7596,96 @@
                 </div>
                 <!-- END LEARNING LOOP DASHBOARD -->
 
+                <!-- Session 603: Learning Velocity Dashboard -->
+                <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #0ea5e9;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(14, 165, 233, 0.2); border-bottom: 1px solid #0ea5e9;">
+                        <h5 class="mb-0" style="color: #0ea5e9;">
+                            <span style="font-size: 24px;">📈</span> Learning Velocity Dashboard
+                            <small class="text-muted ms-2">How fast is the system learning?</small>
+                        </h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <select class="form-select form-select-sm" id="velocity-days-filter" style="width: auto; background: #2d2d2d; border-color: #0ea5e9; color: #fff;" onchange="loadVelocityDashboard()">
+                                <option value="7">Last 7 Days</option>
+                                <option value="14">Last 14 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="60">Last 60 Days</option>
+                                <option value="90">Last 90 Days</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-light" onclick="loadVelocityDashboard()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Health & Velocity Overview Row -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <h2 id="velocity-health-score" style="color: #0ea5e9;">--</h2>
+                                    <small class="text-muted">Health Score</small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary" id="velocity-health-status">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <h2 id="velocity-trend-icon" style="color: #10b981;">--</h2>
+                                    <small class="text-muted">Velocity Trend</small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary" id="velocity-trend-status">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <h2 id="velocity-net-weight" style="color: #f59e0b;">0.00</h2>
+                                    <small class="text-muted">Net Learning Weight</small>
+                                    <div class="mt-2">
+                                        <small class="text-success" id="velocity-positive">+0</small> /
+                                        <small class="text-danger" id="velocity-negative">0</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                    <h2 id="velocity-experiment-count" style="color: #8b5cf6;">0</h2>
+                                    <small class="text-muted">Experiments Analyzed</small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary" id="velocity-theme-count">0 themes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Theme Momentum Section -->
+                        <div class="mb-4">
+                            <h6 style="color: #0ea5e9;">🎯 Theme Momentum</h6>
+                            <p class="text-muted small mb-3">Which themes are improving vs declining?</p>
+                            <div id="velocity-themes-list" style="max-height: 300px; overflow-y: auto;">
+                                <p class="text-muted text-center">Loading theme momentum...</p>
+                            </div>
+                        </div>
+
+                        <!-- Daily Velocity Chart (Simple ASCII-style) -->
+                        <div class="mb-4">
+                            <h6 style="color: #0ea5e9;">📊 Daily Learning Velocity</h6>
+                            <div id="velocity-daily-chart" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px;">
+                                <p class="text-muted text-center">Loading daily velocity...</p>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Summary -->
+                        <div>
+                            <h6 style="color: #0ea5e9;">📅 Weekly Summary</h6>
+                            <div id="velocity-weekly-summary" class="row">
+                                <p class="text-muted text-center">Loading weekly summary...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END LEARNING VELOCITY DASHBOARD -->
+
             </div>
             <!-- Pilot Gates Styles -->
             <style>
@@ -21311,6 +21401,7 @@
                     loadRecentXPGains();
                     loadTimeTravelOverview();
                     loadTimeTravelAgents();
+                    loadVelocityDashboard();  // Session 603: Learning Velocity Dashboard
                 });
             }
 
@@ -68162,6 +68253,207 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error dismissing insight:', error);
             }
+        }
+
+        // ============================================================
+        // Session 603: Learning Velocity Dashboard Functions
+        // ============================================================
+
+        async function loadVelocityDashboard() {
+            const daysFilter = document.getElementById('velocity-days-filter');
+            const days = daysFilter ? daysFilter.value : 30;
+
+            try {
+                const response = await fetch(`/api/learning/velocity/?days=${days}`);
+                const data = await response.json();
+
+                if (data.success && data.dashboard) {
+                    renderVelocityDashboard(data.dashboard);
+                } else {
+                    console.log('Velocity dashboard:', data.message || 'No data');
+                    renderVelocityEmpty();
+                }
+            } catch (error) {
+                console.error('Error loading velocity dashboard:', error);
+                renderVelocityEmpty();
+            }
+        }
+
+        function renderVelocityDashboard(dashboard) {
+            // Health Score
+            const health = dashboard.overall_health || {};
+            const healthScore = health.score || 0;
+            document.getElementById('velocity-health-score').textContent = healthScore;
+
+            const healthStatus = document.getElementById('velocity-health-status');
+            const statusColors = {
+                'excellent': 'bg-success',
+                'healthy': 'bg-info',
+                'moderate': 'bg-warning',
+                'attention': 'bg-warning',
+                'critical': 'bg-danger',
+                'no_data': 'bg-secondary'
+            };
+            healthStatus.textContent = health.status || 'Unknown';
+            healthStatus.className = `badge ${statusColors[health.status] || 'bg-secondary'}`;
+
+            // Velocity Trend
+            const trend = dashboard.velocity_trend || {};
+            const trendIcons = {
+                'accelerating': '🚀',
+                'stable': '➡️',
+                'decelerating': '📉',
+                'insufficient_data': '❓'
+            };
+            const trendColors = {
+                'accelerating': '#10b981',
+                'stable': '#f59e0b',
+                'decelerating': '#ef4444',
+                'insufficient_data': '#6b7280'
+            };
+            document.getElementById('velocity-trend-icon').textContent = trendIcons[trend.direction] || '❓';
+            document.getElementById('velocity-trend-icon').style.color = trendColors[trend.direction] || '#6b7280';
+            document.getElementById('velocity-trend-status').textContent = trend.direction?.replace('_', ' ') || 'Unknown';
+
+            // Net Weight & Breakdown
+            const metrics = health.metrics || {};
+            document.getElementById('velocity-net-weight').textContent = (metrics.net_weight || 0).toFixed(2);
+            document.getElementById('velocity-positive').textContent = `+${(metrics.positive_weight || 0).toFixed(2)}`;
+            document.getElementById('velocity-negative').textContent = (metrics.negative_weight || 0).toFixed(2);
+
+            // Experiment Count
+            document.getElementById('velocity-experiment-count').textContent = metrics.total_experiments || 0;
+            document.getElementById('velocity-theme-count').textContent = `${(dashboard.theme_momentum || []).length} themes`;
+
+            // Render Theme Momentum
+            renderThemeMomentum(dashboard.theme_momentum || []);
+
+            // Render Daily Chart
+            renderDailyVelocityChart(dashboard.daily_velocity || []);
+
+            // Render Weekly Summary
+            renderWeeklySummary(dashboard.weekly_summary || []);
+        }
+
+        function renderVelocityEmpty() {
+            document.getElementById('velocity-health-score').textContent = '--';
+            document.getElementById('velocity-health-status').textContent = 'No Data';
+            document.getElementById('velocity-health-status').className = 'badge bg-secondary';
+            document.getElementById('velocity-trend-icon').textContent = '❓';
+            document.getElementById('velocity-trend-status').textContent = 'No Data';
+            document.getElementById('velocity-net-weight').textContent = '0.00';
+            document.getElementById('velocity-positive').textContent = '+0.00';
+            document.getElementById('velocity-negative').textContent = '0.00';
+            document.getElementById('velocity-experiment-count').textContent = '0';
+            document.getElementById('velocity-theme-count').textContent = '0 themes';
+            document.getElementById('velocity-themes-list').innerHTML = '<p class="text-muted text-center">No experiment data yet. Run some experiments to see velocity!</p>';
+            document.getElementById('velocity-daily-chart').innerHTML = '<p class="text-muted text-center">No daily data available</p>';
+            document.getElementById('velocity-weekly-summary').innerHTML = '<p class="text-muted text-center">No weekly data available</p>';
+        }
+
+        function renderThemeMomentum(themes) {
+            const container = document.getElementById('velocity-themes-list');
+            if (!themes || themes.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No theme data yet</p>';
+                return;
+            }
+
+            const momentumIcons = {
+                'accelerating': '🚀',
+                'stable': '➡️',
+                'declining': '📉',
+                'insufficient': '❓'
+            };
+
+            const healthColors = {
+                'healthy': '#10b981',
+                'neutral': '#6b7280',
+                'attention': '#f59e0b',
+                'concerning': '#ef4444'
+            };
+
+            container.innerHTML = themes.map(t => `
+                <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid ${healthColors[t.health] || '#6b7280'};">
+                    <div>
+                        <strong style="color: #e2e8f0;">${t.theme}</strong>
+                        <br>
+                        <small class="text-muted">${t.experiment_count} experiments</small>
+                    </div>
+                    <div class="text-end">
+                        <span style="font-size: 1.2em;">${momentumIcons[t.momentum] || '❓'}</span>
+                        <span class="badge ${t.total_weight >= 0 ? 'bg-success' : 'bg-danger'}">${t.total_weight >= 0 ? '+' : ''}${t.total_weight.toFixed(2)}</span>
+                        <br>
+                        <small class="text-muted">${t.momentum}</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDailyVelocityChart(daily) {
+            const container = document.getElementById('velocity-daily-chart');
+            if (!daily || daily.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No daily data available</p>';
+                return;
+            }
+
+            // Create simple ASCII-style bar chart
+            const maxWeight = Math.max(...daily.map(d => Math.abs(d.net_velocity)), 1);
+            const barWidth = 20;
+
+            let chartHtml = '<div style="overflow-x: auto;">';
+            daily.slice(-14).forEach(d => {  // Last 14 days
+                const date = new Date(d.date);
+                const dateStr = `${date.getMonth()+1}/${date.getDate()}`;
+                const barLength = Math.round((Math.abs(d.net_velocity) / maxWeight) * barWidth);
+                const isPositive = d.net_velocity >= 0;
+                const bar = isPositive
+                    ? '▓'.repeat(barLength)
+                    : '░'.repeat(barLength);
+                const color = isPositive ? '#10b981' : '#ef4444';
+
+                chartHtml += `
+                    <div class="d-flex align-items-center mb-1">
+                        <span style="width: 45px; color: #94a3b8;">${dateStr}</span>
+                        <span style="color: ${color}; font-family: monospace;">${bar.padEnd(barWidth, ' ')}</span>
+                        <span style="width: 60px; text-align: right; color: ${color};">${d.net_velocity >= 0 ? '+' : ''}${d.net_velocity.toFixed(2)}</span>
+                        <span style="margin-left: 8px; color: #6b7280;">${d.experiments}exp</span>
+                    </div>
+                `;
+            });
+            chartHtml += '</div>';
+
+            container.innerHTML = chartHtml;
+        }
+
+        function renderWeeklySummary(weekly) {
+            const container = document.getElementById('velocity-weekly-summary');
+            if (!weekly || weekly.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center col-12">No weekly data available</p>';
+                return;
+            }
+
+            container.innerHTML = weekly.slice(-4).map(w => {  // Last 4 weeks
+                const weekDate = new Date(w.week_start);
+                const weekStr = `Week of ${weekDate.getMonth()+1}/${weekDate.getDate()}`;
+                const passRateColor = w.pass_rate >= 70 ? '#10b981' : w.pass_rate >= 50 ? '#f59e0b' : '#ef4444';
+
+                return `
+                    <div class="col-md-3 col-sm-6 mb-2">
+                        <div class="p-2" style="background: rgba(255,255,255,0.05); border-radius: 6px;">
+                            <strong style="color: #e2e8f0; font-size: 0.85em;">${weekStr}</strong>
+                            <div class="mt-1">
+                                <span class="badge bg-secondary">${w.experiments} exp</span>
+                                <span class="badge" style="background: ${passRateColor};">${w.pass_rate}% pass</span>
+                            </div>
+                            <div class="mt-1">
+                                <small style="color: ${w.total_weight >= 0 ? '#10b981' : '#ef4444'};">
+                                    Weight: ${w.total_weight >= 0 ? '+' : ''}${w.total_weight.toFixed(2)}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Show Pricing Optimization Modal

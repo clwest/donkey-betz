@@ -1,46 +1,41 @@
-# Session 603 - Start Here
+# Session 604 - Start Here
 
-**Previous Session:** 602
+**Previous Session:** 603
 **Date:** December 29, 2025
-**Focus:** Learning Dashboard or Auto-Prioritization
+**Focus:** Auto-Prioritization, Experiment Suggestions, or Velocity Alerts
 
 ---
 
-## Session 602 Accomplishments
+## Session 603 Accomplishments
 
-### Boardroom Learning Integration - COMPLETE
+### Learning Velocity Dashboard - COMPLETE
 
-Integrated ChatGPT's weighted learning formula with the Boardroom decision-making UI:
+Built a dashboard that tracks how fast the system learns and visualizes momentum:
 
-| Feature | Description |
-|---------|-------------|
-| **Success Probability** | Historical likelihood based on similar past experiments |
-| **Risk Level** | Based on safety failures in similar decisions |
-| **AI Recommendation** | approve/pilot_first/defer/gate based on evidence |
-| **Similar Experiments** | Past experiments that inform this decision |
-| **Weighted Insights** | Key learnings with their weights |
+| Component | Description |
+|-----------|-------------|
+| **Health Score** | 0-100 score based on net weight, volume, declining themes |
+| **Velocity Trend** | Accelerating/stable/decelerating (7-day rolling average) |
+| **Theme Momentum** | Per-theme tracking with health indicators |
+| **Daily Chart** | ASCII-style velocity visualization (last 14 days) |
+| **Weekly Summary** | Pass rates and weight per week |
 
-### New Components
+### New Service
 
-| Component | Purpose |
-|-----------|---------|
-| `BoardroomLearningService` | Integrates learning with decisions |
-| `GET /api/boardroom/decisions/{id}/learning/` | Full learning context |
-| `GET /api/boardroom/learning-summary/` | Summary for pending decisions |
-| UI Modal | Displays learning insights with metrics |
+| File | Purpose |
+|------|---------|
+| `core/services/learning_velocity.py` | Velocity metrics and calculations |
 
-### The Complete Learning-Governance Loop
+### API Endpoints
 
-```
-Experiments generate learnings →
-Learnings inform Boardroom decisions →
-Decisions become policies/pilots →
-Pilots generate new experiments
-```
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/learning/velocity/` | Full velocity dashboard |
+| `GET /api/learning/velocity/theme/<theme>/` | Theme-specific velocity |
 
 ---
 
-## The Learning System (Sessions 590-602)
+## The Complete Learning System (Sessions 590-603)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -55,31 +50,36 @@ Session 598: Learning Loop UI Dashboard
         ↓
 Session 599: Fail Fast + Outcome Classification
         ↓
-Session 600: Real Metrics + Rollback + ThinkingAgent Enhancement
+Session 600: Real Metrics + Rollback + ThinkingAgent
         ↓
 Session 601: ChatGPT's Weighted Learning Formula
         ↓
-Session 602: Boardroom Integration ← COMPLETE!
+Session 602: Boardroom Integration
+        ↓
+Session 603: Learning Velocity Dashboard ← COMPLETE!
 ```
 
 ---
 
-## Session 603 Options
+## Session 604 Options
 
 ### Option A: Auto-Prioritize Decision Queue
-- Sort pending decisions by success probability
+- Sort pending Boardroom decisions by success probability
 - Surface high-probability, low-risk decisions first
 - Flag high-risk decisions for additional review
+- Add priority score to decision cards
 
-### Option B: Learning Velocity Dashboard
-- Track how fast the system learns
-- Visualize learning momentum over time
-- Show which themes are improving/declining
-
-### Option C: Experiment Suggestion Engine
+### Option B: Experiment Suggestion Engine
 - Based on learning gaps, suggest new experiments
-- Identify themes with insufficient data
+- Identify themes with insufficient data (< 3 samples)
 - Recommend sample sizes for confidence targets
+- Generate experiment ideas from patterns
+
+### Option C: Velocity Alerts
+- Notify when velocity is declining
+- Alert on themes that need attention
+- Surface stale themes with no recent activity
+- Add to notification system
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -92,23 +92,17 @@ Session 602: Boardroom Integration ← COMPLETE!
 # Start services
 make start && make celery
 
-# Test boardroom learning context
-curl http://localhost:8000/api/boardroom/learning-summary/ | python -m json.tool
-
-# Test specific decision learning
+# Test velocity dashboard
 .venv/bin/python manage.py shell -c "
-from core.models_unified_system import AgentDecisionSummary
-from core.services.boardroom_learning import BoardroomLearningService
-
-decision = AgentDecisionSummary.objects.first()
-if decision:
-    service = BoardroomLearningService()
-    context = service.get_decision_learning_context(decision)
-    print(f'Decision: {decision.topic}')
-    print(f'Success probability: {context[\"learning_context\"][\"success_probability\"]}%')
-    print(f'Risk level: {context[\"learning_context\"][\"risk_level\"]}')
-    print(f'Recommendation: {context[\"recommendation\"][\"action\"]}')
+from core.services.learning_velocity import LearningVelocityService
+service = LearningVelocityService()
+dashboard = service.get_velocity_dashboard(30)
+print(f'Health: {dashboard[\"overall_health\"][\"status\"]} ({dashboard[\"overall_health\"][\"score\"]})')
+print(f'Trend: {dashboard[\"velocity_trend\"][\"direction\"]}')
 "
+
+# Test boardroom learning
+curl http://localhost:8000/api/boardroom/learning-summary/ | python -m json.tool
 ```
 
 ---
@@ -117,23 +111,23 @@ if decision:
 
 | File | Purpose |
 |------|---------|
-| `core/services/weighted_learning.py` | ChatGPT's weighted learning formula |
-| `core/services/boardroom_learning.py` | Boardroom integration service |
-| `core/agents/thinking_agent.py` | Uses weighted learnings in context |
-| `docs/handoffs/SESSION_602_BOARDROOM_LEARNING_INTEGRATION.md` | Session handoff |
+| `core/services/learning_velocity.py` | Session 603 - Velocity metrics |
+| `core/services/weighted_learning.py` | Session 601 - Weighted formula |
+| `core/services/boardroom_learning.py` | Session 602 - Boardroom integration |
+| `docs/handoffs/SESSION_603_LEARNING_VELOCITY_DASHBOARD.md` | Session handoff |
 
 ---
 
-## System Stats After Session 602
+## System Stats After Session 603
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 97 (+1 from Session 602) |
+| **Services** | 98 (+1 from Session 603) |
 | **Celery Tasks** | 230 |
-| **The Learning Loop** | COMPLETE with Boardroom integration |
+| **The Learning Loop** | COMPLETE with Velocity Dashboard |
 
 ---
 
-**Session 602: Boardroom Learning Integration - COMPLETE**
+**Session 603: Learning Velocity Dashboard - COMPLETE**

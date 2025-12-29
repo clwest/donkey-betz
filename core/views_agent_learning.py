@@ -1483,6 +1483,80 @@ def get_boardroom_learning_summary(request):
 
 
 # =============================================================================
+# Session 603: Learning Velocity Dashboard
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_learning_velocity_dashboard(request):
+    """
+    Session 603: Get learning velocity dashboard data.
+
+    GET /api/learning/velocity/
+
+    Query params:
+    - days: Number of days to analyze (default 30, max 90)
+
+    Returns:
+    - overall_health: System health status and score
+    - velocity_trend: Is learning accelerating/stable/decelerating
+    - daily_velocity: Daily learning metrics with weights
+    - weekly_summary: Weekly aggregates
+    - theme_momentum: Which themes are improving/declining
+    """
+    try:
+        from core.services.learning_velocity import LearningVelocityService
+
+        days = min(90, int(request.GET.get('days', 30)))
+        service = LearningVelocityService()
+        data = service.get_velocity_dashboard(days)
+
+        return JsonResponse({
+            'success': True,
+            **data
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting learning velocity dashboard: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def get_theme_velocity(request, theme):
+    """
+    Session 603: Get velocity data for a specific theme.
+
+    GET /api/learning/velocity/theme/{theme}/
+
+    Query params:
+    - days: Number of days to analyze (default 30)
+    """
+    try:
+        from core.services.learning_velocity import LearningVelocityService
+        from urllib.parse import unquote
+
+        theme_name = unquote(theme)
+        days = min(90, int(request.GET.get('days', 30)))
+
+        service = LearningVelocityService()
+        data = service.get_theme_detail(theme_name, days)
+
+        return JsonResponse({
+            'success': True,
+            **data
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting theme velocity: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# =============================================================================
 # Session 368: Dream Validation & Implementation UI APIs
 # =============================================================================
 
