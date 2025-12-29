@@ -2356,6 +2356,92 @@ Returns push subscription status and settings.""",
                     "required": ["action"]
                 }
             }
+        },
+        # ===== Phase 12: Export & Scheduler Tools (Session 582) =====
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_exports",
+                "description": """Export data in various formats.
+Use this for:
+- "Export project as PDF"
+- "Download research as ZIP"
+- "Export revenue data"
+- "Export legal documents"
+- "Get my content as markdown"
+Returns export URLs or file data.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "export_type": {
+                            "type": "string",
+                            "enum": ["project", "research", "content", "revenue", "legal", "portfolio"],
+                            "description": "Type of data to export"
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["pdf", "zip", "csv", "markdown", "docx", "text"],
+                            "description": "Export format (default varies by type)"
+                        },
+                        "resource_id": {
+                            "type": "string",
+                            "description": "ID of resource to export (project_id, etc.)"
+                        },
+                        "options": {
+                            "type": "object",
+                            "description": "Additional export options",
+                            "properties": {
+                                "include_images": {"type": "boolean"},
+                                "include_metadata": {"type": "boolean"},
+                                "date_range": {"type": "string", "description": "Date range for revenue exports"}
+                            }
+                        }
+                    },
+                    "required": ["export_type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "manage_scheduler",
+                "description": """Manage scheduled tasks and distributions.
+Use this for:
+- "Show scheduled distributions"
+- "Cancel scheduled post"
+- "Reschedule my content"
+- "View Celery schedules"
+- "Schedule a workflow"
+Returns scheduled items and management actions.""",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["list", "cancel", "reschedule", "celery_schedules", "schedule_workflow"],
+                            "description": "Action: list, cancel, reschedule, celery_schedules, schedule_workflow"
+                        },
+                        "distribution_id": {
+                            "type": "string",
+                            "description": "Distribution ID for cancel/reschedule actions"
+                        },
+                        "workflow_id": {
+                            "type": "string",
+                            "description": "Workflow ID for schedule_workflow action"
+                        },
+                        "new_time": {
+                            "type": "string",
+                            "description": "New scheduled time (ISO format) for reschedule action"
+                        },
+                        "schedule_type": {
+                            "type": "string",
+                            "enum": ["distributions", "workflows", "all"],
+                            "description": "Type of schedules to list (default: all)"
+                        }
+                    },
+                    "required": ["action"]
+                }
+            }
         }
     ]
 
@@ -3609,6 +3695,13 @@ Returns push subscription status and settings.""",
 
         if tool_name == "manage_push_notifications":
             return self._manage_push_notifications(arguments)
+
+        # Phase 12: Export & Scheduler Tools (Session 582)
+        if tool_name == "manage_exports":
+            return self._manage_exports(arguments)
+
+        if tool_name == "manage_scheduler":
+            return self._manage_scheduler(arguments)
 
         if tool_name == "delegate_to_agent":
             agent_name = arguments.get('agent_name')
@@ -7824,4 +7917,311 @@ Returns push subscription status and settings.""",
 
         except Exception as e:
             logger.error(f"Error managing push notifications: {e}")
+            return {'success': False, 'error': str(e)}
+
+    # ===== Phase 12: Export & Scheduler Tools (Session 582) =====
+
+    def _manage_exports(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Export data in various formats.
+        """
+        try:
+            import requests
+
+            export_type = arguments.get('export_type', 'project')
+            format = arguments.get('format', 'pdf')
+            resource_id = arguments.get('resource_id')
+            options = arguments.get('options', {})
+
+            base_url = 'http://localhost:8000'
+
+            if export_type == 'project':
+                if not resource_id:
+                    # List recent projects instead
+                    from core.models_partnership import PartnershipProject
+                    projects = PartnershipProject.objects.order_by('-created_at')[:5]
+                    return {
+                        'success': True,
+                        'message': 'Provide a project_id to export. Recent projects:',
+                        'projects': [
+                            {'id': str(p.id), 'name': p.name, 'created': p.created_at.isoformat()}
+                            for p in projects
+                        ]
+                    }
+
+                format_map = {'pdf': 'pdf', 'zip': 'zip', 'csv': 'csv'}
+                fmt = format_map.get(format, 'pdf')
+                url = f'{base_url}/api/creative-projects/{resource_id}/export/{fmt}/'
+                return {
+                    'success': True,
+                    'export_url': url,
+                    'format': fmt,
+                    'message': f'Export URL ready: {url}'
+                }
+
+            elif export_type == 'research':
+                if not resource_id:
+                    return {'success': False, 'error': 'resource_id (project_id) required for research export'}
+                url = f'{base_url}/api/projects/{resource_id}/export-research-pdf/'
+                return {
+                    'success': True,
+                    'export_url': url,
+                    'format': 'pdf',
+                    'message': f'Research PDF export URL: {url}'
+                }
+
+            elif export_type == 'content':
+                if not resource_id:
+                    return {'success': False, 'error': 'resource_id (project_id) required for content export'}
+                url = f'{base_url}/api/projects/{resource_id}/export-content/'
+                return {
+                    'success': True,
+                    'export_url': url,
+                    'format': format or 'markdown',
+                    'message': f'Content export URL: {url}'
+                }
+
+            elif export_type == 'revenue':
+                try:
+                    params = {}
+                    if options.get('date_range'):
+                        params['date_range'] = options['date_range']
+                    response = requests.get(f'{base_url}/api/distribution/revenue/export/', params=params, timeout=15)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return {
+                            'success': True,
+                            'revenue_data': data,
+                            'format': 'json',
+                            'summary': f"Revenue export complete"
+                        }
+                except:
+                    pass
+
+                # Fallback: return export URL
+                return {
+                    'success': True,
+                    'export_url': f'{base_url}/api/distribution/revenue/export/',
+                    'format': 'json',
+                    'message': 'Revenue export endpoint ready'
+                }
+
+            elif export_type == 'legal':
+                url = f'{base_url}/api/legal/export-section/'
+                return {
+                    'success': True,
+                    'export_url': url,
+                    'format': format or 'pdf',
+                    'message': 'Legal document export URL ready'
+                }
+
+            elif export_type == 'portfolio':
+                if not resource_id:
+                    return {'success': False, 'error': 'resource_id (project_id) required for portfolio export'}
+                url = f'{base_url}/api/v1/portfolio/projects/{resource_id}/export/'
+                return {
+                    'success': True,
+                    'export_url': url,
+                    'format': format or 'zip',
+                    'message': f'Portfolio export URL: {url}'
+                }
+
+            return {'success': False, 'error': f'Unknown export type: {export_type}'}
+
+        except Exception as e:
+            logger.error(f"Error managing exports: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _manage_scheduler(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Session 582: Manage scheduled tasks and distributions.
+        """
+        try:
+            import requests
+            from django.utils import timezone
+
+            action = arguments.get('action', 'list')
+            distribution_id = arguments.get('distribution_id')
+            workflow_id = arguments.get('workflow_id')
+            new_time = arguments.get('new_time')
+            schedule_type = arguments.get('schedule_type', 'all')
+
+            base_url = 'http://localhost:8000'
+
+            if action == 'list':
+                results = {'distributions': [], 'workflows': [], 'celery_schedules': []}
+
+                if schedule_type in ['distributions', 'all']:
+                    try:
+                        response = requests.get(f'{base_url}/api/distribution/scheduled/', timeout=10)
+                        if response.status_code == 200:
+                            data = response.json()
+                            results['distributions'] = data if isinstance(data, list) else data.get('results', [])
+                    except:
+                        from core.models_unified_system import ContentDistribution
+                        dists = ContentDistribution.objects.filter(
+                            status='scheduled',
+                            scheduled_time__gte=timezone.now()
+                        ).order_by('scheduled_time')[:10]
+                        results['distributions'] = [
+                            {
+                                'id': str(d.id),
+                                'platform': d.platform,
+                                'scheduled_time': d.scheduled_time.isoformat(),
+                                'status': d.status
+                            }
+                            for d in dists
+                        ]
+
+                if schedule_type in ['workflows', 'all']:
+                    try:
+                        from core.models_workflow import WorkflowExecution
+                        workflows = WorkflowExecution.objects.filter(
+                            status='scheduled'
+                        ).order_by('-created_at')[:10]
+                        results['workflows'] = [
+                            {
+                                'id': str(w.id),
+                                'workflow_name': w.workflow.name if hasattr(w, 'workflow') else 'Unknown',
+                                'status': w.status,
+                                'created_at': w.created_at.isoformat()
+                            }
+                            for w in workflows
+                        ]
+                    except:
+                        results['workflows'] = []
+
+                total = len(results['distributions']) + len(results['workflows'])
+                return {
+                    'success': True,
+                    'scheduled_items': results,
+                    'total': total,
+                    'summary': f"Found {len(results['distributions'])} scheduled distributions, {len(results['workflows'])} scheduled workflows"
+                }
+
+            elif action == 'cancel':
+                if not distribution_id:
+                    return {'success': False, 'error': 'distribution_id required for cancel action'}
+                try:
+                    response = requests.post(f'{base_url}/api/distribution/{distribution_id}/cancel/', timeout=10)
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'distribution_id': distribution_id,
+                            'message': 'Distribution cancelled'
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ContentDistribution
+                try:
+                    dist = ContentDistribution.objects.get(id=distribution_id)
+                    dist.status = 'cancelled'
+                    dist.save()
+                    return {
+                        'success': True,
+                        'distribution_id': distribution_id,
+                        'message': 'Distribution cancelled'
+                    }
+                except ContentDistribution.DoesNotExist:
+                    return {'success': False, 'error': 'Distribution not found'}
+
+            elif action == 'reschedule':
+                if not distribution_id:
+                    return {'success': False, 'error': 'distribution_id required for reschedule action'}
+                if not new_time:
+                    return {'success': False, 'error': 'new_time required for reschedule action'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/distribution/{distribution_id}/reschedule/',
+                        json={'scheduled_time': new_time},
+                        timeout=10
+                    )
+                    if response.status_code == 200:
+                        return {
+                            'success': True,
+                            'distribution_id': distribution_id,
+                            'new_time': new_time,
+                            'message': f'Distribution rescheduled to {new_time}'
+                        }
+                except:
+                    pass
+
+                from core.models_unified_system import ContentDistribution
+                from dateutil.parser import parse
+                try:
+                    dist = ContentDistribution.objects.get(id=distribution_id)
+                    dist.scheduled_time = parse(new_time)
+                    dist.save()
+                    return {
+                        'success': True,
+                        'distribution_id': distribution_id,
+                        'new_time': new_time,
+                        'message': f'Distribution rescheduled to {new_time}'
+                    }
+                except ContentDistribution.DoesNotExist:
+                    return {'success': False, 'error': 'Distribution not found'}
+
+            elif action == 'celery_schedules':
+                try:
+                    response = requests.get(f'{base_url}/api/monitoring/schedules/', timeout=10)
+                    if response.status_code == 200:
+                        data = response.json()
+                        schedules = data.get('schedules', data) if isinstance(data, dict) else data
+                        return {
+                            'success': True,
+                            'celery_schedules': schedules[:20] if isinstance(schedules, list) else schedules,
+                            'summary': f"Found {len(schedules) if isinstance(schedules, list) else 'multiple'} Celery beat schedules"
+                        }
+                except:
+                    pass
+
+                # Fallback: return basic schedule info
+                from core.celery import app
+                try:
+                    schedules = list(app.conf.beat_schedule.keys())[:20]
+                    return {
+                        'success': True,
+                        'celery_schedules': schedules,
+                        'total': len(app.conf.beat_schedule),
+                        'summary': f"Found {len(app.conf.beat_schedule)} Celery beat schedules"
+                    }
+                except:
+                    return {
+                        'success': True,
+                        'celery_schedules': [],
+                        'message': 'Unable to retrieve Celery schedules'
+                    }
+
+            elif action == 'schedule_workflow':
+                if not workflow_id:
+                    return {'success': False, 'error': 'workflow_id required for schedule_workflow action'}
+
+                try:
+                    response = requests.post(
+                        f'{base_url}/api/workflows/{workflow_id}/schedule/',
+                        json={'scheduled_time': new_time} if new_time else {},
+                        timeout=10
+                    )
+                    if response.status_code in [200, 201]:
+                        return {
+                            'success': True,
+                            'workflow_id': workflow_id,
+                            'message': 'Workflow scheduled successfully'
+                        }
+                except:
+                    pass
+
+                return {
+                    'success': True,
+                    'workflow_id': workflow_id,
+                    'schedule_url': f'{base_url}/api/workflows/{workflow_id}/schedule/',
+                    'message': 'Use the schedule URL to schedule this workflow'
+                }
+
+            return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error managing scheduler: {e}")
             return {'success': False, 'error': str(e)}
