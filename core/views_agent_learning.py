@@ -3125,6 +3125,12 @@ def get_experiments(request):
                 'decision_topic': decision_topic,
                 'decision_id': decision_id,
                 'risk_level': risk_level,
+                # Session 599: Halt and outcome classification
+                'is_halted': exp.is_halted,
+                'halted_at': exp.halted_at.isoformat() if exp.halted_at else None,
+                'halted_by': exp.halted_by,
+                'halt_reason': exp.halt_reason,
+                'outcome_classification': exp.outcome_classification,
             })
 
         return JsonResponse({
@@ -3193,12 +3199,14 @@ def complete_experiment(request, experiment_id):
     """
     Session 596: Mark an experiment as complete with outcome.
     Session 597: Auto-creates ExperimentLearning and updates DecisionTypeSuccessPattern.
+    Session 599: Added outcome_classification (PASS/LEARN/FAIL).
 
     POST /api/experiments/<uuid:experiment_id>/complete/
 
     Body:
     {
-        "status": "success" | "failure" | "inconclusive",
+        "status": "success" | "failure" | "inconclusive" | "partial",
+        "outcome_classification": "pass" | "learn" | "fail" (optional, auto-determined if not provided),
         "learnings": "What we learned from this experiment",
         "what_worked": "Specific tactics that worked",
         "what_failed": "Specific tactics that didn't work",
@@ -3213,13 +3221,21 @@ def complete_experiment(request, experiment_id):
         data = json.loads(request.body)
 
         status = data.get('status', 'inconclusive')
-        if status not in ['success', 'failure', 'inconclusive']:
+        if status not in ['success', 'failure', 'inconclusive', 'partial']:
             return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
 
-        exp.status = status
-        exp.learnings = data.get('learnings', '')
-        exp.ended_at = timezone.now()
-        exp.save()
+        # Session 599: Get optional outcome classification
+        outcome_classification = data.get('outcome_classification')
+        if outcome_classification and outcome_classification not in ['pass', 'learn', 'fail']:
+            return JsonResponse({'success': False, 'error': 'Invalid outcome_classification'}, status=400)
+
+        # Use the model's complete method which handles outcome classification
+        exp.complete(
+            status=status,
+            result_summary=data.get('learnings', ''),
+            learnings=data.get('learnings', ''),
+            outcome_classification=outcome_classification
+        )
 
         # Session 597: Auto-create ExperimentLearning record
         learning = None
@@ -3245,16 +3261,94 @@ def complete_experiment(request, experiment_id):
             'success': True,
             'experiment_id': str(exp.id),
             'status': exp.status,
+            'outcome_classification': exp.outcome_classification,  # Session 599
             'ended_at': exp.ended_at.isoformat(),
             'learning_created': learning is not None,
             'learning_id': str(learning.id) if learning else None,
-            'message': f'Experiment marked as {status}'
+            'message': f'Experiment marked as {status} (Classification: {exp.outcome_classification.upper()})'
         })
 
     except Experiment.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
     except Exception as e:
         logger.error(f"Error completing experiment: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def halt_experiment(request, experiment_id):
+    """
+    Session 599: Manually halt a running experiment.
+
+    POST /api/experiments/<uuid:experiment_id>/halt/
+
+    Body:
+    {
+        "reason": "Why this experiment is being halted",
+        "halted_by": "username or 'manual'" (optional, defaults to 'manual')
+    }
+
+    Halted experiments:
+    - Are marked as 'failure' status
+    - Get outcome_classification = 'fail'
+    - Require rollback and remediation
+    - Trigger Discord notification
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import Experiment
+
+        exp = Experiment.objects.get(id=experiment_id)
+
+        # Check if already halted or not running
+        if exp.is_halted:
+            return JsonResponse({
+                'success': False,
+                'error': 'Experiment already halted'
+            }, status=400)
+
+        if exp.status != 'running':
+            return JsonResponse({
+                'success': False,
+                'error': f'Cannot halt experiment with status: {exp.status}'
+            }, status=400)
+
+        data = json.loads(request.body) if request.body else {}
+        reason = data.get('reason', 'Manual halt requested')
+        halted_by = data.get('halted_by', 'manual')
+
+        # Halt the experiment
+        exp.halt(reason=reason, halted_by=halted_by)
+
+        # Send Discord notification
+        try:
+            from core.services.discord_notifications import DiscordNotificationService
+            discord = DiscordNotificationService()
+            message = f"**🛑 EXPERIMENT MANUALLY HALTED**\n\n"
+            message += f"**Experiment:** {exp.name}\n"
+            message += f"**By:** {halted_by}\n"
+            message += f"**Reason:** {reason}\n"
+            message += f"**Outcome:** FAIL (rollback required)"
+            discord.send_to_channel('system-status', message)
+        except Exception as discord_error:
+            logger.debug(f"Discord notification failed: {discord_error}")
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'status': exp.status,
+            'is_halted': exp.is_halted,
+            'halt_reason': exp.halt_reason,
+            'halted_by': exp.halted_by,
+            'outcome_classification': exp.outcome_classification,
+            'message': f'Experiment halted: {reason}'
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error halting experiment: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 

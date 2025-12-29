@@ -58819,7 +58819,7 @@ ${item.generated_content}
                     }).join('');
                 }
 
-                // Render running experiments
+                // Render running experiments (Session 599: Added halt button)
                 const runningContainer = document.getElementById('exp-running');
                 if (data.running_experiments.length === 0) {
                     runningContainer.innerHTML = '<p class="text-muted text-center small">No experiments currently running. Start a pilot to create an experiment!</p>';
@@ -58836,6 +58836,10 @@ ${item.generated_content}
                                     </div>
                                     <div class="text-end">
                                         <span style="color: #3b82f6; font-size: 12px;">${exp.days_running || 0}d running</span>
+                                        <button class="btn btn-sm btn-outline-danger ms-2" style="font-size: 10px; padding: 2px 6px;"
+                                                onclick="haltExperiment('${exp.id}')" title="Emergency halt this experiment">
+                                            🛑 Halt
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="mt-2" style="font-size: 11px;">
@@ -58851,7 +58855,7 @@ ${item.generated_content}
                     }).join('');
                 }
 
-                // Render completed experiments
+                // Render completed experiments (Session 599: Added outcome classification)
                 const completedContainer = document.getElementById('exp-completed');
                 if (data.recent_completions.length === 0) {
                     completedContainer.innerHTML = '<p class="text-muted text-center small">No completed experiments yet</p>';
@@ -58860,13 +58864,23 @@ ${item.generated_content}
                         const statusColor = exp.status === 'success' ? '#10b981' : exp.status === 'failure' ? '#ef4444' : '#f59e0b';
                         const statusIcon = exp.status === 'success' ? '✅' : exp.status === 'failure' ? '❌' : '⚠️';
 
+                        // Session 599: Outcome classification styling
+                        const classificationColor = exp.outcome_classification === 'pass' ? '#10b981'
+                            : exp.outcome_classification === 'fail' ? '#ef4444' : '#f59e0b';
+                        const classificationLabel = exp.outcome_classification === 'pass' ? 'PASS'
+                            : exp.outcome_classification === 'fail' ? 'FAIL' : 'LEARN';
+                        const classificationIcon = exp.outcome_classification === 'pass' ? '✓'
+                            : exp.outcome_classification === 'fail' ? '✗' : '📚';
+
                         return `
                             <div class="experiment-card mb-2 p-2" style="background: rgba(107, 114, 128, 0.1); border-radius: 6px; border-left: 3px solid ${statusColor};">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div style="flex: 1;">
                                         <strong style="color: #e5e7eb; font-size: 13px;">${exp.name.substring(0, 40)}${exp.name.length > 40 ? '...' : ''}</strong>
-                                        <div class="mt-1">
+                                        <div class="mt-1 d-flex gap-1">
                                             <span class="badge" style="background: ${statusColor}; font-size: 9px;">${statusIcon} ${exp.status.toUpperCase()}</span>
+                                            <span class="badge" style="background: ${classificationColor}; font-size: 9px;">${classificationIcon} ${classificationLabel}</span>
+                                            ${exp.is_halted ? '<span class="badge" style="background: #dc2626; font-size: 9px;">🛑 HALTED</span>' : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -58875,6 +58889,11 @@ ${item.generated_content}
                                     <span class="ms-2" style="color: #f59e0b;">🎯 Target:</span> ${exp.target_value || '--'}
                                     <span class="ms-2" style="color: ${statusColor};">📈 Result:</span> ${exp.current_value || '--'}
                                 </div>
+                                ${exp.is_halted && exp.halt_reason ? `
+                                    <div class="mt-1" style="font-size: 10px; color: #ef4444;">
+                                        <strong>Halt reason:</strong> ${exp.halt_reason.substring(0, 60)}${exp.halt_reason.length > 60 ? '...' : ''}
+                                    </div>
+                                ` : ''}
                             </div>
                         `;
                     }).join('');
@@ -58884,6 +58903,42 @@ ${item.generated_content}
                 console.error('Error loading experiment portfolio:', error);
             }
         }
+
+        // ========== SESSION 599: EXPERIMENT HALT FUNCTION ==========
+
+        async function haltExperiment(experimentId) {
+            const reason = prompt('Enter reason for halting this experiment:\n\n(Halted experiments are marked as FAIL and require rollback)');
+
+            if (!reason) {
+                return; // User cancelled
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/halt/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reason: reason,
+                        halted_by: 'manual'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Experiment halted successfully!\n\nOutcome: ${data.outcome_classification.toUpperCase()}\nReason: ${data.halt_reason}`);
+                    loadExperimentPortfolio();
+                    loadLearningsDashboard();
+                } else {
+                    alert(`Failed to halt experiment: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error halting experiment:', error);
+                alert('Error halting experiment. Check console for details.');
+            }
+        }
+
+        // ========== END SESSION 599 ==========
 
         // ========== SESSION 598: LEARNING LOOP DASHBOARD ==========
 

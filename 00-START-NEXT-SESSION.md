@@ -1,26 +1,44 @@
-# Session 599 - Start Here
+# Session 600 - Start Here
 
-**Previous Session:** 598
+**Previous Session:** 599
 **Date:** December 29, 2025
-**Focus:** Learning Loop Enhancements or Kill Switch or AI-Enhanced Learning
+**Focus:** Real Metrics Integration or Rollback Automation
 
 ---
 
-## Session 598 Accomplishments
+## Session 599 Accomplishments
 
-### Learning Loop UI Dashboard (Complete)
+### Automatic Fail Fast & Outcome Classification (Complete)
 
-Built a visual dashboard for the experiment learning loop:
+Implemented ChatGPT's recommendations:
 
-| Component | Description |
-|-----------|-------------|
-| **GET /api/experiments/learnings/** | Filterable API for experiment learnings |
-| **GET /api/experiments/patterns/** | Success patterns by decision type |
-| **Learning Loop Dashboard** | UI section in Intelligence Command Center |
-| **Success Pattern Visualization** | Progress bars + cards per decision type |
-| **Filters** | Outcome and decision type dropdowns |
+| Feature | Description |
+|---------|-------------|
+| **Automatic Halt Conditions** | Experiments auto-halt when thresholds exceeded |
+| **Outcome Classification** | PASS/LEARN/FAIL for clear post-experiment actions |
+| **Monitoring Task** | Celery task checks experiments every 10 minutes |
+| **Discord Notifications** | Auto-halts trigger Discord alerts |
+| **Manual Halt Button** | UI button to halt running experiments |
 
-### The Complete Learning Loop
+### Default Halt Conditions
+```python
+{
+    'bias_detection_rate_max': 15.0,      # % in 2-hour window
+    'user_trust_index_min': 3.8,          # Minimum score
+    'integrity_anomaly_detected': True,   # Any anomaly halts
+    'telemetry_kill_switch': True,        # External kill signal
+    'error_rate_max': 25.0,               # % errors in 1-hour window
+}
+```
+
+### Outcome Classification Logic
+- **PASS** = success → proceed to execution
+- **LEARN** = failure/partial/inconclusive → extract insights, don't proceed
+- **FAIL** = halted (auto or manual) → rollback + remediation required
+
+---
+
+## The Complete Learning Loop (Now Complete!)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -31,33 +49,34 @@ Session 596: Experiment Tracking Registry
         ↓
 Session 597: ExperimentLearning + Pattern Models
         ↓
-Session 598: Learning Loop UI Dashboard ← YOU ARE HERE
+Session 598: Learning Loop UI Dashboard
         ↓
-ThinkingAgent Context → Better Future Decisions
+Session 599: Fail Fast + Outcome Classification ← COMPLETE!
+        ↓
+ThinkingAgent reads learnings → Better Future Decisions
 ```
 
 ---
 
-## Session 599 Options
+## Session 600 Options
 
-### Option A: Kill Switch for Experiments
-- Add "Stop Experiment" button to running experiments
-- Required reason input before stopping
-- Auto-fails the experiment with reason
-- Discord notification of early termination
-- Learning created even for stopped experiments
+### Option A: Connect Halt Conditions to Real Metrics
+- Connect to actual monitoring dashboards
+- Real-time bias detection from output analysis
+- User trust index from feedback systems
+- Error rate from telemetry endpoints
 
-### Option B: AI-Enhanced Learning Extraction
-- Use LLM to extract richer learnings from experiment outcomes
-- Auto-generate deeper insights from patterns
-- Smart recommendations based on similar past experiments
-- Confidence scoring improvements
+### Option B: Rollback Automation
+- Auto-rollback when FAIL outcome detected
+- Generate remediation checklist
+- Discord workflow for remediation steps
+- Track remediation progress
 
-### Option C: Learning Loop Enhancements
-- Learning comparison view (A vs B experiments)
-- Export learnings to CSV/PDF
-- Learning quality scoring
-- Pattern trend analysis over time
+### Option C: ThinkingAgent Learning Enhancement
+- Feed outcome classifications to ThinkingAgent
+- Weight learnings by outcome type
+- Pattern detection across PASS/LEARN/FAIL outcomes
+- Predictive success scoring
 
 ---
 
@@ -75,7 +94,7 @@ ThinkingAgent Context → Better Future Decisions
 | **Experiments** | 1 |
 | **ExperimentLearnings** | 1 |
 | **DecisionTypeSuccessPatterns** | 1 |
-| **Celery Tasks** | 228 |
+| **Celery Tasks** | 229 (+1) |
 
 ---
 
@@ -85,17 +104,26 @@ ThinkingAgent Context → Better Future Decisions
 # Start services
 make start && make celery
 
-# Verify learning loop data
+# Verify new fields exist
 .venv/bin/python manage.py shell -c "
-from core.models_pilot_readiness import ExperimentLearning, DecisionTypeSuccessPattern
-print(f'ExperimentLearning: {ExperimentLearning.objects.count()}')
-print(f'DecisionTypeSuccessPattern: {DecisionTypeSuccessPattern.objects.count()}')
+from core.models_pilot_readiness import Experiment
+exp = Experiment.objects.first()
+if exp:
+    print(f'halt_conditions: {exp.halt_conditions}')
+    print(f'outcome_classification: {exp.outcome_classification}')
+else:
+    print('No experiments yet')
 "
 
-# View Learning Loop Dashboard
+# Check Celery Beat schedule includes new task
+.venv/bin/celery -A core inspect scheduled | grep monitor
+
+# View UI changes
 # 1. Open http://localhost:8000/ai-studio/
 # 2. Navigate to Intelligence Command Center tab
-# 3. Scroll to Learning Loop Dashboard section
+# 3. Check Experiment Tracking Registry for:
+#    - Halt buttons on running experiments
+#    - PASS/LEARN/FAIL badges on completed experiments
 ```
 
 ---
@@ -104,11 +132,13 @@ print(f'DecisionTypeSuccessPattern: {DecisionTypeSuccessPattern.objects.count()}
 
 | File | Purpose |
 |------|---------|
-| `core/views_agent_learning.py:3364-3505` | Learning Loop API endpoints |
-| `ai_core/templates/ai_image_studio.html:7515-7597` | Learning Loop Dashboard HTML |
-| `ai_core/templates/ai_image_studio.html:58882-59059` | Learning Loop Dashboard JS |
-| `docs/handoffs/SESSION_598_LEARNING_LOOP_UI.md` | Session 598 handoff |
+| `core/models_pilot_readiness.py` | Experiment model with halt + classification fields |
+| `core/tasks.py:20432-20561` | monitor_running_experiments Celery task |
+| `core/celery.py:1220-1228` | Beat schedule for monitoring |
+| `core/views_agent_learning.py:3272-3346` | halt_experiment endpoint |
+| `ai_core/templates/ai_image_studio.html:58907-58941` | haltExperiment JS function |
+| `docs/handoffs/SESSION_599_FAIL_FAST_AND_OUTCOME_CLASSIFICATION.md` | Session handoff |
 
 ---
 
-**Session 598: Learning Loop UI Dashboard - COMPLETE**
+**Session 599: Fail Fast & Outcome Classification - COMPLETE**
