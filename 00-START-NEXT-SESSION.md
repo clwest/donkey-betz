@@ -131,4 +131,18 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-**Session 589: Execution gap infrastructure complete - 10 decisions ready for auto-promotion**
+## Spider Telemetry Fix (ChatGPT Review)
+
+ChatGPT identified spider count desync across Self Blog, System Insights, and UI.
+
+**Fixed 8 files** with stale hardcoded values (72, 74, 40 → 77):
+- HTML defaults in `ai_image_studio.html`
+- Business agent prompts
+- WebSocket consumers
+- API fallbacks
+
+All spider counts now use `spider_registry.get_spider_count()['total'] = 77`
+
+---
+
+**Session 589: Execution gap infrastructure + Spider telemetry unification complete**
