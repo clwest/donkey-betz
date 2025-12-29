@@ -290,6 +290,37 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             prompt_parts.append(f"- Actions Taken: {prev.get('actions_count', 0)}\n")
             prompt_parts.append("\n")
 
+        # Session 597: Add experiment learnings context
+        if 'experiment_learnings' in context and context['experiment_learnings']:
+            learnings = context['experiment_learnings']
+            prompt_parts.append("### Experiment Learnings (Past Outcomes)\n")
+            prompt_parts.append(f"- Total Learnings: {learnings.get('total', 0)}\n")
+            prompt_parts.append(f"- Success Rate: {learnings.get('overall_success_rate', 0):.1f}%\n\n")
+
+            if learnings.get('recent_learnings'):
+                prompt_parts.append("**Recent Learnings from Completed Experiments:**\n")
+                for learning in learnings['recent_learnings'][:5]:
+                    prompt_parts.append(f"- **{learning.get('experiment_name', 'Unknown')}** [{learning.get('outcome', 'N/A')}]\n")
+                    if learning.get('key_insight'):
+                        prompt_parts.append(f"  - Insight: {learning['key_insight'][:200]}\n")
+                    if learning.get('recommendation'):
+                        prompt_parts.append(f"  - Recommendation: {learning['recommendation'][:200]}\n")
+
+            if learnings.get('success_patterns'):
+                prompt_parts.append("\n**Decision Type Success Patterns:**\n")
+                for pattern in learnings['success_patterns'][:5]:
+                    prompt_parts.append(f"- {pattern.get('decision_type', 'Unknown')}: {pattern.get('success_rate', 0):.1f}% ")
+                    prompt_parts.append(f"({pattern.get('total', 0)} experiments)\n")
+                    if pattern.get('top_insight'):
+                        prompt_parts.append(f"  - Key insight: {pattern['top_insight'][:150]}\n")
+
+            prompt_parts.append("\n**IMPORTANT - Using Experiment Learnings:**\n")
+            prompt_parts.append("Use these learnings to improve future decisions:\n")
+            prompt_parts.append("- Decision types with low success rates need different approaches\n")
+            prompt_parts.append("- Apply successful tactics from past experiments to new opportunities\n")
+            prompt_parts.append("- Avoid known failure patterns when making new decisions\n")
+            prompt_parts.append("\n")
+
         # Add the task
         prompt_parts.append("\n## Your Task\n")
         prompt_parts.append("Analyze this context deeply. Identify patterns, generate insights, ")
@@ -516,6 +547,58 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                 }
         except Exception as e:
             logger.warning(f"Error getting previous thoughts: {e}")
+
+        # Session 597: Gather experiment learnings for feedback loop
+        try:
+            from core.models_pilot_readiness import ExperimentLearning, DecisionTypeSuccessPattern
+
+            # Get recent learnings
+            recent_learnings = []
+            for learning in ExperimentLearning.objects.order_by('-extracted_at')[:10]:
+                recent_learnings.append({
+                    'experiment_name': learning.experiment.name if learning.experiment else 'Unknown',
+                    'outcome': learning.outcome,
+                    'decision_type': learning.decision_type,
+                    'key_insight': learning.key_insight,
+                    'what_worked': learning.what_worked,
+                    'what_failed': learning.what_failed,
+                    'recommendation': learning.future_recommendation,
+                    'kpi_delta': learning.kpi_delta_percent,
+                })
+
+            # Get success patterns
+            success_patterns = []
+            for pattern in DecisionTypeSuccessPattern.objects.order_by('-total_experiments')[:10]:
+                success_patterns.append({
+                    'decision_type': pattern.decision_type,
+                    'success_rate': pattern.success_rate,
+                    'total': pattern.total_experiments,
+                    'avg_kpi_delta': pattern.avg_kpi_delta_percent,
+                    'top_insight': pattern.top_insights[0] if pattern.top_insights else None,
+                })
+
+            # Calculate overall success rate
+            total_learnings = ExperimentLearning.objects.count()
+            successful_learnings = ExperimentLearning.objects.filter(outcome='success').count()
+            overall_success = (successful_learnings / total_learnings * 100) if total_learnings > 0 else 0
+
+            context['experiment_learnings'] = {
+                'total': total_learnings,
+                'overall_success_rate': overall_success,
+                'recent_learnings': recent_learnings,
+                'success_patterns': success_patterns,
+            }
+
+            # Mark learnings as fed to ThinkingAgent
+            if recent_learnings:
+                ExperimentLearning.objects.filter(
+                    fed_to_thinking_agent=False
+                ).update(fed_to_thinking_agent=True, fed_at=timezone.now())
+                logger.info(f"Fed {len(recent_learnings)} experiment learnings to ThinkingAgent context")
+
+        except Exception as e:
+            logger.warning(f"Error gathering experiment learnings: {e}")
+            context['experiment_learnings'] = {}
 
         return context
 

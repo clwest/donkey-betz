@@ -1,65 +1,64 @@
-# Session 597 - Start Here
+# Session 598 - Start Here
 
-**Previous Session:** 596
+**Previous Session:** 597
 **Date:** December 29, 2025
-**Focus:** Experiment Tracking Registry
+**Focus:** Learning Loop UI or AI-Enhanced Learning Extraction
 
 ---
 
-## Session 596 Accomplishments
+## Session 597 Accomplishments
 
-### Experiment Tracking Registry (Complete)
+### Experiment Learning Loop (Complete)
 
-Built a system to connect pilots to formal experiments with KPI ownership:
+Built a feedback system that connects experiment outcomes back to decision-making:
 
 | Component | Description |
 |-----------|-------------|
-| **Experiment Model** | Links to PilotExecution, tracks KPI owner, target, current value |
-| **Auto-Create** | Experiment created automatically when pilot starts |
-| **API Endpoints** | 4 new endpoints for experiments |
-| **Dashboard UI** | Full portfolio view in Intelligence Command Center |
+| **ExperimentLearning Model** | Captures structured learnings from completed experiments |
+| **DecisionTypeSuccessPattern Model** | Aggregates success patterns by decision type |
+| **Auto-Learning Extraction** | Learning created automatically when experiment completes |
+| **ThinkingAgent Integration** | Learnings fed into ThinkingAgent context |
 
-### API Endpoints
+### The Learning Loop Flow
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/experiments/` | GET | List all experiments |
-| `/api/experiments/portfolio/` | GET | Portfolio metrics & KPI owners |
-| `/api/experiments/<id>/update-kpi/` | POST | Update KPI value |
-| `/api/experiments/<id>/complete/` | POST | Mark experiment complete |
+```
+Boardroom Decision → Pilot Gate → Pilot Started → Experiment
+        ↓
+Experiment Completed → Learning Extracted → Pattern Updated
+        ↓
+ThinkingAgent Reads Learnings → Future Decisions Improved
+```
 
-### Database Fix
+### Decision Type Classification
 
-Resolved migration issue where pilot/experiment tables weren't created despite migrations showing as applied. Tables recreated manually.
-
-**Note:** The 18 pilots from Session 594 were lost during table recreation. Need to restart pilots to populate the system.
+System auto-classifies decisions:
+- `content_strategy`: content, video, post, blog topics
+- `market_strategy`: market, price, competitor topics
+- `tech_adoption`: tech, platform, tool, api topics
+- `resource_allocation`: team, hire, resource topics
+- `general`: all other topics
 
 ---
 
-## Session 597 Options
+## Session 598 Options
 
-### Option A: Kill Switch Integration
+### Option A: Learning Loop UI
+- Dashboard to view experiment learnings
+- Success pattern visualization
+- Decision type performance charts
+- Filter by outcome, date, decision type
 
-Add ability to stop experiments mid-run:
-- "Stop Experiment" button on dashboard
+### Option B: AI-Enhanced Learning Extraction
+- Use LLM to extract richer learnings from experiment outcomes
+- Auto-generate deeper insights from patterns
+- Smart recommendations based on similar past experiments
+- Confidence scoring improvements
+
+### Option C: Kill Switch Integration
+- Add "Stop Experiment" button to dashboard
 - Reason input required
 - Auto-fails the experiment
-- Discord notification
-
-### Option B: Experiment Learning Loop
-
-Improve future decision-making from outcomes:
-- Capture experiment outcomes when complete
-- Feed learnings back to decision-making
-- Improve future success predictions
-- Track success patterns by decision type
-
-### Option C: KPI Owner Assignment UI
-
-Make accountability explicit:
-- Allow manual KPI owner assignment
-- Send notifications to owners
-- Owner-specific dashboard view
+- Discord notification of early termination
 
 ---
 
@@ -75,6 +74,8 @@ Make accountability explicit:
 | **Pilot Readiness Gates** | 0 (tables recreated) |
 | **Running Pilots** | 0 (tables recreated) |
 | **Experiments** | 0 (waiting for pilots) |
+| **ExperimentLearnings** | 0 (waiting for completed experiments) |
+| **DecisionTypeSuccessPatterns** | 0 (auto-created on first learning) |
 | **Celery Tasks** | 228 |
 
 ---
@@ -85,15 +86,25 @@ Make accountability explicit:
 # Start services
 make start && make celery
 
-# Test experiment API
-curl -s http://localhost:8000/api/experiments/portfolio/ | python3 -m json.tool
+# Verify learning loop models
+.venv/bin/python manage.py shell -c "
+from core.models_pilot_readiness import ExperimentLearning, DecisionTypeSuccessPattern
+print(f'ExperimentLearning: {ExperimentLearning.objects.count()}')
+print(f'DecisionTypeSuccessPattern: {DecisionTypeSuccessPattern.objects.count()}')
+"
 
-# Start a pilot to create experiment
+# Test complete experiment with learning
+curl -X POST http://localhost:8000/api/experiments/<uuid>/complete/ \
+  -H "Content-Type: application/json" \
+  -d '{"status": "success", "learnings": "Test insight", "what_worked": "This worked", "recommendation": "Do this next time"}'
+
+# To populate the learning loop:
 # 1. Open AI Studio: http://localhost:8000/ai-studio/
 # 2. Go to Intelligence Command Center tab
-# 3. Find a gate with "Ready" status
-# 4. Click "Start Pilot" button
-# 5. Check Experiment Tracking Registry section
+# 3. Create Pilot Readiness Gate for a decision
+# 4. Complete checklist and start pilot
+# 5. Run the pilot and complete the experiment
+# 6. Learning will be auto-created and fed to ThinkingAgent
 ```
 
 ---
@@ -102,12 +113,12 @@ curl -s http://localhost:8000/api/experiments/portfolio/ | python3 -m json.tool
 
 | File | Purpose |
 |------|---------|
-| `core/models_pilot_readiness.py` | Gate, Checklist, Execution, Experiment models |
-| `core/views_agent_learning.py:3070-3328` | Experiment API endpoints |
-| `core/urls.py:2730-2734` | Experiment URL routes |
-| `ai_core/templates/ai_image_studio.html` | Experiment Dashboard UI |
-| `docs/handoffs/SESSION_596_EXPERIMENT_TRACKING.md` | Session 596 handoff |
+| `core/models_pilot_readiness.py` | Gate, Checklist, Execution, Experiment, Learning, Pattern models |
+| `core/views_agent_learning.py:3192-3258` | complete_experiment() with auto-learning |
+| `core/agents/thinking_agent.py:551-601` | Experiment learnings gathering |
+| `core/agents/thinking_agent.py:293-322` | Learnings formatting for context |
+| `docs/handoffs/SESSION_597_EXPERIMENT_LEARNING_LOOP.md` | Session 597 handoff |
 
 ---
 
-**Session 596: Experiment Tracking Registry - COMPLETE**
+**Session 597: Experiment Learning Loop - COMPLETE**

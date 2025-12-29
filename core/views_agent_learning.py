@@ -3192,18 +3192,22 @@ def update_experiment_kpi(request, experiment_id):
 def complete_experiment(request, experiment_id):
     """
     Session 596: Mark an experiment as complete with outcome.
+    Session 597: Auto-creates ExperimentLearning and updates DecisionTypeSuccessPattern.
 
     POST /api/experiments/<uuid:experiment_id>/complete/
 
     Body:
     {
         "status": "success" | "failure" | "inconclusive",
-        "learnings": "What we learned from this experiment"
+        "learnings": "What we learned from this experiment",
+        "what_worked": "Specific tactics that worked",
+        "what_failed": "Specific tactics that didn't work",
+        "recommendation": "Future recommendation"
     }
     """
     try:
         import json
-        from core.models_pilot_readiness import Experiment
+        from core.models_pilot_readiness import Experiment, ExperimentLearning, DecisionTypeSuccessPattern
 
         exp = Experiment.objects.get(id=experiment_id)
         data = json.loads(request.body)
@@ -3217,11 +3221,33 @@ def complete_experiment(request, experiment_id):
         exp.ended_at = timezone.now()
         exp.save()
 
+        # Session 597: Auto-create ExperimentLearning record
+        learning = None
+        try:
+            analysis = {
+                'what_worked': data.get('what_worked', ''),
+                'what_failed': data.get('what_failed', ''),
+                'key_insight': data.get('learnings', ''),
+                'recommendation': data.get('recommendation', ''),
+                'confidence': 0.7 if status != 'inconclusive' else 0.3,
+            }
+            learning = ExperimentLearning.create_from_experiment(exp, analysis)
+            logger.info(f"Created ExperimentLearning {learning.id} for experiment {exp.id}")
+
+            # Update success patterns
+            pattern = DecisionTypeSuccessPattern.update_from_learning(learning)
+            if pattern:
+                logger.info(f"Updated DecisionTypeSuccessPattern for {pattern.decision_type}: {pattern.success_rate:.1f}%")
+        except Exception as learn_error:
+            logger.error(f"Error creating learning from experiment: {learn_error}")
+
         return JsonResponse({
             'success': True,
             'experiment_id': str(exp.id),
             'status': exp.status,
             'ended_at': exp.ended_at.isoformat(),
+            'learning_created': learning is not None,
+            'learning_id': str(learning.id) if learning else None,
             'message': f'Experiment marked as {status}'
         })
 
