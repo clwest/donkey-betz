@@ -807,6 +807,16 @@
                 return div.innerHTML;
             }
 
+            // Session 574: Execute attention item by action string (called from greeting card)
+            executeAttentionItemByAction(action) {
+                console.log('🚀 Executing attention item:', action);
+                const input = document.getElementById('tabAssistantInput');
+                if (input) {
+                    input.value = action;
+                    this.sendMessage('tab');
+                }
+            }
+
             toggle() {
                 this.isOpen = !this.isOpen;
                 const sidebar = document.getElementById('aiSidebar');
