@@ -627,3 +627,124 @@ class PilotExecution(models.Model):
             delta = end - self.started_at
             return round(delta.total_seconds() / 3600, 1)
         return None
+
+
+class Experiment(models.Model):
+    """
+    Session 596: Experiment Tracking Registry.
+
+    Converts pilots into tracked experiments with KPI ownership.
+    Based on ThinkingAgent insight about reducing decision fatigue
+    through systematic experiment tracking.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Link to pilot
+    pilot = models.OneToOneField(
+        PilotExecution,
+        on_delete=models.CASCADE,
+        related_name='experiment'
+    )
+
+    # Experiment details
+    name = models.CharField(max_length=255)
+    hypothesis = models.TextField(blank=True, help_text="What we're testing")
+
+    # KPI Ownership
+    kpi_owner = models.CharField(max_length=100, blank=True, help_text="Who owns the outcome")
+    primary_kpi = models.CharField(max_length=255, blank=True, help_text="Main metric to track")
+    target_value = models.CharField(max_length=100, blank=True, help_text="Target KPI value")
+    current_value = models.CharField(max_length=100, blank=True, null=True, help_text="Current KPI value")
+
+    # Secondary KPIs (JSON list)
+    secondary_kpis = models.JSONField(default=list, blank=True)
+
+    # Status
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('success', 'Success'),
+        ('failure', 'Failure'),
+        ('partial', 'Partial Success'),
+        ('inconclusive', 'Inconclusive'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+
+    # Results
+    result_summary = models.TextField(blank=True, null=True)
+    learnings = models.TextField(blank=True, null=True)
+
+    # AI-extracted data from checklist
+    extracted_metrics = models.JSONField(default=dict, blank=True, help_text="Metrics extracted from AI-generated success_metrics")
+
+    # Timestamps
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = "Experiment"
+        verbose_name_plural = "Experiments"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Experiment: {self.name} [{self.status}]"
+
+    @classmethod
+    def create_from_pilot(cls, pilot: PilotExecution):
+        """
+        Create an experiment from a pilot execution.
+        Extracts KPIs from the AI-generated success_metrics checklist item.
+        """
+        gate = pilot.gate
+        decision = gate.decision
+
+        # Get success metrics from checklist
+        success_metrics_item = gate.checklist_items.filter(item_type='success_metrics').first()
+        extracted = {}
+        primary_kpi = ""
+        target_value = ""
+
+        if success_metrics_item and success_metrics_item.documentation_notes:
+            # Parse the AI-generated content for KPIs
+            content = success_metrics_item.documentation_notes
+            extracted = {
+                'raw_content': content[:1000],  # Store first 1000 chars
+                'source': 'ai_generated',
+            }
+
+            # Try to extract primary KPI (look for patterns like "5%", "150%", etc.)
+            import re
+            kpi_matches = re.findall(r'(\d+(?:\.\d+)?%?)\s*(?:engagement|ROI|rate|score)', content, re.IGNORECASE)
+            if kpi_matches:
+                target_value = kpi_matches[0]
+                primary_kpi = "Engagement/ROI target"
+
+        experiment = cls.objects.create(
+            pilot=pilot,
+            name=f"Experiment: {decision.topic[:100]}",
+            hypothesis=f"Testing: {decision.topic}",
+            primary_kpi=primary_kpi,
+            target_value=target_value,
+            extracted_metrics=extracted,
+            kpi_owner="Unassigned",  # To be filled in
+        )
+
+        return experiment
+
+    def complete(self, status: str, result_summary: str = None, learnings: str = None):
+        """Complete the experiment with results."""
+        self.status = status
+        self.ended_at = timezone.now()
+        if result_summary:
+            self.result_summary = result_summary
+        if learnings:
+            self.learnings = learnings
+        self.save()
+
+    def update_kpi(self, current_value: str):
+        """Update the current KPI value."""
+        self.current_value = current_value
+        self.save()

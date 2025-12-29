@@ -2620,6 +2620,10 @@ def start_pilot_execution(request, gate_id):
         # Start the pilot
         pilot.start()
 
+        # Session 596: Auto-create experiment for tracking
+        from core.models_pilot_readiness import Experiment
+        experiment = Experiment.create_from_pilot(pilot)
+
         return JsonResponse({
             'success': True,
             'message': 'Pilot started successfully',
@@ -2628,6 +2632,12 @@ def start_pilot_execution(request, gate_id):
                 'name': pilot.name,
                 'status': pilot.status,
                 'started_at': pilot.started_at.isoformat() if pilot.started_at else None,
+            },
+            'experiment': {
+                'id': str(experiment.id),
+                'name': experiment.name,
+                'primary_kpi': experiment.primary_kpi,
+                'target_value': experiment.target_value,
             },
             'gate_status': gate.status,
             'pilot_started_at': gate.pilot_started_at.isoformat() if gate.pilot_started_at else None,
@@ -3054,6 +3064,267 @@ def get_pilot_gate_dashboard(request):
 
     except Exception as e:
         logger.error(f"Error getting pilot gate dashboard: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ============================================================================
+# SESSION 596: EXPERIMENT TRACKING REGISTRY
+# ============================================================================
+
+@require_http_methods(["GET"])
+def get_experiments(request):
+    """
+    Session 596: Get all experiments with KPI tracking.
+
+    GET /api/experiments/
+
+    Query params:
+    - status: Filter by status (running, success, failure, inconclusive)
+    - limit: Number of results (default 50)
+    """
+    try:
+        from core.models_pilot_readiness import Experiment
+
+        status = request.GET.get('status')
+        limit = int(request.GET.get('limit', 50))
+
+        queryset = Experiment.objects.select_related('pilot', 'pilot__gate', 'pilot__gate__decision')
+
+        if status:
+            queryset = queryset.filter(status=status)
+
+        experiments = []
+        for exp in queryset.order_by('-created_at')[:limit]:
+            # Get decision info through pilot -> gate -> decision
+            decision_topic = "Unknown"
+            decision_id = None
+            risk_level = "medium"
+
+            if exp.pilot and exp.pilot.gate and exp.pilot.gate.decision:
+                decision_topic = exp.pilot.gate.decision.topic[:80]
+                decision_id = str(exp.pilot.gate.decision.id)
+                risk_level = exp.pilot.gate.risk_level
+
+            experiments.append({
+                'id': str(exp.id),
+                'name': exp.name,
+                'hypothesis': exp.hypothesis[:200] if exp.hypothesis else '',
+                'status': exp.status,
+                'kpi_owner': exp.kpi_owner,
+                'primary_kpi': exp.primary_kpi,
+                'target_value': exp.target_value,
+                'current_value': exp.current_value,
+                'secondary_kpis': exp.secondary_kpis,
+                'extracted_metrics': exp.extracted_metrics,
+                'started_at': exp.started_at.isoformat() if exp.started_at else None,
+                'ended_at': exp.ended_at.isoformat() if exp.ended_at else None,
+                'learnings': exp.learnings,
+                'pilot_id': str(exp.pilot_id) if exp.pilot_id else None,
+                'decision_topic': decision_topic,
+                'decision_id': decision_id,
+                'risk_level': risk_level,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'experiments': experiments,
+            'count': len(experiments),
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting experiments: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_experiment_kpi(request, experiment_id):
+    """
+    Session 596: Update the current KPI value for an experiment.
+
+    POST /api/experiments/<uuid:experiment_id>/update-kpi/
+
+    Body:
+    {
+        "current_value": "25%",
+        "notes": "Optional notes about the update"
+    }
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import Experiment
+
+        exp = Experiment.objects.get(id=experiment_id)
+        data = json.loads(request.body)
+
+        exp.current_value = data.get('current_value', exp.current_value)
+
+        # Update extracted_metrics with history
+        if 'kpi_history' not in exp.extracted_metrics:
+            exp.extracted_metrics['kpi_history'] = []
+
+        exp.extracted_metrics['kpi_history'].append({
+            'value': exp.current_value,
+            'timestamp': timezone.now().isoformat(),
+            'notes': data.get('notes', '')
+        })
+
+        exp.save()
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'current_value': exp.current_value,
+            'message': 'KPI updated successfully'
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error updating experiment KPI: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def complete_experiment(request, experiment_id):
+    """
+    Session 596: Mark an experiment as complete with outcome.
+
+    POST /api/experiments/<uuid:experiment_id>/complete/
+
+    Body:
+    {
+        "status": "success" | "failure" | "inconclusive",
+        "learnings": "What we learned from this experiment"
+    }
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import Experiment
+
+        exp = Experiment.objects.get(id=experiment_id)
+        data = json.loads(request.body)
+
+        status = data.get('status', 'inconclusive')
+        if status not in ['success', 'failure', 'inconclusive']:
+            return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+
+        exp.status = status
+        exp.learnings = data.get('learnings', '')
+        exp.ended_at = timezone.now()
+        exp.save()
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'status': exp.status,
+            'ended_at': exp.ended_at.isoformat(),
+            'message': f'Experiment marked as {status}'
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error completing experiment: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_experiment_portfolio(request):
+    """
+    Session 596: Get experiment portfolio metrics and KPI ownership summary.
+
+    GET /api/experiments/portfolio/
+
+    Returns:
+    - status_counts: Experiments by status
+    - kpi_owners: Who owns how many experiments
+    - success_rate: Overall success rate
+    - active_experiments: Count of running experiments
+    - recent_completions: Recently finished experiments
+    """
+    try:
+        from core.models_pilot_readiness import Experiment
+        from collections import defaultdict
+
+        all_experiments = Experiment.objects.select_related('pilot', 'pilot__gate', 'pilot__gate__decision')
+
+        # Status counts
+        status_counts = defaultdict(int)
+        for status in ['running', 'success', 'failure', 'inconclusive']:
+            status_counts[status] = all_experiments.filter(status=status).count()
+
+        # KPI owner distribution
+        kpi_owners = defaultdict(int)
+        for exp in all_experiments:
+            owner = exp.kpi_owner or 'Unassigned'
+            kpi_owners[owner] += 1
+
+        # Success metrics
+        completed = all_experiments.exclude(status='running')
+        success_count = all_experiments.filter(status='success').count()
+        completed_count = completed.count()
+        success_rate = round((success_count / completed_count * 100), 1) if completed_count > 0 else 0
+
+        # Recent completions
+        recent_completions = []
+        for exp in all_experiments.exclude(status='running').order_by('-ended_at')[:5]:
+            decision_topic = "Unknown"
+            if exp.pilot and exp.pilot.gate and exp.pilot.gate.decision:
+                decision_topic = exp.pilot.gate.decision.topic[:50]
+
+            recent_completions.append({
+                'id': str(exp.id),
+                'name': exp.name[:50],
+                'status': exp.status,
+                'kpi_owner': exp.kpi_owner,
+                'primary_kpi': exp.primary_kpi,
+                'target_value': exp.target_value,
+                'current_value': exp.current_value,
+                'ended_at': exp.ended_at.isoformat() if exp.ended_at else None,
+                'decision_topic': decision_topic,
+            })
+
+        # Running experiments
+        running_experiments = []
+        for exp in all_experiments.filter(status='running').order_by('-started_at')[:10]:
+            decision_topic = "Unknown"
+            if exp.pilot and exp.pilot.gate and exp.pilot.gate.decision:
+                decision_topic = exp.pilot.gate.decision.topic[:50]
+
+            # Calculate days running
+            days_running = None
+            if exp.started_at:
+                days_running = (timezone.now() - exp.started_at).days
+
+            running_experiments.append({
+                'id': str(exp.id),
+                'name': exp.name[:50],
+                'kpi_owner': exp.kpi_owner,
+                'primary_kpi': exp.primary_kpi,
+                'target_value': exp.target_value,
+                'current_value': exp.current_value,
+                'days_running': days_running,
+                'decision_topic': decision_topic,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'portfolio': {
+                'status_counts': dict(status_counts),
+                'kpi_owners': dict(kpi_owners),
+                'success_rate': success_rate,
+                'total_experiments': all_experiments.count(),
+                'active_count': status_counts['running'],
+                'completed_count': completed_count,
+            },
+            'running_experiments': running_experiments,
+            'recent_completions': recent_completions,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting experiment portfolio: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
