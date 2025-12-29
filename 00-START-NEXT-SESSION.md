@@ -2,7 +2,7 @@
 
 **Previous Session:** 582
 **Date:** December 28, 2025
-**Focus:** PA Tools Phases 11 & 12 Complete (49 → 53)
+**Focus:** PA Tools Phases 11-13 Complete (49 → 55)
 
 ---
 
@@ -22,9 +22,18 @@
 | `manage_exports` | exports | Project/research/content/revenue/legal/portfolio exports |
 | `manage_scheduler` | scheduler | Scheduled distributions, workflows, Celery schedules |
 
+### Phase 13 - Monitoring Tools (2 tools)
+
+| Tool | Category | Purpose |
+|------|----------|---------|
+| `query_system_health` | monitoring | Health for agents, spiders, ML, content studio, etc. |
+| `query_activity_metrics` | monitoring | Activity stream, ROI metrics, provenance chain |
+
 ### Session 582 Commits
 
 ```
+e5c68c8 feat(Session 582): PA Phase 13 - 2 Monitoring Tools (53 → 55)
+be13fbe docs(Session 582): Update session doc - Phases 11 & 12 complete (53 tools)
 067fdf9 feat(Session 582): PA Phase 12 - 2 Export/Scheduler Tools (51 → 53)
 72dc0c9 docs(Session 582): Update session doc - Phase 11 complete (51 tools)
 9db54b1 feat(Session 582): PA Phase 11 - 2 Notification Tools (49 → 51)
@@ -143,8 +152,10 @@ fa5412b feat(Session 581): PA Phase 9 - 5 New Tools (38 → 43)
 | `manage_push_notifications` | Push notification settings | Session 582 |
 | `manage_exports` | Data export (PDF/ZIP/CSV) | Session 582 |
 | `manage_scheduler` | Schedule management | Session 582 |
+| `query_system_health` | System health monitoring | Session 582 |
+| `query_activity_metrics` | Activity/ROI/provenance | Session 582 |
 
-**Coverage:** 53/1,343 endpoints (3.95%)
+**Coverage:** 55/1,343 endpoints (4.10%)
 
 ---
 
@@ -186,19 +197,25 @@ User: "Export my project as PDF"
 
 User: "Show scheduled distributions"
 → manage_scheduler: List, cancel, reschedule scheduled items
+
+User: "How is the system doing?"
+→ query_system_health: Health for agents, spiders, ML scoring, etc.
+
+User: "What's the ROI?"
+→ query_activity_metrics: Activity stream, ROI, provenance
 ```
 
 ---
 
 ## Session 583 Priorities
 
-### Option A: Phase 13 - More Coverage
+### Option A: Phase 14 - More Coverage
 
 Remaining uncovered categories:
-- **monitoring** - 15 endpoints (health, ML scoring, activity)
-- **artifacts** - 12 endpoints (reviews, executions)
+- **artifacts** - 12 endpoints (reviews, executions, Chief of Staff)
 - **journeys** - 8 endpoints (learning journeys)
 - **solutions** - 6 endpoints (solution explorer)
+- **proposals** - 6 endpoints (AI proposals)
 
 ### Option B: Testing & Polish
 
@@ -208,7 +225,7 @@ Remaining uncovered categories:
 
 ### Option C: Documentation
 
-- Update CAPABILITIES.md with all 53 tools
+- Update CAPABILITIES.md with all 55 tools
 - Create PA Tools reference guide
 
 ---
@@ -226,10 +243,10 @@ django.setup()
 from core.agents.personal_assistant_agent import PersonalAssistantAgent
 pa = PersonalAssistantAgent()
 print(f'Total: {len(pa.tools)} tools')
-print('Phase 12 tools:')
-phase12 = ['manage_exports', 'manage_scheduler']
-for t in phase12:
-    args = {'export_type': 'project'} if t == 'manage_exports' else {'action': 'list'}
+print('Phase 13 tools:')
+phase13 = ['query_system_health', 'query_activity_metrics']
+for t in phase13:
+    args = {'subsystem': 'agents'} if t == 'query_system_health' else {'metric_type': 'roi'}
     result = getattr(pa, f'_{t}')(args)
     status = '✅' if result.get('success') else '❌'
     print(f'  {status} {t}')
@@ -247,7 +264,7 @@ open http://localhost:8000/ai-studio/
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **PA Tools** | 53 |
+| **PA Tools** | 55 |
 | **API Endpoints** | 1,343+ |
 | **Celery Tasks** | 228 |
 | **Services** | 93 |
@@ -264,10 +281,11 @@ open http://localhost:8000/ai-studio/
 | 581 | 9 | +5 | 43 |
 | 581 | 10 | +6 | 49 |
 | 582 | 11 | +2 | 51 |
-| **582** | **12** | **+2** | **53** |
+| 582 | 12 | +2 | 53 |
+| **582** | **13** | **+2** | **55** |
 
 ---
 
-**Session 582: Phases 11 & 12 = 4 new tools (49 → 53)**
+**Session 582: Phases 11-13 = 6 new tools (49 → 55)**
 
-**PA now has 53 tools (3.95% coverage) - Phases 9-12 complete!**
+**PA now has 55 tools (4.10% coverage) - Phases 9-13 complete!**
