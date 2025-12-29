@@ -349,6 +349,13 @@ class PersonalAssistantAgent(BaseAgent):
 
 Your job is to understand what the user wants and route their request appropriately.
 
+For SYSTEM STATUS queries (what should I focus on, catch me up, status, what needs attention, overview):
+- IMPORTANT: When the user asks "what should I focus on?" in this platform context, they mean SYSTEM status
+- Look at the Platform Intelligence section for "URGENT" or "Important System Items"
+- Summarize what needs attention: failed cycles, stale concerns, overdue channels, pending dreams
+- Do NOT give generic productivity advice - they want to know about THIS SYSTEM
+- If system items are provided in context, prioritize discussing those
+
 For QUESTIONS (what is, how does, explain, tell me about):
 - Answer directly using your knowledge and any provided context
 
