@@ -457,13 +457,30 @@ class SystemStateAggregator:
             ).order_by('-created_at')[:limit]
 
             for decision in pending_decisions:
+                # Session 574: Strip existing prefixes to avoid "Decision: Decision: ..."
+                clean_topic = decision.topic or 'Untitled'
+                # Strip multiple nested prefixes
+                prefixes = ['Decision: ', 'Panel: ', 'Research: ', 'Research topic: ', 'Discussion: ', '[Learned] ', 'Test: ']
+                changed = True
+                while changed:
+                    changed = False
+                    for prefix in prefixes:
+                        if clean_topic.startswith(prefix):
+                            clean_topic = clean_topic[len(prefix):]
+                            changed = True
+                            break
+
+                # Session 574: Skip items with short/meaningless topics
+                if len(clean_topic.strip()) < 15:
+                    continue
+
                 items.append(AttentionItem(
                     id=f"decision_{decision.id}",
                     section='research',
                     category='pending_decision',
                     priority=PRIORITY_SCORES['pending_decision'],
-                    title=f"Decision: {decision.topic[:35]}",
-                    summary=f"{decision.decision_type}: awaiting promotion",
+                    title=f"Boardroom: {clean_topic[:50]}",
+                    summary=f"{decision.decision_type}: awaiting review",
                     action_url='/ai-studio/?tab=decisions&subtab=pending'
                 ))
 

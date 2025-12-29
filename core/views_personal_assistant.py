@@ -561,15 +561,30 @@ def get_attention_items(request):
 
 
 def _get_suggested_action(item):
-    """Generate a suggested action command for an attention item."""
+    """Generate a suggested action command for an attention item.
+
+    Session 574: These actions are designed to work with PA routing patterns.
+    They should be clear commands that the PA can understand and execute.
+    """
     section = item.section.lower() if item.section else ''
     title = item.title or 'this item'
+    clean_title = title[:50].strip()
 
-    if section == 'research':
-        return f"Execute research on: {title[:50]}"
+    # Session 574: Use patterns that match PA's action detection
+    # Check if this is a Boardroom decision (has "Boardroom:" prefix)
+    if clean_title.startswith('Boardroom:'):
+        # Boardroom items - review and decide pattern (avoid triggering content agents)
+        topic = clean_title.replace('Boardroom:', '').strip()
+        return f"Review this pending decision and summarize the key points: {topic}"
+    elif section == 'research':
+        # Research items - ask for follow-up research
+        return f"What are the latest developments regarding {clean_title}?"
     elif section == 'command_center':
-        return f"Review and address: {title[:50]}"
+        # Command center items - triage/review pattern
+        return f"Triage and create action plan for: {clean_title}"
     elif section == 'autonomous':
-        return f"Check autonomous status for: {title[:50]}"
+        # Autonomous items - check status pattern
+        return f"What is the status of {clean_title}? Summarize and suggest next steps."
     else:
-        return f"Work on: {title[:50]}"
+        # Default - simple task pattern
+        return f"Help me with: {clean_title}"
