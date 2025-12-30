@@ -117,18 +117,43 @@ class SystemRealityChecker:
                 ))
                 return
 
-            # Check how many tasks have run recently using last_run_at
-            # (Result backend stores to Redis, not Django DB)
-            ran_recently = enabled_tasks.filter(last_run_at__gte=self.cutoff).count()
+            # Separate frequent tasks (should run within lookback) from infrequent (daily/weekly)
+            frequent_tasks = []
+            infrequent_tasks = []
 
-            # Find tasks that never ran or are stale
+            for task in enabled_tasks:
+                is_frequent = False
+                if task.interval:
+                    # Interval-based: check if it runs more than once every lookback period
+                    hours = task.interval.every
+                    if task.interval.period == 'minutes':
+                        hours = task.interval.every / 60
+                    elif task.interval.period == 'days':
+                        hours = task.interval.every * 24
+                    is_frequent = hours <= self.lookback_hours
+                elif task.crontab:
+                    # Crontab: if hour is * or has multiple values, runs multiple times/day
+                    cron = task.crontab
+                    hour_str = str(cron.hour)
+                    is_frequent = hour_str == '*' or ',' in hour_str or '/' in hour_str
+
+                if is_frequent:
+                    frequent_tasks.append(task)
+                else:
+                    infrequent_tasks.append(task)
+
+            # Check how many frequent tasks have run recently
+            ran_recently = sum(1 for t in frequent_tasks if t.last_run_at and t.last_run_at >= self.cutoff)
+            expected_frequent = len(frequent_tasks)
+
+            # Find truly stale frequent tasks (should have run but didn't)
             stale_tasks = []
-            for task in enabled_tasks.filter(
-                Q(last_run_at__isnull=True) | Q(last_run_at__lt=self.cutoff)
-            )[:10]:
-                stale_tasks.append(task.name)
+            for task in frequent_tasks:
+                if task.last_run_at is None or task.last_run_at < self.cutoff:
+                    stale_tasks.append(task.name)
 
-            activity_ratio = ran_recently / total_tasks if total_tasks > 0 else 0
+            # Activity ratio based on frequent tasks only
+            activity_ratio = ran_recently / expected_frequent if expected_frequent > 0 else 1.0
             score = self.calculate_score(activity_ratio=activity_ratio, health_ratio=activity_ratio)
 
             issues = []
@@ -141,8 +166,8 @@ class SystemRealityChecker:
                 name="Celery Beat",
                 score=score,
                 status=self.get_status(score),
-                message=f"{ran_recently}/{total_tasks} tasks ran in {self.lookback_hours}h",
-                metrics={"total": total_tasks, "ran": ran_recently, "stale": len(stale_tasks)},
+                message=f"{ran_recently}/{expected_frequent} frequent tasks ran in {self.lookback_hours}h ({len(infrequent_tasks)} daily/weekly excluded)",
+                metrics={"total": total_tasks, "frequent": expected_frequent, "ran": ran_recently, "stale": len(stale_tasks)},
                 issues=issues
             ))
         except Exception as e:
