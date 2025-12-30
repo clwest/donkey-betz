@@ -68,6 +68,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/artifacts/',  # Session 564: Artifacts sub-tab
         '/api/agent-learning/',  # Session 564: Learning activity
         '/api/recent-activity/',  # Session 614: Recent Activity panel
+        '/api/experiment-recommendations/',  # Session 615: Experiment Recommendations
 
         # Session 542: Research Demo APIs (read-only visualization for research presentations)
         '/api/v1/research/network-graph/',  # D3.js graph data

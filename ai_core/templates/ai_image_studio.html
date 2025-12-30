@@ -7136,6 +7136,33 @@
 
                 <p class="text-muted mb-4">Unified dashboard for governance, pilot readiness, and system intelligence.</p>
 
+                <!-- ========== SESSION 615: EXPERIMENT RECOMMENDATIONS ========== -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                <h5 class="mb-0" style="color: #f59e0b;">
+                                    <span style="font-size: 24px;">💡</span> Experiment Recommendations
+                                    <small class="text-muted ms-2">AI-powered next steps for your pilots</small>
+                                </h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="rec-action-badge" class="badge" style="background: #ef4444; display: none;">0 need action</span>
+                                    <span id="rec-total-badge" class="badge" style="background: #f59e0b;">0 recommendations</span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="loadExperimentRecommendations()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="experiment-recommendations-list" class="row">
+                                    <p class="text-muted text-center small">Loading recommendations...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END EXPERIMENT RECOMMENDATIONS -->
+
                 <div class="row">
                     <!-- Left Column: Pilot Readiness Gates -->
                     <div class="col-lg-6">
@@ -60041,6 +60068,7 @@ ${item.generated_content}
             const commandCenterTab = document.querySelector('[data-bs-target="#intelligence-command-center"]');
             if (commandCenterTab) {
                 commandCenterTab.addEventListener('shown.bs.tab', function() {
+                    loadExperimentRecommendations();  // Session 615: Load recommendations first
                     loadPilotProgressDashboard();
                     loadKPIAlerts();  // Session 611: Also load alerts
                     loadRecentActivity();  // Session 614: Load activity feed
@@ -60065,6 +60093,130 @@ ${item.generated_content}
 
         // Session 614: Store activity data for filtering
         let recentActivityData = [];
+
+        // ========== SESSION 615: EXPERIMENT RECOMMENDATIONS ==========
+        async function loadExperimentRecommendations() {
+            /**
+             * Session 615: Load AI-powered recommendations for running experiments.
+             * Analyzes KPI trends, alerts, and progress to suggest next steps.
+             */
+            console.log('💡 Loading Experiment Recommendations...');
+
+            try {
+                const response = await authenticatedFetch('/api/experiment-recommendations/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load recommendations');
+                }
+
+                const recommendations = data.recommendations || [];
+                const summary = data.summary || {};
+
+                // Update badges
+                const totalBadge = document.getElementById('rec-total-badge');
+                const actionBadge = document.getElementById('rec-action-badge');
+
+                if (totalBadge) {
+                    totalBadge.textContent = `${summary.total || 0} experiments`;
+                }
+
+                if (actionBadge) {
+                    const actionCount = summary.action_needed || 0;
+                    if (actionCount > 0) {
+                        actionBadge.style.display = 'inline';
+                        actionBadge.textContent = `${actionCount} need action`;
+                    } else {
+                        actionBadge.style.display = 'none';
+                    }
+                }
+
+                // Render recommendations
+                renderRecommendations(recommendations);
+
+                console.log('✅ Experiment Recommendations loaded:', recommendations.length, 'items');
+
+            } catch (error) {
+                console.error('Error loading experiment recommendations:', error);
+                document.getElementById('experiment-recommendations-list').innerHTML =
+                    '<p class="text-danger text-center small">Error loading recommendations. Check console.</p>';
+            }
+        }
+
+        function renderRecommendations(recommendations) {
+            const list = document.getElementById('experiment-recommendations-list');
+            if (!list) return;
+
+            if (recommendations.length === 0) {
+                list.innerHTML = '<p class="text-muted text-center small col-12">No running experiments to analyze.</p>';
+                return;
+            }
+
+            // Color scheme for recommendation types
+            const typeColors = {
+                'scale_up': { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#22c55e' },
+                'investigate': { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#ef4444' },
+                'adjust': { bg: 'rgba(251, 191, 36, 0.2)', border: '#fbbf24', text: '#fbbf24' },
+                'continue': { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', text: '#3b82f6' },
+                'celebrate': { bg: 'rgba(168, 85, 247, 0.2)', border: '#a855f7', text: '#a855f7' },
+                'end_early': { bg: 'rgba(107, 114, 128, 0.2)', border: '#6b7280', text: '#6b7280' }
+            };
+
+            list.innerHTML = recommendations.map(rec => {
+                const colors = typeColors[rec.recommendation_type] || typeColors['continue'];
+                const metrics = rec.metrics || {};
+
+                // Progress bar
+                let progressHtml = '';
+                if (metrics.progress_pct !== null && metrics.progress_pct !== undefined) {
+                    const pct = Math.min(100, metrics.progress_pct);
+                    progressHtml = `
+                        <div class="progress mt-2" style="height: 6px; background: #333;">
+                            <div class="progress-bar" style="width: ${pct}%; background: ${colors.border};"></div>
+                        </div>
+                        <div class="small text-muted mt-1">${metrics.progress_pct.toFixed(0)}% to target</div>
+                    `;
+                }
+
+                // Trend indicator
+                let trendIcon = '';
+                if (metrics.trend_direction === 'up') trendIcon = '📈';
+                else if (metrics.trend_direction === 'down') trendIcon = '📉';
+                else if (metrics.trend_direction === 'stable') trendIcon = '➡️';
+                else trendIcon = '📊';
+
+                return `
+                    <div class="col-lg-6 col-xl-4 mb-3">
+                        <div class="card h-100" style="background: ${colors.bg}; border: 1px solid ${colors.border};">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span style="font-size: 24px;">${rec.icon}</span>
+                                    <span class="badge" style="background: ${colors.border}; font-size: 10px;">
+                                        ${rec.recommendation_type.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                </div>
+                                <h6 style="color: #e5e7eb; font-size: 13px; margin-bottom: 8px;"
+                                    title="${rec.experiment_name}">
+                                    ${rec.experiment_name.substring(0, 35)}${rec.experiment_name.length > 35 ? '...' : ''}
+                                </h6>
+                                <p style="color: ${colors.text}; font-size: 12px; margin-bottom: 4px;">
+                                    ${rec.reason}
+                                </p>
+                                <p class="small text-muted mb-2" style="font-style: italic;">
+                                    → ${rec.action}
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center small text-muted">
+                                    <span>${trendIcon} ${metrics.trend_direction || 'unknown'}</span>
+                                    <span>Day ${metrics.days_running || 0}</span>
+                                </div>
+                                ${progressHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        // ========== END SESSION 615: EXPERIMENT RECOMMENDATIONS ==========
 
         // Session 614: Load Recent Activity
         async function loadRecentActivity() {
