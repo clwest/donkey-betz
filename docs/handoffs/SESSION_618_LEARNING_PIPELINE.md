@@ -87,15 +87,14 @@ Decision → Gate → Pilot → Experiment → Learning → ThinkingAgent
 
 ## Test Results
 
-### First Run
+### Final State (after multiple runs)
 ```
-Evaluated: 5 pilots
-Success: 5
-Partial: 0
-Failure: 0
-Experiments Updated: 5
-Learnings Created: 5
-Patterns Updated: 4
+Pilots Completed:     611 / 618
+Experiments Completed: 611 / 618
+Learnings Created:    611
+Success Rate:         88.1%
+Success Patterns:     10
+Fed to ThinkingAgent: 611
 ```
 
 ### ThinkingAgent Context Now Shows
@@ -145,9 +144,13 @@ Experiments: 618 total, 613 running
 
 ---
 
-## Remaining Pilots
+## Dashboard Fix
 
-608 pilots are still running (started ~1 hour ago). They will be evaluated automatically by the Celery Beat schedule every 2 hours.
+The Learning Loop Dashboard was showing 0 for "Total Learnings" and "Fed to ThinkingAgent" because:
+- API returned `total` but UI expected `total_count`
+- `fed_to_thinking_agent_count` was missing entirely
+
+Fixed by adding both fields to the `/api/experiments/learnings/` response.
 
 ---
 
@@ -156,6 +159,8 @@ Experiments: 618 total, 613 running
 | Commit | Description |
 |--------|-------------|
 | `f243763` | feat(Session 618): Pilot Outcome Evaluation and Learning Extraction Pipeline |
+| `1b6566d` | docs(Session 618): Add handoff and update start document |
+| `debf67d` | fix(Session 618): Add missing fields to learnings API for dashboard |
 
 ---
 
