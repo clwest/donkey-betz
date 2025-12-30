@@ -1,0 +1,450 @@
+<!-- ============================================================ -->
+<!-- Session 628: CONTENT CALENDAR PANEL -->
+<!-- View scheduled and past autonomous content generation -->
+<!-- ============================================================ -->
+<div class="tab-pane fade" id="content-calendar" role="tabpanel">
+    <div class="container-fluid p-4">
+
+        <!-- ========================================================== -->
+        <!-- HEADER WITH STATS -->
+        <!-- ========================================================== -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%); border: 2px solid rgba(59, 130, 246, 0.5); border-radius: 16px;">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="mb-0" style="color: #60a5fa;">
+                                <i class="fas fa-calendar-alt me-2"></i>Content Calendar
+                            </h2>
+                            <button class="btn btn-outline-primary btn-sm" onclick="loadCalendarData()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="row g-3">
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 700; color: #60a5fa;" id="calendarTotalChannels">0</div>
+                                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">Active Channels</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 700; color: #34d399;" id="calendarTotalEpisodes">0</div>
+                                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">Total Episodes</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 700; color: #fbbf24;" id="calendarUpcomingCount">0</div>
+                                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">Upcoming</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3" style="background: rgba(236, 72, 153, 0.2); border-radius: 12px;">
+                                    <div style="font-size: 2rem; font-weight: 700; color: #f472b6;" id="calendarAvgPerformance">0</div>
+                                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">Avg Performance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- MAIN CONTENT: TWO COLUMNS -->
+        <!-- ========================================================== -->
+        <div class="row">
+            <!-- LEFT COLUMN: Upcoming Content -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 12px;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(59, 130, 246, 0.1); border-bottom: 1px solid rgba(75, 85, 99, 0.5);">
+                        <h5 class="mb-0" style="color: #60a5fa;">
+                            <i class="fas fa-clock me-2"></i>Upcoming Content
+                        </h5>
+                        <span class="badge bg-primary" id="upcomingBadge">0 scheduled</span>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                        <div id="upcomingContentList" class="p-3">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading upcoming content...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Recent Content with Performance -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 12px;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.1); border-bottom: 1px solid rgba(75, 85, 99, 0.5);">
+                        <h5 class="mb-0" style="color: #34d399;">
+                            <i class="fas fa-history me-2"></i>Recent Content
+                        </h5>
+                        <span class="badge bg-success" id="recentBadge">0 published</span>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                        <div id="recentContentList" class="p-3">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading recent content...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- CHANNELS OVERVIEW -->
+        <!-- ========================================================== -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 12px;">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.1); border-bottom: 1px solid rgba(75, 85, 99, 0.5);">
+                        <h5 class="mb-0" style="color: #a78bfa;">
+                            <i class="fas fa-tv me-2"></i>Content Channels
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="channelsList" class="row g-3">
+                            <div class="col-12 text-center py-4 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading channels...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- TOP PERFORMING TOPICS -->
+        <!-- ========================================================== -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 12px;">
+                    <div class="card-header" style="background: rgba(245, 158, 11, 0.1); border-bottom: 1px solid rgba(75, 85, 99, 0.5);">
+                        <h5 class="mb-0" style="color: #fbbf24;">
+                            <i class="fas fa-star me-2"></i>Top Performing Topics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="topTopicsList" class="row g-3">
+                            <div class="col-12 text-center py-4 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading top topics...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- USER PREFERENCES APPLIED -->
+        <!-- ========================================================== -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card" style="background: rgba(17, 24, 39, 0.6); border: 1px solid rgba(75, 85, 99, 0.3); border-radius: 12px;">
+                    <div class="card-header" style="background: rgba(52, 211, 153, 0.1); border-bottom: 1px solid rgba(75, 85, 99, 0.3);">
+                        <h6 class="mb-0" style="color: #6ee7b7;">
+                            <i class="fas fa-user-cog me-2"></i>Your Content Preferences
+                        </h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div id="userPreferences" class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-secondary">Loading preferences...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CONTENT CALENDAR JAVASCRIPT -->
+<!-- ============================================================ -->
+<script>
+// Session 628: Content Calendar Functions
+
+let calendarData = null;
+
+async function loadCalendarData() {
+    try {
+        const response = await fetch('/api/content-calendar/');
+        if (!response.ok) throw new Error('Failed to load calendar data');
+
+        calendarData = await response.json();
+
+        if (calendarData.success) {
+            updateCalendarStats(calendarData.stats);
+            renderUpcomingContent(calendarData.upcoming);
+            renderRecentContent(calendarData.past_30_days);
+            renderChannels(calendarData.channels);
+            renderTopTopics(calendarData.top_topics);
+            renderUserPreferences(calendarData.user_preferences);
+        }
+    } catch (error) {
+        console.error('Error loading calendar data:', error);
+        showCalendarError('Failed to load calendar data');
+    }
+}
+
+function updateCalendarStats(stats) {
+    document.getElementById('calendarTotalChannels').textContent = stats.active_channels || 0;
+    document.getElementById('calendarTotalEpisodes').textContent = stats.total_episodes || 0;
+    document.getElementById('calendarAvgPerformance').textContent = stats.avg_performance_score || 0;
+}
+
+function renderUpcomingContent(upcoming) {
+    const container = document.getElementById('upcomingContentList');
+    const badge = document.getElementById('upcomingBadge');
+
+    document.getElementById('calendarUpcomingCount').textContent = upcoming.length;
+    badge.textContent = `${upcoming.length} scheduled`;
+
+    if (!upcoming || upcoming.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-calendar-check fa-2x mb-3" style="color: #4b5563;"></i>
+                <p>No upcoming content scheduled</p>
+                <small>Create a content channel to start generating content automatically</small>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = upcoming.map(item => {
+        const dueDate = new Date(item.next_due);
+        const isOverdue = item.is_overdue;
+        const statusColor = isOverdue ? '#ef4444' : '#60a5fa';
+        const statusText = isOverdue ? 'OVERDUE' : formatRelativeDate(dueDate);
+
+        return `
+            <div class="mb-3 p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 3px solid ${statusColor};">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0" style="color: #fff;">${escapeHtml(item.channel_name)}</h6>
+                    <span class="badge" style="background: ${statusColor};">${statusText}</span>
+                </div>
+                <p class="mb-2 small" style="color: rgba(255,255,255,0.7);">${escapeHtml(item.topic_domain)}</p>
+                <div class="d-flex flex-wrap gap-1">
+                    ${item.preferences_applied ? `
+                        <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                            <i class="fas fa-palette me-1"></i>${escapeHtml(item.preferences_applied.visual_style || 'default')}
+                        </span>
+                        <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                            <i class="fas fa-microphone me-1"></i>${escapeHtml(item.preferences_applied.voice_name || 'default')}
+                        </span>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderRecentContent(recent) {
+    const container = document.getElementById('recentContentList');
+    const badge = document.getElementById('recentBadge');
+
+    badge.textContent = `${recent.length} published`;
+
+    if (!recent || recent.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-muted">
+                <i class="fas fa-video fa-2x mb-3" style="color: #4b5563;"></i>
+                <p>No recent content</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = recent.map(item => {
+        const perfColor = item.performance_score >= 80 ? '#34d399' :
+                         item.performance_score >= 50 ? '#fbbf24' : '#f87171';
+
+        return `
+            <div class="mb-3 p-3" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-0" style="color: #fff;">${escapeHtml(item.title)}</h6>
+                        <small style="color: rgba(255,255,255,0.5);">${escapeHtml(item.channel_name)}</small>
+                    </div>
+                    <span class="badge" style="background: ${perfColor};">
+                        ${item.performance_score.toFixed(1)}
+                    </span>
+                </div>
+                <div class="d-flex gap-3 small" style="color: rgba(255,255,255,0.6);">
+                    <span><i class="fas fa-eye me-1"></i>${formatNumber(item.views)}</span>
+                    <span><i class="fas fa-heart me-1"></i>${formatNumber(item.engagement)}</span>
+                    <span><i class="fas fa-percentage me-1"></i>${item.retention_rate}%</span>
+                </div>
+                ${item.platform_url ? `
+                    <a href="${escapeHtml(item.platform_url)}" target="_blank" class="btn btn-sm btn-outline-success mt-2">
+                        <i class="fas fa-external-link-alt me-1"></i>View
+                    </a>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function renderChannels(channels) {
+    const container = document.getElementById('channelsList');
+
+    if (!channels || channels.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-4 text-muted">
+                <i class="fas fa-plus-circle fa-2x mb-3" style="color: #4b5563;"></i>
+                <p>No content channels yet</p>
+                <small>Use the Discord bot command /studio-create to create one</small>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = channels.map(channel => {
+        const statusColor = channel.status === 'active' ? '#34d399' :
+                           channel.status === 'paused' ? '#fbbf24' : '#ef4444';
+
+        return `
+            <div class="col-md-6 col-lg-4">
+                <div class="p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0" style="color: #a78bfa;">${escapeHtml(channel.name)}</h6>
+                        <span class="badge" style="background: ${statusColor}; font-size: 0.7rem;">
+                            ${channel.status.toUpperCase()}
+                        </span>
+                    </div>
+                    <p class="mb-2 small" style="color: rgba(255,255,255,0.6);">${escapeHtml(channel.topic_domain.substring(0, 60))}...</p>
+                    <div class="d-flex justify-content-between small" style="color: rgba(255,255,255,0.5);">
+                        <span><i class="fas fa-video me-1"></i>${channel.total_episodes} episodes</span>
+                        <span><i class="fas fa-eye me-1"></i>${formatNumber(channel.total_views)} views</span>
+                    </div>
+                    <div class="mt-2 small" style="color: rgba(255,255,255,0.4);">
+                        <i class="fas fa-clock me-1"></i>Next: ${channel.next_content_due ? formatRelativeDate(new Date(channel.next_content_due)) : 'Not scheduled'}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderTopTopics(topics) {
+    const container = document.getElementById('topTopicsList');
+
+    if (!topics || topics.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-3 text-muted">
+                <small>No topic performance data yet</small>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = topics.map((topic, index) => {
+        const medals = ['', '', ''];
+        const medal = index < 3 ? medals[index] : '';
+
+        return `
+            <div class="col-md-4 col-lg-2">
+                <div class="text-center p-2" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                    <div style="font-size: 1.2rem;">${medal || `#${index + 1}`}</div>
+                    <div class="small" style="color: #fbbf24;">${escapeHtml(topic.topic.substring(0, 20))}</div>
+                    <div class="small text-muted">${topic.episode_count} eps</div>
+                    <div class="small" style="color: #34d399;">${topic.avg_performance.toFixed(1)} avg</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderUserPreferences(prefs) {
+    const container = document.getElementById('userPreferences');
+
+    if (!prefs) {
+        container.innerHTML = '<span class="badge bg-secondary">No preferences set</span>';
+        return;
+    }
+
+    const badges = [];
+
+    if (prefs.visual_style) {
+        badges.push(`<span class="badge bg-primary"><i class="fas fa-palette me-1"></i>${escapeHtml(prefs.visual_style)}</span>`);
+    }
+    if (prefs.voice_name) {
+        badges.push(`<span class="badge bg-info"><i class="fas fa-microphone me-1"></i>${escapeHtml(prefs.voice_name)}</span>`);
+    }
+    if (prefs.content_tone) {
+        badges.push(`<span class="badge bg-secondary"><i class="fas fa-comment me-1"></i>${escapeHtml(prefs.content_tone)}</span>`);
+    }
+    if (prefs.preferred_topics && prefs.preferred_topics.length > 0) {
+        prefs.preferred_topics.slice(0, 3).forEach(topic => {
+            badges.push(`<span class="badge bg-success"><i class="fas fa-thumbs-up me-1"></i>${escapeHtml(topic.substring(0, 20))}</span>`);
+        });
+    }
+
+    container.innerHTML = badges.length > 0 ? badges.join('') : '<span class="badge bg-secondary">No preferences set yet</span>';
+}
+
+// Utility functions
+function formatRelativeDate(date) {
+    const now = new Date();
+    const diff = date - now;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+
+    if (days < 0) return `${Math.abs(days)}d ago`;
+    if (days === 0) return hours <= 0 ? 'Now' : `${hours}h`;
+    if (days === 1) return 'Tomorrow';
+    if (days < 7) return `${days}d`;
+    return date.toLocaleDateString();
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showCalendarError(message) {
+    const containers = ['upcomingContentList', 'recentContentList', 'channelsList', 'topTopicsList'];
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = `
+                <div class="col-12 text-center py-4 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            `;
+        }
+    });
+}
+
+// Load data when tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if content-calendar tab exists and add listener
+    const calendarTab = document.querySelector('[data-bs-target="#content-calendar"], [href="#content-calendar"]');
+    if (calendarTab) {
+        calendarTab.addEventListener('shown.bs.tab', loadCalendarData);
+    }
+
+    // Also load if we're already on that tab
+    if (document.getElementById('content-calendar')?.classList.contains('active')) {
+        loadCalendarData();
+    }
+});
+</script>

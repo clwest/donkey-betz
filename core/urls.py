@@ -334,6 +334,14 @@ from core.views_agent_learning import (
     get_decision_priority,
 )
 
+# Session 628: Content Calendar
+from core.views_content_calendar import (
+    content_calendar_main,
+    content_calendar_upcoming,
+    content_calendar_history,
+    content_calendar_reschedule,
+)
+
 # Session 250: Hive Mind Mode
 from core.views_hive_mind import (
     start_hive_mind_session,
@@ -1421,6 +1429,12 @@ urlpatterns = [
     path('api/discord/status/', get_discord_status, name='discord-status'),
     path('api/discord/unlink/', unlink_discord, name='discord-unlink'),
     path('api/discord/verify-link-code/', verify_discord_link_code, name='discord-verify-link-code'),
+
+    # Session 628: Content Calendar APIs
+    path('api/content-calendar/', content_calendar_main, name='content-calendar'),
+    path('api/content-calendar/upcoming/', content_calendar_upcoming, name='content-calendar-upcoming'),
+    path('api/content-calendar/history/', content_calendar_history, name='content-calendar-history'),
+    path('api/content-calendar/reschedule/', content_calendar_reschedule, name='content-calendar-reschedule'),
 
     # Agent Tracking APIs (Session 120)
     path('api/projects/<uuid:project_id>/contributions/agents/', project_contributing_agents, name='project-contributing-agents'),

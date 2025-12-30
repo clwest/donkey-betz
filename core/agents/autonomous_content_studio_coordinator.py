@@ -36,6 +36,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from core.services.memory_context_service import get_memory_context_service
 
 logger = logging.getLogger(__name__)
 
@@ -593,8 +594,33 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         except ContentChannel.DoesNotExist:
             return {"error": f"Channel {channel_id} not found"}
 
-        # Create AISeries for this content
-        series_prompt = f"{channel.topic_domain} - {topic}\n\nAngle: {angle}\n\nTarget Audience: {channel.target_audience}"
+        # Session 628: Get user preferences for personalization
+        user_prefs = {}
+        try:
+            memory_service = get_memory_context_service(channel.user)
+            user_prefs = memory_service.get_content_preferences(channel.user, channel)
+            logger.info(f"Session 628: Loaded user preferences for {channel.name}: {user_prefs}")
+        except Exception as pref_error:
+            logger.warning(f"Session 628: Failed to load preferences: {pref_error}")
+
+        # Apply user preferences to visual style and voice
+        visual_style = user_prefs.get('visual_style') or channel.visual_style
+        voice_id = user_prefs.get('voice_id') or channel.voice_id
+        voice_name = user_prefs.get('voice_name') or channel.voice_name
+        content_tone = user_prefs.get('content_tone') or 'balanced'
+
+        # Create AISeries for this content with preferences
+        series_prompt = f"""{channel.topic_domain} - {topic}
+
+Angle: {angle}
+
+Target Audience: {channel.target_audience}
+
+Visual Style: {visual_style}
+Voice: {voice_name or 'Default'}
+Content Tone: {content_tone}
+
+User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
 
         # Phase 3: AISeriesWorkflowAgent integration pending
         # Creates placeholder records for now
