@@ -8,15 +8,20 @@
 
 ## Session 625 Accomplishments
 
-### Fixed Celery Beat Reality Check
+### Fixed Reality Check TaskResult Bug
 
-**Problem:** System Reality Check was showing Celery Beat at 30% because it checked `TaskResult` table, which is empty since the result backend stores to Redis.
+**Problem:** System Reality Check was checking `TaskResult` table for Celery Beat and ThinkingAgent, but results store to Redis, leaving the table empty.
 
-**Fix:** Changed to use `PeriodicTask.last_run_at` from django-celery-beat, which accurately tracks when each scheduled task last ran.
+**Fixes:**
+1. **Celery Beat**: Now uses `PeriodicTask.last_run_at` from django-celery-beat
+2. **ThinkingAgent**: Now checks `ThoughtRecord` model directly
 
-**Result:**
-- Celery Beat score: 30% → 83% (46/60 tasks ran in 6h)
-- Overall reality score: 68% → 73%
+**Results:**
+| System | Before | After |
+|--------|--------|-------|
+| Celery Beat | 30% | 83% (46/60 tasks) |
+| ThinkingAgent | 60% | 100% (8 cycles) |
+| **Overall** | 68% | **78%** |
 
 ---
 
