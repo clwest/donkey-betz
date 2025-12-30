@@ -1,8 +1,33 @@
-# Session 613 - Start Here
+# Session 614 - Start Here
 
-**Previous Session:** 612
+**Previous Session:** 613
 **Date:** December 29, 2025
 **Focus:** New Feature - User Choice
+
+---
+
+## Session 613 Accomplishments
+
+### Pilot Source Tracking - COMPLETE!
+
+Added source/origin visibility to pilot cards so you can see WHERE each pilot came from:
+
+1. **API Enhancement** (`pilot_progress.py`)
+   - Added `_get_source_info()` method
+   - Traces chain: Experiment → Pilot → Gate → Decision → Conversation
+   - Returns: source type, topic, decision_type, conversation_id, agents_involved
+   - Cleans up topic prefixes automatically
+
+2. **UI Enhancement** (pilot cards)
+   - Source badge on each card showing:
+     - 🗣️ Conversation / 🧠 Hive Mind / 🏛️ Boardroom
+     - Agent names involved (if available)
+     - Topic/subject of the original decision
+   - Example: `🗣️ Conversation · "Combining trend and market insights"`
+
+3. **Name Cleanup**
+   - Removed verbose prefixes from experiment names: `Experiment:`, `Discussion:`, `[Synthesis]`, `[Learned]`
+   - Cards now show clean names like "MIT Tech Review Insights"
 
 ---
 
@@ -10,35 +35,7 @@
 
 ### Dashboard Consolidation - COMPLETE!
 
-Merged Pilot Dashboard and Pilot Progress Dashboard into one unified dashboard:
-
-1. **Unified Pilot Dashboard** (green themed)
-   - "➕ Create Pilot" button added
-   - Stats Row 1: Running | Success | Failure | Partial | Success Rate | Healthy %
-   - Stats Row 2: Trending Up | Stable | Trending Down
-   - KPI Alerts section (from Session 611)
-   - Attention Needed section
-   - All Pilots with rich cards (trends, sparklines, health)
-
-2. **Removed Redundant UI**
-   - Old pink "Pilot Dashboard" (~80 lines HTML)
-   - `loadPilotDashboard()` function (~100 lines JS)
-   - Net reduction: ~158 lines of code
-
-3. **API Enhancement**
-   - Added failure/partial counts to pilot progress API
-
----
-
-## Session 611 Accomplishments
-
-### KPI Alerts System - COMPLETE!
-
-- 5 alert types: kpi_drop, trend_reversal, stalled, off_track, target_exceeded
-- 3 severity levels: critical, warning, info
-- Celery tasks: hourly alerts check, weekly summary
-- Discord integration for real-time notifications
-- Dashboard UI for viewing alerts
+Merged Pilot Dashboard and Pilot Progress Dashboard into one unified dashboard.
 
 ---
 
@@ -60,11 +57,13 @@ Trends:
   Collecting Data: 6
 
 KPI Alerts: 0 (all healthy!)
+
+Source Tracking: ALL pilots show origin!
 ```
 
 ---
 
-## The Complete Learning System (Sessions 590-612)
+## The Complete Learning System (Sessions 590-613)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -87,12 +86,14 @@ Session 610: Trend Visualization UI - SPARKLINES!
         |
 Session 611: KPI Alerts - SMART MONITORING!
         |
-Session 612: Dashboard Consolidation - UNIFIED UI! <-- NEW
+Session 612: Dashboard Consolidation - UNIFIED UI!
+        |
+Session 613: Pilot Source Tracking - KNOW WHERE PILOTS COME FROM! <-- NEW
 ```
 
 ---
 
-## Session 613 Options
+## Session 614 Options
 
 ### Option A: Experiment Recommendations
 - AI-powered next steps based on KPI trends
@@ -112,7 +113,12 @@ Session 612: Dashboard Consolidation - UNIFIED UI! <-- NEW
 - Alert snooze/acknowledge UI
 - Alert history tracking
 
-### Option D: New Feature
+### Option D: Recent Activity Panel
+- Add panel showing recent dreams, conversations, boardroom decisions
+- Quick links to see what agents are discussing
+- Feed of system activity that leads to pilots
+
+### Option E: New Feature
 - User chooses a different direction
 
 ---
@@ -127,13 +133,14 @@ make start && make celery
 open http://localhost:8000/ai-studio/
 # Go to Growth tab -> Pilot Dashboard (unified)
 
-# Test dashboard API
+# Test source tracking
 .venv/bin/python manage.py shell -c "
 from core.services.pilot_progress import get_pilot_progress_dashboard
 result = get_pilot_progress_dashboard()
-s = result['summary']
-print(f'Running: {s[\"running\"]} | Success: {s[\"success\"]} | Failure: {s[\"failure\"]}')
-print(f'Success Rate: {s[\"success_rate\"]}% | Healthy: {s[\"healthy_percent\"]}%')
+for exp in result['experiments'][:3]:
+    src = exp.get('source', {})
+    print(f\"{exp['name'][:40]}\")
+    print(f\"  Source: {src.get('type')} - {src.get('topic')[:50]}\")
 "
 ```
 
@@ -143,14 +150,14 @@ print(f'Success Rate: {s[\"success_rate\"]}% | Healthy: {s[\"healthy_percent\"]}
 
 | File | Purpose |
 |------|---------|
-| `ai_core/templates/ai_image_studio.html` | Unified Pilot Dashboard UI |
-| `core/services/pilot_progress.py` | Dashboard API with outcome counts |
+| `ai_core/templates/ai_image_studio.html` | Unified Pilot Dashboard UI with source badges |
+| `core/services/pilot_progress.py` | Dashboard API with source tracking |
 | `core/services/kpi_alerts.py` | KPI alert detection service |
 | `core/services/auto_kpi_tracking.py` | Auto KPI tracking service |
 
 ---
 
-## System Stats After Session 612
+## System Stats After Session 613
 
 | Component | Count |
 |-----------|-------|
@@ -161,8 +168,8 @@ print(f'Success Rate: {s[\"success_rate\"]}% | Healthy: {s[\"healthy_percent\"]}
 | **Pilot Health** | 100% on_track |
 | **KPI Tracking** | 100% auto-tracked |
 | **KPI Alerts** | 5 types, 3 severities |
-| **Dashboard** | Unified (1 instead of 2) |
+| **Dashboard** | Unified with source tracking |
 
 ---
 
-**Session 612: Dashboard Consolidation - One unified Pilot Dashboard with all features!**
+**Session 613: Pilot Source Tracking - Now you can see WHERE each pilot came from!**
