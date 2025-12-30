@@ -4187,6 +4187,54 @@ def get_all_experiment_kpi_trends(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def get_kpi_alerts(request):
+    """
+    GET /api/experiments/kpi-alerts/
+
+    Session 611: Check and return KPI alerts for all running experiments.
+
+    Returns:
+        - alerts: List of alert objects sorted by severity
+        - summary: Counts by severity and type
+        - experiments_checked: Number of experiments analyzed
+    """
+    try:
+        from core.services.kpi_alerts import check_kpi_alerts
+
+        result = check_kpi_alerts()
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting KPI alerts: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_weekly_kpi_summary(request):
+    """
+    GET /api/experiments/kpi-summary/
+
+    Session 611: Get weekly KPI trend summary.
+
+    Returns:
+        - week_of: Date of summary
+        - experiments_tracked: Count
+        - trending_up/down/stable: Counts
+        - highlights: Experiments doing well
+        - concerns: Experiments needing attention
+    """
+    try:
+        from core.services.kpi_alerts import get_weekly_kpi_summary
+
+        result = get_weekly_kpi_summary()
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting weekly KPI summary: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

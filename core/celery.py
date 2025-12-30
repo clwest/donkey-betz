@@ -1238,6 +1238,27 @@ app.conf.beat_schedule = {
             'expires': 3600,  # Expire after 1 hour
         }
     },
+
+    # SESSION 611: KPI ALERTS
+    # Check for KPI drops, trend reversals, stalled experiments
+    # Sends Discord notifications for critical/warning alerts
+    'check-kpi-alerts': {
+        'task': 'core.tasks.check_kpi_alerts',
+        'schedule': crontab(minute=30),  # Every hour at :30 (after KPI update)
+        'options': {
+            'expires': 3600,  # Expire after 1 hour
+        }
+    },
+
+    # SESSION 611: WEEKLY KPI SUMMARY
+    # Send weekly summary of KPI trends to Discord
+    'weekly-kpi-summary': {
+        'task': 'core.tasks.send_weekly_kpi_summary',
+        'schedule': crontab(hour=9, minute=0, day_of_week=1),  # Monday 9 AM
+        'options': {
+            'expires': 86400,  # Expire after 1 day
+        }
+    },
 }
 
 # Task routing configuration

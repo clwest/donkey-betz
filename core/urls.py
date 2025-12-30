@@ -316,6 +316,9 @@ from core.views_agent_learning import (
     trigger_kpi_update,
     get_experiment_kpi_trend,
     get_all_experiment_kpi_trends,
+    # Session 611: KPI Alerts
+    get_kpi_alerts,
+    get_weekly_kpi_summary,
     # Session 602: Boardroom Learning Integration
     get_decision_learning_context,
     get_boardroom_learning_summary,
@@ -2787,6 +2790,9 @@ urlpatterns = [
     path('api/experiments/kpis/update/', trigger_kpi_update, name='trigger-kpi-update'),
     path('api/experiments/<uuid:experiment_id>/kpi-trend/', get_experiment_kpi_trend, name='experiment-kpi-trend'),
     path('api/experiments/kpi-trends/', get_all_experiment_kpi_trends, name='all-experiment-kpi-trends'),
+    # Session 611: KPI Alerts
+    path('api/experiments/kpi-alerts/', get_kpi_alerts, name='kpi-alerts'),
+    path('api/experiments/kpi-summary/', get_weekly_kpi_summary, name='kpi-weekly-summary'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

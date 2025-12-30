@@ -20641,3 +20641,109 @@ def _send_kpi_update_discord_notification(results):
 
     except Exception as e:
         logger.debug(f"Discord KPI notification failed: {e}")
+
+
+# =============================================================================
+# Session 611: KPI Alerts Task
+# =============================================================================
+
+@shared_task
+def check_kpi_alerts():
+    """
+    Session 611: Check all running experiments for KPI alert conditions.
+
+    Runs on a schedule to detect:
+    1. Significant KPI drops (>20% decline)
+    2. Trend reversals (was improving, now declining)
+    3. Stalled experiments (no progress)
+    4. Off-track experiments (behind expected pace)
+    5. Target exceeded (positive!)
+
+    Sends Discord notifications for critical/warning alerts.
+
+    Returns:
+        Dict with alerts generated and summary
+    """
+    logger.info("🚨 [SESSION 611] Checking KPI alerts...")
+
+    try:
+        from core.services.kpi_alerts import check_kpi_alerts as do_check, send_kpi_alerts_to_discord
+
+        # Check for alerts
+        results = do_check()
+
+        summary = results.get('summary', {})
+        logger.info(
+            f"🚨 [SESSION 611] Alert check complete - "
+            f"Critical: {summary.get('critical', 0)}, "
+            f"Warning: {summary.get('warning', 0)}, "
+            f"Info: {summary.get('info', 0)}"
+        )
+
+        # Send Discord notifications for critical/warning alerts
+        alerts = results.get('alerts', [])
+        critical_warnings = [a for a in alerts if a['severity'] in ('critical', 'warning')]
+
+        if critical_warnings:
+            discord_result = send_kpi_alerts_to_discord(alerts)
+            logger.info(f"🚨 [SESSION 611] Discord notifications sent: {discord_result.get('sent', 0)}")
+
+        return results
+
+    except Exception as e:
+        logger.error(f"🚨 [SESSION 611] KPI alert check failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task
+def send_weekly_kpi_summary():
+    """
+    Session 611: Send weekly KPI trend summary to Discord.
+
+    Runs once per week to summarize:
+    - Experiments trending up (highlights)
+    - Experiments trending down (concerns)
+    - Overall trend distribution
+
+    Returns:
+        Dict with summary data
+    """
+    logger.info("📊 [SESSION 611] Generating weekly KPI summary...")
+
+    try:
+        from core.services.kpi_alerts import get_weekly_kpi_summary
+        from core.services.discord_notifications import DiscordNotificationService
+
+        summary = get_weekly_kpi_summary()
+
+        # Build Discord message
+        message = "**📊 Weekly KPI Summary**\n\n"
+        message += f"**Experiments Tracked:** {summary.get('experiments_tracked', 0)}\n"
+        message += f"• 📈 Trending Up: {summary.get('trending_up', 0)}\n"
+        message += f"• ➡️ Stable: {summary.get('stable', 0)}\n"
+        message += f"• 📉 Trending Down: {summary.get('trending_down', 0)}\n\n"
+
+        highlights = summary.get('highlights', [])
+        if highlights:
+            message += "**🌟 Highlights:**\n"
+            for h in highlights[:3]:
+                message += f"• {h['name'][:30]}: {h['current']} / {h['target']}\n"
+            message += "\n"
+
+        concerns = summary.get('concerns', [])
+        if concerns:
+            message += "**⚠️ Needs Attention:**\n"
+            for c in concerns[:3]:
+                message += f"• {c['name'][:30]}: {c['current']} / {c['target']}\n"
+
+        # Send to Discord
+        discord = DiscordNotificationService()
+        discord.send_to_channel('system-status', message)
+
+        logger.info(f"📊 [SESSION 611] Weekly summary sent - {len(highlights)} highlights, {len(concerns)} concerns")
+
+        return summary
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 611] Weekly summary failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
