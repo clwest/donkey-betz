@@ -309,6 +309,9 @@ from core.views_agent_learning import (
     update_remediation_step,
     # Session 606: Experiment Suggestions
     get_experiment_suggestions,
+    # Session 607: Pilot Progress Dashboard
+    get_pilot_progress_dashboard,
+    get_pilot_progress_detail,
     # Session 602: Boardroom Learning Integration
     get_decision_learning_context,
     get_boardroom_learning_summary,
@@ -2773,6 +2776,9 @@ urlpatterns = [
     path('api/experiments/<uuid:experiment_id>/remediation/', update_remediation_step, name='experiment-remediation'),
     # Session 606: Experiment Suggestions
     path('api/experiments/suggestions/', get_experiment_suggestions, name='experiment-suggestions'),
+    # Session 607: Pilot Progress Dashboard
+    path('api/pilots/progress/', get_pilot_progress_dashboard, name='pilot-progress-dashboard'),
+    path('api/pilots/progress/<uuid:experiment_id>/', get_pilot_progress_detail, name='pilot-progress-detail'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),
