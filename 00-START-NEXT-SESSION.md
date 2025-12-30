@@ -1,49 +1,40 @@
-# Session 610 - Start Here
+# Session 611 - Start Here
 
-**Previous Session:** 609
+**Previous Session:** 610
 **Date:** December 29, 2025
 **Focus:** New Feature - User Choice
 
 ---
 
-## Session 609 Accomplishments
+## Session 610 Accomplishments
 
-### Auto KPI Tracking System - COMPLETE!
+### KPI Trend Visualization UI - COMPLETE!
 
-Built automatic KPI tracking for all running experiments:
+Added trend visualization to the Pilot Progress Dashboard:
 
-1. **KPISnapshot Model** (`core/models_pilot_readiness.py`)
-   - Stores historical KPI values for trend tracking
-   - Includes numeric parsing for charting
-   - Progress percentage calculation
+1. **Trend Summary Stats** (Top of Dashboard)
+   - Shows count of pilots trending up (green)
+   - Shows count of pilots stable (gray)
+   - Shows count of pilots trending down (red)
 
-2. **AutoKPITrackingService** (`core/services/auto_kpi_tracking.py`)
-   - Connects experiments to data sources (spiders, agents, decisions)
-   - Calculates current KPI values automatically
-   - Creates snapshots for trend visualization
-   - Data source mappings:
-     - `mit_tech_review` -> Spider: mit_tech runs
-     - `financial` -> Spider: coingecko, yahoo, polygon, finnhub
-     - `content` -> Agent: content, writer, creative executions
-     - `synthesis` -> Decision: synthesis decisions
-     - `market` -> Spider: market, trend, news
+2. **Trend Badges on Pilot Cards**
+   - Each pilot card shows a clickable trend badge
+   - Icons: 📈 Up | ➡️ Stable | 📉 Down | 📊 Collecting Data
+   - Color-coded: Green/Gray/Red based on direction
+   - Shows number of data points collected
 
-3. **Celery Task** (`core/tasks.py`)
-   - `update_experiment_kpis` - Runs every hour at :00
-   - Discord notifications on updates
+3. **Trend Detail Modal** (Click badge to open)
+   - Shows current value vs target
+   - SVG sparkline chart with 30-day history
+   - Area fill under the line for visual impact
+   - Data points table with last 10 readings
+   - Color-coded based on trend direction
 
-4. **API Endpoints** (`core/views_agent_learning.py`, `core/urls.py`)
-   - `POST /api/experiments/kpis/update/` - Trigger manual update
-   - `GET /api/experiments/<id>/kpi-trend/` - Get trend for one experiment
-   - `GET /api/experiments/kpi-trends/` - Get all trends summary
-
-### Test Results
-```
-Total experiments: 7
-Updated: 7 (100%)
-Snapshots created: 7
-Errors: 0
-```
+4. **Sparkline Generator**
+   - Pure JavaScript SVG generation
+   - No external charting library needed
+   - Responsive design, scales to container
+   - Shows data points as circles on the line
 
 ---
 
@@ -51,18 +42,24 @@ Errors: 0
 
 ```
 8 total pilots:
-  Running: 7 - ALL KPI TRACKED
+  Running: 7 - ALL KPI TRACKED + TREND VISUALIZATION
   Completed: 1 - SUCCESS at 150%
+
+Trend Summary:
+  Trending Up: 0
+  Stable: 1
+  Trending Down: 0
+  Collecting Data: 6
 
 KPI Tracking:
   Auto-updates: Every hour
-  Data sources: Spiders (3), Agents (1), Decisions (1)
-  Snapshots: Tracking historical values
+  Sparkline Charts: 30-day history
+  Click-to-view: Detailed trend modal
 ```
 
 ---
 
-## The Complete Learning System (Sessions 590-609)
+## The Complete Learning System (Sessions 590-610)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -79,27 +76,31 @@ Session 607: Pilot Progress Dashboard
         |
 Session 608: Fixed All Pilot KPIs - ALL HEALTHY!
         |
-Session 609: Auto KPI Tracking - REAL DATA! <-- NEW
+Session 609: Auto KPI Tracking - REAL DATA!
+        |
+Session 610: Trend Visualization UI - SPARKLINES! <-- NEW
 ```
 
 ---
 
-## Session 610 Options
+## Session 611 Options
 
-### Option A: Trend Visualization UI
-- Add KPI trend charts to Pilot Progress Dashboard
-- Sparklines showing 30-day history
-- Color-coded trend indicators (up/down/stable)
+### Option A: KPI Alerts
+- Alert when KPI drops significantly
+- Discord notifications for trend changes
+- "Experiment X is declining" warnings
+- Weekly trend summary
 
-### Option B: KPI Alerts
-- Alert when KPI drops below threshold
-- Notify when experiment is at risk
-- Discord notifications for KPI changes
-
-### Option C: Experiment Recommendations
+### Option B: Experiment Recommendations
 - Suggest actions based on KPI trends
 - "MIT Tech Review insights are high - consider scaling"
 - "Content agent KPIs low - investigate"
+- AI-powered next steps
+
+### Option C: Dashboard Enhancements
+- Mini sparklines inline on pilot cards
+- Trend comparison view
+- Export trend data to CSV
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -112,25 +113,19 @@ Session 609: Auto KPI Tracking - REAL DATA! <-- NEW
 # Start services
 make start && make celery
 
-# Test auto KPI tracking
-.venv/bin/python manage.py shell -c "
-from core.services.auto_kpi_tracking import update_all_experiment_kpis
-result = update_all_experiment_kpis()
-print(f'Updated: {result[\"summary\"][\"updated_count\"]}')
-print(f'Errors: {result[\"summary\"][\"error_count\"]}')
-"
+# View in UI
+open http://localhost:8000/ai-studio/
+# Go to Growth tab -> Pilot Progress Dashboard
+# Click on trend badge to see sparkline chart
 
-# Get KPI trends
+# Test trend API
 .venv/bin/python manage.py shell -c "
 from core.services.auto_kpi_tracking import get_all_kpi_trends
 result = get_all_kpi_trends()
 print(f'Trending up: {result[\"summary\"][\"trending_up\"]}')
+print(f'Stable: {result[\"summary\"][\"stable\"]}')
 print(f'Trending down: {result[\"summary\"][\"trending_down\"]}')
 "
-
-# View in UI
-open http://localhost:8000/ai-studio/
-# Go to Growth tab -> Pilot Progress Dashboard
 ```
 
 ---
@@ -139,28 +134,26 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `core/services/auto_kpi_tracking.py` | Session 609 - Auto KPI tracking service |
-| `core/models_pilot_readiness.py` | KPISnapshot model added |
-| `core/migrations/0134_session_609_kpi_snapshot.py` | KPI snapshot migration |
-| `core/tasks.py` | `update_experiment_kpis` Celery task |
-| `core/celery.py` | Beat schedule (hourly) |
-| `core/views_agent_learning.py` | API endpoints |
-| `core/urls.py` | URL routes |
+| `ai_core/templates/ai_image_studio.html` | Session 610 - Trend UI, sparkline, modal |
+| `core/services/auto_kpi_tracking.py` | Session 609 - KPI tracking service |
+| `core/models_pilot_readiness.py` | KPISnapshot model |
+| `core/views_agent_learning.py` | Trend API endpoints |
 
 ---
 
-## System Stats After Session 609
+## System Stats After Session 610
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 103 (+1 AutoKPITrackingService) |
+| **Services** | 103 |
 | **Active Pilots** | 7 running, 1 success |
 | **Pilot Health** | 100% on_track |
 | **KPI Tracking** | 100% auto-tracked |
-| **The Learning Loop** | COMPLETE + AUTO-TRACKED! |
+| **Trend Visualization** | Sparkline charts with click-to-detail |
+| **The Learning Loop** | COMPLETE + VISUALIZED! |
 
 ---
 
-**Session 609: Auto KPI Tracking - All experiments now auto-update from real data!**
+**Session 610: Trend Visualization UI - See your KPI history in beautiful sparklines!**

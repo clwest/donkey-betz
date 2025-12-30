@@ -7528,40 +7528,47 @@
                             <div class="card-body">
                                 <!-- Summary Stats -->
                                 <div class="row mb-4">
-                                    <div class="col-md-2">
+                                    <div class="col-6 col-md-2 mb-2">
                                         <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.2); border-radius: 8px;">
                                             <h2 id="pilot-running-count" style="color: #22c55e;">-</h2>
                                             <small class="text-muted">Running</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-6 col-md-2 mb-2">
                                         <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
                                             <h2 id="pilot-completed-count" style="color: #3b82f6;">-</h2>
                                             <small class="text-muted">Completed</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-6 col-md-2 mb-2">
                                         <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
                                             <h2 id="pilot-success-rate" style="color: #10b981;">--%</h2>
                                             <small class="text-muted">Success Rate</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
-                                        <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 8px;">
-                                            <h2 id="pilot-kpi-completion" style="color: #8b5cf6;">--%</h2>
-                                            <small class="text-muted">KPI Defined</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
+                                    <div class="col-6 col-md-2 mb-2">
                                         <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.2); border-radius: 8px;">
                                             <h2 id="pilot-healthy-percent" style="color: #22c55e;">--%</h2>
                                             <small class="text-muted">Healthy</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
-                                        <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
-                                            <h2 id="pilot-needs-attention" style="color: #f59e0b;">-</h2>
-                                            <small class="text-muted">Need Attention</small>
+                                    <!-- Session 610: Trend Stats -->
+                                    <div class="col-4 col-md-2 mb-2">
+                                        <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.15); border-radius: 8px;">
+                                            <h2 id="pilot-trending-up" style="color: #22c55e;">-</h2>
+                                            <small class="text-muted">📈 Up</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 col-md-1 mb-2">
+                                        <div class="text-center p-3" style="background: rgba(156, 163, 175, 0.15); border-radius: 8px;">
+                                            <h2 id="pilot-trending-stable" style="color: #9ca3af;">-</h2>
+                                            <small class="text-muted">➡️</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 col-md-1 mb-2">
+                                        <div class="text-center p-3" style="background: rgba(239, 68, 68, 0.15); border-radius: 8px;">
+                                            <h2 id="pilot-trending-down" style="color: #ef4444;">-</h2>
+                                            <small class="text-muted">📉</small>
                                         </div>
                                     </div>
                                 </div>
@@ -59918,20 +59925,49 @@ ${item.generated_content}
         // ========== END SESSION 598: LEARNING LOOP DASHBOARD ==========
 
         // ========== SESSION 607: PILOT PROGRESS DASHBOARD ==========
+        // ========== SESSION 610: Added trend visualization ==========
+
+        // Session 610: Store trend data globally for use in card rendering
+        let pilotTrendData = {};
+
         async function loadPilotProgressDashboard() {
             /**
              * Session 607: Load the Pilot Progress Dashboard
-             * Shows running pilots with KPI tracking, health status, and recommended actions.
+             * Session 610: Added KPI trend visualization with sparklines
+             * Shows running pilots with KPI tracking, health status, trends, and recommended actions.
              */
             console.log('📊 Loading Pilot Progress Dashboard...');
 
             try {
-                const response = await authenticatedFetch('/api/pilots/progress/');
-                const data = await response.json();
+                // Fetch both progress and trend data in parallel
+                const [progressResponse, trendResponse] = await Promise.all([
+                    authenticatedFetch('/api/pilots/progress/'),
+                    authenticatedFetch('/api/experiments/kpi-trends/?days=30')
+                ]);
+
+                const data = await progressResponse.json();
+                const trendData = await trendResponse.json();
 
                 if (!data.success) {
                     console.error('Error loading pilot progress:', data.error);
                     return;
+                }
+
+                // Session 610: Build trend lookup map
+                pilotTrendData = {};
+                if (trendData.success && trendData.experiments) {
+                    trendData.experiments.forEach(exp => {
+                        pilotTrendData[exp.id] = {
+                            direction: exp.trend_direction,
+                            dataPoints: exp.data_points
+                        };
+                    });
+
+                    // Update trend summary stats
+                    const trendSummary = trendData.summary || {};
+                    document.getElementById('pilot-trending-up').textContent = trendSummary.trending_up || 0;
+                    document.getElementById('pilot-trending-stable').textContent = trendSummary.stable || 0;
+                    document.getElementById('pilot-trending-down').textContent = trendSummary.trending_down || 0;
                 }
 
                 // Update summary stats
@@ -59939,9 +59975,7 @@ ${item.generated_content}
                 document.getElementById('pilot-running-count').textContent = summary.running || 0;
                 document.getElementById('pilot-completed-count').textContent = summary.completed || 0;
                 document.getElementById('pilot-success-rate').textContent = `${summary.success_rate || 0}%`;
-                document.getElementById('pilot-kpi-completion').textContent = `${summary.kpi_completion_rate || 0}%`;
                 document.getElementById('pilot-healthy-percent').textContent = `${summary.healthy_percent || 0}%`;
-                document.getElementById('pilot-needs-attention').textContent = summary.needs_attention || 0;
 
                 // Show attention section if needed
                 const attentionSection = document.getElementById('pilot-attention-section');
@@ -60026,12 +60060,34 @@ ${item.generated_content}
                         ? `<span class="badge" style="background: #ef4444;">Failed</span>`
                         : `<span class="badge" style="background: #6b7280;">${exp.status}</span>`;
 
+                    // Session 610: Trend indicator
+                    const trend = pilotTrendData[exp.id] || { direction: 'insufficient_data', dataPoints: 0 };
+                    const trendIcons = {
+                        'up': { icon: '📈', color: '#22c55e', label: 'Trending Up' },
+                        'down': { icon: '📉', color: '#ef4444', label: 'Trending Down' },
+                        'stable': { icon: '➡️', color: '#9ca3af', label: 'Stable' },
+                        'insufficient_data': { icon: '📊', color: '#6b7280', label: 'Collecting Data' }
+                    };
+                    const trendInfo = trendIcons[trend.direction] || trendIcons['insufficient_data'];
+
+                    // Session 610: Trend badge HTML (clickable to view details)
+                    const trendBadge = `
+                        <span class="badge ms-1" style="background: ${trendInfo.color}20; color: ${trendInfo.color}; font-size: 10px; cursor: pointer;"
+                              title="${trendInfo.label} (${trend.dataPoints} data points) - Click for details"
+                              onclick="event.stopPropagation(); showTrendDetail('${exp.id}', '${exp.name.replace(/'/g, "\\'")}');">
+                            ${trendInfo.icon} ${trend.dataPoints > 0 ? trend.dataPoints + ' pts' : ''}
+                        </span>
+                    `;
+
                     return `
                         <div class="col-md-6 col-lg-4 mb-3">
                             <div style="background: ${health.bg}; border: 1px solid ${health.border}; border-radius: 8px; padding: 15px; height: 100%;">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <span style="font-size: 20px;">${health.icon}</span>
-                                    ${statusBadge}
+                                    <div class="d-flex align-items-center">
+                                        ${trendBadge}
+                                        ${statusBadge}
+                                    </div>
                                 </div>
                                 <h6 style="color: #e5e7eb; margin-bottom: 8px;" title="${exp.name}">${exp.name.substring(0, 45)}${exp.name.length > 45 ? '...' : ''}</h6>
                                 <div class="small text-muted mb-2">
@@ -60072,7 +60128,168 @@ ${item.generated_content}
                 });
             }
         });
-        // ========== END SESSION 607: PILOT PROGRESS DASHBOARD ==========
+
+        // Session 610: Show trend detail modal with sparkline
+        async function showTrendDetail(experimentId, experimentName) {
+            console.log('📈 Loading trend for experiment:', experimentId);
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/kpi-trend/?days=30`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading trend:', data.error);
+                    return;
+                }
+
+                // Generate sparkline SVG
+                const trendData = data.trend_data || [];
+                const sparklineSvg = generateSparklineSvg(trendData, data.trend_direction);
+
+                // Trend direction styling
+                const directionStyles = {
+                    'up': { icon: '📈', color: '#22c55e', label: 'Trending Up' },
+                    'down': { icon: '📉', color: '#ef4444', label: 'Trending Down' },
+                    'stable': { icon: '➡️', color: '#9ca3af', label: 'Stable' },
+                    'insufficient_data': { icon: '📊', color: '#6b7280', label: 'Collecting Data' }
+                };
+                const style = directionStyles[data.trend_direction] || directionStyles['insufficient_data'];
+
+                const modalHtml = `
+                    <div class="modal fade" id="trendDetailModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content" style="background: #1a1a1a; border: 2px solid ${style.color};">
+                                <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                    <h5 class="modal-title" style="color: ${style.color};">
+                                        ${style.icon} KPI Trend - ${experimentName.substring(0, 40)}
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-4">
+                                        <div class="col-md-4 text-center">
+                                            <h4 style="color: ${style.color};">${style.icon}</h4>
+                                            <p style="color: ${style.color};">${style.label}</p>
+                                        </div>
+                                        <div class="col-md-4 text-center">
+                                            <h4 style="color: #e5e7eb;">${data.current || '-'}</h4>
+                                            <small class="text-muted">Current Value</small>
+                                        </div>
+                                        <div class="col-md-4 text-center">
+                                            <h4 style="color: #8b5cf6;">${data.target || '-'}</h4>
+                                            <small class="text-muted">Target</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <h6 style="color: #e5e7eb;">KPI: ${data.kpi || 'Not set'}</h6>
+                                    </div>
+
+                                    <!-- Sparkline Chart -->
+                                    <div class="mb-4 p-3" style="background: #2d2d2d; border-radius: 8px;">
+                                        <h6 class="text-muted mb-3">30-Day Trend (${trendData.length} data points)</h6>
+                                        ${sparklineSvg}
+                                    </div>
+
+                                    <!-- Data Points Table -->
+                                    ${trendData.length > 0 ? `
+                                        <div style="max-height: 200px; overflow-y: auto;">
+                                            <table class="table table-sm table-dark">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Value</th>
+                                                        <th>Progress</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${trendData.slice(-10).reverse().map(pt => `
+                                                        <tr>
+                                                            <td class="small">${new Date(pt.date).toLocaleDateString()}</td>
+                                                            <td>${pt.display_value || pt.value || '-'}</td>
+                                                            <td>${pt.progress_percent ? pt.progress_percent + '%' : '-'}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ` : '<p class="text-muted text-center">No trend data available yet. Auto-updates run hourly.</p>'}
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #333;">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Remove existing modal if present
+                const existingModal = document.getElementById('trendDetailModal');
+                if (existingModal) existingModal.remove();
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = new bootstrap.Modal(document.getElementById('trendDetailModal'));
+                modal.show();
+
+            } catch (error) {
+                console.error('Error loading trend detail:', error);
+            }
+        }
+
+        // Session 610: Generate SVG sparkline from trend data
+        function generateSparklineSvg(data, direction) {
+            if (!data || data.length === 0) {
+                return '<p class="text-muted text-center">No data points yet</p>';
+            }
+
+            const width = 600;
+            const height = 100;
+            const padding = 10;
+
+            // Extract numeric values
+            const values = data.map(d => d.value || 0).filter(v => !isNaN(v));
+            if (values.length === 0) {
+                return '<p class="text-muted text-center">No numeric data available</p>';
+            }
+
+            const minVal = Math.min(...values);
+            const maxVal = Math.max(...values);
+            const range = maxVal - minVal || 1;
+
+            // Generate points
+            const points = values.map((val, i) => {
+                const x = padding + (i / (values.length - 1 || 1)) * (width - 2 * padding);
+                const y = height - padding - ((val - minVal) / range) * (height - 2 * padding);
+                return `${x},${y}`;
+            }).join(' ');
+
+            // Color based on trend direction
+            const colors = {
+                'up': { stroke: '#22c55e', fill: 'rgba(34, 197, 94, 0.2)' },
+                'down': { stroke: '#ef4444', fill: 'rgba(239, 68, 68, 0.2)' },
+                'stable': { stroke: '#9ca3af', fill: 'rgba(156, 163, 175, 0.2)' },
+                'insufficient_data': { stroke: '#6b7280', fill: 'rgba(107, 114, 128, 0.2)' }
+            };
+            const color = colors[direction] || colors['insufficient_data'];
+
+            // Create area fill path
+            const firstX = padding;
+            const lastX = padding + ((values.length - 1) / (values.length - 1 || 1)) * (width - 2 * padding);
+            const areaPath = `M ${firstX},${height - padding} L ${points} L ${lastX},${height - padding} Z`;
+
+            return `
+                <svg width="100%" viewBox="0 0 ${width} ${height}" style="max-height: 120px;">
+                    <path d="${areaPath}" fill="${color.fill}" />
+                    <polyline points="${points}" fill="none" stroke="${color.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    ${values.map((val, i) => {
+                        const x = padding + (i / (values.length - 1 || 1)) * (width - 2 * padding);
+                        const y = height - padding - ((val - minVal) / range) * (height - 2 * padding);
+                        return `<circle cx="${x}" cy="${y}" r="4" fill="${color.stroke}" />`;
+                    }).join('')}
+                </svg>
+            `;
+        }
+        // ========== END SESSION 607/610: PILOT PROGRESS DASHBOARD ==========
 
         // Show approve gate modal
         function showApproveGateModal(gateId) {
