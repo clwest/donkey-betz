@@ -1,6 +1,6 @@
 """
-Content Calendar API Views - Session 628
-=========================================
+Content Calendar API Views - Session 628 + 631 + 632
+=====================================================
 
 API endpoints for the Content Calendar feature, providing visibility
 into scheduled and past autonomous content generation.
@@ -10,6 +10,8 @@ Endpoints:
 - GET /api/content-calendar/upcoming/ - Next 10 scheduled items
 - GET /api/content-calendar/history/ - Past content with metrics
 - POST /api/content-calendar/reschedule/ - Change schedule date
+- GET /api/content-calendar/episode/<uuid>/ - Episode details with script (Session 631)
+- POST /api/content-calendar/generate/<uuid>/ - Trigger content generation (Session 632)
 """
 
 import logging
@@ -415,6 +417,171 @@ def content_calendar_reschedule(request):
         }, status=400)
     except Exception as e:
         logger.error(f"Error rescheduling content: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def content_calendar_episode_detail(request, episode_id):
+    """
+    GET /api/content-calendar/episode/<uuid>/
+
+    Session 631: Returns full episode details including script content.
+
+    Response includes:
+    - Basic episode info (title, topic, dates)
+    - Full script content
+    - Debate information (if available)
+    - Performance metrics
+    - Channel context
+    """
+    user = request.user
+
+    try:
+        episode = ChannelEpisode.objects.select_related('channel', 'series').get(
+            id=episode_id,
+            channel__user=user
+        )
+    except ChannelEpisode.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Episode not found',
+        }, status=404)
+
+    # Calculate engagement metrics
+    engagement = episode.likes + episode.comments + episode.shares
+    engagement_rate = (engagement / episode.views * 100) if episode.views > 0 else 0
+
+    # Try to get debate info if it exists
+    debate_info = None
+    try:
+        from core.models_autonomous_studio import ContentDebate
+        # Look for debate that matches this episode's topic/time
+        recent_debates = ContentDebate.objects.filter(
+            channel=episode.channel,
+            created_at__gte=episode.created_at - timedelta(hours=1),
+            created_at__lte=episode.created_at + timedelta(hours=1),
+        ).order_by('-created_at').first()
+
+        if recent_debates:
+            debate_info = {
+                'id': str(recent_debates.id),
+                'topic_debated': recent_debates.proposed_topic,
+                'miner_argument': recent_debates.topic_miner_position,
+                'contrarian_argument': recent_debates.contrarian_position,
+                'analyst_argument': recent_debates.analyst_position,
+                'winning_angle': recent_debates.chosen_angle,
+                'decision_reasoning': recent_debates.decision_reasoning,
+                'consensus_reached': recent_debates.consensus_reached,
+                'created_at': recent_debates.created_at.isoformat(),
+            }
+    except Exception as e:
+        logger.debug(f"Could not fetch debate info: {e}")
+
+    # Build response
+    response_data = {
+        'success': True,
+        'episode': {
+            'id': str(episode.id),
+            'title': episode.title,
+            'topic': episode.topic,
+            'description': episode.description,
+            'script': episode.script,  # Session 630: Full script content
+            'channel': {
+                'id': str(episode.channel.id),
+                'name': episode.channel.name,
+                'topic_domain': episode.channel.topic_domain,
+                'visual_style': episode.channel.visual_style,
+                'voice_name': episode.channel.voice_name,
+            },
+            'series': {
+                'id': str(episode.series.id) if episode.series else None,
+                'name': episode.series.name if episode.series else None,
+            },
+            'dates': {
+                'created_at': episode.created_at.isoformat(),
+                'publish_date': episode.publish_date.isoformat() if episode.publish_date else None,
+                'updated_at': episode.updated_at.isoformat() if hasattr(episode, 'updated_at') else None,
+            },
+            'metrics': {
+                'views': episode.views,
+                'likes': episode.likes,
+                'comments': episode.comments,
+                'shares': episode.shares,
+                'engagement': engagement,
+                'engagement_rate': round(engagement_rate, 2),
+                'watch_time_seconds': episode.watch_time_seconds,
+                'retention_rate': float(episode.retention_rate),
+                'performance_score': float(episode.performance_score),
+            },
+            'platform_url': episode.platform_url,
+            'contributed_to_learning': episode.contributed_to_learning,
+        },
+        'debate': debate_info,
+    }
+
+    return JsonResponse(response_data)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def content_calendar_generate(request, channel_id):
+    """
+    POST /api/content-calendar/generate/<uuid>/
+
+    Session 632: Trigger immediate content generation for a channel.
+
+    This bypasses the Celery Beat schedule and triggers content generation
+    on demand. The generation runs asynchronously via Celery task.
+
+    Returns:
+    - task_id: Celery task ID for tracking
+    - channel info
+    - message
+    """
+    user = request.user
+
+    try:
+        channel = ContentChannel.objects.get(id=channel_id, user=user)
+    except ContentChannel.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Channel not found',
+        }, status=404)
+
+    # Check if channel is active
+    if channel.status != ChannelStatus.ACTIVE:
+        return JsonResponse({
+            'success': False,
+            'error': f'Channel is {channel.status}, must be active to generate content',
+        }, status=400)
+
+    # Import and trigger the Celery task
+    try:
+        from core.tasks import generate_content_for_channel
+
+        # Trigger async generation
+        task = generate_content_for_channel.delay(str(channel.id))
+
+        logger.info(
+            f"Session 632: Manual content generation triggered for {channel.name} "
+            f"by user {user.username}, task_id={task.id}"
+        )
+
+        return JsonResponse({
+            'success': True,
+            'task_id': task.id,
+            'channel_id': str(channel.id),
+            'channel_name': channel.name,
+            'message': f'Content generation started for {channel.name}. This may take 1-2 minutes.',
+        })
+
+    except Exception as e:
+        logger.error(f"Error triggering content generation: {e}")
         return JsonResponse({
             'success': False,
             'error': str(e),

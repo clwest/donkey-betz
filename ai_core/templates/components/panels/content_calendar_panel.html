@@ -168,12 +168,401 @@
 </div>
 
 <!-- ============================================================ -->
+<!-- SESSION 631: EPISODE DETAIL MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="episodeDetailModal" tabindex="-1" aria-labelledby="episodeDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="background: #1f2937; border: 1px solid rgba(75, 85, 99, 0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(75, 85, 99, 0.5);">
+                <h5 class="modal-title" id="episodeDetailModalLabel" style="color: #60a5fa;">
+                    <i class="fas fa-video me-2"></i>Episode Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="episodeDetailContent">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="text-muted mt-3">Loading episode details...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(75, 85, 99, 0.5);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="episodePlatformLink" class="btn btn-primary" target="_blank" style="display: none;">
+                    <i class="fas fa-external-link-alt me-1"></i>View on Platform
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
 <!-- CONTENT CALENDAR JAVASCRIPT -->
 <!-- ============================================================ -->
 <script>
-// Session 628: Content Calendar Functions
+// Session 628 + 631: Content Calendar Functions
 
 let calendarData = null;
+let episodeDetailModal = null;
+
+// Session 631: Initialize modal on DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    const modalEl = document.getElementById('episodeDetailModal');
+    if (modalEl) {
+        episodeDetailModal = new bootstrap.Modal(modalEl);
+    }
+});
+
+// Session 631: Show episode details in modal
+async function showEpisodeDetail(episodeId) {
+    // Show modal with loading state
+    const contentEl = document.getElementById('episodeDetailContent');
+    const platformLink = document.getElementById('episodePlatformLink');
+    const titleEl = document.getElementById('episodeDetailModalLabel');
+
+    contentEl.innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+            <p class="text-muted mt-3">Loading episode details...</p>
+        </div>
+    `;
+    platformLink.style.display = 'none';
+    episodeDetailModal.show();
+
+    try {
+        const response = await fetch(`/api/content-calendar/episode/${episodeId}/`);
+        if (!response.ok) throw new Error('Failed to load episode');
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+
+        const ep = data.episode;
+        const debate = data.debate;
+
+        // Update title
+        titleEl.innerHTML = `<i class="fas fa-video me-2"></i>${escapeHtml(ep.title)}`;
+
+        // Build content HTML
+        let html = `
+            <!-- Episode Header -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <h4 style="color: #fff;">${escapeHtml(ep.title)}</h4>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-tv me-1"></i>${escapeHtml(ep.channel.name)}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-tag me-1"></i>${escapeHtml(ep.topic)}
+                    </p>
+                    <p class="small text-muted">
+                        <i class="fas fa-calendar me-1"></i>Created: ${new Date(ep.dates.created_at).toLocaleDateString()}
+                        ${ep.dates.publish_date ? `<span class="mx-2">|</span><i class="fas fa-clock me-1"></i>Published: ${new Date(ep.dates.publish_date).toLocaleDateString()}` : ''}
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                        <div class="text-center">
+                            <div style="font-size: 2rem; font-weight: 700; color: ${getPerformanceColor(ep.metrics.performance_score)};">
+                                ${ep.metrics.performance_score.toFixed(1)}
+                            </div>
+                            <div class="small text-muted">Performance Score</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Row -->
+            <div class="row mb-4 g-3">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                        <div style="font-size: 1.5rem; color: #60a5fa;">${formatNumber(ep.metrics.views)}</div>
+                        <div class="small text-muted"><i class="fas fa-eye me-1"></i>Views</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center" style="background: rgba(236, 72, 153, 0.1); border-radius: 8px;">
+                        <div style="font-size: 1.5rem; color: #f472b6;">${formatNumber(ep.metrics.engagement)}</div>
+                        <div class="small text-muted"><i class="fas fa-heart me-1"></i>Engagement</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                        <div style="font-size: 1.5rem; color: #fbbf24;">${ep.metrics.retention_rate.toFixed(1)}%</div>
+                        <div class="small text-muted"><i class="fas fa-percentage me-1"></i>Retention</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 text-center" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                        <div style="font-size: 1.5rem; color: #a78bfa;">${formatDuration(ep.metrics.watch_time_seconds)}</div>
+                        <div class="small text-muted"><i class="fas fa-clock me-1"></i>Watch Time</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Script Content Section
+        if (ep.script) {
+            html += `
+                <div class="mb-4">
+                    <h5 style="color: #34d399;"><i class="fas fa-scroll me-2"></i>Script / Generated Content</h5>
+                    <div class="p-3" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 8px; max-height: 300px; overflow-y: auto;">
+                        <pre style="color: #e5e7eb; white-space: pre-wrap; font-family: inherit; margin: 0;">${escapeHtml(ep.script)}</pre>
+                    </div>
+                </div>
+            `;
+        } else if (ep.description) {
+            html += `
+                <div class="mb-4">
+                    <h5 style="color: #34d399;"><i class="fas fa-align-left me-2"></i>Description</h5>
+                    <div class="p-3" style="background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); border-radius: 8px;">
+                        <p style="color: #e5e7eb; margin: 0;">${escapeHtml(ep.description)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Debate Section (if available)
+        if (debate) {
+            html += `
+                <div class="mb-4">
+                    <h5 style="color: #fbbf24;"><i class="fas fa-comments me-2"></i>3-Agent Debate</h5>
+                    <div class="p-3" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px;">
+                        <p class="mb-3 small text-muted">Topic: ${escapeHtml(debate.topic_debated)}</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 6px;">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-search text-primary me-2"></i>
+                                        <strong style="color: #60a5fa;">Topic Miner</strong>
+                                    </div>
+                                    <p class="small mb-0" style="color: #e5e7eb;">${formatDebateArgument(debate.miner_argument)}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-balance-scale text-danger me-2"></i>
+                                        <strong style="color: #f87171;">Contrarian</strong>
+                                    </div>
+                                    <p class="small mb-0" style="color: #e5e7eb;">${formatDebateArgument(debate.contrarian_argument)}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2" style="background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-chart-line text-success me-2"></i>
+                                        <strong style="color: #34d399;">Analyst</strong>
+                                    </div>
+                                    <p class="small mb-0" style="color: #e5e7eb;">${formatDebateArgument(debate.analyst_argument)}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 p-2" style="background: rgba(139, 92, 246, 0.1); border-radius: 6px;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong style="color: #a78bfa;"><i class="fas fa-trophy me-2"></i>Winning Angle:</strong>
+                                    <span style="color: #e5e7eb;">${escapeHtml(debate.winning_angle || 'Not recorded')}</span>
+                                </div>
+                                <span class="badge ${debate.consensus_reached ? 'bg-success' : 'bg-warning'}">${debate.consensus_reached ? 'Consensus Reached' : 'No Consensus'}</span>
+                            </div>
+                            ${debate.decision_reasoning ? `
+                                <p class="mt-2 mb-0 small" style="color: rgba(255,255,255,0.7);">
+                                    <strong>Reasoning:</strong> ${escapeHtml(debate.decision_reasoning.substring(0, 300))}${debate.decision_reasoning.length > 300 ? '...' : ''}
+                                </p>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Channel Context
+        html += `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                        <h6 style="color: #a78bfa;"><i class="fas fa-tv me-2"></i>Channel Settings</h6>
+                        <div class="small" style="color: #e5e7eb;">
+                            <p class="mb-1"><strong>Domain:</strong> ${escapeHtml(ep.channel.topic_domain)}</p>
+                            <p class="mb-1"><strong>Visual Style:</strong> ${escapeHtml(ep.channel.visual_style || 'Default')}</p>
+                            <p class="mb-0"><strong>Voice:</strong> ${escapeHtml(ep.channel.voice_name || 'Default')}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                        <h6 style="color: #60a5fa;"><i class="fas fa-info-circle me-2"></i>Episode Info</h6>
+                        <div class="small" style="color: #e5e7eb;">
+                            <p class="mb-1"><strong>ID:</strong> <code>${ep.id}</code></p>
+                            ${ep.series?.name ? `<p class="mb-1"><strong>Series:</strong> ${escapeHtml(ep.series.name)}</p>` : ''}
+                            <p class="mb-0"><strong>Learning:</strong> ${ep.contributed_to_learning ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        contentEl.innerHTML = html;
+
+        // Update platform link
+        if (ep.platform_url) {
+            platformLink.href = ep.platform_url;
+            platformLink.style.display = 'inline-block';
+        }
+
+    } catch (error) {
+        console.error('Error loading episode details:', error);
+        contentEl.innerHTML = `
+            <div class="text-center py-5 text-danger">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                <p>Failed to load episode details</p>
+                <small>${escapeHtml(error.message)}</small>
+            </div>
+        `;
+    }
+}
+
+// Helper: Get color based on performance score
+function getPerformanceColor(score) {
+    if (score >= 80) return '#34d399';
+    if (score >= 50) return '#fbbf24';
+    return '#f87171';
+}
+
+// Helper: Format duration in seconds to human readable
+function formatDuration(seconds) {
+    if (!seconds || seconds === 0) return '0s';
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+
+// Helper: Format debate argument, handling error messages gracefully
+function formatDebateArgument(argument) {
+    if (!argument) return '<span class="text-muted fst-italic">No argument provided</span>';
+
+    // Check if this is an error message from a failed agent execution
+    if (argument.startsWith('Error:') || argument.includes('is not defined') || argument.includes('Traceback')) {
+        return '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Agent encountered an error during execution</span>';
+    }
+
+    // Normal case: truncate and escape
+    const truncated = argument.length > 200 ? argument.substring(0, 200) + '...' : argument;
+    return escapeHtml(truncated);
+}
+
+// Session 632: Generate content immediately for a channel
+async function generateContentNow(channelId, channelName) {
+    const btn = document.getElementById(`generate-btn-${channelId}`);
+    const originalContent = btn.innerHTML;
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting...';
+
+    try {
+        const response = await fetch(`/api/content-calendar/generate/${channelId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken(),
+            },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Show success state
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Generating...';
+
+            // Show toast notification
+            showGenerationToast('success', `Content generation started for ${channelName}. This may take 1-2 minutes.`);
+
+            // After 3 seconds, show "Refresh to see" state
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-sync me-1"></i>Refresh to see';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-info');
+                btn.disabled = false;
+                btn.onclick = () => loadCalendarData();
+            }, 3000);
+
+        } else {
+            throw new Error(data.error || 'Unknown error');
+        }
+
+    } catch (error) {
+        console.error('Error triggering content generation:', error);
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-danger');
+        btn.innerHTML = '<i class="fas fa-times me-1"></i>Failed';
+
+        showGenerationToast('error', `Failed to start generation: ${error.message}`);
+
+        // Reset button after 3 seconds
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-primary');
+            btn.innerHTML = originalContent;
+            btn.onclick = () => generateContentNow(channelId, channelName);
+        }, 3000);
+    }
+}
+
+// Helper: Get CSRF token
+function getCSRFToken() {
+    // Try to get from cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    // Fallback to meta tag
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+// Helper: Show toast notification for generation status
+function showGenerationToast(type, message) {
+    // Create toast container if not exists
+    let toastContainer = document.getElementById('generation-toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'generation-toast-container';
+        toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+        document.body.appendChild(toastContainer);
+    }
+
+    const bgColor = type === 'success' ? 'rgba(16, 185, 129, 0.95)' :
+                    type === 'error' ? 'rgba(239, 68, 68, 0.95)' : 'rgba(59, 130, 246, 0.95)';
+    const icon = type === 'success' ? 'fa-check-circle' :
+                 type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+
+    const toast = document.createElement('div');
+    toast.className = 'toast show';
+    toast.style.cssText = `background: ${bgColor}; color: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 350px;`;
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas ${icon} me-2"></i>
+            <span>${escapeHtml(message)}</span>
+            <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
 
 async function loadCalendarData() {
     try {
@@ -264,15 +653,22 @@ function renderRecentContent(recent) {
         return;
     }
 
+    // Session 631: Added click handler to view episode details
     container.innerHTML = recent.map(item => {
         const perfColor = item.performance_score >= 80 ? '#34d399' :
                          item.performance_score >= 50 ? '#fbbf24' : '#f87171';
 
         return `
-            <div class="mb-3 p-3" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+            <div class="mb-3 p-3 episode-card" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                 onclick="showEpisodeDetail('${item.episode_id}')"
+                 onmouseover="this.style.background='rgba(16, 185, 129, 0.2)'; this.style.transform='translateX(4px)';"
+                 onmouseout="this.style.background='rgba(16, 185, 129, 0.1)'; this.style.transform='translateX(0)';">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <h6 class="mb-0" style="color: #fff;">${escapeHtml(item.title)}</h6>
+                        <h6 class="mb-0" style="color: #fff;">
+                            ${escapeHtml(item.title)}
+                            <i class="fas fa-chevron-right ms-2 small" style="color: rgba(255,255,255,0.3);"></i>
+                        </h6>
                         <small style="color: rgba(255,255,255,0.5);">${escapeHtml(item.channel_name)}</small>
                     </div>
                     <span class="badge" style="background: ${perfColor};">
@@ -284,11 +680,16 @@ function renderRecentContent(recent) {
                     <span><i class="fas fa-heart me-1"></i>${formatNumber(item.engagement)}</span>
                     <span><i class="fas fa-percentage me-1"></i>${item.retention_rate}%</span>
                 </div>
-                ${item.platform_url ? `
-                    <a href="${escapeHtml(item.platform_url)}" target="_blank" class="btn btn-sm btn-outline-success mt-2">
-                        <i class="fas fa-external-link-alt me-1"></i>View
-                    </a>
-                ` : ''}
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); showEpisodeDetail('${item.episode_id}')">
+                        <i class="fas fa-expand me-1"></i>Details
+                    </button>
+                    ${item.platform_url ? `
+                        <a href="${escapeHtml(item.platform_url)}" target="_blank" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation();">
+                            <i class="fas fa-external-link-alt me-1"></i>Platform
+                        </a>
+                    ` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -308,9 +709,11 @@ function renderChannels(channels) {
         return;
     }
 
+    // Session 632: Added Generate Now button
     container.innerHTML = channels.map(channel => {
         const statusColor = channel.status === 'active' ? '#34d399' :
                            channel.status === 'paused' ? '#fbbf24' : '#ef4444';
+        const isActive = channel.status === 'active';
 
         return `
             <div class="col-md-6 col-lg-4">
@@ -328,6 +731,14 @@ function renderChannels(channels) {
                     </div>
                     <div class="mt-2 small" style="color: rgba(255,255,255,0.4);">
                         <i class="fas fa-clock me-1"></i>Next: ${channel.next_content_due ? formatRelativeDate(new Date(channel.next_content_due)) : 'Not scheduled'}
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}"
+                                id="generate-btn-${channel.id}"
+                                onclick="generateContentNow('${channel.id}', '${escapeHtml(channel.name)}')"
+                                ${!isActive ? 'disabled' : ''}>
+                            <i class="fas fa-bolt me-1"></i>Generate Now
+                        </button>
                     </div>
                 </div>
             </div>

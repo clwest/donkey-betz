@@ -13040,9 +13040,11 @@ Coordinate this debate and return the winning topic decision.
 
         # Parse debate results from coordinator
         # The coordinator should have created a ContentDebate record
-        # Let's find the most recent debate for this channel
+        # Session 633: Check for debate created AFTER we started (not just any old debate)
+        task_start_time = timezone.now() - timezone.timedelta(minutes=5)  # Allow 5 min window
         recent_debate = ContentDebate.objects.filter(
-            channel=channel
+            channel=channel,
+            created_at__gte=task_start_time  # Must be created during this task run
         ).order_by('-debate_date').first()
 
         # Session 469: If coordinator didn't create debate (GPT didn't call tools),
@@ -13066,7 +13068,7 @@ Coordinate this debate and return the winning topic decision.
             # Run TopicMinerAgent
             logger.info(f"🗣️ Fallback Debate Step 1: TopicMinerAgent")
             try:
-                topic_miner = TopicMinerAgent(user=user)
+                topic_miner = TopicMinerAgent(user=channel.user)
                 miner_result = topic_miner.execute(
                     task=f"Find trending topics in {channel.topic_domain}",
                     context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
@@ -13081,7 +13083,7 @@ Coordinate this debate and return the winning topic decision.
             # Run ContrarianAgent
             logger.info(f"🗣️ Fallback Debate Step 2: ContrarianAgent")
             try:
-                contrarian = ContrarianAgent(user=user)
+                contrarian = ContrarianAgent(user=channel.user)
                 contrarian_result = contrarian.execute(
                     task=f"Check saturation and suggest unique angles for {channel.topic_domain}",
                     context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
@@ -13096,7 +13098,7 @@ Coordinate this debate and return the winning topic decision.
             # Run PerformanceAnalystAgent
             logger.info(f"🗣️ Fallback Debate Step 3: PerformanceAnalystAgent")
             try:
-                analyst = PerformanceAnalystAgent(user=user)
+                analyst = PerformanceAnalystAgent(user=channel.user)
                 analyst_result = analyst.execute(
                     task=f"Analyze performance predictions for {channel.topic_domain}",
                     context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
@@ -13179,11 +13181,13 @@ Create 1 episode following the channel's style and targeting the audience.
         logger.info(f"🎥 [SESSION 466] Step 3: Creating ChannelEpisode record...")
 
         # Session 468: Fixed field names to match ChannelEpisode model
+        # Session 630: Store generated content in script field
         episode = ChannelEpisode.objects.create(
             channel=channel,
             topic=winning_topic,
             title=f"{channel.name}: {winning_topic}",
             description=f"Auto-generated content. Debate ID: {recent_debate.id}",
+            script=series_result.message if series_result and series_result.message else "",
             publish_date=timezone.now(),
             views=0,
             likes=0,
@@ -14329,11 +14333,14 @@ def trigger_content_from_narrative_shift(shift_id: str):
         content_parts.append(f"*Importance: {shift.importance}*")
 
         # Create the episode record with the full content in description
+        # Session 630: Also store in script field for consistent content storage
+        full_content = '\n'.join(content_parts)
         episode = ChannelEpisode.objects.create(
             channel=channel,
             title=topic_title[:200],
             topic=f"{domain_display} narrative shift [{str(shift.id)[:8]}]",
-            description='\n'.join(content_parts),
+            description=full_content,
+            script=full_content,
             publish_date=timezone.now(),
         )
 
