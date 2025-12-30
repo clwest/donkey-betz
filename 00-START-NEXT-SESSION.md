@@ -1,75 +1,56 @@
-# Session 623 - Start Here
+# Session 624 - Start Here
 
-**Previous Session:** 622
+**Previous Session:** 623
 **Date:** December 30, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 622 Accomplishments
+## Session 622 Accomplishments (Part 2)
+
+### TechnicalDocumentAgent with Stage-Aware Document Lifecycle
+
+**Problem:** Synthesized deliverables used blog-style language ("In this blog post...") and lacked governance elements like PASS/FAIL criteria.
+
+**Solution:** Created `TechnicalDocumentAgent` with 5-stage document lifecycle:
+
+| Stage | Document Type | Purpose |
+|-------|--------------|---------|
+| 1 | Research Brief | Discovery + framing - Why does this matter? |
+| 2 | Prototype Plan | Translation layer - How would we build this? |
+| 3 | Evaluation Protocol | Pre-pilot gate - Should we proceed? (PASS/LEARN/FAIL) |
+| 4 | Technical Design | Implementation specification - Exactly what to build |
+| 5 | Compliance Mapping | Regulatory alignment - Are we allowed to do this? |
+
+**Key Features:**
+- `infer_stage_from_deliverable()` - Maps deliverable names to appropriate stages
+- Professional language enforced (no blog-style phrasing)
+- Stage 3+ documents include governance:
+  - PASS criteria with measurable thresholds
+  - LEARN criteria for iteration paths
+  - FAIL criteria with kill switch conditions
+  - Consent and data governance sections
+- Stage-aware naming: `[Stage 3 - Evaluation Protocol] Document Name`
+
+**Files:**
+| File | Changes |
+|------|---------|
+| `core/agents/technical_document_agent.py` | NEW - 600+ lines |
+| `core/services/autonomous_action_executor.py` | Updated synthesis pipeline |
+| `core/agents/__init__.py` | Registered new agent |
+
+---
+
+## Session 622 Accomplishments (Part 1)
 
 ### Dedicated Deliverables Tab in Research Section
 
-**Problem:** Synthesized deliverables were saved to SelfBlog but mixed in with other entries, making them hard to find.
+**Problem:** Synthesized deliverables were saved to SelfBlog but mixed in with other entries.
 
-**Solution:** Added dedicated **📄 Deliverables** sub-tab in the Research section:
-
+**Solution:** Added dedicated **Deliverables** sub-tab in the Research section:
 - **API Endpoint:** `/api/v1/research/deliverables/`
 - **Location:** Research tab → between System Insights and Thinking Engine
-- **Features:**
-  - Stats bar: Total count, latest date, average character count
-  - Expandable cards with document type badges
-  - Parent research topic display
-  - Markdown formatting support
-  - Color-coded by document type
-
-**Files Modified:**
-| File | Changes |
-|------|---------|
-| `core/views_research_demo.py` | Added `deliverables_api()` function |
-| `core/urls.py` | Added route for `/api/v1/research/deliverables/` |
-| `core/auth_middleware.py` | Added endpoint to PUBLIC_PATHS |
-| `ai_core/templates/ai_image_studio.html` | Added tab button, pane, and JavaScript |
-
-**Current Deliverables:** 5 documents from "AI Humanizer" and "TTL Metadata Model" research
-
----
-
-## Session 621 Accomplishments
-
-### Synthesis Phase Complete - Research → Document Pipeline
-
-**Problem:** Session 620 fixed research, but deliverables like "Design doc with TTL/consent metadata model" were just listed, not actually created.
-
-**Solution:** Added synthesis phase to `_execute_request_research`:
-
-```python
-# When research completes and deliverables exist:
-if synthesize_deliverables and deliverables and research_successful:
-    for deliverable in deliverables:
-        result = _synthesize_single_deliverable(
-            content_writer=ContentWriterAgent(),
-            deliverable_name=deliverable,
-            topic=topic,
-            research_context=research_context
-        )
-        # Save to SelfBlog with [Deliverable] prefix
-```
-
-**New Helper Methods:**
-- `_build_research_context()` - Builds comprehensive context for synthesis
-- `_synthesize_single_deliverable()` - Creates documents using ContentWriterAgent
-- `_infer_document_type()` - Infers doc type from name (design doc, recommendations, etc.)
-
----
-
-## Session 620 Accomplishments
-
-### Fixed Request Research Action Handler
-
-**Problem:** `request_research` autonomous actions were failing to use proper parameters.
-
-**Solution:** Rewrote `_execute_request_research` in `autonomous_action_executor.py` to use action name as topic and include deliverables.
+- **Features:** Stats bar, expandable cards, document type badges, markdown support
 
 ---
 
@@ -80,7 +61,7 @@ Gates:       804 total (606 waived LOW, 198 approved MEDIUM/HIGH)
 Pilots:      804 total (611+ completed, 193 running)
 Experiments: 809+ total (ongoing evaluation)
 Learnings:   611+ (fed to ThinkingAgent)
-Deliverables: 5 synthesized documents
+Deliverables: 5+ synthesized documents (now with stage-aware naming)
 ```
 
 ### Complete Automation Loop (Fully Working!)
@@ -89,7 +70,7 @@ Deliverables: 5 synthesized documents
 ThinkingAgent → Decisions → AutonomousActions → Real Execution
                                     │
                                     ├── spawn_spider: Queues spider tasks
-                                    ├── request_research: ResearchAgent + Synthesis → Deliverables
+                                    ├── request_research: ResearchAgent + TechnicalDocumentAgent → [Deliverable]
                                     ├── create_report: Comprehensive SelfBlog reports
                                     ├── trigger_debate: Schedules agent debates
                                     ├── trigger_conversation: Agent conversations
@@ -109,7 +90,7 @@ make celery
 open http://localhost:8000/ai-studio/
 
 # 3. View Deliverables
-# Research tab → 📄 Deliverables sub-tab
+# Research tab → Deliverables sub-tab
 
 # 4. Check via API
 curl http://localhost:8000/api/v1/research/deliverables/ | python3 -m json.tool
@@ -119,11 +100,14 @@ curl http://localhost:8000/api/v1/research/deliverables/ | python3 -m json.tool
 
 ## Recommended Next Steps
 
-### Priority 1: Monitor ThinkingAgent Cycles
-ThinkingAgent runs every 6 hours and may generate new research requests with deliverables.
+### Priority 1: Monitor New Deliverable Quality
+ThinkingAgent runs every 6 hours. New deliverables should now have:
+- Stage-aware naming (e.g., `[Stage 3 - Evaluation Protocol]`)
+- Professional tone (no blog language)
+- PASS/LEARN/FAIL criteria for Stage 3+ documents
 
-### Priority 2: Review Synthesized Deliverables
-Check the 5 existing deliverables in the new Deliverables tab for quality and usefulness.
+### Priority 2: Review Existing Deliverables
+The 5 existing deliverables were created before TechnicalDocumentAgent. Consider regenerating them to apply the new format.
 
 ### Priority 3: Monitor Pilot Progress
 The 193+ running pilots continue to be evaluated by `evaluate_and_complete_pilots` every 2 hours.
@@ -134,7 +118,7 @@ The 193+ running pilots continue to be evaluated by `evaluate_and_complete_pilot
 
 | Session | Document |
 |---------|----------|
-| 622 | (This file - Deliverables Tab) |
+| 622 | TechnicalDocumentAgent + Deliverables Tab (this file) |
 | 620 | `docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md` |
 | 619 | `docs/handoffs/SESSION_619_AUTOMATIC_GATE_PROCESSOR.md` |
 | 618 | `docs/handoffs/SESSION_618_PILOT_EVALUATION_FIX.md` |
@@ -149,15 +133,22 @@ Decision → Gate → Documentation → Approve → Pilot → Experiment → Lea
    │                                                                   └── ThinkingAgent
    │
 ThinkingAgent → Autonomous Actions:
-   ├── request_research → ResearchAgent → ContentWriterAgent → [Deliverable]
+   ├── request_research → ResearchAgent → TechnicalDocumentAgent → [Stage X - Deliverable]
    ├── spawn_spider → Celery task
    ├── create_report → SelfBlog
    ├── trigger_debate → AgentKnowledgeSource
    ├── trigger_conversation → AgentConversation
    └── triage_dreams → Boardroom routing
 
+Document Lifecycle (Session 622):
+   Stage 1: Research Brief      → Why does this matter?
+   Stage 2: Prototype Plan      → How would we build this?
+   Stage 3: Evaluation Protocol → Should we proceed? (PASS/LEARN/FAIL)
+   Stage 4: Technical Design    → Exactly what to build
+   Stage 5: Compliance Mapping  → Are we allowed to do this?
+
 UI Access:
-   └── Research tab → 📄 Deliverables sub-tab [Session 622]
+   └── Research tab → Deliverables sub-tab [Session 622]
 
 Celery Beat:
   - :45 every hour: process_gates_and_deploy_pilots
