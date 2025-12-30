@@ -1,42 +1,47 @@
-# Session 605 - Start Here
+# Session 606 - Start Here
 
-**Previous Session:** 604
+**Previous Session:** 605
 **Date:** December 29, 2025
 **Focus:** Experiment Suggestions, Velocity Alerts, or New Feature
 
 ---
 
-## Session 604 Accomplishments
+## Session 605 Accomplishments
 
-### Auto-Prioritize Decision Queue - COMPLETE
+### Learning Insights for Personal Assistant - COMPLETE
 
-Built a Decision Prioritization system to sort Boardroom decisions by AI-recommended priority:
+Integrated the weighted learning system with the PA so users get predictions like "Based on 5 similar experiments, this approach has 73% success rate."
 
 | Component | Description |
 |-----------|-------------|
-| **Priority Score** | 0-100 score based on success probability, risk, confidence |
-| **Priority Tiers** | QUICK_WIN, RECOMMENDED, STANDARD, NEEDS_REVIEW, HIGH_RISK |
-| **Risk Weights** | minimal=0, low=5, medium=15, high=30, critical=50 |
-| **Confidence Multipliers** | high=1.0, medium=0.85, low=0.7, insufficient=0.5 |
-| **UI Toggle** | "Priority" button in Boardroom header |
-| **Visual Styling** | Green glow for quick wins, red pulse for high risk |
+| **PALearningInsightsService** | Decision detection and experiment matching |
+| **Pilot Status Awareness** | Shows 7 active pilots with days running |
+| **Success Predictions** | Calculates probability from similar experiments |
+| **Learning Summaries** | Formatted context for PA prompt injection |
+| **Recommendations** | Data-driven guidance based on outcomes |
 
 ### New Service
 
 | File | Purpose |
 |------|---------|
-| `core/services/decision_prioritization.py` | Priority scoring and queue sorting |
+| `core/services/pa_learning_insights.py` | Learning insights for PA context |
 
-### API Endpoints
+### Example PA Outputs
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/boardroom/decisions/prioritized/` | Prioritized queue with stats |
-| `GET /api/boardroom/decisions/{id}/priority/` | Single decision priority |
+```
+"Should I try financial trading?"
+→ 📊 50% success probability (2 similar experiments in-progress)
+
+"What pilots are running?"
+→ Lists 7 active pilots with status
+
+"Should I treat culture as adaptive?"
+→ 📈 70% success probability (1 success experiment)
+```
 
 ---
 
-## The Complete Learning System (Sessions 590-604)
+## The Complete Learning System (Sessions 590-605)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -59,12 +64,28 @@ Session 602: Boardroom Integration
         ↓
 Session 603: Learning Velocity Dashboard
         ↓
-Session 604: Decision Prioritization ← COMPLETE!
+Session 604: Decision Prioritization
+        ↓
+Session 605: PA Learning Insights ← COMPLETE!
 ```
 
 ---
 
-## Session 605 Options
+## Active Pilots (7 Running)
+
+| Pilot | Focus |
+|-------|-------|
+| Synthesis: Trend + Market | Combining signals |
+| Financial Intelligence (2x) | Financial strategy |
+| Convertkit Content | Content creation |
+| Synthesis: Content Ideas | Content planning |
+| MIT Tech Review (2x) | Innovation/General |
+
+**1 Completed:** "Treat culture as an adaptive system" (SUCCESS)
+
+---
+
+## Session 606 Options
 
 ### Option A: Experiment Suggestion Engine
 - Based on learning gaps, suggest new experiments
@@ -78,11 +99,11 @@ Session 604: Decision Prioritization ← COMPLETE!
 - Surface stale themes with no recent activity
 - Add to notification system (Discord/Web Push)
 
-### Option C: Learning Insights for Personal Assistant
-- Surface learning insights in PA context
-- "Based on 5 similar experiments, this approach has 73% success rate"
-- Integrate weighted learning into PA responses
-- Show relevant past experiments when making decisions
+### Option C: Pilot Progress Dashboard
+- Visual dashboard showing all pilot progress
+- KPI tracking with target vs actual
+- Timeline view of pilot lifecycle
+- Quick actions (halt, extend, mark complete)
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -95,22 +116,25 @@ Session 604: Decision Prioritization ← COMPLETE!
 # Start services
 make start && make celery
 
+# Test PA learning insights
+.venv/bin/python manage.py shell -c "
+from core.services.pa_intelligence_enricher import PAIntelligenceEnricher
+enricher = PAIntelligenceEnricher()
+result = enricher.enrich_context('Should I try financial trading?')
+print(f'Has learning: {result[\"metadata\"].get(\"has_learning_insights\")}')
+print(f'Prediction: {result[\"metadata\"].get(\"learning_prediction\")}')
+"
+
 # Test decision prioritization
 curl "http://localhost:8000/api/boardroom/decisions/prioritized/?limit=5" | python -m json.tool
 
-# Check priority stats
-curl "http://localhost:8000/api/boardroom/decisions/prioritized/" | python -c "
-import sys,json
-d=json.load(sys.stdin)
-s=d.get('stats',{})
-print(f'Total: {s.get(\"total\",0)}')
-print(f'Quick Wins: {s.get(\"quick_win_count\",0)}')
-print(f'High Risk: {s.get(\"high_risk_count\",0)}')
-print(f'Avg Priority: {s.get(\"avg_priority\",0)}')
+# Check active pilots
+.venv/bin/python manage.py shell -c "
+from core.models_pilot_readiness import Experiment
+active = Experiment.objects.filter(status='running')
+print(f'Active pilots: {active.count()}')
+for e in active: print(f'  - {e.name[:50]}')
 "
-
-# Test velocity dashboard
-curl http://localhost:8000/api/learning/velocity/ | python -m json.tool
 ```
 
 ---
@@ -119,6 +143,8 @@ curl http://localhost:8000/api/learning/velocity/ | python -m json.tool
 
 | File | Purpose |
 |------|---------|
+| `core/services/pa_learning_insights.py` | Session 605 - PA learning insights |
+| `core/services/pa_intelligence_enricher.py` | Session 565/605 - PA context enrichment |
 | `core/services/decision_prioritization.py` | Session 604 - Priority scoring |
 | `core/services/learning_velocity.py` | Session 603 - Velocity metrics |
 | `core/services/weighted_learning.py` | Session 601 - Weighted formula |
@@ -126,16 +152,17 @@ curl http://localhost:8000/api/learning/velocity/ | python -m json.tool
 
 ---
 
-## System Stats After Session 604
+## System Stats After Session 605
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 99 (+1 from Session 604) |
+| **Services** | 100 (+1 from Session 605) |
 | **Celery Tasks** | 230 |
-| **The Learning Loop** | COMPLETE with Decision Prioritization |
+| **Active Pilots** | 7 running, 1 success |
+| **The Learning Loop** | COMPLETE with PA Integration |
 
 ---
 
-**Session 604: Auto-Prioritize Decision Queue - COMPLETE**
+**Session 605: Learning Insights for PA - COMPLETE**
