@@ -762,3 +762,139 @@ def deliverables_api(request):
     except Exception as e:
         logger.error(f"Error in deliverables_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def initiatives_api(request):
+    """
+    Session 622: Get all initiatives with their stage status.
+    Provides a single source of truth for document lifecycle tracking.
+    """
+    try:
+        from core.models_document_registry import Initiative, InitiativeStage
+
+        initiatives = Initiative.objects.all().order_by('-updated_at')
+
+        initiatives_list = []
+        for init in initiatives[:50]:
+            # Build stage status
+            stages = {}
+            for i in range(1, 6):
+                stage_doc = init.get_stage_document(i)
+                if stage_doc:
+                    stages[i] = {
+                        'status': stage_doc.status,
+                        'stage_name': stage_doc.stage_name,
+                        'document_id': str(stage_doc.document_id) if stage_doc.document_id else None,
+                        'approved_at': stage_doc.approved_at.isoformat() if stage_doc.approved_at else None,
+                    }
+                else:
+                    from core.models_document_registry import STAGE_NAMES
+                    stages[i] = {
+                        'status': 'NOT_STARTED',
+                        'stage_name': STAGE_NAMES.get(i, 'Unknown'),
+                        'document_id': None,
+                        'approved_at': None,
+                    }
+
+            initiatives_list.append({
+                'id': str(init.id),
+                'name': init.name,
+                'description': init.description,
+                'status': init.status,
+                'current_stage': init.current_stage,
+                'completion_percentage': init.completion_percentage,
+                'stages': stages,
+                'created_at': init.created_at.isoformat(),
+                'updated_at': init.updated_at.isoformat(),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'count': len(initiatives_list),
+            'initiatives': initiatives_list,
+        })
+
+    except Exception as e:
+        logger.error(f"Error in initiatives_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def populate_initiatives_api(request):
+    """
+    Session 622: Auto-populate initiatives from existing deliverables.
+    Creates Initiative records and links existing stage documents.
+    """
+    try:
+        from django.db.models import Q
+        from core.models_unified_system import SelfBlog
+        from core.models_document_registry import Initiative, InitiativeStage
+
+        # Find all unique parent topics from deliverables
+        deliverables = SelfBlog.objects.filter(
+            Q(title__startswith='[Stage 1 -') |
+            Q(title__startswith='[Stage 2 -') |
+            Q(title__startswith='[Stage 3 -') |
+            Q(title__startswith='[Stage 4 -') |
+            Q(title__startswith='[Stage 5 -')
+        )
+
+        # Group by parent topic
+        topics = {}
+        for doc in deliverables:
+            if doc.stats_snapshot and doc.stats_snapshot.get('parent_topic'):
+                topic = doc.stats_snapshot['parent_topic']
+                if topic not in topics:
+                    topics[topic] = []
+                topics[topic].append(doc)
+
+        created_initiatives = []
+        for topic, docs in topics.items():
+            # Create or get initiative
+            initiative, created = Initiative.objects.get_or_create(
+                name=topic,
+                defaults={
+                    'description': f'Auto-populated from {len(docs)} deliverables',
+                    'created_by': 'auto_populate',
+                    'parent_topic': topic,
+                }
+            )
+
+            if created:
+                # Link documents to stages
+                for doc in docs:
+                    stage_num = doc.stats_snapshot.get('stage') if doc.stats_snapshot else None
+                    if stage_num:
+                        InitiativeStage.objects.get_or_create(
+                            initiative=initiative,
+                            stage=stage_num,
+                            defaults={
+                                'document': doc,
+                                'status': 'APPROVED',
+                                'approved_by': 'auto_populate',
+                                'approved_at': doc.created_at,
+                            }
+                        )
+
+                # Update current stage
+                max_stage = max([d.stats_snapshot.get('stage', 0) for d in docs if d.stats_snapshot])
+                initiative.current_stage = min(max_stage + 1, 5)
+                initiative.save()
+
+                created_initiatives.append({
+                    'name': topic,
+                    'stages_linked': len(docs),
+                    'current_stage': initiative.current_stage,
+                })
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Created {len(created_initiatives)} new initiatives',
+            'created': created_initiatives,
+            'existing_topics': [t for t in topics.keys() if t not in [i['name'] for i in created_initiatives]],
+        })
+
+    except Exception as e:
+        logger.error(f"Error in populate_initiatives_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

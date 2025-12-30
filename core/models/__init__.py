@@ -47,6 +47,9 @@ from ..models_conversation_artifacts import *
 # Import bankroll tracking (Session 558)
 from ..models_bankroll import *
 
+# Import document registry (Session 622)
+from ..models_document_registry import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -154,4 +157,8 @@ __all__ = [
     'WeeklySynthesis',
     'ReviewDocument',
     'SideChat',
+
+    # Document Registry (Session 622)
+    'Initiative',
+    'InitiativeStage',
 ]

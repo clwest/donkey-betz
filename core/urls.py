@@ -2565,6 +2565,10 @@ urlpatterns = [
     # Session 622: Deliverables API
     path('api/v1/research/deliverables/', views_research_demo.deliverables_api, name='research-deliverables'),
 
+    # Session 622: Document Registry / Initiatives API
+    path('api/v1/initiatives/', views_research_demo.initiatives_api, name='initiatives-list'),
+    path('api/v1/initiatives/populate/', views_research_demo.populate_initiatives_api, name='initiatives-populate'),
+
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
     path('api/v1/reasoning/thoughts/<uuid:thought_id>/', views_autonomous_reasoning.thought_detail_api, name='reasoning-thought-detail'),
