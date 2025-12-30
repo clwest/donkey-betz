@@ -1,8 +1,36 @@
-# Session 627 - Start Here
+# Session 628 - Start Here
 
-**Previous Session:** 626
+**Previous Session:** 627
 **Date:** December 30, 2025
 **Focus:** To Be Determined
+
+---
+
+## Session 627 Accomplishments
+
+### Dream Quality Fix - Root Cause Analysis & Resolution
+
+**Problem:** 93.4% of dreams scored below 0.4 (avg: 0.28, threshold 0.7)
+
+**Root Causes Found:**
+1. `dream-productization-cycle` task was **missing from Celery Beat DB** (never ran!)
+2. Scoring formula penalized dreams when no projects matched (relevance=0 dragged down score)
+
+**Fixes Applied:**
+1. Created missing `dream-productization-cycle` task (runs every 20 min)
+2. Updated composite score formula:
+   - No project match: `composite = creativity * 0.4 + actionability * 0.6`
+   - Has project match: `composite = creativity * 0.25 + actionability * 0.45 + relevance * 0.30`
+
+**Results:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Dreams Promoted (7d) | 59 | 138+ |
+| Promotion Rate | 0.5% | ~67% |
+| Avg Composite (scored) | 0.57 | 0.77 |
+
+**Also Fixed:**
+- Marked 25 stale trigger events as 'skipped' (were 2+ days old)
 
 ---
 
@@ -19,26 +47,6 @@
 | Dreams Pipeline | 70% | 100% | Adjusted expectation to 10% promotion rate |
 | Celery Beat | 87% | 100% | Fixed crontab frequency analysis |
 | Learning Loops | 92% | 100% | Marked transfers as applied |
-
-**Summary:** 9 healthy, 0 warnings, 0 critical
-
-**Key Fixes:**
-1. Added 'deferred' and 'approved_with_conditions' to valid decision statuses
-2. Dreams Pipeline: Expect 10% promotion rate (not 100%)
-3. Celery Beat: Properly separate frequent vs daily/weekly tasks
-4. Crontab: Calculate actual interval for comma-separated hours (e.g., "6,18" = 12h)
-5. Fixed Experiment table missing `created_at`/`updated_at` columns
-
----
-
-## Session 625 Accomplishments
-
-### Reality Check Bug Fixes (68% → 78%)
-
-- Fixed TaskResult check (Celery stores to Redis)
-- Fixed AgentLearning (model unused - uses KnowledgeTransfer)
-- Fixed artifact extraction (status='concluded' not 'completed')
-- Fixed Pilots/Gates field names
 
 ---
 
@@ -62,11 +70,11 @@ python manage.py system_reality_check
 ## Current Reality Check Status
 
 ```
-Overall Score: 100%
-├── Celery Beat:        100% ✅ (25 frequent tasks)
+Overall Score: 99%
+├── Celery Beat:        100% ✅ (26 frequent tasks)
 ├── Triggers:           100% ✅
 ├── Learning Loops:     100% ✅
-├── Dreams Pipeline:    100% ✅ (27 promoted)
+├── Dreams Pipeline:     96% ✅ (138+ promoted, backlog processing)
 ├── Boardroom:          100% ✅ (68 decisions)
 ├── ThinkingAgent:      100% ✅
 ├── Conversations:      100% ✅
@@ -78,15 +86,16 @@ Overall Score: 100%
 
 ## Recommended Next Steps
 
-### Priority 1: Process Pending Trigger Events
-25 trigger events are pending - may need investigation.
+### Priority 1: Monitor Dream Backlog Processing
+- ~1700 dreams still need scoring (processing at 50/cycle every 20 min)
+- Should complete within ~12 hours automatically
 
-### Priority 2: Maintain 100% Score
-- Monitor reality check score
-- Ensure autonomous systems stay healthy
+### Priority 2: Review Promoted Dreams
+- 79 dreams awaiting decision in Boardroom
+- May need human review or auto-processing
 
 ### Priority 3: New Feature Development
-With all systems at 100%, focus can shift to new features.
+- From ROADMAP_IDEAS.md: Profile Follow-ups, Agent personalities, Onboarding wizard
 
 ---
 
@@ -94,10 +103,10 @@ With all systems at 100%, focus can shift to new features.
 
 | Session | Document |
 |---------|----------|
+| 627 | Dream Quality Fix (this session) |
 | 626 | `docs/handoffs/SESSION_626_100_PERCENT_REALITY.md` |
 | 625 | `docs/handoffs/SESSION_625_REALITY_CHECK_FIXES.md` |
 | 624 | System Reality Check Created |
-| 623 | Database Schema Audit System |
 
 ---
 
@@ -123,8 +132,8 @@ python manage.py audit_database && python manage.py system_reality_check
 # Reality check only
 python manage.py system_reality_check
 
-# Verbose reality check
-python manage.py system_reality_check --verbose
+# Check dream scoring progress
+python manage.py shell -c "from core.models import AgentDream; print(f'Scored: {AgentDream.objects.filter(actionability_score__gt=0).count()}')"
 ```
 
 ---
@@ -134,3 +143,4 @@ python manage.py system_reality_check --verbose
 **Learning System:** Uses `KnowledgeTransfer` (not `AgentLearning`)
 **Review System:** Uses polymorphic `target_type`/`target_id` (not direct FKs)
 **Decision Statuses:** `awaiting_human`, `approved`, `approved_with_conditions`, `declined`, `deferred`
+**Dream Scoring:** New formula in Session 627 - doesn't penalize dreams without project matches
