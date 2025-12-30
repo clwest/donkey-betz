@@ -3082,6 +3082,41 @@ class SpiderData(models.Model):
         ordering = ['-created_at']
 
 
+class SpiderItemHash(models.Model):
+    """
+    Session 616: Tracks content hashes for spider item deduplication.
+
+    Stores a hash of each unique item to prevent re-ingesting
+    the same content across multiple spider runs.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Spider identification
+    spider_name = models.CharField(max_length=100, db_index=True)
+    data_type = models.CharField(max_length=50, default='unknown')
+
+    # Content hash (SHA256 truncated to 32 chars)
+    content_hash = models.CharField(max_length=32, db_index=True)
+
+    # Human-readable reference (for debugging)
+    item_title = models.CharField(max_length=200, blank=True)
+
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        app_label = 'core'
+        # Unique constraint: same hash for same spider shouldn't exist
+        unique_together = [['spider_name', 'content_hash']]
+        indexes = [
+            models.Index(fields=['spider_name', 'created_at']),
+            models.Index(fields=['content_hash']),
+        ]
+
+    def __str__(self):
+        return f"{self.spider_name}: {self.item_title[:30]}"
+
+
 class AdvisorInsight(models.Model):
     """
     Insights and recommendations from legendary advisors

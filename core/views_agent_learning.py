@@ -2858,14 +2858,23 @@ def start_pilot_execution(request, gate_id):
         # Parse request body
         data = json.loads(request.body) if request.body else {}
 
-        # Create default name based on decision
-        default_name = f"Pilot: {gate.decision.topic[:50]}"
+        # Session 617: Clean the topic name
+        import re
+        topic = gate.decision.topic or 'Pilot'
+        for prefix in [r'^Experiment:\s*', r'^Pilot:\s*', r'^Discussion:\s*',
+                       r'^Panel:\s*', r'^\[Learned\]\s*', r'^\[Synthesis\]\s*',
+                       r'^Research:\s*', r'^Research topic:\s*', r'^Topic:\s*']:
+            topic = re.sub(prefix, '', topic, flags=re.IGNORECASE).strip()
+        if topic and topic[0].islower():
+            topic = topic[0].upper() + topic[1:]
+
+        default_name = topic[:100]
 
         # Create pilot execution
         pilot = PilotExecution.objects.create(
             gate=gate,
             name=data.get('name', default_name),
-            description=data.get('description', f'Pilot execution for {gate.decision.topic}'),
+            description=data.get('description', f'Pilot execution for {topic}'),
             scope=data.get('scope', gate.summary),
             status='planned'
         )

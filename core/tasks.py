@@ -361,16 +361,33 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
                 data = {'items': [], 'error': f'Spider class not found: {spider_name}'}
                 item_count = 0
 
-        # Save data to SpiderData
-        spider_data = SpiderData.objects.create(
-            spider_name=spider_name,
-            data_type=category,
-            raw_data=data if isinstance(data, dict) else {'data': str(data)},
-            source_url=source_urls[0] if source_urls else 'manual',
-            relevance_score=70 if item_count > 0 else 30
-        )
+        # Session 616: Item-level deduplication
+        from core.services.spider_deduplication import deduplicate_spider_items
 
-        logger.info(f"✅ Spider {spider_name} completed: {item_count} items")
+        items = data.get('items', []) if isinstance(data, dict) else []
+        unique_items, dedup_stats = deduplicate_spider_items(spider_name, items, category)
+
+        # Only save if there are unique items
+        if unique_items:
+            # Update data with only unique items
+            if isinstance(data, dict):
+                data['items'] = unique_items
+                data['dedup_stats'] = dedup_stats
+
+            spider_data = SpiderData.objects.create(
+                spider_name=spider_name,
+                data_type=category,
+                raw_data=data if isinstance(data, dict) else {'data': str(data)},
+                source_url=source_urls[0] if source_urls else 'manual',
+                relevance_score=70 if len(unique_items) > 0 else 30
+            )
+            item_count = len(unique_items)
+            logger.info(f"✅ Spider {spider_name} completed: {item_count} unique items (dedup: {dedup_stats['duplicates']} removed)")
+        else:
+            # No unique items - skip creating SpiderData record
+            spider_data = None
+            item_count = 0
+            logger.info(f"⏭️ Spider {spider_name}: all {dedup_stats['total']} items already seen, skipping save")
 
         # Update execution log
         if execution_log:
@@ -384,7 +401,8 @@ def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
             'spider': spider_name,
             'success': True,
             'item_count': item_count,
-            'data_id': str(spider_data.id),
+            'data_id': str(spider_data.id) if spider_data else None,
+            'dedup_stats': dedup_stats,  # Session 616: Include dedup stats
         }
 
     except Exception as e:
@@ -931,24 +949,41 @@ def run_spider_network(self):
                 else:
                     item_count = len(data.get('items', []))
 
-            # Save to SpiderData
+            # Session 616: Item-level deduplication
+            from core.services.spider_deduplication import deduplicate_spider_items
             config = spider_config.get('config', {})
-            spider_data = SpiderData.objects.create(
-                spider_name=spider_name,
-                data_type=config.get('category', spider_config.get('category', 'general')),
-                raw_data=data if isinstance(data, dict) else {'data': str(data)},
-                source_url=SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal',
-                relevance_score=70 if item_count > 0 else 30
-            )
+            category = config.get('category', spider_config.get('category', 'general'))
+
+            items = data.get('items', []) if isinstance(data, dict) else []
+            unique_items, dedup_stats = deduplicate_spider_items(spider_name, items, category)
+
+            if unique_items:
+                if isinstance(data, dict):
+                    data['items'] = unique_items
+                    data['dedup_stats'] = dedup_stats
+
+                spider_data = SpiderData.objects.create(
+                    spider_name=spider_name,
+                    data_type=category,
+                    raw_data=data if isinstance(data, dict) else {'data': str(data)},
+                    source_url=SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal',
+                    relevance_score=70 if len(unique_items) > 0 else 30
+                )
+                item_count = len(unique_items)
+            else:
+                spider_data = None
+                item_count = 0
 
             results['spiders_run'] += 1
-            results['data_collected'] += 1
+            if spider_data:
+                results['data_collected'] += 1
             results['items_collected'] += item_count
             results['spider_results'].append({
                 'spider': spider_name,
                 'success': True,
                 'item_count': item_count,
-                'data_id': str(spider_data.id)
+                'data_id': str(spider_data.id) if spider_data else None,
+                'dedup_stats': dedup_stats
             })
 
             # Session 423: Track topics for summary notification
@@ -1155,18 +1190,31 @@ def execute_single_spider_lightweight(spider_name: str):
         # Use lightweight synchronous data collection
         data = _collect_spider_data_sync(spider_name, category, spider_config)
 
-        # Save to SpiderData
-        spider_data = SpiderData.objects.create(
-            spider_name=spider_name,
-            data_type=category,
-            raw_data=data if isinstance(data, dict) else {'data': str(data)},
-            source_url='on-demand-execution',
-            relevance_score=75  # Higher score for on-demand
-        )
+        # Session 616: Item-level deduplication
+        from core.services.spider_deduplication import deduplicate_spider_items
+
+        items = data.get('items', []) if isinstance(data, dict) else []
+        unique_items, dedup_stats = deduplicate_spider_items(spider_name, items, category)
+
+        if unique_items:
+            if isinstance(data, dict):
+                data['items'] = unique_items
+                data['dedup_stats'] = dedup_stats
+
+            spider_data = SpiderData.objects.create(
+                spider_name=spider_name,
+                data_type=category,
+                raw_data=data if isinstance(data, dict) else {'data': str(data)},
+                source_url='on-demand-execution',
+                relevance_score=75  # Higher score for on-demand
+            )
+            item_count = len(unique_items)
+        else:
+            spider_data = None
+            item_count = 0
 
         # Session 423: Calculate duration and send Discord notification
         duration = time.time() - start_time
-        item_count = len(data.get('items', [])) if isinstance(data, dict) else 0
 
         try:
             from core.services.discord_notifications import discord_notify
@@ -1181,11 +1229,17 @@ def execute_single_spider_lightweight(spider_name: str):
         except Exception:
             pass
 
-        logger.info(f"✅ Spider {spider_name} executed successfully, saved as SpiderData {spider_data.id}")
+        if spider_data:
+            logger.info(f"✅ Spider {spider_name} executed: {item_count} unique items (dedup: {dedup_stats['duplicates']} removed)")
+        else:
+            logger.info(f"⏭️ Spider {spider_name}: all {dedup_stats['total']} items already seen")
+
         return {
             'success': True,
             'spider_name': spider_name,
-            'data_id': str(spider_data.id),
+            'data_id': str(spider_data.id) if spider_data else None,
+            'item_count': item_count,
+            'dedup_stats': dedup_stats,
             'timestamp': timezone.now().isoformat()
         }
 
@@ -11254,12 +11308,19 @@ def collect_training_data():
 
         # Save to SpiderData (triggers Spider Data Bridge automatically)
         from core.models_unified_system import SpiderData
+        # Session 616: Item-level deduplication for training data
+        from core.services.spider_deduplication import deduplicate_spider_items
 
         content = result.content
         high_quality = content.get('high_quality_conversations', [])
-        saved = 0
 
-        for conv in high_quality[:50]:  # Limit to 50 per run
+        # Deduplicate training conversations
+        unique_convs, dedup_stats = deduplicate_spider_items(
+            'discord_training', high_quality[:50], 'training_data'
+        )
+
+        saved = 0
+        for conv in unique_convs:
             try:
                 messages = conv.get('messages', [])
                 if not messages:
@@ -11285,6 +11346,8 @@ def collect_training_data():
                 saved += 1
             except Exception as e:
                 logger.warning(f"📚 [SESSION 420] Error saving conversation: {e}")
+
+        logger.info(f"📚 [SESSION 420] Dedup: {dedup_stats['total']} -> {dedup_stats['unique']} unique, {dedup_stats['duplicates']} skipped")
 
         stats = content.get('statistics', {})
         logger.info(f"📚 [SESSION 420] Training data collection complete: {saved} records saved")
@@ -11360,15 +11423,22 @@ def collect_training_data_full():
             return {'status': 'no_data', 'records_saved': 0}
 
         from core.models_unified_system import SpiderData
+        # Session 616: Item-level deduplication
+        from core.services.spider_deduplication import deduplicate_spider_items
 
         content = result.content
         # For weekly full collection, save more records
         high_quality = content.get('high_quality_conversations', [])
         medium_quality = content.get('medium_quality_conversations', [])
         all_quality = high_quality + medium_quality
-        saved = 0
 
-        for conv in all_quality[:200]:  # Save up to 200 per weekly run
+        # Deduplicate before saving
+        unique_convs, dedup_stats = deduplicate_spider_items(
+            'discord_training', all_quality[:200], 'training_data'
+        )
+
+        saved = 0
+        for conv in unique_convs:
             try:
                 messages = conv.get('messages', [])
                 if not messages:
@@ -11394,6 +11464,8 @@ def collect_training_data_full():
                 saved += 1
             except Exception as e:
                 logger.warning(f"📚 [SESSION 420] Error saving conversation: {e}")
+
+        logger.info(f"📚 [SESSION 420] FULL Dedup: {dedup_stats['total']} -> {dedup_stats['unique']} unique, {dedup_stats['duplicates']} skipped")
 
         stats = content.get('statistics', {})
         logger.info(f"📚 [SESSION 420] FULL training data collection complete: {saved} records saved")
@@ -11424,6 +11496,38 @@ def collect_training_data_full():
 
     except Exception as e:
         logger.error(f"📚 [SESSION 420] FULL training data collection failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+@shared_task
+def cleanup_spider_item_hashes(days_to_keep: int = 7):
+    """
+    Session 616: Clean up old spider item hashes to prevent table bloat.
+
+    Removes hash records older than the lookback period since they're
+    no longer needed for deduplication.
+
+    Args:
+        days_to_keep: Days of hashes to retain (default: 7)
+
+    Returns:
+        Dict with cleanup stats
+    """
+    from core.services.spider_deduplication import SpiderDeduplicationService
+
+    try:
+        service = SpiderDeduplicationService()
+        deleted = service.cleanup_old_hashes(days_to_keep)
+
+        logger.info(f"🧹 [SESSION 616] Cleaned up {deleted} old spider item hashes (older than {days_to_keep} days)")
+
+        return {
+            'status': 'success',
+            'deleted': deleted,
+            'days_kept': days_to_keep,
+        }
+    except Exception as e:
+        logger.error(f"🧹 [SESSION 616] Hash cleanup failed: {e}")
         return {'status': 'error', 'error': str(e)}
 
 

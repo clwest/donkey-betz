@@ -1,8 +1,103 @@
-# Session 616 - Start Here
+# Session 618 - Start Here
 
-**Previous Session:** 615
+**Previous Session:** 617
 **Date:** December 29, 2025
 **Focus:** To Be Determined
+
+---
+
+## Session 617 Accomplishments
+
+### Migration Disaster Recovery - COMPLETE!
+
+**Problem Discovered:**
+- Console errors: `relation "core_experiment" does not exist`
+- Migration 0135 was auto-generated with **DeleteModel operations** that wiped pilot/experiment tables
+- This was a recurring issue (same thing happened in Session 596)
+
+**Root Cause:**
+- Django's `makemigrations` auto-generated DeleteModel operations when model definitions mismatched migration state
+- Running migrations created tables (0130-0134) then immediately deleted them (0135)
+
+**Fixes Applied:**
+
+1. **Fixed Migration 0135**
+   - Removed erroneous DeleteModel operations for Experiment, PilotExecution, etc.
+   - Migration now only creates SpiderItemHash (as intended)
+
+2. **Added Missing Columns**
+   - Added `created_at` and `updated_at` to `core_experiment` table
+
+3. **Recreated Pilots**
+   - Created 5 new pilots from recent AgentDecisionSummary records
+   - User started 5 additional pilots through UI
+
+**Current State:**
+```
+Pilots: 10 total
+  - Running: 5
+  - In Progress: 5
+
+Experiments: 10
+  - All running with KPI tracking enabled
+```
+
+**Files Modified:**
+- `core/migrations/0135_session_616_spider_item_hash.py` - Removed DeleteModel ops
+
+**Lesson Learned:**
+Always review auto-generated migrations before applying! Django can generate destructive operations.
+
+---
+
+## Session 616 Accomplishments
+
+### Spider Item-Level Deduplication - COMPLETE!
+
+**Problem Identified:**
+- ThinkingAgent flagged spider yield at 41.4 items/spider/day (expected: 10-20)
+- Audit revealed: **97.7% of spider data was redundant duplicates**
+- 3,339 SpiderData records in 24h, but only 77 unique spiders
+- Same content stored 43+ times per spider per day
+
+**Solution Implemented:**
+
+1. **New Model** (`SpiderItemHash`)
+   - Tracks content hashes for deduplication
+   - Unique constraint on (spider_name, content_hash)
+   - Auto-expires after 7 days
+
+2. **New Service** (`core/services/spider_deduplication.py`)
+   - Item-level deduplication using content hashing
+   - Smart hash key selection: URL > event_id > ticker > title
+   - Returns stats: total, unique, duplicates, new_hashes
+
+3. **Core Tasks Integration**
+   - Updated 5 spider save locations in `core/tasks.py`
+   - Only creates SpiderData if unique items found
+   - Logs dedup stats: "15 unique items (dedup: 186 removed)"
+
+4. **Celery Cleanup Task**
+   - Daily hash cleanup at 3:30 AM
+   - Removes hashes older than 7 days
+
+**Results:**
+```
+Before: 43 runs/spider/day creating 43 records (97.7% waste)
+After:  43 runs/spider/day creating ~1-3 records (unique content only)
+
+Test Results:
+- hackernews run 1: 15 unique items, 1 SpiderData record
+- hackernews run 2: 0 unique items, 0 records (all duplicates skipped)
+```
+
+**Files Created/Modified:**
+- `core/services/spider_deduplication.py` - NEW
+- `core/models_unified_system.py` - Added SpiderItemHash model
+- `core/models/__init__.py` - Export SpiderItemHash
+- `core/tasks.py` - Added dedup to 5 spider save locations
+- `core/celery.py` - Added cleanup_spider_item_hashes schedule
+- `core/migrations/0135_session_616_spider_item_hash.py` - NEW
 
 ---
 

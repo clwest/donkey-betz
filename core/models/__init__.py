@@ -100,6 +100,7 @@ __all__ = [
     'AgentSolution',
     'AgentLearning',
     'SpiderData',
+    'SpiderItemHash',  # Session 616: Spider deduplication
     'AdvisorInsight',
     'UserAgentLearning',
 
