@@ -4271,6 +4271,36 @@ def get_recent_activity(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def get_experiment_recommendations(request):
+    """
+    GET /api/experiment-recommendations/
+
+    Session 615: Get AI-powered recommendations for running experiments.
+
+    Analyzes KPI trends, alerts, and progress to generate actionable recommendations:
+    - 🚀 Scale up - experiments exceeding expectations
+    - 🔍 Investigate - experiments with declining KPIs
+    - 🔧 Adjust - experiments that are stalled
+    - ✅ Continue - experiments on track
+    - 🎉 Celebrate - experiments that exceeded targets
+    - ⏹️ End early - experiments not meeting goals
+
+    Returns:
+        - recommendations: List of recommendations with type, reason, action
+        - summary: Counts by type and action_needed count
+    """
+    try:
+        from core.services.experiment_recommendations import get_experiment_recommendations
+
+        result = get_experiment_recommendations()
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting experiment recommendations: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
