@@ -1267,6 +1267,17 @@ app.conf.beat_schedule = {
             'expires': 86400,  # Expire after 1 day
         }
     },
+
+    # SESSION 618: PILOT EVALUATION AND LEARNING EXTRACTION
+    # Evaluate running pilots, complete experiments, extract learnings
+    # Feeds learnings to collective intelligence for system-wide learning
+    'evaluate-and-complete-pilots': {
+        'task': 'core.tasks.evaluate_and_complete_pilots',
+        'schedule': crontab(minute=15, hour='*/2'),  # Every 2 hours at :15
+        'options': {
+            'expires': 7200,  # Expire after 2 hours
+        }
+    },
 }
 
 # Task routing configuration
