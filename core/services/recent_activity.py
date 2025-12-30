@@ -89,24 +89,27 @@ class RecentActivityService:
             from core.models_unified_system import AgentDream
 
             dreams = AgentDream.objects.filter(
-                created_at__gte=cutoff
-            ).order_by('-created_at')[:10]
+                dreamed_at__gte=cutoff
+            ).order_by('-dreamed_at')[:10]
 
             for dream in dreams:
                 # Clean up title
                 title = (dream.title or dream.content[:50] if dream.content else 'Untitled dream')
                 title = title.replace('[Learned]', '').replace('[Synthesis]', '').strip()
 
+                # Get agent name from related agent object
+                agent_name = dream.agent.name if dream.agent else 'Unknown Agent'
+
                 activities.append({
                     'id': str(dream.id),
                     'type': 'dream',
                     'icon': '💭',
                     'title': title[:60] + ('...' if len(title) > 60 else ''),
-                    'subtitle': f"by {dream.agent_name or 'Unknown Agent'}",
-                    'timestamp': dream.created_at.isoformat(),
-                    'timestamp_display': self._format_time_ago(dream.created_at),
-                    'agent': dream.agent_name,
-                    'category': getattr(dream, 'category', None),
+                    'subtitle': f"by {agent_name}",
+                    'timestamp': dream.dreamed_at.isoformat(),
+                    'timestamp_display': self._format_time_ago(dream.dreamed_at),
+                    'agent': agent_name,
+                    'category': getattr(dream, 'dream_type', None),
                 })
 
         except Exception as e:
@@ -122,15 +125,17 @@ class RecentActivityService:
             from core.models_unified_system import AgentConversation
 
             convos = AgentConversation.objects.filter(
-                created_at__gte=cutoff
-            ).order_by('-created_at')[:10]
+                started_at__gte=cutoff
+            ).order_by('-started_at')[:10]
 
             for convo in convos:
-                # Get participant names
-                agent_a = getattr(convo, 'participant_a_name', None) or 'Agent A'
-                agent_b = getattr(convo, 'participant_b_name', None) or 'Agent B'
-                topic = getattr(convo, 'topic', None) or getattr(convo, 'title', None) or 'Discussion'
-                topic = topic.replace('Discussion:', '').replace('[Synthesis]', '').strip()
+                # Get participant names from participants M2M relation
+                participants = list(convo.participants.values_list('name', flat=True)[:2])
+                agent_a = participants[0] if participants else 'Agent A'
+                agent_b = participants[1] if len(participants) > 1 else 'Agent B'
+
+                topic = convo.topic or 'Discussion'
+                topic = topic.replace('Discussion:', '').replace('[Synthesis]', '').replace('[Learned]', '').strip()
 
                 activities.append({
                     'id': str(convo.id),
@@ -138,8 +143,8 @@ class RecentActivityService:
                     'icon': '🗣️',
                     'title': topic[:60] + ('...' if len(topic) > 60 else ''),
                     'subtitle': f"{agent_a} + {agent_b}",
-                    'timestamp': convo.created_at.isoformat(),
-                    'timestamp_display': self._format_time_ago(convo.created_at),
+                    'timestamp': convo.started_at.isoformat(),
+                    'timestamp_display': self._format_time_ago(convo.started_at),
                     'agents': [agent_a, agent_b],
                 })
 
