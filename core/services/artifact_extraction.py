@@ -323,9 +323,10 @@ JSON array only, no other text:"""
         cutoff = timezone.now() - timezone.timedelta(hours=hours_back)
 
         # Get conversations without artifacts
+        # Note: status is 'concluded' not 'completed'
         conversations = AgentConversation.objects.filter(
             started_at__gte=cutoff,
-            status='completed'
+            status='concluded'
         ).exclude(
             artifacts__isnull=False
         ).order_by('-started_at')[:50]  # Limit to 50 per batch
