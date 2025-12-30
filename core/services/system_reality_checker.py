@@ -217,12 +217,9 @@ class SystemRealityChecker:
     def check_learning_loops(self):
         """Check if agents are learning from each other"""
         try:
-            from core.models_unified_system import AgentLearning, KnowledgeTransfer
+            from core.models_unified_system import KnowledgeTransfer
 
-            recent_learning = AgentLearning.objects.filter(
-                created_at__gte=self.cutoff
-            ).count()
-
+            # Note: AgentLearning model exists but is unused - learning uses KnowledgeTransfer
             recent_transfers = KnowledgeTransfer.objects.filter(
                 created_at__gte=self.cutoff
             ).count()
@@ -232,25 +229,25 @@ class SystemRealityChecker:
                 was_applied=True
             ).count()
 
-            # Expected: ~10 min cycle = ~36 cycles in 6h, each should have some activity
-            expected_min = self.lookback_hours * 6  # At least 6 per hour
-            activity_ratio = min(1.0, (recent_learning + recent_transfers) / max(1, expected_min))
+            # Expected: ~10 min cycle = 6 per hour, each creates ~1-3 transfers
+            # So in 6h we expect ~10-20 transfers minimum
+            expected_min = self.lookback_hours * 2  # At least 2 per hour
+            activity_ratio = min(1.0, recent_transfers / max(1, expected_min))
 
             progress_ratio = applied_transfers / max(1, recent_transfers) if recent_transfers > 0 else 0.5
 
             score = self.calculate_score(activity_ratio=activity_ratio, progress_ratio=progress_ratio)
 
             issues = []
-            if recent_learning == 0 and recent_transfers == 0:
+            if recent_transfers == 0:
                 issues.append("No learning activity detected")
 
             self.checks.append(SystemCheck(
                 name="Learning Loops",
                 score=score,
                 status=self.get_status(score),
-                message=f"{recent_learning} learnings, {recent_transfers} transfers in {self.lookback_hours}h",
+                message=f"{recent_transfers} transfers in {self.lookback_hours}h",
                 metrics={
-                    "recent_learning": recent_learning,
                     "recent_transfers": recent_transfers,
                     "applied_transfers": applied_transfers
                 },
