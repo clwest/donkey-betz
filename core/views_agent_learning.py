@@ -2544,7 +2544,7 @@ def get_pilot_readiness_gates(request):
                 'status': gate.status,
                 'status_display': gate.get_status_display(),
                 'risk_level': gate.risk_level,
-                'summary': gate.summary,
+                'summary': clean_title(gate.summary.replace('Pilot readiness for: ', ''), max_length=100) if gate.summary else '',  # Session 617
                 'checklist_total': progress['total'],
                 'checklist_completed': progress['completed'],
                 'checklist_percentage': progress['percentage'],
