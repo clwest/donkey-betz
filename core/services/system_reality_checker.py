@@ -427,18 +427,17 @@ class SystemRealityChecker:
     def check_thinking_agent(self):
         """Check if ThinkingAgent is running its cycles"""
         try:
-            from django_celery_results.models import TaskResult
+            from core.models_unified_system import ThoughtRecord
 
-            thinking_runs = TaskResult.objects.filter(
-                task_name='core.tasks.run_autonomous_thinking_cycle',
-                date_done__gte=self.cutoff,
-                status='SUCCESS'
+            # Check ThoughtRecord directly (TaskResult stores to Redis)
+            thinking_runs = ThoughtRecord.objects.filter(
+                started_at__gte=self.cutoff,
+                execution_status='completed'
             ).count()
 
-            failed_runs = TaskResult.objects.filter(
-                task_name='core.tasks.run_autonomous_thinking_cycle',
-                date_done__gte=self.cutoff,
-                status='FAILURE'
+            failed_runs = ThoughtRecord.objects.filter(
+                started_at__gte=self.cutoff,
+                execution_status='failed'
             ).count()
 
             # Expected: 1 per hour = lookback_hours runs
