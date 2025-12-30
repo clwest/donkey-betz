@@ -906,6 +906,94 @@ class Experiment(models.Model):
 
 
 # =============================================================================
+# Session 609: KPI Snapshot for Auto-Tracking
+# =============================================================================
+
+class KPISnapshot(models.Model):
+    """
+    Session 609: Stores historical KPI values for trend tracking.
+
+    Auto-updated by Celery task to track pilot progress over time.
+    Enables trend visualization and automated KPI updates.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    experiment = models.ForeignKey(
+        Experiment,
+        on_delete=models.CASCADE,
+        related_name='kpi_snapshots'
+    )
+
+    # KPI values at snapshot time
+    kpi_name = models.CharField(max_length=255)
+    value = models.CharField(max_length=100)
+    numeric_value = models.FloatField(null=True, blank=True, help_text="Parsed numeric value for charting")
+    target_value = models.CharField(max_length=100, blank=True)
+    progress_percent = models.FloatField(null=True, blank=True)
+
+    # Data source info
+    data_source = models.CharField(max_length=100, blank=True, help_text="e.g., spider:mit_tech_review, agent:research")
+    source_query = models.TextField(blank=True, help_text="Query or filter used to calculate value")
+
+    # Metadata
+    snapshot_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('auto', 'Automatic'),
+            ('manual', 'Manual'),
+            ('scheduled', 'Scheduled'),
+        ],
+        default='auto'
+    )
+    notes = models.TextField(blank=True)
+
+    # Timestamps
+    captured_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['-captured_at']
+        indexes = [
+            models.Index(fields=['experiment', '-captured_at']),
+        ]
+
+    def __str__(self):
+        return f"KPI Snapshot: {self.experiment.name[:30]} - {self.value} ({self.captured_at.date()})"
+
+    @classmethod
+    def create_snapshot(cls, experiment, value, data_source='manual', notes=''):
+        """Create a new KPI snapshot for an experiment."""
+        # Parse numeric value
+        numeric = None
+        try:
+            cleaned = str(value).replace('%', '').replace('$', '').replace(',', '').strip()
+            numeric = float(cleaned)
+        except (ValueError, TypeError):
+            pass
+
+        # Calculate progress
+        progress = None
+        if numeric is not None and experiment.target_value:
+            try:
+                target_cleaned = experiment.target_value.replace('%', '').replace('$', '').replace(',', '').strip()
+                target_num = float(target_cleaned)
+                if target_num > 0:
+                    progress = round((numeric / target_num) * 100, 1)
+            except (ValueError, TypeError):
+                pass
+
+        return cls.objects.create(
+            experiment=experiment,
+            kpi_name=experiment.primary_kpi or 'Unknown KPI',
+            value=str(value),
+            numeric_value=numeric,
+            target_value=experiment.target_value or '',
+            progress_percent=progress,
+            data_source=data_source,
+            notes=notes,
+        )
+
+
+# =============================================================================
 # Session 597: Experiment Learning Loop Models
 # =============================================================================
 

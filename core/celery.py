@@ -1227,6 +1227,17 @@ app.conf.beat_schedule = {
             'expires': 600,  # Expire after 10 minutes
         }
     },
+
+    # SESSION 609: AUTO KPI TRACKING
+    # Automatically update experiment KPIs from data sources (spiders, agents, decisions)
+    # Creates KPI snapshots for trend visualization
+    'update-experiment-kpis': {
+        'task': 'core.tasks.update_experiment_kpis',
+        'schedule': crontab(minute=0),  # Every hour at :00
+        'options': {
+            'expires': 3600,  # Expire after 1 hour
+        }
+    },
 }
 
 # Task routing configuration

@@ -312,6 +312,10 @@ from core.views_agent_learning import (
     # Session 607: Pilot Progress Dashboard
     get_pilot_progress_dashboard,
     get_pilot_progress_detail,
+    # Session 609: Auto KPI Tracking
+    trigger_kpi_update,
+    get_experiment_kpi_trend,
+    get_all_experiment_kpi_trends,
     # Session 602: Boardroom Learning Integration
     get_decision_learning_context,
     get_boardroom_learning_summary,
@@ -2779,6 +2783,10 @@ urlpatterns = [
     # Session 607: Pilot Progress Dashboard
     path('api/pilots/progress/', get_pilot_progress_dashboard, name='pilot-progress-dashboard'),
     path('api/pilots/progress/<uuid:experiment_id>/', get_pilot_progress_detail, name='pilot-progress-detail'),
+    # Session 609: Auto KPI Tracking
+    path('api/experiments/kpis/update/', trigger_kpi_update, name='trigger-kpi-update'),
+    path('api/experiments/<uuid:experiment_id>/kpi-trend/', get_experiment_kpi_trend, name='experiment-kpi-trend'),
+    path('api/experiments/kpi-trends/', get_all_experiment_kpi_trends, name='all-experiment-kpi-trends'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

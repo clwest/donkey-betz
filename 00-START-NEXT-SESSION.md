@@ -1,38 +1,49 @@
-# Session 609 - Start Here
+# Session 610 - Start Here
 
-**Previous Session:** 608
+**Previous Session:** 609
 **Date:** December 29, 2025
-**Focus:** Velocity Alerts, Quick Actions, or New Feature
+**Focus:** New Feature - User Choice
 
 ---
 
-## Session 608 Accomplishments
+## Session 609 Accomplishments
 
-### Fixed All Pilot KPIs - ALL PILOTS NOW HEALTHY!
+### Auto KPI Tracking System - COMPLETE!
 
-Updated all 7 running pilots with proper KPIs, targets, and current values.
+Built automatic KPI tracking for all running experiments:
 
-| Before | After |
-|--------|-------|
-| Healthy: 0% | Healthy: **100%** |
-| KPI Defined: 25% | KPI Defined: **87.5%** |
-| Needs Attention: 7 | Needs Attention: **0** |
+1. **KPISnapshot Model** (`core/models_pilot_readiness.py`)
+   - Stores historical KPI values for trend tracking
+   - Includes numeric parsing for charting
+   - Progress percentage calculation
 
-### KPIs Assigned:
+2. **AutoKPITrackingService** (`core/services/auto_kpi_tracking.py`)
+   - Connects experiments to data sources (spiders, agents, decisions)
+   - Calculates current KPI values automatically
+   - Creates snapshots for trend visualization
+   - Data source mappings:
+     - `mit_tech_review` -> Spider: mit_tech runs
+     - `financial` -> Spider: coingecko, yahoo, polygon, finnhub
+     - `content` -> Agent: content, writer, creative executions
+     - `synthesis` -> Decision: synthesis decisions
+     - `market` -> Spider: market, trend, news
 
-| Pilot | KPI | Target | Current | Progress |
-|-------|-----|--------|---------|----------|
-| MIT Tech Review - General | Actionable insights/week | 5 | 0 | 0% |
-| MIT Tech Review - Innovation | Engagement/ROI target | 60% | 15 | 25% |
-| Synthesis: content + trend | Quality recommendations | 10 | 2 | 20% |
-| Convertkit Content | High conversion ideas | 8 | 1 | 12.5% |
-| Financial Intelligence #1 | Engagement/ROI target | 50% | 10 | 20% |
-| Financial Intelligence #2 | Trading signal accuracy | 70% | 45% | 64.3% |
-| Synthesis: trend + market | Market insight quality | 8 | 3 | 37.5% |
+3. **Celery Task** (`core/tasks.py`)
+   - `update_experiment_kpis` - Runs every hour at :00
+   - Discord notifications on updates
 
-### KPI Owners Assigned:
-- Research Team, Innovation Team, Content Strategy
-- Email Marketing, Financial Team, Trading Desk, Market Intelligence
+4. **API Endpoints** (`core/views_agent_learning.py`, `core/urls.py`)
+   - `POST /api/experiments/kpis/update/` - Trigger manual update
+   - `GET /api/experiments/<id>/kpi-trend/` - Get trend for one experiment
+   - `GET /api/experiments/kpi-trends/` - Get all trends summary
+
+### Test Results
+```
+Total experiments: 7
+Updated: 7 (100%)
+Snapshots created: 7
+Errors: 0
+```
 
 ---
 
@@ -40,56 +51,55 @@ Updated all 7 running pilots with proper KPIs, targets, and current values.
 
 ```
 8 total pilots:
-  ✅ 7 running - ALL ON TRACK
-  🏁 1 completed - SUCCESS at 150%
+  Running: 7 - ALL KPI TRACKED
+  Completed: 1 - SUCCESS at 150%
 
-Health Status:
-  ✅ on_track: 7
-  🏁 completed: 1
-  ⚠️ at_risk: 0
-  🔔 needs_attention: 0
+KPI Tracking:
+  Auto-updates: Every hour
+  Data sources: Spiders (3), Agents (1), Decisions (1)
+  Snapshots: Tracking historical values
 ```
 
 ---
 
-## The Complete Learning System (Sessions 590-608)
+## The Complete Learning System (Sessions 590-609)
 
 ```
 Session 590: Pilot Readiness Gate
-        ↓
+        |
 Session 595-600: Execution, Tracking, Learning, Metrics
-        ↓
+        |
 Session 601-604: Weighted Learning, Boardroom, Velocity, Prioritization
-        ↓
+        |
 Session 605: PA Learning Insights
-        ↓
+        |
 Session 606: Experiment Suggestion Engine
-        ↓
+        |
 Session 607: Pilot Progress Dashboard
-        ↓
-Session 608: Fixed All Pilot KPIs ← ALL HEALTHY!
+        |
+Session 608: Fixed All Pilot KPIs - ALL HEALTHY!
+        |
+Session 609: Auto KPI Tracking - REAL DATA! <-- NEW
 ```
 
 ---
 
-## Session 609 Options
+## Session 610 Options
 
-### Option A: Velocity Alerts
-- Notify when learning velocity is declining
-- Alert on themes that need attention
-- Surface stale themes with no recent activity
-- Add to notification system (Discord/Web Push)
+### Option A: Trend Visualization UI
+- Add KPI trend charts to Pilot Progress Dashboard
+- Sparklines showing 30-day history
+- Color-coded trend indicators (up/down/stable)
 
-### Option B: Quick Actions for Pilots
-- Add "Update KPI" button to pilot cards
-- Add "Halt Pilot" quick action
-- Add "Mark Complete" workflow
-- Inline editing of current values
+### Option B: KPI Alerts
+- Alert when KPI drops below threshold
+- Notify when experiment is at risk
+- Discord notifications for KPI changes
 
-### Option C: Auto KPI Tracking
-- Connect pilots to spider data for automatic KPI updates
-- Set up scheduled KPI snapshots
-- Trend visualization over time
+### Option C: Experiment Recommendations
+- Suggest actions based on KPI trends
+- "MIT Tech Review insights are high - consider scaling"
+- "Content agent KPIs low - investigate"
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -102,18 +112,25 @@ Session 608: Fixed All Pilot KPIs ← ALL HEALTHY!
 # Start services
 make start && make celery
 
-# Verify all pilots are healthy
+# Test auto KPI tracking
 .venv/bin/python manage.py shell -c "
-from core.services.pilot_progress import get_pilot_progress_dashboard
-result = get_pilot_progress_dashboard()
-print(f'Healthy: {result[\"summary\"][\"healthy_percent\"]}%')
-print(f'On Track: {result[\"health_breakdown\"][\"on_track\"]}')
-print(f'Needs Attention: {result[\"summary\"][\"needs_attention\"]}')
+from core.services.auto_kpi_tracking import update_all_experiment_kpis
+result = update_all_experiment_kpis()
+print(f'Updated: {result[\"summary\"][\"updated_count\"]}')
+print(f'Errors: {result[\"summary\"][\"error_count\"]}')
+"
+
+# Get KPI trends
+.venv/bin/python manage.py shell -c "
+from core.services.auto_kpi_tracking import get_all_kpi_trends
+result = get_all_kpi_trends()
+print(f'Trending up: {result[\"summary\"][\"trending_up\"]}')
+print(f'Trending down: {result[\"summary\"][\"trending_down\"]}')
 "
 
 # View in UI
 open http://localhost:8000/ai-studio/
-# Go to Growth tab → Pilot Progress Dashboard
+# Go to Growth tab -> Pilot Progress Dashboard
 ```
 
 ---
@@ -122,25 +139,28 @@ open http://localhost:8000/ai-studio/
 
 | File | Purpose |
 |------|---------|
-| `core/services/pilot_progress.py` | Session 607 - Pilot progress tracking |
-| `core/services/experiment_suggestion.py` | Session 606 - Suggestion engine |
-| `core/services/pa_learning_insights.py` | Session 605 - PA learning insights |
-| `core/models_pilot_readiness.py` | Experiment model with KPI fields |
+| `core/services/auto_kpi_tracking.py` | Session 609 - Auto KPI tracking service |
+| `core/models_pilot_readiness.py` | KPISnapshot model added |
+| `core/migrations/0134_session_609_kpi_snapshot.py` | KPI snapshot migration |
+| `core/tasks.py` | `update_experiment_kpis` Celery task |
+| `core/celery.py` | Beat schedule (hourly) |
+| `core/views_agent_learning.py` | API endpoints |
+| `core/urls.py` | URL routes |
 
 ---
 
-## System Stats After Session 608
+## System Stats After Session 609
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 102 |
+| **Services** | 103 (+1 AutoKPITrackingService) |
 | **Active Pilots** | 7 running, 1 success |
 | **Pilot Health** | 100% on_track |
-| **KPI Definition** | 87.5% |
-| **The Learning Loop** | COMPLETE & HEALTHY! |
+| **KPI Tracking** | 100% auto-tracked |
+| **The Learning Loop** | COMPLETE + AUTO-TRACKED! |
 
 ---
 
-**Session 608: Fixed Pilot KPIs - ALL PILOTS HEALTHY!**
+**Session 609: Auto KPI Tracking - All experiments now auto-update from real data!**

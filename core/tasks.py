@@ -20569,3 +20569,75 @@ def _send_halt_discord_notification(experiment, reason):
 
     except Exception as e:
         logger.debug(f"Discord halt notification failed: {e}")
+
+
+# =============================================================================
+# Session 609: Auto KPI Tracking Task
+# =============================================================================
+
+@shared_task
+def update_experiment_kpis():
+    """
+    Session 609: Automatically update KPIs for all running experiments.
+
+    Runs on a schedule to:
+    1. Connect experiments to their data sources (spiders, agents, decisions)
+    2. Calculate current KPI values
+    3. Update experiment current_value fields
+    4. Create KPI snapshots for trend visualization
+
+    Returns:
+        Dict with update statistics
+    """
+    logger.info("📊 [SESSION 609] Starting automatic KPI update...")
+
+    try:
+        from core.services.auto_kpi_tracking import update_all_experiment_kpis
+
+        results = update_all_experiment_kpis()
+
+        summary = results.get('summary', {})
+        logger.info(
+            f"📊 [SESSION 609] KPI update complete - "
+            f"Updated: {summary.get('updated_count', 0)}, "
+            f"Skipped: {summary.get('skipped_count', 0)}, "
+            f"Errors: {summary.get('error_count', 0)}"
+        )
+
+        # Send Discord notification if updates were made
+        if summary.get('updated_count', 0) > 0:
+            _send_kpi_update_discord_notification(results)
+
+        return results
+
+    except Exception as e:
+        logger.error(f"📊 [SESSION 609] KPI update failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+def _send_kpi_update_discord_notification(results):
+    """
+    Session 609: Send Discord notification after KPI updates.
+    """
+    try:
+        from core.services.discord_notifications import DiscordNotificationService
+
+        discord = DiscordNotificationService()
+        summary = results.get('summary', {})
+        updated = results.get('updated', [])
+
+        message = f"**📊 Auto KPI Update Complete**\n\n"
+        message += f"**Updated:** {summary.get('updated_count', 0)} experiments\n"
+        message += f"**Snapshots:** {results.get('snapshots_created', 0)} created\n\n"
+
+        if updated:
+            message += "**Changes:**\n"
+            for exp in updated[:5]:  # Show first 5
+                message += f"• {exp['name'][:30]}: {exp['old_value']} → {exp['new_value']}\n"
+            if len(updated) > 5:
+                message += f"• _...and {len(updated) - 5} more_\n"
+
+        discord.send_to_channel('system-status', message)
+
+    except Exception as e:
+        logger.debug(f"Discord KPI notification failed: {e}")
