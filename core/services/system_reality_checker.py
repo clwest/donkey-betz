@@ -354,7 +354,7 @@ class SystemRealityChecker:
 
             recent_decisions = ReviewDocument.objects.filter(
                 decided_at__gte=self.cutoff,
-                status__in=['approved', 'declined']
+                status__in=['approved', 'approved_with_conditions', 'declined', 'deferred']
             ).count()
 
             total_reviews = ReviewDocument.objects.filter(
