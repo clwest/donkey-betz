@@ -4235,6 +4235,42 @@ def get_weekly_kpi_summary(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+def get_recent_activity(request):
+    """
+    GET /api/recent-activity/
+
+    Session 614: Get recent system activity feed.
+
+    Aggregates recent activity from:
+    - Agent Dreams
+    - Agent Conversations
+    - Boardroom Decisions
+    - Pilot Starts/Completions
+
+    Query params:
+        - limit: Max items (default 20)
+        - hours: How far back to look (default 72)
+
+    Returns:
+        - activities: List of activity items with type, icon, title, subtitle, timestamp
+        - counts: Count by activity type
+        - total: Total count
+    """
+    try:
+        from core.services.recent_activity import get_recent_activity
+
+        limit = int(request.GET.get('limit', 20))
+        hours = int(request.GET.get('hours', 72))
+
+        result = get_recent_activity(limit=limit, hours=hours)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting recent activity: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
