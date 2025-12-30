@@ -314,11 +314,15 @@ class PilotReadinessGate(models.Model):
             risk_level: Risk level ('low', 'medium', 'high', 'critical')
             auto_generate_content: If True, queue AI content generation (Session 594)
         """
+        # Session 617: Clean topic for summary
+        from core.utils.title_cleaner import clean_title
+        cleaned_topic = clean_title(decision.topic, max_length=100)
+
         gate = cls.objects.create(
             decision=decision,
             risk_level=risk_level,
             decision_made_at=decision.created_at,
-            summary=f"Pilot readiness for: {decision.topic}",
+            summary=cleaned_topic,  # Session 617: Just use cleaned topic, not "Pilot readiness for:"
         )
 
         # Auto-create standard checklist items based on risk level
