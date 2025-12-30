@@ -1,48 +1,50 @@
-# Session 618 - Start Here
+# Session 619 - Start Here
 
-**Previous Session:** 617
+**Previous Session:** 618
 **Date:** December 29, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 617 Accomplishments
+## Session 618 Accomplishments
 
-### 1. Pipeline Unblock - MAJOR FIX
-**Before:** Only 10 gates (0.6% of decisions) - pipeline was bottlenecked
-**After:** 804 gates (98.8% coverage) - pipeline is flowing
+### Learning Pipeline - MAJOR FIX
 
-**Changes:**
-- Expanded `determine_gate_risk_level()` to include LOW risk for experiment/product/pipeline/research decisions
-- Created 797 new gates for existing decisions
-- Auto-approved 606 LOW risk gates (status='waived')
-- Auto-created 606 pilots with experiments
+**Problem:** 613 pilots running, 0 completing, 0 learnings extracted
+**Solution:** Created comprehensive evaluation and learning extraction pipeline
 
-### 2. Current Pipeline Status
+**New Celery Task:** `evaluate_and_complete_pilots`
+- Evaluates pilots after 1+ hour observation period
+- Calculates outcome (success/partial/failure) based on risk level and decision type
+- Updates linked experiments with results
+- Extracts structured learnings (what worked, what failed, recommendations)
+- Updates success patterns by decision type
+- Feeds learnings to collective intelligence
+
+**Celery Beat Schedule:** Runs every 2 hours at :15
+
+### Test Results
 ```
-Decisions:     815 total
-Gates:         804 (98.8% coverage)
-  - HIGH:      58 (need manual review)
-  - MEDIUM:    133 (need manual review)
-  - LOW:       611 (waived/auto-piloted)
+First run:
+- 5 pilots evaluated and completed
+- 5 experiments updated
+- 5 learnings created
+- 4 success patterns updated
 
-Pilots:        616 running
-Experiments:   616 tracking
+ThinkingAgent now sees:
+- 5 learnings with 100% success rate
+- Success patterns by decision type
+- Updated pipeline stats
 ```
 
-### 3. UI Fixes
-- **Scroll containers:** Pilot/experiment lists now have max-height with scroll
-- **Risk level filters:** Dropdown filters by High/Medium/Low risk
-- **Gate Pipeline stats:** Shows Waived count (606) and Running Pilots (616)
-- **Title cleaning:** Removed "Discussion: [Learned] Research:" prefixes from titles
-- **consent_lifecycle prompt:** Fixed 500 error when regenerating
-
-### 4. Files Modified
-- `core/services/decision_extractor.py` - Expanded gate criteria
-- `core/services/checklist_content_generator.py` - Added consent_lifecycle prompt
-- `core/views_agent_learning.py` - Clean titles in API response
-- `core/utils/title_cleaner.py` - NEW utility for cleaning redundant prefixes
-- `ai_core/templates/ai_image_studio.html` - UI improvements
+### Current Pipeline Status
+```
+Gates:       804 (98.2% coverage)
+Pilots:      618 total, 608 running, 5 completed
+Experiments: 618 total, 613 running, 5 completed
+Learnings:   5
+Patterns:    4
+```
 
 ---
 
@@ -55,44 +57,58 @@ make celery
 
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
+
+# 3. Check learning status
+.venv/bin/python manage.py shell -c "
+from core.models_pilot_readiness import ExperimentLearning, PilotExecution
+print(f'Learnings: {ExperimentLearning.objects.count()}')
+print(f'Completed Pilots: {PilotExecution.objects.filter(status=\"completed\").count()}')
+"
 ```
 
 ---
 
 ## Recommended Next Steps
 
-### Priority 1: Review HIGH/MEDIUM Gates
-191 gates need manual checklist completion before becoming pilots:
-- 58 HIGH risk (security/infrastructure) - 6-item safety checklist
-- 133 MEDIUM risk (policy/guideline) - 3-item checklist
+### Priority 1: Monitor Pilot Completions
+The Celery Beat schedule will process remaining 608 pilots every 2 hours.
+By next session, many more should be completed with learnings extracted.
 
-Access via: Command Center tab → Pilot Readiness Gates → Filter by Risk Level
+### Priority 2: Review Learning Quality
+Examine the generated learnings:
+- Are insights meaningful?
+- Are recommendations actionable?
+- Do success patterns make sense?
 
-### Priority 2: Pilot Outcomes
-With 616 pilots running, start marking outcomes:
-- Success → Proceed to implementation
-- Partial → Iterate on decision
-- Failure → Revise approach
-
-This generates learnings that feed back into the system.
-
-### Priority 3: Learning Loop Activation
-Ensure experiment learnings are being captured and fed to future decisions.
+### Priority 3: ThinkingAgent Insights
+Run ThinkingAgent after more learnings accumulate to see if it generates better insights based on experiment learnings.
 
 ---
 
-## Session 617 Commits
+## Session 618 Commits
 
 | Commit | Description |
 |--------|-------------|
-| `341821e` | Migration Recovery + KPI Auto-Population + Title Cleaning |
-| `e031af4` | Expand gate criteria to unblock decision pipeline |
-| `f99bc08` | Add scroll containers to pilot/experiment sections |
-| `2548b0a` | Add risk level filters and clean gate titles |
-| `a75f3d4` | Fix missing consent_lifecycle prompt |
-| `e69dfdc` | Add Waived status and Running Pilots to Gate Pipeline |
+| `f243763` | feat(Session 618): Pilot Outcome Evaluation and Learning Extraction Pipeline |
 
 ---
 
 ## Handoff Document
-See: `docs/handoffs/SESSION_617_PIPELINE_UNBLOCK_AND_UI_FIXES.md`
+See: `docs/handoffs/SESSION_618_LEARNING_PIPELINE.md`
+
+---
+
+## Pipeline Architecture
+
+```
+Decision → Gate → Pilot → Experiment → Learning → ThinkingAgent
+   │         │       │         │           │           │
+   │         │       │         │           │           └── Future insights
+   │         │       │         │           └── Pattern learning
+   │         │       │         └── KPI tracking
+   │         │       └── Risk-based evaluation
+   │         └── Safety checklists
+   └── Boardroom decisions
+
+Celery Beat: evaluate_and_complete_pilots runs every 2 hours
+```
