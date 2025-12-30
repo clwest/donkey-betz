@@ -1,8 +1,82 @@
-# Session 624 - Start Here
+# Session 625 - Start Here
 
-**Previous Session:** 623
+**Previous Session:** 624
 **Date:** December 30, 2025
 **Focus:** To Be Determined
+
+---
+
+## Session 624 Accomplishments
+
+### System Reality Check
+
+**Problem:** No unified way to verify that all 10 autonomous systems (triggers, learning loops, dreams, boardroom, etc.) are actually functioning as designed.
+
+**Solution:** Created comprehensive system reality checker:
+
+| Component | Purpose |
+|-----------|---------|
+| `system_reality_check` command | Verify all autonomous systems |
+| `SystemRealityChecker` service | Core verification logic |
+| `/api/v1/system/reality-check/` | API endpoint for web access |
+| `docs/SYSTEM_REALITY_CHECK.md` | Auto-generated reality report |
+
+**Systems Monitored (10):**
+| System | What It Checks |
+|--------|---------------|
+| Celery Beat | 97 scheduled tasks running on time |
+| Triggers | SituationTrigger events firing |
+| Learning Loops | AgentLearning, KnowledgeTransfer activity |
+| Dreams Pipeline | Dreams generated → promoted → implemented |
+| Boardroom | ReviewDocument decisions pending/made |
+| ThinkingAgent | Autonomous reasoning cycles |
+| Agent Conversations | HiveMind sessions happening |
+| Spider Network | 77 spiders collecting data |
+| Pilots/Gates | Experiments progressing |
+
+**Initial Reality Check Results (Session 624):**
+```
+Overall Score: 68%
+- Celery Beat: 30% (tasks stale - Celery not running)
+- Triggers: 100% (64 fires in 6h)
+- Learning Loops: 57% (8 transfers)
+- Dreams Pipeline: 70% (265 dreams)
+- Boardroom: 45% (0 pending)
+- ThinkingAgent: 60% (0 cycles)
+- Agent Conversations: 100% (284 conversations)
+- Spider Network: 100% (77 spiders, 1087 items)
+- Pilots/Gates: 50% (tables not migrated)
+```
+
+**Usage:**
+```bash
+# Quick check
+python manage.py system_reality_check
+
+# Detailed output
+python manage.py system_reality_check --verbose
+
+# Check longer period
+python manage.py system_reality_check --lookback 24
+
+# CI/CD mode (exit 1 if any system critical)
+python manage.py system_reality_check --fail-on-error
+
+# Generate docs/SYSTEM_REALITY_CHECK.md
+python manage.py system_reality_check --output report
+
+# API endpoint
+curl http://localhost:8000/api/v1/system/reality-check/
+curl http://localhost:8000/api/v1/system/reality-check/?lookback=24
+```
+
+**Files Created:**
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/services/system_reality_checker.py` | 720 | Reality check service |
+| `core/management/commands/system_reality_check.py` | 240 | Management command |
+| `core/urls.py` | +6 | API endpoint |
+| `docs/SYSTEM_REALITY_CHECK.md` | ~150 | Generated report |
 
 ---
 
@@ -10,89 +84,12 @@
 
 ### Database Schema Audit System
 
-**Problem:** Migration sync issues where migrations show as "applied" but tables don't exist. No automated way to verify all 394 Django models have corresponding PostgreSQL tables.
+Verifies all 394 Django models have corresponding PostgreSQL tables.
 
-**Solution:** Created comprehensive database audit infrastructure:
-
-| Component | Purpose |
-|-----------|---------|
-| `audit_database` command | Full schema verification across all apps |
-| `core/apps.py` | Startup health check (opt-in via env vars) |
-| `docs/DATABASE_AUDIT.md` | Auto-generated audit report |
-
-**Audit Results (Session 623):**
-```
-Total Models: 394 across 22 Django apps
-Healthy:      394 (100%)
-Missing:      0
-Orphaned:     66 (old M2M tables from deleted models)
-Custom Names: 53 (models using db_table)
-```
-
-**Usage:**
 ```bash
-# Quick health check
-python manage.py audit_database
-
-# Detailed per-model output
-python manage.py audit_database --verbose
-
-# CI/CD mode (exit 1 if issues)
-python manage.py audit_database --fail-on-error
-
-# Generate docs/DATABASE_AUDIT.md
-python manage.py audit_database --output report
-
-# Audit specific app only
-python manage.py audit_database --app core
-```
-
-**Startup Health Check (opt-in):**
-```bash
-# Enable startup check
-DATABASE_AUDIT_ON_STARTUP=1 python manage.py runserver
-
-# Strict mode (fail on missing tables)
-DATABASE_AUDIT_STRICT=1 DATABASE_AUDIT_ON_STARTUP=1 python manage.py runserver
-```
-
-**Files Created:**
-| File | Lines | Purpose |
-|------|-------|---------|
-| `core/management/commands/audit_database.py` | 420 | Management command |
-| `core/apps.py` | 118 | App config with startup check |
-| `docs/DATABASE_AUDIT.md` | 207 | Generated report |
-
----
-
-## Session 622 Accomplishments
-
-### TechnicalDocumentAgent with Stage-Aware Document Lifecycle
-
-5-stage document lifecycle for technical deliverables:
-
-| Stage | Document Type | Purpose |
-|-------|--------------|---------|
-| 1 | Research Brief | Discovery + framing |
-| 2 | Prototype Plan | Translation layer |
-| 3 | Evaluation Protocol | Pre-pilot gate (PASS/LEARN/FAIL) |
-| 4 | Technical Design | Implementation specification |
-| 5 | Compliance Mapping | Regulatory alignment |
-
-### Dedicated Deliverables Tab
-- **API:** `/api/v1/research/deliverables/`
-- **Location:** Research tab → Deliverables sub-tab
-
----
-
-## Current Pipeline Status
-
-```
-Gates:       804 total (606 waived LOW, 198 approved MEDIUM/HIGH)
-Pilots:      804 total (611+ completed, 193 running)
-Experiments: 809+ total (ongoing evaluation)
-Learnings:   611+ (fed to ThinkingAgent)
-Deliverables: 5+ synthesized documents (stage-aware naming)
+python manage.py audit_database              # Quick check
+python manage.py audit_database --verbose    # Detailed
+python manage.py audit_database --fail-on-error  # CI/CD
 ```
 
 ---
@@ -110,7 +107,10 @@ open http://localhost:8000/ai-studio/
 # 3. Database health check
 python manage.py audit_database
 
-# 4. View Deliverables
+# 4. System reality check
+python manage.py system_reality_check
+
+# 5. View Deliverables
 # Research tab → Deliverables sub-tab
 ```
 
@@ -118,18 +118,20 @@ python manage.py audit_database
 
 ## Recommended Next Steps
 
-### Priority 1: Add audit_database to CI/CD
-Add to your CI pipeline:
+### Priority 1: Fix Low Reality Score Systems
+Current issues identified:
+- **Celery Beat (30%)**: Start Celery workers with `make celery`
+- **ThinkingAgent (60%)**: Verify `run_autonomous_thinking_cycle` task
+- **Pilots/Gates (50%)**: Run migrations for pilot_readiness models
+
+### Priority 2: Add Reality Check to CI/CD
 ```yaml
-- name: Database Schema Check
-  run: python manage.py audit_database --fail-on-error
+- name: System Reality Check
+  run: python manage.py system_reality_check --fail-on-error
 ```
 
-### Priority 2: Review Orphaned Tables
-The 66 orphaned tables are from deleted models. Review `docs/DATABASE_AUDIT.md` to determine which can be safely dropped.
-
-### Priority 3: Monitor Deliverable Quality
-New deliverables should have stage-aware naming and PASS/LEARN/FAIL criteria for Stage 3+ documents.
+### Priority 3: Review Dreams Pipeline
+265 dreams generated but none promoted - investigate promotion criteria.
 
 ---
 
@@ -137,10 +139,10 @@ New deliverables should have stage-aware naming and PASS/LEARN/FAIL criteria for
 
 | Session | Document |
 |---------|----------|
-| 623 | Database Schema Audit System (this file) |
+| 624 | System Reality Check (this file) |
+| 623 | Database Schema Audit System |
 | 622 | TechnicalDocumentAgent + Deliverables Tab |
 | 620 | `docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md` |
-| 619 | `docs/handoffs/SESSION_619_AUTOMATIC_GATE_PROCESSOR.md` |
 
 ---
 
@@ -151,9 +153,25 @@ New deliverables should have stage-aware naming and PASS/LEARN/FAIL criteria for
 | Django Models | 394 |
 | Agents | 71 |
 | Spiders | 77 |
-| Celery Tasks | 226 |
+| Celery Tasks | 97 scheduled |
 | Services | 93 |
 | Discord Commands | 112 |
+
+---
+
+## Monitoring Commands
+
+```bash
+# Database schema
+python manage.py audit_database
+
+# System reality (all autonomous systems)
+python manage.py system_reality_check
+
+# Combined CI/CD check
+python manage.py audit_database --fail-on-error && \
+python manage.py system_reality_check --fail-on-error
+```
 
 ---
 
@@ -172,12 +190,18 @@ ThinkingAgent → Autonomous Actions:
    ├── trigger_conversation → AgentConversation
    └── triage_dreams → Boardroom routing
 
-Database Audit (Session 623):
-   └── python manage.py audit_database
-       ├── Discovers all models across 22 apps
-       ├── Verifies table existence in PostgreSQL
-       ├── Reports orphaned tables (no model)
-       └── Generates docs/DATABASE_AUDIT.md
+Monitoring Layer (Sessions 623-624):
+   ├── audit_database → Schema verification (394 models)
+   └── system_reality_check → 10 autonomous systems
+       ├── Celery Beat (97 tasks)
+       ├── Triggers (SituationTrigger)
+       ├── Learning Loops (AgentLearning)
+       ├── Dreams Pipeline (AgentDream)
+       ├── Boardroom (ReviewDocument)
+       ├── ThinkingAgent (HiveMind)
+       ├── Agent Conversations
+       ├── Spider Network (77 spiders)
+       └── Pilots/Gates (Experiment)
 
 Celery Beat:
   - :45 every hour: process_gates_and_deploy_pilots

@@ -2649,6 +2649,13 @@ urlpatterns = [
     path('api/spider-health/embedding-coverage/', spider_embedding_coverage, name='spider-health-embedding-coverage'),
     path('api/spider-health/run/<str:spider_name>/', run_spider_manual, name='spider-health-run'),
 
+    # Session 624: System Reality Check - Verify all autonomous systems
+    path('api/v1/system/reality-check/', lambda r: __import__('django.http', fromlist=['JsonResponse']).JsonResponse(
+        __import__('core.services.system_reality_checker', fromlist=['SystemRealityChecker']).SystemRealityChecker(
+            lookback_hours=int(r.GET.get('lookback', 6))
+        ).run()
+    ), name='system-reality-check'),
+
     # Session 208: Spider Intelligence API - Agents query spider data
     path('api/spider-intelligence/trends/', trending_topics, name='spider-intelligence-trends'),
     path('api/spider-intelligence/market/', market_insights, name='spider-intelligence-market'),
