@@ -7154,7 +7154,7 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div id="experiment-recommendations-list" class="row">
+                                <div id="experiment-recommendations-list" class="row" style="max-height: 400px; overflow-y: auto;">
                                     <p class="text-muted text-center small">Loading recommendations...</p>
                                 </div>
                             </div>
@@ -7188,7 +7188,7 @@
                                 <p class="text-muted small mb-3" style="font-style: italic;">
                                     "Bridge between Boardroom Decisions and Pilot Execution. Complete checklists before launching pilots."
                                 </p>
-                                <div id="icc-pilot-gates-list">
+                                <div id="icc-pilot-gates-list" style="max-height: 500px; overflow-y: auto;">
                                     <p class="text-muted text-center">Loading pilot gates...</p>
                                 </div>
                             </div>
@@ -7558,8 +7558,8 @@
                                 </div>
 
                                 <!-- Pilot Cards -->
-                                <h6 style="color: #22c55e;">📊 All Pilots</h6>
-                                <div id="pilot-progress-list" class="row">
+                                <h6 style="color: #22c55e;">📊 All Pilots <small class="text-muted" id="pilot-total-count"></small></h6>
+                                <div id="pilot-progress-list" class="row" style="max-height: 600px; overflow-y: auto;">
                                     <p class="text-muted text-center small">Loading pilot progress...</p>
                                 </div>
                             </div>
