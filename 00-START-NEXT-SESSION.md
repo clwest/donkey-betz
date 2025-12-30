@@ -6,51 +6,82 @@
 
 ---
 
-## Session 622 Accomplishments (Part 2)
+## Session 623 Accomplishments
 
-### TechnicalDocumentAgent with Stage-Aware Document Lifecycle
+### Database Schema Audit System
 
-**Problem:** Synthesized deliverables used blog-style language ("In this blog post...") and lacked governance elements like PASS/FAIL criteria.
+**Problem:** Migration sync issues where migrations show as "applied" but tables don't exist. No automated way to verify all 394 Django models have corresponding PostgreSQL tables.
 
-**Solution:** Created `TechnicalDocumentAgent` with 5-stage document lifecycle:
+**Solution:** Created comprehensive database audit infrastructure:
 
-| Stage | Document Type | Purpose |
-|-------|--------------|---------|
-| 1 | Research Brief | Discovery + framing - Why does this matter? |
-| 2 | Prototype Plan | Translation layer - How would we build this? |
-| 3 | Evaluation Protocol | Pre-pilot gate - Should we proceed? (PASS/LEARN/FAIL) |
-| 4 | Technical Design | Implementation specification - Exactly what to build |
-| 5 | Compliance Mapping | Regulatory alignment - Are we allowed to do this? |
+| Component | Purpose |
+|-----------|---------|
+| `audit_database` command | Full schema verification across all apps |
+| `core/apps.py` | Startup health check (opt-in via env vars) |
+| `docs/DATABASE_AUDIT.md` | Auto-generated audit report |
 
-**Key Features:**
-- `infer_stage_from_deliverable()` - Maps deliverable names to appropriate stages
-- Professional language enforced (no blog-style phrasing)
-- Stage 3+ documents include governance:
-  - PASS criteria with measurable thresholds
-  - LEARN criteria for iteration paths
-  - FAIL criteria with kill switch conditions
-  - Consent and data governance sections
-- Stage-aware naming: `[Stage 3 - Evaluation Protocol] Document Name`
+**Audit Results (Session 623):**
+```
+Total Models: 394 across 22 Django apps
+Healthy:      394 (100%)
+Missing:      0
+Orphaned:     66 (old M2M tables from deleted models)
+Custom Names: 53 (models using db_table)
+```
 
-**Files:**
-| File | Changes |
-|------|---------|
-| `core/agents/technical_document_agent.py` | NEW - 600+ lines |
-| `core/services/autonomous_action_executor.py` | Updated synthesis pipeline |
-| `core/agents/__init__.py` | Registered new agent |
+**Usage:**
+```bash
+# Quick health check
+python manage.py audit_database
+
+# Detailed per-model output
+python manage.py audit_database --verbose
+
+# CI/CD mode (exit 1 if issues)
+python manage.py audit_database --fail-on-error
+
+# Generate docs/DATABASE_AUDIT.md
+python manage.py audit_database --output report
+
+# Audit specific app only
+python manage.py audit_database --app core
+```
+
+**Startup Health Check (opt-in):**
+```bash
+# Enable startup check
+DATABASE_AUDIT_ON_STARTUP=1 python manage.py runserver
+
+# Strict mode (fail on missing tables)
+DATABASE_AUDIT_STRICT=1 DATABASE_AUDIT_ON_STARTUP=1 python manage.py runserver
+```
+
+**Files Created:**
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/management/commands/audit_database.py` | 420 | Management command |
+| `core/apps.py` | 118 | App config with startup check |
+| `docs/DATABASE_AUDIT.md` | 207 | Generated report |
 
 ---
 
-## Session 622 Accomplishments (Part 1)
+## Session 622 Accomplishments
 
-### Dedicated Deliverables Tab in Research Section
+### TechnicalDocumentAgent with Stage-Aware Document Lifecycle
 
-**Problem:** Synthesized deliverables were saved to SelfBlog but mixed in with other entries.
+5-stage document lifecycle for technical deliverables:
 
-**Solution:** Added dedicated **Deliverables** sub-tab in the Research section:
-- **API Endpoint:** `/api/v1/research/deliverables/`
-- **Location:** Research tab → between System Insights and Thinking Engine
-- **Features:** Stats bar, expandable cards, document type badges, markdown support
+| Stage | Document Type | Purpose |
+|-------|--------------|---------|
+| 1 | Research Brief | Discovery + framing |
+| 2 | Prototype Plan | Translation layer |
+| 3 | Evaluation Protocol | Pre-pilot gate (PASS/LEARN/FAIL) |
+| 4 | Technical Design | Implementation specification |
+| 5 | Compliance Mapping | Regulatory alignment |
+
+### Dedicated Deliverables Tab
+- **API:** `/api/v1/research/deliverables/`
+- **Location:** Research tab → Deliverables sub-tab
 
 ---
 
@@ -61,20 +92,7 @@ Gates:       804 total (606 waived LOW, 198 approved MEDIUM/HIGH)
 Pilots:      804 total (611+ completed, 193 running)
 Experiments: 809+ total (ongoing evaluation)
 Learnings:   611+ (fed to ThinkingAgent)
-Deliverables: 5+ synthesized documents (now with stage-aware naming)
-```
-
-### Complete Automation Loop (Fully Working!)
-
-```
-ThinkingAgent → Decisions → AutonomousActions → Real Execution
-                                    │
-                                    ├── spawn_spider: Queues spider tasks
-                                    ├── request_research: ResearchAgent + TechnicalDocumentAgent → [Deliverable]
-                                    ├── create_report: Comprehensive SelfBlog reports
-                                    ├── trigger_debate: Schedules agent debates
-                                    ├── trigger_conversation: Agent conversations
-                                    └── triage_dreams: Routes dreams to Boardroom/Archive
+Deliverables: 5+ synthesized documents (stage-aware naming)
 ```
 
 ---
@@ -89,28 +107,29 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. View Deliverables
-# Research tab → Deliverables sub-tab
+# 3. Database health check
+python manage.py audit_database
 
-# 4. Check via API
-curl http://localhost:8000/api/v1/research/deliverables/ | python3 -m json.tool
+# 4. View Deliverables
+# Research tab → Deliverables sub-tab
 ```
 
 ---
 
 ## Recommended Next Steps
 
-### Priority 1: Monitor New Deliverable Quality
-ThinkingAgent runs every 6 hours. New deliverables should now have:
-- Stage-aware naming (e.g., `[Stage 3 - Evaluation Protocol]`)
-- Professional tone (no blog language)
-- PASS/LEARN/FAIL criteria for Stage 3+ documents
+### Priority 1: Add audit_database to CI/CD
+Add to your CI pipeline:
+```yaml
+- name: Database Schema Check
+  run: python manage.py audit_database --fail-on-error
+```
 
-### Priority 2: Review Existing Deliverables
-The 5 existing deliverables were created before TechnicalDocumentAgent. Consider regenerating them to apply the new format.
+### Priority 2: Review Orphaned Tables
+The 66 orphaned tables are from deleted models. Review `docs/DATABASE_AUDIT.md` to determine which can be safely dropped.
 
-### Priority 3: Monitor Pilot Progress
-The 193+ running pilots continue to be evaluated by `evaluate_and_complete_pilots` every 2 hours.
+### Priority 3: Monitor Deliverable Quality
+New deliverables should have stage-aware naming and PASS/LEARN/FAIL criteria for Stage 3+ documents.
 
 ---
 
@@ -118,10 +137,23 @@ The 193+ running pilots continue to be evaluated by `evaluate_and_complete_pilot
 
 | Session | Document |
 |---------|----------|
-| 622 | TechnicalDocumentAgent + Deliverables Tab (this file) |
+| 623 | Database Schema Audit System (this file) |
+| 622 | TechnicalDocumentAgent + Deliverables Tab |
 | 620 | `docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md` |
 | 619 | `docs/handoffs/SESSION_619_AUTOMATIC_GATE_PROCESSOR.md` |
-| 618 | `docs/handoffs/SESSION_618_PILOT_EVALUATION_FIX.md` |
+
+---
+
+## System Stats
+
+| Component | Count |
+|-----------|-------|
+| Django Models | 394 |
+| Agents | 71 |
+| Spiders | 77 |
+| Celery Tasks | 226 |
+| Services | 93 |
+| Discord Commands | 112 |
 
 ---
 
@@ -133,22 +165,19 @@ Decision → Gate → Documentation → Approve → Pilot → Experiment → Lea
    │                                                                   └── ThinkingAgent
    │
 ThinkingAgent → Autonomous Actions:
-   ├── request_research → ResearchAgent → TechnicalDocumentAgent → [Stage X - Deliverable]
+   ├── request_research → ResearchAgent → TechnicalDocumentAgent
    ├── spawn_spider → Celery task
    ├── create_report → SelfBlog
    ├── trigger_debate → AgentKnowledgeSource
    ├── trigger_conversation → AgentConversation
    └── triage_dreams → Boardroom routing
 
-Document Lifecycle (Session 622):
-   Stage 1: Research Brief      → Why does this matter?
-   Stage 2: Prototype Plan      → How would we build this?
-   Stage 3: Evaluation Protocol → Should we proceed? (PASS/LEARN/FAIL)
-   Stage 4: Technical Design    → Exactly what to build
-   Stage 5: Compliance Mapping  → Are we allowed to do this?
-
-UI Access:
-   └── Research tab → Deliverables sub-tab [Session 622]
+Database Audit (Session 623):
+   └── python manage.py audit_database
+       ├── Discovers all models across 22 apps
+       ├── Verifies table existence in PostgreSQL
+       ├── Reports orphaned tables (no model)
+       └── Generates docs/DATABASE_AUDIT.md
 
 Celery Beat:
   - :45 every hour: process_gates_and_deploy_pilots
