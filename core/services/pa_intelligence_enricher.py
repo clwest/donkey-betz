@@ -2,6 +2,7 @@
 Session 565: PA Intelligence Enricher
 Session 573: Added System State Awareness
 Session 574: Added Platform Intelligence Briefing - Omniscient PA
+Session 605: Added Learning Insights - Success probability predictions
 
 Enriches Personal Assistant context with platform intelligence before generating responses.
 This bridges the gap between 3,345+ knowledge entries and user queries.
@@ -14,6 +15,7 @@ The PA can now answer questions informed by:
 - Spider trends (recent discoveries from data network)
 - System state (Session 573: urgent items needing attention)
 - Platform Briefing (Session 574: comprehensive awareness of all platform activity)
+- Learning Insights (Session 605: success predictions based on similar experiments)
 """
 
 import logging
@@ -50,6 +52,15 @@ PLATFORM_BRIEFING_KEYWORDS = [
     'everything', 'full status', 'all activity', 'whats new', "what's new"
 ]
 
+# Session 605: Keywords that trigger learning insights
+LEARNING_INSIGHT_KEYWORDS = [
+    'should i', 'should we', 'try', 'experiment', 'pilot',
+    'want to', 'thinking about', 'considering', 'planning to',
+    'good idea', 'bad idea', 'recommend', 'worth it', 'likely to',
+    'success', 'fail', 'work', 'similar', 'past', 'before',
+    'active pilots', 'running experiments', 'pilots status'
+]
+
 
 class PAIntelligenceEnricher:
     """
@@ -77,6 +88,7 @@ class PAIntelligenceEnricher:
                 - include_trends: bool (default True)
                 - include_system_state: bool (default True) - Session 573
                 - include_platform_briefing: bool (default True) - Session 574
+                - include_learning_insights: bool (default True) - Session 605
                 - max_context_chars: int (default 3000)
         """
         self.config = config or {}
@@ -86,6 +98,7 @@ class PAIntelligenceEnricher:
         self.include_trends = self.config.get('include_trends', True)
         self.include_system_state = self.config.get('include_system_state', True)  # Session 573
         self.include_platform_briefing = self.config.get('include_platform_briefing', True)  # Session 574
+        self.include_learning_insights = self.config.get('include_learning_insights', True)  # Session 605
         self.max_context_chars = self.config.get('max_context_chars', 3000)  # Increased for briefing
 
         self.intelligence_service = IntelligenceQueryService()
@@ -125,6 +138,7 @@ class PAIntelligenceEnricher:
                 'spider_trends': [],
                 'system_state': [],  # Session 573
                 'platform_briefing': None,  # Session 574: Full platform awareness
+                'learning_insights': None,  # Session 605: Predictions from similar experiments
                 'attribution': '',
                 'context_text': '',
                 'metadata': {
@@ -135,6 +149,7 @@ class PAIntelligenceEnricher:
                     'trends_count': 0,
                     'system_state_count': 0,  # Session 573
                     'has_platform_briefing': False,  # Session 574
+                    'has_learning_insights': False,  # Session 605
                     'intent': intent,
                     'spider_sources': []
                 }
@@ -181,6 +196,15 @@ class PAIntelligenceEnricher:
                 result['platform_briefing'] = briefing_result
                 result['metadata']['has_platform_briefing'] = briefing_result is not None
 
+            # Session 605: Get learning insights (for decisions and pilot status)
+            if self.include_learning_insights and self._should_include_learning_insights(message):
+                learning_result = self._get_learning_insights(message)
+                if learning_result and learning_result.get('has_insights'):
+                    result['learning_insights'] = learning_result
+                    result['metadata']['has_learning_insights'] = True
+                    result['metadata']['learning_prediction'] = learning_result.get('prediction')
+                    result['metadata']['active_pilot_count'] = learning_result.get('metadata', {}).get('active_pilot_count', 0)
+
             # Build formatted context and attribution
             result['context_text'] = self._format_context(result, intent)
             result['attribution'] = self._build_attribution(result)
@@ -192,7 +216,8 @@ class PAIntelligenceEnricher:
                 f"{result['metadata']['policies_count']} policies, "
                 f"{result['metadata']['trends_count']} trends, "
                 f"{result['metadata']['system_state_count']} system items, "  # Session 573
-                f"briefing: {result['metadata'].get('has_platform_briefing', False)}"  # Session 574
+                f"briefing: {result['metadata'].get('has_platform_briefing', False)}, "  # Session 574
+                f"learning: {result['metadata'].get('has_learning_insights', False)}"  # Session 605
             )
 
             return result
@@ -206,6 +231,7 @@ class PAIntelligenceEnricher:
                 'policies': [],
                 'spider_trends': [],
                 'system_state': [],  # Session 573
+                'learning_insights': None,  # Session 605
                 'attribution': '',
                 'context_text': '',
                 'metadata': {'error': str(e)},
@@ -496,6 +522,43 @@ class PAIntelligenceEnricher:
             self.logger.warning(f"Could not get platform briefing: {e}")
             return None
 
+    def _should_include_learning_insights(self, message: str) -> bool:
+        """
+        Session 605: Determine if the message warrants learning insights.
+
+        Returns True if the user is:
+        - Considering a decision ("should I...", "want to try...")
+        - Asking about pilot/experiment status
+        - Asking about past experiment outcomes
+        """
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in LEARNING_INSIGHT_KEYWORDS)
+
+    def _get_learning_insights(self, message: str) -> dict:
+        """
+        Session 605: Get learning insights for the user's message.
+
+        Uses PALearningInsightsService to provide:
+        - Success probability for decisions
+        - Active pilot status
+        - Similar experiment outcomes
+        """
+        try:
+            from core.services.pa_learning_insights import PALearningInsightsService
+            service = PALearningInsightsService()
+            insights = service.get_learning_insights(message)
+            self.logger.info(
+                f"Learning insights retrieved: has_insights={insights.get('has_insights')}, "
+                f"pilots={insights.get('metadata', {}).get('active_pilot_count', 0)}"
+            )
+            return insights
+        except ImportError as e:
+            self.logger.warning(f"Could not import PALearningInsightsService: {e}")
+            return None
+        except Exception as e:
+            self.logger.warning(f"Could not get learning insights: {e}")
+            return None
+
     def _format_context(self, data: dict, intent: str) -> str:
         """
         Format the intelligence data into a context string for prompt injection.
@@ -574,6 +637,14 @@ class PAIntelligenceEnricher:
                     section = item.get('section', '').replace('_', ' ').title()
                     parts.append(f"- [{section}] {item.get('title', '')}")
 
+        # Session 605: Format learning insights
+        if data.get('learning_insights') and data['learning_insights'].get('has_insights'):
+            insights = data['learning_insights']
+
+            # Include the pre-formatted learning summary
+            if insights.get('learning_summary'):
+                parts.append("\n" + insights['learning_summary'])
+
         # Join and truncate if needed
         context = "\n".join(parts)
 
@@ -626,6 +697,20 @@ class PAIntelligenceEnricher:
                 parts.append(f"{system_state_count} system items (URGENT)")
             else:
                 parts.append(f"{system_state_count} system items")
+
+        # Session 605: Include learning insights in attribution
+        if data['metadata'].get('has_learning_insights'):
+            learning_data = data.get('learning_insights', {})
+            prediction = learning_data.get('prediction')
+            pilot_count = learning_data.get('metadata', {}).get('active_pilot_count', 0)
+
+            if prediction and prediction.get('sample_size', 0) > 0:
+                prob = prediction.get('success_probability', 0)
+                sample = prediction.get('sample_size', 0)
+                parts.append(f"learning prediction ({prob}% from {sample} experiments)")
+
+            if pilot_count > 0:
+                parts.append(f"{pilot_count} active pilots")
 
         if not parts:
             return "No relevant platform intelligence found."
