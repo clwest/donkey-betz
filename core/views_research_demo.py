@@ -690,29 +690,45 @@ def system_insights_api(request):
 def deliverables_api(request):
     """
     Session 622: Get synthesized deliverables from the research pipeline.
-    These are documents created by ContentWriterAgent after ResearchAgent completes research.
-    Deliverables have titles starting with '[Deliverable]'.
+    These are documents created by TechnicalDocumentAgent after ResearchAgent completes research.
+    Session 622.2: Updated to support both legacy [Deliverable] and new [Stage X - ...] formats.
     """
     try:
+        from django.db.models import Q
         from core.models_unified_system import SelfBlog
+        import re
 
-        # Get all deliverables (title starts with [Deliverable])
+        # Get all deliverables - both legacy and new stage-based formats
         deliverables = SelfBlog.objects.filter(
-            title__startswith='[Deliverable]'
+            Q(title__startswith='[Deliverable]') |
+            Q(title__startswith='[Stage 1 -') |
+            Q(title__startswith='[Stage 2 -') |
+            Q(title__startswith='[Stage 3 -') |
+            Q(title__startswith='[Stage 4 -') |
+            Q(title__startswith='[Stage 5 -')
         ).order_by('-created_at')
 
         deliverables_list = []
         for d in deliverables[:50]:  # Limit to 50 most recent
-            # Extract parent topic from stats_snapshot if available
+            # Extract parent topic and stage info from stats_snapshot if available
             parent_topic = None
             doc_type = None
+            stage = None
+            stage_name = None
             if d.stats_snapshot:
                 parent_topic = d.stats_snapshot.get('parent_topic')
                 doc_type = d.stats_snapshot.get('doc_type')
+                stage = d.stats_snapshot.get('stage')
+                stage_name = d.stats_snapshot.get('stage_name')
+
+            # Clean title for display - handle both formats
+            display_title = d.title
+            display_title = re.sub(r'^\[Deliverable\]\s*', '', display_title)
+            display_title = re.sub(r'^\[Stage \d+ - [^\]]+\]\s*', '', display_title)
 
             deliverables_list.append({
                 'id': str(d.id),
-                'title': d.title.replace('[Deliverable] ', ''),  # Clean title for display
+                'title': display_title,
                 'full_title': d.title,
                 'intro': d.intro,
                 'full_text': d.full_text,
@@ -720,6 +736,8 @@ def deliverables_api(request):
                 'word_count': len(d.full_text) if d.full_text else 0,
                 'parent_topic': parent_topic,
                 'doc_type': doc_type,
+                'stage': stage,
+                'stage_name': stage_name,
                 'created_at': d.created_at.isoformat(),
             })
 
