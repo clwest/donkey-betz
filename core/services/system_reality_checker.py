@@ -132,10 +132,36 @@ class SystemRealityChecker:
                         hours = task.interval.every * 24
                     is_frequent = hours <= self.lookback_hours
                 elif task.crontab:
-                    # Crontab: if hour is * or has multiple values, runs multiple times/day
+                    # Crontab: calculate effective interval between runs
                     cron = task.crontab
                     hour_str = str(cron.hour)
-                    is_frequent = hour_str == '*' or ',' in hour_str or '/' in hour_str
+                    minute_str = str(cron.minute)
+
+                    if hour_str == '*':
+                        # Runs every hour (or more with minute patterns)
+                        is_frequent = True
+                    elif '/' in hour_str:
+                        # Pattern like */2 means every 2 hours
+                        try:
+                            interval = int(hour_str.split('/')[1])
+                            is_frequent = interval <= self.lookback_hours
+                        except (ValueError, IndexError):
+                            is_frequent = False
+                    elif ',' in hour_str:
+                        # Multiple specific hours like "6,18" - calculate interval
+                        try:
+                            hours_list = [int(h) for h in hour_str.split(',')]
+                            runs_per_day = len(hours_list)
+                            avg_interval = 24 / runs_per_day  # e.g., 2 runs = 12 hour interval
+                            is_frequent = avg_interval <= self.lookback_hours
+                        except ValueError:
+                            is_frequent = False
+                    elif '/' in minute_str or minute_str == '*':
+                        # Runs multiple times per hour
+                        is_frequent = True
+                    else:
+                        # Single specific hour = once per day
+                        is_frequent = False
 
                 if is_frequent:
                     frequent_tasks.append(task)
