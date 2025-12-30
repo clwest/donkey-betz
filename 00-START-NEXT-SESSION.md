@@ -16,6 +16,10 @@
 
 **Problem 2:** Boardroom showing 0 artifacts
 - Fixed `artifact_extraction.py`: `status='completed'` → `status='concluded'`
+- Fixed RelatedManager access: `conversation.messages[:30]` → `conversation.messages.all()[:30]`
+- Fixed GPT-5-mini token limit: `max_completion_tokens=2000` → `8000` (reasoning model needs extra tokens)
+- Ran `batch_extract_artifacts()`: Created **167 ExtractedArtifacts** from agent conversations
+- Ran `generate_pending_reviews()`: Created **32 ReviewDocuments** for human review
 
 **Problem 3:** Pilots/Gates field name errors
 - Fixed: `approved_at` → `gate_approved_at`, `pilot_completed_at` → `completed_at`
@@ -27,13 +31,14 @@
 - Learning Loops (57%): `AgentLearning` model unused, `KnowledgeTransfer` working
 - Dreams Pipeline (70%): Dream scores ~0.25 avg, below 0.7 promotion threshold
 
-**Results:**
+**Final Results:**
 | System | Before | After |
 |--------|--------|-------|
-| Celery Beat | 30% | 83% |
+| Celery Beat | 30% | 84% |
 | ThinkingAgent | 60% | 100% |
+| Boardroom | 45% (0 artifacts) | 59% (167 artifacts, 32 reviews) |
 | Pilots/Gates | 0% (error) | 45% |
-| **Overall** | 68% | **77%** |
+| **Overall** | 68% | **79%** |
 
 ---
 
@@ -149,20 +154,27 @@ python manage.py system_reality_check
 
 ## Recommended Next Steps
 
-### Priority 1: Fix Low Reality Score Systems
-Current issues identified:
-- **Celery Beat (30%)**: Start Celery workers with `make celery`
-- **ThinkingAgent (60%)**: Verify `run_autonomous_thinking_cycle` task
-- **Pilots/Gates (50%)**: Run migrations for pilot_readiness models
+### Priority 1: Make Boardroom Decisions
+32 ReviewDocuments await human review in the Boardroom UI:
+- Open AI Studio → Boardroom tab
+- Review Pro/Con analysis for each pending decision
+- Approve or reject to move score from 59% toward 100%
 
-### Priority 2: Add Reality Check to CI/CD
+### Priority 2: Fix Dreams Promotion Threshold
+275 dreams generated but none promoted. Current threshold is 0.7 but average scores are ~0.25.
+- Consider lowering `score_and_promote_dreams` threshold in `core/tasks.py`
+- Or improve dream quality/scoring algorithm
+
+### Priority 3: Activate Pilots/Gates Pipeline
+0 pilots currently running. The infrastructure exists but needs activation:
+- Create pilot experiments via Boardroom or ThinkingAgent
+- Verify `process_gates_and_deploy_pilots` Celery task
+
+### Priority 4: Add Reality Check to CI/CD
 ```yaml
 - name: System Reality Check
   run: python manage.py system_reality_check --fail-on-error
 ```
-
-### Priority 3: Review Dreams Pipeline
-265 dreams generated but none promoted - investigate promotion criteria.
 
 ---
 
@@ -170,7 +182,8 @@ Current issues identified:
 
 | Session | Document |
 |---------|----------|
-| 624 | System Reality Check (this file) |
+| 625 | Reality Check Fixes + Artifact Extraction (this file) |
+| 624 | System Reality Check Created |
 | 623 | Database Schema Audit System |
 | 622 | TechnicalDocumentAgent + Deliverables Tab |
 | 620 | `docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md` |
