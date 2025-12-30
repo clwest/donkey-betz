@@ -113,7 +113,7 @@ class PilotProgressService:
 
             for exp in experiments:
                 progress = self._calculate_progress(exp)
-                progress_list.append(self._progress_to_dict(progress))
+                progress_list.append(self._progress_to_dict(progress, exp))
 
                 # Track health
                 health_counts[progress.health_status] += 1
@@ -490,9 +490,9 @@ class PilotProgressService:
 
         return timeline[:20]  # Return last 20 events
 
-    def _progress_to_dict(self, progress: PilotProgress) -> Dict:
+    def _progress_to_dict(self, progress: PilotProgress, exp=None) -> Dict:
         """Convert PilotProgress to dictionary."""
-        return {
+        result = {
             'id': progress.id,
             'name': progress.name,
             'hypothesis': progress.hypothesis[:200] if progress.hypothesis else '',
@@ -522,6 +522,63 @@ class PilotProgressService:
                 'result_summary': progress.result_summary[:200] if progress.result_summary else '',
             },
         }
+
+        # Session 613: Add source/origin info
+        if exp:
+            source_info = self._get_source_info(exp)
+            result['source'] = source_info
+
+        return result
+
+    def _get_source_info(self, exp) -> Dict:
+        """Session 613: Get the source/origin of a pilot (decision, conversation, dream)."""
+        source = {
+            'type': 'unknown',
+            'topic': '',
+            'decision_type': '',
+            'conversation_id': None,
+            'agents_involved': [],
+        }
+
+        try:
+            # Navigate: Experiment -> Pilot -> Gate -> Decision
+            if hasattr(exp, 'pilot') and exp.pilot:
+                pilot = exp.pilot
+                if hasattr(pilot, 'gate') and pilot.gate:
+                    gate = pilot.gate
+                    if hasattr(gate, 'decision') and gate.decision:
+                        decision = gate.decision
+                        source['type'] = 'boardroom_decision'
+                        # Clean up topic - remove prefixes
+                        raw_topic = decision.topic or ''
+                        source['topic'] = (raw_topic
+                            .replace('Discussion:', '').replace('Experiment:', '')
+                            .replace('[Synthesis]', '').replace('[Learned]', '')
+                            .strip())
+                        source['decision_type'] = decision.decision_type or ''
+
+                        # Get conversation/session info
+                        if hasattr(decision, 'conversation') and decision.conversation:
+                            conv = decision.conversation
+                            source['conversation_id'] = str(conv.id)
+                            source['type'] = 'agent_conversation'
+                            # Get participating agents
+                            if hasattr(conv, 'participant_a_name'):
+                                source['agents_involved'].append(conv.participant_a_name or 'Agent A')
+                            if hasattr(conv, 'participant_b_name'):
+                                source['agents_involved'].append(conv.participant_b_name or 'Agent B')
+
+                        elif hasattr(decision, 'hive_session') and decision.hive_session:
+                            hive = decision.hive_session
+                            source['conversation_id'] = str(hive.id)
+                            source['type'] = 'hive_mind_session'
+                            if hasattr(hive, 'participants') and hive.participants:
+                                source['agents_involved'] = hive.participants[:5]  # Limit to 5
+
+        except Exception as e:
+            logger.debug(f"Error getting source info: {e}")
+
+        return source
 
 
 # Convenience functions
