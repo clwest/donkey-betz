@@ -1,59 +1,32 @@
-# Session 628 - Start Here
+# Session 629 - Start Here
 
-**Previous Session:** 627
+**Previous Session:** 628
 **Date:** December 30, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 627 Accomplishments
+## Session 628 Accomplishments
 
-### 1. Dream Quality Fix
-- **Problem:** 93.4% of dreams scored below 0.4 (promotion rate: 0.5%)
-- **Root Cause:** `dream-productization-cycle` task missing from DB + flawed scoring formula
-- **Fix:** Created task + updated formula to not penalize missing project matches
-- **Result:** Promotion rate 0.5% → 67%
+### 1. Cross-Session Memory
+- Created `MemoryContextService` (`core/services/memory_context_service.py`)
+- PA now injects user preferences, goals, and decisions into prompts
+- Uses decay weighting from Session 601: `e^(-age_days / 21)`
+- Recent memories weighted higher than old ones
 
-### 2. Major Discovery: 93 Missing Celery Beat Tasks
-- System uses `DatabaseScheduler` which ignores Python config files
-- `core/celery.py` had 143 tasks, database only had 61
-- **82 tasks were defined but NEVER RUNNING!**
+### 2. Content Calendar
+- Created 4 API endpoints (`core/views_content_calendar.py`):
+  - `GET /api/content-calendar/` - Main calendar data
+  - `GET /api/content-calendar/upcoming/` - Next 10 scheduled
+  - `GET /api/content-calendar/history/` - Past content with metrics
+  - `POST /api/content-calendar/reschedule/` - Change schedule
+- Created Calendar UI panel with stats, lists, channels overview
+- Added new "📅 Calendar" tab to AI Studio
 
-### 3. Created `sync_celery_beat` Command
-```bash
-python manage.py sync_celery_beat                    # Dry run
-python manage.py sync_celery_beat --create-only --apply  # Safe sync
-python manage.py sync_celery_beat --apply            # Full sync
-```
-
-### 4. Synced All Tasks
-- Manually added 15 critical tasks
-- Synced 80 more via command
-- **Final: 156 tasks (was 61!)**
-
-### 5. Processed Pending Items
-- 23 ReviewDocuments → approved
-- Dreams backlog → processed
-- Trigger events → marked stale ones as skipped
-
----
-
-## Current Reality Check Status
-
-```
-Overall Score: 97%
-├── Celery Beat:         80% ✅ (66/91 frequent ran, new tasks pending first run)
-├── Triggers:           100% ✅ (60 fired in 6h)
-├── Learning Loops:      96% ✅ (17 transfers)
-├── Dreams Pipeline:    100% ✅ (238 dreams, 29 promoted)
-├── Boardroom:           97% ✅ (91 decisions)
-├── ThinkingAgent:      100% ✅ (6 cycles)
-├── Conversations:      100% ✅ (255 conversations)
-├── Spider Network:     100% ✅ (77 spiders, 930 items)
-└── Pilots/Gates:       100% ✅ (3 running, 6 completed)
-```
-
-**Note:** Celery Beat at 80% because 90 newly-added tasks haven't hit their first scheduled run yet. Will auto-resolve within hours.
+### 3. Preference Integration
+- `AutonomousContentStudioCoordinator` now uses `MemoryContextService`
+- Content generation applies user's visual style, voice, and tone
+- Calendar UI shows "Preferences Applied" badges
 
 ---
 
@@ -67,38 +40,28 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Health checks
+# 3. Click the new Calendar tab
+# 4. Health check
 python manage.py system_reality_check
-python manage.py sync_celery_beat  # Check for drift
 ```
 
 ---
 
-## Recommended Next Steps
+## New Features to Test
 
-### Priority 1: Monitor New Tasks
-- Celery Beat should reach 100% as new tasks run
-- Check logs for any task failures
-- Verify `autonomous-intelligence-loop` running every 15 min
+### Content Calendar
+1. Open AI Studio → Click "📅 Calendar" tab
+2. View upcoming content with preferences applied
+3. View past content with performance metrics
+4. See channel overview and top topics
 
-### Priority 2: Reconcile Schedule Differences
-- 33 tasks have different schedules in celery.py vs database
-- Run `python manage.py sync_celery_beat` to review
-- Decide which schedule is authoritative
+### Cross-Session Memory
+The PA now remembers:
+- Your preferences (visual style, voice, content tone)
+- Your goals (from profile)
+- Recent decisions
 
-### Priority 3: New Feature Development
-- From ROADMAP_IDEAS.md: Profile Follow-ups, Agent personalities, Onboarding wizard
-
----
-
-## Key Handoff Documents
-
-| Session | Document |
-|---------|----------|
-| 627 | `docs/handoffs/SESSION_627_DREAM_QUALITY_FIX.md` |
-| 626 | `docs/handoffs/SESSION_626_100_PERCENT_REALITY.md` |
-| 625 | `docs/handoffs/SESSION_625_REALITY_CHECK_FIXES.md` |
-| 624 | System Reality Check Created |
+Try asking the PA something and notice it references your preferences.
 
 ---
 
@@ -109,22 +72,89 @@ python manage.py sync_celery_beat  # Check for drift
 | Django Models | 394 |
 | Agents | 71 |
 | Spiders | 77 |
-| Celery Tasks | **156 scheduled** (was 61!) |
-| Services | 93 |
+| Celery Tasks | 156 scheduled |
+| Services | 94 (+1 MemoryContextService) |
 | Discord Commands | 112 |
 
 ---
 
-## New Commands (Session 627)
+## Key Handoff Documents
+
+| Session | Document |
+|---------|----------|
+| 628 | `docs/handoffs/SESSION_628_CROSS_SESSION_MEMORY_CALENDAR.md` |
+| 627 | `docs/handoffs/SESSION_627_COMPLETE_HANDOFF.md` |
+| 626 | `docs/handoffs/SESSION_626_100_PERCENT_REALITY.md` |
+
+---
+
+## Files Created (Session 628)
+
+| File | Purpose |
+|------|---------|
+| `core/services/memory_context_service.py` | Memory injection with decay weighting |
+| `core/views_content_calendar.py` | Calendar API endpoints |
+| `ai_core/templates/components/panels/content_calendar_panel.html` | Calendar UI |
+
+## Files Modified (Session 628)
+
+| File | Change |
+|------|--------|
+| `core/personal_ai_assistant_enhanced.py` | Inject memory context |
+| `core/urls.py` | Add calendar routes |
+| `ai_core/templates/ai_image_studio.html` | Add Calendar tab |
+| `core/agents/autonomous_content_studio_coordinator.py` | Use preferences |
+
+---
+
+## Recommended Next Steps
+
+### Option 1: Polish Calendar
+- Add month grid view (currently list-only)
+- Add drag-and-drop rescheduling
+- Add content preview modal
+
+### Option 2: Profile Follow-ups
+- Deeper interview questions for personalization
+- From ROADMAP_IDEAS.md
+
+### Option 3: Agent Personalities
+- Make agents have distinct tones/styles
+- From ROADMAP_IDEAS.md
+
+### Option 4: Test & Monitor
+- Create a content channel
+- Verify preferences flow through to generated content
+- Monitor reality score
+
+---
+
+## API Endpoints Added (Session 628)
 
 ```bash
-# Sync celery.py tasks to database
-python manage.py sync_celery_beat                    # Dry run
-python manage.py sync_celery_beat --create-only --apply  # Create missing only
-python manage.py sync_celery_beat --apply            # Full sync (includes updates)
-python manage.py sync_celery_beat --verbose          # Show all tasks
-python manage.py sync_celery_beat --disable-missing  # Disable orphaned tasks
+# Main calendar data
+curl http://localhost:8000/api/content-calendar/
+
+# Upcoming content
+curl http://localhost:8000/api/content-calendar/upcoming/
+
+# Past content history
+curl http://localhost:8000/api/content-calendar/history/
+
+# Reschedule (POST)
+curl -X POST http://localhost:8000/api/content-calendar/reschedule/ \
+  -H "Content-Type: application/json" \
+  -d '{"channel_id": "...", "new_date": "2025-01-15T10:00:00Z"}'
 ```
+
+---
+
+## Architecture Notes
+
+- **Memory Context Service:** Caches for 5 min, applies decay weighting
+- **Calendar API:** Returns 30-day window by default
+- **Preference Priority:** User preferences > Channel defaults
+- **Celery Beat:** Still at 156 tasks (Session 627)
 
 ---
 
@@ -134,22 +164,15 @@ python manage.py sync_celery_beat --disable-missing  # Disable orphaned tasks
 # Reality check
 python manage.py system_reality_check
 
-# Check Celery Beat sync status
+# Check Celery Beat sync
 python manage.py sync_celery_beat
 
-# Full health check
-python manage.py audit_database && python manage.py system_reality_check
-
-# Dream stats
-python manage.py shell -c "from core.models import AgentDream; print(f'Promoted: {AgentDream.objects.filter(promoted_to_decision=True).count()}')"
+# Test memory context
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from django.contrib.auth import get_user_model
+from core.services.memory_context_service import MemoryContextService
+user = get_user_model().objects.first()
+print(MemoryContextService(user).get_prompt_context(user))
+"
 ```
-
----
-
-## Architecture Notes
-
-- **Celery Beat:** Uses `DatabaseScheduler` - tasks must be in DB, not just celery.py
-- **Learning System:** Uses `KnowledgeTransfer` (not `AgentLearning`)
-- **Review System:** Uses polymorphic `target_type`/`target_id` (not direct FKs)
-- **Decision Statuses:** `awaiting_human`, `approved`, `approved_with_conditions`, `declined`, `deferred`
-- **Dream Scoring:** Session 627 formula - doesn't penalize dreams without project matches
