@@ -1278,6 +1278,18 @@ app.conf.beat_schedule = {
             'expires': 7200,  # Expire after 2 hours
         }
     },
+
+    # SESSION 619: AUTOMATIC GATE PROCESSING AND PILOT DEPLOYMENT
+    # Process MEDIUM/HIGH risk gates, generate documentation, deploy pilots
+    # Runs every hour at :45 to process 20 gates per batch
+    'process-gates-and-deploy-pilots': {
+        'task': 'core.tasks.process_gates_and_deploy_pilots',
+        'schedule': crontab(minute=45),  # Every hour at :45
+        'kwargs': {'batch_size': 20},
+        'options': {
+            'expires': 3600,  # Expire after 1 hour
+        }
+    },
 }
 
 # Task routing configuration
