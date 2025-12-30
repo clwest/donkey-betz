@@ -59938,6 +59938,27 @@ ${item.generated_content}
                         </span>
                     `;
 
+                    // Session 613: Source/origin badge
+                    const source = exp.source || { type: 'unknown', topic: '', agents_involved: [] };
+                    const sourceIcons = {
+                        'agent_conversation': { icon: '🗣️', label: 'Conversation' },
+                        'hive_mind_session': { icon: '🧠', label: 'Hive Mind' },
+                        'boardroom_decision': { icon: '🏛️', label: 'Boardroom' },
+                        'unknown': { icon: '❓', label: 'Unknown' }
+                    };
+                    const sourceInfo = sourceIcons[source.type] || sourceIcons['unknown'];
+                    const sourceAgents = source.agents_involved?.length > 0
+                        ? source.agents_involved.slice(0, 2).join(' + ')
+                        : '';
+                    const sourceTopic = source.topic ? source.topic.substring(0, 50) + (source.topic.length > 50 ? '...' : '') : '';
+                    const sourceHtml = source.type !== 'unknown' ? `
+                        <div class="small mt-1" style="color: #9ca3af; font-size: 11px;" title="${source.topic}">
+                            ${sourceInfo.icon} <span style="color: #6b7280;">${sourceInfo.label}</span>
+                            ${sourceAgents ? `<span style="color: #a855f7;"> · ${sourceAgents}</span>` : ''}
+                            ${sourceTopic ? `<br><span style="color: #4b5563; font-style: italic;">"${sourceTopic}"</span>` : ''}
+                        </div>
+                    ` : '';
+
                     return `
                         <div class="col-md-6 col-lg-4 mb-3">
                             <div style="background: ${health.bg}; border: 1px solid ${health.border}; border-radius: 8px; padding: 15px; height: 100%;">
@@ -59948,8 +59969,9 @@ ${item.generated_content}
                                         ${statusBadge}
                                     </div>
                                 </div>
-                                <h6 style="color: #e5e7eb; margin-bottom: 8px;" title="${cleanName}">${cleanName.substring(0, 45)}${cleanName.length > 45 ? '...' : ''}</h6>
-                                <div class="small text-muted mb-2">
+                                <h6 style="color: #e5e7eb; margin-bottom: 4px;" title="${cleanName}">${cleanName.substring(0, 45)}${cleanName.length > 45 ? '...' : ''}</h6>
+                                ${sourceHtml}
+                                <div class="small text-muted mb-2" style="margin-top: 6px;">
                                     Day ${exp.days_running} of ~${exp.expected_duration_days} expected
                                 </div>
                                 ${kpiHtml}
