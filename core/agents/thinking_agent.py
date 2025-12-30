@@ -756,6 +756,9 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         Synchronous execution wrapper for the thinking process.
 
         This is called by the Celery task to run a thinking cycle.
+
+        Note: Decision execution is handled by the Celery task (run_autonomous_reasoning)
+        using AutonomousActionExecutor (Session 544). This method focuses on thinking only.
         """
         import asyncio
 
