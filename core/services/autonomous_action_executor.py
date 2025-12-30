@@ -602,46 +602,168 @@ class AutonomousActionExecutor:
 
     def _synthesize_single_deliverable(
         self,
-        content_writer,
+        content_writer,  # Legacy param, now uses TechnicalDocumentAgent
         deliverable_name: str,
         topic: str,
         research_context: str,
         reasoning: str
     ) -> Dict[str, Any]:
         """
-        Session 620.1: Synthesize a single deliverable using ContentWriterAgent.
+        Session 620.1: Synthesize a single deliverable.
+        Session 622: Updated to use TechnicalDocumentAgent with stage-aware naming.
 
-        Creates a professional document based on the deliverable name and research context.
+        Creates a professional technical document based on the deliverable name
+        and research context. Documents are now stage-aware and use formal
+        language instead of blog-style content.
+        """
+        from core.models_unified_system import SelfBlog
+        from core.agents.technical_document_agent import (
+            TechnicalDocumentAgent,
+            infer_stage_from_deliverable
+        )
+        import uuid
+
+        # Session 622: Infer stage and document type
+        stage_info = infer_stage_from_deliverable(deliverable_name)
+        stage = stage_info['stage']
+        doc_type = stage_info['doc_type']
+        stage_name = stage_info['stage_name']
+        stage_prefix = stage_info['prefix']
+
+        logger.info(f"Synthesizing deliverable: {deliverable_name} as {stage_prefix}")
+
+        # Build the synthesis task for TechnicalDocumentAgent
+        synthesis_task = f"""Create a formal {stage_name} document for: {deliverable_name}
+
+This is part of the product development lifecycle for: {topic}
+
+The document should:
+1. Use formal, professional language (NO blog-style phrasing)
+2. Include specific, measurable criteria where applicable
+3. Be structured for executive review and decision-making
+4. Include governance and compliance considerations for Stage 3+ documents
+"""
+
+        # Session 622: Use TechnicalDocumentAgent instead of ContentWriterAgent
+        try:
+            technical_agent = TechnicalDocumentAgent()
+            result = technical_agent.execute(
+                task=synthesis_task,
+                context={
+                    'deliverable': deliverable_name,
+                    'topic': topic,
+                    'doc_type': doc_type,
+                    'stage': stage,
+                    'research_context': research_context,
+                    'reasoning': reasoning,
+                    'autonomous': True,
+                    'classification': 'INTERNAL'
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Extract content from TechnicalDocumentAgent result
+            content = ""
+            if hasattr(result, 'data') and result.data:
+                if isinstance(result.data, dict):
+                    content_data = result.data.get('content', {})
+                    if isinstance(content_data, dict):
+                        content = content_data.get('full_text', '')
+                    elif content_data:
+                        content = str(content_data)
+                else:
+                    content = str(result.data)
+            elif hasattr(result, 'message') and result.message:
+                content = result.message
+
+            logger.info(f"Extracted content length: {len(content)} chars for {stage_prefix}")
+
+            if not content or len(content) < 100:
+                # Fallback to ContentWriterAgent if TechnicalDocumentAgent fails
+                logger.warning(f"TechnicalDocumentAgent returned insufficient content, falling back to ContentWriterAgent")
+                return self._synthesize_with_fallback(
+                    content_writer, deliverable_name, topic, research_context, reasoning, stage_info
+                )
+
+            # Session 622: Save with stage-aware title
+            blog = SelfBlog.objects.create(
+                id=uuid.uuid4(),
+                title=f"[{stage_prefix}] {deliverable_name[:60]}",
+                intro=f"Synthesized deliverable for: {topic}. Stage {stage} of 5 - {stage_name}",
+                conclusion=f"This document was auto-generated as part of the product development lifecycle. Review and customize as needed.",
+                full_text=content,
+                tone="professional",
+                stats_snapshot={
+                    'auto_generated': True,
+                    'action_type': 'synthesized_deliverable',
+                    'parent_topic': topic,
+                    'deliverable_name': deliverable_name,
+                    'doc_type': doc_type,
+                    'stage': stage,
+                    'stage_name': stage_name,
+                    'stage_prefix': stage_prefix,
+                    'content_length': len(content),
+                    'has_governance': stage >= 3,  # Stage 3+ includes governance
+                }
+            )
+
+            logger.info(f"Deliverable saved to SelfBlog: {blog.id} ({stage_prefix})")
+
+            return {
+                'deliverable': deliverable_name,
+                'success': True,
+                'blog_id': str(blog.id),
+                'doc_type': doc_type,
+                'stage': stage,
+                'stage_name': stage_name,
+                'stage_prefix': stage_prefix,
+                'content_length': len(content),
+                'preview': content[:300] + '...' if len(content) > 300 else content
+            }
+
+        except Exception as e:
+            logger.error(f"Error in TechnicalDocumentAgent: {e}")
+            # Fallback to ContentWriterAgent
+            return self._synthesize_with_fallback(
+                content_writer, deliverable_name, topic, research_context, reasoning, stage_info
+            )
+
+    def _synthesize_with_fallback(
+        self,
+        content_writer,
+        deliverable_name: str,
+        topic: str,
+        research_context: str,
+        reasoning: str,
+        stage_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Session 622: Fallback synthesis using ContentWriterAgent if TechnicalDocumentAgent fails.
         """
         from core.models_unified_system import SelfBlog
         import uuid
 
-        # Determine document type based on deliverable name
-        doc_type = self._infer_document_type(deliverable_name)
+        stage = stage_info['stage']
+        doc_type = stage_info['doc_type']
+        stage_name = stage_info['stage_name']
+        stage_prefix = stage_info['prefix']
 
-        # Build the synthesis task
-        synthesis_task = f"""Create a professional {doc_type} document for the following deliverable:
-
-**Deliverable:** {deliverable_name}
+        synthesis_task = f"""Create a professional {stage_name} document for: {deliverable_name}
 
 **Parent Topic:** {topic}
-
 **Purpose:** {reasoning}
 
 {research_context}
 
----
-
 **Instructions:**
-1. Create a comprehensive, professional document that addresses "{deliverable_name}"
-2. Use the research findings above to inform your content
-3. Structure the document with clear sections and headers
-4. Include specific recommendations, not just general guidance
-5. Make it actionable and implementation-ready
-6. Use markdown formatting for clarity
+1. Create a comprehensive, professional document
+2. Use formal language (avoid blog-style phrasing)
+3. Structure with clear sections and headers
+4. Include specific recommendations
+5. Use markdown formatting
 """
 
-        # Call ContentWriterAgent
         try:
             result = content_writer.execute(
                 task=synthesis_task,
@@ -656,18 +778,13 @@ class AutonomousActionExecutor:
                 spider_context={}
             )
 
-            # Extract content from result
-            # Session 620.1 Fix: ContentWriterAgent returns data['content'] as a dict
-            # with 'full_text' containing the actual content
             content = ""
             if hasattr(result, 'data') and result.data:
                 if isinstance(result.data, dict):
                     content_data = result.data.get('content', {})
                     if isinstance(content_data, dict):
-                        # ContentWriterAgent returns content as a dict with 'full_text'
                         content = content_data.get('full_text', '') or content_data.get('raw_content', '')
                         if not content:
-                            # Fallback: stringify the content dict
                             content = str(content_data)
                     elif content_data:
                         content = str(content_data)
@@ -680,21 +797,18 @@ class AutonomousActionExecutor:
             elif hasattr(result, 'message') and result.message:
                 content = result.message
 
-            logger.info(f"Extracted content length: {len(content)} chars")
-
             if not content or len(content) < 100:
                 return {
                     'deliverable': deliverable_name,
                     'success': False,
-                    'error': 'ContentWriterAgent returned insufficient content'
+                    'error': 'Both TechnicalDocumentAgent and ContentWriterAgent returned insufficient content'
                 }
 
-            # Save to SelfBlog
             blog = SelfBlog.objects.create(
                 id=uuid.uuid4(),
-                title=f"[Deliverable] {deliverable_name[:80]}",
-                intro=f"Synthesized deliverable for: {topic}. Document type: {doc_type}",
-                conclusion=f"This document was auto-generated based on research findings. Review and customize as needed.",
+                title=f"[{stage_prefix}] {deliverable_name[:60]}",
+                intro=f"Synthesized deliverable for: {topic}. Stage {stage} of 5 - {stage_name} (fallback)",
+                conclusion=f"This document was auto-generated. Review and customize as needed.",
                 full_text=content,
                 tone="professional",
                 stats_snapshot={
@@ -703,23 +817,27 @@ class AutonomousActionExecutor:
                     'parent_topic': topic,
                     'deliverable_name': deliverable_name,
                     'doc_type': doc_type,
-                    'content_length': len(content)
+                    'stage': stage,
+                    'stage_name': stage_name,
+                    'stage_prefix': stage_prefix,
+                    'content_length': len(content),
+                    'fallback_used': True,
                 }
             )
-
-            logger.info(f"Deliverable saved to SelfBlog: {blog.id}")
 
             return {
                 'deliverable': deliverable_name,
                 'success': True,
                 'blog_id': str(blog.id),
                 'doc_type': doc_type,
+                'stage': stage,
+                'stage_name': stage_name,
                 'content_length': len(content),
-                'preview': content[:300] + '...' if len(content) > 300 else content
+                'fallback_used': True,
             }
 
         except Exception as e:
-            logger.error(f"Error in ContentWriterAgent: {e}")
+            logger.error(f"Fallback synthesis failed: {e}")
             return {
                 'deliverable': deliverable_name,
                 'success': False,
@@ -729,33 +847,13 @@ class AutonomousActionExecutor:
     def _infer_document_type(self, deliverable_name: str) -> str:
         """
         Session 620.1: Infer the document type from the deliverable name.
+        Session 622: Now calls the enhanced infer_stage_from_deliverable() function.
 
         Returns a document type string to guide content generation.
         """
-        name_lower = deliverable_name.lower()
-
-        if 'design doc' in name_lower or 'architecture' in name_lower:
-            return 'technical design document'
-        elif 'recommendation' in name_lower:
-            return 'recommendations report'
-        elif 'test' in name_lower or 'testing' in name_lower or 'framework' in name_lower:
-            return 'testing framework specification'
-        elif 'metric' in name_lower or 'telemetry' in name_lower or 'kpi' in name_lower:
-            return 'metrics and monitoring specification'
-        elif 'compliance' in name_lower or 'regulatory' in name_lower or 'mapping' in name_lower:
-            return 'compliance mapping document'
-        elif 'checklist' in name_lower:
-            return 'checklist document'
-        elif 'plan' in name_lower or 'roadmap' in name_lower:
-            return 'implementation plan'
-        elif 'guide' in name_lower or 'how-to' in name_lower:
-            return 'guide document'
-        elif 'policy' in name_lower:
-            return 'policy document'
-        elif 'analysis' in name_lower or 'report' in name_lower:
-            return 'analysis report'
-        else:
-            return 'professional document'
+        from core.agents.technical_document_agent import infer_stage_from_deliverable
+        stage_info = infer_stage_from_deliverable(deliverable_name)
+        return stage_info['doc_type']
 
     def _execute_trigger_conversation(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
         """Trigger a conversation between specific agents."""

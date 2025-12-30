@@ -234,6 +234,14 @@ from core.agents.resolve_agent import ResolveAgent, get_resolve_agent
 # Content Writer Agent (Session 496: Written content from research)
 from core.agents.content_writer_agent import ContentWriterAgent, get_content_writer_agent
 
+# Technical Document Agent (Session 622: Formal technical documents with governance)
+from core.agents.technical_document_agent import (
+    TechnicalDocumentAgent,
+    infer_stage_from_deliverable,
+    get_stage_for_doc_type,
+    DOCUMENT_STAGES,
+)
+
 # Blockchain Audit Agents (Session 461)
 from core.agents.blockchain import (
     SmartContractAuditorAgent,
