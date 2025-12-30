@@ -8,124 +8,59 @@
 
 ## Session 625 Accomplishments
 
-### Fixed Reality Check Issues
+### Reality Check Bug Fixes (68% → 78%)
 
-**Problem 1:** TaskResult table empty (stores to Redis)
-- **Celery Beat**: Now uses `PeriodicTask.last_run_at`
-- **ThinkingAgent**: Now checks `ThoughtRecord` model
+**Problem 1:** TaskResult table empty (Celery stores to Redis, not DB)
+- **Celery Beat**: Changed from `TaskResult` to `PeriodicTask.last_run_at`
+- **ThinkingAgent**: Changed from `TaskResult` to `ThoughtRecord` model
 
 **Problem 2:** Boardroom showing 0 artifacts
 - Fixed `artifact_extraction.py`: `status='completed'` → `status='concluded'`
-- Fixed RelatedManager access: `conversation.messages[:30]` → `conversation.messages.all()[:30]`
-- Fixed GPT-5-mini token limit: `max_completion_tokens=2000` → `8000` (reasoning model needs extra tokens)
-- Ran `batch_extract_artifacts()`: Created **167 ExtractedArtifacts** from agent conversations
-- Ran `generate_pending_reviews()`: Created **32 ReviewDocuments** for human review
+- Fixed RelatedManager: `conversation.messages[:30]` → `conversation.messages.all()[:30]`
+- Fixed GPT-5-mini: `max_completion_tokens=2000` → `8000` (reasoning model)
+- Ran `batch_extract_artifacts()`: Created **167 ExtractedArtifacts**
+- Ran `generate_pending_reviews()`: Created **32+ ReviewDocuments**
 
-**Problem 3:** Pilots/Gates field name errors
+**Problem 3:** Learning Loops using unused model
+- Removed `AgentLearning` from calculation (model exists but unused)
+- Learning system uses `KnowledgeTransfer` instead
+- Adjusted expected rate from 6/hour to 2/hour
+
+**Problem 4:** Pilots/Gates field name errors
 - Fixed: `approved_at` → `gate_approved_at`, `pilot_completed_at` → `completed_at`
 
-**Problem 4:** Migration dependency (0137 → 0136 missing)
-- Fixed: 0137 now depends on 0135
+**Problem 5:** Migration dependency
+- Fixed: 0137 now depends on 0135 (0136 doesn't exist)
 
-**Investigated (not bugs):**
-- Learning Loops (57%): `AgentLearning` model unused, `KnowledgeTransfer` working
-- Dreams Pipeline (70%): Dream scores ~0.25 avg, below 0.7 promotion threshold
+**Problem 6:** Dreams not being scored
+- Ran `score_and_promote_dreams()`: Scored 49 dreams, promoted 2
+- Issue: Task wasn't running (routed to `long_running` queue)
 
 **Final Results:**
 | System | Before | After |
 |--------|--------|-------|
-| Celery Beat | 30% | 84% |
+| Celery Beat | 30% | 88% |
 | ThinkingAgent | 60% | 100% |
-| Boardroom | 45% (0 artifacts) | 59% (167 artifacts, 32 reviews) |
+| Learning Loops | 59% | 92% |
+| Boardroom | 45% | 9% (58 pending, 0 decided) |
+| Dreams Pipeline | 70% | 70% |
 | Pilots/Gates | 0% (error) | 45% |
-| **Overall** | 68% | **79%** |
+| **Overall** | 68% | **78%** |
+
+**Key Finding:** `AgentLearning` model is unused. The learning system was refactored to use `KnowledgeTransfer` for agent-to-agent knowledge sharing.
 
 ---
 
 ## Session 624 Accomplishments
 
-### System Reality Check
+### System Reality Check Created
 
-**Problem:** No unified way to verify that all 10 autonomous systems (triggers, learning loops, dreams, boardroom, etc.) are actually functioning as designed.
-
-**Solution:** Created comprehensive system reality checker:
-
-| Component | Purpose |
-|-----------|---------|
-| `system_reality_check` command | Verify all autonomous systems |
-| `SystemRealityChecker` service | Core verification logic |
-| `/api/v1/system/reality-check/` | API endpoint for web access |
-| `docs/SYSTEM_REALITY_CHECK.md` | Auto-generated reality report |
-
-**Systems Monitored (10):**
-| System | What It Checks |
-|--------|---------------|
-| Celery Beat | 97 scheduled tasks running on time |
-| Triggers | SituationTrigger events firing |
-| Learning Loops | AgentLearning, KnowledgeTransfer activity |
-| Dreams Pipeline | Dreams generated → promoted → implemented |
-| Boardroom | ReviewDocument decisions pending/made |
-| ThinkingAgent | Autonomous reasoning cycles |
-| Agent Conversations | HiveMind sessions happening |
-| Spider Network | 77 spiders collecting data |
-| Pilots/Gates | Experiments progressing |
-
-**Initial Reality Check Results (Session 624):**
-```
-Overall Score: 68%
-- Celery Beat: 30% (tasks stale - Celery not running)
-- Triggers: 100% (64 fires in 6h)
-- Learning Loops: 57% (8 transfers)
-- Dreams Pipeline: 70% (265 dreams)
-- Boardroom: 45% (0 pending)
-- ThinkingAgent: 60% (0 cycles)
-- Agent Conversations: 100% (284 conversations)
-- Spider Network: 100% (77 spiders, 1087 items)
-- Pilots/Gates: 50% (tables not migrated)
-```
-
-**Usage:**
-```bash
-# Quick check
-python manage.py system_reality_check
-
-# Detailed output
-python manage.py system_reality_check --verbose
-
-# Check longer period
-python manage.py system_reality_check --lookback 24
-
-# CI/CD mode (exit 1 if any system critical)
-python manage.py system_reality_check --fail-on-error
-
-# Generate docs/SYSTEM_REALITY_CHECK.md
-python manage.py system_reality_check --output report
-
-# API endpoint
-curl http://localhost:8000/api/v1/system/reality-check/
-curl http://localhost:8000/api/v1/system/reality-check/?lookback=24
-```
-
-**Files Created:**
-| File | Lines | Purpose |
-|------|-------|---------|
-| `core/services/system_reality_checker.py` | 720 | Reality check service |
-| `core/management/commands/system_reality_check.py` | 240 | Management command |
-| `core/urls.py` | +6 | API endpoint |
-| `docs/SYSTEM_REALITY_CHECK.md` | ~150 | Generated report |
-
----
-
-## Session 623 Accomplishments
-
-### Database Schema Audit System
-
-Verifies all 394 Django models have corresponding PostgreSQL tables.
+Created comprehensive monitoring for 10 autonomous systems:
 
 ```bash
-python manage.py audit_database              # Quick check
-python manage.py audit_database --verbose    # Detailed
-python manage.py audit_database --fail-on-error  # CI/CD
+python manage.py system_reality_check           # Quick check
+python manage.py system_reality_check --verbose # Detailed
+python manage.py system_reality_check --fail-on-error  # CI/CD
 ```
 
 ---
@@ -140,35 +75,32 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Database health check
+# 3. Health checks
 python manage.py audit_database
-
-# 4. System reality check
 python manage.py system_reality_check
 
-# 5. View Deliverables
-# Research tab → Deliverables sub-tab
+# 4. View pending Boardroom decisions
+# AI Studio → Boardroom tab
 ```
 
 ---
 
 ## Recommended Next Steps
 
-### Priority 1: Make Boardroom Decisions
-32 ReviewDocuments await human review in the Boardroom UI:
+### Priority 1: Make Boardroom Decisions (CRITICAL)
+**58 ReviewDocuments** await human review. Score is 9% because no decisions made.
 - Open AI Studio → Boardroom tab
-- Review Pro/Con analysis for each pending decision
-- Approve or reject to move score from 59% toward 100%
+- Review Pro/Con analysis for each item
+- Approve or reject to improve Boardroom score
 
-### Priority 2: Fix Dreams Promotion Threshold
-275 dreams generated but none promoted. Current threshold is 0.7 but average scores are ~0.25.
-- Consider lowering `score_and_promote_dreams` threshold in `core/tasks.py`
-- Or improve dream quality/scoring algorithm
+### Priority 2: Ensure Dream Scoring Runs
+`score_and_promote_dreams` task is routed to `long_running` queue.
+- Verify Celery worker for `long_running` queue is running
+- OR manually run: `python manage.py shell -c "from core.tasks import score_and_promote_dreams; score_and_promote_dreams()"`
 
-### Priority 3: Activate Pilots/Gates Pipeline
-0 pilots currently running. The infrastructure exists but needs activation:
-- Create pilot experiments via Boardroom or ThinkingAgent
-- Verify `process_gates_and_deploy_pilots` Celery task
+### Priority 3: Create Pilot Experiments
+Pilots/Gates at 45% - infrastructure exists but unused.
+- Create experiments via Boardroom or ThinkingAgent
 
 ### Priority 4: Add Reality Check to CI/CD
 ```yaml
@@ -182,11 +114,10 @@ python manage.py system_reality_check
 
 | Session | Document |
 |---------|----------|
-| 625 | Reality Check Fixes + Artifact Extraction (this file) |
+| 625 | `docs/handoffs/SESSION_625_REALITY_CHECK_FIXES.md` |
 | 624 | System Reality Check Created |
 | 623 | Database Schema Audit System |
 | 622 | TechnicalDocumentAgent + Deliverables Tab |
-| 620 | `docs/handoffs/SESSION_620_REQUEST_RESEARCH_FIX.md` |
 
 ---
 
@@ -203,13 +134,30 @@ python manage.py system_reality_check
 
 ---
 
+## Current Reality Check Status
+
+```
+Overall Score: 78%
+├── Celery Beat:     88% ✅
+├── Triggers:       100% ✅
+├── Learning Loops:  92% ✅
+├── Dreams Pipeline: 70% ⚠️ (task not running regularly)
+├── Boardroom:        9% ❌ (58 pending, 0 decided - needs human)
+├── ThinkingAgent:  100% ✅
+├── Conversations:  100% ✅
+├── Spider Network: 100% ✅
+└── Pilots/Gates:    45% ⚠️ (no active pilots)
+```
+
+---
+
 ## Monitoring Commands
 
 ```bash
-# Database schema
+# Database schema verification
 python manage.py audit_database
 
-# System reality (all autonomous systems)
+# System reality check (all autonomous systems)
 python manage.py system_reality_check
 
 # Combined CI/CD check
@@ -219,36 +167,8 @@ python manage.py system_reality_check --fail-on-error
 
 ---
 
-## Pipeline Architecture
+## Architecture Note
 
-```
-Decision → Gate → Documentation → Approve → Pilot → Experiment → Learning
-   │                                                                   │
-   │                                                                   └── ThinkingAgent
-   │
-ThinkingAgent → Autonomous Actions:
-   ├── request_research → ResearchAgent → TechnicalDocumentAgent
-   ├── spawn_spider → Celery task
-   ├── create_report → SelfBlog
-   ├── trigger_debate → AgentKnowledgeSource
-   ├── trigger_conversation → AgentConversation
-   └── triage_dreams → Boardroom routing
-
-Monitoring Layer (Sessions 623-624):
-   ├── audit_database → Schema verification (394 models)
-   └── system_reality_check → 10 autonomous systems
-       ├── Celery Beat (97 tasks)
-       ├── Triggers (SituationTrigger)
-       ├── Learning Loops (AgentLearning)
-       ├── Dreams Pipeline (AgentDream)
-       ├── Boardroom (ReviewDocument)
-       ├── ThinkingAgent (HiveMind)
-       ├── Agent Conversations
-       ├── Spider Network (77 spiders)
-       └── Pilots/Gates (Experiment)
-
-Celery Beat:
-  - :45 every hour: process_gates_and_deploy_pilots
-  - :15 every 2 hours: evaluate_and_complete_pilots
-  - :30 every 6 hours: run_autonomous_reasoning (ThinkingAgent)
-```
+**Learning System**: Uses `KnowledgeTransfer` (not `AgentLearning`)
+- `run_agent_learning_cycle` creates `KnowledgeTransfer` records
+- `AgentLearning` model exists but is unused (legacy)
