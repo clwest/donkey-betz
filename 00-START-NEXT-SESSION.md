@@ -8,20 +8,32 @@
 
 ## Session 625 Accomplishments
 
-### Fixed Reality Check TaskResult Bug
+### Fixed Reality Check Issues
 
-**Problem:** System Reality Check was checking `TaskResult` table for Celery Beat and ThinkingAgent, but results store to Redis, leaving the table empty.
+**Problem 1:** TaskResult table empty (stores to Redis)
+- **Celery Beat**: Now uses `PeriodicTask.last_run_at`
+- **ThinkingAgent**: Now checks `ThoughtRecord` model
 
-**Fixes:**
-1. **Celery Beat**: Now uses `PeriodicTask.last_run_at` from django-celery-beat
-2. **ThinkingAgent**: Now checks `ThoughtRecord` model directly
+**Problem 2:** Boardroom showing 0 artifacts
+- Fixed `artifact_extraction.py`: `status='completed'` → `status='concluded'`
+
+**Problem 3:** Pilots/Gates field name errors
+- Fixed: `approved_at` → `gate_approved_at`, `pilot_completed_at` → `completed_at`
+
+**Problem 4:** Migration dependency (0137 → 0136 missing)
+- Fixed: 0137 now depends on 0135
+
+**Investigated (not bugs):**
+- Learning Loops (57%): `AgentLearning` model unused, `KnowledgeTransfer` working
+- Dreams Pipeline (70%): Dream scores ~0.25 avg, below 0.7 promotion threshold
 
 **Results:**
 | System | Before | After |
 |--------|--------|-------|
-| Celery Beat | 30% | 83% (46/60 tasks) |
-| ThinkingAgent | 60% | 100% (8 cycles) |
-| **Overall** | 68% | **78%** |
+| Celery Beat | 30% | 83% |
+| ThinkingAgent | 60% | 100% |
+| Pilots/Gates | 0% (error) | 45% |
+| **Overall** | 68% | **77%** |
 
 ---
 
