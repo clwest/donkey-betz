@@ -12,7 +12,7 @@ Session 617 fixed a major pipeline bottleneck where only 0.6% of decisions were 
 
 ---
 
-## Commits (6)
+## Commits (9)
 
 | Commit | Description |
 |--------|-------------|
@@ -22,6 +22,9 @@ Session 617 fixed a major pipeline bottleneck where only 0.6% of decisions were 
 | `2548b0a` | Add risk level filters and clean gate titles |
 | `a75f3d4` | Fix missing consent_lifecycle prompt for checklist generation |
 | `e69dfdc` | Add Waived status and Running Pilots to Gate Pipeline |
+| `a77b69e` | Add handoff doc and Session 618 start document |
+| `8dd48f8` | Add decision context to gate cards (impact area, decision type, risk explanation) |
+| `269ba7c` | Clean gate summaries - remove 'Pilot readiness for:' prefix |
 
 ---
 
@@ -68,6 +71,16 @@ KPI_TEMPLATES = {
 - **Risk level filters:** Dropdown now filters by High/Medium/Low risk
 - **Gate Pipeline stats:** Added Waived count and Running Pilots counter
 - **consent_lifecycle prompt:** Added missing prompt for checklist generation
+
+### 7. Gate Card Improvements
+Gate cards now show rich context:
+- **Impact area badge** (📁 security, infrastructure, product, etc.)
+- **Decision type badge** (📋 policy, architecture, experiment, etc.)
+- **Risk explanation**:
+  - HIGH: "⚠️ Security-sensitive decision requiring full safety review"
+  - MEDIUM: "🔶 Policy change requiring review"
+  - LOW: "✅ Fast-track experiment decision"
+- **Cleaned summaries** - Removed "Pilot readiness for: Discussion: [Learned]..." prefixes
 
 ---
 
