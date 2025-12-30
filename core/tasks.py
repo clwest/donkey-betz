@@ -12999,26 +12999,21 @@ def generate_content_for_channel(channel_id):
         # Session 468: Pass the channel's user to AgentRouter for AISeries creation
         router = AgentRouter(user=channel.user)
 
-        # Create the debate prompt
+        # Create the debate prompt - Session 633: Explicitly instruct to call initiate_content_debate tool
         debate_prompt = f"""
-The autonomous content studio needs to decide on a topic for the next episode.
+IMPORTANT: You MUST call the initiate_content_debate tool with channel_id="{channel.id}" to start the 3-agent debate.
 
-Channel: {channel.name}
-Domain: {channel.topic_domain}
-Publishing Frequency: {channel.get_content_frequency_display()}
-Last Episode: {channel.last_content_created or 'Never'}
-Performance Stats:
+Channel Details:
+- Name: {channel.name}
+- ID: {channel.id}
+- Domain: {channel.topic_domain}
+- Publishing Frequency: {channel.get_content_frequency_display()}
+- Last Episode: {channel.last_content_created or 'Never'}
 - Total Episodes: {channel.total_episodes_created}
 - Average Views: {channel.total_views / max(channel.total_episodes_created, 1):.0f}
 - Average Retention: {channel.avg_retention_rate:.1f}%
-- Confidence Multiplier: {channel.confidence_multiplier}x
 
-Three agents will debate which topic to pursue:
-1. TopicMinerAgent - Finds trending topics (argues FOR popular)
-2. ContrarianAgent - Challenges obvious choices (argues AGAINST trendy)
-3. PerformanceAnalystAgent - Uses data to guide decisions (argues from EVIDENCE)
-
-Coordinate this debate and return the winning topic decision.
+Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coordinate the debate between TopicMinerAgent, ContrarianAgent, and PerformanceAnalystAgent.
 """
 
         # Execute coordinator agent to run the debate

@@ -235,6 +235,23 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         tool_calls_made = []
 
         try:
+            # Session 633: Direct tool call for initiate_content_debate action
+            # This bypasses GPT to ensure reliable debate creation
+            if context.get('action') == 'initiate_content_debate' and context.get('channel_id'):
+                logger.info(f"🎥 [SESSION 633] Direct debate initiation for channel {context['channel_id']}")
+                tool_input = {'channel_id': context['channel_id']}
+                debate_result = self._initiate_content_debate(tool_input)
+
+                execution_time = int((time.time() - start_time) * 1000)
+                return AgentResult(
+                    success=True,
+                    message=f"Debate created: {debate_result.get('proposed_topic', 'Unknown topic')}",
+                    data={"debate_result": debate_result},
+                    agent_name=self.name,
+                    execution_time_ms=execution_time,
+                    tool_calls=[{"name": "initiate_content_debate", "input": tool_input}]
+                )
+
             # Build prompt with system prompt + task
             prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
@@ -635,12 +652,14 @@ User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
         )
 
         # Create ChannelEpisode record
+        # Session 630: Store series_prompt in script field for full content context
         episode = ChannelEpisode.objects.create(
             channel=channel,
             series=series,
             title=f"{topic}",
             topic=topic,
-            description=angle
+            description=angle,
+            script=series_prompt
         )
 
         # [SESSION 475] Add provenance tracking

@@ -115,6 +115,24 @@ New content generation creates fresh debates with actual agent responses:
 - Contrarian: Real saturation/opportunity analysis
 - Analyst: Real performance predictions
 
+**3. Coordinator Direct Debate Fix:**
+The coordinator wasn't reliably calling its `initiate_content_debate` tool via GPT. Fixed by adding direct tool invocation in `autonomous_content_studio_coordinator.py`:
+
+```python
+# Session 633: Direct tool call for initiate_content_debate action
+# This bypasses GPT to ensure reliable debate creation
+if context.get('action') == 'initiate_content_debate' and context.get('channel_id'):
+    logger.info(f"🎥 [SESSION 633] Direct debate initiation for channel {context['channel_id']}")
+    tool_input = {'channel_id': context['channel_id']}
+    debate_result = self._initiate_content_debate(tool_input)
+    # ... return result
+```
+
+**Final Result:**
+- `Proposed By: AutonomousContentStudioCoordinator` (not fallback!)
+- `Is Fallback: False`
+- Proper 3-agent debate with synthesized decision reasoning
+
 ---
 
 ## Files Modified
@@ -123,8 +141,8 @@ New content generation creates fresh debates with actual agent responses:
 |------|--------|
 | `core/models_autonomous_studio.py` | Added `script` TextField |
 | `core/migrations/0139_session_630_add_episode_script.py` | New migration |
-| `core/tasks.py` | Updated 2 episode creation locations + fixed debate query (line 13044) |
-| `core/agents/autonomous_content_studio_coordinator.py` | Updated 1 episode creation |
+| `core/tasks.py` | Updated 2 episode creation locations + fixed debate query + explicit tool prompt |
+| `core/agents/autonomous_content_studio_coordinator.py` | Updated 1 episode creation + direct debate initiation |
 | `core/views_content_calendar.py` | Added episode detail + generate views |
 | `core/urls.py` | Added episode detail + generate URL routes |
 | `ai_core/templates/components/panels/content_calendar_panel.html` | Modal, click handlers, Generate Now button, formatDebateArgument() helper |
@@ -155,6 +173,7 @@ Verified:
 - Button states update correctly
 - Error messages in debate data displayed gracefully (Session 633)
 - New content generation creates fresh debates with real agent data (Session 633)
+- Coordinator creates debates directly (not via GPT tool call) - `Is Fallback: False`
 
 ---
 
