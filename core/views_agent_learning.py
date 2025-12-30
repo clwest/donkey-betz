@@ -4055,6 +4055,55 @@ def get_experiment_suggestions(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# Session 607: Pilot Progress Dashboard API
+@require_http_methods(["GET"])
+def get_pilot_progress_dashboard(request):
+    """
+    GET /api/pilots/progress/
+
+    Session 607: Comprehensive pilot progress dashboard with KPI tracking.
+
+    Returns:
+        - experiments: List of all experiments with progress data
+        - summary: Aggregate stats (running, success rate, healthy %)
+        - attention_needed: Experiments requiring immediate action
+        - health_breakdown: Count by health status
+        - timeline: Recent activity events
+    """
+    try:
+        from core.services.pilot_progress import get_pilot_progress_dashboard as get_dashboard
+
+        result = get_dashboard()
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting pilot progress dashboard: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_pilot_progress_detail(request, experiment_id):
+    """
+    GET /api/pilots/progress/<experiment_id>/
+
+    Session 607: Get detailed progress for a single experiment.
+
+    Returns:
+        - experiment: Full progress data with KPIs, health, actions
+        - details: Secondary KPIs, halt conditions, extracted metrics
+        - learning: Associated learning record if exists
+    """
+    try:
+        from core.services.pilot_progress import get_experiment_detail
+
+        result = get_experiment_detail(str(experiment_id))
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting experiment detail: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

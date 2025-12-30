@@ -7512,6 +7512,79 @@
                 </div>
                 <!-- END EXPERIMENT TRACKING REGISTRY -->
 
+                <!-- ========== SESSION 607: PILOT PROGRESS DASHBOARD ========== -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22c55e;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid #22c55e;">
+                                <h5 class="mb-0" style="color: #22c55e;">
+                                    <span style="font-size: 24px;">🚀</span> Pilot Progress Dashboard
+                                    <small class="text-muted ms-2">What's going on with your pilots?</small>
+                                </h5>
+                                <button class="btn btn-sm btn-outline-success" onclick="loadPilotProgressDashboard()">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Summary Stats -->
+                                <div class="row mb-4">
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-running-count" style="color: #22c55e;">-</h2>
+                                            <small class="text-muted">Running</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-completed-count" style="color: #3b82f6;">-</h2>
+                                            <small class="text-muted">Completed</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(16, 185, 129, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-success-rate" style="color: #10b981;">--%</h2>
+                                            <small class="text-muted">Success Rate</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(139, 92, 246, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-kpi-completion" style="color: #8b5cf6;">--%</h2>
+                                            <small class="text-muted">KPI Defined</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(34, 197, 94, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-healthy-percent" style="color: #22c55e;">--%</h2>
+                                            <small class="text-muted">Healthy</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="text-center p-3" style="background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                                            <h2 id="pilot-needs-attention" style="color: #f59e0b;">-</h2>
+                                            <small class="text-muted">Need Attention</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Attention Needed Section -->
+                                <div id="pilot-attention-section" class="mb-4" style="display: none;">
+                                    <h6 style="color: #f59e0b;">🔔 Requires Attention</h6>
+                                    <div id="pilot-attention-list" class="row">
+                                        <!-- Populated by JS -->
+                                    </div>
+                                </div>
+
+                                <!-- Pilot Cards -->
+                                <h6 style="color: #22c55e;">📊 All Pilots</h6>
+                                <div id="pilot-progress-list" class="row">
+                                    <p class="text-muted text-center small">Loading pilot progress...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END PILOT PROGRESS DASHBOARD -->
+
                 <!-- ========== SESSION 598: LEARNING LOOP DASHBOARD ========== -->
                 <div class="row mt-4">
                     <div class="col-12">
@@ -59843,6 +59916,163 @@ ${item.generated_content}
         }
 
         // ========== END SESSION 598: LEARNING LOOP DASHBOARD ==========
+
+        // ========== SESSION 607: PILOT PROGRESS DASHBOARD ==========
+        async function loadPilotProgressDashboard() {
+            /**
+             * Session 607: Load the Pilot Progress Dashboard
+             * Shows running pilots with KPI tracking, health status, and recommended actions.
+             */
+            console.log('📊 Loading Pilot Progress Dashboard...');
+
+            try {
+                const response = await authenticatedFetch('/api/pilots/progress/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading pilot progress:', data.error);
+                    return;
+                }
+
+                // Update summary stats
+                const summary = data.summary || {};
+                document.getElementById('pilot-running-count').textContent = summary.running || 0;
+                document.getElementById('pilot-completed-count').textContent = summary.completed || 0;
+                document.getElementById('pilot-success-rate').textContent = `${summary.success_rate || 0}%`;
+                document.getElementById('pilot-kpi-completion').textContent = `${summary.kpi_completion_rate || 0}%`;
+                document.getElementById('pilot-healthy-percent').textContent = `${summary.healthy_percent || 0}%`;
+                document.getElementById('pilot-needs-attention').textContent = summary.needs_attention || 0;
+
+                // Show attention section if needed
+                const attentionSection = document.getElementById('pilot-attention-section');
+                const attentionList = document.getElementById('pilot-attention-list');
+                const attention = data.attention_needed || [];
+
+                if (attention.length > 0) {
+                    attentionSection.style.display = 'block';
+                    attentionList.innerHTML = attention.map(item => `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 8px; padding: 12px;">
+                                <strong style="color: #f59e0b;">${item.name}</strong>
+                                <div class="mt-2">
+                                    ${item.reasons.map(r => `<div class="small text-muted">• ${r}</div>`).join('')}
+                                </div>
+                                <div class="mt-2">
+                                    <strong class="small" style="color: #10b981;">Recommended:</strong>
+                                    ${item.actions.slice(0, 2).map(a => `<div class="small" style="color: #a3e635;">→ ${a}</div>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    attentionSection.style.display = 'none';
+                }
+
+                // Render pilot cards
+                const pilotList = document.getElementById('pilot-progress-list');
+                const experiments = data.experiments || [];
+
+                if (experiments.length === 0) {
+                    pilotList.innerHTML = '<p class="text-muted text-center">No pilots found. Start a pilot from the Boardroom!</p>';
+                    return;
+                }
+
+                pilotList.innerHTML = experiments.map(exp => {
+                    const healthColors = {
+                        'on_track': { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', icon: '✅' },
+                        'at_risk': { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', icon: '⚠️' },
+                        'needs_attention': { bg: 'rgba(251, 191, 36, 0.2)', border: '#fbbf24', icon: '🔔' },
+                        'overdue': { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', icon: '🚨' },
+                        'completed': { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', icon: '🏁' },
+                        'halted': { bg: 'rgba(156, 163, 175, 0.2)', border: '#9ca3af', icon: '⛔' }
+                    };
+                    const health = healthColors[exp.health_status] || healthColors['needs_attention'];
+
+                    // KPI progress bar
+                    let kpiHtml = '';
+                    if (exp.kpi.progress_percent !== null) {
+                        const progressColor = exp.kpi.progress_percent >= 100 ? '#10b981' :
+                                             exp.kpi.progress_percent >= 50 ? '#f59e0b' : '#ef4444';
+                        kpiHtml = `
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span style="color: #9ca3af;">${exp.kpi.primary}</span>
+                                    <span style="color: ${progressColor};">${exp.kpi.progress_percent}%</span>
+                                </div>
+                                <div style="background: #333; border-radius: 4px; height: 8px;">
+                                    <div style="background: ${progressColor}; width: ${Math.min(exp.kpi.progress_percent, 100)}%; height: 100%; border-radius: 4px;"></div>
+                                </div>
+                                <div class="small text-muted mt-1">${exp.kpi.current || '?'} / ${exp.kpi.target || '?'}</div>
+                            </div>
+                        `;
+                    } else if (exp.kpi.primary && exp.kpi.primary !== 'Not set') {
+                        kpiHtml = `
+                            <div class="mt-2 small">
+                                <span style="color: #9ca3af;">KPI: ${exp.kpi.primary}</span>
+                                ${exp.kpi.target ? `<br><span class="text-muted">Target: ${exp.kpi.target}</span>` : ''}
+                                ${exp.kpi.current ? `<br><span style="color: #10b981;">Current: ${exp.kpi.current}</span>` : '<br><span class="text-warning">No current value</span>'}
+                            </div>
+                        `;
+                    } else {
+                        kpiHtml = `<div class="mt-2 small text-muted">⚠️ No KPI defined</div>`;
+                    }
+
+                    // Status badge
+                    const statusBadge = exp.status === 'running'
+                        ? `<span class="badge" style="background: #22c55e;">Running</span>`
+                        : exp.status === 'success'
+                        ? `<span class="badge" style="background: #3b82f6;">Success</span>`
+                        : exp.status === 'failure'
+                        ? `<span class="badge" style="background: #ef4444;">Failed</span>`
+                        : `<span class="badge" style="background: #6b7280;">${exp.status}</span>`;
+
+                    return `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div style="background: ${health.bg}; border: 1px solid ${health.border}; border-radius: 8px; padding: 15px; height: 100%;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span style="font-size: 20px;">${health.icon}</span>
+                                    ${statusBadge}
+                                </div>
+                                <h6 style="color: #e5e7eb; margin-bottom: 8px;" title="${exp.name}">${exp.name.substring(0, 45)}${exp.name.length > 45 ? '...' : ''}</h6>
+                                <div class="small text-muted mb-2">
+                                    Day ${exp.days_running} of ~${exp.expected_duration_days} expected
+                                </div>
+                                ${kpiHtml}
+                                ${exp.health.reasons.length > 0 && exp.status === 'running' ? `
+                                    <div class="mt-2 small" style="color: ${health.border};">
+                                        ${exp.health.reasons[0]}
+                                    </div>
+                                ` : ''}
+                                ${exp.outcome.result_summary ? `
+                                    <div class="mt-2 small" style="color: #a3e635;">
+                                        Result: ${exp.outcome.result_summary.substring(0, 80)}...
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                console.log('✅ Pilot Progress Dashboard loaded:', experiments.length, 'experiments');
+
+            } catch (error) {
+                console.error('Error loading pilot progress dashboard:', error);
+                document.getElementById('pilot-progress-list').innerHTML =
+                    '<p class="text-danger text-center">Error loading pilot progress. Check console.</p>';
+            }
+        }
+
+        // Auto-load pilot progress when Growth tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            // Listen for tab change to Growth
+            const growthTab = document.querySelector('[data-bs-target="#growth"]');
+            if (growthTab) {
+                growthTab.addEventListener('shown.bs.tab', function() {
+                    loadPilotProgressDashboard();
+                });
+            }
+        });
+        // ========== END SESSION 607: PILOT PROGRESS DASHBOARD ==========
 
         // Show approve gate modal
         function showApproveGateModal(gateId) {
