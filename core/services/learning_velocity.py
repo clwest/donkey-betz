@@ -377,19 +377,20 @@ class LearningVelocityService:
 
     def _calculate_velocity_trend(self, daily_velocity: List[Dict]) -> Dict[str, Any]:
         """Calculate velocity trend (accelerating/stable/decelerating)."""
-        if len(daily_velocity) < 7:
+        # Session 619: Lowered threshold from 7 to 3 days for faster feedback
+        if len(daily_velocity) < 3:
             return {
                 'direction': 'insufficient_data',
                 'rate': 0,
-                'message': 'Need at least 7 days of data for trend analysis',
+                'message': 'Need at least 3 days of data for trend analysis',
             }
 
-        # Compare last 7 days vs previous 7 days
-        recent_7 = daily_velocity[-7:] if len(daily_velocity) >= 7 else daily_velocity
-        older_7 = daily_velocity[-14:-7] if len(daily_velocity) >= 14 else []
+        # Compare last 3 days vs previous 3 days (Session 619: changed from 7)
+        recent_days = daily_velocity[-3:] if len(daily_velocity) >= 3 else daily_velocity
+        older_days = daily_velocity[-6:-3] if len(daily_velocity) >= 6 else []
 
-        recent_avg = sum(d['net_velocity'] for d in recent_7) / len(recent_7)
-        older_avg = sum(d['net_velocity'] for d in older_7) / len(older_7) if older_7 else 0
+        recent_avg = sum(d['net_velocity'] for d in recent_days) / len(recent_days)
+        older_avg = sum(d['net_velocity'] for d in older_days) / len(older_days) if older_days else 0
 
         # Calculate rate of change
         rate = recent_avg - older_avg
@@ -407,8 +408,8 @@ class LearningVelocityService:
         return {
             'direction': direction,
             'rate': round(rate, 3),
-            'recent_7_avg': round(recent_avg, 3),
-            'older_7_avg': round(older_avg, 3),
+            'recent_avg': round(recent_avg, 3),
+            'older_avg': round(older_avg, 3),
             'message': message,
         }
 
