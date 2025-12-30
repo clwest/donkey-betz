@@ -253,6 +253,29 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
                     prompt_parts.append(f"- {decision['topic']}: {stance}\n")
             prompt_parts.append("\n")
 
+        # Session 617: Add pipeline stats (gates, pilots, experiments)
+        if 'pipeline_stats' in context:
+            ps = context['pipeline_stats']
+            prompt_parts.append("### Decision Pipeline Status\n")
+
+            # Gates
+            gates = ps.get('gates', {})
+            prompt_parts.append(f"- **Gates:** {gates.get('total', 0)} total ({gates.get('coverage_pct', 0)}% decision coverage)\n")
+            by_status = gates.get('by_status', {})
+            prompt_parts.append(f"  - Not Started: {by_status.get('not_started', 0)}, Waived: {by_status.get('waived', 0)}, Approved: {by_status.get('approved', 0)}\n")
+            by_risk = gates.get('by_risk', {})
+            prompt_parts.append(f"  - By Risk: HIGH={by_risk.get('high', 0)}, MEDIUM={by_risk.get('medium', 0)}, LOW={by_risk.get('low', 0)}\n")
+
+            # Pilots
+            pilots = ps.get('pilots', {})
+            prompt_parts.append(f"- **Pilots:** {pilots.get('total', 0)} total, {pilots.get('running', 0)} running, {pilots.get('completed', 0)} completed\n")
+
+            # Experiments
+            experiments = ps.get('experiments', {})
+            prompt_parts.append(f"- **Experiments:** {experiments.get('total', 0)} total, {experiments.get('running', 0)} running\n")
+
+            prompt_parts.append("\n")
+
         # Add spider data
         if 'spider_stats' in context:
             stats = context['spider_stats']
@@ -573,6 +596,54 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         except Exception as e:
             logger.warning(f"Error gathering boardroom stats: {e}")
             context['boardroom_stats'] = {'total': 0, 'count_24h': 0, 'recent_decisions': []}
+
+        # Session 617: Gather pilot/gate/experiment stats
+        try:
+            from core.models_pilot_readiness import PilotReadinessGate, PilotExecution, Experiment
+
+            # Gate stats by status and risk
+            total_gates = PilotReadinessGate.objects.count()
+            gates_by_status = {}
+            for status in ['not_started', 'in_progress', 'ready', 'approved', 'waived', 'blocked']:
+                gates_by_status[status] = PilotReadinessGate.objects.filter(status=status).count()
+
+            gates_by_risk = {}
+            for risk in ['low', 'medium', 'high', 'critical']:
+                gates_by_risk[risk] = PilotReadinessGate.objects.filter(risk_level=risk).count()
+
+            # Pilot stats
+            total_pilots = PilotExecution.objects.count()
+            running_pilots = PilotExecution.objects.filter(status='running').count()
+            completed_pilots = PilotExecution.objects.filter(status='completed').count()
+
+            # Experiment stats
+            total_experiments = Experiment.objects.count()
+            running_experiments = Experiment.objects.filter(status='running').count()
+
+            # Coverage calculation
+            total_decisions = context.get('boardroom_stats', {}).get('total', 0)
+            coverage_pct = round((total_gates / total_decisions * 100), 1) if total_decisions > 0 else 0
+
+            context['pipeline_stats'] = {
+                'gates': {
+                    'total': total_gates,
+                    'by_status': gates_by_status,
+                    'by_risk': gates_by_risk,
+                    'coverage_pct': coverage_pct,
+                },
+                'pilots': {
+                    'total': total_pilots,
+                    'running': running_pilots,
+                    'completed': completed_pilots,
+                },
+                'experiments': {
+                    'total': total_experiments,
+                    'running': running_experiments,
+                },
+            }
+        except Exception as e:
+            logger.warning(f"Error gathering pipeline stats: {e}")
+            context['pipeline_stats'] = {}
 
         # Gather spider stats - Session 548: Use created_at (not discovered_at)
         try:
