@@ -3959,9 +3959,16 @@ def get_experiment_learnings(request):
             'decision_type', flat=True
         ).distinct().order_by('decision_type'))
 
+        # Session 618: Get fed to thinking agent count for dashboard
+        fed_to_thinking_agent_count = ExperimentLearning.objects.filter(
+            fed_to_thinking_agent=True
+        ).count()
+
         return JsonResponse({
             'success': True,
             'total': total_count,
+            'total_count': total_count,  # Session 618: Alias for UI compatibility
+            'fed_to_thinking_agent_count': fed_to_thinking_agent_count,  # Session 618
             'limit': limit,
             'offset': offset,
             'results': results,
