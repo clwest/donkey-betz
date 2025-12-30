@@ -155,17 +155,18 @@ class ArtifactExtractionService:
 
     def _format_conversation(self, conversation) -> str:
         """Format conversation for LLM analysis."""
-        messages = conversation.messages or []
-        if not messages:
+        # messages is a RelatedManager, use .all() to query
+        messages = conversation.messages.all().order_by('sequence_number')[:30]
+        if not messages.exists():
             return ""
 
         lines = [f"Topic: {conversation.topic or 'General Discussion'}"]
         lines.append(f"Participants: {conversation.initiator.name if conversation.initiator else 'Unknown'}")
 
-        for i, msg in enumerate(messages[:30]):  # Limit to 30 messages
-            agent = msg.get('agent', 'Unknown')
-            content = msg.get('content', msg.get('message', ''))[:500]  # Truncate long messages
-            lines.append(f"[{i+1}] {agent}: {content}")
+        for i, msg in enumerate(messages):
+            agent_name = msg.agent.name if msg.agent else 'Unknown'
+            content = (msg.content or '')[:500]  # Truncate long messages
+            lines.append(f"[{i+1}] {agent_name}: {content}")
 
         return "\n".join(lines)
 
@@ -239,8 +240,8 @@ JSON array only, no other text:"""
                     {"role": "system", "content": "You are an artifact extraction specialist. Extract actionable items from agent conversations. Return only valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=2000,  # GPT-5-mini uses max_completion_tokens
-                response_format={"type": "json_object"}
+                # GPT-5-mini is a reasoning model - needs extra tokens for reasoning + output
+                max_completion_tokens=8000
             )
 
             content = response.choices[0].message.content.strip()
