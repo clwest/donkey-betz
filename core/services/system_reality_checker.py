@@ -293,8 +293,14 @@ class SystemRealityChecker:
             expected_dreams = self.lookback_hours * 4
             activity_ratio = min(1.0, dreams_generated / max(1, expected_dreams))
 
-            # Progress: some dreams should be promoted
-            progress_ratio = dreams_promoted / max(1, dreams_generated) if dreams_generated > 10 else 0.5
+            # Progress: expect ~10% promotion rate as healthy (not all dreams should be promoted)
+            # Dreams are ideas - a 10% promotion rate indicates good filtering
+            if dreams_generated > 10:
+                promotion_rate = dreams_promoted / dreams_generated
+                expected_promotion_rate = 0.10  # 10% is healthy
+                progress_ratio = min(1.0, promotion_rate / expected_promotion_rate)
+            else:
+                progress_ratio = 0.5  # Not enough data
 
             score = self.calculate_score(activity_ratio=activity_ratio, progress_ratio=progress_ratio)
 
