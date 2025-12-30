@@ -4104,6 +4104,89 @@ def get_pilot_progress_detail(request, experiment_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# =============================================================================
+# Session 609: Auto KPI Tracking API
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def trigger_kpi_update(request):
+    """
+    POST /api/experiments/kpis/update/
+
+    Session 609: Manually trigger KPI update for all running experiments.
+
+    Returns:
+        - updated: List of experiments that were updated
+        - skipped: List of experiments that couldn't be updated
+        - errors: Any errors encountered
+        - summary: Statistics on the update run
+    """
+    try:
+        from core.services.auto_kpi_tracking import update_all_experiment_kpis
+
+        results = update_all_experiment_kpis()
+        return JsonResponse(results)
+
+    except Exception as e:
+        logger.error(f"Error triggering KPI update: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_experiment_kpi_trend(request, experiment_id):
+    """
+    GET /api/experiments/<experiment_id>/kpi-trend/
+
+    Session 609: Get KPI trend data for a specific experiment.
+
+    Query params:
+        - days: Number of days to look back (default 30)
+
+    Returns:
+        - trend_data: Time series of KPI values
+        - trend_direction: up, down, stable, or insufficient_data
+        - current: Current KPI value
+        - target: Target KPI value
+    """
+    try:
+        from core.services.auto_kpi_tracking import get_experiment_kpi_trend
+
+        days = int(request.GET.get('days', 30))
+        result = get_experiment_kpi_trend(str(experiment_id), days=days)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting KPI trend: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_all_experiment_kpi_trends(request):
+    """
+    GET /api/experiments/kpi-trends/
+
+    Session 609: Get KPI trend summary for all running experiments.
+
+    Query params:
+        - days: Number of days to look back (default 30)
+
+    Returns:
+        - experiments: List of experiments with trend info
+        - summary: Counts of trending up, down, stable
+    """
+    try:
+        from core.services.auto_kpi_tracking import get_all_kpi_trends
+
+        days = int(request.GET.get('days', 30))
+        result = get_all_kpi_trends(days=days)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting all KPI trends: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
