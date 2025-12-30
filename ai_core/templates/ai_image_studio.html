@@ -7883,6 +7883,11 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="research-deliverables-tab" data-bs-toggle="pill" data-bs-target="#research-deliverables" type="button" role="tab">
+                            📄 Deliverables
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="research-thinking-tab" data-bs-toggle="pill" data-bs-target="#research-thinking" type="button" role="tab">
                             🧠 Thinking Engine
                         </button>
@@ -8237,6 +8242,56 @@
                                     <div class="text-center py-5 text-secondary">
                                         <div class="spinner-border spinner-border-sm me-2"></div>
                                         Loading system insights...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DELIVERABLES SUB-TAB (Session 622) -->
+                    <div class="tab-pane fade" id="research-deliverables" role="tabpanel">
+                        <div class="card" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(34,197,94,0.3); border-radius: 15px;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="card-title mb-0">📄 Synthesized Deliverables</h5>
+                                    <span class="badge" style="background: #22c55e;">Research Pipeline</span>
+                                </div>
+
+                                <p class="text-secondary mb-4">
+                                    Documents created by ContentWriterAgent after ResearchAgent completes research.
+                                    These are actual deliverables synthesized from research findings.
+                                </p>
+
+                                <!-- Deliverables Stats -->
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="p-3" style="background: rgba(34,197,94,0.1); border-radius: 10px; border-left: 3px solid #22c55e;">
+                                            <h6>📄 Total</h6>
+                                            <h3 class="mb-0" id="deliverables-total">0</h3>
+                                            <small class="text-muted">Deliverables</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3" style="background: rgba(139,92,246,0.1); border-radius: 10px; border-left: 3px solid #8b5cf6;">
+                                            <h6>📝 Latest</h6>
+                                            <h3 class="mb-0" id="deliverables-latest-date">-</h3>
+                                            <small class="text-muted">Last created</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3" style="background: rgba(236,72,153,0.1); border-radius: 10px; border-left: 3px solid #ec4899;">
+                                            <h6>📏 Avg Size</h6>
+                                            <h3 class="mb-0" id="deliverables-avg-size">0</h3>
+                                            <small class="text-muted">Characters</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Deliverables List -->
+                                <div id="deliverables-content">
+                                    <div class="text-center py-5 text-secondary">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading deliverables...
                                     </div>
                                 </div>
                             </div>
@@ -78696,6 +78751,136 @@ ${item.generated_content}
                     <button class="btn btn-outline-danger btn-sm" onclick="generateSelfBlog()">Try Again</button>
                 </div>
             `;
+        }
+
+        // ====================================================================
+        // SESSION 622: DELIVERABLES FUNCTIONS
+        // ====================================================================
+
+        // Load deliverables when tab is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const deliverablesTab = document.getElementById('research-deliverables-tab');
+            if (deliverablesTab) {
+                deliverablesTab.addEventListener('shown.bs.tab', loadDeliverables);
+            }
+        });
+
+        function loadDeliverables() {
+            const container = document.getElementById('deliverables-content');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-center py-5 text-secondary"><div class="spinner-border spinner-border-sm me-2"></div>Loading deliverables...</div>';
+
+            fetch('/api/v1/research/deliverables/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.has_deliverables) {
+                        // Update stats
+                        document.getElementById('deliverables-total').textContent = data.count;
+                        if (data.latest) {
+                            const latestDate = new Date(data.latest.created_at);
+                            document.getElementById('deliverables-latest-date').textContent = latestDate.toLocaleDateString();
+                        }
+                        // Calculate average size
+                        const avgSize = data.all_deliverables.reduce((sum, d) => sum + d.word_count, 0) / data.count;
+                        document.getElementById('deliverables-avg-size').textContent = Math.round(avgSize).toLocaleString();
+
+                        renderDeliverables(container, data.all_deliverables);
+                    } else {
+                        container.innerHTML = `
+                            <div class="text-center py-5">
+                                <h4 class="text-secondary mb-3">No Deliverables Yet</h4>
+                                <p class="text-muted mb-4">Deliverables are synthesized when ThinkingAgent requests research with specific deliverables.</p>
+                                <p class="text-muted small">The pipeline: ThinkingAgent → ResearchAgent → ContentWriterAgent → Deliverable</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    container.innerHTML = '<div class="text-center text-danger py-5">Failed to load deliverables</div>';
+                    console.error('Deliverables error:', err);
+                });
+        }
+
+        function renderDeliverables(container, deliverables) {
+            let html = `
+                <div class="list-group" style="max-height: 600px; overflow-y: auto;">
+            `;
+
+            deliverables.forEach((d, idx) => {
+                const date = new Date(d.created_at);
+                const docTypeColor = getDocTypeColor(d.doc_type);
+
+                html += `
+                    <div class="list-group-item" style="background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1); margin-bottom: 8px; border-radius: 8px;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge me-2" style="background: ${docTypeColor};">${d.doc_type || 'document'}</span>
+                                    <h6 class="mb-0" style="color: #f9fafb; cursor: pointer;" onclick="toggleDeliverableContent('${d.id}')">
+                                        ${d.title}
+                                    </h6>
+                                </div>
+                                ${d.parent_topic ? `<small class="text-muted d-block mb-2">📚 Research: ${d.parent_topic}</small>` : ''}
+                                <div class="d-flex gap-3 text-muted small">
+                                    <span>📝 ${d.word_count.toLocaleString()} chars</span>
+                                    <span>📅 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-success" onclick="toggleDeliverableContent('${d.id}')" style="border-color: #22c55e; color: #22c55e;">
+                                View
+                            </button>
+                        </div>
+                        <div id="deliverable-content-${d.id}" class="mt-3" style="display: none;">
+                            <div class="p-3 rounded" style="background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.2);">
+                                <div class="deliverable-text" style="color: #e2e8f0; white-space: pre-wrap; font-family: inherit; line-height: 1.7;">
+                                    ${formatDeliverableContent(d.full_text)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function toggleDeliverableContent(id) {
+            const content = document.getElementById(`deliverable-content-${id}`);
+            if (content) {
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function getDocTypeColor(docType) {
+            const colors = {
+                'design_doc': '#8b5cf6',
+                'implementation_plan': '#06b6d4',
+                'recommendations': '#22c55e',
+                'research_report': '#f59e0b',
+                'evaluation_protocol': '#ec4899',
+                'analysis': '#6366f1',
+                'prototype_plan': '#14b8a6',
+                'brief': '#a855f7'
+            };
+            return colors[docType] || '#64748b';
+        }
+
+        function formatDeliverableContent(text) {
+            if (!text) return '<em class="text-muted">No content available</em>';
+
+            // Convert markdown-style formatting to HTML
+            return text
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/^# (.+)$/gm, '<h4 style="color: #f9fafb; margin-top: 1rem;">$1</h4>')
+                .replace(/^## (.+)$/gm, '<h5 style="color: #22c55e; margin-top: 0.75rem;">$1</h5>')
+                .replace(/^### (.+)$/gm, '<h6 style="color: #06b6d4; margin-top: 0.5rem;">$1</h6>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #f9fafb;">$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/^- (.+)$/gm, '<li style="margin-left: 1rem;">$1</li>')
+                .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left: 1rem;">$2</li>');
         }
 
         // ====================================================================

@@ -684,3 +684,63 @@ def system_insights_api(request):
     except Exception as e:
         logger.error(f"Error in system_insights_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def deliverables_api(request):
+    """
+    Session 622: Get synthesized deliverables from the research pipeline.
+    These are documents created by ContentWriterAgent after ResearchAgent completes research.
+    Deliverables have titles starting with '[Deliverable]'.
+    """
+    try:
+        from core.models_unified_system import SelfBlog
+
+        # Get all deliverables (title starts with [Deliverable])
+        deliverables = SelfBlog.objects.filter(
+            title__startswith='[Deliverable]'
+        ).order_by('-created_at')
+
+        deliverables_list = []
+        for d in deliverables[:50]:  # Limit to 50 most recent
+            # Extract parent topic from stats_snapshot if available
+            parent_topic = None
+            doc_type = None
+            if d.stats_snapshot:
+                parent_topic = d.stats_snapshot.get('parent_topic')
+                doc_type = d.stats_snapshot.get('doc_type')
+
+            deliverables_list.append({
+                'id': str(d.id),
+                'title': d.title.replace('[Deliverable] ', ''),  # Clean title for display
+                'full_title': d.title,
+                'intro': d.intro,
+                'full_text': d.full_text,
+                'tone': d.tone,
+                'word_count': len(d.full_text) if d.full_text else 0,
+                'parent_topic': parent_topic,
+                'doc_type': doc_type,
+                'created_at': d.created_at.isoformat(),
+            })
+
+        if deliverables_list:
+            return JsonResponse({
+                'success': True,
+                'has_deliverables': True,
+                'count': len(deliverables_list),
+                'total_in_db': deliverables.count(),
+                'latest': deliverables_list[0],
+                'all_deliverables': deliverables_list,
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'has_deliverables': False,
+                'count': 0,
+                'message': 'No deliverables yet. These are created when ThinkingAgent requests research with deliverables.',
+                'all_deliverables': [],
+            })
+
+    except Exception as e:
+        logger.error(f"Error in deliverables_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

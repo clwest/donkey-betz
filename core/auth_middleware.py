@@ -81,6 +81,8 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/research/self-blog/task/',  # Check task status (prefix match)
         # Session 588: System Insights API
         '/api/v1/research/system-insights/',  # System insights from ThinkingAgent
+        # Session 622: Deliverables API
+        '/api/v1/research/deliverables/',  # Synthesized deliverables from research pipeline
 
         # Session 544: Autonomous Reasoning Engine APIs
         '/api/v1/reasoning/thoughts/',  # View thought records

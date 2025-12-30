@@ -2562,6 +2562,8 @@ urlpatterns = [
     # path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),
+    # Session 622: Deliverables API
+    path('api/v1/research/deliverables/', views_research_demo.deliverables_api, name='research-deliverables'),
 
     # Session 544: Autonomous Reasoning Engine APIs
     path('api/v1/reasoning/thoughts/', views_autonomous_reasoning.thoughts_api, name='reasoning-thoughts'),
