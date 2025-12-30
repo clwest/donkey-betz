@@ -1841,6 +1841,13 @@
                 </button>
             </li>
 
+            <!-- Session 628: Content Calendar -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="content-calendar-tab" data-bs-toggle="tab" data-bs-target="#content-calendar" type="button" role="tab" title="Content Calendar - Scheduled and Past Content">
+                    📅 Calendar
+                </button>
+            </li>
+
             <!-- Session 220 Phase E: Real-Time Collaboration Tab - HIDDEN Session 502 -->
             <li class="nav-item" role="presentation" style="display: none;">
                 <button class="nav-link" id="collaborate-tab" data-bs-toggle="tab" data-bs-target="#collaborate" type="button" role="tab" title="Real-Time Project Collaboration">
@@ -17641,6 +17648,12 @@
             <!-- ============================================================ -->
             {% include "components/panels/autonomous_dashboard_panel.html" %}
             <!-- END AUTONOMOUS SYSTEMS DASHBOARD -->
+
+            <!-- ============================================================ -->
+            <!-- Session 628: CONTENT CALENDAR - Scheduled & Past Content -->
+            <!-- ============================================================ -->
+            {% include "components/panels/content_calendar_panel.html" %}
+            <!-- END CONTENT CALENDAR -->
 
             <!-- ============================================================ -->
             <!-- Session 530: INTELLIGENCE COMMAND CENTER - Unified Dashboard -->

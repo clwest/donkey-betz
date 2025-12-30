@@ -18,6 +18,7 @@ from core.models import EnhancedUserProfile, UserMemoryContext
 from core.personal_ai_assistant import PersonalAIAssistant
 from core.llm_enforcer import LLMEnforcer
 from core.unified_memory_manager import get_memory_manager
+from core.services.memory_context_service import get_memory_context_service
 from core.agents.registry import get_agent_registry
 from advisors.registry import get_advisor_registry
 try:
@@ -7073,12 +7074,17 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             except Exception as e:
                 logger.warning(f"⚠️ Context aggregation failed: {e}")
 
-        # Build comprehensive context using UnifiedMemoryManager
-        recent_memories = self.memory_manager.retrieve_memories(
-            user=self.user,
-            limit=5
-        )
-        memory_context = "\n".join([f"- {m['type']}: {m['content']}" for m in recent_memories])
+        # Session 628: Build comprehensive context using MemoryContextService
+        # This provides decay-weighted preferences, goals, and decisions
+        memory_context_service = get_memory_context_service(self.user)
+        memory_context = memory_context_service.get_prompt_context(self.user)
+        if not memory_context:
+            # Fallback to basic memory retrieval if service returns empty
+            recent_memories = self.memory_manager.retrieve_memories(
+                user=self.user,
+                limit=5
+            )
+            memory_context = "\n".join([f"- {m['type']}: {m['content']}" for m in recent_memories])
 
         # Get agent activity context using UnifiedMemoryManager
         agent_activities = self.memory_manager.get_agent_activities(
