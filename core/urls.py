@@ -307,6 +307,8 @@ from core.views_agent_learning import (
     get_experiment_metrics,
     get_rollback_plan,
     update_remediation_step,
+    # Session 606: Experiment Suggestions
+    get_experiment_suggestions,
     # Session 602: Boardroom Learning Integration
     get_decision_learning_context,
     get_boardroom_learning_summary,
@@ -2769,6 +2771,8 @@ urlpatterns = [
     path('api/experiments/<uuid:experiment_id>/metrics/', get_experiment_metrics, name='experiment-metrics'),
     path('api/experiments/<uuid:experiment_id>/rollback/', get_rollback_plan, name='experiment-rollback'),
     path('api/experiments/<uuid:experiment_id>/remediation/', update_remediation_step, name='experiment-remediation'),
+    # Session 606: Experiment Suggestions
+    path('api/experiments/suggestions/', get_experiment_suggestions, name='experiment-suggestions'),
 
     # Session 368: Dream Validation UI API
     path('api/boardroom/dreams/', get_boardroom_dreams, name='boardroom-dreams'),

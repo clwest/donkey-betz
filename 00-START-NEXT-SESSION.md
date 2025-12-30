@@ -1,47 +1,57 @@
-# Session 606 - Start Here
+# Session 607 - Start Here
 
-**Previous Session:** 605
+**Previous Session:** 606
 **Date:** December 29, 2025
-**Focus:** Experiment Suggestions, Velocity Alerts, or New Feature
+**Focus:** Velocity Alerts, Dashboard Improvements, or New Feature
 
 ---
 
-## Session 605 Accomplishments
+## Session 606 Accomplishments
 
-### Learning Insights for Personal Assistant - COMPLETE
+### Experiment Suggestion Engine - COMPLETE
 
-Integrated the weighted learning system with the PA so users get predictions like "Based on 5 similar experiments, this approach has 73% success rate."
+Built a system that analyzes learning gaps and suggests new experiments to improve system confidence.
 
 | Component | Description |
 |-----------|-------------|
-| **PALearningInsightsService** | Decision detection and experiment matching |
-| **Pilot Status Awareness** | Shows 7 active pilots with days running |
-| **Success Predictions** | Calculates probability from similar experiments |
-| **Learning Summaries** | Formatted context for PA prompt injection |
-| **Recommendations** | Data-driven guidance based on outcomes |
+| **ExperimentSuggestionService** | Core service for gap analysis and suggestions |
+| **Learning Gap Detection** | Identifies themes with insufficient data (< 3 samples) |
+| **Sample Size Calculator** | Recommends 3/5/8 samples for low/medium/high confidence |
+| **Suggestion Generator** | Creates prioritized experiment ideas from patterns |
+| **Coverage Analysis** | Shows 6.3% experiment coverage of canonical decisions |
 
 ### New Service
 
 | File | Purpose |
 |------|---------|
-| `core/services/pa_learning_insights.py` | Learning insights for PA context |
+| `core/services/experiment_suggestion.py` | Session 606 - Experiment suggestion engine |
 
-### Example PA Outputs
+### API Endpoint
 
 ```
-"Should I try financial trading?"
-→ 📊 50% success probability (2 similar experiments in-progress)
+GET /api/experiments/suggestions/
+```
 
-"What pilots are running?"
-→ Lists 7 active pilots with status
+Returns:
+- `gaps`: Learning gaps by theme with priority (critical/high/medium/low)
+- `suggestions`: Prioritized experiment suggestions with rationale
+- `coverage`: Current experiment coverage stats
+- `sample_size_guide`: Recommended sample sizes by confidence level
 
-"Should I treat culture as adaptive?"
-→ 📈 70% success probability (1 success experiment)
+### Current System State
+
+```
+8 experiments total (7 running, 1 success)
+6.3% coverage of canonical decisions
+12 critical learning gaps identified:
+  - product: 512 decisions, 0 experiments (MAJOR GAP)
+  - workflow: 143 decisions, 0 experiments (MAJOR GAP)
+  - infrastructure, image, security: 0 experiments each
 ```
 
 ---
 
-## The Complete Learning System (Sessions 590-605)
+## The Complete Learning System (Sessions 590-606)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -66,7 +76,9 @@ Session 603: Learning Velocity Dashboard
         ↓
 Session 604: Decision Prioritization
         ↓
-Session 605: PA Learning Insights ← COMPLETE!
+Session 605: PA Learning Insights
+        ↓
+Session 606: Experiment Suggestion Engine ← COMPLETE!
 ```
 
 ---
@@ -85,25 +97,25 @@ Session 605: PA Learning Insights ← COMPLETE!
 
 ---
 
-## Session 606 Options
+## Session 607 Options
 
-### Option A: Experiment Suggestion Engine
-- Based on learning gaps, suggest new experiments
-- Identify themes with insufficient data (< 3 samples)
-- Recommend sample sizes for confidence targets
-- Generate experiment ideas from patterns
-
-### Option B: Velocity Alerts
+### Option A: Velocity Alerts
 - Notify when velocity is declining
 - Alert on themes that need attention
 - Surface stale themes with no recent activity
 - Add to notification system (Discord/Web Push)
 
-### Option C: Pilot Progress Dashboard
+### Option B: Pilot Progress Dashboard
 - Visual dashboard showing all pilot progress
 - KPI tracking with target vs actual
 - Timeline view of pilot lifecycle
 - Quick actions (halt, extend, mark complete)
+
+### Option C: Experiment Suggestion UI
+- Add UI panel in Learning Loop tab for suggestions
+- Show gaps and suggestions with actions
+- "Start Experiment" button from suggestions
+- Visual coverage metrics
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -116,25 +128,25 @@ Session 605: PA Learning Insights ← COMPLETE!
 # Start services
 make start && make celery
 
+# Test experiment suggestions
+curl "http://localhost:8000/api/experiments/suggestions/" | python -m json.tool
+
+# Or via shell
+.venv/bin/python manage.py shell -c "
+from core.services.experiment_suggestion import get_experiment_suggestions
+result = get_experiment_suggestions(limit=5)
+print(f'Gaps: {len(result.get(\"gaps\", []))} gaps found')
+print(f'Suggestions: {len(result.get(\"suggestions\", []))} suggestions')
+print(f'Coverage: {result[\"coverage\"][\"experiment_coverage_ratio\"]}%')
+print(f'Message: {result[\"summary\"][\"message\"]}')
+"
+
 # Test PA learning insights
 .venv/bin/python manage.py shell -c "
-from core.services.pa_intelligence_enricher import PAIntelligenceEnricher
-enricher = PAIntelligenceEnricher()
-result = enricher.enrich_context('Should I try financial trading?')
-print(f'Has learning: {result[\"metadata\"].get(\"has_learning_insights\")}')
-print(f'Prediction: {result[\"metadata\"].get(\"learning_prediction\")}')
-"
-
-# Test decision prioritization
-curl "http://localhost:8000/api/boardroom/decisions/prioritized/?limit=5" | python -m json.tool
-
-# Check active pilots
-.venv/bin/python manage.py shell -c "
-from core.models_pilot_readiness import Experiment
-active = Experiment.objects.filter(status='running')
-print(f'Active pilots: {active.count()}')
-for e in active: print(f'  - {e.name[:50]}')
-"
+from core.services.pa_learning_insights import get_pa_learning_insights
+result = get_pa_learning_insights('Should I try financial trading?')
+print(f'Has insights: {result.get(\"has_insights\")}')
+print(f'Prediction: {result.get(\"prediction\")}')"
 ```
 
 ---
@@ -143,6 +155,7 @@ for e in active: print(f'  - {e.name[:50]}')
 
 | File | Purpose |
 |------|---------|
+| `core/services/experiment_suggestion.py` | Session 606 - Suggestion engine |
 | `core/services/pa_learning_insights.py` | Session 605 - PA learning insights |
 | `core/services/pa_intelligence_enricher.py` | Session 565/605 - PA context enrichment |
 | `core/services/decision_prioritization.py` | Session 604 - Priority scoring |
@@ -152,17 +165,19 @@ for e in active: print(f'  - {e.name[:50]}')
 
 ---
 
-## System Stats After Session 605
+## System Stats After Session 606
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 100 (+1 from Session 605) |
+| **Services** | 101 (+1 from Session 606) |
 | **Celery Tasks** | 230 |
 | **Active Pilots** | 7 running, 1 success |
-| **The Learning Loop** | COMPLETE with PA Integration |
+| **Learning Gaps** | 12 critical |
+| **Experiment Coverage** | 6.3% |
+| **The Learning Loop** | COMPLETE with Suggestions! |
 
 ---
 
-**Session 605: Learning Insights for PA - COMPLETE**
+**Session 606: Experiment Suggestion Engine - COMPLETE**
