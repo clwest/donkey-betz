@@ -60133,8 +60133,8 @@ ${item.generated_content}
 
         // Auto-load pilot progress when Growth tab is shown
         document.addEventListener('DOMContentLoaded', function() {
-            // Listen for tab change to Growth
-            const growthTab = document.querySelector('[data-bs-target="#growth"]');
+            // Listen for tab change to Growth (tab ID is agents-growth)
+            const growthTab = document.querySelector('[data-bs-target="#agents-growth"]');
             if (growthTab) {
                 growthTab.addEventListener('shown.bs.tab', function() {
                     loadPilotProgressDashboard();
