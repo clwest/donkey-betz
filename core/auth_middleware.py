@@ -67,6 +67,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/pilot-gates/',  # Session 590: Pilot Readiness Gates
         '/api/artifacts/',  # Session 564: Artifacts sub-tab
         '/api/agent-learning/',  # Session 564: Learning activity
+        '/api/recent-activity/',  # Session 614: Recent Activity panel
 
         # Session 542: Research Demo APIs (read-only visualization for research presentations)
         '/api/v1/research/network-graph/',  # D3.js graph data
