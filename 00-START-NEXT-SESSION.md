@@ -1,8 +1,35 @@
-# Session 614 - Start Here
+# Session 615 - Start Here
 
-**Previous Session:** 613
+**Previous Session:** 614
 **Date:** December 29, 2025
-**Focus:** New Feature - User Choice
+**Focus:** To Be Determined
+
+---
+
+## Session 614 Accomplishments
+
+### Recent Activity Panel - COMPLETE!
+
+Added unified activity feed to Command Center showing system activity flow:
+
+1. **New Service** (`core/services/recent_activity.py`)
+   - Aggregates activity from 4 sources: Dreams, Conversations, Decisions, Pilots
+   - Returns unified timeline with icons, timestamps, and metadata
+   - Proper field mappings: `dreamed_at` for dreams, `started_at` for conversations
+
+2. **New API Endpoint** (`/api/recent-activity/`)
+   - `GET /api/recent-activity/?limit=30&hours=72`
+   - Returns recent activity with counts by type
+
+3. **UI Panel** (Command Center tab)
+   - Purple-themed card after Pilot Progress Dashboard
+   - Filter buttons: All | Dreams | Conversations | Decisions | Pilots
+   - Shows: icon, title, subtitle, time ago
+
+4. **Bug Fix: Celery Multi-Queue Architecture**
+   - Discovered Session 573 added 3 Celery queues (default, long_running, broadcast)
+   - Only default worker was running - long_running tasks were stuck
+   - Fixed by running `make celery` (starts all 3 workers + beat)
 
 ---
 
@@ -88,12 +115,14 @@ Session 611: KPI Alerts - SMART MONITORING!
         |
 Session 612: Dashboard Consolidation - UNIFIED UI!
         |
-Session 613: Pilot Source Tracking - KNOW WHERE PILOTS COME FROM! <-- NEW
+Session 613: Pilot Source Tracking - KNOW WHERE PILOTS COME FROM!
+        |
+Session 614: Recent Activity Panel - SEE THE SYSTEM FLOW! <-- NEW
 ```
 
 ---
 
-## Session 614 Options
+## Session 615 Options
 
 ### Option A: Experiment Recommendations
 - AI-powered next steps based on KPI trends
@@ -113,12 +142,7 @@ Session 613: Pilot Source Tracking - KNOW WHERE PILOTS COME FROM! <-- NEW
 - Alert snooze/acknowledge UI
 - Alert history tracking
 
-### Option D: Recent Activity Panel
-- Add panel showing recent dreams, conversations, boardroom decisions
-- Quick links to see what agents are discussing
-- Feed of system activity that leads to pilots
-
-### Option E: New Feature
+### Option D: User Choice
 - User chooses a different direction
 
 ---
@@ -131,16 +155,16 @@ make start && make celery
 
 # View in UI
 open http://localhost:8000/ai-studio/
-# Go to Growth tab -> Pilot Dashboard (unified)
+# Go to 🧠 Command Center tab -> scroll down to Recent Activity panel
 
-# Test source tracking
+# Test Recent Activity API
 .venv/bin/python manage.py shell -c "
-from core.services.pilot_progress import get_pilot_progress_dashboard
-result = get_pilot_progress_dashboard()
-for exp in result['experiments'][:3]:
-    src = exp.get('source', {})
-    print(f\"{exp['name'][:40]}\")
-    print(f\"  Source: {src.get('type')} - {src.get('topic')[:50]}\")
+from core.services.recent_activity import get_recent_activity
+result = get_recent_activity(limit=10, hours=72)
+print(f'Total: {result[\"total\"]} items')
+print(f'Counts: {result[\"counts\"]}')
+for act in result['activities'][:5]:
+    print(f'{act[\"icon\"]} [{act[\"type\"]}] {act[\"title\"][:40]}')
 "
 ```
 
@@ -150,26 +174,28 @@ for exp in result['experiments'][:3]:
 
 | File | Purpose |
 |------|---------|
-| `ai_core/templates/ai_image_studio.html` | Unified Pilot Dashboard UI with source badges |
+| `ai_core/templates/ai_image_studio.html` | Command Center with Recent Activity panel |
+| `core/services/recent_activity.py` | NEW - Recent activity aggregation service |
 | `core/services/pilot_progress.py` | Dashboard API with source tracking |
 | `core/services/kpi_alerts.py` | KPI alert detection service |
 | `core/services/auto_kpi_tracking.py` | Auto KPI tracking service |
 
 ---
 
-## System Stats After Session 613
+## System Stats After Session 614
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 104 |
+| **Services** | 105 (+1 recent_activity) |
 | **Active Pilots** | 7 running, 1 success |
 | **Pilot Health** | 100% on_track |
 | **KPI Tracking** | 100% auto-tracked |
 | **KPI Alerts** | 5 types, 3 severities |
+| **Recent Activity** | 4 sources unified |
 | **Dashboard** | Unified with source tracking |
 
 ---
 
-**Session 613: Pilot Source Tracking - Now you can see WHERE each pilot came from!**
+**Session 614: Recent Activity Panel - See the living system flow in Command Center!**
