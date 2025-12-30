@@ -90,6 +90,14 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Session 616: Clean up old spider item hashes
+    'cleanup-spider-item-hashes': {
+        'task': 'core.tasks.cleanup_spider_item_hashes',
+        'schedule': crontab(hour=3, minute=30),  # Daily at 3:30 AM
+        'options': {
+            'expires': 3600,
+        }
+    },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
     'evaluate-completed-predictions': {

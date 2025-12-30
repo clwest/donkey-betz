@@ -724,45 +724,75 @@ class Experiment(models.Model):
     def __str__(self):
         return f"Experiment: {self.name} [{self.status}]"
 
+    # Session 617: KPI templates based on impact area
+    KPI_TEMPLATES = {
+        'audio': {'kpi': 'Audio Quality Score', 'target': '85%', 'owner': 'AudioAgent'},
+        'video': {'kpi': 'Video Engagement Rate', 'target': '75%', 'owner': 'VideoAgent'},
+        'product': {'kpi': 'User Adoption Rate', 'target': '60%', 'owner': 'ProductTeam'},
+        'research': {'kpi': 'Insight Quality Score', 'target': '80%', 'owner': 'ResearchAgent'},
+        'content': {'kpi': 'Content Performance', 'target': '70%', 'owner': 'ContentAgent'},
+        'business': {'kpi': 'Business Impact Score', 'target': '65%', 'owner': 'BusinessTeam'},
+        'technical': {'kpi': 'Technical Success Rate', 'target': '90%', 'owner': 'TechTeam'},
+        'creative': {'kpi': 'Creative Quality Score', 'target': '80%', 'owner': 'CreativeDirector'},
+        'marketing': {'kpi': 'Marketing ROI', 'target': '150%', 'owner': 'MarketingTeam'},
+        'operations': {'kpi': 'Operational Efficiency', 'target': '85%', 'owner': 'OpsTeam'},
+    }
+    DEFAULT_KPI = {'kpi': 'Success Rate', 'target': '75%', 'owner': 'System'}
+
     @classmethod
     def create_from_pilot(cls, pilot: PilotExecution):
         """
         Create an experiment from a pilot execution.
-        Extracts KPIs from the AI-generated success_metrics checklist item.
+        Session 617: Enhanced to auto-populate KPIs based on decision impact area.
         """
+        import re
         gate = pilot.gate
         decision = gate.decision
 
-        # Get success metrics from checklist
-        success_metrics_item = gate.checklist_items.filter(item_type='success_metrics').first()
-        extracted = {}
-        primary_kpi = ""
-        target_value = ""
+        # Session 617: Clean the topic name
+        topic = decision.topic or 'Experiment'
+        # Remove redundant prefixes
+        for prefix in [r'^Experiment:\s*', r'^Pilot:\s*', r'^Discussion:\s*',
+                       r'^Panel:\s*', r'^\[Learned\]\s*', r'^\[Synthesis\]\s*',
+                       r'^Research:\s*', r'^Research topic:\s*', r'^Topic:\s*']:
+            topic = re.sub(prefix, '', topic, flags=re.IGNORECASE).strip()
+        if topic and topic[0].islower():
+            topic = topic[0].upper() + topic[1:]
 
+        # Session 617: Get KPI template based on impact area
+        impact_area = decision.impact_area or 'general'
+        template = cls.KPI_TEMPLATES.get(impact_area, cls.DEFAULT_KPI)
+
+        # Try to extract percentage targets from key_insights
+        insights = decision.key_insights or []
+        insights_text = ' '.join(str(i) for i in insights) if isinstance(insights, list) else str(insights)
+        targets = re.findall(r'(\d+(?:\.\d+)?)\s*%', insights_text)
+        if targets:
+            template = template.copy()
+            template['target'] = f'{targets[0]}%'
+
+        # Build hypothesis from suggested_feature or decision topic
+        hypothesis = decision.suggested_feature[:500] if decision.suggested_feature else f'Test {impact_area} improvements'
+
+        # Get success metrics from checklist if available
+        extracted = {}
+        success_metrics_item = gate.checklist_items.filter(item_type='success_metrics').first()
         if success_metrics_item and success_metrics_item.documentation_notes:
-            # Parse the AI-generated content for KPIs
-            content = success_metrics_item.documentation_notes
             extracted = {
-                'raw_content': content[:1000],  # Store first 1000 chars
+                'raw_content': success_metrics_item.documentation_notes[:1000],
                 'source': 'ai_generated',
             }
 
-            # Try to extract primary KPI (look for patterns like "5%", "150%", etc.)
-            import re
-            kpi_matches = re.findall(r'(\d+(?:\.\d+)?%?)\s*(?:engagement|ROI|rate|score)', content, re.IGNORECASE)
-            if kpi_matches:
-                target_value = kpi_matches[0]
-                primary_kpi = "Engagement/ROI target"
-
         experiment = cls.objects.create(
             pilot=pilot,
-            name=f"Experiment: {decision.topic[:100]}",
-            hypothesis=f"Testing: {decision.topic}",
-            primary_kpi=primary_kpi,
-            target_value=target_value,
+            name=topic[:200],
+            hypothesis=hypothesis,
+            primary_kpi=template['kpi'],
+            target_value=template['target'],
+            current_value='0%',  # Session 617: Set initial value
+            kpi_owner=template['owner'],
             extracted_metrics=extracted,
-            kpi_owner="Unassigned",  # To be filled in
-            halt_conditions=cls.get_default_halt_conditions(),  # Session 599
+            halt_conditions=cls.get_default_halt_conditions(),
         )
 
         return experiment

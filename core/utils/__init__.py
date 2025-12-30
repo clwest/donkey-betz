@@ -25,6 +25,9 @@ from .url_validator import (
     get_allowed_domains,
 )
 
+# Session 617: Title cleaning
+from .title_cleaner import clean_title, clean_titles_dict
+
 __all__ = [
     # Temp files
     'temp_file',
@@ -45,4 +48,7 @@ __all__ = [
     'validate_url_permissive',
     'is_private_ip',
     'get_allowed_domains',
+    # Title cleaning
+    'clean_title',
+    'clean_titles_dict',
 ]
