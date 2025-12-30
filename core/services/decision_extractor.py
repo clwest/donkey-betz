@@ -497,29 +497,42 @@ def get_decision_extractor() -> DecisionExtractor:
 def determine_gate_risk_level(decision) -> Optional[str]:
     """
     Session 593: Determine if a decision needs a Pilot Readiness Gate and at what risk level.
+    Session 617: Expanded criteria to include more decision types.
 
     Rules:
     - impact_area='security' → 'high' risk (6-item safety checklist)
+    - impact_area='infrastructure' → 'high' risk
     - decision_type='policy' → 'medium' risk (3-item checklist)
+    - decision_type='architecture' → 'medium' risk
+    - decision_type='guideline' → 'medium' risk
+    - decision_type='experiment' → 'low' risk (fast-track checklist)
+    - decision_type='product' → 'low' risk
+    - decision_type='pipeline' → 'low' risk
+    - decision_type='research' → 'low' risk
     - Otherwise → None (no gate needed)
 
     Args:
         decision: AgentDecisionSummary instance
 
     Returns:
-        Risk level string ('high', 'medium') or None if no gate needed
+        Risk level string ('high', 'medium', 'low') or None if no gate needed
     """
-    # Security decisions always get HIGH risk gates
-    if decision.impact_area == 'security':
-        logger.info(f"Session 593: Decision '{decision.topic[:50]}...' has impact_area='security' → HIGH risk gate")
+    # HIGH risk: Security and infrastructure decisions
+    if decision.impact_area in ('security', 'infrastructure'):
+        logger.info(f"Session 617: Decision '{decision.topic[:50]}...' has impact_area='{decision.impact_area}' → HIGH risk gate")
         return 'high'
 
-    # Policy decisions get MEDIUM risk gates
-    if decision.decision_type == 'policy':
-        logger.info(f"Session 593: Decision '{decision.topic[:50]}...' has decision_type='policy' → MEDIUM risk gate")
+    # MEDIUM risk: Policy, architecture, guideline decisions
+    if decision.decision_type in ('policy', 'architecture', 'guideline'):
+        logger.info(f"Session 617: Decision '{decision.topic[:50]}...' has decision_type='{decision.decision_type}' → MEDIUM risk gate")
         return 'medium'
 
-    # No gate needed for other decisions
+    # LOW risk: Experiment, product, pipeline, research decisions
+    if decision.decision_type in ('experiment', 'product', 'pipeline', 'research'):
+        logger.info(f"Session 617: Decision '{decision.topic[:50]}...' has decision_type='{decision.decision_type}' → LOW risk gate")
+        return 'low'
+
+    # No gate needed for other decisions (discussion, dream_promotion, etc.)
     return None
 
 
@@ -564,78 +577,108 @@ def auto_create_gate_for_decision(decision) -> Optional['PilotReadinessGate']:
         return None
 
 
-def batch_create_gates_for_existing_decisions(dry_run: bool = True) -> Dict[str, Any]:
+def batch_create_gates_for_existing_decisions(dry_run: bool = True, limit: int = None) -> Dict[str, Any]:
     """
     Session 593: Batch create Pilot Readiness Gates for existing decisions that qualify.
+    Session 617: Expanded to handle all risk levels (high, medium, low).
 
     This retroactively creates gates for decisions that were made before the
     auto-gate feature was implemented.
 
     Args:
         dry_run: If True, only count what would be created. If False, create gates.
+        limit: Optional limit on number of gates to create (useful for large batches)
 
     Returns:
-        Dict with counts and results:
-        - security_count: Number of security decisions processed
-        - policy_count: Number of policy decisions processed
-        - gates_created: Number of gates actually created
-        - errors: List of any errors encountered
+        Dict with counts and results by risk level
     """
     from core.models_unified_system import AgentDecisionSummary
     from core.models_pilot_readiness import PilotReadinessGate
+    from django.db.models import Q
 
     results = {
         'dry_run': dry_run,
-        'security_count': 0,
-        'policy_count': 0,
+        'high_count': 0,
+        'medium_count': 0,
+        'low_count': 0,
         'gates_created': 0,
+        'skipped': 0,
         'errors': []
     }
 
     # Get existing gate decision IDs to avoid duplicates
     existing_gate_ids = set(PilotReadinessGate.objects.values_list('decision_id', flat=True))
 
-    # Security decisions needing HIGH risk gates
-    security_decisions = AgentDecisionSummary.objects.filter(
-        impact_area='security'
+    # HIGH risk: security, infrastructure impact areas
+    high_decisions = AgentDecisionSummary.objects.filter(
+        impact_area__in=['security', 'infrastructure']
     ).exclude(id__in=existing_gate_ids)
+    results['high_count'] = high_decisions.count()
 
-    results['security_count'] = security_decisions.count()
-    logger.info(f"Session 593 Batch: Found {results['security_count']} security decisions needing HIGH gates")
-
-    if not dry_run:
-        for decision in security_decisions:
-            try:
-                gate = PilotReadinessGate.create_for_decision(decision, risk_level='high')
-                results['gates_created'] += 1
-                logger.info(f"  Created HIGH gate for: {decision.topic[:50]}...")
-            except Exception as e:
-                error_msg = f"Failed to create gate for {decision.id}: {e}"
-                results['errors'].append(error_msg)
-                logger.error(f"  {error_msg}")
-
-    # Policy decisions needing MEDIUM risk gates (exclude security to avoid duplicates)
-    policy_decisions = AgentDecisionSummary.objects.filter(
-        decision_type='policy'
+    # MEDIUM risk: policy, architecture, guideline types (exclude high risk areas)
+    medium_decisions = AgentDecisionSummary.objects.filter(
+        decision_type__in=['policy', 'architecture', 'guideline']
     ).exclude(
-        impact_area='security'
+        impact_area__in=['security', 'infrastructure']
     ).exclude(id__in=existing_gate_ids)
+    results['medium_count'] = medium_decisions.count()
 
-    results['policy_count'] = policy_decisions.count()
-    logger.info(f"Session 593 Batch: Found {results['policy_count']} policy decisions needing MEDIUM gates")
+    # LOW risk: experiment, product, pipeline, research types (exclude higher risk)
+    low_decisions = AgentDecisionSummary.objects.filter(
+        decision_type__in=['experiment', 'product', 'pipeline', 'research']
+    ).exclude(
+        impact_area__in=['security', 'infrastructure']
+    ).exclude(
+        decision_type__in=['policy', 'architecture', 'guideline']
+    ).exclude(id__in=existing_gate_ids)
+    results['low_count'] = low_decisions.count()
 
-    if not dry_run:
-        for decision in policy_decisions:
-            try:
-                gate = PilotReadinessGate.create_for_decision(decision, risk_level='medium')
-                results['gates_created'] += 1
-                logger.info(f"  Created MEDIUM gate for: {decision.topic[:50]}...")
-            except Exception as e:
-                error_msg = f"Failed to create gate for {decision.id}: {e}"
-                results['errors'].append(error_msg)
-                logger.error(f"  {error_msg}")
+    total_eligible = results['high_count'] + results['medium_count'] + results['low_count']
+    logger.info(f"Session 617 Batch: Found {total_eligible} decisions needing gates")
+    logger.info(f"  HIGH: {results['high_count']}, MEDIUM: {results['medium_count']}, LOW: {results['low_count']}")
 
-    total_eligible = results['security_count'] + results['policy_count']
-    logger.info(f"Session 593 Batch: Complete - {results['gates_created']}/{total_eligible} gates created")
+    if dry_run:
+        return results
+
+    # Process gates with optional limit
+    gates_to_create = limit if limit else total_eligible
+
+    # HIGH risk gates
+    for decision in high_decisions:
+        if results['gates_created'] >= gates_to_create:
+            results['skipped'] = total_eligible - results['gates_created']
+            break
+        try:
+            PilotReadinessGate.create_for_decision(decision, risk_level='high')
+            results['gates_created'] += 1
+            logger.info(f"  Created HIGH gate for: {decision.topic[:50]}...")
+        except Exception as e:
+            results['errors'].append(f"HIGH gate failed for {decision.id}: {e}")
+
+    # MEDIUM risk gates
+    for decision in medium_decisions:
+        if results['gates_created'] >= gates_to_create:
+            results['skipped'] = total_eligible - results['gates_created']
+            break
+        try:
+            PilotReadinessGate.create_for_decision(decision, risk_level='medium')
+            results['gates_created'] += 1
+            logger.info(f"  Created MEDIUM gate for: {decision.topic[:50]}...")
+        except Exception as e:
+            results['errors'].append(f"MEDIUM gate failed for {decision.id}: {e}")
+
+    # LOW risk gates
+    for decision in low_decisions:
+        if results['gates_created'] >= gates_to_create:
+            results['skipped'] = total_eligible - results['gates_created']
+            break
+        try:
+            PilotReadinessGate.create_for_decision(decision, risk_level='low')
+            results['gates_created'] += 1
+            logger.info(f"  Created LOW gate for: {decision.topic[:50]}...")
+        except Exception as e:
+            results['errors'].append(f"LOW gate failed for {decision.id}: {e}")
+
+    logger.info(f"Session 617 Batch: Complete - {results['gates_created']}/{total_eligible} gates created")
 
     return results
