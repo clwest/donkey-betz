@@ -83,6 +83,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/research/system-insights/',  # System insights from ThinkingAgent
         # Session 622: Deliverables API
         '/api/v1/research/deliverables/',  # Synthesized deliverables from research pipeline
+        # Session 622: Document Registry / Initiatives API
+        '/api/v1/initiatives/',  # View initiatives and their stages
+        '/api/v1/initiatives/populate/',  # Auto-populate from deliverables
 
         # Session 544: Autonomous Reasoning Engine APIs
         '/api/v1/reasoning/thoughts/',  # View thought records
