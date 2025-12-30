@@ -8032,7 +8032,14 @@ Example: 0.8|AI Content Studio"""
                                     break
 
                 # Step 3: Calculate composite score
-                composite = (dream.creativity_score + actionability + relevance) / 3.0
+                # Session 627: Don't penalize dreams when no projects match
+                # If relevance is very low (no matching project), use 2-factor formula
+                if relevance < 0.2 and not matched_project_id:
+                    # No relevant project - score based on creativity and actionability only
+                    composite = (dream.creativity_score * 0.4 + actionability * 0.6)
+                else:
+                    # Has relevant project - include relevance in scoring
+                    composite = (dream.creativity_score * 0.25 + actionability * 0.45 + relevance * 0.30)
 
                 # Update dream scores
                 dream.actionability_score = actionability
