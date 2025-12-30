@@ -1,40 +1,39 @@
-# Session 611 - Start Here
+# Session 612 - Start Here
 
-**Previous Session:** 610
+**Previous Session:** 611
 **Date:** December 29, 2025
 **Focus:** New Feature - User Choice
 
 ---
 
-## Session 610 Accomplishments
+## Session 611 Accomplishments
 
-### KPI Trend Visualization UI - COMPLETE!
+### KPI Alerts System - COMPLETE!
 
-Added trend visualization to the Pilot Progress Dashboard:
+Added intelligent KPI alerting to monitor experiment health:
 
-1. **Trend Summary Stats** (Top of Dashboard)
-   - Shows count of pilots trending up (green)
-   - Shows count of pilots stable (gray)
-   - Shows count of pilots trending down (red)
+1. **Alert Detection Service** (`core/services/kpi_alerts.py`)
+   - 5 alert types: kpi_drop, trend_reversal, stalled, off_track, target_exceeded
+   - 3 severity levels: critical, warning, info
+   - Automatic threshold-based detection
+   - Configurable thresholds (20% drop, 7 day stall, 30% off-track)
 
-2. **Trend Badges on Pilot Cards**
-   - Each pilot card shows a clickable trend badge
-   - Icons: 📈 Up | ➡️ Stable | 📉 Down | 📊 Collecting Data
-   - Color-coded: Green/Gray/Red based on direction
-   - Shows number of data points collected
+2. **Discord Integration**
+   - Real-time alerts to #system-status channel
+   - Color-coded by severity (red/yellow/blue)
+   - Grouped by severity with recommended actions
+   - Positive alerts for target exceeded
 
-3. **Trend Detail Modal** (Click badge to open)
-   - Shows current value vs target
-   - SVG sparkline chart with 30-day history
-   - Area fill under the line for visual impact
-   - Data points table with last 10 readings
-   - Color-coded based on trend direction
+3. **Celery Automation**
+   - `check_kpi_alerts`: Runs every hour at :30
+   - `send_weekly_kpi_summary`: Runs Monday 9 AM
+   - Automatic Discord notifications for critical/warning
 
-4. **Sparkline Generator**
-   - Pure JavaScript SVG generation
-   - No external charting library needed
-   - Responsive design, scales to container
-   - Shows data points as circles on the line
+4. **Dashboard UI**
+   - KPI Alerts section in Pilot Progress Dashboard
+   - Color-coded alert cards
+   - Shows severity, type, message, and recommended action
+   - Auto-loads when Growth tab is shown
 
 ---
 
@@ -42,7 +41,7 @@ Added trend visualization to the Pilot Progress Dashboard:
 
 ```
 8 total pilots:
-  Running: 7 - ALL KPI TRACKED + TREND VISUALIZATION
+  Running: 7 - ALL KPI TRACKED + ALERTS
   Completed: 1 - SUCCESS at 150%
 
 Trend Summary:
@@ -51,15 +50,15 @@ Trend Summary:
   Trending Down: 0
   Collecting Data: 6
 
-KPI Tracking:
-  Auto-updates: Every hour
-  Sparkline Charts: 30-day history
-  Click-to-view: Detailed trend modal
+KPI Alerts:
+  Critical: 0
+  Warning: 0
+  Info: 0 (all healthy!)
 ```
 
 ---
 
-## The Complete Learning System (Sessions 590-610)
+## The Complete Learning System (Sessions 590-611)
 
 ```
 Session 590: Pilot Readiness Gate
@@ -78,29 +77,32 @@ Session 608: Fixed All Pilot KPIs - ALL HEALTHY!
         |
 Session 609: Auto KPI Tracking - REAL DATA!
         |
-Session 610: Trend Visualization UI - SPARKLINES! <-- NEW
+Session 610: Trend Visualization UI - SPARKLINES!
+        |
+Session 611: KPI Alerts - SMART MONITORING! <-- NEW
 ```
 
 ---
 
-## Session 611 Options
+## Session 612 Options
 
-### Option A: KPI Alerts
-- Alert when KPI drops significantly
-- Discord notifications for trend changes
-- "Experiment X is declining" warnings
-- Weekly trend summary
-
-### Option B: Experiment Recommendations
-- Suggest actions based on KPI trends
+### Option A: Experiment Recommendations
+- AI-powered next steps based on KPI trends
 - "MIT Tech Review insights are high - consider scaling"
 - "Content agent KPIs low - investigate"
-- AI-powered next steps
+- Proactive optimization suggestions
 
-### Option C: Dashboard Enhancements
+### Option B: Dashboard Enhancements
 - Mini sparklines inline on pilot cards
 - Trend comparison view
 - Export trend data to CSV
+- Historical alert log
+
+### Option C: Alert Tuning
+- Adjust alert thresholds per experiment
+- Custom alert rules
+- Alert snooze/acknowledge UI
+- Alert history tracking
 
 ### Option D: New Feature
 - User chooses a different direction
@@ -116,15 +118,18 @@ make start && make celery
 # View in UI
 open http://localhost:8000/ai-studio/
 # Go to Growth tab -> Pilot Progress Dashboard
-# Click on trend badge to see sparkline chart
+# See KPI Alerts section (shows when alerts exist)
 
-# Test trend API
+# Test alerts API
+curl -s http://localhost:8000/api/experiments/kpi-alerts/
+
+# Test in shell
 .venv/bin/python manage.py shell -c "
-from core.services.auto_kpi_tracking import get_all_kpi_trends
-result = get_all_kpi_trends()
-print(f'Trending up: {result[\"summary\"][\"trending_up\"]}')
-print(f'Stable: {result[\"summary\"][\"stable\"]}')
-print(f'Trending down: {result[\"summary\"][\"trending_down\"]}')
+from core.services.kpi_alerts import check_kpi_alerts
+result = check_kpi_alerts()
+print(f'Alerts: {result[\"alerts_generated\"]}')
+print(f'Critical: {result[\"summary\"][\"critical\"]}')
+print(f'Warning: {result[\"summary\"][\"warning\"]}')
 "
 ```
 
@@ -134,26 +139,27 @@ print(f'Trending down: {result[\"summary\"][\"trending_down\"]}')
 
 | File | Purpose |
 |------|---------|
-| `ai_core/templates/ai_image_studio.html` | Session 610 - Trend UI, sparkline, modal |
-| `core/services/auto_kpi_tracking.py` | Session 609 - KPI tracking service |
-| `core/models_pilot_readiness.py` | KPISnapshot model |
-| `core/views_agent_learning.py` | Trend API endpoints |
+| `core/services/kpi_alerts.py` | Session 611 - KPI alert detection service |
+| `core/tasks.py` | Celery tasks including check_kpi_alerts |
+| `core/celery.py` | Beat schedules for alerts |
+| `core/views_agent_learning.py` | Alert API endpoints |
+| `ai_core/templates/ai_image_studio.html` | Alert UI section |
 
 ---
 
-## System Stats After Session 610
+## System Stats After Session 611
 
 | Component | Count |
 |-----------|-------|
 | **Agents** | 71 (47 routable) |
 | **Spiders** | 77 (72 working) |
-| **Services** | 103 |
+| **Services** | 104 (+1 kpi_alerts) |
 | **Active Pilots** | 7 running, 1 success |
 | **Pilot Health** | 100% on_track |
 | **KPI Tracking** | 100% auto-tracked |
-| **Trend Visualization** | Sparkline charts with click-to-detail |
-| **The Learning Loop** | COMPLETE + VISUALIZED! |
+| **KPI Alerts** | 5 types, 3 severities |
+| **The Learning Loop** | COMPLETE + MONITORED! |
 
 ---
 
-**Session 610: Trend Visualization UI - See your KPI history in beautiful sparklines!**
+**Session 611: KPI Alerts - Smart monitoring that watches your pilots 24/7!**

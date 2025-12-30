@@ -7573,6 +7573,19 @@
                                     </div>
                                 </div>
 
+                                <!-- Session 611: KPI Alerts Section -->
+                                <div id="kpi-alerts-section" class="mb-4" style="display: none;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0" style="color: #ef4444;">🚨 KPI Alerts</h6>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="loadKPIAlerts()" title="Check for alerts">
+                                            🔄
+                                        </button>
+                                    </div>
+                                    <div id="kpi-alerts-list">
+                                        <!-- Populated by JS -->
+                                    </div>
+                                </div>
+
                                 <!-- Attention Needed Section -->
                                 <div id="pilot-attention-section" class="mb-4" style="display: none;">
                                     <h6 style="color: #f59e0b;">🔔 Requires Attention</h6>
@@ -60125,9 +60138,96 @@ ${item.generated_content}
             if (growthTab) {
                 growthTab.addEventListener('shown.bs.tab', function() {
                     loadPilotProgressDashboard();
+                    loadKPIAlerts();  // Session 611: Also load alerts
                 });
             }
         });
+
+        // Session 611: Load KPI Alerts
+        async function loadKPIAlerts() {
+            /**
+             * Session 611: Load KPI alerts for all running experiments.
+             * Shows critical/warning/info alerts with recommended actions.
+             */
+            console.log('🚨 Loading KPI Alerts...');
+
+            try {
+                const response = await authenticatedFetch('/api/experiments/kpi-alerts/');
+                const data = await response.json();
+
+                const alertsSection = document.getElementById('kpi-alerts-section');
+                const alertsList = document.getElementById('kpi-alerts-list');
+
+                if (!data.success) {
+                    console.error('Error loading KPI alerts:', data.error);
+                    alertsSection.style.display = 'none';
+                    return;
+                }
+
+                const alerts = data.alerts || [];
+
+                if (alerts.length === 0) {
+                    alertsSection.style.display = 'none';
+                    console.log('✅ No KPI alerts');
+                    return;
+                }
+
+                // Show alerts section
+                alertsSection.style.display = 'block';
+
+                // Severity styling
+                const severityStyles = {
+                    'critical': { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', icon: '🔴', label: 'CRITICAL' },
+                    'warning': { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', icon: '🟡', label: 'WARNING' },
+                    'info': { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6', icon: '🔵', label: 'INFO' }
+                };
+
+                // Alert type icons
+                const typeIcons = {
+                    'kpi_drop': '📉',
+                    'trend_reversal': '↩️',
+                    'stalled': '⏸️',
+                    'off_track': '🎯',
+                    'target_exceeded': '🎉'
+                };
+
+                alertsList.innerHTML = alerts.map(alert => {
+                    const style = severityStyles[alert.severity] || severityStyles['info'];
+                    const typeIcon = typeIcons[alert.type] || '📋';
+
+                    return `
+                        <div class="mb-2" style="background: ${style.bg}; border: 1px solid ${style.border}; border-radius: 8px; padding: 12px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span style="color: ${style.border}; font-weight: 600;">
+                                        ${style.icon} ${style.label}
+                                    </span>
+                                    <span class="ms-2 text-muted small">${typeIcon} ${alert.type.replace(/_/g, ' ')}</span>
+                                </div>
+                                <span class="text-muted small">${alert.kpi}</span>
+                            </div>
+                            <div class="mt-1">
+                                <strong style="color: #e5e7eb;">${alert.experiment_name}</strong>
+                            </div>
+                            <div class="mt-1 small" style="color: ${style.border};">
+                                ${alert.message}
+                            </div>
+                            ${alert.recommended_action ? `
+                                <div class="mt-2 small" style="color: #a3e635;">
+                                    💡 ${alert.recommended_action}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                console.log('✅ KPI Alerts loaded:', alerts.length, 'alerts');
+
+            } catch (error) {
+                console.error('Error loading KPI alerts:', error);
+                document.getElementById('kpi-alerts-section').style.display = 'none';
+            }
+        }
 
         // Session 610: Show trend detail modal with sparkline
         async function showTrendDetail(experimentId, experimentName) {
