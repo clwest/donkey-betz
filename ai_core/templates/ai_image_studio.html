@@ -7176,11 +7176,19 @@
                                     <span class="badge" style="background: #14b8a6;" id="icc-pilot-gates-count">0 Gates</span>
                                     <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #14b8a6; color: #fff;" id="icc-gate-status-filter" onchange="loadPilotGates(this.value)">
                                         <option value="">All Gates</option>
-                                        <option value="not_started">⬜ Not Started</option>
-                                        <option value="in_progress">🔄 In Progress</option>
-                                        <option value="ready">✅ Ready</option>
-                                        <option value="approved">🎯 Approved</option>
-                                        <option value="blocked">🚫 Blocked</option>
+                                        <optgroup label="By Status">
+                                            <option value="not_started">⬜ Not Started</option>
+                                            <option value="in_progress">🔄 In Progress</option>
+                                            <option value="ready">✅ Ready</option>
+                                            <option value="approved">🎯 Approved</option>
+                                            <option value="blocked">🚫 Blocked</option>
+                                            <option value="waived">⏭️ Waived</option>
+                                        </optgroup>
+                                        <optgroup label="By Risk Level">
+                                            <option value="risk:high">🔴 High Risk</option>
+                                            <option value="risk:medium">🟡 Medium Risk</option>
+                                            <option value="risk:low">🟢 Low Risk</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                             </div>
@@ -58485,7 +58493,12 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
             try {
                 let url = '/api/pilot-gates/';
                 if (filter) {
-                    url += `?status=${filter}`;
+                    // Session 617: Support risk level filters (risk:high, risk:medium, risk:low)
+                    if (filter.startsWith('risk:')) {
+                        url += `?risk_level=${filter.substring(5)}`;
+                    } else {
+                        url += `?status=${filter}`;
+                    }
                 }
 
                 const response = await fetch(url);

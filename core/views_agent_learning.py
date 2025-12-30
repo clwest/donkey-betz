@@ -2486,6 +2486,7 @@ def get_pilot_readiness_gates(request):
     """
     try:
         from core.models_pilot_readiness import PilotReadinessGate
+        from core.utils.title_cleaner import clean_title  # Session 617: Clean redundant prefixes
 
         limit = int(request.GET.get('limit', 20))
         status = request.GET.get('status')
@@ -2537,7 +2538,7 @@ def get_pilot_readiness_gates(request):
             gates_data.append({
                 'id': str(gate.id),
                 'decision_id': str(gate.decision.id),
-                'decision_topic': gate.decision.topic,
+                'decision_topic': clean_title(gate.decision.topic, max_length=80),  # Session 617: Clean titles
                 'decision_type': gate.decision.decision_type,
                 'impact_area': gate.decision.impact_area,
                 'status': gate.status,
