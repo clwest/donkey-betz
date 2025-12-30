@@ -404,8 +404,10 @@ class PilotProgressService:
         running = experiments.filter(status='running').count()
         completed = total - running
 
-        # Success rate for completed experiments
+        # Outcome counts for completed experiments
         success = experiments.filter(status='success').count()
+        failure = experiments.filter(status='failure').count()
+        partial = experiments.filter(status='partial').count()
         success_rate = round((success / completed * 100), 1) if completed > 0 else 0
 
         # Average days running for active experiments
@@ -430,7 +432,9 @@ class PilotProgressService:
             'total_experiments': total,
             'running': running,
             'completed': completed,
-            'success_count': success,
+            'success': success,
+            'failure': failure,
+            'partial': partial,
             'success_rate': success_rate,
             'avg_days_running': avg_days,
             'kpi_completion_rate': kpi_completion,
