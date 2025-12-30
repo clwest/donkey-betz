@@ -610,7 +610,7 @@ class SystemRealityChecker:
                 return
 
             approved_gates = PilotReadinessGate.objects.filter(
-                approved_at__gte=self.cutoff
+                gate_approved_at__gte=self.cutoff
             ).count()
 
             # Pilots
