@@ -292,6 +292,40 @@ Generate a BASIC REVIEW CHECKLIST for this decision. Include:
 
 Keep it simple and comprehensive.
 """,
+
+            # Session 617: Added consent_lifecycle prompt
+            'consent_lifecycle': f"""
+{base_context}
+
+Generate a CONSENT LIFECYCLE document for this decision. Include:
+
+1. **Consent Requirements**
+   - What user consent is needed?
+   - What data/actions require explicit consent?
+   - Are there implicit vs explicit consent scenarios?
+
+2. **Consent Collection**
+   - How will consent be obtained?
+   - Consent UI/UX requirements
+   - Clear language requirements
+
+3. **Consent Storage**
+   - Where is consent recorded?
+   - Audit trail requirements
+   - Timestamp and version tracking
+
+4. **Consent Revocation**
+   - How can users withdraw consent?
+   - What happens when consent is revoked?
+   - Data deletion/retention implications
+
+5. **Compliance Considerations**
+   - GDPR requirements (if applicable)
+   - CCPA requirements (if applicable)
+   - Age verification needs
+
+Focus on practical, implementable consent flows.
+""",
         }
 
         return prompts.get(item_type)
