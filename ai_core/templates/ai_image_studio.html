@@ -60037,10 +60037,10 @@ ${item.generated_content}
 
         // Auto-load pilot progress when Growth tab is shown
         document.addEventListener('DOMContentLoaded', function() {
-            // Listen for tab change to Growth (tab ID is agents-growth)
-            const growthTab = document.querySelector('[data-bs-target="#agents-growth"]');
-            if (growthTab) {
-                growthTab.addEventListener('shown.bs.tab', function() {
+            // Listen for tab change to Command Center (intelligence-command-center)
+            const commandCenterTab = document.querySelector('[data-bs-target="#intelligence-command-center"]');
+            if (commandCenterTab) {
+                commandCenterTab.addEventListener('shown.bs.tab', function() {
                     loadPilotProgressDashboard();
                     loadKPIAlerts();  // Session 611: Also load alerts
                     loadRecentActivity();  // Session 614: Load activity feed
