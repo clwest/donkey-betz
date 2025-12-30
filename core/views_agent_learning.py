@@ -1586,9 +1586,10 @@ def get_learning_velocity_dashboard(request):
         service = LearningVelocityService()
         data = service.get_velocity_dashboard(days)
 
+        # Session 619: Frontend expects data under 'dashboard' key
         return JsonResponse({
             'success': True,
-            **data
+            'dashboard': data
         })
 
     except Exception as e:
