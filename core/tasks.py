@@ -833,12 +833,17 @@ def run_spider_network(self):
                 spider_class = registry.get_spider_class(spider_name)
                 if spider_class:
                     try:
-                        spider = spider_class(
-                            spider_id=spider_name,
-                            targets=[],
-                            subscribers=[],
-                            redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
-                        )
+                        # Session 603: Try simple constructor first (TheOdds, Kalshi, etc.)
+                        # then fall back to full constructor for BaseIntelligenceSpider
+                        try:
+                            spider = spider_class()
+                        except TypeError:
+                            spider = spider_class(
+                                spider_id=spider_name,
+                                targets=[],
+                                subscribers=[],
+                                redis_config={'host': 'localhost', 'port': 6379, 'db': 0}
+                            )
                         # Try spider methods - Session 503: Added fetch_data support
                         if hasattr(spider, 'scrape'):
                             import asyncio

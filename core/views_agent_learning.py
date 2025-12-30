@@ -4019,6 +4019,42 @@ def get_success_patterns(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# Session 606: Experiment Suggestions API
+@require_http_methods(["GET"])
+def get_experiment_suggestions(request):
+    """
+    GET /api/learning/experiment-suggestions/
+
+    Session 606: Get experiment suggestions based on learning gaps.
+
+    Returns prioritized suggestions for new experiments based on:
+    - Learning gaps (themes with insufficient data)
+    - High-value canonical decisions without experiments
+    - Patterns from successful experiments
+
+    Query params:
+        limit: Max suggestions to return (default 10)
+
+    Returns:
+        - gaps: Learning gaps by theme with priority
+        - suggestions: Prioritized experiment suggestions
+        - coverage: Current experiment coverage stats
+        - sample_size_guide: Recommended sample sizes by confidence level
+        - summary: Summary message and stats
+    """
+    try:
+        from core.services.experiment_suggestion import get_experiment_suggestions as get_suggestions
+
+        limit = int(request.GET.get('limit', 10))
+        result = get_suggestions(limit=limit)
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error getting experiment suggestions: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (
