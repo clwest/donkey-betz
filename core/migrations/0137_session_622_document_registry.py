@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0136_session_622_document_registry"),
+        ("core", "0135_session_616_spider_item_hash"),
     ]
 
     operations = [
