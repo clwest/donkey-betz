@@ -29,6 +29,33 @@
 | Promotion Rate | 0.5% | ~67% |
 | Avg Composite (scored) | 0.57 | 0.77 |
 
+### Major Discovery: 93 Missing Celery Beat Tasks
+
+**Architecture Issue:** System uses `DatabaseScheduler` which ignores Python config files!
+- `core/celery.py` defines 143 tasks
+- Database only had 61 tasks
+- 82 tasks were defined but NEVER RUNNING!
+
+**Critical Tasks Added (15):**
+- `autonomous-intelligence-loop` (*/15 min) - Main intelligence conductor
+- `process-gates-and-deploy-pilots` (hourly :45) - Pilot deployment
+- `evaluate-and-complete-pilots` (*/2h :15) - Pilot evaluation
+- `daily-intelligence-digest` (8 AM) - Daily digest
+- `daily-betting-digest` (8 AM) - Betting summary
+- `update-experiment-kpis` (*/2h) - KPI tracking
+- + 9 more maintenance/intelligence tasks
+
+**Result:** Database tasks: 61 → 76
+
+### Created sync_celery_beat Command
+
+Built management command to sync `celery.py` → database:
+```bash
+python manage.py sync_celery_beat --create-only --apply
+```
+
+Synced 80 additional tasks. **Final count: 156 tasks** (was 61!)
+
 **Also Fixed:**
 - Marked 25 stale trigger events as 'skipped' (were 2+ days old)
 
@@ -70,29 +97,31 @@ python manage.py system_reality_check
 ## Current Reality Check Status
 
 ```
-Overall Score: 99%
-├── Celery Beat:        100% ✅ (26 frequent tasks)
+Overall Score: 100%
+├── Celery Beat:        100% ✅ (156 scheduled tasks - was 61!)
 ├── Triggers:           100% ✅
 ├── Learning Loops:     100% ✅
-├── Dreams Pipeline:     96% ✅ (138+ promoted, backlog processing)
+├── Dreams Pipeline:    100% ✅ (138+ promoted, 67% rate)
 ├── Boardroom:          100% ✅ (68 decisions)
 ├── ThinkingAgent:      100% ✅
 ├── Conversations:      100% ✅
 ├── Spider Network:     100% ✅
-└── Pilots/Gates:       100% ✅ (6 completed)
+└── Pilots/Gates:       100% ✅ (KPIs now tracking)
 ```
 
 ---
 
 ## Recommended Next Steps
 
-### Priority 1: Monitor Dream Backlog Processing
-- ~1700 dreams still need scoring (processing at 50/cycle every 20 min)
-- Should complete within ~12 hours automatically
+### Priority 1: Monitor New Celery Tasks
+- Verify all 156 tasks running on schedule
+- Check `daily-betting-digest` and `daily-intelligence-digest` at 8 AM
+- Monitor autonomous loops: intelligence, content studio, pilots
 
-### Priority 2: Review Promoted Dreams
-- 79 dreams awaiting decision in Boardroom
-- May need human review or auto-processing
+### Priority 2: Reconcile Schedule Differences
+- 33 tasks have different schedules in celery.py vs database
+- Review and decide which schedule is correct
+- Run `python manage.py sync_celery_beat` to see differences
 
 ### Priority 3: New Feature Development
 - From ROADMAP_IDEAS.md: Profile Follow-ups, Agent personalities, Onboarding wizard
@@ -117,7 +146,7 @@ Overall Score: 99%
 | Django Models | 394 |
 | Agents | 71 |
 | Spiders | 77 |
-| Celery Tasks | 97 scheduled |
+| Celery Tasks | 156 scheduled (was 61!) |
 | Services | 93 |
 | Discord Commands | 112 |
 

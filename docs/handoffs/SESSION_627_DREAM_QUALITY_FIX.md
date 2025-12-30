@@ -1,8 +1,8 @@
-# Session 627 - Dream Quality Fix
+# Session 627 - Dream Quality Fix + Celery Beat Sync
 
 **Date:** December 30, 2025
-**Focus:** Fix low dream quality scores (93.4% scoring below 0.4)
-**Result:** Promotion rate increased from 0.5% to ~67%
+**Focus:** Fix low dream quality scores + Sync 93 missing Celery Beat tasks
+**Result:** Promotion rate 0.5% → ~67%, Celery tasks 61 → 76
 
 ---
 
@@ -101,6 +101,27 @@ Marked 25 trigger events as 'skipped':
 
 ---
 
+## Additional Fix: Experiment KPI Tracking
+
+**Same pattern discovered!** The `update_experiment_kpis` task (Session 609) existed in code but wasn't scheduled in Celery Beat.
+
+Created missing task:
+```python
+PeriodicTask.objects.create(
+    name='update-experiment-kpis',
+    task='core.tasks.update_experiment_kpis',
+    interval=IntervalSchedule(every=2, period=HOURS),
+    enabled=True
+)
+```
+
+Results:
+- 7 running experiments found
+- 1 updated with KPI data (content creation)
+- 6 skipped (no data source mappings - generic experiments)
+
+---
+
 ## Files Modified
 
 | File | Change |
@@ -113,6 +134,7 @@ Marked 25 trigger events as 'skipped':
 |--------|--------|
 | Created `dream-productization-cycle` task | Django shell |
 | Marked 25 trigger events as 'skipped' | Django shell |
+| Created `update-experiment-kpis` task | Django shell |
 
 ---
 
@@ -133,8 +155,79 @@ python manage.py system_reality_check
 
 ---
 
+## Major Discovery: 93 Missing Celery Beat Tasks
+
+Investigation revealed a **fundamental architecture issue**:
+
+| Source | Task Definitions |
+|--------|-----------------|
+| `core/celery.py` | 143 tasks |
+| `core/settings.py` | 53 tasks |
+| Database (actual) | 61 tasks |
+
+**Root Cause:** System uses `DatabaseScheduler` which ignores Python config files!
+Tasks defined in `celery.py` were never synced to the database.
+
+### Critical Tasks Added (15 total)
+
+| Task | Schedule | Purpose |
+|------|----------|---------|
+| `autonomous-intelligence-loop` | */15 min | Main conductor |
+| `process-gates-and-deploy-pilots` | Hourly :45 | Pilot deployment |
+| `evaluate-and-complete-pilots` | */2h :15 | Pilot evaluation |
+| `daily-intelligence-digest` | 8 AM | Morning digest |
+| `daily-betting-digest` | 8 AM | Betting summary |
+| `daily-learning-pipeline` | 6 AM | Learning pipeline |
+| `collect-kalshi-market-intelligence` | */30 min | Prediction markets |
+| `collect-sports-odds-intelligence` | */20 min | Sports odds |
+| `market-intelligence-scan` | */15 min | Market scan |
+| `update-learning-profiles` | */30 min | Learning profiles |
+| `cleanup-old-notifications` | 3 AM | Maintenance |
+| `cleanup-stale-scoring-requests` | 4 AM | Maintenance |
+| `expire-old-opportunities` | 5 AM | Maintenance |
+| `auto-complete-pilots` | Hourly :30 | Pilot completion |
+| `update-experiment-kpis` | */2h | KPI tracking |
+
+**Result:** Database tasks: 61 → 76 (15 critical tasks added)
+
+---
+
+## Created: sync_celery_beat Management Command
+
+Created `core/management/commands/sync_celery_beat.py` to sync tasks from `celery.py` to database.
+
+### Usage
+
+```bash
+# Dry run - show what would change
+python manage.py sync_celery_beat
+
+# Apply changes (create new tasks only)
+python manage.py sync_celery_beat --create-only --apply
+
+# Apply all changes including schedule updates
+python manage.py sync_celery_beat --apply
+
+# Show all tasks including those in sync
+python manage.py sync_celery_beat --verbose
+
+# Disable orphaned tasks (in DB but not in celery.py)
+python manage.py sync_celery_beat --disable-missing --apply
+```
+
+### Final Sync Results
+
+Ran `--create-only --apply` to add all missing tasks:
+- **Created:** 80 new tasks
+- **Skipped:** 33 with different schedules (kept existing DB schedules)
+- **Orphaned:** 11 tasks in DB but not in celery.py
+
+**Final task count: 156 enabled** (was 61 at session start)
+
+---
+
 ## Next Steps
 
-1. **Monitor backlog processing** - ~1,700 dreams still need scoring
+1. **Monitor new tasks** - Verify autonomous-intelligence-loop and pilot tasks are running
 2. **Review promoted dreams** - 79+ awaiting decision in Boardroom
-3. **Consider more active projects** - Would improve relevance matching
+3. **Consider sync command** - Automate celery.py → database sync
