@@ -58774,23 +58774,37 @@ ${item.generated_content}
 
                 const actionButtons = getGateActionButtons(g);
 
+                // Session 617: Risk explanation based on impact area and decision type
+                const riskExplanation = g.risk_level === 'high'
+                    ? `⚠️ HIGH RISK: ${g.impact_area === 'security' ? 'Security-sensitive' : 'Infrastructure-critical'} decision requiring full safety review`
+                    : g.risk_level === 'medium'
+                    ? `🔶 MEDIUM RISK: ${g.decision_type === 'policy' ? 'Policy change' : g.decision_type === 'architecture' ? 'Architecture decision' : 'Guideline update'} requiring review`
+                    : `✅ LOW RISK: Fast-track ${g.decision_type} decision`;
+
                 return `
                     <div class="gate-card gate-status-${g.status}">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
+                            <div style="flex: 1;">
                                 <span style="font-size: 18px; margin-right: 8px;">${statusIcon}</span>
-                                <strong style="color: #14b8a6;">${g.decision_topic.substring(0, 50)}${g.decision_topic.length > 50 ? '...' : ''}</strong>
+                                <strong style="color: #14b8a6;">${g.decision_topic}</strong>
                             </div>
-                            <div class="text-end">
+                            <div class="text-end" style="min-width: 100px;">
                                 <small class="text-muted">${timeAgo}</small><br>
                                 <span class="badge" style="background: ${riskColor}; font-size: 10px;">${g.risk_level.toUpperCase()} Risk</span>
                             </div>
+                        </div>
+                        <!-- Session 617: Decision context -->
+                        <div class="mb-2" style="background: rgba(20, 184, 166, 0.1); padding: 8px; border-radius: 6px; border-left: 3px solid ${riskColor};">
+                            <div class="d-flex gap-2 mb-1">
+                                <span class="badge" style="background: #6366f1; font-size: 10px;">📁 ${g.impact_area || 'general'}</span>
+                                <span class="badge" style="background: #8b5cf6; font-size: 10px;">📋 ${g.decision_type || 'decision'}</span>
+                            </div>
+                            <small style="color: #9ca3af;">${riskExplanation}</small>
                         </div>
                         <div class="mb-2">
                             <span class="badge" style="background: #14b8a6;">${g.status_display}</span>
                             <span class="badge bg-secondary ms-1">Progress: ${progress} (${progressPercent}%)</span>
                         </div>
-                        ${g.summary ? `<p style="color: #e5e7eb; font-size: 13px; margin-bottom: 8px;">${g.summary}</p>` : ''}
                         <div class="mb-2">
                             <div class="progress" style="height: 6px; background: #333;">
                                 <div class="progress-bar" role="progressbar" style="width: ${progressPercent}%; background: #14b8a6;"></div>
