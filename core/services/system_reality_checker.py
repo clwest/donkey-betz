@@ -103,7 +103,6 @@ class SystemRealityChecker:
         """Check if scheduled Celery tasks are running on time"""
         try:
             from django_celery_beat.models import PeriodicTask
-            from django_celery_results.models import TaskResult
 
             enabled_tasks = PeriodicTask.objects.filter(enabled=True)
             total_tasks = enabled_tasks.count()
@@ -118,19 +117,16 @@ class SystemRealityChecker:
                 ))
                 return
 
-            # Check how many tasks have run recently
-            ran_recently = 0
+            # Check how many tasks have run recently using last_run_at
+            # (Result backend stores to Redis, not Django DB)
+            ran_recently = enabled_tasks.filter(last_run_at__gte=self.cutoff).count()
+
+            # Find tasks that never ran or are stale
             stale_tasks = []
-
-            for task in enabled_tasks:
-                last_result = TaskResult.objects.filter(
-                    task_name=task.task
-                ).order_by('-date_done').first()
-
-                if last_result and last_result.date_done >= self.cutoff:
-                    ran_recently += 1
-                else:
-                    stale_tasks.append(task.name)
+            for task in enabled_tasks.filter(
+                Q(last_run_at__isnull=True) | Q(last_run_at__lt=self.cutoff)
+            )[:10]:
+                stale_tasks.append(task.name)
 
             activity_ratio = ran_recently / total_tasks if total_tasks > 0 else 0
             score = self.calculate_score(activity_ratio=activity_ratio, health_ratio=activity_ratio)
