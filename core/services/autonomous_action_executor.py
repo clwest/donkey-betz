@@ -346,27 +346,416 @@ class AutonomousActionExecutor:
         }
 
     def _execute_request_research(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
-        """Request deep research on a topic."""
-        from core.agents.research_agent import ResearchAgent
+        """
+        Request deep research on a topic with optional deliverable synthesis.
 
-        topic = params.get('topic', 'emerging trends')
-        depth = params.get('depth', 'standard')
+        Session 620: Fixed to properly use action name as topic and include deliverables.
+        Session 620.1: Added synthesis phase - chains to ContentWriterAgent to create deliverables.
+
+        Args:
+            name: The action name (used as research topic if no topic in params)
+            params: May include:
+                - topic: Research topic (defaults to action name)
+                - depth: Research depth (default: comprehensive)
+                - deliverables: List of documents to create
+                - synthesize_deliverables: Whether to create deliverable docs (default: True)
+                - owner_agent: Agent responsible (default: ResearchAgent)
+                - deadline_hours: Deadline for completion (default: 72)
+            reasoning: Context for why this research was requested
+        """
+        from core.agents.research_agent import ResearchAgent
+        from core.models_unified_system import SelfBlog
+        import uuid
+
+        # Session 620: Use action name as topic if no explicit topic in params
+        topic = params.get('topic') or name
+        depth = params.get('depth', 'comprehensive')
+        deliverables = params.get('deliverables', [])
+        synthesize_deliverables = params.get('synthesize_deliverables', True)  # Session 620.1
+        owner_agent = params.get('owner_agent', 'ResearchAgent')
+        deadline_hours = params.get('deadline_hours', 72)
+
+        # Build comprehensive research task including deliverables
+        task_parts = [f"Research topic: {topic}"]
+        task_parts.append(f"Depth: {depth}")
+
+        if deliverables:
+            task_parts.append("\nRequired deliverables:")
+            for i, deliverable in enumerate(deliverables, 1):
+                task_parts.append(f"  {i}. {deliverable}")
+
+        if reasoning:
+            task_parts.append(f"\nContext: {reasoning}")
+
+        full_task = "\n".join(task_parts)
+
+        logger.info(f"Executing research request: {topic}")
+        logger.info(f"Deliverables requested: {deliverables}")
+        logger.info(f"Synthesize deliverables: {synthesize_deliverables}")
 
         agent = ResearchAgent()
         # ResearchAgent.execute takes: task, context, scifi_context, spider_context
         result = agent.execute(
-            task=f"Research topic: {topic}. Depth: {depth}. Context: {reasoning}",
-            context={'topic': topic, 'depth': depth, 'autonomous': True},
+            task=full_task,
+            context={
+                'topic': topic,
+                'depth': depth,
+                'autonomous': True,
+                'deliverables': deliverables,
+                'owner_agent': owner_agent,
+                'deadline_hours': deadline_hours
+            },
             scifi_context={},
             spider_context={}
         )
 
+        # Extract findings from result
+        findings = ""
+        findings_detailed = []  # Session 620.1: More detailed findings for synthesis
+        research_data = {}
+
+        if hasattr(result, 'data') and result.data:
+            research_data = result.data
+            # Try to extract meaningful content from results
+            if isinstance(result.data, dict):
+                results_list = result.data.get('results', [])
+                if results_list:
+                    finding_parts = []
+                    for r in results_list[:5]:  # Top 5 results
+                        source = r.get('source', 'unknown')
+                        data = r.get('data', {})
+                        if isinstance(data, dict):
+                            # Extract key info from each source
+                            items = data.get('results', data.get('discussions', data.get('topics', [])))
+                            if items and isinstance(items, list):
+                                for item in items[:3]:
+                                    if isinstance(item, dict):
+                                        title = item.get('title', item.get('name', ''))
+                                        snippet = item.get('snippet', item.get('description', item.get('selftext', '')))
+                                        link = item.get('link', item.get('url', ''))
+                                        if title:
+                                            finding_parts.append(f"- [{source}] {title}")
+                                            # Session 620.1: Store detailed findings for synthesis
+                                            findings_detailed.append({
+                                                'source': source,
+                                                'title': title,
+                                                'snippet': snippet[:500] if snippet else '',
+                                                'link': link
+                                            })
+                    findings = "\n".join(finding_parts[:10]) if finding_parts else "Research completed, data gathered"
+
+        if hasattr(result, 'message') and result.message:
+            if not findings:
+                findings = result.message
+
+        if hasattr(result, 'content') and result.content:
+            if not findings:
+                findings = str(result.content)[:500]
+
+        research_successful = result.success if hasattr(result, 'success') else False
+
+        # Session 620.1: Debug logging for research result
+        logger.info(f"Research result - hasattr success: {hasattr(result, 'success')}, success value: {result.success if hasattr(result, 'success') else 'N/A'}, research_successful: {research_successful}")
+
+        # Session 620: Create a SelfBlog entry to persist research findings
+        research_blog_id = None
+        if research_successful:
+            try:
+                research_report = f"""# Research Report: {topic}
+
+## Request Context
+{reasoning}
+
+## Deliverables Requested
+{chr(10).join(f'- {d}' for d in deliverables) if deliverables else 'None specified'}
+
+## Research Findings
+{findings if findings else 'Research completed - see data below'}
+
+## Data Sources Consulted
+{', '.join(r.get('source', 'unknown') for r in research_data.get('results', [])) if isinstance(research_data, dict) else 'Multiple sources'}
+
+---
+*Auto-generated research report from ThinkingAgent autonomous action*
+"""
+
+                blog = SelfBlog.objects.create(
+                    id=uuid.uuid4(),
+                    title=f"[Research] {topic[:100]}",
+                    intro=f"Autonomous research on: {topic}. Deliverables: {len(deliverables)}",
+                    conclusion="Research findings saved for review. Execute follow-up actions as needed.",
+                    full_text=research_report,
+                    tone="analytical",
+                    stats_snapshot={
+                        'auto_generated': True,
+                        'action_type': 'request_research',
+                        'deliverables': deliverables,
+                        'owner_agent': owner_agent,
+                        'reasoning': reasoning[:200] if reasoning else '',
+                    }
+                )
+                research_blog_id = str(blog.id)
+                logger.info(f"Research report saved: {blog.id}")
+
+            except Exception as e:
+                logger.warning(f"Could not save research report: {e}")
+
+        # =========================================================
+        # Session 620.1: SYNTHESIS PHASE - Create actual deliverables
+        # =========================================================
+        synthesized_deliverables = []
+
+        if synthesize_deliverables and deliverables and research_successful:
+            logger.info(f"Starting synthesis phase for {len(deliverables)} deliverables")
+
+            from core.agents.content_writer_agent import ContentWriterAgent
+            content_writer = ContentWriterAgent()
+
+            # Build research context for the content writer
+            research_context = self._build_research_context(
+                topic=topic,
+                reasoning=reasoning,
+                findings=findings,
+                findings_detailed=findings_detailed
+            )
+
+            for i, deliverable in enumerate(deliverables, 1):
+                logger.info(f"Synthesizing deliverable {i}/{len(deliverables)}: {deliverable}")
+
+                try:
+                    # Create the deliverable using ContentWriterAgent
+                    deliverable_result = self._synthesize_single_deliverable(
+                        content_writer=content_writer,
+                        deliverable_name=deliverable,
+                        topic=topic,
+                        research_context=research_context,
+                        reasoning=reasoning
+                    )
+
+                    if deliverable_result.get('success'):
+                        synthesized_deliverables.append(deliverable_result)
+                        logger.info(f"Successfully synthesized: {deliverable}")
+                    else:
+                        logger.warning(f"Failed to synthesize: {deliverable} - {deliverable_result.get('error')}")
+                        synthesized_deliverables.append({
+                            'deliverable': deliverable,
+                            'success': False,
+                            'error': deliverable_result.get('error', 'Unknown error')
+                        })
+
+                except Exception as e:
+                    logger.error(f"Error synthesizing deliverable '{deliverable}': {e}")
+                    synthesized_deliverables.append({
+                        'deliverable': deliverable,
+                        'success': False,
+                        'error': str(e)
+                    })
+
+            logger.info(f"Synthesis complete: {sum(1 for d in synthesized_deliverables if d.get('success'))}/{len(deliverables)} successful")
+
         return {
             'topic': topic,
             'depth': depth,
-            'research_complete': result.success if hasattr(result, 'success') else False,
-            'findings_preview': str(result.content)[:300] if hasattr(result, 'content') and result.content else 'Research initiated'
+            'deliverables_requested': deliverables,
+            'research_complete': research_successful,
+            'findings_preview': findings[:500] if findings else 'Research initiated',
+            'sources_used': [r.get('source') for r in research_data.get('results', [])] if isinstance(research_data, dict) else [],
+            'owner_agent': owner_agent,
+            'deadline_hours': deadline_hours,
+            'research_blog_id': research_blog_id,
+            # Session 620.1: Synthesis results
+            'synthesize_deliverables': synthesize_deliverables,
+            'synthesized_count': len(synthesized_deliverables),
+            'synthesized_success': sum(1 for d in synthesized_deliverables if d.get('success')),
+            'synthesized_deliverables': synthesized_deliverables
         }
+
+    def _build_research_context(self, topic: str, reasoning: str, findings: str, findings_detailed: List[Dict]) -> str:
+        """
+        Session 620.1: Build a comprehensive research context for content synthesis.
+
+        Formats research findings into a context string that ContentWriterAgent can use
+        to create informed deliverables.
+        """
+        context_parts = [
+            f"# Research Context: {topic}",
+            "",
+            "## Background",
+            reasoning if reasoning else "No specific background provided.",
+            "",
+            "## Key Research Findings",
+            findings if findings else "General research completed.",
+            "",
+        ]
+
+        if findings_detailed:
+            context_parts.append("## Detailed Sources")
+            for finding in findings_detailed[:10]:  # Top 10 detailed findings
+                context_parts.append(f"\n### {finding.get('title', 'Untitled')}")
+                context_parts.append(f"**Source:** {finding.get('source', 'Unknown')}")
+                if finding.get('snippet'):
+                    context_parts.append(f"**Summary:** {finding['snippet']}")
+                if finding.get('link'):
+                    context_parts.append(f"**Reference:** {finding['link']}")
+
+        return "\n".join(context_parts)
+
+    def _synthesize_single_deliverable(
+        self,
+        content_writer,
+        deliverable_name: str,
+        topic: str,
+        research_context: str,
+        reasoning: str
+    ) -> Dict[str, Any]:
+        """
+        Session 620.1: Synthesize a single deliverable using ContentWriterAgent.
+
+        Creates a professional document based on the deliverable name and research context.
+        """
+        from core.models_unified_system import SelfBlog
+        import uuid
+
+        # Determine document type based on deliverable name
+        doc_type = self._infer_document_type(deliverable_name)
+
+        # Build the synthesis task
+        synthesis_task = f"""Create a professional {doc_type} document for the following deliverable:
+
+**Deliverable:** {deliverable_name}
+
+**Parent Topic:** {topic}
+
+**Purpose:** {reasoning}
+
+{research_context}
+
+---
+
+**Instructions:**
+1. Create a comprehensive, professional document that addresses "{deliverable_name}"
+2. Use the research findings above to inform your content
+3. Structure the document with clear sections and headers
+4. Include specific recommendations, not just general guidance
+5. Make it actionable and implementation-ready
+6. Use markdown formatting for clarity
+"""
+
+        # Call ContentWriterAgent
+        try:
+            result = content_writer.execute(
+                task=synthesis_task,
+                context={
+                    'deliverable': deliverable_name,
+                    'topic': topic,
+                    'doc_type': doc_type,
+                    'autonomous': True,
+                    'synthesis_mode': True
+                },
+                scifi_context={},
+                spider_context={}
+            )
+
+            # Extract content from result
+            # Session 620.1 Fix: ContentWriterAgent returns data['content'] as a dict
+            # with 'full_text' containing the actual content
+            content = ""
+            if hasattr(result, 'data') and result.data:
+                if isinstance(result.data, dict):
+                    content_data = result.data.get('content', {})
+                    if isinstance(content_data, dict):
+                        # ContentWriterAgent returns content as a dict with 'full_text'
+                        content = content_data.get('full_text', '') or content_data.get('raw_content', '')
+                        if not content:
+                            # Fallback: stringify the content dict
+                            content = str(content_data)
+                    elif content_data:
+                        content = str(content_data)
+                    else:
+                        content = result.data.get('text', str(result.data))
+                else:
+                    content = str(result.data)
+            elif hasattr(result, 'content') and result.content:
+                content = str(result.content)
+            elif hasattr(result, 'message') and result.message:
+                content = result.message
+
+            logger.info(f"Extracted content length: {len(content)} chars")
+
+            if not content or len(content) < 100:
+                return {
+                    'deliverable': deliverable_name,
+                    'success': False,
+                    'error': 'ContentWriterAgent returned insufficient content'
+                }
+
+            # Save to SelfBlog
+            blog = SelfBlog.objects.create(
+                id=uuid.uuid4(),
+                title=f"[Deliverable] {deliverable_name[:80]}",
+                intro=f"Synthesized deliverable for: {topic}. Document type: {doc_type}",
+                conclusion=f"This document was auto-generated based on research findings. Review and customize as needed.",
+                full_text=content,
+                tone="professional",
+                stats_snapshot={
+                    'auto_generated': True,
+                    'action_type': 'synthesized_deliverable',
+                    'parent_topic': topic,
+                    'deliverable_name': deliverable_name,
+                    'doc_type': doc_type,
+                    'content_length': len(content)
+                }
+            )
+
+            logger.info(f"Deliverable saved to SelfBlog: {blog.id}")
+
+            return {
+                'deliverable': deliverable_name,
+                'success': True,
+                'blog_id': str(blog.id),
+                'doc_type': doc_type,
+                'content_length': len(content),
+                'preview': content[:300] + '...' if len(content) > 300 else content
+            }
+
+        except Exception as e:
+            logger.error(f"Error in ContentWriterAgent: {e}")
+            return {
+                'deliverable': deliverable_name,
+                'success': False,
+                'error': str(e)
+            }
+
+    def _infer_document_type(self, deliverable_name: str) -> str:
+        """
+        Session 620.1: Infer the document type from the deliverable name.
+
+        Returns a document type string to guide content generation.
+        """
+        name_lower = deliverable_name.lower()
+
+        if 'design doc' in name_lower or 'architecture' in name_lower:
+            return 'technical design document'
+        elif 'recommendation' in name_lower:
+            return 'recommendations report'
+        elif 'test' in name_lower or 'testing' in name_lower or 'framework' in name_lower:
+            return 'testing framework specification'
+        elif 'metric' in name_lower or 'telemetry' in name_lower or 'kpi' in name_lower:
+            return 'metrics and monitoring specification'
+        elif 'compliance' in name_lower or 'regulatory' in name_lower or 'mapping' in name_lower:
+            return 'compliance mapping document'
+        elif 'checklist' in name_lower:
+            return 'checklist document'
+        elif 'plan' in name_lower or 'roadmap' in name_lower:
+            return 'implementation plan'
+        elif 'guide' in name_lower or 'how-to' in name_lower:
+            return 'guide document'
+        elif 'policy' in name_lower:
+            return 'policy document'
+        elif 'analysis' in name_lower or 'report' in name_lower:
+            return 'analysis report'
+        else:
+            return 'professional document'
 
     def _execute_trigger_conversation(self, name: str, params: Dict, reasoning: str) -> Dict[str, Any]:
         """Trigger a conversation between specific agents."""
