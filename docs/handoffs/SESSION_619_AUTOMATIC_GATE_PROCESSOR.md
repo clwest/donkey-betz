@@ -166,11 +166,35 @@ This creates a complete automation loop:
 
 ---
 
+## Bug Fix: Learning Velocity Dashboard
+
+**Problem:** Dashboard showing no data despite 611 learnings existing
+**Root Cause:** API returned data at root level, but frontend expected `data.dashboard`
+
+**Fix:** Wrapped API response in `dashboard` key:
+```python
+# Before
+return JsonResponse({'success': True, **data})
+
+# After
+return JsonResponse({'success': True, 'dashboard': data})
+```
+
+Dashboard now shows:
+- Health Score: 100 (Excellent)
+- 611 experiments
+- 15 themes
+- Net weight: 168.36
+
+---
+
 ## Commits
 
 | Commit | Description |
 |--------|-------------|
 | `f0a8e6c` | feat(Session 619): Automatic Gate Processing and Pilot Deployment |
+| `a576cf6` | docs(Session 619): Update handoff with commit hash |
+| `71c9472` | fix(Session 619): Learning Velocity Dashboard API structure |
 
 ---
 
