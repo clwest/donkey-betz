@@ -1,24 +1,36 @@
-# Session 630 - Start Here
+# Session 634 - Start Here
 
-**Previous Session:** 629
+**Previous Session:** 633
 **Date:** December 30, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 629 Accomplishments
+## Session 630-633 Accomplishments
 
-### Testing & Validation
-- Tested Content Calendar UI - working correctly
-- Tested Cross-Session Memory - preferences injected into PA prompts
-- Tested Content Generation - episode created via 3-agent debate
-- Fixed user mismatch issue (channel ownership transfer)
-- Fixed cache issue (clear cache after adding memories)
+### Session 630: Episode Script Field
+- Added `script` TextField to `ChannelEpisode` model
+- Created migration `0139_session_630_add_episode_script.py`
+- Updated 3 code locations to populate script field
 
-### Test Data Created
-- Channel: "AI Tech Weekly" (owned by admin)
-- 1 episode generated with debate ID `241ce36d-389f-47d7-b0fd-3a7f91fdf9b8`
-- User memories: visual style, voice, goals, decisions
+### Session 631: Episode Content Viewer
+- Added `GET /api/content-calendar/episode/<uuid>/` API endpoint
+- Created episode detail modal in Calendar panel
+- Added click handlers to episode cards
+- Shows script content, 3-agent debate, and metrics
+
+### Session 632: Generate Now Button
+- Added `POST /api/content-calendar/generate/<uuid>/` API endpoint
+- Added "Generate Now" button to channel cards
+- Loading states, toast notifications, error handling
+- Triggers Celery task for immediate content generation
+
+### Session 633: Graceful Error Handling + Root Cause Fix
+- Added `formatDebateArgument()` UI helper for graceful error display
+- Fixed `generate_content_for_channel()` to create fresh debates
+- Root cause: Task was reusing old debates with errors instead of running agents
+- Fix: Debate query now only finds debates created in last 5 minutes
+- Verified: New content generation creates proper 3-agent debates
 
 ---
 
@@ -32,9 +44,9 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Click the Calendar tab to see channels/episodes
-# 4. Health check
-python manage.py system_reality_check
+# 3. Click the Calendar tab
+#    - Click any episode to view details
+#    - Click "Generate Now" on a channel to create content immediately
 ```
 
 ---
@@ -57,25 +69,30 @@ python manage.py system_reality_check
 
 | Session | Document |
 |---------|----------|
+| 630-633 | `docs/handoffs/SESSION_630_633_CONTENT_CALENDAR_FEATURES.md` |
 | 629 | `docs/handoffs/SESSION_629_TESTING_VALIDATION.md` |
 | 628 | `docs/handoffs/SESSION_628_CROSS_SESSION_MEMORY_CALENDAR.md` |
-| 627 | `docs/handoffs/SESSION_627_COMPLETE_HANDOFF.md` |
 
 ---
 
 ## Recommended Next Steps
 
-### Option 1: Episode Content Viewer
-- Find where episode content is stored
-- Add UI to view/preview generated content
-- Show debate transcript and final script
+### Option 1: Month Grid View
+- Add calendar month grid view
+- Visual scheduling interface
+- Drag-and-drop rescheduling
 
-### Option 2: Polish Calendar
-- Add month grid view (currently list-only)
-- Add drag-and-drop rescheduling
-- Add content preview modal
+### Option 2: Content Editing
+- Edit generated scripts before publishing
+- Regenerate with different parameters
+- Manual approval workflow
 
-### Option 3: Profile Follow-ups
+### Option 3: Generation Progress Tracking
+- Track Celery task progress
+- Show generation steps in real-time
+- Notify when generation completes
+
+### Option 4: Profile Follow-ups
 - Deeper interview questions for personalization
 - From ROADMAP_IDEAS.md
 
@@ -85,16 +102,22 @@ python manage.py system_reality_check
 
 | Channel | Owner | Episodes | Status |
 |---------|-------|----------|--------|
-| AI Tech Weekly | admin | 1 | Active |
-| Narrative Shift Reports | admin | 5 | Active |
+| AI Tech Weekly | admin | 2+ | Active |
+| Narrative Shift Reports | admin | 5+ | Active |
 
 ---
 
-## API Endpoints (Session 628)
+## API Endpoints (Content Calendar)
 
 ```bash
-# Calendar data
+# Main calendar data
 curl http://localhost:8000/api/content-calendar/
+
+# Episode details (Session 631)
+curl http://localhost:8000/api/content-calendar/episode/<uuid>/
+
+# Trigger generation (Session 632)
+curl -X POST http://localhost:8000/api/content-calendar/generate/<uuid>/
 
 # Upcoming content
 curl http://localhost:8000/api/content-calendar/upcoming/
