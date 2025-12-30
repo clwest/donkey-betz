@@ -25,12 +25,13 @@
 - Loading states, toast notifications, error handling
 - Triggers Celery task for immediate content generation
 
-### Session 633: Graceful Error Handling + Root Cause Fix
+### Session 633: Error Handling + Coordinator Debate Fix
 - Added `formatDebateArgument()` UI helper for graceful error display
-- Fixed `generate_content_for_channel()` to create fresh debates
-- Root cause: Task was reusing old debates with errors instead of running agents
-- Fix: Debate query now only finds debates created in last 5 minutes
-- Verified: New content generation creates proper 3-agent debates
+- Fixed debate query to only find debates created in last 5 minutes
+- **Major Fix:** Coordinator now directly calls `_initiate_content_debate`
+- Before: GPT wasn't reliably calling the tool, fallback path ran
+- After: Direct invocation ensures proper 3-agent debate creation
+- Result: `Proposed By: AutonomousContentStudioCoordinator`, `Is Fallback: False`
 
 ---
 
