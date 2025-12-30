@@ -59873,6 +59873,14 @@ ${item.generated_content}
                     };
                     const health = healthColors[exp.health_status] || healthColors['needs_attention'];
 
+                    // Session 612: Clean up experiment name - remove prefixes
+                    let cleanName = exp.name
+                        .replace(/^Experiment:\s*/i, '')
+                        .replace(/^Discussion:\s*/i, '')
+                        .replace(/^\[Synthesis\]\s*/i, '')
+                        .replace(/^\[Learned\]\s*/i, '')
+                        .trim();
+
                     // KPI progress bar
                     let kpiHtml = '';
                     if (exp.kpi.progress_percent !== null) {
@@ -59940,7 +59948,7 @@ ${item.generated_content}
                                         ${statusBadge}
                                     </div>
                                 </div>
-                                <h6 style="color: #e5e7eb; margin-bottom: 8px;" title="${exp.name}">${exp.name.substring(0, 45)}${exp.name.length > 45 ? '...' : ''}</h6>
+                                <h6 style="color: #e5e7eb; margin-bottom: 8px;" title="${cleanName}">${cleanName.substring(0, 45)}${cleanName.length > 45 ? '...' : ''}</h6>
                                 <div class="small text-muted mb-2">
                                     Day ${exp.days_running} of ~${exp.expected_duration_days} expected
                                 </div>
