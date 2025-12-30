@@ -114,7 +114,7 @@ INSTALLED_APPS = [
     'django_celery_results',   # Celery task result storage
     "pgvector",
     # Core app only for now
-    'core',                    # Core utilities and management
+    'core.apps.CoreConfig',    # Core utilities and management (Session 623: with startup health check)
 
     # Unified platform apps (will be created step by step)
     # 'gateway',                 # Unified API Gateway
