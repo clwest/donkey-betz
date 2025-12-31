@@ -9,6 +9,9 @@ from datetime import datetime
 from celery import shared_task
 from .realtime_engine import intelligence_engine
 
+# Session 642: Import shared_memory task to ensure Celery discovers it
+from .shared_memory import sync_all_entity_memories  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 

@@ -1353,7 +1353,13 @@ Try:
         clean_agents = []
         if self.use_clean_architecture and self.agent_router:
             for name, agent_class in self.agent_router.AGENT_MAP.items():
+                # Session 642: Handle tools that might be a property
                 tools = getattr(agent_class, 'tools', [])
+                # If tools is a property, call it; if it's not a list/tuple, use empty list
+                if isinstance(tools, property):
+                    tools = []
+                elif not isinstance(tools, (list, tuple)):
+                    tools = []
                 clean_agents.append({
                     'name': name,
                     'tool_count': len(tools),

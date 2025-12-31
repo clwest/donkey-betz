@@ -735,16 +735,11 @@ class AgentRouter:
                 }
             )
 
-            # Session 641: Skip execution record if no user (user field is not nullable)
-            # Stats will still be updated in _complete_execution
-            if self.user is None:
-                logger.debug(f"Skipping execution record for {agent_name} - no user (stats will still update)")
-                return None
-
-            # Create execution record
+            # Session 642: User field is now nullable - always create execution record
+            # Create execution record (user can be None for Celery/API tasks)
             execution = AgentExecution.objects.create(
                 agent=agent_record,
-                user=self.user,
+                user=self.user,  # Can be None now
                 task=task[:500],  # Truncate long tasks
                 status='in_progress',
                 input_data={'task': task}
