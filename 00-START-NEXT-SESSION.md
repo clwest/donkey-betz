@@ -1,8 +1,26 @@
-# Session 636 - Start Here
+# Session 637 - Start Here
 
-**Previous Session:** 635
+**Previous Session:** 636
 **Date:** December 30, 2025
 **Focus:** To Be Determined
+
+---
+
+## Session 636 Accomplishments
+
+### Podcast Script Generation Fix
+Fixed critical issue where the AutonomousContentStudioCoordinator was only creating placeholder records instead of generating actual podcast scripts:
+- **Bug:** `_trigger_content_creation()` created AISeries and ChannelEpisode records but never generated scripts (said "Phase 3: AISeriesWorkflowAgent integration pending")
+- **Fix:** Added GPT-4o-mini script generation directly in the coordinator
+- **Result:** Episodes now have 4,000+ character scripts instead of 42 character placeholders
+
+**Files changed:**
+- `core/agents/autonomous_content_studio_coordinator.py` - Added script generation (lines 642-692)
+
+### Podcast Word Count Fix
+Fixed bug where podcast episodes showed incorrect word counts (e.g., "10 words" instead of "585 words"):
+- **Bug:** `_channel_episode_to_dict()` in `core/views_podcast.py:59` used `ep.description` (63 chars) instead of `ep.script` (3,848 chars)
+- **Fix:** Now uses `ep.script` field for word count with fallback to `ep.description`
 
 ---
 

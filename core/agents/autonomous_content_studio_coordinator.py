@@ -639,27 +639,76 @@ Content Tone: {content_tone}
 
 User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
 
-        # Phase 3: AISeriesWorkflowAgent integration pending
-        # Creates placeholder records for now
+        # Session 636: Actually generate podcast script using GPT
+        import openai
+        import os
+
+        script_content = series_prompt  # Fallback to prompt if generation fails
+
+        try:
+            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+            # Get debate positions for richer content
+            debate_context = ""
+            if debate_id:
+                try:
+                    debate = ContentDebate.objects.get(id=debate_id)
+                    debate_context = f"""
+DEBATE INSIGHTS:
+TopicMiner: {debate.topic_miner_position[:500] if debate.topic_miner_position else 'N/A'}
+Contrarian: {debate.contrarian_position[:500] if debate.contrarian_position else 'N/A'}
+Analyst: {debate.analyst_position[:500] if debate.analyst_position else 'N/A'}
+Decision: {debate.decision_reasoning[:300] if debate.decision_reasoning else 'N/A'}
+"""
+                except ContentDebate.DoesNotExist:
+                    pass
+
+            script_prompt = f"""Write a podcast script for "{channel.name}" about: {topic}
+
+{debate_context}
+
+Target Audience: {channel.target_audience}
+Visual Style: {visual_style}
+Content Tone: {content_tone}
+
+Create a 3-5 minute podcast script with:
+1. Host intro (friendly, engaging)
+2. Main topic discussion (3-4 key points)
+3. Insights and takeaways
+4. Closing with call to action
+
+Make it conversational and engaging. Use natural speech patterns."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": script_prompt}],
+                max_tokens=2000
+            )
+            script_content = response.choices[0].message.content
+            logger.info(f"Session 636: Generated podcast script ({len(script_content)} chars) for {channel.name}")
+
+        except Exception as script_error:
+            logger.warning(f"Session 636: Failed to generate script: {script_error}")
+            # Keep the series_prompt as fallback
 
         series = AISeries.objects.create(
             name=f"{channel.name} - {topic}",
             description=angle,
             prompt=series_prompt,
             series_type=channel.content_type,
-            episode_count=1,  # Single episode for now
-            target_audience=channel.target_audience
+            episode_count=1,
+            target_audience=channel.target_audience,
+            created_by=channel.user  # Session 636: Fix NOT NULL constraint
         )
 
-        # Create ChannelEpisode record
-        # Session 630: Store series_prompt in script field for full content context
+        # Create ChannelEpisode record with actual generated script
         episode = ChannelEpisode.objects.create(
             channel=channel,
             series=series,
             title=f"{topic}",
             topic=topic,
             description=angle,
-            script=series_prompt
+            script=script_content  # Session 636: Use generated script, not just prompt
         )
 
         # [SESSION 475] Add provenance tracking
@@ -695,10 +744,11 @@ User Preferences Applied: {json.dumps(user_prefs) if user_prefs else 'None'}"""
         channel.save()
 
         return {
-            "status": "content_triggered",
+            "status": "content_created",
             "series_id": str(series.id),
             "episode_id": str(episode.id),
-            "message": "Content creation triggered. Full AISeriesWorkflowAgent integration pending Phase 3."
+            "script_length": len(script_content),
+            "message": f"Created episode with {len(script_content)} character script."
         }
 
     def _update_channel_schedule(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:

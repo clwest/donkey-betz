@@ -56,7 +56,7 @@ def _channel_episode_to_dict(ep):
         'has_audio': False,  # ChannelEpisodes typically don't have audio
         'audio_url': None,
         'duration_seconds': ep.watch_time_seconds or 0,
-        'word_count': len(ep.description.split()) if ep.description else 0,
+        'word_count': len(ep.script.split()) if ep.script else (len(ep.description.split()) if ep.description else 0),
         'created_at': ep.created_at.isoformat(),
         'completed_at': ep.publish_date.isoformat() if ep.publish_date else ep.created_at.isoformat(),
         'error_message': None,
