@@ -561,6 +561,13 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_DISABLE_RATE_LIMITS = False
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 
+# Session 644: macOS Stability Settings
+# IMPORTANT: On macOS, always start workers with --pool=threads to avoid SIGSEGV crashes
+# The prefork pool uses fork() which is incompatible with macOS's Objective-C runtime
+# Example: celery -A core worker --pool=threads --concurrency=4 -Q default
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100  # Recycle workers after 100 tasks to prevent memory leaks
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit (warn before 30 min hard kill)
+
 # Logging Configuration
 LOGGING = {
     'version': 1,
