@@ -3,60 +3,60 @@
 **Previous Session:** 636
 **Date:** December 30, 2025
 **Focus:** To Be Determined
+**Health Score:** 89% (run `python manage.py system_health_check` to verify)
 
 ---
 
 ## Session 636 Accomplishments
 
+### System Health Check Command (NEW)
+Created `python manage.py system_health_check` - a comprehensive checklist that verifies ALL platform components:
+
+**13 Check Categories:**
+1. **Services** - Redis, Daphne, PostgreSQL
+2. **Database** - 394 models, key tables (agents, dreams, conversations, pilots)
+3. **Agents** - 67 active agents, router, agent files
+4. **Agent Social Activity** - Conversations, dreams, who's talked to who
+5. **Learning Loops** - Knowledge transfers, collective intelligence, memories
+6. **UI Connectivity** - Template exists, panels present, page loads
+7. **Spiders** - 171 spider files, key spiders verified
+8. **Celery** - Workers, beat, scheduled tasks
+9. **Content System** - Channels, episodes with real scripts, debates
+10. **Pilots** - Gates, experiments, stale messages
+11. **API Endpoints** - Health, agents, podcasts, calendar
+12. **ML Models** - OpenAI, Anthropic API keys
+13. **Discord** - Bot token, service files
+
+### Agent Introduction Party Command (NEW)
+Created `python manage.py agent_introduction_party` - a fun way to have all agents introduce themselves and start conversations:
+- Agents generate personalized introductions
+- Random pairs have brief conversations
+- Post-party dreams are generated
+- Great for onboarding and ensuring agents have socialized
+
 ### Podcast Script Generation Fix (Two Code Paths)
-Fixed critical issue where podcast episodes were getting 42-char placeholder scripts instead of real content:
+Fixed critical issue where podcast episodes were getting 42-char placeholder scripts:
 
 **Path 1: AutonomousContentStudioCoordinator**
 - **Bug:** `_trigger_content_creation()` said "Phase 3: AISeriesWorkflowAgent integration pending"
-- **Fix:** Added GPT-4o-mini script generation directly in the coordinator
-- **File:** `core/agents/autonomous_content_studio_coordinator.py` (lines 642-692)
+- **Fix:** Added GPT-4o-mini script generation directly
+- **File:** `core/agents/autonomous_content_studio_coordinator.py`
 
 **Path 2: Celery Task generate_content_for_channel**
-- **Bug:** Used AISeriesWorkflowAgent which returned "Created educational series with 0 episodes"
-- **Fix:** Replaced AISeriesWorkflowAgent with direct GPT-4o-mini script generation
-- **File:** `core/tasks.py` (lines 13135-13180)
+- **Bug:** Used AISeriesWorkflowAgent which returned "0 episodes"
+- **Fix:** Replaced with direct GPT-4o-mini script generation
+- **File:** `core/tasks.py`
 
-**Result:** Episodes now have 3,000-4,000+ character scripts (500-600 words) instead of 42 character placeholders
+**Result:** Episodes now have 3,000-4,000+ character scripts (500-600 words)
 
-### Pilot Cleanup
+### Pilot & Episode Cleanup
 - Deleted 79 duplicate "Market Data - Market Intelligence" pilots (127 → 48 pilots)
-- Cleared "Regenerated from Session 635" messages from all pilots
+- Cleared "Regenerated from Session 635" messages
 - Deleted 9 placeholder podcast episodes
 
 ### Podcast Word Count Fix
-Fixed bug where podcast episodes showed incorrect word counts (e.g., "10 words" instead of "585 words"):
-- **Bug:** `_channel_episode_to_dict()` in `core/views_podcast.py:59` used `ep.description` (63 chars) instead of `ep.script` (3,848 chars)
-- **Fix:** Now uses `ep.script` field for word count with fallback to `ep.description`
-
----
-
-## Session 635 Accomplishments
-
-### Full System Demo Command
-Created `python manage.py full_system_demo` that demonstrates the AI Studio by having it create content about itself:
-- Agents research the platform (67 agents, 77 spiders, 394 models)
-- Creates agent dreams about system capabilities
-- Generates multi-agent conversations (4 agents discussing the platform)
-- Produces blog posts saved to SelfBlog model
-- Creates podcast episodes
-- Generates social media posts (Twitter, LinkedIn, Bluesky)
-- Captures learning loop entries
-
-### Pilot Regeneration Command
-Created `python manage.py regenerate_pilots` to recover from database issues:
-- Regenerates PilotReadinessGate from canonical AgentDecisionSummary records
-- Creates ReadinessChecklistItem records (4 per gate)
-- Creates PilotExecution and Experiment records
-- Successfully restored 127 pilots after database schema issues
-
-### Database Fixes
-- Added missing `created_at` and `updated_at` columns to `core_experiment` table
-- Fixed API 500 errors for experiment-related endpoints
+- **Bug:** `_channel_episode_to_dict()` used `ep.description` instead of `ep.script`
+- **Fix:** Now uses `ep.script` field for word count
 
 ---
 
@@ -70,27 +70,83 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Run Full System Demo (optional)
-python manage.py full_system_demo
+# 3. Run System Health Check
+python manage.py system_health_check
+
+# 4. Host Agent Introduction Party (optional)
+python manage.py agent_introduction_party --agents 10
 ```
 
 ---
 
-## System Stats
+## New Management Commands (Session 636)
+
+```bash
+# System Health Check - verify everything is working
+python manage.py system_health_check
+python manage.py system_health_check --verbose
+
+# Agent Introduction Party - agents meet and greet
+python manage.py agent_introduction_party --dry-run  # Preview
+python manage.py agent_introduction_party --agents 10  # Limit agents
+python manage.py agent_introduction_party  # Full party (20 agents)
+
+# From Session 635
+python manage.py full_system_demo
+python manage.py regenerate_pilots
+```
+
+---
+
+## System Stats (After Session 636)
 
 | Component | Count |
 |-----------|-------|
 | Django Models | 394 |
-| Agents | 71 |
-| Spiders | 77 |
-| Celery Tasks | 156 scheduled |
+| Agents | 71 (67 active) |
+| Spiders | 171 spider files |
+| Celery Tasks | 53 scheduled |
 | Services | 94 |
 | Discord Commands | 112 |
-| Self Blogs | 315 |
-| Agent Conversations | 5,046 |
-| Agent Dreams | 5,187 |
-| Pilot Gates | 127 |
-| Experiments | 127 |
+| Self Blogs | 319 |
+| Agent Conversations | 5,066 |
+| Agent Dreams | 5,199 |
+| Pilot Gates | 54 |
+| Pilots | 69 |
+| Experiments | 69 |
+| Knowledge Transfers | 1,289 |
+| Agent Memories | 633 |
+
+---
+
+## Health Check Summary
+
+```
+═══ SERVICES ═══
+  ✅ Redis running
+  ✅ Daphne/Django running
+  ✅ PostgreSQL connected
+
+═══ AGENT SOCIAL ACTIVITY ═══
+  ✅ 5,066 total conversations
+  ✅ 901 conversations in last 24 hours
+  ✅ 5,199 total dreams
+  ✅ 864 dreams in last 24 hours
+
+═══ LEARNING LOOPS ═══
+  ✅ 1,289 knowledge transfers
+  ✅ 70 transfers in last 24 hours
+  ✅ CollectiveIntelligenceService available
+  ✅ 878 agent decisions recorded
+  ✅ 633 agent memories stored
+
+═══ SUMMARY ═══
+  Total Checks: 57
+  ✅ Passed: 51
+  ⚠️  Warnings: 6
+  ❌ Failed: 0
+  🏆 Health Score: 89%
+```
 
 ---
 
@@ -98,48 +154,35 @@ python manage.py full_system_demo
 
 | Session | Document |
 |---------|----------|
-| 635 | (this document) |
+| 636 | `docs/handoffs/SESSION_636_SYSTEM_HEALTH_CHECK.md` |
+| 635 | (previous start doc) |
 | 634 | `docs/handoffs/SESSION_634_PODCASTS_TO_CALENDAR.md` |
 | 630-633 | `docs/handoffs/SESSION_630_633_CONTENT_CALENDAR_FEATURES.md` |
-| 629 | `docs/handoffs/SESSION_629_TESTING_VALIDATION.md` |
-| 628 | `docs/handoffs/SESSION_628_CROSS_SESSION_MEMORY_CALENDAR.md` |
-
----
-
-## New Management Commands (Session 635)
-
-```bash
-# Full System Demo - AI creates content about itself
-python manage.py full_system_demo
-
-# Regenerate Pilots from decisions (recovery tool)
-python manage.py regenerate_pilots --dry-run  # Preview
-python manage.py regenerate_pilots            # Execute
-```
 
 ---
 
 ## Recommended Next Steps
 
-### Option 1: Month Grid View
+### Option 1: Improve Health Score to 95%+
+- Add Podcasts Tab to UI template
+- Add Pilot Dashboard Panel to UI template
+- Fix learning bridges import
+- Clean up placeholder episodes
+
+### Option 2: Month Grid View
 - Add calendar month grid view
 - Visual scheduling interface
 - Drag-and-drop rescheduling
-
-### Option 2: Content Editing
-- Edit generated scripts before publishing
-- Regenerate with different parameters
-- Manual approval workflow
 
 ### Option 3: Podcast Audio Generation
 - Generate audio from scripts using TTS
 - Support multiple voice options
 - Audio player in UI
 
-### Option 4: Automated Self-Promotion
-- Schedule the full_system_demo to run periodically
-- Auto-publish generated content to social platforms
-- Build audience through consistent AI-generated content
+### Option 4: Agent Introduction Party Automation
+- Schedule periodic parties to keep agents socializing
+- Track which agents have never talked
+- Auto-generate cross-team collaborations
 
 ---
 
@@ -147,9 +190,9 @@ python manage.py regenerate_pilots            # Execute
 
 | Channel | Owner | Episodes | Status |
 |---------|-------|----------|--------|
-| AI Tech Weekly | admin | 3+ | Active |
-| Narrative Shift Reports | admin | 5+ | Active |
-| AI Studio Insider | admin | 1+ | Active (from demo) |
+| AI Tech Weekly | admin | 11+ | Active |
+| Narrative Shift Reports | admin | 3+ | Active |
+| AI Studio Insider | admin | 3+ | Active |
 
 ---
 
@@ -159,28 +202,10 @@ python manage.py regenerate_pilots            # Execute
 # Content Calendar
 curl http://localhost:8000/api/content-calendar/
 curl http://localhost:8000/api/content-calendar/episode/<uuid>/
-curl -X POST http://localhost:8000/api/content-calendar/generate/<uuid>/
 
 # Podcast with 3-agent debate
 curl http://localhost:8000/api/podcasts/<uuid>/script/
 
-# Experiments (Session 635 fix)
-curl http://localhost:8000/api/experiment-recommendations/
-```
-
----
-
-## Session 635 Commits
-
-```
-cacd9801 feat(Session 635): Full System Demo + Pilot Regeneration
-```
-
----
-
-## Database Backup
-
-A backup was created during Session 635:
-```
-backups/database/unified_donkey_betz_20251230_session635.dump (698 MB)
+# System Health (programmatic)
+curl http://localhost:8000/health/ping/
 ```
