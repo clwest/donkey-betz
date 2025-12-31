@@ -1,47 +1,54 @@
-# Session 644 - Start Here
+# Session 645 - Start Here
 
-**Previous Session:** 643
+**Previous Session:** 644
 **Date:** December 31, 2025
-**Focus:** Tab Consolidation + Deep End-to-End Audit Complete
+**Focus:** Research Demo 24h Activity Indicators + Celery Stability
 **Health Score:** 100% (run `python manage.py system_health_check` to verify)
 
 ---
 
-## Session 643 Accomplishments
+## Session 644 Accomplishments
 
-### Deep End-to-End Audit - COMPLETE
+### Research Demo 24h Activity Indicators - COMPLETE
 
-Traced every feature from UI -> API -> Database -> Output to verify actual connectivity:
+Added real-time activity indicators to the Knowledge Pipeline Flow visualization:
 
-| System | Status | Evidence |
-|--------|--------|----------|
-| Agent Learning | :white_check_mark: | 5,436 conversations, 1,368 transfers |
-| Narrative Drift | :white_check_mark: | 5 narratives, 312 evidence, 27/day |
-| Spider Network | :white_check_mark: | 764 records in 24h, all fresh |
-| Autonomous Situations | :white_check_mark: | 252 sessions in 24h |
-| Content Studio | :white_check_mark: | 3 channels, 19 episodes |
-| AgentExecution Tracking | :white_check_mark: | Working since Session 641 |
+| Pipeline Box | Now Shows | Example |
+|--------------|-----------|---------|
+| Spiders | Data points in 24h | `716 data/24h` |
+| Agents | Active with knowledge | `71 active` |
+| Connections | Transfers in 24h | `104 transfers/24h` |
+| Blocked | Pending reviews | `12 pending` |
+| Knowledge | New items in 24h | `+201 new/24h` |
 
-### Tab Consolidation - COMPLETE
+**Why:** Previously showed only totals which change slowly. Now users can see the system is actively processing data.
 
-Hidden 3 additional low-usage tabs:
-| Tab | Reason |
-|-----|--------|
-| Distribution | Not fully implemented |
-| Portfolio | Low usage, use Projects instead |
-| Upload | Functionality in Projects tab |
+### Celery macOS Stability Fixes - COMPLETE
 
-**Result:** Visible tabs reduced from 26 to ~20 (includes 10 previously hidden)
+Added settings to prevent SIGSEGV crashes on macOS:
 
-### Self-Blog API Fixed - COMPLETE
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `CELERY_WORKER_MAX_TASKS_PER_CHILD` | 100 | Recycle workers to prevent memory leaks |
+| `CELERY_TASK_SOFT_TIME_LIMIT` | 25 min | Warn before 30 min hard kill |
 
-Enabled previously-commented-out endpoints:
-- `POST /api/v1/research/self-blog/generate/` - Triggers Celery task
-- `GET /api/v1/research/self-blog/task/<task_id>/` - Checks status
+**Key Finding:** Rogue workers started without `--pool=threads` cause SIGSEGV crashes. Always use `make celery` to start workers.
 
-**Files Modified:**
-- `core/views_research_demo.py` - Added view functions
-- `core/urls.py` - Uncommented URL patterns
+### Research Demo Sub-tabs Audit - COMPLETE
+
+Verified all 9 sub-tabs are working with real data:
+
+| Sub-Tab | Status | Data |
+|---------|--------|------|
+| Overview | Fixed | Now shows 24h activity |
+| Network Graph | Working | 67 agents, 323 connections |
+| Live Feed | Working | 104 transfers, 483 conversations/24h |
+| Mythology Gate | Working | 12 pending quarantine |
+| Self Blog | Working | 416 blogs |
+| System Insights | Working | 57 insights |
+| Deliverables | Working | 4 stage documents |
+| Thinking Engine | Working | 62 cycles, engine active |
+| Concern Tracking | Working | 155 total concerns |
 
 ---
 
@@ -58,13 +65,13 @@ open http://localhost:8000/ai-studio/
 # 3. Run System Health Check
 python manage.py system_health_check
 
-# 4. Test new self-blog API
-curl -X POST http://localhost:8000/api/v1/research/self-blog/generate/ -H "Content-Type: application/json" -d '{}'
+# 4. View Research Demo (check 24h indicators)
+# Navigate to Research Demo tab -> Overview sub-tab
 ```
 
 ---
 
-## System Stats (After Session 643)
+## System Stats (After Session 644)
 
 | Component | Count | Status |
 |-----------|-------|--------|
@@ -72,14 +79,14 @@ curl -X POST http://localhost:8000/api/v1/research/self-blog/generate/ -H "Conte
 | Spiders | 77 | 72 working, 5 need API keys |
 | Celery Tasks | 53 | All scheduled |
 | API Connectivity | 97.8% | Healthy |
-| Visible UI Tabs | ~20 | Reduced from 26 |
-| Autonomous Situations | 19 | All active |
-| Agent Conversations | 5,436 | Growing daily |
-| Knowledge Transfers | 1,368 | Learning active |
+| Visible UI Tabs | ~20 | Consolidated |
+| Agent Conversations | 5,446 | Growing daily |
+| Knowledge Transfers | 1,370 | +103 in 24h |
+| Knowledge Items | 2,719 | +201 in 24h |
 
 ---
 
-## Recommended Next Steps for Session 644+
+## Recommended Next Steps for Session 645+
 
 ### Priority 1: Chart.js Integration
 The Activity tab has chart structure but needs Chart.js integration.
@@ -103,10 +110,26 @@ Add GitHub Actions workflow for:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **643** | `SESSION_643_DEEP_AUDIT_ISSUES.md` | **Tab consolidation + API fixes** |
+| **644** | (this commit) | **Research Demo 24h indicators + Celery stability** |
+| 643 | `SESSION_643_DEEP_AUDIT_ISSUES.md` | Tab consolidation + API fixes |
 | 642 | `SESSION_642_PREDEPLOYMENT_SYSTEM_AUDIT.md` | Full system inventory |
 | 642 | `SESSION_642_PLATFORM_AUDIT_FIXES.md` | 6 bug fixes |
 | 641 | `SESSION_641_AGENT_PERFORMANCE_DASHBOARD.md` | Execution tracking |
+
+---
+
+## Important Notes
+
+### Template Changes Require Daphne Restart
+If you modify HTML templates in `ai_core/templates/`, you must restart Daphne:
+```bash
+pkill -f daphne && make start
+```
+Browser hard-refresh alone won't work - Daphne caches templates.
+
+### Celery Workers Must Use Threads Pool
+On macOS, always start workers with `--pool=threads` to avoid SIGSEGV crashes.
+The Makefile handles this automatically - always use `make celery`.
 
 ---
 
@@ -116,10 +139,8 @@ Add GitHub Actions workflow for:
 # System health check
 python manage.py system_health_check
 
-# Test self-blog generation
-curl -X POST http://localhost:8000/api/v1/research/self-blog/generate/ \
-  -H "Content-Type: application/json" \
-  -d '{"tone": "enthusiastic", "word_count": 500}'
+# Test Research Demo stats API (check 24h data)
+curl -s http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | head -40
 
 # Test agent analytics
 curl http://localhost:8000/api/agent-analytics/stats/
