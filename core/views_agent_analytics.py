@@ -101,7 +101,8 @@ def agent_analytics_top_performers(request):
                 'agent_type': agent.agent_type,
             })
 
-        return JsonResponse({'top_performers': top_performers})
+        # Session 641: Changed key to 'performers' to match frontend expectations
+        return JsonResponse({'performers': top_performers})
     except Exception as e:
         logger.error(f"Error in agent_analytics_top_performers: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -170,7 +171,8 @@ def agent_analytics_needs_attention(request):
                     'agent_type': agent.agent_type,
                 })
 
-        return JsonResponse({'needs_attention': needs_attention[:limit]})
+        # Session 641: Changed key to 'issues' to match frontend expectations
+        return JsonResponse({'issues': needs_attention[:limit]})
     except Exception as e:
         logger.error(f"Error in agent_analytics_needs_attention: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -383,11 +385,12 @@ def test_agent_execution(request):
         from core.agent_router import AgentRouter
 
         start_time = timezone.now()
-        router = AgentRouter()
+        # Pass user to AgentRouter constructor (can be None for unauthenticated)
+        router = AgentRouter(user=request.user if request.user.is_authenticated else None)
 
         try:
-            # Route to the agent
-            result = router.route(task, user=request.user if request.user.is_authenticated else None)
+            # Route to the agent - pass agent_name and task as positional args
+            result = router.route(agent_name, task, context={})
 
             execution_time = (timezone.now() - start_time).total_seconds() * 1000
 
