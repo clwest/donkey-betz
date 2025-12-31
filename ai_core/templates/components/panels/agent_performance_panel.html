@@ -500,6 +500,17 @@ function renderActivityChart(container, data) {
 
 async function loadAgentList() {
     const tbody = document.getElementById('ap-agent-table-body');
+
+    // Helper to find category from AGENT_CATEGORIES
+    function findCategory(agentName) {
+        for (const [category, agents] of Object.entries(AGENT_CATEGORIES)) {
+            if (agents.includes(agentName)) {
+                return category;
+            }
+        }
+        return 'other';
+    }
+
     try {
         // Get all agents from the router
         const response = await fetch('/api/agents/');
@@ -507,14 +518,25 @@ async function loadAgentList() {
 
         if (response.ok) {
             const data = await response.json();
-            agents = data.agents || data || [];
+            const rawAgents = data.agents || data || [];
+
+            // Transform API response to expected format
+            agents = rawAgents.map(agent => ({
+                name: agent.name,
+                category: findCategory(agent.name),
+                success_rate: agent.effectivenessScore || 100,
+                executions: agent.totalExecutions || agent.total_executions || 0,
+                avg_time: agent.avgExecutionTime || 0,
+                last_run: agent.lastActive || agent.last_active || null,
+                status: agent.isActive === false ? 'warning' : (agent.effectivenessScore < 70 ? 'warning' : 'healthy')
+            }));
         }
 
         // If no data from API, use categories
         if (agents.length === 0) {
             agents = Object.values(AGENT_CATEGORIES).flat().map(name => ({
                 name: name,
-                category: Object.keys(AGENT_CATEGORIES).find(k => AGENT_CATEGORIES[k].includes(name)) || 'other',
+                category: findCategory(name),
                 success_rate: 100,
                 executions: 0,
                 avg_time: 0,
@@ -530,7 +552,7 @@ async function loadAgentList() {
         // Render with default data
         const agents = Object.values(AGENT_CATEGORIES).flat().map(name => ({
             name: name,
-            category: Object.keys(AGENT_CATEGORIES).find(k => AGENT_CATEGORIES[k].includes(name)) || 'other',
+            category: findCategory(name),
             success_rate: 100,
             executions: 0,
             avg_time: 0,
