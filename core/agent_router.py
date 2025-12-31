@@ -620,12 +620,13 @@ class AgentRouter:
             )
 
             # Track successful execution
+            # Session 641: Use result.message (not result.output which doesn't exist on AgentResult)
             self._complete_execution(
                 execution_record,
                 agent_name,
                 success=result.success,
                 execution_time_ms=result.execution_time_ms,
-                output_data={'result_preview': str(result.output)[:500] if result.output else None}
+                output_data={'result_preview': str(result.message)[:500] if result.message else None}
             )
 
             logger.info(
