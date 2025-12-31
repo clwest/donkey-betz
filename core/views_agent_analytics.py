@@ -19,6 +19,7 @@ from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncDate, TruncHour
 
@@ -356,6 +357,7 @@ def system_health_check(request):
         }, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def test_agent_execution(request):
     """
@@ -364,11 +366,12 @@ def test_agent_execution(request):
     """
     try:
         data = json.loads(request.body)
-        agent_name = data.get('agent_name')
+        # Accept both 'agent' and 'agent_name' for flexibility
+        agent_name = data.get('agent_name') or data.get('agent')
         task = data.get('task', 'Test execution - health check')
 
         if not agent_name:
-            return JsonResponse({'error': 'agent_name required'}, status=400)
+            return JsonResponse({'error': 'agent_name or agent required'}, status=400)
 
         # Get the agent
         try:
