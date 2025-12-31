@@ -99,11 +99,14 @@ Run agent health checks on PR.
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| 642 | `docs/handoffs/SESSION_642_PLATFORM_AUDIT_FIXES.md` | Platform audit + 4 bug fixes |
+| 642 | `docs/handoffs/SESSION_642_PREDEPLOYMENT_SYSTEM_AUDIT.md` | **COMPREHENSIVE** - Full system inventory |
+| 642 | `docs/handoffs/SESSION_642_PLATFORM_AUDIT_FIXES.md` | Platform audit + 6 bug fixes |
 | 641 | `docs/handoffs/SESSION_641_AGENT_PERFORMANCE_DASHBOARD.md` | Execution tracking + bug fixes |
 | 640 | `docs/handoffs/SESSION_640_UI_TAB_VERIFICATION.md` | Tab structure verification |
 | 639 | `docs/handoffs/SESSION_639_SYSTEM_CONNECTIVITY_AUDIT.md` | UI-Backend connectivity |
 | 638 | `docs/handoffs/SESSION_638_AGENT_EXECUTION_TESTING.md` | All 71 agents fixed |
+
+**For complete system overview, read `SESSION_642_PREDEPLOYMENT_SYSTEM_AUDIT.md` first!**
 
 ---
 
