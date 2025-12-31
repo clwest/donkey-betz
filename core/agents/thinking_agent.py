@@ -751,31 +751,51 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
 
         return context
 
-    def execute(self, request: str = "", **kwargs) -> Dict[str, Any]:
+    def execute(
+        self,
+        task: str = "",
+        context: Dict[str, Any] = None,
+        scifi_context: Dict[str, Any] = None,
+        spider_context: Dict[str, Any] = None,
+        **kwargs
+    ) -> 'AgentResult':
         """
         Synchronous execution wrapper for the thinking process.
 
         This is called by the Celery task to run a thinking cycle.
+        Also compatible with AgentRouter.route() calls.
 
         Note: Decision execution is handled by the Celery task (run_autonomous_reasoning)
         using AutonomousActionExecutor (Session 544). This method focuses on thinking only.
         """
         import asyncio
+        import time
+        from .base_agent import AgentResult
+
+        start_time = time.time()
 
         # Gather context
         lookback_hours = kwargs.get('lookback_hours', 24)
-        context = self.gather_context(lookback_hours)
+        gathered_context = self.gather_context(lookback_hours)
 
         # Run the async thinking process
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            result = loop.run_until_complete(self.think(context))
+            thinking_result = loop.run_until_complete(self.think(gathered_context))
         finally:
             loop.close()
 
-        return {
-            "success": True,
-            "context": context,
-            "thinking_result": result
-        }
+        execution_time = int((time.time() - start_time) * 1000)
+
+        # Return proper AgentResult
+        return AgentResult(
+            success=True,
+            agent_name=self.name,
+            message=thinking_result.get('reflection', 'Thinking cycle complete'),
+            data={
+                "context": gathered_context,
+                "thinking_result": thinking_result
+            },
+            execution_time_ms=execution_time
+        )

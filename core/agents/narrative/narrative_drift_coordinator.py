@@ -14,6 +14,7 @@ Implements the 5 Autonomous Properties:
 
 import logging
 import re
+import json
 from typing import Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -1162,6 +1163,11 @@ class NarrativeDriftCoordinator(BaseAgent):
         spider_context: Dict[str, Any]
     ) -> AgentResult:
         """Execute the coordinator task."""
+        import time
+        from openai import OpenAI
+        from django.conf import settings
+
+        start_time = time.time()
         scifi_context = scifi_context or {}
         spider_context = spider_context or {}
 
@@ -1194,24 +1200,78 @@ This is a Tier 1 Autonomous Situation with:
 - Outputs with Consequences: Alerts are sent and tracked
 - Self-Renewal: The system runs forever via Celery schedules
 
-Your job is to keep this system running smoothly and surfacing valuable narrative intelligence."""
+Your job is to keep this system running smoothly and surfacing valuable narrative intelligence.
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": task}
-        ]
+Analyze the task and decide which tool(s) to call. If no tools are needed, just respond with your analysis."""
 
-        result = self._execute_with_tools(messages, context)
+        try:
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": task}
+            ]
+
+            # Call OpenAI with tools
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                tools=self.tools,
+                tool_choice="auto",
+                max_tokens=2000
+            )
+
+            assistant_message = response.choices[0].message
+            tool_calls_results = []
+
+            # Handle tool calls if any
+            if assistant_message.tool_calls:
+                for tool_call in assistant_message.tool_calls:
+                    tool_name = tool_call.function.name
+                    try:
+                        tool_args = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError:
+                        tool_args = {}
+
+                    logger.info(f"Executing tool: {tool_name}")
+                    tool_result = self._handle_tool_call(tool_name, tool_args)
+                    tool_calls_results.append({
+                        'tool': tool_name,
+                        'result': tool_result
+                    })
+
+            execution_time = int((time.time() - start_time) * 1000)
+
+            result = AgentResult(
+                success=True,
+                agent_name=self.name,
+                message=assistant_message.content or "Task executed successfully",
+                data={
+                    'tool_calls': tool_calls_results,
+                    'response': assistant_message.content
+                },
+                execution_time_ms=execution_time
+            )
+
+        except Exception as e:
+            logger.error(f"NarrativeDriftCoordinator execution failed: {e}")
+            execution_time = int((time.time() - start_time) * 1000)
+            result = AgentResult(
+                success=False,
+                agent_name=self.name,
+                error=str(e),
+                execution_time_ms=execution_time
+            )
 
         # Record learning outcome for collective intelligence
         try:
             self._record_learning_outcome(
                 task=task,
                 result=result,
-                success=result.success if hasattr(result, 'success') else True,
+                success=result.success,
                 context={
                     'agent_type': self.__class__.__name__,
-                    'execution_time_ms': result.execution_time_ms if hasattr(result, 'execution_time_ms') else 0,
+                    'execution_time_ms': result.execution_time_ms,
                 }
             )
         except Exception as le:
