@@ -1,62 +1,40 @@
-# Session 637 - Start Here
+# Session 638 - Start Here
 
-**Previous Session:** 636
+**Previous Session:** 637
 **Date:** December 30, 2025
 **Focus:** To Be Determined
-**Health Score:** 🏆 100% (run `python manage.py system_health_check` to verify)
+**Health Score:** 100% (run `python manage.py system_health_check` to verify)
 
 ---
 
-## Session 636 Accomplishments
+## Session 637 Accomplishments
 
-### System Health Check Command (NEW)
-Created `python manage.py system_health_check` - a comprehensive checklist that verifies ALL platform components:
+### Agent Router Expansion (47 → 68 Routable Agents)
 
-**13 Check Categories:**
-1. **Services** - Redis, Daphne, PostgreSQL
-2. **Database** - 394 models, key tables (agents, dreams, conversations, pilots)
-3. **Agents** - 67 active agents, router, agent files
-4. **Agent Social Activity** - Conversations, dreams, who's talked to who
-5. **Learning Loops** - Knowledge transfers, collective intelligence, memories
-6. **UI Connectivity** - Template exists, panels present, page loads
-7. **Spiders** - 171 spider files, key spiders verified
-8. **Celery** - Workers, beat, scheduled tasks
-9. **Content System** - Channels, episodes with real scripts, debates
-10. **Pilots** - Gates, experiments, stale messages
-11. **API Endpoints** - Health, agents, podcasts, calendar
-12. **ML Models** - OpenAI, Anthropic API keys
-13. **Discord** - Bot token, service files
+Added 21 previously dead agents to the AgentRouter:
 
-### Agent Introduction Party Command (NEW)
-Created `python manage.py agent_introduction_party` - a fun way to have all agents introduce themselves and start conversations:
-- Agents generate personalized introductions
-- Random pairs have brief conversations
-- Post-party dreams are generated
-- Great for onboarding and ensuring agents have socialized
+**Stock Agents (8 new):**
+- StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent
+- MarketAnomalyDetectorAgent, BullCaseAgent, BearCaseAgent
+- SignalScannerAgent, MarketIntelligenceCoordinator
 
-### Podcast Script Generation Fix (Two Code Paths)
-Fixed critical issue where podcast episodes were getting 42-char placeholder scripts:
+**Blockchain Agents (4 new):**
+- SmartContractAuditorAgent, TransactionMonitorAgent
+- WhaleWatcherAgent, ExploitDetectorAgent
 
-**Path 1: AutonomousContentStudioCoordinator**
-- **Bug:** `_trigger_content_creation()` said "Phase 3: AISeriesWorkflowAgent integration pending"
-- **Fix:** Added GPT-4o-mini script generation directly
-- **File:** `core/agents/autonomous_content_studio_coordinator.py`
+**Narrative Agents (4 new):**
+- NarrativeDriftCoordinator, NarrativeHistorianAgent
+- TrendBreakDetectorAgent, CulturalImpactAgent
 
-**Path 2: Celery Task generate_content_for_channel**
-- **Bug:** Used AISeriesWorkflowAgent which returned "0 episodes"
-- **Fix:** Replaced with direct GPT-4o-mini script generation
-- **File:** `core/tasks.py`
+**Orchestration Agents (5 new):**
+- OpportunityPipelineAgent, ContentExecutorAgent
+- WorkflowOrchestrationAgent, ThinkingAgent, TechnicalDocumentAgent
 
-**Result:** Episodes now have 3,000-4,000+ character scripts (500-600 words)
+### System Audit Corrections
 
-### Pilot & Episode Cleanup
-- Deleted 79 duplicate "Market Data - Market Intelligence" pilots (127 → 48 pilots)
-- Cleared "Regenerated from Session 635" messages
-- Deleted 9 placeholder podcast episodes
-
-### Podcast Word Count Fix
-- **Bug:** `_channel_episode_to_dict()` used `ep.description` instead of `ep.script`
-- **Fix:** Now uses `ep.script` field for word count
+Verified that previous audit findings were false positives:
+- **Intelligence module imports:** All work correctly (153+ imports are valid)
+- **Silent failures:** Only 22 legitimate optional dependency handlers
 
 ---
 
@@ -73,80 +51,41 @@ open http://localhost:8000/ai-studio/
 # 3. Run System Health Check
 python manage.py system_health_check
 
-# 4. Host Agent Introduction Party (optional)
-python manage.py agent_introduction_party --agents 10
+# 4. Verify agent count
+python manage.py shell -c "from core.agent_router import AgentRouter; print(f'{len(AgentRouter.AGENT_MAP)} routable agents')"
 ```
 
 ---
 
-## New Management Commands (Session 636)
-
-```bash
-# System Health Check - verify everything is working
-python manage.py system_health_check
-python manage.py system_health_check --verbose
-
-# Agent Introduction Party - agents meet and greet
-python manage.py agent_introduction_party --dry-run  # Preview
-python manage.py agent_introduction_party --agents 10  # Limit agents
-python manage.py agent_introduction_party  # Full party (20 agents)
-
-# From Session 635
-python manage.py full_system_demo
-python manage.py regenerate_pilots
-```
-
----
-
-## System Stats (After Session 636)
+## System Stats (After Session 637)
 
 | Component | Count |
 |-----------|-------|
 | Django Models | 394 |
-| Agents | 71 (67 active) |
+| **Routable Agents** | **68** (was 47) |
+| Total Agents | 71 (3 non-routable) |
 | Spiders | 171 spider files |
 | Celery Tasks | 53 scheduled |
 | Services | 94 |
 | Discord Commands | 112 |
 | Self Blogs | 319 |
-| Agent Conversations | 5,066 |
-| Agent Dreams | 5,199 |
-| Pilot Gates | 54 |
-| Pilots | 69 |
-| Experiments | 69 |
-| Knowledge Transfers | 1,289 |
-| Agent Memories | 633 |
+| Agent Conversations | 5,066+ |
+| Agent Dreams | 5,199+ |
+| Pilot Gates | 55 |
+| Pilots | 72 |
+| Knowledge Transfers | 1,289+ |
+| Agent Memories | 633+ |
 
 ---
 
 ## Health Check Summary
 
 ```
-═══ SERVICES ═══
-  ✅ Redis running
-  ✅ Daphne/Django running
-  ✅ PostgreSQL connected
-
-═══ AGENT SOCIAL ACTIVITY ═══
-  ✅ 5,082+ total conversations
-  ✅ 905+ conversations in last 24 hours
-  ✅ 5,219+ total dreams
-  ✅ 869+ dreams in last 24 hours
-
-═══ LEARNING LOOPS ═══
-  ✅ 1,293 knowledge transfers
-  ✅ 74 transfers in last 24 hours
-  ✅ CollectiveIntelligenceService available
-  ✅ Learning bridges imported successfully
-  ✅ 878 agent decisions recorded
-  ✅ 641 agent memories stored
-
-═══ SUMMARY ═══
-  Total Checks: 58
-  ✅ Passed: 58
-  ⚠️  Warnings: 0
-  ❌ Failed: 0
-  🏆 Health Score: 100%
+Total Checks: 58
+Passed: 58
+Warnings: 0
+Failed: 0
+Health Score: 100%
 ```
 
 ---
@@ -155,39 +94,43 @@ python manage.py regenerate_pilots
 
 | Session | Document |
 |---------|----------|
+| 637 | `docs/handoffs/SESSION_637_SYSTEM_AUDIT_FIXES.md` |
 | 636 | `docs/handoffs/SESSION_636_SYSTEM_HEALTH_CHECK.md` |
-| 635 | (previous start doc) |
-| 634 | `docs/handoffs/SESSION_634_PODCASTS_TO_CALENDAR.md` |
-| 630-633 | `docs/handoffs/SESSION_630_633_CONTENT_CALENDAR_FEATURES.md` |
+| 636 | `docs/WIREMAP.md` (system architecture) |
 
 ---
 
 ## Recommended Next Steps
 
-### Option 1: Month Grid View
+### Option 1: Test All 68 Agents
+- Create a test suite that exercises each routable agent
+- Measure response times and success rates
+- Identify any agents that need maintenance
+
+### Option 2: Agent Performance Dashboard
+- Track which agents are used most frequently
+- Show success/failure rates per agent
+- Display average execution times
+
+### Option 3: Month Grid Calendar View
 - Add calendar month grid view
 - Visual scheduling interface
 - Drag-and-drop rescheduling
 
-### Option 2: Podcast Audio Generation
+### Option 4: Podcast Audio Generation
 - Generate audio from scripts using TTS
 - Support multiple voice options
 - Audio player in UI
 
-### Option 3: Agent Introduction Party Automation
-- Schedule periodic parties via Celery Beat
-- Track which agents have never talked
-- Auto-generate cross-team collaborations
-
 ---
 
-## Content Channels
+## Files Modified in Session 637
 
-| Channel | Owner | Episodes | Status |
-|---------|-------|----------|--------|
-| AI Tech Weekly | admin | 11+ | Active |
-| Narrative Shift Reports | admin | 3+ | Active |
-| AI Studio Insider | admin | 3+ | Active |
+| File | Changes |
+|------|---------|
+| `core/agent_router.py` | +21 agent imports and AGENT_MAP entries |
+| `core/agents/__init__.py` | +10 stock agents, ThinkingAgent, TechnicalDocumentAgent |
+| `docs/handoffs/SESSION_637_SYSTEM_AUDIT_FIXES.md` | Full handoff documentation |
 
 ---
 
@@ -196,7 +139,6 @@ python manage.py regenerate_pilots
 ```bash
 # Content Calendar
 curl http://localhost:8000/api/content-calendar/
-curl http://localhost:8000/api/content-calendar/episode/<uuid>/
 
 # Podcast with 3-agent debate
 curl http://localhost:8000/api/podcasts/<uuid>/script/
