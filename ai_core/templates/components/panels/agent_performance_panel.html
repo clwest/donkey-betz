@@ -521,14 +521,17 @@ async function loadAgentList() {
             const rawAgents = data.agents || data || [];
 
             // Transform API response to expected format
+            // Session 641: Now using real execution tracking data
             agents = rawAgents.map(agent => ({
                 name: agent.name,
                 category: findCategory(agent.name),
-                success_rate: agent.effectivenessScore || 100,
-                executions: agent.totalExecutions || agent.total_executions || 0,
+                success_rate: agent.successRate || agent.effectivenessScore || 100,
+                executions: agent.totalExecutions || 0,
                 avg_time: agent.avgExecutionTime || 0,
-                last_run: agent.lastActive || agent.last_active || null,
-                status: agent.isActive === false ? 'warning' : (agent.effectivenessScore < 70 ? 'warning' : 'healthy')
+                last_run: agent.lastActive || null,
+                status: agent.isActive === false ? 'warning' :
+                        (agent.totalExecutions > 0 && agent.successRate < 70) ? 'warning' :
+                        (agent.effectivenessScore < 70) ? 'warning' : 'healthy'
             }));
         }
 
