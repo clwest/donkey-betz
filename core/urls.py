@@ -1284,6 +1284,17 @@ from core.views_discord import (
     verify_discord_link_code,
 )
 
+# Session 641: Agent Analytics API
+from core.views_agent_analytics import (
+    agent_analytics_stats,
+    agent_analytics_top_performers,
+    agent_analytics_needs_attention,
+    agent_analytics_activity,
+    agent_analytics_executions,
+    system_health_check,
+    test_agent_execution,
+)
+
 # Session 327: Project-Scoped Agent Intelligence API
 from core.views_project_intelligence import (
     get_project_intelligence_overview,
@@ -1687,6 +1698,16 @@ urlpatterns = [
     path('api/agents/', all_agents_list, name='agents-list'),  # Session 267: Add agents list endpoint for sci-fi features
     path('api/agents/assigned/', agents_assigned, name='agents-assigned'),
     path('api/agents/<uuid:agent_id>/profile/', get_agent_profile, name='agent-profile'),  # Session 417: Agent Profile
+    path('api/agents/test/', test_agent_execution, name='agent-test'),  # Session 641: Test agent execution
+
+    # Session 641: Agent Analytics API
+    path('api/agent-analytics/stats/', agent_analytics_stats, name='agent-analytics-stats'),
+    path('api/agent-analytics/top-performers/', agent_analytics_top_performers, name='agent-analytics-top-performers'),
+    path('api/agent-analytics/needs-attention/', agent_analytics_needs_attention, name='agent-analytics-needs-attention'),
+    path('api/agent-analytics/activity/', agent_analytics_activity, name='agent-analytics-activity'),
+    path('api/agent-analytics/executions/', agent_analytics_executions, name='agent-analytics-executions'),
+    path('api/system-health/', system_health_check, name='system-health'),
+
     # Session 417: Detail endpoints for conversations, decisions, dreams, hivemind
     path('api/conversations/<uuid:conversation_id>/', get_conversation_detail, name='conversation-detail'),
     path('api/hivemind/<uuid:session_id>/', get_hivemind_detail, name='hivemind-detail'),
