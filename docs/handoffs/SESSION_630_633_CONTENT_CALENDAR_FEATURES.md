@@ -133,6 +133,31 @@ if context.get('action') == 'initiate_content_debate' and context.get('channel_i
 - `Is Fallback: False`
 - Proper 3-agent debate with synthesized decision reasoning
 
+**4. Script Extraction Fix:**
+The ChannelEpisode.script field was only storing a summary message (42 chars) instead of actual script content. Fixed by extracting script from SeriesEpisode:
+
+```python
+# Session 633: Extract actual script from SeriesEpisode
+from core.models_ai_series import AISeries, SeriesEpisode
+recent_series = AISeries.objects.order_by('-created_at').first()
+if recent_series:
+    series_episode = SeriesEpisode.objects.filter(series=recent_series).order_by('-created_at').first()
+    if series_episode and series_episode.script:
+        actual_script = series_episode.script  # 1544 chars of real content
+```
+
+**Script Result:**
+- **Before:** 42 chars - "Created educational series with 1 episodes"
+- **After:** 1544 chars - Full episode script with host intro, content, and flow
+
+**5. Expandable Text UI:**
+Updated `formatDebateArgument()` to show 500 chars with expandable "[Show more/less]" toggle:
+- Truncates to 500 chars initially (was 200)
+- Adds clickable "[Show more]" link to expand
+- Full content displayed in scrollable container (max-height: 300px)
+- "[Show less]" collapses back to truncated view
+- Same expandable format applied to reasoning display
+
 ---
 
 ## Files Modified
@@ -141,11 +166,11 @@ if context.get('action') == 'initiate_content_debate' and context.get('channel_i
 |------|--------|
 | `core/models_autonomous_studio.py` | Added `script` TextField |
 | `core/migrations/0139_session_630_add_episode_script.py` | New migration |
-| `core/tasks.py` | Updated 2 episode creation locations + fixed debate query + explicit tool prompt |
+| `core/tasks.py` | Updated 2 episode creation locations + fixed debate query + explicit tool prompt + script extraction |
 | `core/agents/autonomous_content_studio_coordinator.py` | Updated 1 episode creation + direct debate initiation |
 | `core/views_content_calendar.py` | Added episode detail + generate views |
 | `core/urls.py` | Added episode detail + generate URL routes |
-| `ai_core/templates/components/panels/content_calendar_panel.html` | Modal, click handlers, Generate Now button, formatDebateArgument() helper |
+| `ai_core/templates/components/panels/content_calendar_panel.html` | Modal, click handlers, Generate Now button, formatDebateArgument() with expandable text |
 
 ---
 
@@ -174,6 +199,8 @@ Verified:
 - Error messages in debate data displayed gracefully (Session 633)
 - New content generation creates fresh debates with real agent data (Session 633)
 - Coordinator creates debates directly (not via GPT tool call) - `Is Fallback: False`
+- Script extraction from SeriesEpisode verified: 1544 chars stored (Session 633)
+- Expandable text UI with "[Show more/less]" toggle working (Session 633)
 
 ---
 
