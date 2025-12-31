@@ -1756,6 +1756,13 @@
                 </button>
             </li>
 
+            <!-- Session 640: Content Studio - Unified Images/Video/Audio -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="content-studio-tab" data-bs-toggle="tab" data-bs-target="#content-studio" type="button" role="tab" title="Content Studio - Create Images, Videos, and Audio">
+                    🎨 Content Studio
+                </button>
+            </li>
+
             <!-- Session 197: Images tab HIDDEN - Tools now in Project Creative Toolbox -->
             <li class="nav-item" role="presentation" style="display: none;">
                 <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" title="AI Image Generation & Editing">
@@ -1838,6 +1845,13 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="autonomous-tab" data-bs-toggle="tab" data-bs-target="#autonomous" type="button" role="tab" title="Autonomous Systems Dashboard - 19 Situations Running 24/7">
                     🤖 Autonomous
+                </button>
+            </li>
+
+            <!-- Session 641: Agent Performance Dashboard -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="agent-performance-tab" data-bs-toggle="tab" data-bs-target="#agent-performance" type="button" role="tab" title="Agent Performance Dashboard - Track Success Rates and Metrics">
+                    📊 Performance
                 </button>
             </li>
 
@@ -9036,6 +9050,14 @@
             <!-- SESSION 451: USER UPLOAD TAB -->
             {% include "components/panels/upload_panel.html" %}
             <!-- END USER UPLOAD TAB -->
+
+            <!-- SESSION 640: CONTENT STUDIO - Unified Images/Video/Audio -->
+            {% include "components/panels/content_studio_panel.html" %}
+            <!-- END CONTENT STUDIO -->
+
+            <!-- SESSION 641: AGENT PERFORMANCE DASHBOARD -->
+            {% include "components/panels/agent_performance_panel.html" %}
+            <!-- END AGENT PERFORMANCE DASHBOARD -->
 
             <!-- SESSION 100: LEADERSHIP DASHBOARD TAB -->
             <div class="tab-pane fade" id="leadership" role="tabpanel">

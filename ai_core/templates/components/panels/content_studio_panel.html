@@ -1,0 +1,650 @@
+{% comment %}
+Session 640: Content Studio Panel
+Unified content creation hub - Images, Video, Audio in one place.
+Uses nav-pills to switch between existing content sections.
+{% endcomment %}
+
+<div class="tab-pane fade" id="content-studio" role="tabpanel">
+    <div class="container-fluid p-4">
+
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-1" style="color: #f9a8d4;">
+                            <span style="font-size: 1.5rem;">🎨</span> Content Studio
+                        </h3>
+                        <p class="text-muted mb-0">Create images, videos, and audio with AI</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-light" onclick="refreshContentStudio()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="row mb-4" id="content-studio-stats">
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-images">0</h3>
+                        <small style="font-weight: 600;">Images</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-videos">0</h3>
+                        <small style="font-weight: 600;">Videos</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-audio">0</h3>
+                        <small style="font-weight: 600;">Audio</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-3d">0</h3>
+                        <small style="font-weight: 600;">3D Models</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-projects">0</h3>
+                        <small style="font-weight: 600;">Projects</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h3 class="mb-0" id="cs-stat-characters">0</h3>
+                        <small style="font-weight: 600;">Characters</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Category Pills -->
+        <ul class="nav nav-pills mb-4" id="content-studio-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="cs-images-tab" data-bs-toggle="pill" data-bs-target="#cs-images"
+                        type="button" role="tab" onclick="showContentSection('images')"
+                        style="background: transparent; border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; margin-right: 8px;">
+                    🎨 Images
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cs-video-tab" data-bs-toggle="pill" data-bs-target="#cs-video"
+                        type="button" role="tab" onclick="showContentSection('video')"
+                        style="background: transparent; border: 1px solid rgba(139, 92, 246, 0.4); color: #8b5cf6; margin-right: 8px;">
+                    🎬 Video
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cs-audio-tab" data-bs-toggle="pill" data-bs-target="#cs-audio"
+                        type="button" role="tab" onclick="showContentSection('audio')"
+                        style="background: transparent; border: 1px solid rgba(6, 182, 212, 0.4); color: #06b6d4; margin-right: 8px;">
+                    🎵 Audio
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cs-3d-tab" data-bs-toggle="pill" data-bs-target="#cs-3d"
+                        type="button" role="tab" onclick="showContentSection('3d')"
+                        style="background: transparent; border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; margin-right: 8px;">
+                    🧊 3D
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cs-gallery-tab" data-bs-toggle="pill" data-bs-target="#cs-gallery"
+                        type="button" role="tab" onclick="showContentSection('gallery')"
+                        style="background: transparent; border: 1px solid rgba(34, 197, 94, 0.4); color: #22c55e; margin-right: 8px;">
+                    📁 All Gallery
+                </button>
+            </li>
+        </ul>
+
+        <!-- Content Sections -->
+        <div class="tab-content" id="content-studio-content">
+
+            <!-- IMAGES SECTION -->
+            <div class="tab-pane fade show active" id="cs-images" role="tabpanel">
+                <div class="card" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                    <div class="card-body">
+                        <h4 style="color: #f9a8d4;">🎨 AI Image Studio</h4>
+                        <p class="text-muted">Generate images from text, edit with advanced tools, and browse your gallery!</p>
+
+                        <!-- Image Tools Quick Access -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white;"
+                                        onclick="openImageTool('generate')">
+                                    ✨ Generate Image
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;"
+                                        onclick="openImageTool('upscale')">
+                                    ⬆️ Upscale
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white;"
+                                        onclick="openImageTool('inpaint')">
+                                    🎨 Inpaint
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"
+                                        onclick="openImageTool('gallery')">
+                                    📁 Gallery
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- All Image Tools -->
+                        <div class="row g-2">
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('erase')">🧹 Erase</button>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('outpaint')">📐 Outpaint</button>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('recolor')">🖌️ Recolor</button>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('control')">🎭 Control</button>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('compare')">⚖️ Compare</button>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openImageTool('minifig')">🤖 3D Chars</button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Images -->
+                        <div class="mt-4">
+                            <h5 style="color: #f9a8d4;">Recent Images</h5>
+                            <div id="cs-recent-images" class="row g-2">
+                                <div class="col-12 text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Loading recent images...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIDEO SECTION -->
+            <div class="tab-pane fade" id="cs-video" role="tabpanel">
+                <div class="card" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                    <div class="card-body">
+                        <h4 style="color: #c4b5fd;">🎬 AI Video Generation</h4>
+                        <p class="text-muted">Generate videos from text descriptions or animate your images with Runway ML!</p>
+
+                        <!-- Video Tools Quick Access -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;"
+                                        onclick="openVideoTool('text-video')">
+                                    📝 Text-to-Video
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white;"
+                                        onclick="openVideoTool('image-video')">
+                                    🖼️ Image-to-Video
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white;"
+                                        onclick="openVideoTool('upscale-video')">
+                                    ⬆️ Upscale
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"
+                                        onclick="openVideoTool('video-gallery')">
+                                    📹 Gallery
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- All Video Tools -->
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openVideoTool('video-to-video')">🎬 Video-to-Video</button>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openVideoTool('character-performance')">🎭 Character Performance</button>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openVideoTool('davinci-editing')">🎬 Video Editing</button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Videos -->
+                        <div class="mt-4">
+                            <h5 style="color: #c4b5fd;">Recent Videos</h5>
+                            <div id="cs-recent-videos" class="row g-2">
+                                <div class="col-12 text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Loading recent videos...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AUDIO SECTION -->
+            <div class="tab-pane fade" id="cs-audio" role="tabpanel">
+                <div class="card" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                    <div class="card-body">
+                        <h4 style="color: #67e8f9;">🎵 AI Audio Generation</h4>
+                        <p class="text-muted">Generate speech, create sound effects, dub audio, convert voices, and isolate vocals!</p>
+
+                        <!-- Audio Tools Quick Access -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white;"
+                                        onclick="openAudioTool('text-speech')">
+                                    🗣️ Text-to-Speech
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;"
+                                        onclick="openAudioTool('text-sound')">
+                                    🔊 Text-to-Sound
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white;"
+                                        onclick="openAudioTool('voice-dubbing')">
+                                    🌍 Voice Dubbing
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"
+                                        onclick="openAudioTool('voice-isolation')">
+                                    🎧 Voice Isolation
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- All Audio Tools -->
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="openAudioTool('speech-speech')">🎙️ Speech-to-Speech</button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Audio -->
+                        <div class="mt-4">
+                            <h5 style="color: #67e8f9;">Recent Audio</h5>
+                            <div id="cs-recent-audio" class="row g-2">
+                                <div class="col-12 text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Loading recent audio...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3D SECTION -->
+            <div class="tab-pane fade" id="cs-3d" role="tabpanel">
+                <div class="card" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                    <div class="card-body">
+                        <h4 style="color: #fcd34d;">🧊 3D Generation</h4>
+                        <p class="text-muted">Create 3D models from images and generate custom characters!</p>
+
+                        <!-- 3D Tools Quick Access -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"
+                                        onclick="openImageTool('minifig')">
+                                    🤖 3D Characters
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;"
+                                        onclick="open3DTool('image-to-3d')">
+                                    🖼️ Image to 3D
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn w-100 py-3" style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white;"
+                                        onclick="open3DTool('text-to-3d')">
+                                    📝 Text to 3D
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recent 3D Models -->
+                        <div class="mt-4">
+                            <h5 style="color: #fcd34d;">Recent 3D Models</h5>
+                            <div id="cs-recent-3d" class="row g-2">
+                                <div class="col-12 text-center py-4 text-muted">
+                                    No 3D models yet. Create your first one!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GALLERY SECTION -->
+            <div class="tab-pane fade" id="cs-gallery" role="tabpanel">
+                <div class="card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                    <div class="card-body">
+                        <h4 style="color: #86efac;">📁 All Content Gallery</h4>
+                        <p class="text-muted">Browse all your creative content in one place</p>
+
+                        <!-- Gallery Filters -->
+                        <div class="d-flex gap-2 mb-4">
+                            <button class="btn btn-sm btn-outline-success active" onclick="filterGallery('all')">All</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterGallery('images')">Images</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterGallery('videos')">Videos</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterGallery('audio')">Audio</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterGallery('3d')">3D</button>
+                        </div>
+
+                        <!-- Gallery Grid -->
+                        <div id="cs-gallery-grid" class="row g-3">
+                            <div class="col-12 text-center py-4 text-muted">
+                                <div class="spinner-border spinner-border-sm me-2"></div>
+                                Loading gallery...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// Content Studio initialization
+let contentStudioLoaded = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const contentStudioTab = document.querySelector('[data-bs-target="#content-studio"]');
+    if (contentStudioTab) {
+        contentStudioTab.addEventListener('shown.bs.tab', function() {
+            if (!contentStudioLoaded) {
+                loadContentStudioData();
+                contentStudioLoaded = true;
+            }
+        });
+    }
+});
+
+function loadContentStudioData() {
+    loadContentStudioStats();
+    loadRecentImages();
+}
+
+function refreshContentStudio() {
+    loadContentStudioStats();
+    loadRecentImages();
+    loadRecentVideos();
+    loadRecentAudio();
+}
+
+async function loadContentStudioStats() {
+    try {
+        // Load image count
+        const imgRes = await fetch('/api/images/');
+        if (imgRes.ok) {
+            const data = await imgRes.json();
+            document.getElementById('cs-stat-images').textContent = data.total || data.count || 0;
+        }
+
+        // Load video count
+        const vidRes = await fetch('/api/video/');
+        if (vidRes.ok) {
+            const data = await vidRes.json();
+            document.getElementById('cs-stat-videos').textContent = data.total || data.count || 0;
+        }
+
+        // Load project count
+        const projRes = await fetch('/api/projects/');
+        if (projRes.ok) {
+            const data = await projRes.json();
+            document.getElementById('cs-stat-projects').textContent = data.length || 0;
+        }
+
+        // Load character count
+        const charRes = await fetch('/api/characters/');
+        if (charRes.ok) {
+            const data = await charRes.json();
+            document.getElementById('cs-stat-characters').textContent = data.length || data.count || 0;
+        }
+    } catch (error) {
+        console.error('Error loading Content Studio stats:', error);
+    }
+}
+
+async function loadRecentImages() {
+    const container = document.getElementById('cs-recent-images');
+    try {
+        const response = await fetch('/api/images/?limit=8&order=-created_at');
+        if (response.ok) {
+            const data = await response.json();
+            const images = data.results || data.images || data || [];
+
+            if (images.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center py-4 text-muted">No images yet. Create your first one!</div>';
+                return;
+            }
+
+            container.innerHTML = images.slice(0, 8).map(img => `
+                <div class="col-3">
+                    <div class="position-relative" style="aspect-ratio: 1; overflow: hidden; border-radius: 8px;">
+                        <img src="${img.image_url || img.url || '/static/placeholder.png'}"
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             alt="${img.prompt || 'Generated image'}">
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading recent images:', error);
+        container.innerHTML = '<div class="col-12 text-center py-4 text-muted">Error loading images</div>';
+    }
+}
+
+async function loadRecentVideos() {
+    const container = document.getElementById('cs-recent-videos');
+    try {
+        const response = await fetch('/api/video/?limit=4&order=-created_at');
+        if (response.ok) {
+            const data = await response.json();
+            const videos = data.results || data.videos || data || [];
+
+            if (videos.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center py-4 text-muted">No videos yet. Create your first one!</div>';
+                return;
+            }
+
+            container.innerHTML = videos.slice(0, 4).map(vid => `
+                <div class="col-6">
+                    <div class="position-relative" style="aspect-ratio: 16/9; overflow: hidden; border-radius: 8px; background: #1a1a1a;">
+                        <video src="${vid.video_url || vid.url}"
+                               style="width: 100%; height: 100%; object-fit: cover;"
+                               muted></video>
+                        <div class="position-absolute bottom-0 start-0 end-0 p-2" style="background: rgba(0,0,0,0.7);">
+                            <small class="text-white">${vid.prompt?.substring(0, 30) || 'Video'}...</small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading recent videos:', error);
+        container.innerHTML = '<div class="col-12 text-center py-4 text-muted">Error loading videos</div>';
+    }
+}
+
+async function loadRecentAudio() {
+    const container = document.getElementById('cs-recent-audio');
+    container.innerHTML = '<div class="col-12 text-center py-4 text-muted">Audio gallery coming soon!</div>';
+}
+
+// Navigation functions to open existing tools
+function openImageTool(tool) {
+    // Show the images tab and navigate to the specific tool
+    const imagesTab = document.getElementById('images-tab');
+    if (imagesTab) {
+        // Unhide the images tab temporarily and click it
+        const imagesLi = imagesTab.closest('li');
+        if (imagesLi) {
+            imagesLi.style.display = 'block';
+            imagesTab.click();
+
+            // Click the specific tool pill
+            setTimeout(() => {
+                const toolPill = document.getElementById(tool + '-pill');
+                if (toolPill) toolPill.click();
+            }, 100);
+        }
+    }
+}
+
+function openVideoTool(tool) {
+    const videoTab = document.getElementById('video-tab');
+    if (videoTab) {
+        const videoLi = videoTab.closest('li');
+        if (videoLi) {
+            videoLi.style.display = 'block';
+            videoTab.click();
+
+            setTimeout(() => {
+                const toolPill = document.getElementById(tool + '-pill');
+                if (toolPill) toolPill.click();
+            }, 100);
+        }
+    }
+}
+
+function openAudioTool(tool) {
+    const audioTab = document.getElementById('audio-tab');
+    if (audioTab) {
+        const audioLi = audioTab.closest('li');
+        if (audioLi) {
+            audioLi.style.display = 'block';
+            audioTab.click();
+
+            setTimeout(() => {
+                const toolPill = document.getElementById(tool + '-tab');
+                if (toolPill) toolPill.click();
+            }, 100);
+        }
+    }
+}
+
+function open3DTool(tool) {
+    // For 3D tools, use the 3D generation modal or navigate to character page
+    if (tool === 'image-to-3d') {
+        // Open 3D modal if exists
+        const modal = document.getElementById('generate3DModal');
+        if (modal) {
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } else {
+            openImageTool('minifig');
+        }
+    } else if (tool === 'text-to-3d') {
+        openImageTool('minifig');
+    }
+}
+
+function showContentSection(section) {
+    // Update active pill styling
+    document.querySelectorAll('#content-studio-tabs .nav-link').forEach(btn => {
+        btn.style.background = 'transparent';
+    });
+    const activeBtn = document.querySelector(`#cs-${section}-tab`);
+    if (activeBtn) {
+        activeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+    }
+
+    // Load section data if needed
+    if (section === 'video' && !document.getElementById('cs-recent-videos').dataset.loaded) {
+        loadRecentVideos();
+        document.getElementById('cs-recent-videos').dataset.loaded = 'true';
+    } else if (section === 'audio' && !document.getElementById('cs-recent-audio').dataset.loaded) {
+        loadRecentAudio();
+        document.getElementById('cs-recent-audio').dataset.loaded = 'true';
+    } else if (section === 'gallery') {
+        loadGallery();
+    }
+}
+
+async function loadGallery() {
+    const container = document.getElementById('cs-gallery-grid');
+    container.innerHTML = '<div class="col-12 text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading gallery...</div>';
+
+    try {
+        const response = await fetch('/api/images/?limit=20&order=-created_at');
+        if (response.ok) {
+            const data = await response.json();
+            const images = data.results || data.images || data || [];
+
+            if (images.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center py-4 text-muted">No content yet!</div>';
+                return;
+            }
+
+            container.innerHTML = images.map(img => `
+                <div class="col-6 col-md-3">
+                    <div class="position-relative" style="aspect-ratio: 1; overflow: hidden; border-radius: 8px;">
+                        <img src="${img.image_url || img.url || '/static/placeholder.png'}"
+                             style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                             onclick="viewImage('${img.id}')"
+                             alt="${img.prompt || 'Content'}">
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading gallery:', error);
+        container.innerHTML = '<div class="col-12 text-center py-4 text-muted">Error loading gallery</div>';
+    }
+}
+
+function filterGallery(type) {
+    // Update button states
+    document.querySelectorAll('#cs-gallery .btn-outline-success').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // Reload with filter
+    loadGallery(type);
+}
+
+function viewImage(imageId) {
+    // Open image viewer modal
+    console.log('Viewing image:', imageId);
+}
+</script>
