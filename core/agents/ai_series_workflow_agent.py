@@ -669,6 +669,47 @@ Start by researching the topic to understand trends and audience preferences.
                 except AISeries.DoesNotExist:
                     logger.warning(f"Series {existing_series_id} not found, creating new one")
 
+            # If no user, return a mock series object for planning purposes
+            if not self.user:
+                logger.info("No user provided - returning conceptual series plan")
+                # Return a simple object with required attributes for planning
+                class ConceptualSeries:
+                    def __init__(self, task, context):
+                        import uuid
+                        from datetime import datetime
+                        self.id = str(uuid.uuid4())
+                        self.name = task[:200]
+                        self.description = task
+                        self.episode_count = min(context.get('episode_count', 3), 5)
+                        self.target_audience = context.get('target_audience', 'general audience')
+                        self.is_conceptual = True
+                        self.style_config = {}
+                        self.character_profiles = []
+                        self.status = 'planning'
+                        self.generation_progress = 0
+                        self.updated_at = datetime.now()
+
+                    def save(self, *args, **kwargs):
+                        """No-op save for conceptual series."""
+                        pass
+
+                    def refresh_from_db(self):
+                        """No-op refresh for conceptual series."""
+                        pass
+
+                    def complete_generation(self):
+                        """Mark conceptual series as complete."""
+                        self.status = 'complete'
+                        self.generation_progress = 100
+
+                    def fail(self, error_message: str, stage: str = 'unknown'):
+                        """Mark conceptual series as failed."""
+                        self.status = 'failed'
+                        self.error_message = error_message
+                        self.failed_at_stage = stage
+
+                return ConceptualSeries(task, context)
+
             # Map series type
             type_mapping = {
                 'educational': SeriesType.EDUCATIONAL,

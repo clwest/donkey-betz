@@ -14646,7 +14646,9 @@ def _execute_generate_voice(user, parameters, session=None):
         # Save audio file
         audio_data = response.content
         filename = f'voice_{uuid.uuid4().hex[:8]}.mp3'
-        filepath = os.path.join('generated_audio', user.username, filename)
+        # Handle case where user is None (agent testing or system calls)
+        username = user.username if user else 'system'
+        filepath = os.path.join('generated_audio', username, filename)
         from django.core.files.storage import default_storage
         from django.core.files.base import ContentFile
         saved_path = default_storage.save(filepath, ContentFile(audio_data))
@@ -14654,31 +14656,34 @@ def _execute_generate_voice(user, parameters, session=None):
 
         logger.info(f"✅ Agent generated voice: {saved_path}")
 
-        # Session 305: Save to AudioHistory
-        from content.models import AudioHistory
-        audio_record = AudioHistory.objects.create(
-            user=user,
-            session=session,
-            filename=filename,
-            file_path=saved_path,
-            audio_type='tts',
-            prompt=text,
-            parameters={
-                'stability': stability,
-                'similarity_boost': similarity_boost,
-                'model_id': 'eleven_monolingual_v1'
-            },
-            voice_id=voice_id,
-            voice_name=voice,
-            model_used='eleven_monolingual_v1',
-            file_size_bytes=len(audio_data),
-            status='completed'
-        )
+        # Session 305: Save to AudioHistory (only if user is provided)
+        audio_id = None
+        if user:
+            from content.models import AudioHistory
+            audio_record = AudioHistory.objects.create(
+                user=user,
+                session=session,
+                filename=filename,
+                file_path=saved_path,
+                audio_type='tts',
+                prompt=text,
+                parameters={
+                    'stability': stability,
+                    'similarity_boost': similarity_boost,
+                    'model_id': 'eleven_monolingual_v1'
+                },
+                voice_id=voice_id,
+                voice_name=voice,
+                model_used='eleven_monolingual_v1',
+                file_size_bytes=len(audio_data),
+                status='completed'
+            )
+            audio_id = audio_record.id
 
         return {
             'success': True,
             'audio_url': audio_url,
-            'audio_id': audio_record.id,
+            'audio_id': audio_id,
             'voice': voice,
             'voice_id': voice_id,
             'filename': filename,

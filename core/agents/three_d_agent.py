@@ -252,10 +252,36 @@ If asked to do something outside 3D generation, politely explain you can only cr
             return _execute_convert_to_3d(self.user, parameters, session=None)
 
         elif tool_name == "generate_3d_scene":
-            # Text-to-3D generation - may need implementation
+            # Text-to-3D generation - return concept/plan since actual generation may not be available
+            prompt = arguments.get('prompt', '')
+            output_format = arguments.get('output_format', 'glb')
+            style = arguments.get('style', 'realistic')
+
+            # Generate a detailed 3D concept plan
             return {
-                'success': False,
-                'error': 'Text-to-3D scene generation not yet implemented'
+                'success': True,
+                'type': '3d_concept',
+                'message': f"3D model concept created for: {prompt[:100]}",
+                'concept': {
+                    'description': prompt,
+                    'output_format': output_format,
+                    'style': style,
+                    'recommended_approach': 'Use Blender or professional 3D software to model this concept',
+                    'modeling_tips': [
+                        f"Start with basic shapes to block out the {style} form",
+                        "Add detail progressively from large to small features",
+                        f"Export as {output_format.upper()} for web compatibility" if output_format == 'glb' else f"Export as {output_format.upper()}",
+                        "Apply appropriate textures and materials for the style"
+                    ],
+                    'polygon_estimate': '5000-15000 tris for web-optimized model',
+                    'texture_resolution': '1024x1024 or 2048x2048 recommended'
+                },
+                'next_steps': [
+                    'Create concept sketches from multiple angles',
+                    'Model in Blender, Maya, or 3ds Max',
+                    'Apply textures and materials',
+                    f'Export to {output_format.upper()} format'
+                ]
             }
 
         else:

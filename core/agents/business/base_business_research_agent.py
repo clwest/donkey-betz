@@ -238,6 +238,37 @@ class BaseBusinessResearchAgent:
             self._unified_search = get_unified_intelligence_search()
         return self._unified_search
 
+    def _build_intelligent_prompt(
+        self,
+        task: str,
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any]
+    ) -> str:
+        """
+        Build intelligent prompt with platform context.
+
+        Session 529: Add platform awareness to business research agents.
+        """
+        from django.utils import timezone
+
+        parts = []
+
+        # Add temporal awareness
+        current_date = timezone.now()
+        parts.append(f"## TEMPORAL AWARENESS\n- Current Date: {current_date.strftime('%B %d, %Y')}")
+
+        # Add mood context if available
+        if scifi_context and scifi_context.get('mood'):
+            mood = scifi_context['mood']
+            parts.append(f"## CREATIVE MOOD\nCurrent Mood: **{mood.get('name', 'Calm')}**")
+
+        # Add research context
+        parts.append(f"""## RESEARCH CONTEXT
+You are {self.name}, a specialized business research agent.
+Research Type: {self.research_type}""")
+
+        return "\n\n".join(parts) if parts else ""
+
     @property
     def tools(self) -> List[Dict]:
         """Combine standard tools with agent-specific tools and synthesis tool."""
@@ -441,7 +472,10 @@ class BaseBusinessResearchAgent:
             prompt_parts.append(f"\n\n## Prior Research Context\n{prior_context}")
 
         if context:
-            prompt_parts.append(f"\n\n## Additional Context\n{json.dumps(context, indent=2)}")
+            try:
+                prompt_parts.append(f"\n\n## Additional Context\n{json.dumps(context, indent=2, default=str)}")
+            except (TypeError, ValueError):
+                prompt_parts.append(f"\n\n## Additional Context\n{str(context)}")
 
         # Add synthesis instructions
         prompt_parts.append(f"\n\n## Instructions\n{self.get_synthesis_prompt(task, context)}")
@@ -508,7 +542,7 @@ class BaseBusinessResearchAgent:
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
-                        "content": json.dumps(result) if isinstance(result, dict) else str(result)
+                        "content": json.dumps(result, default=str) if isinstance(result, dict) else str(result)
                     })
             else:
                 logger.debug(f"{self.name}: No tool calls, breaking")

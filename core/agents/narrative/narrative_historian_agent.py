@@ -504,12 +504,37 @@ When analyzing narratives, consider:
 
 Provide clear, analytical responses about narrative history and patterns."""
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": task}
-        ]
+        # Build full prompt with system and task
+        full_prompt = f"{system_prompt}\n\nTask: {task}"
 
-        result = self._execute_with_tools(messages, context)
+        # Call GPT using BaseAgent's _call_openai
+        try:
+            gpt_response = self._call_openai(full_prompt)
+
+            # Process response - extract content and handle any tool calls
+            content = gpt_response.get('content', '')
+            tool_calls = gpt_response.get('tool_calls', [])
+
+            # Process tool calls if any
+            tool_results = []
+            for tc in tool_calls:
+                tool_result = self._handle_tool_call(tc['name'], tc['arguments'])
+                tool_results.append(tool_result)
+
+            # Build result
+            result = AgentResult(
+                success=True,
+                message=content or "Narrative history analysis complete",
+                data={'tool_results': tool_results, 'analysis': content},
+                agent_name=self.name
+            )
+        except Exception as e:
+            logger.error(f"NarrativeHistorianAgent error: {e}")
+            result = AgentResult(
+                success=False,
+                error=str(e),
+                agent_name=self.name
+            )
 
         # Record learning outcome for collective intelligence
         try:
