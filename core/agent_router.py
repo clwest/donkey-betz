@@ -148,11 +148,35 @@ from core.agents.devops_agent import DevOpsAgent
 # Session 461: Security Agents (full set)
 from core.agents.security import ContentAuditAgent
 
-# Session 461: Stock Audit Agents
-from core.agents.stocks import StockAuditCoordinator
+# Session 461: Stock Audit Agents (full set - Session 637)
+from core.agents.stocks import (
+    StockAuditCoordinator,
+    StockAnalystAgent,
+    MarketMovementMonitorAgent,
+    InstitutionalWatcherAgent,
+    MarketAnomalyDetectorAgent,
+    BullCaseAgent,
+    BearCaseAgent,
+    SignalScannerAgent,
+    MarketIntelligenceCoordinator,
+)
 
-# Session 461: Blockchain Audit Agents
-from core.agents.blockchain import BlockchainAuditCoordinator
+# Session 461: Blockchain Audit Agents (full set - Session 637)
+from core.agents.blockchain import (
+    BlockchainAuditCoordinator,
+    SmartContractAuditorAgent,
+    TransactionMonitorAgent,
+    WhaleWatcherAgent,
+    ExploitDetectorAgent,
+)
+
+# Session 471: Narrative Drift Agents (Session 637)
+from core.agents.narrative import (
+    NarrativeDriftCoordinator,
+    NarrativeHistorianAgent,
+    TrendBreakDetectorAgent,
+    CulturalImpactAgent,
+)
 
 # Session 445: Series Workflow Agent
 from core.agents.ai_series_workflow_agent import AISeriesWorkflowAgent
@@ -180,6 +204,13 @@ from core.agents.campaign_orchestrator_agent import CampaignOrchestratorAgent
 
 # Session 558: Markets Agents
 from core.agents.markets import PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+
+# Session 637: Missing agents from root directory
+from core.agents.opportunity_pipeline_agent import OpportunityPipelineAgent
+from core.agents.content_executor_agent import ContentExecutorAgent
+from core.agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
+from core.agents.thinking_agent import ThinkingAgent
+from core.agents.technical_document_agent import TechnicalDocumentAgent
 
 logger = logging.getLogger(__name__)
 
@@ -267,11 +298,29 @@ class AgentRouter:
         # Security Agents (Session 461)
         "ContentAuditAgent": ContentAuditAgent,
 
-        # Stock Audit Agents (Session 461)
+        # Stock Audit Agents (Session 461 + 637)
         "StockAuditCoordinator": StockAuditCoordinator,
+        "StockAnalystAgent": StockAnalystAgent,
+        "MarketMovementMonitorAgent": MarketMovementMonitorAgent,
+        "InstitutionalWatcherAgent": InstitutionalWatcherAgent,
+        "MarketAnomalyDetectorAgent": MarketAnomalyDetectorAgent,
+        "BullCaseAgent": BullCaseAgent,
+        "BearCaseAgent": BearCaseAgent,
+        "SignalScannerAgent": SignalScannerAgent,
+        "MarketIntelligenceCoordinator": MarketIntelligenceCoordinator,
 
-        # Blockchain Audit Agents (Session 461)
+        # Blockchain Audit Agents (Session 461 + 637)
         "BlockchainAuditCoordinator": BlockchainAuditCoordinator,
+        "SmartContractAuditorAgent": SmartContractAuditorAgent,
+        "TransactionMonitorAgent": TransactionMonitorAgent,
+        "WhaleWatcherAgent": WhaleWatcherAgent,
+        "ExploitDetectorAgent": ExploitDetectorAgent,
+
+        # Narrative Drift Agents (Session 471 + 637)
+        "NarrativeDriftCoordinator": NarrativeDriftCoordinator,
+        "NarrativeHistorianAgent": NarrativeHistorianAgent,
+        "TrendBreakDetectorAgent": TrendBreakDetectorAgent,
+        "CulturalImpactAgent": CulturalImpactAgent,
 
         # Series Workflow Agent (Session 445)
         "AISeriesWorkflowAgent": AISeriesWorkflowAgent,
@@ -301,6 +350,13 @@ class AgentRouter:
         "PredictionMarketAnalyst": PredictionMarketAnalyst,
         "SportsOddsAnalyst": SportsOddsAnalyst,
         "ArbitrageDetector": ArbitrageDetector,
+
+        # Session 637: Orchestration & Utility Agents
+        "OpportunityPipelineAgent": OpportunityPipelineAgent,
+        "ContentExecutorAgent": ContentExecutorAgent,
+        "WorkflowOrchestrationAgent": WorkflowOrchestrationAgent,
+        "ThinkingAgent": ThinkingAgent,
+        "TechnicalDocumentAgent": TechnicalDocumentAgent,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,

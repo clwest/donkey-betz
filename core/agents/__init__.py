@@ -280,6 +280,22 @@ from core.agents.markets import (
     ArbitrageDetector,
 )
 
+# Stock Audit Agents (Session 461 + 637: Full stock agent suite)
+from core.agents.stocks import (
+    StockAuditCoordinator,
+    StockAnalystAgent,
+    MarketMovementMonitorAgent,
+    InstitutionalWatcherAgent,
+    MarketAnomalyDetectorAgent,
+    BullCaseAgent,
+    BearCaseAgent,
+    SignalScannerAgent,
+    MarketIntelligenceCoordinator,
+)
+
+# Thinking Agent (Session 593: AI-powered evaluation and reasoning)
+from core.agents.thinking_agent import ThinkingAgent
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -382,6 +398,12 @@ __all__ = [
     'ContentWriterAgent',
     'get_content_writer_agent',
 
+    # Technical Document Agent (1) - Session 622
+    'TechnicalDocumentAgent',
+    'infer_stage_from_deliverable',
+    'get_stage_for_doc_type',
+    'DOCUMENT_STAGES',
+
     # Blockchain Audit Agents (5) - Session 461
     'SmartContractAuditorAgent',
     'TransactionMonitorAgent',
@@ -409,4 +431,18 @@ __all__ = [
     'PredictionMarketAnalyst',
     'SportsOddsAnalyst',
     'ArbitrageDetector',
+
+    # Stock Audit Agents (9) - Session 461 + 637
+    'StockAuditCoordinator',
+    'StockAnalystAgent',
+    'MarketMovementMonitorAgent',
+    'InstitutionalWatcherAgent',
+    'MarketAnomalyDetectorAgent',
+    'BullCaseAgent',
+    'BearCaseAgent',
+    'SignalScannerAgent',
+    'MarketIntelligenceCoordinator',
+
+    # Thinking Agent (1) - Session 593
+    'ThinkingAgent',
 ]
