@@ -13175,6 +13175,24 @@ Create 1 episode following the channel's style and targeting the audience.
         # Step 3: Create ChannelEpisode record (Property #4: Outputs with Consequences)
         logger.info(f"🎥 [SESSION 466] Step 3: Creating ChannelEpisode record...")
 
+        # Session 633: Extract actual script from SeriesEpisode created by AISeriesWorkflowAgent
+        actual_script = ""
+        try:
+            from core.models_ai_series import AISeries, SeriesEpisode
+            # Find the most recent series created (by AISeriesWorkflowAgent)
+            recent_series = AISeries.objects.order_by('-created_at').first()
+            if recent_series:
+                series_episode = SeriesEpisode.objects.filter(series=recent_series).order_by('-created_at').first()
+                if series_episode and series_episode.script:
+                    actual_script = series_episode.script
+                    logger.info(f"🎥 [SESSION 633] Found script in SeriesEpisode: {len(actual_script)} chars")
+        except Exception as script_err:
+            logger.warning(f"🎥 [SESSION 633] Could not extract script from SeriesEpisode: {script_err}")
+
+        # Fallback to series_result.message if no script found
+        if not actual_script:
+            actual_script = series_result.message if series_result and series_result.message else ""
+
         # Session 468: Fixed field names to match ChannelEpisode model
         # Session 630: Store generated content in script field
         episode = ChannelEpisode.objects.create(
@@ -13182,7 +13200,7 @@ Create 1 episode following the channel's style and targeting the audience.
             topic=winning_topic,
             title=f"{channel.name}: {winning_topic}",
             description=f"Auto-generated content. Debate ID: {recent_debate.id}",
-            script=series_result.message if series_result and series_result.message else "",
+            script=actual_script,
             publish_date=timezone.now(),
             views=0,
             likes=0,
