@@ -128,6 +128,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-analytics/',  # All agent analytics endpoints
         '/api/system-health/',  # System health check
         '/api/agents/test/',  # Test agent execution
+
+        # Session 642: Celery Monitoring
+        '/api/celery/',  # Celery status endpoint
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

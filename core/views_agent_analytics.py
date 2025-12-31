@@ -428,3 +428,152 @@ def test_agent_execution(request):
     except Exception as e:
         logger.error(f"Error in test_agent_execution: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def celery_status(request):
+    """
+    GET /api/celery/status/
+    Returns comprehensive Celery worker and task status for monitoring.
+    Session 642: Celery monitoring dashboard
+    """
+    try:
+        from core.celery import app
+        import redis
+
+        status = {
+            'timestamp': timezone.now().isoformat(),
+            'overall_status': 'healthy',
+            'workers': [],
+            'queues': [],
+            'scheduled_tasks': [],
+            'active_tasks': [],
+            'stats': {
+                'total_workers': 0,
+                'total_queues': 0,
+                'total_scheduled': 0,
+                'total_active': 0,
+            }
+        }
+
+        # Get Celery inspector
+        inspector = app.control.inspect()
+
+        # Check workers
+        try:
+            ping_results = inspector.ping()
+            if ping_results:
+                for worker_name, response in ping_results.items():
+                    status['workers'].append({
+                        'name': worker_name,
+                        'status': 'online' if response.get('ok') == 'pong' else 'error',
+                        'response': response,
+                    })
+                status['stats']['total_workers'] = len(ping_results)
+            else:
+                status['overall_status'] = 'degraded'
+                status['workers'].append({
+                    'name': 'No workers',
+                    'status': 'offline',
+                    'response': None,
+                })
+        except Exception as e:
+            status['overall_status'] = 'error'
+            status['workers'].append({
+                'name': 'Error checking workers',
+                'status': 'error',
+                'response': str(e),
+            })
+
+        # Check active tasks
+        try:
+            active = inspector.active()
+            if active:
+                for worker_name, tasks in active.items():
+                    for task in tasks:
+                        status['active_tasks'].append({
+                            'worker': worker_name,
+                            'task_id': task.get('id', 'N/A'),
+                            'task_name': task.get('name', 'Unknown'),
+                            'args': str(task.get('args', []))[:100],
+                            'started': task.get('time_start', 0),
+                        })
+                status['stats']['total_active'] = len(status['active_tasks'])
+        except Exception as e:
+            logger.warning(f"Error checking active tasks: {e}")
+
+        # Check queues
+        try:
+            queues = inspector.active_queues()
+            if queues:
+                seen_queues = set()
+                for worker_name, worker_queues in queues.items():
+                    for q in worker_queues:
+                        queue_name = q.get('name', 'default')
+                        if queue_name not in seen_queues:
+                            seen_queues.add(queue_name)
+                            status['queues'].append({
+                                'name': queue_name,
+                                'routing_key': q.get('routing_key', ''),
+                            })
+                status['stats']['total_queues'] = len(seen_queues)
+        except Exception as e:
+            logger.warning(f"Error checking queues: {e}")
+
+        # Get scheduled beat tasks from config
+        try:
+            beat_schedule = app.conf.beat_schedule or {}
+            for task_name, task_config in list(beat_schedule.items())[:50]:  # Limit to 50
+                schedule = task_config.get('schedule', 'Unknown')
+                # Format schedule nicely
+                if hasattr(schedule, 'run_every'):
+                    schedule_str = f"Every {schedule.run_every}"
+                elif hasattr(schedule, 'hour') and hasattr(schedule, 'minute'):
+                    schedule_str = f"Cron: {schedule.minute} {schedule.hour} * * *"
+                else:
+                    schedule_str = str(schedule)[:50]
+
+                status['scheduled_tasks'].append({
+                    'name': task_name,
+                    'task': task_config.get('task', 'Unknown'),
+                    'schedule': schedule_str,
+                })
+            status['stats']['total_scheduled'] = len(beat_schedule)
+        except Exception as e:
+            logger.warning(f"Error checking beat schedule: {e}")
+
+        # Check Redis queue lengths
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            for queue in ['celery', 'default', 'long_running', 'broadcast']:
+                length = r.llen(queue)
+                if length > 0:
+                    # Find existing queue entry or add new one
+                    found = False
+                    for q in status['queues']:
+                        if q['name'] == queue:
+                            q['pending'] = length
+                            found = True
+                            break
+                    if not found:
+                        status['queues'].append({
+                            'name': queue,
+                            'pending': length,
+                        })
+        except Exception as e:
+            logger.warning(f"Error checking Redis queues: {e}")
+
+        return JsonResponse(status)
+
+    except Exception as e:
+        logger.error(f"Error in celery_status: {e}")
+        return JsonResponse({
+            'timestamp': timezone.now().isoformat(),
+            'overall_status': 'error',
+            'error': str(e),
+            'workers': [],
+            'queues': [],
+            'scheduled_tasks': [],
+            'active_tasks': [],
+            'stats': {'total_workers': 0, 'total_queues': 0, 'total_scheduled': 0, 'total_active': 0}
+        })

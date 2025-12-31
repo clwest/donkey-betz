@@ -1293,6 +1293,7 @@ from core.views_agent_analytics import (
     agent_analytics_executions,
     system_health_check,
     test_agent_execution,
+    celery_status,  # Session 642: Celery monitoring
 )
 
 # Session 327: Project-Scoped Agent Intelligence API
@@ -1707,6 +1708,7 @@ urlpatterns = [
     path('api/agent-analytics/activity/', agent_analytics_activity, name='agent-analytics-activity'),
     path('api/agent-analytics/executions/', agent_analytics_executions, name='agent-analytics-executions'),
     path('api/system-health/', system_health_check, name='system-health'),
+    path('api/celery/status/', celery_status, name='celery-status'),  # Session 642: Celery monitoring
 
     # Session 417: Detail endpoints for conversations, decisions, dreams, hivemind
     path('api/conversations/<uuid:conversation_id>/', get_conversation_detail, name='conversation-detail'),
