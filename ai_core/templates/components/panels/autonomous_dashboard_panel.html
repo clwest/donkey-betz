@@ -177,13 +177,7 @@
                     <i class="fas fa-brain me-1"></i>ML Scoring
                 </button>
             </li>
-            <!-- Session 502: Podcast Studio Tab -->
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="auto-podcasts-tab" data-bs-toggle="pill" data-bs-target="#auto-podcasts"
-                        type="button" role="tab" onclick="showAutoSubTab('podcasts'); loadPodcastStats(); loadPodcasts();" style="color: #f472b6;">
-                    <i class="fas fa-podcast me-1"></i>Podcasts
-                </button>
-            </li>
+            <!-- Session 502: Podcast Studio Tab - MOVED to Calendar tab (Session 634) -->
         </ul>
 
         <!-- Overview Content (default visible) -->
@@ -326,8 +320,7 @@
         <!-- Spider Operations Content (hidden by default) -->
         {% include "components/panels/spider_operations_panel.html" %}
 
-        <!-- Session 502: Podcast Studio Content (hidden by default) -->
-        {% include "components/panels/podcast_studio_panel.html" %}
+        <!-- Session 502: Podcast Studio - MOVED to Calendar tab (Session 634) -->
 
         <!-- Session 497: Narrative Drift Content (hidden by default) -->
         <div id="narrativeDriftContainer" style="display: none;">
@@ -736,7 +729,7 @@ function showAutoSubTab(tab) {
     const spiderContent = document.getElementById('spiderOperationsContainer');
     const narrativeContent = document.getElementById('narrativeDriftContainer');
     const mlContent = document.getElementById('mlScoringContainer');
-    const podcastContent = document.getElementById('auto-podcasts');
+    // Session 634: Podcast content moved to Calendar tab
 
     // Hide all
     overviewContent.style.display = 'none';
@@ -744,7 +737,6 @@ function showAutoSubTab(tab) {
     if (spiderContent) spiderContent.style.display = 'none';
     if (narrativeContent) narrativeContent.style.display = 'none';
     if (mlContent) mlContent.style.display = 'none';
-    if (podcastContent) podcastContent.style.display = 'none';
 
     if (tab === 'overview') {
         overviewContent.style.display = 'block';
@@ -780,10 +772,8 @@ function showAutoSubTab(tab) {
             loadMLScoring();
             mlScoringLoaded = true;
         }
-    } else if (tab === 'podcasts') {
-        const podcastContent = document.getElementById('auto-podcasts');
-        if (podcastContent) podcastContent.style.display = 'block';
     }
+    // Session 634: Podcasts tab moved to Calendar panel
 }
 
 async function loadAnalyticsSummary() {
