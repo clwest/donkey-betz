@@ -1,9 +1,33 @@
 <!-- ============================================================ -->
 <!-- Session 628: CONTENT CALENDAR PANEL -->
+<!-- Session 634: Added Podcasts sub-tab (moved from Autonomous) -->
 <!-- View scheduled and past autonomous content generation -->
 <!-- ============================================================ -->
 <div class="tab-pane fade" id="content-calendar" role="tabpanel">
     <div class="container-fluid p-4">
+
+        <!-- ========================================================== -->
+        <!-- Session 634: SUB-TAB NAVIGATION -->
+        <!-- ========================================================== -->
+        <ul class="nav nav-pills mb-4" id="calendarSubTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="calendar-schedule-tab" data-bs-toggle="pill" data-bs-target="#calendar-schedule"
+                        type="button" role="tab" onclick="showCalendarSubTab('schedule')" style="color: #60a5fa;">
+                    <i class="fas fa-calendar-alt me-1"></i>Schedule
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="calendar-podcasts-tab" data-bs-toggle="pill" data-bs-target="#calendar-podcasts"
+                        type="button" role="tab" onclick="showCalendarSubTab('podcasts'); loadPodcastStats(); loadPodcasts();" style="color: #f472b6;">
+                    <i class="fas fa-podcast me-1"></i>Podcasts
+                </button>
+            </li>
+        </ul>
+
+        <!-- ========================================================== -->
+        <!-- Schedule Content (default visible) -->
+        <!-- ========================================================== -->
+        <div id="calendarScheduleContent">
 
         <!-- ========================================================== -->
         <!-- HEADER WITH STATS -->
@@ -164,6 +188,16 @@
             </div>
         </div>
 
+        </div>
+        <!-- END calendarScheduleContent -->
+
+        <!-- ========================================================== -->
+        <!-- Session 634: PODCAST CONTENT (moved from Autonomous) -->
+        <!-- ========================================================== -->
+        <div id="calendarPodcastsContent" style="display: none;">
+            {% include "components/panels/podcast_studio_panel.html" %}
+        </div>
+
     </div>
 </div>
 
@@ -199,10 +233,27 @@
 <!-- CONTENT CALENDAR JAVASCRIPT -->
 <!-- ============================================================ -->
 <script>
-// Session 628 + 631: Content Calendar Functions
+// Session 628 + 631 + 634: Content Calendar Functions
 
 let calendarData = null;
 let episodeDetailModal = null;
+
+// Session 634: Sub-tab switching (Schedule / Podcasts)
+function showCalendarSubTab(tab) {
+    const scheduleContent = document.getElementById('calendarScheduleContent');
+    const podcastsContent = document.getElementById('calendarPodcastsContent');
+
+    // Hide both containers
+    if (scheduleContent) scheduleContent.style.display = 'none';
+    if (podcastsContent) podcastsContent.style.display = 'none';
+
+    // Show selected tab content
+    if (tab === 'schedule') {
+        if (scheduleContent) scheduleContent.style.display = 'block';
+    } else if (tab === 'podcasts') {
+        if (podcastsContent) podcastsContent.style.display = 'block';
+    }
+}
 
 // Session 631: Initialize modal on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
