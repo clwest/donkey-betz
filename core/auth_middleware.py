@@ -123,6 +123,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/betting/wagers/',  # View wagers
         '/api/v1/betting/stats/',  # View stats
         '/api/v1/betting/recent/',  # Recent activity
+
+        # Session 641: Agent Performance Dashboard APIs
+        '/api/agent-analytics/',  # All agent analytics endpoints
+        '/api/system-health/',  # System health check
+        '/api/agents/test/',  # Test agent execution
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

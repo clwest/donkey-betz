@@ -257,6 +257,10 @@ def agent_analytics_executions(request):
 
         results = []
         for exe in executions:
+            # Calculate duration in seconds from milliseconds
+            duration_seconds = (exe.execution_time_ms or 0) / 1000.0
+            is_success = exe.status == 'completed'
+
             results.append({
                 'id': str(exe.id),
                 'agent_id': str(exe.agent.id),
@@ -270,6 +274,11 @@ def agent_analytics_executions(request):
                 'created_at': exe.created_at.isoformat(),
                 'completed_at': exe.completed_at.isoformat() if exe.completed_at else None,
                 'error_message': exe.error_message[:200] if exe.error_message else None,
+                # Session 641: Additional fields for frontend compatibility
+                'agent': exe.agent.name,  # Frontend expects 'agent'
+                'timestamp': exe.created_at.isoformat(),  # Frontend expects 'timestamp'
+                'duration': duration_seconds,  # Frontend expects duration in seconds
+                'success': is_success,  # Frontend expects boolean success
             })
 
         return JsonResponse({
