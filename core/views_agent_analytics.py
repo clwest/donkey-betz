@@ -130,6 +130,7 @@ def agent_analytics_needs_attention(request):
             needs_attention.append({
                 'id': str(agent.id),
                 'name': agent.name,
+                'agent': agent.name,  # Session 641: Frontend expects 'agent'
                 'issue': 'Low effectiveness score',
                 'value': agent.effectiveness_score,
                 'agent_type': agent.agent_type,
@@ -148,6 +149,7 @@ def agent_analytics_needs_attention(request):
                 needs_attention.append({
                     'id': str(failure['agent__id']),
                     'name': failure['agent__name'],
+                    'agent': failure['agent__name'],  # Session 641: Frontend expects 'agent'
                     'issue': 'Recent failures',
                     'value': failure['failure_count'],
                     'agent_type': failure['agent__agent_type'],
@@ -166,6 +168,7 @@ def agent_analytics_needs_attention(request):
                 needs_attention.append({
                     'id': str(agent.id),
                     'name': agent.name,
+                    'agent': agent.name,  # Session 641: Frontend expects 'agent'
                     'issue': 'Inactive',
                     'value': f'{days_inactive} days',
                     'agent_type': agent.agent_type,
