@@ -13132,66 +13132,55 @@ Call the initiate_content_debate tool NOW with channel_id="{channel.id}" to coor
         logger.info(f"     Contrarian: {recent_debate.contrarian_position[:100]}...")
         logger.info(f"     Analyst: {recent_debate.analyst_position[:100]}...")
 
-        # Step 2: Trigger content creation via AISeriesWorkflowAgent
-        logger.info(f"🎥 [SESSION 466] Step 2: Creating content via AISeriesWorkflowAgent...")
+        # Step 2: Generate podcast script directly using GPT (Session 636 fix)
+        logger.info(f"🎥 [SESSION 636] Step 2: Generating podcast script directly...")
 
-        # Build content creation prompt
-        content_prompt = f"""
-Create a single episode for the autonomous content channel "{channel.name}".
+        import openai
+        import os
 
-Topic: {winning_topic}
+        actual_script = ""
+        try:
+            client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+
+            # Build debate context for richer content
+            debate_context = f"""
+DEBATE INSIGHTS (from 3-agent discussion):
+TopicMiner: {recent_debate.topic_miner_position[:500] if recent_debate.topic_miner_position else 'N/A'}
+Contrarian: {recent_debate.contrarian_position[:500] if recent_debate.contrarian_position else 'N/A'}
+Analyst: {recent_debate.analyst_position[:500] if recent_debate.analyst_position else 'N/A'}
+Decision: {recent_debate.decision_reasoning[:300] if recent_debate.decision_reasoning else 'N/A'}
+"""
+
+            script_prompt = f"""Write a podcast script for "{channel.name}" about: {winning_topic}
+
+{debate_context}
+
 Channel Domain: {channel.topic_domain}
 Target Audience: {channel.target_audience}
 Visual Style: {channel.visual_style}
 
-This topic was selected through agent debate:
-- TopicMiner found it trending
-- Contrarian validated it's not oversaturated
-- PerformanceAnalyst predicted strong performance
+Create a 3-5 minute podcast script with:
+1. Host intro (friendly, engaging)
+2. Main topic discussion (3-4 key points from the debate)
+3. Insights and takeaways
+4. Closing with call to action
 
-Create 1 episode following the channel's style and targeting the audience.
-"""
+Make it conversational and engaging. Use natural speech patterns."""
 
-        # Execute AISeriesWorkflowAgent
-        series_result = router.route(
-            agent_name="AISeriesWorkflowAgent",
-            task=content_prompt,
-            context={
-                'series_type': 'educational',
-                'episode_count': 1,
-                'consistency_mode': True
-            }
-        )
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": script_prompt}],
+                max_tokens=2000
+            )
+            actual_script = response.choices[0].message.content
+            logger.info(f"🎥 [SESSION 636] Generated podcast script: {len(actual_script)} chars")
 
-        if not series_result.success:
-            error_msg = f"Content creation failed: {series_result.error}"
-            logger.error(f"🎥 [SESSION 466] {error_msg}")
-            results['status'] = 'failed'
-            results['error'] = error_msg
-            return results
-
-        logger.info(f"🎥 [SESSION 466] Content created successfully!")
+        except Exception as script_error:
+            logger.error(f"🎥 [SESSION 636] Failed to generate script: {script_error}")
+            actual_script = f"Script generation failed: {script_error}"
 
         # Step 3: Create ChannelEpisode record (Property #4: Outputs with Consequences)
-        logger.info(f"🎥 [SESSION 466] Step 3: Creating ChannelEpisode record...")
-
-        # Session 633: Extract actual script from SeriesEpisode created by AISeriesWorkflowAgent
-        actual_script = ""
-        try:
-            from core.models_ai_series import AISeries, SeriesEpisode
-            # Find the most recent series created (by AISeriesWorkflowAgent)
-            recent_series = AISeries.objects.order_by('-created_at').first()
-            if recent_series:
-                series_episode = SeriesEpisode.objects.filter(series=recent_series).order_by('-created_at').first()
-                if series_episode and series_episode.script:
-                    actual_script = series_episode.script
-                    logger.info(f"🎥 [SESSION 633] Found script in SeriesEpisode: {len(actual_script)} chars")
-        except Exception as script_err:
-            logger.warning(f"🎥 [SESSION 633] Could not extract script from SeriesEpisode: {script_err}")
-
-        # Fallback to series_result.message if no script found
-        if not actual_script:
-            actual_script = series_result.message if series_result and series_result.message else ""
+        logger.info(f"🎥 [SESSION 636] Step 3: Creating ChannelEpisode record...")
 
         # Session 468: Fixed field names to match ChannelEpisode model
         # Session 630: Store generated content in script field
