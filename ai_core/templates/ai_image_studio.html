@@ -75720,13 +75720,23 @@ ${item.generated_content}
         // Initialize meeting modal on page load
         document.addEventListener('DOMContentLoaded', function() {
             const startMeetingBtn = document.getElementById('start-meeting-btn');
+            const tabStartMeetingBtn = document.getElementById('tabStartMeetingBtn');  // Session 639: Also wire up tab button
             const meetingModal = new bootstrap.Modal(document.getElementById('boardroom-meeting-modal'));
             const submitMeetingBtn = document.getElementById('start-meeting-submit-btn');
 
-            // Open modal when "Start Meeting" button is clicked
+            // Open modal when "Start Meeting" button is clicked (sidebar button)
             if (startMeetingBtn) {
                 startMeetingBtn.addEventListener('click', function() {
                     console.log('🏢 Opening boardroom meeting modal...');
+                    loadProjectsForMeeting();
+                    meetingModal.show();
+                });
+            }
+
+            // Session 639: Also wire up the tab Meeting button (visible in Assistant tab)
+            if (tabStartMeetingBtn) {
+                tabStartMeetingBtn.addEventListener('click', function() {
+                    console.log('🏢 Opening boardroom meeting modal from tab...');
                     loadProjectsForMeeting();
                     meetingModal.show();
                 });
