@@ -1,37 +1,27 @@
-# Session 634 - Start Here
+# Session 635 - Start Here
 
-**Previous Session:** 633
+**Previous Session:** 634
 **Date:** December 30, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 630-633 Accomplishments
+## Session 634 Accomplishments
 
-### Session 630: Episode Script Field
-- Added `script` TextField to `ChannelEpisode` model
-- Created migration `0139_session_630_add_episode_script.py`
-- Updated 3 code locations to populate script field
+### Podcasts Tab Reorganization
+- Moved Podcasts sub-tab from Autonomous to Calendar tab
+- Calendar now has sub-tabs: Schedule | Podcasts
+- Makes more sense contextually (podcasts are content)
 
-### Session 631: Episode Content Viewer
-- Added `GET /api/content-calendar/episode/<uuid>/` API endpoint
-- Created episode detail modal in Calendar panel
-- Added click handlers to episode cards
-- Shows script content, 3-agent debate, and metrics
+### Enhanced Script Modal
+- Script button now shows full 3-agent debate content (~8,000+ chars)
+- Previously only showed the 1,544 char intro script
+- Added TopicMiner, Contrarian, Analyst positions in color-coded cards
+- Decision Reasoning shown at bottom
 
-### Session 632: Generate Now Button
-- Added `POST /api/content-calendar/generate/<uuid>/` API endpoint
-- Added "Generate Now" button to channel cards
-- Loading states, toast notifications, error handling
-- Triggers Celery task for immediate content generation
-
-### Session 633: Error Handling + Coordinator Debate Fix
-- Added `formatDebateArgument()` UI helper for graceful error display
-- Fixed debate query to only find debates created in last 5 minutes
-- **Major Fix:** Coordinator now directly calls `_initiate_content_debate`
-- Before: GPT wasn't reliably calling the tool, fallback path ran
-- After: Direct invocation ensures proper 3-agent debate creation
-- Result: `Proposed By: AutonomousContentStudioCoordinator`, `Is Fallback: False`
+### Bug Fixes
+- Fixed podcast_script API returning description (71 chars) instead of script (1,544 chars)
+- Script field (added Session 630) now properly used in podcast views
 
 ---
 
@@ -45,9 +35,11 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Click the Calendar tab
-#    - Click any episode to view details
-#    - Click "Generate Now" on a channel to create content immediately
+# 3. Test Podcasts feature
+#    - Click Calendar tab
+#    - Click Podcasts sub-tab
+#    - Click Script button on any episode
+#    - See full 3-agent debate content
 ```
 
 ---
@@ -70,6 +62,7 @@ open http://localhost:8000/ai-studio/
 
 | Session | Document |
 |---------|----------|
+| 634 | `docs/handoffs/SESSION_634_PODCASTS_TO_CALENDAR.md` |
 | 630-633 | `docs/handoffs/SESSION_630_633_CONTENT_CALENDAR_FEATURES.md` |
 | 629 | `docs/handoffs/SESSION_629_TESTING_VALIDATION.md` |
 | 628 | `docs/handoffs/SESSION_628_CROSS_SESSION_MEMORY_CALENDAR.md` |
@@ -93,9 +86,10 @@ open http://localhost:8000/ai-studio/
 - Show generation steps in real-time
 - Notify when generation completes
 
-### Option 4: Profile Follow-ups
-- Deeper interview questions for personalization
-- From ROADMAP_IDEAS.md
+### Option 4: Podcast Audio Generation
+- Generate audio from scripts using TTS
+- Support multiple voice options
+- Audio player in UI
 
 ---
 
@@ -103,7 +97,7 @@ open http://localhost:8000/ai-studio/
 
 | Channel | Owner | Episodes | Status |
 |---------|-------|----------|--------|
-| AI Tech Weekly | admin | 2+ | Active |
+| AI Tech Weekly | admin | 3+ | Active |
 | Narrative Shift Reports | admin | 5+ | Active |
 
 ---
@@ -120,9 +114,19 @@ curl http://localhost:8000/api/content-calendar/episode/<uuid>/
 # Trigger generation (Session 632)
 curl -X POST http://localhost:8000/api/content-calendar/generate/<uuid>/
 
-# Upcoming content
-curl http://localhost:8000/api/content-calendar/upcoming/
+# Podcast script with 3-agent debate (Session 634)
+curl http://localhost:8000/api/podcasts/<uuid>/script/
+```
 
-# Past content history
-curl http://localhost:8000/api/content-calendar/history/
+---
+
+## Session 634 Commits
+
+```
+5f4828f2 feat(Session 634): Enhanced Script modal with 3-agent debate content
+de2c872f fix(Session 634): Podcast Script button shows full script, not description
+30f30a10 feat(Session 634): Move Podcasts sub-tab from Autonomous to Calendar
+4beb8e38 fix(Session 630): Add missing script field to ChannelEpisode model
+452e54d8 docs(Session 633): Update handoff with script extraction + expandable UI
+515fcbbc fix(Session 633): Script extraction + expandable debate text in UI
 ```
