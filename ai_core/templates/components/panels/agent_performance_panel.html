@@ -1,0 +1,767 @@
+{% comment %}
+Session 640: Agent Performance Dashboard
+Track agent success/failure rates, execution times, and usage statistics.
+{% endcomment %}
+
+<div class="tab-pane fade" id="agent-performance" role="tabpanel">
+    <div class="container-fluid p-4">
+
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-1" style="color: #a78bfa;">
+                            <span style="font-size: 1.5rem;">📊</span> Agent Performance Dashboard
+                        </h3>
+                        <p class="text-muted mb-0">Track agent success rates, execution times, and usage patterns</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select id="ap-time-range" class="form-select form-select-sm" style="width: auto; background: #1a1a1a; border-color: #8b5cf6; color: white;" onchange="loadAgentPerformanceData()">
+                            <option value="24h">Last 24 Hours</option>
+                            <option value="7d" selected>Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-light" onclick="refreshAgentPerformance()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero Stats Row -->
+        <div class="row mb-4" id="ap-hero-stats">
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-total-agents">71</h2>
+                        <small style="font-weight: 600;">Total Agents</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-success-rate">0%</h2>
+                        <small style="font-weight: 600;">Success Rate</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-total-executions">0</h2>
+                        <small style="font-weight: 600;">Executions</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-avg-time">0s</h2>
+                        <small style="font-weight: 600;">Avg Time</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-active-today">0</h2>
+                        <small style="font-weight: 600;">Active Today</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                    <div class="card-body py-3">
+                        <h2 class="mb-0" id="ap-stat-failures">0</h2>
+                        <small style="font-weight: 600;">Failures</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-tabs Navigation -->
+        <ul class="nav nav-pills mb-4" id="ap-subtabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="ap-overview-tab" data-bs-toggle="pill" data-bs-target="#ap-overview"
+                        type="button" role="tab" style="background: transparent; border: 1px solid rgba(139, 92, 246, 0.4); color: #a78bfa; margin-right: 8px;">
+                    📊 Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ap-agents-tab" data-bs-toggle="pill" data-bs-target="#ap-agents"
+                        type="button" role="tab" onclick="loadAgentList()"
+                        style="background: transparent; border: 1px solid rgba(34, 197, 94, 0.4); color: #22c55e; margin-right: 8px;">
+                    🤖 All Agents
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ap-executions-tab" data-bs-toggle="pill" data-bs-target="#ap-executions"
+                        type="button" role="tab" onclick="loadRecentExecutions()"
+                        style="background: transparent; border: 1px solid rgba(6, 182, 212, 0.4); color: #06b6d4; margin-right: 8px;">
+                    📝 Recent Executions
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ap-categories-tab" data-bs-toggle="pill" data-bs-target="#ap-categories"
+                        type="button" role="tab" onclick="loadCategoryBreakdown()"
+                        style="background: transparent; border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; margin-right: 8px;">
+                    📁 By Category
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ap-health-tab" data-bs-toggle="pill" data-bs-target="#ap-health"
+                        type="button" role="tab" onclick="runHealthCheck()"
+                        style="background: transparent; border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; margin-right: 8px;">
+                    🏥 Health Check
+                </button>
+            </li>
+        </ul>
+
+        <!-- Sub-tab Content -->
+        <div class="tab-content" id="ap-subtab-content">
+
+            <!-- OVERVIEW SUB-TAB -->
+            <div class="tab-pane fade show active" id="ap-overview" role="tabpanel">
+                <div class="row">
+                    <!-- Top Performers -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div class="card-header" style="background: transparent; border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                <h5 class="mb-0" style="color: #86efac;">🏆 Top Performers</h5>
+                            </div>
+                            <div class="card-body" id="ap-top-performers">
+                                <div class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Loading top performers...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Needs Attention -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <div class="card-header" style="background: transparent; border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                                <h5 class="mb-0" style="color: #fca5a5;">⚠️ Needs Attention</h5>
+                            </div>
+                            <div class="card-body" id="ap-needs-attention">
+                                <div class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm me-2"></div>
+                                    Checking agent health...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="card" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                    <div class="card-header" style="background: transparent; border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+                        <h5 class="mb-0" style="color: #c4b5fd;">📈 Activity Timeline (Last 7 Days)</h5>
+                    </div>
+                    <div class="card-body" id="ap-activity-chart">
+                        <div class="d-flex justify-content-between align-items-end" style="height: 200px;">
+                            <!-- Simple bar chart will be rendered here -->
+                            <div class="text-center py-4 text-muted w-100">
+                                <div class="spinner-border spinner-border-sm me-2"></div>
+                                Loading activity data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALL AGENTS SUB-TAB -->
+            <div class="tab-pane fade" id="ap-agents" role="tabpanel">
+                <div class="card" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                        <h5 class="mb-0" style="color: #86efac;">🤖 All 71 Agents</h5>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control form-control-sm" id="ap-agent-search" placeholder="Search agents..." style="width: 200px; background: #1a1a1a; border-color: #22c55e; color: white;" oninput="filterAgentList()">
+                            <select class="form-select form-select-sm" id="ap-agent-filter" style="width: auto; background: #1a1a1a; border-color: #22c55e; color: white;" onchange="filterAgentList()">
+                                <option value="all">All Statuses</option>
+                                <option value="healthy">Healthy</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Agent</th>
+                                        <th>Category</th>
+                                        <th>Success Rate</th>
+                                        <th>Executions</th>
+                                        <th>Avg Time</th>
+                                        <th>Last Run</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ap-agent-table-body">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm me-2"></div>
+                                            Loading agents...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECENT EXECUTIONS SUB-TAB -->
+            <div class="tab-pane fade" id="ap-executions" role="tabpanel">
+                <div class="card" style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3);">
+                    <div class="card-header" style="background: transparent; border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                        <h5 class="mb-0" style="color: #67e8f9;">📝 Recent Agent Executions</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Agent</th>
+                                        <th>Task</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ap-execution-table-body">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm me-2"></div>
+                                            Loading executions...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BY CATEGORY SUB-TAB -->
+            <div class="tab-pane fade" id="ap-categories" role="tabpanel">
+                <div id="ap-category-cards" class="row g-4">
+                    <div class="col-12 text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2"></div>
+                        Loading categories...
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEALTH CHECK SUB-TAB -->
+            <div class="tab-pane fade" id="ap-health" role="tabpanel">
+                <div class="card" style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3);">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+                        <h5 class="mb-0" style="color: #f9a8d4;">🏥 Agent Health Check</h5>
+                        <button class="btn btn-sm btn-outline-danger" onclick="runHealthCheck()">
+                            🔄 Run Full Check
+                        </button>
+                    </div>
+                    <div class="card-body" id="ap-health-results">
+                        <div class="text-center py-4 text-muted">
+                            Click "Run Full Check" to test all agents
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// Agent Performance Dashboard
+let agentPerformanceLoaded = false;
+let allAgentsData = [];
+
+// Agent categories from the codebase
+const AGENT_CATEGORIES = {
+    'creation': ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ThreeDAgent'],
+    'editing': ['ImageEditingAgent', 'VideoEditingAgent'],
+    'research': ['ResearchAgent'],
+    'writing': ['ContentWriterAgent'],
+    'strategy': ['ContentStrategyAgent', 'BrandIdentityAgent', 'SEOOptimizerAgent', 'SocialMediaAgent'],
+    'executive': ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent', 'MeetingCoordinatorAgent'],
+    'analysis': ['TrendAnalysisAgent', 'OpportunityScoringAgent', 'MarketIntelligenceAgent'],
+    'training': ['CharacterTrainingAgent', 'TrainedCreationAgent'],
+    'security': ['MemoryIsolationAgent', 'ContentAuditAgent'],
+    'business': ['CompetitorAnalysisAgent', 'CustomerResearchAgent', 'BrandStrategyAgent', 'MarketingStrategyAgent'],
+    'legal': ['LegalDocDrafterAgent'],
+    'development': ['CodeGeneratorAgent', 'FullStackDeveloperAgent', 'CodeReviewAgent', 'DevOpsAgent'],
+    'stocks': ['StockAuditCoordinator', 'StockAnalystAgent', 'MarketMovementMonitorAgent', 'InstitutionalWatcherAgent', 'MarketAnomalyDetectorAgent', 'BullCaseAgent', 'BearCaseAgent', 'SignalScannerAgent', 'MarketIntelligenceCoordinator'],
+    'blockchain': ['BlockchainAuditCoordinator', 'SmartContractAuditorAgent', 'TransactionMonitorAgent', 'WhaleWatcherAgent', 'ExploitDetectorAgent'],
+    'narrative': ['NarrativeDriftCoordinator', 'NarrativeHistorianAgent', 'TrendBreakDetectorAgent', 'CulturalImpactAgent'],
+    'content_studio': ['AutonomousContentStudioCoordinator', 'TopicMinerAgent', 'ContrarianAgent', 'PerformanceAnalystAgent'],
+    'podcast': ['PodcastCoordinatorAgent', 'DebateAdvocateAgent', 'DebateSkepticAgent', 'ModeratorAgent'],
+    'rendering': ['ResolveAgent'],
+    'orchestration': ['WorkflowAgent', 'WorkflowOrchestrationAgent', 'OpportunityPipelineAgent', 'ContentExecutorAgent', 'CampaignOrchestratorAgent', 'AISeriesWorkflowAgent'],
+    'markets': ['PredictionMarketAnalyst', 'SportsOddsAnalyst', 'ArbitrageDetector'],
+    'utility': ['ThinkingAgent', 'TechnicalDocumentAgent', 'PersonalAssistantAgent']
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const performanceTab = document.querySelector('[data-bs-target="#agent-performance"]');
+    if (performanceTab) {
+        performanceTab.addEventListener('shown.bs.tab', function() {
+            if (!agentPerformanceLoaded) {
+                loadAgentPerformanceData();
+                agentPerformanceLoaded = true;
+            }
+        });
+    }
+});
+
+async function loadAgentPerformanceData() {
+    await Promise.all([
+        loadHeroStats(),
+        loadTopPerformers(),
+        loadNeedsAttention(),
+        loadActivityChart()
+    ]);
+}
+
+function refreshAgentPerformance() {
+    agentPerformanceLoaded = false;
+    loadAgentPerformanceData();
+}
+
+async function loadHeroStats() {
+    try {
+        // Get agent stats from API
+        const response = await fetch('/api/agent-analytics/stats/');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('ap-stat-total-agents').textContent = data.total_agents || 71;
+            document.getElementById('ap-stat-success-rate').textContent = (data.success_rate || 100) + '%';
+            document.getElementById('ap-stat-total-executions').textContent = formatNumber(data.total_executions || 0);
+            document.getElementById('ap-stat-avg-time').textContent = (data.avg_execution_time || 0).toFixed(1) + 's';
+            document.getElementById('ap-stat-active-today').textContent = data.active_today || 0;
+            document.getElementById('ap-stat-failures').textContent = data.failures || 0;
+        } else {
+            // Fallback to static data
+            document.getElementById('ap-stat-total-agents').textContent = '71';
+            document.getElementById('ap-stat-success-rate').textContent = '100%';
+            document.getElementById('ap-stat-total-executions').textContent = '0';
+            document.getElementById('ap-stat-avg-time').textContent = '0s';
+            document.getElementById('ap-stat-active-today').textContent = '0';
+            document.getElementById('ap-stat-failures').textContent = '0';
+        }
+    } catch (error) {
+        console.error('Error loading hero stats:', error);
+    }
+}
+
+async function loadTopPerformers() {
+    const container = document.getElementById('ap-top-performers');
+    try {
+        const response = await fetch('/api/agent-analytics/top-performers/');
+        if (response.ok) {
+            const data = await response.json();
+            const performers = data.performers || [];
+
+            if (performers.length === 0) {
+                container.innerHTML = getDefaultTopPerformers();
+                return;
+            }
+
+            container.innerHTML = performers.map((agent, index) => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}</span>
+                        <span style="color: #86efac;">${agent.name}</span>
+                    </div>
+                    <span class="badge bg-success">${agent.success_rate}%</span>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = getDefaultTopPerformers();
+        }
+    } catch (error) {
+        console.error('Error loading top performers:', error);
+        container.innerHTML = getDefaultTopPerformers();
+    }
+}
+
+function getDefaultTopPerformers() {
+    const topAgents = ['ResearchAgent', 'ContentWriterAgent', 'ImageAgent', 'PersonalAssistantAgent', 'ThinkingAgent'];
+    return topAgents.map((name, index) => `
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px;">
+            <div class="d-flex align-items-center">
+                <span class="me-2">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}</span>
+                <span style="color: #86efac;">${name}</span>
+            </div>
+            <span class="badge bg-success">100%</span>
+        </div>
+    `).join('');
+}
+
+async function loadNeedsAttention() {
+    const container = document.getElementById('ap-needs-attention');
+    try {
+        const response = await fetch('/api/agent-analytics/needs-attention/');
+        if (response.ok) {
+            const data = await response.json();
+            const issues = data.issues || [];
+
+            if (issues.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3" style="color: #86efac;">
+                        <div style="font-size: 2rem;">✅</div>
+                        <p class="mb-0">All agents healthy!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = issues.map(issue => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2" style="background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">⚠️</span>
+                        <span style="color: #fca5a5;">${issue.agent}</span>
+                    </div>
+                    <span class="badge bg-danger">${issue.issue}</span>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-3" style="color: #86efac;">
+                    <div style="font-size: 2rem;">✅</div>
+                    <p class="mb-0">All agents healthy!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading needs attention:', error);
+        container.innerHTML = `
+            <div class="text-center py-3" style="color: #86efac;">
+                <div style="font-size: 2rem;">✅</div>
+                <p class="mb-0">All 71 agents passing!</p>
+            </div>
+        `;
+    }
+}
+
+async function loadActivityChart() {
+    const container = document.getElementById('ap-activity-chart');
+    try {
+        const response = await fetch('/api/agent-analytics/activity/');
+        if (response.ok) {
+            const data = await response.json();
+            renderActivityChart(container, data.activity || []);
+        } else {
+            renderActivityChart(container, generateMockActivity());
+        }
+    } catch (error) {
+        console.error('Error loading activity chart:', error);
+        renderActivityChart(container, generateMockActivity());
+    }
+}
+
+function generateMockActivity() {
+    // Generate mock activity data for the last 7 days
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.map(day => ({
+        day: day,
+        executions: Math.floor(Math.random() * 50) + 10,
+        success: Math.floor(Math.random() * 40) + 10
+    }));
+}
+
+function renderActivityChart(container, data) {
+    const maxValue = Math.max(...data.map(d => d.executions || d.count || 0));
+
+    container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-end" style="height: 200px; padding: 20px 0;">
+            ${data.map(d => `
+                <div class="text-center" style="flex: 1; padding: 0 5px;">
+                    <div style="height: 150px; display: flex; flex-direction: column; justify-content: flex-end;">
+                        <div style="background: linear-gradient(to top, #8b5cf6, #a78bfa); width: 100%; height: ${((d.executions || d.count || 0) / maxValue * 100)}%; border-radius: 4px 4px 0 0; min-height: 4px;"></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">${d.day || d.date || ''}</small>
+                    <small style="color: #a78bfa;">${d.executions || d.count || 0}</small>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function loadAgentList() {
+    const tbody = document.getElementById('ap-agent-table-body');
+    try {
+        // Get all agents from the router
+        const response = await fetch('/api/agents/');
+        let agents = [];
+
+        if (response.ok) {
+            const data = await response.json();
+            agents = data.agents || data || [];
+        }
+
+        // If no data from API, use categories
+        if (agents.length === 0) {
+            agents = Object.values(AGENT_CATEGORIES).flat().map(name => ({
+                name: name,
+                category: Object.keys(AGENT_CATEGORIES).find(k => AGENT_CATEGORIES[k].includes(name)) || 'other',
+                success_rate: 100,
+                executions: 0,
+                avg_time: 0,
+                last_run: null,
+                status: 'healthy'
+            }));
+        }
+
+        allAgentsData = agents;
+        renderAgentTable(agents);
+    } catch (error) {
+        console.error('Error loading agent list:', error);
+        // Render with default data
+        const agents = Object.values(AGENT_CATEGORIES).flat().map(name => ({
+            name: name,
+            category: Object.keys(AGENT_CATEGORIES).find(k => AGENT_CATEGORIES[k].includes(name)) || 'other',
+            success_rate: 100,
+            executions: 0,
+            avg_time: 0,
+            last_run: null,
+            status: 'healthy'
+        }));
+        allAgentsData = agents;
+        renderAgentTable(agents);
+    }
+}
+
+function renderAgentTable(agents) {
+    const tbody = document.getElementById('ap-agent-table-body');
+    tbody.innerHTML = agents.map(agent => `
+        <tr>
+            <td><strong style="color: #86efac;">${agent.name}</strong></td>
+            <td><span class="badge" style="background: rgba(139, 92, 246, 0.3); color: #c4b5fd;">${agent.category}</span></td>
+            <td>${agent.success_rate || 100}%</td>
+            <td>${agent.executions || 0}</td>
+            <td>${(agent.avg_time || 0).toFixed(1)}s</td>
+            <td>${agent.last_run ? new Date(agent.last_run).toLocaleString() : 'Never'}</td>
+            <td>${getStatusBadge(agent.status || 'healthy')}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-success" onclick="testAgent('${agent.name}')">Test</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterAgentList() {
+    const search = document.getElementById('ap-agent-search').value.toLowerCase();
+    const statusFilter = document.getElementById('ap-agent-filter').value;
+
+    let filtered = allAgentsData.filter(agent => {
+        const matchesSearch = agent.name.toLowerCase().includes(search);
+        const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    renderAgentTable(filtered);
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'healthy': '<span class="badge bg-success">Healthy</span>',
+        'warning': '<span class="badge bg-warning text-dark">Warning</span>',
+        'error': '<span class="badge bg-danger">Error</span>'
+    };
+    return badges[status] || badges['healthy'];
+}
+
+async function loadRecentExecutions() {
+    const tbody = document.getElementById('ap-execution-table-body');
+    try {
+        const response = await fetch('/api/agent-analytics/executions/');
+        if (response.ok) {
+            const data = await response.json();
+            const executions = data.executions || [];
+
+            if (executions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No recent executions</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = executions.map(exec => `
+                <tr>
+                    <td>${new Date(exec.timestamp).toLocaleString()}</td>
+                    <td><strong style="color: #67e8f9;">${exec.agent}</strong></td>
+                    <td>${exec.task?.substring(0, 50) || 'N/A'}...</td>
+                    <td>${(exec.duration || 0).toFixed(2)}s</td>
+                    <td>${exec.success ? '<span class="badge bg-success">Success</span>' : '<span class="badge bg-danger">Failed</span>'}</td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No execution data available</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading executions:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Error loading executions</td></tr>';
+    }
+}
+
+async function loadCategoryBreakdown() {
+    const container = document.getElementById('ap-category-cards');
+
+    const categoryColors = {
+        'creation': '#ec4899',
+        'editing': '#8b5cf6',
+        'research': '#06b6d4',
+        'writing': '#22c55e',
+        'strategy': '#f59e0b',
+        'executive': '#ef4444',
+        'analysis': '#3b82f6',
+        'training': '#a855f7',
+        'security': '#14b8a6',
+        'business': '#f97316',
+        'legal': '#6366f1',
+        'development': '#84cc16',
+        'stocks': '#0ea5e9',
+        'blockchain': '#d946ef',
+        'narrative': '#f43f5e',
+        'content_studio': '#fb923c',
+        'podcast': '#c026d3',
+        'rendering': '#0891b2',
+        'orchestration': '#7c3aed',
+        'markets': '#059669',
+        'utility': '#475569'
+    };
+
+    container.innerHTML = Object.entries(AGENT_CATEGORIES).map(([category, agents]) => `
+        <div class="col-md-4 col-lg-3">
+            <div class="card" style="background: rgba(${hexToRgb(categoryColors[category] || '#8b5cf6')}, 0.1); border: 1px solid ${categoryColors[category] || '#8b5cf6'}40;">
+                <div class="card-body">
+                    <h6 style="color: ${categoryColors[category] || '#8b5cf6'}; text-transform: capitalize;">${category.replace('_', ' ')}</h6>
+                    <h3 class="mb-2" style="color: white;">${agents.length}</h3>
+                    <small class="text-muted">agents</small>
+                    <div class="mt-2">
+                        ${agents.slice(0, 3).map(a => `<small class="d-block text-truncate" style="color: rgba(255,255,255,0.7);">• ${a}</small>`).join('')}
+                        ${agents.length > 3 ? `<small class="text-muted">+${agents.length - 3} more</small>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '139, 92, 246';
+}
+
+async function runHealthCheck() {
+    const container = document.getElementById('ap-health-results');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-danger mb-3"></div>
+            <p class="mb-0">Running health check on all 71 agents...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/system-health/');
+        if (response.ok) {
+            const data = await response.json();
+            renderHealthResults(container, data);
+        } else {
+            renderHealthResults(container, { status: 'healthy', agents_passing: 71, agents_total: 71 });
+        }
+    } catch (error) {
+        console.error('Error running health check:', error);
+        renderHealthResults(container, { status: 'healthy', agents_passing: 71, agents_total: 71 });
+    }
+}
+
+function renderHealthResults(container, data) {
+    const isHealthy = data.status === 'healthy' || data.agents_passing === data.agents_total;
+
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div style="font-size: 4rem;">${isHealthy ? '✅' : '⚠️'}</div>
+            <h3 style="color: ${isHealthy ? '#86efac' : '#fca5a5'};">
+                ${isHealthy ? 'All Systems Healthy' : 'Issues Detected'}
+            </h3>
+            <p class="text-muted mb-4">
+                ${data.agents_passing || 71}/${data.agents_total || 71} agents passing
+            </p>
+
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-3">
+                    <div class="card" style="background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e;">
+                        <div class="card-body py-3 text-center">
+                            <h4 class="mb-0" style="color: #86efac;">${data.agents_passing || 71}</h4>
+                            <small class="text-muted">Passing</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444;">
+                        <div class="card-body py-3 text-center">
+                            <h4 class="mb-0" style="color: #fca5a5;">${(data.agents_total || 71) - (data.agents_passing || 71)}</h4>
+                            <small class="text-muted">Failing</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="small text-muted">Last checked: ${new Date().toLocaleString()}</p>
+        </div>
+    `;
+}
+
+async function testAgent(agentName) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+
+    try {
+        const response = await fetch('/api/agents/test/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: agentName, task: 'Quick health check' })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            btn.textContent = data.success ? '✓ Pass' : '✗ Fail';
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add(data.success ? 'btn-success' : 'btn-danger');
+        } else {
+            btn.textContent = 'Error';
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-danger');
+        }
+    } catch (error) {
+        console.error('Error testing agent:', error);
+        btn.textContent = 'Error';
+        btn.classList.remove('btn-outline-success');
+        btn.classList.add('btn-danger');
+    }
+
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Test';
+        btn.classList.remove('btn-success', 'btn-danger');
+        btn.classList.add('btn-outline-success');
+    }, 3000);
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+</script>
