@@ -316,6 +316,12 @@ class ChannelEpisode(models.Model):
         help_text="Episode description"
     )
 
+    # Session 630: Add script field to store generated content
+    script = models.TextField(
+        blank=True,
+        help_text="Generated script/content for this episode"
+    )
+
     publish_date = models.DateTimeField(
         null=True,
         blank=True,
