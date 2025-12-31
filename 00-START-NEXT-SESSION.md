@@ -8,14 +8,25 @@
 
 ## Session 636 Accomplishments
 
-### Podcast Script Generation Fix
-Fixed critical issue where the AutonomousContentStudioCoordinator was only creating placeholder records instead of generating actual podcast scripts:
-- **Bug:** `_trigger_content_creation()` created AISeries and ChannelEpisode records but never generated scripts (said "Phase 3: AISeriesWorkflowAgent integration pending")
-- **Fix:** Added GPT-4o-mini script generation directly in the coordinator
-- **Result:** Episodes now have 4,000+ character scripts instead of 42 character placeholders
+### Podcast Script Generation Fix (Two Code Paths)
+Fixed critical issue where podcast episodes were getting 42-char placeholder scripts instead of real content:
 
-**Files changed:**
-- `core/agents/autonomous_content_studio_coordinator.py` - Added script generation (lines 642-692)
+**Path 1: AutonomousContentStudioCoordinator**
+- **Bug:** `_trigger_content_creation()` said "Phase 3: AISeriesWorkflowAgent integration pending"
+- **Fix:** Added GPT-4o-mini script generation directly in the coordinator
+- **File:** `core/agents/autonomous_content_studio_coordinator.py` (lines 642-692)
+
+**Path 2: Celery Task generate_content_for_channel**
+- **Bug:** Used AISeriesWorkflowAgent which returned "Created educational series with 0 episodes"
+- **Fix:** Replaced AISeriesWorkflowAgent with direct GPT-4o-mini script generation
+- **File:** `core/tasks.py` (lines 13135-13180)
+
+**Result:** Episodes now have 3,000-4,000+ character scripts (500-600 words) instead of 42 character placeholders
+
+### Pilot Cleanup
+- Deleted 79 duplicate "Market Data - Market Intelligence" pilots (127 → 48 pilots)
+- Cleared "Regenerated from Session 635" messages from all pilots
+- Deleted 9 placeholder podcast episodes
 
 ### Podcast Word Count Fix
 Fixed bug where podcast episodes showed incorrect word counts (e.g., "10 words" instead of "585 words"):
