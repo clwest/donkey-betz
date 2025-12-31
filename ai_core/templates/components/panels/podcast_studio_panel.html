@@ -163,9 +163,9 @@ Create and manage AI-generated podcasts where agents research, debate, and discu
     </div>
 </div>
 
-<!-- View Script Modal -->
+<!-- View Script Modal - Session 634: Enhanced with 3-agent debate content -->
 <div class="modal fade" id="viewScriptModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content" style="background: #1a1a2e; border: 1px solid rgba(244, 114, 182, 0.3);">
             <div class="modal-header border-0">
                 <h5 class="modal-title" style="color: #f472b6;" id="script-modal-title">
@@ -174,7 +174,62 @@ Create and manage AI-generated podcasts where agents research, debate, and discu
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="script-content" style="white-space: pre-wrap; font-family: monospace; font-size: 14px;"></div>
+                <!-- Episode Script Section -->
+                <div class="mb-4">
+                    <h6 style="color: #60a5fa;"><i class="fas fa-microphone me-2"></i>Episode Script</h6>
+                    <div id="script-content" class="p-3" style="background: rgba(96, 165, 250, 0.1); border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 14px;"></div>
+                </div>
+
+                <!-- 3-Agent Debate Section -->
+                <div id="debate-section" style="display: none;">
+                    <h6 style="color: #a78bfa;"><i class="fas fa-comments me-2"></i>3-Agent Debate</h6>
+                    <div class="row g-3">
+                        <!-- TopicMiner -->
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <div class="card-header py-2" style="background: rgba(16, 185, 129, 0.2);">
+                                    <small style="color: #34d399;"><i class="fas fa-search me-1"></i>TopicMiner</small>
+                                </div>
+                                <div class="card-body py-2" style="max-height: 300px; overflow-y: auto;">
+                                    <small id="debate-topic-miner" style="white-space: pre-wrap;"></small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Contrarian -->
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <div class="card-header py-2" style="background: rgba(239, 68, 68, 0.2);">
+                                    <small style="color: #f87171;"><i class="fas fa-balance-scale me-1"></i>Contrarian</small>
+                                </div>
+                                <div class="card-body py-2" style="max-height: 300px; overflow-y: auto;">
+                                    <small id="debate-contrarian" style="white-space: pre-wrap;"></small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Analyst -->
+                        <div class="col-md-4">
+                            <div class="card h-100" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                                <div class="card-header py-2" style="background: rgba(245, 158, 11, 0.2);">
+                                    <small style="color: #fbbf24;"><i class="fas fa-chart-line me-1"></i>Analyst</small>
+                                </div>
+                                <div class="card-body py-2" style="max-height: 300px; overflow-y: auto;">
+                                    <small id="debate-analyst" style="white-space: pre-wrap;"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Decision Reasoning -->
+                    <div class="mt-3">
+                        <div class="card" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div class="card-header py-2" style="background: rgba(139, 92, 246, 0.2);">
+                                <small style="color: #a78bfa;"><i class="fas fa-gavel me-1"></i>Decision Reasoning</small>
+                            </div>
+                            <div class="card-body py-2">
+                                <small id="debate-decision" style="white-space: pre-wrap;"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -382,6 +437,19 @@ async function viewPodcastScript(episodeId) {
             document.getElementById('script-modal-title').innerHTML =
                 `<i class="fas fa-scroll me-2"></i>${escapeHtml(data.episode.topic)}`;
             document.getElementById('script-content').textContent = data.script || 'No script available';
+
+            // Session 634: Populate 3-agent debate content if available
+            const debateSection = document.getElementById('debate-section');
+            if (data.debate && (data.debate.topic_miner || data.debate.contrarian || data.debate.analyst)) {
+                document.getElementById('debate-topic-miner').textContent = data.debate.topic_miner || 'No position provided';
+                document.getElementById('debate-contrarian').textContent = data.debate.contrarian || 'No position provided';
+                document.getElementById('debate-analyst').textContent = data.debate.analyst || 'No position provided';
+                document.getElementById('debate-decision').textContent = data.debate.decision_reasoning || 'No reasoning provided';
+                debateSection.style.display = 'block';
+            } else {
+                debateSection.style.display = 'none';
+            }
+
             new bootstrap.Modal(document.getElementById('viewScriptModal')).show();
         } else {
             showNotification(data.error || 'Failed to load script', 'error');

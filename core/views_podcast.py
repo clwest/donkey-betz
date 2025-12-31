@@ -331,6 +331,25 @@ def podcast_script(request, episode_id):
             episode = ChannelEpisode.objects.get(id=episode_id)
             # Session 634: Use script field (added Session 630) instead of description
             script_content = episode.script or episode.description or ''
+
+            # Session 634: Include 3-agent debate content
+            from core.models_autonomous_studio import ContentDebate
+            debate_info = None
+            try:
+                debate = ContentDebate.objects.filter(channel=episode.channel).order_by('-created_at').first()
+                if debate:
+                    debate_info = {
+                        'topic': debate.proposed_topic,
+                        'proposed_by': debate.proposed_by,
+                        'topic_miner': debate.topic_miner_position or '',
+                        'contrarian': debate.contrarian_position or '',
+                        'analyst': debate.analyst_position or '',
+                        'decision_reasoning': debate.decision_reasoning or '',
+                        'consensus_reached': debate.consensus_reached,
+                    }
+            except Exception:
+                pass
+
             return JsonResponse({
                 'success': True,
                 'episode': {
@@ -340,7 +359,7 @@ def podcast_script(request, episode_id):
                     'status': 'complete',
                 },
                 'script': script_content,
-                'debate': None,
+                'debate': debate_info,
                 'word_count': len(script_content.split()) if script_content else 0,
             })
         except ChannelEpisode.DoesNotExist:
