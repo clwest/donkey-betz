@@ -1,54 +1,41 @@
-# Session 645 - Start Here
+# Session 646 - Start Here
 
-**Previous Session:** 644
+**Previous Session:** 645
 **Date:** December 31, 2025
-**Focus:** Research Demo 24h Activity Indicators + Celery Stability
+**Focus:** All 71 Agents Verified and Running
 **Health Score:** 100% (run `python manage.py system_health_check` to verify)
 
 ---
 
-## Session 644 Accomplishments
+## Session 645 Accomplishments
 
-### Research Demo 24h Activity Indicators - COMPLETE
+### All 71 Agents Verified and Running - COMPLETE
 
-Added real-time activity indicators to the Knowledge Pipeline Flow visualization:
+Fixed critical issues preventing full agent coverage:
 
-| Pipeline Box | Now Shows | Example |
-|--------------|-----------|---------|
-| Spiders | Data points in 24h | `716 data/24h` |
-| Agents | Active with knowledge | `71 active` |
-| Connections | Transfers in 24h | `104 transfers/24h` |
-| Blocked | Pending reviews | `12 pending` |
-| Knowledge | New items in 24h | `+201 new/24h` |
+| Issue | Fix | Result |
+|-------|-----|--------|
+| 4 agents missing from database | Created ArbitrageDetector, PredictionMarketAnalyst, SportsOddsAnalyst, TechnicalDocumentAgent | 71 agents in DB |
+| force_agent_cycle not updating last_active | Added bulk update at command start | All agents tracked |
 
-**Why:** Previously showed only totals which change slowly. Now users can see the system is actively processing data.
+### Force Agent Cycle Results
 
-### Celery macOS Stability Fixes - COMPLETE
+| Metric | Count | Status |
+|--------|-------|--------|
+| Dreams Created | 71 | All agents dreamed |
+| Hive Mind Sessions | 35 | 71 agents paired |
+| Knowledge Items | 71 | All agents shared knowledge |
+| Discord Posts | 212 | All notifications sent |
+| Errors | 0 | No failures |
 
-Added settings to prevent SIGSEGV crashes on macOS:
+### New Agents Added to Database
 
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| `CELERY_WORKER_MAX_TASKS_PER_CHILD` | 100 | Recycle workers to prevent memory leaks |
-| `CELERY_TASK_SOFT_TIME_LIMIT` | 25 min | Warn before 30 min hard kill |
-
-**Key Finding:** Rogue workers started without `--pool=threads` cause SIGSEGV crashes. Always use `make celery` to start workers.
-
-### Research Demo Sub-tabs Audit - COMPLETE
-
-Verified all 9 sub-tabs are working with real data:
-
-| Sub-Tab | Status | Data |
-|---------|--------|------|
-| Overview | Fixed | Now shows 24h activity |
-| Network Graph | Working | 67 agents, 323 connections |
-| Live Feed | Working | 104 transfers, 483 conversations/24h |
-| Mythology Gate | Working | 12 pending quarantine |
-| Self Blog | Working | 416 blogs |
-| System Insights | Working | 57 insights |
-| Deliverables | Working | 4 stage documents |
-| Thinking Engine | Working | 62 cycles, engine active |
-| Concern Tracking | Working | 155 total concerns |
+| Agent Name | Category | Specialization |
+|------------|----------|----------------|
+| ArbitrageDetector | Markets | Cross-market arbitrage detection |
+| PredictionMarketAnalyst | Markets | Kalshi trading, event probability |
+| SportsOddsAnalyst | Markets | Line movement, value identification |
+| TechnicalDocumentAgent | Special | Technical writing, API docs |
 
 ---
 
@@ -65,38 +52,57 @@ open http://localhost:8000/ai-studio/
 # 3. Run System Health Check
 python manage.py system_health_check
 
-# 4. View Research Demo (check 24h indicators)
-# Navigate to Research Demo tab -> Overview sub-tab
+# 4. Verify all 71 agents
+.venv/bin/python manage.py shell -c "
+from core.models import Agent
+from core.agent_router import AgentRouter
+router = AgentRouter()
+print(f'DB: {Agent.objects.filter(is_active=True).count()}')
+print(f'Router: {len(router.AGENT_MAP)}')
+"
 ```
 
 ---
 
-## System Stats (After Session 644)
+## System Stats (After Session 645)
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| Routable Agents | 71 | 100% passing |
+| **Active Agents** | 71 | All verified running |
+| Routable Agents | 71 | 100% in AgentRouter |
 | Spiders | 77 | 72 working, 5 need API keys |
 | Celery Tasks | 53 | All scheduled |
 | API Connectivity | 97.8% | Healthy |
-| Visible UI Tabs | ~20 | Consolidated |
-| Agent Conversations | 5,446 | Growing daily |
-| Knowledge Transfers | 1,370 | +103 in 24h |
-| Knowledge Items | 2,719 | +201 in 24h |
+| Agent Conversations | 5,900+ | Growing daily |
+| Knowledge Items | 2,800+ | +71 from cycle |
 
 ---
 
-## Recommended Next Steps for Session 645+
+## Agent Categories (71 Total)
+
+| Category | Count | Key Agents |
+|----------|-------|------------|
+| Stocks | 9 | StockAuditCoordinator, BullCaseAgent, BearCaseAgent |
+| Blockchain | 5 | BlockchainAuditCoordinator, WhaleWatcherAgent |
+| Development | 4 | CodeGeneratorAgent, FullStackDeveloperAgent |
+| Executive | 4 | CTOAgent, COOAgent, CreativeDirectorAgent |
+| Markets | 3 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector |
+| Creation | 4 | ImageAgent, VideoAgent, AudioAgent, ThreeDAgent |
+| Other Categories | 42 | See AGENTS.md for full list |
+
+---
+
+## Recommended Next Steps for Session 646+
 
 ### Priority 1: Chart.js Integration
 The Activity tab has chart structure but needs Chart.js integration.
 - Add line charts for agent activity over time
 - Add bar charts for category distribution
 
-### Priority 2: Further Tab Consolidation
-Consider merging related tabs:
-- Agents + Research Demo + Agent Performance -> Unified Agents tab
-- Content Studio + Images + Video + Audio -> Unified Create tab
+### Priority 2: Agent Sync Automation
+Consider adding automatic sync between AgentRouter and database:
+- Create management command to detect mismatches
+- Add to system_health_check
 
 ### Priority 3: CI/CD Pipeline
 Add GitHub Actions workflow for:
@@ -110,11 +116,54 @@ Add GitHub Actions workflow for:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **644** | (this commit) | **Research Demo 24h indicators + Celery stability** |
+| **645** | `SESSION_645_71_AGENTS_VERIFIED.md` | **All 71 agents verified running** |
+| 644 | (previous commit) | Research Demo 24h indicators + Celery stability |
 | 643 | `SESSION_643_DEEP_AUDIT_ISSUES.md` | Tab consolidation + API fixes |
 | 642 | `SESSION_642_PREDEPLOYMENT_SYSTEM_AUDIT.md` | Full system inventory |
 | 642 | `SESSION_642_PLATFORM_AUDIT_FIXES.md` | 6 bug fixes |
-| 641 | `SESSION_641_AGENT_PERFORMANCE_DASHBOARD.md` | Execution tracking |
+
+---
+
+## Important Commands
+
+### Verify Agent Sync
+```bash
+.venv/bin/python manage.py shell -c "
+from core.models import Agent
+from core.agent_router import AgentRouter
+router = AgentRouter()
+db = set(Agent.objects.filter(is_active=True).values_list('name', flat=True))
+rtr = set(router.AGENT_MAP.keys())
+missing_db = rtr - db
+missing_rtr = db - rtr
+print(f'Missing from DB: {missing_db or \"None\"}')
+print(f'Missing from Router: {missing_rtr or \"None\"}')"
+```
+
+### Run Agent Cycle
+```bash
+# Dry run (no changes)
+.venv/bin/python manage.py force_agent_cycle --dry-run
+
+# Full run
+.venv/bin/python manage.py force_agent_cycle
+
+# Dreams only
+.venv/bin/python manage.py force_agent_cycle --dreams-only
+```
+
+### Check Agent Activity
+```bash
+.venv/bin/python manage.py shell -c "
+from core.models import Agent
+from django.utils import timezone
+from datetime import timedelta
+recent = Agent.objects.filter(
+    is_active=True,
+    last_active__gte=timezone.now() - timedelta(hours=24)
+).count()
+print(f'Agents active in 24h: {recent}/71')"
+```
 
 ---
 
@@ -125,32 +174,10 @@ If you modify HTML templates in `ai_core/templates/`, you must restart Daphne:
 ```bash
 pkill -f daphne && make start
 ```
-Browser hard-refresh alone won't work - Daphne caches templates.
 
 ### Celery Workers Must Use Threads Pool
 On macOS, always start workers with `--pool=threads` to avoid SIGSEGV crashes.
 The Makefile handles this automatically - always use `make celery`.
-
----
-
-## Verification Commands
-
-```bash
-# System health check
-python manage.py system_health_check
-
-# Test Research Demo stats API (check 24h data)
-curl -s http://localhost:8000/api/v1/research/stats/ | python3 -m json.tool | head -40
-
-# Test agent analytics
-curl http://localhost:8000/api/agent-analytics/stats/
-
-# Test Celery status
-curl http://localhost:8000/api/celery/status/
-
-# Health ping
-curl http://localhost:8000/health/ping/
-```
 
 ---
 

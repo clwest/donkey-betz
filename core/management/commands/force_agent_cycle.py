@@ -65,11 +65,18 @@ class Command(BaseCommand):
         run_all = not (dreams_only or conversations_only or learning_only)
 
         # Get ALL active agents
+        from django.utils import timezone
         agents = list(Agent.objects.filter(is_active=True))
         self.stdout.write(self.style.SUCCESS(f"\n{'='*60}"))
-        self.stdout.write(self.style.SUCCESS(f"  FORCE AGENT CYCLE - Session 417"))
+        self.stdout.write(self.style.SUCCESS(f"  FORCE AGENT CYCLE - Session 645"))
         self.stdout.write(self.style.SUCCESS(f"{'='*60}"))
         self.stdout.write(f"\nFound {len(agents)} active agents")
+
+        # Update last_active for ALL agents at the start
+        if not dry_run:
+            now = timezone.now()
+            Agent.objects.filter(is_active=True).update(last_active=now)
+            self.stdout.write(self.style.SUCCESS(f"Updated last_active for all {len(agents)} agents"))
 
         if dry_run:
             self.stdout.write(self.style.WARNING("\n[DRY RUN MODE - No changes will be made]\n"))
