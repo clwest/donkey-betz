@@ -1,27 +1,33 @@
-# Session 635 - Start Here
+# Session 636 - Start Here
 
-**Previous Session:** 634
+**Previous Session:** 635
 **Date:** December 30, 2025
 **Focus:** To Be Determined
 
 ---
 
-## Session 634 Accomplishments
+## Session 635 Accomplishments
 
-### Podcasts Tab Reorganization
-- Moved Podcasts sub-tab from Autonomous to Calendar tab
-- Calendar now has sub-tabs: Schedule | Podcasts
-- Makes more sense contextually (podcasts are content)
+### Full System Demo Command
+Created `python manage.py full_system_demo` that demonstrates the AI Studio by having it create content about itself:
+- Agents research the platform (67 agents, 77 spiders, 394 models)
+- Creates agent dreams about system capabilities
+- Generates multi-agent conversations (4 agents discussing the platform)
+- Produces blog posts saved to SelfBlog model
+- Creates podcast episodes
+- Generates social media posts (Twitter, LinkedIn, Bluesky)
+- Captures learning loop entries
 
-### Enhanced Script Modal
-- Script button now shows full 3-agent debate content (~8,000+ chars)
-- Previously only showed the 1,544 char intro script
-- Added TopicMiner, Contrarian, Analyst positions in color-coded cards
-- Decision Reasoning shown at bottom
+### Pilot Regeneration Command
+Created `python manage.py regenerate_pilots` to recover from database issues:
+- Regenerates PilotReadinessGate from canonical AgentDecisionSummary records
+- Creates ReadinessChecklistItem records (4 per gate)
+- Creates PilotExecution and Experiment records
+- Successfully restored 127 pilots after database schema issues
 
-### Bug Fixes
-- Fixed podcast_script API returning description (71 chars) instead of script (1,544 chars)
-- Script field (added Session 630) now properly used in podcast views
+### Database Fixes
+- Added missing `created_at` and `updated_at` columns to `core_experiment` table
+- Fixed API 500 errors for experiment-related endpoints
 
 ---
 
@@ -35,11 +41,8 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test Podcasts feature
-#    - Click Calendar tab
-#    - Click Podcasts sub-tab
-#    - Click Script button on any episode
-#    - See full 3-agent debate content
+# 3. Run Full System Demo (optional)
+python manage.py full_system_demo
 ```
 
 ---
@@ -54,7 +57,11 @@ open http://localhost:8000/ai-studio/
 | Celery Tasks | 156 scheduled |
 | Services | 94 |
 | Discord Commands | 112 |
-| Content Channels | 2 (AI Tech Weekly, Narrative Shift Reports) |
+| Self Blogs | 315 |
+| Agent Conversations | 5,046 |
+| Agent Dreams | 5,187 |
+| Pilot Gates | 127 |
+| Experiments | 127 |
 
 ---
 
@@ -62,10 +69,24 @@ open http://localhost:8000/ai-studio/
 
 | Session | Document |
 |---------|----------|
+| 635 | (this document) |
 | 634 | `docs/handoffs/SESSION_634_PODCASTS_TO_CALENDAR.md` |
 | 630-633 | `docs/handoffs/SESSION_630_633_CONTENT_CALENDAR_FEATURES.md` |
 | 629 | `docs/handoffs/SESSION_629_TESTING_VALIDATION.md` |
 | 628 | `docs/handoffs/SESSION_628_CROSS_SESSION_MEMORY_CALENDAR.md` |
+
+---
+
+## New Management Commands (Session 635)
+
+```bash
+# Full System Demo - AI creates content about itself
+python manage.py full_system_demo
+
+# Regenerate Pilots from decisions (recovery tool)
+python manage.py regenerate_pilots --dry-run  # Preview
+python manage.py regenerate_pilots            # Execute
+```
 
 ---
 
@@ -81,15 +102,15 @@ open http://localhost:8000/ai-studio/
 - Regenerate with different parameters
 - Manual approval workflow
 
-### Option 3: Generation Progress Tracking
-- Track Celery task progress
-- Show generation steps in real-time
-- Notify when generation completes
-
-### Option 4: Podcast Audio Generation
+### Option 3: Podcast Audio Generation
 - Generate audio from scripts using TTS
 - Support multiple voice options
 - Audio player in UI
+
+### Option 4: Automated Self-Promotion
+- Schedule the full_system_demo to run periodically
+- Auto-publish generated content to social platforms
+- Build audience through consistent AI-generated content
 
 ---
 
@@ -99,34 +120,38 @@ open http://localhost:8000/ai-studio/
 |---------|-------|----------|--------|
 | AI Tech Weekly | admin | 3+ | Active |
 | Narrative Shift Reports | admin | 5+ | Active |
+| AI Studio Insider | admin | 1+ | Active (from demo) |
 
 ---
 
-## API Endpoints (Content Calendar)
+## API Endpoints
 
 ```bash
-# Main calendar data
+# Content Calendar
 curl http://localhost:8000/api/content-calendar/
-
-# Episode details (Session 631)
 curl http://localhost:8000/api/content-calendar/episode/<uuid>/
-
-# Trigger generation (Session 632)
 curl -X POST http://localhost:8000/api/content-calendar/generate/<uuid>/
 
-# Podcast script with 3-agent debate (Session 634)
+# Podcast with 3-agent debate
 curl http://localhost:8000/api/podcasts/<uuid>/script/
+
+# Experiments (Session 635 fix)
+curl http://localhost:8000/api/experiment-recommendations/
 ```
 
 ---
 
-## Session 634 Commits
+## Session 635 Commits
 
 ```
-5f4828f2 feat(Session 634): Enhanced Script modal with 3-agent debate content
-de2c872f fix(Session 634): Podcast Script button shows full script, not description
-30f30a10 feat(Session 634): Move Podcasts sub-tab from Autonomous to Calendar
-4beb8e38 fix(Session 630): Add missing script field to ChannelEpisode model
-452e54d8 docs(Session 633): Update handoff with script extraction + expandable UI
-515fcbbc fix(Session 633): Script extraction + expandable debate text in UI
+cacd9801 feat(Session 635): Full System Demo + Pilot Regeneration
+```
+
+---
+
+## Database Backup
+
+A backup was created during Session 635:
+```
+backups/database/unified_donkey_betz_20251230_session635.dump (698 MB)
 ```
