@@ -446,11 +446,20 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
 
     def _detect_attack_pattern(
         self,
-        transactions: List[Dict[str, Any]],
+        transactions: List[Dict[str, Any]] = None,
         time_window_seconds: int = 60,
         target_patterns: List[str] = None
     ) -> Dict[str, Any]:
         """Detect known attack patterns in transactions."""
+        # Handle missing transactions argument
+        if not transactions:
+            return {
+                "success": False,
+                "error": "No transactions provided to analyze",
+                "patterns_detected": [],
+                "requires": "List of transaction objects with hash, from, to, value, timestamp"
+            }
+
         from openai import OpenAI
 
         client = OpenAI()

@@ -28,6 +28,7 @@ Usage:
     )
 """
 
+import json
 import logging
 import time
 from typing import Dict, Any, List, Optional
@@ -272,8 +273,9 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             # Build prompt with context
             full_prompt = self._build_intelligent_prompt(task, scifi_context, spider_context)
 
-            # Record decision
+            # Record decision (decision_type, action, ...)
             self.record_decision(
+                "analysis",
                 f"Starting market intelligence analysis",
                 context={'task': task},
                 confidence=0.8
@@ -302,9 +304,10 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             if assistant_message.tool_calls:
                 for tool_call in assistant_message.tool_calls:
                     tool_name = tool_call.function.name
-                    tool_args = eval(tool_call.function.arguments) if tool_call.function.arguments else {}
+                    tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
 
                     self.record_decision(
+                        "tool_call",
                         f"Calling tool: {tool_name}",
                         context={'args': tool_args},
                         confidence=0.9
@@ -344,14 +347,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             # Build result
             execution_time = int((time.time() - start_time) * 1000)
 
-            # Record learning outcome
-            self._record_learning_outcome(
-                {'analysis': analysis[:500], 'tools_used': [t['tool'] for t in tool_calls_made]},
-                task,
-                context
-            )
-
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message=analysis,
                 data={
@@ -364,6 +360,14 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                 decisions_made=len(tool_calls_made) + 1,
                 tool_calls=tool_calls_made
             )
+
+            # Record learning outcome with proper AgentResult
+            try:
+                self._record_learning_outcome(result, task, context)
+            except Exception as le:
+                logger.warning(f"Failed to record learning outcome: {le}")
+
+            return result
 
         except Exception as e:
             logger.exception(f"MarketIntelligenceAgent error: {e}")

@@ -213,8 +213,25 @@ Always provide:
             # Build prompt with intelligent context
             prompt = intelligent_context + "\n\n" + scan_context
 
-            # Call GPT with tools
-            gpt_result = self._call_gpt(prompt, self.tools)
+            # Call GPT with tools using BaseAgent's _call_openai
+            gpt_response = self._call_openai(prompt)
+
+            # Process response - extract content and handle any tool calls
+            content = gpt_response.get('content', '')
+            tool_calls = gpt_response.get('tool_calls', [])
+
+            # Process tool calls if any
+            tool_results = []
+            for tc in tool_calls:
+                tool_result = self._handle_tool_call(tc['name'], tc['arguments'])
+                tool_results.append(tool_result)
+
+            # Build final result
+            gpt_result = {
+                'analysis': content,
+                'signals': tool_results if tool_results else [],
+                'tool_calls_made': len(tool_calls)
+            }
 
             execution_time_ms = int((time.time() - start_time) * 1000)
             signals_found = len(gpt_result.get('signals', []))
