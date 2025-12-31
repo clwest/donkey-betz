@@ -1,12 +1,12 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 29, 2025 - Session 586
+**Last Updated:** December 30, 2025 - Session 637
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
 
-## System Stats (Session 586)
+## System Stats (Session 637)
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 71 | 47 routable, 24 sub-agents |
+| **Agents** | 71 | 68 routable, 3 sub-agents |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Database Models** | 324+ | 37 categories |
@@ -65,7 +65,7 @@ open http://localhost:8000/ai-studio/
 ## Agent Ecosystem (71 Agents)
 
 All agents in `core/agents/` with learning hooks connected to collective intelligence.
-**47 routable** (in AgentRouter) | **24 non-routable** (sub-agents managed by coordinators)
+**68 routable** (in AgentRouter) | **3 non-routable** (sub-agents: TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent)
 
 | Category | Count | Agents |
 |----------|-------|--------|
@@ -75,25 +75,25 @@ All agents in `core/agents/` with learning hooks connected to collective intelli
 | **Content Writing** | 1 | ContentWriterAgent |
 | **Strategy** | 4 | ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent, SocialMediaAgent |
 | **Executive** | 4 | CTOAgent, COOAgent, CreativeDirectorAgent, MeetingCoordinatorAgent |
-| **Analysis** | 3 | TrendAnalysisAgent, OpportunityScoringAgent, MarketIntelligenceAgent* |
+| **Analysis** | 3 | TrendAnalysisAgent, OpportunityScoringAgent, MarketIntelligenceAgent |
 | **Training** | 2 | CharacterTrainingAgent, TrainedCreationAgent |
 | **Security** | 2 | MemoryIsolationAgent, ContentAuditAgent |
-| **Business** | 5 | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent*, ContentStrategyAgent (business)*, MarketingStrategyAgent* |
+| **Business** | 5 | CompetitorAnalysisAgent, CustomerResearchAgent, BrandStrategyAgent, ContentStrategyAgent (business), MarketingStrategyAgent |
 | **Development** | 4 | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent |
-| **Blockchain** | 5 | BlockchainAuditCoordinator, SmartContractAuditorAgent*, TransactionMonitorAgent*, WhaleWatcherAgent*, ExploitDetectorAgent* |
+| **Blockchain** | 5 | BlockchainAuditCoordinator, SmartContractAuditorAgent, TransactionMonitorAgent, WhaleWatcherAgent, ExploitDetectorAgent |
 | **Legal** | 1 | LegalDocDrafterAgent |
-| **Narrative** | 4 | NarrativeDriftCoordinator*, NarrativeHistorianAgent*, TrendBreakDetectorAgent*, CulturalImpactAgent* |
-| **Content Studio** | 4 | AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent |
+| **Narrative** | 4 | NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetectorAgent, CulturalImpactAgent |
+| **Content Studio** | 4 | AutonomousContentStudioCoordinator, TopicMinerAgent*, ContrarianAgent*, PerformanceAnalystAgent* |
 | **Podcast** | 4 | PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent |
 | **Rendering** | 1 | ResolveAgent |
-| **Orchestration** | 4 | WorkflowAgent, WorkflowOrchestrationAgent*, OpportunityPipelineAgent*, ContentExecutorAgent* |
+| **Orchestration** | 4 | WorkflowAgent, WorkflowOrchestrationAgent, OpportunityPipelineAgent, ContentExecutorAgent |
 | **Campaign** | 2 | CampaignOrchestratorAgent, AISeriesWorkflowAgent |
-| **Stocks** | 9 | StockAuditCoordinator, StockAnalystAgent*, MarketMovementMonitorAgent*, InstitutionalWatcherAgent*, MarketAnomalyDetectorAgent*, BullCaseAgent*, BearCaseAgent*, SignalScannerAgent*, MarketIntelligenceCoordinator* |
+| **Stocks** | 9 | StockAuditCoordinator, StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent, MarketAnomalyDetectorAgent, BullCaseAgent, BearCaseAgent, SignalScannerAgent, MarketIntelligenceCoordinator |
 | **Markets** | 3 | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector |
 | **Entry Point** | 1 | PersonalAssistantAgent |
-| **Special** | 1 | ThinkingAgent* |
+| **Special** | 2 | ThinkingAgent, TechnicalDocumentAgent |
 
-*\* = Non-routable (sub-agents orchestrated by coordinators)*
+*\* = Non-routable (sub-agents used internally by AutonomousContentStudioCoordinator)*
 
 ### Agent Architecture
 - **BaseAgent** - All agents inherit TimeTravelMixin, learning hooks, memory creation
@@ -166,16 +166,16 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| 637 | AgentRouter expansion (47→68 routable) + agent fixes | `SESSION_637_SYSTEM_AUDIT_FIXES.md` |
+| 636 | System Health Check command + Agent Introduction Party | `SESSION_636_SYSTEM_HEALTH_CHECK.md` |
 | 596 | Experiment Tracking Registry - KPI ownership for pilots | `SESSION_596_EXPERIMENT_TRACKING.md` |
 | 595 | Pilot Dashboard - Monitor running/completed pilots | `SESSION_595_PILOT_DASHBOARD.md` |
 | 594 | AI-Powered Governance - Auto-completion & ThinkingAgent eval | `SESSION_594_PILOT_AUTO_COMPLETION.md` |
 | 593 | ThinkingAgent Auto-Gates - AI generates pilot gates | `SESSION_593_THINKING_AGENT_AUTO_GATES.md` |
 | 592 | Pilot Readiness Gate Complete - Full checklist system | `SESSION_592_PILOT_READINESS_GATE_COMPLETE.md` |
-| 590 | Pilot Readiness Gate - Human-in-the-loop for decisions | Migration `0130` |
 | 588 | PA Phase 25 (81 tools) + System Insights UI | `SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md` |
 | 573 | PA System Awareness + Celery Multi-Queue | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
 | 567 | Full System Audit - 71 agents, 77 spiders | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
-| 555 | Chief of Staff Layer - Human-in-the-loop | `SESSION_555_CHIEF_OF_STAFF_LAYER.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
