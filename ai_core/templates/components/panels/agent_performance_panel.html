@@ -888,7 +888,9 @@ async function runHealthCheck() {
 }
 
 function renderHealthResults(container, data) {
-    const isHealthy = data.status === 'healthy';
+    // Session 642: Fix - API returns data.health.status, not data.status
+    const healthData = data.health || data;
+    const isHealthy = healthData.status === 'healthy';
     const checks = data.checks || {};
 
     // Build checks HTML

@@ -1055,6 +1055,72 @@ class DiscordNotificationService:
 
         return self._send_message(self.CHANNEL_BOARDROOM, "", embed=embed)
 
+    def send_embed(self, channel_name: str, title: str, description: str,
+                   color: int = 0x3498db, fields: List[Dict[str, Any]] = None,
+                   footer: str = None) -> bool:
+        """
+        Send a custom embed to any Discord channel by name.
+
+        Session 642: Generic embed sender for flexible notifications.
+
+        Args:
+            channel_name: Channel name like 'boardroom', 'market-intelligence', etc.
+            title: Embed title
+            description: Embed description
+            color: Embed color (hex int)
+            fields: List of {'name': str, 'value': str, 'inline': bool} dicts
+            footer: Optional footer text
+
+        Returns:
+            True if sent successfully
+        """
+        # Map channel names to IDs
+        channel_map = {
+            'dreams': self.CHANNEL_DREAMS,
+            'agent-dreams': self.CHANNEL_DREAMS,
+            'conversations': self.CHANNEL_CONVERSATIONS,
+            'agent-conversations': self.CHANNEL_CONVERSATIONS,
+            'status': self.CHANNEL_STATUS,
+            'system-status': self.CHANNEL_STATUS,
+            'learning': self.CHANNEL_LEARNING,
+            'boardroom': self.CHANNEL_BOARDROOM,
+            'opportunities': self.CHANNEL_OPPORTUNITIES,
+            'gallery': self.CHANNEL_GALLERY,
+            'profile': self.CHANNEL_PROFILE,
+            'market-alerts': self.CHANNEL_MARKET_ALERTS,
+            'market-intelligence': self.CHANNEL_MARKET_ALERTS,
+            'stock-alerts': self.CHANNEL_STOCK_ALERTS,
+            'blockchain-alerts': self.CHANNEL_BLOCKCHAIN_ALERTS,
+            'podcast-library': self.CHANNEL_PODCAST_LIBRARY,
+        }
+
+        channel_id = channel_map.get(channel_name.lower())
+        if not channel_id:
+            logger.warning(f"Unknown Discord channel: {channel_name}")
+            return False
+
+        embed = {
+            "title": title[:256],  # Discord limit
+            "description": description[:4096],  # Discord limit
+            "color": color,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        if fields:
+            embed["fields"] = [
+                {
+                    "name": f.get('name', '')[:256],
+                    "value": f.get('value', '')[:1024],
+                    "inline": f.get('inline', True)
+                }
+                for f in fields[:25]  # Max 25 fields
+            ]
+
+        if footer:
+            embed["footer"] = {"text": footer[:2048]}
+
+        return self._send_message(channel_id, "", embed=embed)
+
     def test_connection(self) -> dict:
         """
         Test the Discord connection by sending test messages to all channels.
