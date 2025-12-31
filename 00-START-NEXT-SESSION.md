@@ -9,32 +9,35 @@
 
 ## Session 637 Accomplishments
 
-### Agent Router Expansion (47 → 68 Routable Agents)
+### Agent Router Complete (47 → 71 Routable Agents)
 
-Added 21 previously dead agents to the AgentRouter:
+All 71 agents are now routable through AgentRouter. Session 637 added 24 agents in 4 phases:
 
-**Stock Agents (8 new):**
+**Phase 1: Stock Agents (8 new)**
 - StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent
 - MarketAnomalyDetectorAgent, BullCaseAgent, BearCaseAgent
 - SignalScannerAgent, MarketIntelligenceCoordinator
 
-**Blockchain Agents (4 new):**
+**Phase 2: Blockchain Agents (4 new)**
 - SmartContractAuditorAgent, TransactionMonitorAgent
 - WhaleWatcherAgent, ExploitDetectorAgent
 
-**Narrative Agents (4 new):**
+**Phase 3: Narrative Agents (4 new)**
 - NarrativeDriftCoordinator, NarrativeHistorianAgent
 - TrendBreakDetectorAgent, CulturalImpactAgent
 
-**Orchestration Agents (5 new):**
+**Phase 4: Orchestration & Business (8 new)**
 - OpportunityPipelineAgent, ContentExecutorAgent
 - WorkflowOrchestrationAgent, ThinkingAgent, TechnicalDocumentAgent
+- BrandStrategyAgent, MarketingStrategyAgent, MarketIntelligenceAgent
 
-### System Audit Corrections
+### Execution Errors Fixed
+- **ThinkingAgent:** Fixed execute() to return AgentResult instead of dict
+- **NarrativeDriftCoordinator:** Implemented proper OpenAI tool execution
 
-Verified that previous audit findings were false positives:
-- **Intelligence module imports:** All work correctly (153+ imports are valid)
-- **Silent failures:** Only 22 legitimate optional dependency handlers
+### Agent Test Suite Created
+- `core/tests/test_all_agents.py` - Comprehensive verification
+- All 71 agents pass instantiation and signature tests
 
 ---
 
@@ -51,8 +54,12 @@ open http://localhost:8000/ai-studio/
 # 3. Run System Health Check
 python manage.py system_health_check
 
-# 4. Verify agent count
-python manage.py shell -c "from core.agent_router import AgentRouter; print(f'{len(AgentRouter.AGENT_MAP)} routable agents')"
+# 4. Verify agent count (should be 71)
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.agent_router import AgentRouter
+print(f'{len(AgentRouter.AGENT_MAP)} routable agents')
+"
 ```
 
 ---
@@ -62,9 +69,9 @@ python manage.py shell -c "from core.agent_router import AgentRouter; print(f'{l
 | Component | Count |
 |-----------|-------|
 | Django Models | 394 |
-| **Routable Agents** | **68** (was 47) |
-| Total Agents | 71 (3 non-routable) |
-| Spiders | 171 spider files |
+| **Routable Agents** | **71** (was 47) |
+| Total Agent Files | 71 |
+| Spiders | 77 registered |
 | Celery Tasks | 53 scheduled |
 | Services | 94 |
 | Discord Commands | 112 |
@@ -90,6 +97,18 @@ Health Score: 100%
 
 ---
 
+## Session 637 Commits
+
+| Commit | Description |
+|--------|-------------|
+| `a14c43ab` | feat: Expand AgentRouter from 47 to 68 agents |
+| `cdf081c6` | fix: Fix execution errors (ThinkingAgent, NarrativeDriftCoordinator) |
+| `a2ff4d77` | docs: Update CLAUDE.md with 68 routable agents |
+| `0bf9ad5d` | feat: Complete AgentRouter with all 71 agents + test suite |
+| `2afdb1de` | docs: Update handoff with complete session summary |
+
+---
+
 ## Key Handoff Documents
 
 | Session | Document |
@@ -102,22 +121,28 @@ Health Score: 100%
 
 ## Recommended Next Steps
 
-### Option 1: Test All 68 Agents
-- Create a test suite that exercises each routable agent
+### Option 1: Agent Execution Testing
+- Run actual tasks through each of the 71 agents
+- Verify stock agents can analyze real market data
+- Test blockchain agents with real contracts
 - Measure response times and success rates
-- Identify any agents that need maintenance
 
-### Option 2: Agent Performance Dashboard
+### Option 2: Semantic Router Update
+- Ensure all 71 agents have embeddings for semantic routing
+- Test `route_by_query()` method with various prompts
+- Verify confidence thresholds work correctly
+
+### Option 3: Agent Performance Dashboard
 - Track which agents are used most frequently
 - Show success/failure rates per agent
 - Display average execution times
 
-### Option 3: Month Grid Calendar View
+### Option 4: Month Grid Calendar View
 - Add calendar month grid view
 - Visual scheduling interface
 - Drag-and-drop rescheduling
 
-### Option 4: Podcast Audio Generation
+### Option 5: Podcast Audio Generation
 - Generate audio from scripts using TTS
 - Support multiple voice options
 - Audio player in UI
@@ -128,8 +153,12 @@ Health Score: 100%
 
 | File | Changes |
 |------|---------|
-| `core/agent_router.py` | +21 agent imports and AGENT_MAP entries |
-| `core/agents/__init__.py` | +10 stock agents, ThinkingAgent, TechnicalDocumentAgent |
+| `core/agent_router.py` | +24 agent imports and AGENT_MAP entries |
+| `core/agents/__init__.py` | +10 stock agents exports |
+| `core/agents/thinking_agent.py` | Fixed execute() return type |
+| `core/agents/narrative/narrative_drift_coordinator.py` | Fixed execute() implementation |
+| `core/tests/test_all_agents.py` | Created comprehensive test suite |
+| `CLAUDE.md` | Updated to 71 routable agents |
 | `docs/handoffs/SESSION_637_SYSTEM_AUDIT_FIXES.md` | Full handoff documentation |
 
 ---
@@ -145,4 +174,30 @@ curl http://localhost:8000/api/podcasts/<uuid>/script/
 
 # System Health (programmatic)
 curl http://localhost:8000/health/ping/
+
+# Agent list
+curl http://localhost:8000/api/agents/
+```
+
+---
+
+## Agent Test Suite
+
+```bash
+# Quick verification (no database needed)
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.agent_router import AgentRouter
+import inspect
+
+agent_map = AgentRouter.AGENT_MAP
+print(f'Total agents: {len(agent_map)}')
+failed = []
+for name, cls in agent_map.items():
+    try:
+        cls(user=None)
+    except Exception as e:
+        failed.append(name)
+print(f'Instantiation: {\"PASS\" if not failed else \"FAIL: \" + str(failed)}')
+"
 ```
