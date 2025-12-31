@@ -2599,8 +2599,9 @@ urlpatterns = [
     path('api/v1/research/self-blog/', views_research_demo.self_blog_api, name='research-self-blog'),
     # Session 570: Self-blog by ID endpoint
     path('api/v1/research/self-blog/<uuid:blog_id>/', views_research_demo.self_blog_by_id_api, name='research-self-blog-by-id'),
-    # path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
-    # path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
+    # Session 643: Enabled self-blog generation endpoints
+    path('api/v1/research/self-blog/generate/', views_research_demo.generate_self_blog_api, name='research-generate-self-blog'),
+    path('api/v1/research/self-blog/task/<str:task_id>/', views_research_demo.self_blog_task_status_api, name='research-self-blog-task'),
     # Session 588: System Insights API
     path('api/v1/research/system-insights/', views_research_demo.system_insights_api, name='research-system-insights'),
     # Session 622: Deliverables API

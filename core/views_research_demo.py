@@ -632,6 +632,115 @@ def self_blog_by_id_api(request, blog_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@require_http_methods(["POST"])
+def generate_self_blog_api(request):
+    """
+    Session 643: Trigger self-blog generation via Celery task.
+
+    POST body:
+    {
+        "tone": "enthusiastic",  # optional, default "enthusiastic"
+        "word_count": 1500,      # optional, default 1500
+        "topic_category": null   # optional
+    }
+
+    Returns:
+    {
+        "success": true,
+        "task_id": "uuid-string"
+    }
+    """
+    try:
+        import json
+        from core.tasks import generate_self_blog_task
+
+        # Parse request body
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
+
+        tone = data.get('tone', 'enthusiastic')
+        word_count = data.get('word_count', 1500)
+        topic_category = data.get('topic_category')
+
+        # Queue the Celery task
+        task = generate_self_blog_task.delay(
+            tone=tone,
+            word_count=word_count,
+            topic_category=topic_category
+        )
+
+        logger.info(f"Self-blog generation task queued: {task.id}")
+
+        return JsonResponse({
+            'success': True,
+            'task_id': str(task.id),
+            'message': 'Self-blog generation started'
+        })
+
+    except Exception as e:
+        logger.error(f"Error triggering self-blog generation: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def self_blog_task_status_api(request, task_id):
+    """
+    Session 643: Check the status of a self-blog generation task.
+
+    Returns:
+    {
+        "success": true,
+        "status": "pending|started|completed|failed",
+        "title": "...",  # if completed
+        "blog_id": "...", # if completed
+        "error": "..."   # if failed
+    }
+    """
+    try:
+        from celery.result import AsyncResult
+        from core.celery import app
+
+        result = AsyncResult(task_id, app=app)
+
+        response = {
+            'success': True,
+            'task_id': task_id,
+            'status': result.status.lower() if result.status else 'pending'
+        }
+
+        if result.successful():
+            # Task completed successfully
+            task_result = result.result or {}
+            if isinstance(task_result, dict):
+                response['status'] = 'completed'
+                response['blog_id'] = task_result.get('blog_id')
+                response['title'] = task_result.get('title', 'Self-Blog Generated')
+            else:
+                response['status'] = 'completed'
+                response['title'] = 'Self-Blog Generated'
+        elif result.failed():
+            response['status'] = 'failed'
+            response['error'] = str(result.result) if result.result else 'Unknown error'
+        elif result.status == 'PENDING':
+            response['status'] = 'pending'
+        elif result.status == 'STARTED':
+            response['status'] = 'started'
+
+        return JsonResponse(response)
+
+    except Exception as e:
+        logger.error(f"Error checking self-blog task status: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["GET"])
 def system_insights_api(request):
     """

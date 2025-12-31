@@ -1869,8 +1869,8 @@
                 </button>
             </li>
 
-            <!-- Session 229: Distribution Tab (Phase 4 - Smart Distribution) -->
-            <li class="nav-item" role="presentation">
+            <!-- Session 229: Distribution Tab (Phase 4 - Smart Distribution) - HIDDEN Session 643: Not fully implemented -->
+            <li class="nav-item" role="presentation" style="display: none;">
                 <button class="nav-link" id="distribution-tab" data-bs-toggle="tab" data-bs-target="#distribution" type="button" role="tab" title="Smart Content Distribution">
                     🚀 Distribute
                 </button>
@@ -1911,8 +1911,8 @@
                 </button>
             </li>
 
-            <!-- Portfolio (Session 61: Phase C.2.2) -->
-            <li class="nav-item" role="presentation">
+            <!-- Portfolio (Session 61: Phase C.2.2) - HIDDEN Session 643: Low usage, can use Projects instead -->
+            <li class="nav-item" role="presentation" style="display: none;">
                 <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab" title="Showcase your best work">
                     🎨 Portfolio
                 </button>
@@ -1946,8 +1946,8 @@
                 </button>
             </li>
 
-            <!-- Session 451: User Upload -->
-            <li class="nav-item" role="presentation">
+            <!-- Session 451: User Upload - HIDDEN Session 643: Functionality available in Projects tab -->
+            <li class="nav-item" role="presentation" style="display: none;">
                 <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" title="Upload your own videos and images">
                     📤 Upload
                 </button>
@@ -7930,30 +7930,46 @@
                                 <h5 class="card-title mb-4">🔄 Knowledge Pipeline Flow</h5>
 
                                 <!-- Pipeline Visualization -->
+                                <!-- Session 644: Added 24h activity indicators to show real-time data flow -->
                                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap" style="gap: 10px;">
                                     <div class="text-center p-3" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; min-width: 120px;">
                                         <h3 class="mb-0" id="pipeline-spiders">77</h3>
                                         <small>🕷️ Spiders</small>
+                                        <div class="mt-1" style="font-size: 11px; color: rgba(255,255,255,0.8);">
+                                            <span id="pipeline-spiders-24h">0</span> data/24h
+                                        </div>
                                     </div>
                                     <div style="font-size: 24px; color: #06b6d4;">→</div>
                                     <div class="text-center p-3" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 12px; min-width: 120px;">
                                         <h3 class="mb-0" id="pipeline-agents">55</h3>
                                         <small>🤖 Agents</small>
+                                        <div class="mt-1" style="font-size: 11px; color: rgba(255,255,255,0.8);">
+                                            <span id="pipeline-agents-active">0</span> active
+                                        </div>
                                     </div>
                                     <div style="font-size: 24px; color: #06b6d4;">→</div>
                                     <div class="text-center p-3" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 12px; min-width: 120px;">
                                         <h3 class="mb-0" id="pipeline-connections">114</h3>
                                         <small>🔗 Connections</small>
+                                        <div class="mt-1" style="font-size: 11px; color: rgba(255,255,255,0.8);">
+                                            <span id="pipeline-transfers-24h">0</span> transfers/24h
+                                        </div>
                                     </div>
                                     <div style="font-size: 24px; color: #06b6d4;">→</div>
                                     <div class="text-center p-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; min-width: 120px;">
                                         <h3 class="mb-0" id="pipeline-mythology">0</h3>
                                         <small>🛡️ Blocked</small>
+                                        <div class="mt-1" style="font-size: 11px; color: rgba(255,255,255,0.8);">
+                                            <span id="pipeline-mythology-pending">0</span> pending
+                                        </div>
                                     </div>
                                     <div style="font-size: 24px; color: #06b6d4;">→</div>
                                     <div class="text-center p-3" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 12px; min-width: 120px;">
                                         <h3 class="mb-0" id="pipeline-knowledge">2,874</h3>
                                         <small>📚 Knowledge</small>
+                                        <div class="mt-1" style="font-size: 11px; color: rgba(255,255,255,0.8);">
+                                            +<span id="pipeline-knowledge-24h">0</span> new/24h
+                                        </div>
                                     </div>
                                 </div>
 
@@ -77939,6 +77955,13 @@ ${item.generated_content}
                         updateElement('pipeline-connections', p.network.connections);
                         updateElement('pipeline-mythology', p.mythology_gate.quarantined);
                         updateElement('pipeline-knowledge', p.outcomes.total_knowledge.toLocaleString());
+
+                        // Session 644: Update 24h activity indicators
+                        updateElement('pipeline-spiders-24h', p.spiders.data_points_24h.toLocaleString());
+                        updateElement('pipeline-agents-active', p.agents.with_knowledge);
+                        updateElement('pipeline-transfers-24h', p.network.transfers_24h);
+                        updateElement('pipeline-mythology-pending', p.mythology_gate.pending);
+                        updateElement('pipeline-knowledge-24h', p.outcomes.new_24h);
 
                         // Update detailed stats
                         updateElement('stat-spiders-active', p.spiders.total);
