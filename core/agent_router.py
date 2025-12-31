@@ -128,11 +128,16 @@ from core.agents.security import (
     MemoryIsolationAgent,
 )
 
-# Session 293: Business Research Agents
+# Session 293: Business Research Agents (+ Session 637)
 from core.agents.business import (
     CompetitorAnalysisAgent,
     CustomerResearchAgent,
+    BrandStrategyAgent,
+    MarketingStrategyAgent,
 )
+
+# Session 385: Market Intelligence Agent (from analysis)
+from core.agents.analysis import MarketIntelligenceAgent
 
 # Session 403: Legal Agents
 from core.agents.legal import (
@@ -282,9 +287,12 @@ class AgentRouter:
         # Security Agents (Session 280 Phase 3)
         "MemoryIsolationAgent": MemoryIsolationAgent,
 
-        # Business Research Agents (Session 293)
+        # Business Research Agents (Session 293 + 637)
         "CompetitorAnalysisAgent": CompetitorAnalysisAgent,
         "CustomerResearchAgent": CustomerResearchAgent,
+        "BrandStrategyAgent": BrandStrategyAgent,
+        "MarketingStrategyAgent": MarketingStrategyAgent,
+        "MarketIntelligenceAgent": MarketIntelligenceAgent,
 
         # Legal Agents (Session 403)
         "LegalDocDrafterAgent": LegalDocDrafterAgent,

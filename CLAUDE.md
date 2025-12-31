@@ -6,7 +6,7 @@
 ## System Stats (Session 637)
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 71 | 68 routable, 3 sub-agents |
+| **Agents** | 71 | All 71 routable (Session 637 complete) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Database Models** | 324+ | 37 categories |
