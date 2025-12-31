@@ -366,9 +366,9 @@ async function showEpisodeDetail(episodeId) {
                                 <span class="badge ${debate.consensus_reached ? 'bg-success' : 'bg-warning'}">${debate.consensus_reached ? 'Consensus Reached' : 'No Consensus'}</span>
                             </div>
                             ${debate.decision_reasoning ? `
-                                <p class="mt-2 mb-0 small" style="color: rgba(255,255,255,0.7);">
-                                    <strong>Reasoning:</strong> ${escapeHtml(debate.decision_reasoning.substring(0, 300))}${debate.decision_reasoning.length > 300 ? '...' : ''}
-                                </p>
+                                <div class="mt-2 small" style="color: rgba(255,255,255,0.7);">
+                                    <strong>Reasoning:</strong> ${formatDebateArgument(debate.decision_reasoning, 400)}
+                                </div>
                             ` : ''}
                         </div>
                     </div>
@@ -438,7 +438,8 @@ function formatDuration(seconds) {
 }
 
 // Helper: Format debate argument, handling error messages gracefully
-function formatDebateArgument(argument) {
+// Session 633: Show more content with expandable text
+function formatDebateArgument(argument, maxLength = 500) {
     if (!argument) return '<span class="text-muted fst-italic">No argument provided</span>';
 
     // Check if this is an error message from a failed agent execution
@@ -446,9 +447,13 @@ function formatDebateArgument(argument) {
         return '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Agent encountered an error during execution</span>';
     }
 
-    // Normal case: truncate and escape
-    const truncated = argument.length > 200 ? argument.substring(0, 200) + '...' : argument;
-    return escapeHtml(truncated);
+    // Show full content with scroll if needed
+    const escaped = escapeHtml(argument);
+    if (argument.length > maxLength) {
+        const id = 'debate-' + Math.random().toString(36).substr(2, 9);
+        return `<div id="${id}-short">${escapeHtml(argument.substring(0, maxLength))}... <a href="#" onclick="document.getElementById('${id}-short').style.display='none';document.getElementById('${id}-full').style.display='block';return false;" class="text-info">[Show more]</a></div><div id="${id}-full" style="display:none;max-height:300px;overflow-y:auto;">${escaped} <a href="#" onclick="document.getElementById('${id}-full').style.display='none';document.getElementById('${id}-short').style.display='block';return false;" class="text-info">[Show less]</a></div>`;
+    }
+    return escaped;
 }
 
 // Session 632: Generate content immediately for a channel
