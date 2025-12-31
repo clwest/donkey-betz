@@ -329,6 +329,8 @@ def podcast_script(request, episode_id):
         # Try ChannelEpisode
         try:
             episode = ChannelEpisode.objects.get(id=episode_id)
+            # Session 634: Use script field (added Session 630) instead of description
+            script_content = episode.script or episode.description or ''
             return JsonResponse({
                 'success': True,
                 'episode': {
@@ -337,9 +339,9 @@ def podcast_script(request, episode_id):
                     'format_type': 'content',
                     'status': 'complete',
                 },
-                'script': episode.description or '',
+                'script': script_content,
                 'debate': None,
-                'word_count': len(episode.description.split()) if episode.description else 0,
+                'word_count': len(script_content.split()) if script_content else 0,
             })
         except ChannelEpisode.DoesNotExist:
             pass
