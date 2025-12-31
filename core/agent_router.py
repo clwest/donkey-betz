@@ -723,7 +723,7 @@ class AgentRouter:
         try:
             from core.models_unified_system import Agent, AgentExecution
 
-            # Get or create the Agent record
+            # Get or create the Agent record (always do this for stats tracking)
             agent_record, created = Agent.objects.get_or_create(
                 name=agent_name,
                 defaults={
@@ -733,6 +733,12 @@ class AgentRouter:
                     'is_active': True,
                 }
             )
+
+            # Session 641: Skip execution record if no user (user field is not nullable)
+            # Stats will still be updated in _complete_execution
+            if self.user is None:
+                logger.debug(f"Skipping execution record for {agent_name} - no user (stats will still update)")
+                return None
 
             # Create execution record
             execution = AgentExecution.objects.create(
