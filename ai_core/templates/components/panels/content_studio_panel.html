@@ -413,14 +413,14 @@ function refreshContentStudio() {
 async function loadContentStudioStats() {
     try {
         // Load image count
-        const imgRes = await fetch('/api/images/');
+        const imgRes = await fetch('/api/images/history/');
         if (imgRes.ok) {
             const data = await imgRes.json();
             document.getElementById('cs-stat-images').textContent = data.total || data.count || 0;
         }
 
         // Load video count
-        const vidRes = await fetch('/api/video/');
+        const vidRes = await fetch('/api/v1/video/gallery/');
         if (vidRes.ok) {
             const data = await vidRes.json();
             document.getElementById('cs-stat-videos').textContent = data.total || data.count || 0;
@@ -447,7 +447,7 @@ async function loadContentStudioStats() {
 async function loadRecentImages() {
     const container = document.getElementById('cs-recent-images');
     try {
-        const response = await fetch('/api/images/?limit=8&order=-created_at');
+        const response = await fetch('/api/images/history/?limit=8');
         if (response.ok) {
             const data = await response.json();
             const images = data.results || data.images || data || [];
@@ -476,7 +476,7 @@ async function loadRecentImages() {
 async function loadRecentVideos() {
     const container = document.getElementById('cs-recent-videos');
     try {
-        const response = await fetch('/api/video/?limit=4&order=-created_at');
+        const response = await fetch('/api/v1/video/gallery/?limit=4');
         if (response.ok) {
             const data = await response.json();
             const videos = data.results || data.videos || data || [];
@@ -605,7 +605,7 @@ async function loadGallery() {
     container.innerHTML = '<div class="col-12 text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading gallery...</div>';
 
     try {
-        const response = await fetch('/api/images/?limit=20&order=-created_at');
+        const response = await fetch('/api/images/history/?limit=20');
         if (response.ok) {
             const data = await response.json();
             const images = data.results || data.images || data || [];
