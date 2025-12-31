@@ -83,6 +83,8 @@ Available Agents:
 
 import logging
 from typing import Dict, Any, Optional, Type
+from django.utils import timezone
+from django.db.models import F
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.agents.image_agent import ImageAgent
@@ -602,13 +604,28 @@ class AgentRouter:
             except Exception as e:
                 logger.warning(f"⚠️ Session 522: SmartTrendingService failed for ContentWriterAgent: {e}")
 
-        # Execute the agent
+        # Execute the agent with tracking
+        start_time = timezone.now()
+        execution_record = None
+
         try:
+            # Create execution record
+            execution_record = self._create_execution_record(agent_name, task)
+
             result = agent.execute(
                 task=task,
                 context=context,
                 scifi_context=scifi_context,
                 spider_context=spider_context
+            )
+
+            # Track successful execution
+            self._complete_execution(
+                execution_record,
+                agent_name,
+                success=result.success,
+                execution_time_ms=result.execution_time_ms,
+                output_data={'result_preview': str(result.output)[:500] if result.output else None}
             )
 
             logger.info(
@@ -619,6 +636,16 @@ class AgentRouter:
             return result
 
         except Exception as e:
+            # Track failed execution
+            execution_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
+            self._complete_execution(
+                execution_record,
+                agent_name,
+                success=False,
+                execution_time_ms=execution_time_ms,
+                error_message=str(e)
+            )
+
             logger.error(f"Agent execution error ({agent_name}): {e}")
             return AgentResult(
                 success=False,
@@ -687,6 +714,78 @@ class AgentRouter:
         except Exception as e:
             logger.warning(f"Failed to get spider context: {e}")
             return {}
+
+    def _create_execution_record(self, agent_name: str, task: str):
+        """
+        Create an execution record for tracking.
+        Session 641: Added for Agent Performance Dashboard.
+        """
+        try:
+            from core.models_unified_system import Agent, AgentExecution
+
+            # Get or create the Agent record
+            agent_record, created = Agent.objects.get_or_create(
+                name=agent_name,
+                defaults={
+                    'agent_type': 'routable',
+                    'description': f'{agent_name} - Routable agent',
+                    'specialization': '',
+                    'is_active': True,
+                }
+            )
+
+            # Create execution record
+            execution = AgentExecution.objects.create(
+                agent=agent_record,
+                user=self.user,
+                task=task[:500],  # Truncate long tasks
+                status='in_progress',
+                input_data={'task': task}
+            )
+
+            return execution
+        except Exception as e:
+            logger.warning(f"Failed to create execution record: {e}")
+            return None
+
+    def _complete_execution(
+        self,
+        execution_record,
+        agent_name: str,
+        success: bool,
+        execution_time_ms: int,
+        output_data: dict = None,
+        error_message: str = None
+    ):
+        """
+        Complete an execution record and update agent stats.
+        Session 641: Added for Agent Performance Dashboard.
+        """
+        try:
+            from core.models_unified_system import Agent
+
+            # Update execution record
+            if execution_record:
+                execution_record.status = 'completed' if success else 'failed'
+                execution_record.execution_time_ms = execution_time_ms
+                execution_record.completed_at = timezone.now()
+                if output_data:
+                    execution_record.output_data = output_data
+                if error_message:
+                    execution_record.error_message = error_message[:500]
+                execution_record.save()
+
+            # Update agent stats
+            Agent.objects.filter(name=agent_name).update(
+                total_executions=F('total_executions') + 1,
+                successful_executions=F('successful_executions') + (1 if success else 0),
+                last_active=timezone.now()
+            )
+
+            logger.debug(f"Tracked execution for {agent_name}: success={success}, time={execution_time_ms}ms")
+
+        except Exception as e:
+            logger.warning(f"Failed to complete execution record: {e}")
 
     def get_available_agents(self) -> list:
         """

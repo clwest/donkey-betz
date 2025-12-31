@@ -264,6 +264,7 @@ def all_agents_list(request):
         teachings_count = agent.teachings.count()
         learnings_count = agent.learnings.count()
 
+        # Session 641: Add execution tracking data
         agent_list.append({
             'id': str(agent.id),
             'name': agent.name,
@@ -274,7 +275,12 @@ def all_agents_list(request):
             'solutionsCreated': solutions_count,
             'knowledgeShared': teachings_count,
             'knowledgeReceived': learnings_count,
-            'totalRevenue': float(agent.total_revenue_generated)
+            'totalRevenue': float(agent.total_revenue_generated),
+            # Session 641: Execution tracking fields
+            'totalExecutions': agent.total_executions,
+            'successfulExecutions': agent.successful_executions,
+            'successRate': agent.success_rate,
+            'lastActive': agent.last_active.isoformat() if agent.last_active else None,
         })
 
     return JsonResponse({
