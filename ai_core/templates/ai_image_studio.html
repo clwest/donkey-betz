@@ -75765,7 +75765,7 @@ ${item.generated_content}
             if (!projectSelect) return;
 
             try {
-                const response = await fetch('/ai/projects/', {
+                const response = await fetch('/api/projects/', {
                     headers: {
                         'X-CSRFToken': getCsrfToken()
                     }
@@ -75829,7 +75829,7 @@ ${item.generated_content}
                 }
 
                 // Call the AI Assistant API directly
-                const response = await fetch('/ai/chat/', {
+                const response = await fetch('/api/assistant/chat/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
