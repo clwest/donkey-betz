@@ -7189,6 +7189,17 @@
                             🏛️ Governance
                         </button>
                     </li>
+                    <!-- Session 660: Tasks & Health sub-tabs -->
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-tasks-tab" data-bs-toggle="pill" data-bs-target="#icc-tasks" type="button" role="tab">
+                            ⚙️ Tasks
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-health-tab" data-bs-toggle="pill" data-bs-target="#icc-health" type="button" role="tab">
+                            💚 Health
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Sub-tab Content -->
@@ -8086,6 +8097,202 @@
 
                     </div>
                     <!-- END GOVERNANCE SUB-TAB -->
+
+                    <!-- ========== TASKS SUB-TAB (Session 660) ========== -->
+                    <div class="tab-pane fade" id="icc-tasks" role="tabpanel">
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(139, 92, 246, 0.2); border-bottom: 1px solid #8b5cf6;">
+                                        <h5 class="mb-0" style="color: #8b5cf6;">
+                                            <span style="font-size: 24px;">⚙️</span> Celery Task Monitor
+                                            <small class="text-muted ms-2">Background task execution status</small>
+                                        </h5>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge" style="background: #22c55e;" id="icc-tasks-success">0 Success</span>
+                                            <span class="badge" style="background: #ef4444;" id="icc-tasks-failed">0 Failed</span>
+                                            <button class="btn btn-sm btn-outline-info" onclick="loadCeleryTasks()">
+                                                🔄 Refresh
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Worker Stats Row -->
+                                        <div class="row mb-4 g-2">
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(139, 92, 246, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-workers" style="color: #8b5cf6; margin: 0;">-</h3>
+                                                    <small class="text-muted">Workers</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(34, 197, 94, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-scheduled" style="color: #22c55e; margin: 0;">-</h3>
+                                                    <small class="text-muted">Scheduled</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(59, 130, 246, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-active" style="color: #3b82f6; margin: 0;">-</h3>
+                                                    <small class="text-muted">Active</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(245, 158, 11, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-queued" style="color: #f59e0b; margin: 0;">-</h3>
+                                                    <small class="text-muted">Queued</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(34, 197, 94, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-success-24h" style="color: #22c55e; margin: 0;">-</h3>
+                                                    <small class="text-muted">Success (24h)</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-2">
+                                                <div class="text-center p-2" style="background: rgba(239, 68, 68, 0.15); border-radius: 8px;">
+                                                    <h3 id="tasks-failed-24h" style="color: #ef4444; margin: 0;">-</h3>
+                                                    <small class="text-muted">Failed (24h)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Recent Tasks List -->
+                                        <h6 class="text-muted mb-3">Recent Task Executions</h6>
+                                        <div id="icc-tasks-list" style="max-height: 400px; overflow-y: auto;">
+                                            <p class="text-muted text-center">Loading task data...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END TASKS SUB-TAB -->
+
+                    <!-- ========== HEALTH SUB-TAB (Session 660) ========== -->
+                    <div class="tab-pane fade" id="icc-health" role="tabpanel">
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #22c55e;">
+                                    <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.2); border-bottom: 1px solid #22c55e;">
+                                        <h5 class="mb-0" style="color: #22c55e;">
+                                            <span style="font-size: 24px;">💚</span> System Health Dashboard
+                                            <small class="text-muted ms-2">Service status and performance metrics</small>
+                                        </h5>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge" id="icc-health-status" style="background: #22c55e;">Healthy</span>
+                                            <button class="btn btn-sm btn-outline-success" onclick="loadSystemHealth()">
+                                                🔄 Refresh
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Service Status Row -->
+                                        <div class="row mb-4 g-3">
+                                            <div class="col-md-3">
+                                                <div class="p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 4px solid #22c55e;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div>
+                                                            <h6 class="mb-1" style="color: #22c55e;">Redis</h6>
+                                                            <small class="text-muted">Cache & Message Broker</small>
+                                                        </div>
+                                                        <span id="health-redis" class="badge" style="background: #22c55e;">●</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div>
+                                                            <h6 class="mb-1" style="color: #3b82f6;">Daphne</h6>
+                                                            <small class="text-muted">ASGI Server</small>
+                                                        </div>
+                                                        <span id="health-daphne" class="badge" style="background: #22c55e;">●</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-3" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 4px solid #8b5cf6;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div>
+                                                            <h6 class="mb-1" style="color: #8b5cf6;">Celery</h6>
+                                                            <small class="text-muted">Task Workers</small>
+                                                        </div>
+                                                        <span id="health-celery" class="badge" style="background: #22c55e;">●</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-3" style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; border-left: 4px solid #f59e0b;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <div>
+                                                            <h6 class="mb-1" style="color: #f59e0b;">PostgreSQL</h6>
+                                                            <small class="text-muted">Database</small>
+                                                        </div>
+                                                        <span id="health-postgres" class="badge" style="background: #22c55e;">●</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- System Metrics -->
+                                        <h6 class="text-muted mb-3">System Metrics</h6>
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <div class="p-3" style="background: rgba(107, 114, 128, 0.1); border-radius: 8px;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">Active Agents</span>
+                                                        <strong id="health-agents" style="color: #8b5cf6;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">Registered Spiders</span>
+                                                        <strong id="health-spiders" style="color: #14b8a6;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">Scheduled Tasks</span>
+                                                        <strong id="health-scheduled" style="color: #f59e0b;">-</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="p-3" style="background: rgba(107, 114, 128, 0.1); border-radius: 8px;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">Conversations (24h)</span>
+                                                        <strong id="health-conversations" style="color: #ec4899;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">Dreams (24h)</span>
+                                                        <strong id="health-dreams" style="color: #a855f7;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">Decisions (Total)</span>
+                                                        <strong id="health-decisions" style="color: #f59e0b;">-</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="p-3" style="background: rgba(107, 114, 128, 0.1); border-radius: 8px;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">Canonical Rate</span>
+                                                        <strong id="health-canonical-rate" style="color: #22c55e;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="text-muted">AI Promoted</span>
+                                                        <strong id="health-ai-promoted" style="color: #3b82f6;">-</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">Last Health Check</span>
+                                                        <strong id="health-last-check" style="color: #6b7280;">-</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END HEALTH SUB-TAB -->
 
                 </div>
                 <!-- END SUB-TAB CONTENT -->
@@ -61338,6 +61545,116 @@ ${item.generated_content}
             if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
             if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
             return Math.floor(seconds / 86400) + ' days ago';
+        }
+
+        // Session 660: Load Celery Task Stats
+        async function loadCeleryTasks() {
+            console.log('⚙️ Loading Celery task stats...');
+            try {
+                const response = await authenticatedFetch('/api/celery/stats/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading Celery stats:', data.error);
+                    return;
+                }
+
+                const stats = data.stats;
+
+                // Update stat cards
+                document.getElementById('tasks-workers').textContent = stats.workers;
+                document.getElementById('tasks-scheduled').textContent = stats.scheduled;
+                document.getElementById('tasks-active').textContent = stats.active;
+                document.getElementById('tasks-queued').textContent = stats.queued;
+                document.getElementById('tasks-success-24h').textContent = stats.success_24h;
+                document.getElementById('tasks-failed-24h').textContent = stats.failed_24h;
+
+                // Update header badges
+                document.getElementById('icc-tasks-success').textContent = stats.success_24h + ' Success';
+                document.getElementById('icc-tasks-failed').textContent = stats.failed_24h + ' Failed';
+
+                // Render recent tasks
+                const container = document.getElementById('icc-tasks-list');
+                if (data.recent_tasks && data.recent_tasks.length > 0) {
+                    container.innerHTML = data.recent_tasks.map(task => {
+                        const statusColor = task.status === 'SUCCESS' ? '#22c55e' :
+                                          task.status === 'FAILURE' ? '#ef4444' : '#f59e0b';
+                        const statusIcon = task.status === 'SUCCESS' ? '✅' :
+                                         task.status === 'FAILURE' ? '❌' : '⏳';
+                        return `
+                            <div class="d-flex justify-content-between align-items-center p-2 mb-2"
+                                 style="background: rgba(139, 92, 246, 0.1); border-radius: 6px; border-left: 3px solid ${statusColor};">
+                                <div>
+                                    <span style="color: ${statusColor};">${statusIcon}</span>
+                                    <strong class="ms-2" style="color: #e5e7eb;">${task.name}</strong>
+                                    <small class="text-muted ms-2">${task.id}</small>
+                                </div>
+                                <small class="text-muted">${task.completed ? getTimeAgo(new Date(task.completed)) : '-'}</small>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center">No recent tasks found</p>';
+                }
+
+                console.log('⚙️ Celery stats loaded:', stats);
+            } catch (error) {
+                console.error('Error loading Celery stats:', error);
+            }
+        }
+
+        // Session 660: Load System Health
+        async function loadSystemHealth() {
+            console.log('💚 Loading system health...');
+            try {
+                const response = await authenticatedFetch('/api/icc/health/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading system health:', data.error);
+                    return;
+                }
+
+                const services = data.services;
+                const metrics = data.metrics;
+
+                // Update service indicators
+                const updateService = (id, isUp) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent = isUp ? '●' : '○';
+                        el.style.background = isUp ? '#22c55e' : '#ef4444';
+                    }
+                };
+
+                updateService('health-redis', services.redis);
+                updateService('health-daphne', services.daphne);
+                updateService('health-celery', services.celery);
+                updateService('health-postgres', services.postgres);
+
+                // Update overall status
+                const statusBadge = document.getElementById('icc-health-status');
+                if (statusBadge) {
+                    statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                    statusBadge.style.background = data.status === 'healthy' ? '#22c55e' :
+                                                   data.status === 'degraded' ? '#f59e0b' : '#ef4444';
+                }
+
+                // Update metrics
+                document.getElementById('health-agents').textContent = metrics.agents;
+                document.getElementById('health-spiders').textContent = metrics.spiders;
+                document.getElementById('health-scheduled').textContent = metrics.scheduled_tasks;
+                document.getElementById('health-conversations').textContent = metrics.conversations_24h;
+                document.getElementById('health-dreams').textContent = metrics.dreams_24h;
+                document.getElementById('health-decisions').textContent = metrics.decisions_total;
+                document.getElementById('health-canonical-rate').textContent = metrics.canonical_rate + '%';
+                document.getElementById('health-ai-promoted').textContent = metrics.ai_promoted;
+                document.getElementById('health-last-check').textContent = 'just now';
+
+                console.log('💚 System health loaded:', data.status);
+            } catch (error) {
+                console.error('Error loading system health:', error);
+            }
         }
 
         // Session 657: Load Governance Decisions for Command Center

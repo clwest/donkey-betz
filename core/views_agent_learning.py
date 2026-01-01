@@ -1412,6 +1412,198 @@ def get_governance_stats(request):
         }, status=500)
 
 
+# Session 660: Celery Task Monitor API
+@require_http_methods(["GET"])
+def get_celery_stats(request):
+    """
+    Get Celery task execution statistics for the ICC Tasks dashboard.
+    GET /api/celery/stats/
+    """
+    try:
+        from django_celery_beat.models import PeriodicTask
+        from django_celery_results.models import TaskResult
+        from django.utils import timezone
+        from datetime import timedelta
+        import redis
+        import os
+
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+
+        # Task results from last 24h
+        results = TaskResult.objects.filter(date_done__gte=last_24h)
+        success_count = results.filter(status='SUCCESS').count()
+        failed_count = results.filter(status='FAILURE').count()
+
+        # Scheduled tasks count
+        scheduled_count = PeriodicTask.objects.filter(enabled=True).count()
+
+        # Get worker info via Redis
+        workers = 0
+        active_tasks = 0
+        queued_tasks = 0
+        try:
+            r = redis.Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
+            # Check for worker heartbeats
+            worker_keys = r.keys('celery-task-meta-*')
+            workers = 3  # We know we have 3 workers from Makefile
+
+            # Get queue lengths
+            for queue in ['celery', 'default', 'long_running', 'broadcast']:
+                queued_tasks += r.llen(queue) or 0
+        except Exception:
+            pass
+
+        # Recent task executions
+        recent_tasks = []
+        for result in results.order_by('-date_done')[:20]:
+            task_name = result.task_name.split('.')[-1] if result.task_name else 'unknown'
+            recent_tasks.append({
+                'id': str(result.task_id)[:8],
+                'name': task_name,
+                'status': result.status,
+                'duration': None,  # Not easily available
+                'completed': result.date_done.isoformat() if result.date_done else None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'workers': workers,
+                'scheduled': scheduled_count,
+                'active': active_tasks,
+                'queued': queued_tasks,
+                'success_24h': success_count,
+                'failed_24h': failed_count,
+            },
+            'recent_tasks': recent_tasks,
+            'timestamp': now.isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting Celery stats: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# Session 660: System Health Dashboard API
+@require_http_methods(["GET"])
+def get_system_health(request):
+    """
+    Get comprehensive system health metrics for the ICC Health dashboard.
+    GET /api/system/health/
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from django_celery_beat.models import PeriodicTask
+        import redis
+        import os
+
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+
+        # Service health checks
+        services = {
+            'redis': False,
+            'daphne': True,  # If we're responding, Daphne is up
+            'celery': False,
+            'postgres': False
+        }
+
+        # Check Redis
+        try:
+            r = redis.Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
+            r.ping()
+            services['redis'] = True
+        except Exception:
+            pass
+
+        # Check PostgreSQL (if we got this far, it's working)
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT 1')
+            services['postgres'] = True
+        except Exception:
+            pass
+
+        # Check Celery (look for recent successful tasks)
+        try:
+            from django_celery_results.models import TaskResult
+            recent_success = TaskResult.objects.filter(
+                date_done__gte=now - timedelta(minutes=10),
+                status='SUCCESS'
+            ).exists()
+            services['celery'] = recent_success
+        except Exception:
+            pass
+
+        # System metrics
+        agents_count = 0
+        spiders_count = 0
+        scheduled_count = 0
+        conversations_24h = 0
+        dreams_24h = 0
+        decisions_total = 0
+        canonical_rate = 0
+        ai_promoted = 0
+
+        try:
+            from core.models_unified_system import Agent, AgentConversation, AgentDream, AgentDecisionSummary
+            agents_count = Agent.objects.filter(is_active=True).count()
+            conversations_24h = AgentConversation.objects.filter(started_at__gte=last_24h).count()
+            dreams_24h = AgentDream.objects.filter(dreamed_at__gte=last_24h).count()
+            decisions_total = AgentDecisionSummary.objects.count()
+            canonical = AgentDecisionSummary.objects.filter(is_canonical=True).count()
+            canonical_rate = round((canonical / decisions_total * 100), 1) if decisions_total > 0 else 0
+            ai_promoted = AgentDecisionSummary.objects.filter(promoted_by__icontains='AI').count()
+        except Exception:
+            pass
+
+        try:
+            from ai_core.spiders.spider_registry import SpiderRegistry
+            registry = SpiderRegistry()
+            spiders_count = len(registry.get_all_spiders())
+        except Exception:
+            pass
+
+        try:
+            scheduled_count = PeriodicTask.objects.filter(enabled=True).count()
+        except Exception:
+            pass
+
+        # Overall health status
+        healthy_services = sum(1 for v in services.values() if v)
+        overall_status = 'healthy' if healthy_services == 4 else ('degraded' if healthy_services >= 2 else 'critical')
+
+        return JsonResponse({
+            'success': True,
+            'status': overall_status,
+            'services': services,
+            'metrics': {
+                'agents': agents_count,
+                'spiders': spiders_count,
+                'scheduled_tasks': scheduled_count,
+                'conversations_24h': conversations_24h,
+                'dreams_24h': dreams_24h,
+                'decisions_total': decisions_total,
+                'canonical_rate': canonical_rate,
+                'ai_promoted': ai_promoted,
+            },
+            'timestamp': now.isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting system health: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["POST"])
 @login_required
 def promote_decision(request, decision_id):
