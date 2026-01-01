@@ -20100,14 +20100,16 @@ def auto_approve_low_risk_gates(
             'waived_topics': []
         }
 
-        # Find low-risk gates that haven't been started
+        # Find low-risk gates that are either not started OR ready (checklist complete)
+        # Session 655: Also include 'ready' status - these completed their checklist but
+        # are waiting for someone to click "Approve for Pilot" button
         pending_gates = PilotReadinessGate.objects.filter(
-            status='not_started',
+            status__in=['not_started', 'ready'],
             risk_level='low'
         ).select_related('decision').order_by('created_at')[:max_gates]
 
         total_backlog = PilotReadinessGate.objects.filter(
-            status='not_started',
+            status__in=['not_started', 'ready'],
             risk_level='low'
         ).count()
 
