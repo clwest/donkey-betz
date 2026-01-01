@@ -20130,6 +20130,28 @@ def auto_approve_low_risk_gates(
                     stats['waived'] += 1
                     stats['waived_topics'].append(topic)
 
+                    # Session 654: Auto-complete checklist items for low-risk gates
+                    from core.models_pilot_readiness import ReadinessChecklistItem
+                    pending_items = ReadinessChecklistItem.objects.filter(
+                        gate=gate,
+                        status='pending'
+                    )
+                    for item in pending_items:
+                        item.status = 'waived'
+                        item.completed_by = 'ThinkingAgent'
+                        item.completed_at = timezone.now()
+                        item.completion_notes = f'''## Auto-Waived for Low-Risk Gate
+
+This checklist item was auto-waived by ThinkingAgent because:
+- Gate risk level: LOW
+- Low-risk gates don't require full documentation
+- Decision topic: {topic}
+
+For low-risk decisions, basic review is sufficient.
+Full documentation is required for MEDIUM/HIGH/CRITICAL risk gates.
+'''
+                        item.save()
+
                     # Optionally auto-deploy as pilot
                     if auto_deploy:
                         try:
