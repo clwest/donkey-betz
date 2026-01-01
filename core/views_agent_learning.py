@@ -1579,8 +1579,8 @@ def get_system_health(request):
 
         try:
             from ai_core.spiders.spider_registry import SpiderRegistry
-            registry = SpiderRegistry()
-            spiders_count = len(registry.get_all_spiders())
+            spider_stats = SpiderRegistry().get_spider_count()
+            spiders_count = spider_stats.get('total', 0) if isinstance(spider_stats, dict) else spider_stats
         except Exception:
             pass
 
