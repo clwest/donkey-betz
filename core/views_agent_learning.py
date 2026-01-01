@@ -3583,6 +3583,21 @@ def complete_experiment(request, experiment_id):
         except Exception as learn_error:
             logger.error(f"Error creating learning from experiment: {learn_error}")
 
+        # Session 657: Auto-sync linked PilotExecution records
+        pilot_synced = False
+        try:
+            from core.models_pilot_readiness import PilotExecution
+            pilots = PilotExecution.objects.filter(experiment=exp, status='running')
+            for pilot in pilots:
+                pilot.status = 'completed'
+                pilot.ended_at = exp.ended_at
+                pilot.result_summary = exp.result_summary or f'Marked as {status}'
+                pilot.save()
+                pilot_synced = True
+                logger.info(f"Auto-synced PilotExecution {pilot.id} to completed")
+        except Exception as sync_error:
+            logger.error(f"Error syncing pilot execution: {sync_error}")
+
         return JsonResponse({
             'success': True,
             'experiment_id': str(exp.id),
@@ -3591,6 +3606,7 @@ def complete_experiment(request, experiment_id):
             'ended_at': exp.ended_at.isoformat(),
             'learning_created': learning is not None,
             'learning_id': str(learning.id) if learning else None,
+            'pilot_synced': pilot_synced,  # Session 657
             'message': f'Experiment marked as {status} (Classification: {exp.outcome_classification.upper()})'
         })
 
