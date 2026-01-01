@@ -6372,12 +6372,9 @@ def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions:
     """
     Session 362: Automatically promote high-quality decisions to canonical policies.
 
-    This closes the feedback loop:
-    1. Agents have conversations → conclusions generated
-    2. Conclusions extracted as AgentDecisionSummary (decisions)
-    3. This task promotes high-quality decisions to canonical policies
-    4. PolicyContextService injects canonical policies into future agent prompts
-    5. Future agents behave according to past wisdom
+    DEPRECATED: Session 658 introduced ai_promote_decisions which uses GPT-5-mini
+    for intelligent evaluation. This legacy task is kept for backwards compatibility
+    but now defers to the AI-powered version.
 
     Args:
         quality_threshold: Minimum quality_score to be eligible (0.0-1.0)
@@ -6386,113 +6383,16 @@ def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions:
     Returns:
         Stats about promotions made
     """
-    from django.utils import timezone
-    from core.models_unified_system import AgentDecisionSummary
+    # Session 659: This task is deprecated - use ai_promote_decisions instead
+    # The AI Decision Promoter (Session 658) uses GPT-5-mini for intelligent evaluation
+    # which is more accurate than the rule-based quality_score approach.
+    logger.info("🏛️ [AUTO-PROMOTE] DEPRECATED - Use ai_promote_decisions (Session 658) instead")
 
-    logger.info("🏛️ [AUTO-PROMOTE] Starting decision auto-promotion cycle...")
-
-    try:
-        stats = {
-            'scores_updated': 0,
-            'candidates_found': 0,
-            'promoted': 0,
-            'already_canonical': 0,
-            'promoted_decisions': []
-        }
-
-        # Step 1: Update quality scores for all unscored decisions
-        unscored = AgentDecisionSummary.objects.filter(
-            quality_score=0.0,
-            is_canonical=False
-        )
-
-        for decision in unscored:
-            decision.update_quality_score()
-            stats['scores_updated'] += 1
-
-        if stats['scores_updated'] > 0:
-            logger.info(f"🏛️ [AUTO-PROMOTE] Updated quality scores for {stats['scores_updated']} decisions")
-
-        # Step 2: Find high-quality unpromoted decisions
-        candidates = AgentDecisionSummary.objects.filter(
-            is_canonical=False,
-            quality_score__gte=quality_threshold
-        ).order_by('-quality_score', '-created_at')[:max_promotions * 2]  # Get extra for diversity
-
-        stats['candidates_found'] = candidates.count()
-
-        if not candidates:
-            logger.info(f"🏛️ [AUTO-PROMOTE] No candidates above threshold {quality_threshold}")
-            return {
-                'status': 'success',
-                'message': 'No candidates above threshold',
-                'stats': stats
-            }
-
-        # Step 3: Promote top candidates, ensuring diversity by impact_area
-        promoted_areas = set()
-        promoted_count = 0
-
-        for decision in candidates:
-            if promoted_count >= max_promotions:
-                break
-
-            # Skip if we already promoted a decision in this impact area this run
-            # (promotes diversity across areas)
-            if decision.impact_area in promoted_areas and promoted_count >= 1:
-                continue
-
-            # Promote the decision
-            decision.promote_to_canonical(promoted_by='auto_promote_task')
-            promoted_areas.add(decision.impact_area)
-            promoted_count += 1
-
-            stats['promoted'] += 1
-            stats['promoted_decisions'].append({
-                'id': str(decision.id),
-                'topic': decision.topic[:100],
-                'decision_type': decision.decision_type,
-                'impact_area': decision.impact_area,
-                'quality_score': decision.quality_score,
-            })
-
-            logger.info(
-                f"🏛️ [AUTO-PROMOTE] Promoted decision: {decision.topic[:50]}... "
-                f"(quality: {decision.quality_score:.2f}, area: {decision.impact_area})"
-            )
-
-        # Step 4: Broadcast the update
-        try:
-            import redis
-            import json
-            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
-            r.publish('agent_learning', json.dumps({
-                'type': 'decisions_promoted',
-                'stats': {
-                    'promoted': stats['promoted'],
-                    'decisions': stats['promoted_decisions']
-                },
-                'timestamp': timezone.now().isoformat()
-            }))
-        except Exception:
-            pass
-
-        logger.info(
-            f"🏛️ [AUTO-PROMOTE] Cycle complete: "
-            f"{stats['scores_updated']} scores updated, "
-            f"{stats['candidates_found']} candidates, "
-            f"{stats['promoted']} promoted to canonical"
-        )
-
-        return {
-            'status': 'success',
-            'stats': stats,
-            'timestamp': timezone.now().isoformat()
-        }
-
-    except Exception as e:
-        logger.exception(f"🏛️ [AUTO-PROMOTE] Failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
+    return {
+        'status': 'deprecated',
+        'message': 'This task is deprecated. Use ai_promote_decisions (Session 658) which uses GPT-5-mini for intelligent evaluation.',
+        'redirect': 'core.tasks.ai_promote_decisions'
+    }
 
 
 # =============================================================================
@@ -6876,175 +6776,28 @@ def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
     """
     Session 363: Propagate newly promoted policies to relevant agents.
 
-    When a decision becomes canonical policy, this task:
-    1. Finds recently promoted policies
-    2. Identifies agents affected by the policy's impact area
-    3. Creates implementation conversations
-    4. Logs policy adoption for tracking
-
-    This completes the feedback loop: Conversations → Decisions → Policies → Agent Behavior
+    DEPRECATED (Session 659): This task used a non-existent 'propagated_at' field.
+    Policy injection now happens automatically via PolicyContextService when agents
+    are called, so explicit propagation is no longer needed.
 
     Args:
         hours_back: How far back to look for new policies
         max_actions: Maximum actions to trigger per run
 
     Returns:
-        Stats about policy propagation
+        Deprecation notice
     """
-    from django.utils import timezone
-    from datetime import timedelta
-    from core.models_unified_system import AgentDecisionSummary
-    from core.models import Agent, AgentConversation, ConversationMessage
-    from core.services.policy_context import PolicyContextService
-    import openai
-    import os
+    # Session 659: This task is deprecated because:
+    # 1. The 'propagated_at' field never existed on AgentDecisionSummary
+    # 2. PolicyContextService already injects canonical policies into agent prompts
+    # 3. Agents automatically receive policy context without explicit propagation
+    logger.info("🏛️ [POLICY-PROPAGATE] DEPRECATED - PolicyContextService handles policy injection automatically")
 
-    logger.info("🏛️ [POLICY-PROPAGATE] Checking for new policies to propagate...")
-
-    try:
-        stats = {
-            'policies_checked': 0,
-            'actions_triggered': 0,
-            'agents_notified': [],
-            'conversations_created': []
-        }
-
-        # Find recently promoted policies that haven't been propagated
-        cutoff = timezone.now() - timedelta(hours=hours_back)
-        new_policies = AgentDecisionSummary.objects.filter(
-            is_canonical=True,
-            promoted_at__gte=cutoff,
-            propagated_at__isnull=True  # Not yet propagated
-        ).order_by('-promoted_at')[:max_actions]
-
-        stats['policies_checked'] = new_policies.count()
-
-        if not new_policies:
-            logger.info("🏛️ [POLICY-PROPAGATE] No new policies to propagate")
-            return {'status': 'success', 'message': 'No new policies', 'stats': stats}
-
-        # Get agent-to-area mapping
-        policy_service = PolicyContextService()
-
-        # Initialize OpenAI
-        client = openai.OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
-
-        for policy in new_policies:
-            # Find agents affected by this policy's impact area
-            affected_agents = []
-            for agent_name, areas in policy_service.AGENT_IMPACT_AREAS.items():
-                if policy.impact_area in areas:
-                    affected_agents.append(agent_name)
-
-            if not affected_agents:
-                # Mark as propagated even if no affected agents
-                policy.propagated_at = timezone.now()
-                policy.save(update_fields=['propagated_at'])
-                continue
-
-            # Get actual agent objects (limit to 3)
-            agents = list(Agent.objects.filter(
-                name__in=affected_agents,
-                is_active=True
-            )[:3])
-
-            if len(agents) < 2:
-                # Need at least 2 agents for a conversation
-                policy.propagated_at = timezone.now()
-                policy.save(update_fields=['propagated_at'])
-                continue
-
-            # Create implementation discussion
-            topic = f"New Policy Implementation: {policy.topic[:50]}"
-
-            conversation = AgentConversation.objects.create(
-                topic=topic,
-                conversation_type='implementation_planning',
-                initiator=agents[0],
-                trigger_type='scheduled',  # Policy-triggered
-                status='active'
-            )
-            conversation.participants.add(*agents[:2])
-
-            # Generate initial implementation discussion
-            policy_summary = f"""
-New Canonical Policy:
-- Topic: {policy.topic}
-- Decision: {policy.recommended_stance[:200] if policy.recommended_stance else 'Not specified'}
-- Impact Area: {policy.impact_area}
-- Key Insights: {', '.join(str(i) for i in policy.key_insights[:3]) if policy.key_insights else 'None specified'}
-"""
-
-            system_prompt = f"""You are {agents[0].name}, an AI agent specializing in {agents[0].specialization or 'analysis'}.
-
-A new policy has been established through agent governance:
-
-{policy_summary}
-
-Your task: Discuss how this policy should affect your work and what concrete steps you'll take to implement it.
-Keep response to 2-3 sentences. Be specific about implementation."""
-
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-5-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": "How will you implement this new policy in your work?"}
-                    ],
-                    max_completion_tokens=500,
-                )
-
-                content = response.choices[0].message.content.strip() if response.choices[0].message.content else ""
-
-                if content:
-                    # Validate output
-                    content = validate_agent_output(agents[0].name, content)
-
-                    ConversationMessage.objects.create(
-                        conversation=conversation,
-                        agent=agents[0],
-                        content=content,
-                        message_type='statement',
-                        sequence_number=1
-                    )
-
-                    stats['actions_triggered'] += 1
-                    stats['agents_notified'].extend([a.name for a in agents[:2]])
-                    stats['conversations_created'].append(conversation.id)
-
-                    logger.info(
-                        f"🏛️ [POLICY-PROPAGATE] Created implementation conversation for "
-                        f"'{policy.topic[:30]}' with {len(agents)} agents"
-                    )
-
-            except Exception as e:
-                logger.warning(f"🏛️ [POLICY-PROPAGATE] Failed to generate message: {e}")
-                conversation.delete()
-                continue
-
-            # Mark policy as propagated
-            policy.propagated_at = timezone.now()
-            policy.save(update_fields=['propagated_at'])
-
-        logger.info(
-            f"🏛️ [POLICY-PROPAGATE] Complete: {stats['policies_checked']} policies checked, "
-            f"{stats['actions_triggered']} implementation conversations created"
-        )
-
-        return {
-            'status': 'success',
-            'stats': {
-                'policies_checked': stats['policies_checked'],
-                'actions_triggered': stats['actions_triggered'],
-                'agents_notified': list(set(stats['agents_notified'])),
-                'conversations_created': len(stats['conversations_created'])
-            },
-            'timestamp': timezone.now().isoformat()
-        }
-
-    except Exception as e:
-        logger.exception(f"🏛️ [POLICY-PROPAGATE] Failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
+    return {
+        'status': 'deprecated',
+        'message': 'Policy propagation now happens automatically via PolicyContextService when agents are called.',
+        'info': 'Canonical policies are injected into agent prompts without needing explicit propagation.'
+    }
 
 
 @shared_task(bind=True)
