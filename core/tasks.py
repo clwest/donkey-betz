@@ -20155,6 +20155,8 @@ Full documentation is required for MEDIUM/HIGH/CRITICAL risk gates.
                     # Optionally auto-deploy as pilot
                     if auto_deploy:
                         try:
+                            from core.models_pilot_readiness import Experiment
+
                             pilot = PilotExecution.objects.create(
                                 gate=gate,
                                 name=f"Auto-pilot: {topic[:80]}",
@@ -20163,6 +20165,10 @@ Full documentation is required for MEDIUM/HIGH/CRITICAL risk gates.
                                 scope=gate.summary or topic
                             )
                             pilot.start()
+
+                            # Session 654: Also create experiment for dashboard visibility
+                            Experiment.create_from_pilot(pilot)
+
                             stats['deployed'] += 1
                         except Exception as e:
                             logger.error(f"🚦 [GATE-APPROVAL] Failed to deploy pilot for gate {gate.id}: {e}")
