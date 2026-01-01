@@ -18251,6 +18251,32 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
             except Exception as e:
                 logger.warning(f"Error verifying concerns: {e}")
 
+        # Session 647: Send Discord summary notification when actions are executed
+        if actions_executed:
+            try:
+                from core.services.discord_notifications import DiscordNotificationService
+                discord = DiscordNotificationService()
+
+                # Build action summary
+                successful = sum(1 for a in actions_executed if a.get('success'))
+                failed = len(actions_executed) - successful
+                action_types = [a.get('type', 'unknown') for a in actions_executed[:5]]
+
+                message = f"""**🧠 Thinking Cycle #{cycle_number} Complete**
+
+**Duration:** {thought.thinking_duration_seconds:.1f}s
+**Insights:** {len(thought.insights)} | **Patterns:** {len(thought.patterns)}
+**Decisions Made:** {len(thought.decisions)}
+
+**Actions Executed:** {len(actions_executed)} ({successful} ✅, {failed} ❌)
+{chr(10).join(f'• {t}' for t in action_types)}
+
+**Concerns:** {concerns_registered} registered, {verification_result.get('resolved', 0)} resolved
+"""
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"Discord notification failed: {e}")
+
         return {
             'success': True,
             'cycle_number': cycle_number,

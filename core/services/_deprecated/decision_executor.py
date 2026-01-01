@@ -1,5 +1,29 @@
 """
-Session 619: Decision Executor Service
+=============================================================================
+DEPRECATED - Session 647 (December 31, 2025)
+=============================================================================
+
+This service was created in Session 619 but was NEVER integrated into the system.
+The same functionality is provided by:
+
+  core/services/autonomous_action_executor.py (AutonomousActionExecutor)
+
+Which is used by the Celery task:
+
+  core/tasks.py:run_autonomous_thinking_cycle
+
+Evidence that the system works without this file:
+- 258 AutonomousAction records (all completed)
+- 66 ThinkingAgent cycles in the last 7 days
+- Zero imports of DecisionExecutorService in the codebase
+
+The Discord summary notification feature was migrated to run_autonomous_thinking_cycle
+in Session 647.
+
+DO NOT use this file. It is kept for reference only.
+=============================================================================
+
+Session 619: Decision Executor Service (DEPRECATED)
 
 =============================================================================
 ARCHITECTURE OVERVIEW
