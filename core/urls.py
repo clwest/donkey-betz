@@ -263,6 +263,8 @@ from core.views_agent_learning import (
     get_boardroom_decisions,
     promote_decision,
     reject_decision,
+    # Session 659: Governance Stats
+    get_governance_stats,
     # Session 368: Dream Validation UI
     get_boardroom_dreams,
     decide_dream,
@@ -2806,6 +2808,8 @@ urlpatterns = [
     # Session 602: Boardroom Learning Integration
     path('api/boardroom/decisions/<uuid:decision_id>/learning/', get_decision_learning_context, name='decision-learning-context'),
     path('api/boardroom/learning-summary/', get_boardroom_learning_summary, name='boardroom-learning-summary'),
+    # Session 659: Governance Stats API
+    path('api/boardroom/governance-stats/', get_governance_stats, name='governance-stats'),
 
     # Session 603: Learning Velocity Dashboard
     path('api/learning/velocity/', get_learning_velocity_dashboard, name='learning-velocity-dashboard'),
