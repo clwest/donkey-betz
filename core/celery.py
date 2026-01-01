@@ -499,7 +499,7 @@ app.conf.beat_schedule = {
         },
         'kwargs': {
             'max_gates': 20,
-            'auto_deploy': False,  # Start with just waiving, not deploying
+            'auto_deploy': True,  # Session 654: Auto-deploy as running pilots
         }
     },
     # Session 252: Agent Mood System
