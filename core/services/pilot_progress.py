@@ -495,7 +495,7 @@ class PilotProgressService:
         result = {
             'id': progress.id,
             'name': progress.name,
-            'hypothesis': progress.hypothesis[:200] if progress.hypothesis else '',
+            'hypothesis': progress.hypothesis or '',  # Session 656: Return full hypothesis for modal
             'status': progress.status,
             'health_status': progress.health_status,
             'days_running': progress.days_running,
