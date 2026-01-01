@@ -155,8 +155,8 @@ Session 658 added AI Decision Promoter but the ICC Governance sub-tab doesn't di
 | `leadership` | Hidden (Session 502) | Remove or repurpose |
 | `teams` | Hidden (Session 502) | Remove or repurpose |
 | `collaborate` | Hidden (Session 502) | Remove or repurpose |
-| `marketplace` | No content | Remove |
-| `agent-performance` | Redundant with Agents tab | Merge into Agents |
+| `marketplace` | Hidden (Session 536) | Remove |
+| `agent-performance` | Hidden (Session 659) | Merged into Agents tab |
 
 ---
 
