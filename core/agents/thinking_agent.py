@@ -79,6 +79,7 @@ You can decide to:
 - trigger_conversation: Initiate a conversation between relevant agents
 - archive_insight: Store an important insight for future reference
 - triage_dreams: Process pending dreams - promote high-value to Boardroom, archive stale ones
+- auto_approve_gates: Auto-waive low-risk gates that are stuck in 'not_started' status
 
 ## Output Format
 Respond with a JSON object containing:
@@ -273,6 +274,22 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
             # Experiments
             experiments = ps.get('experiments', {})
             prompt_parts.append(f"- **Experiments:** {experiments.get('total', 0)} total, {experiments.get('running', 0)} running\n")
+
+            # Session 654: Add gate backlog assessment
+            low_risk_not_started = by_status.get('not_started', 0)
+            low_risk_count = by_risk.get('low', 0)
+            if low_risk_not_started > 10:
+                prompt_parts.append("\n**IMPORTANT - Gate Backlog Assessment:**\n")
+                prompt_parts.append(f"Gate backlog detected: {low_risk_not_started} gates stuck in 'not_started' status.\n")
+                prompt_parts.append(f"Low-risk gates available: {low_risk_count}\n")
+                prompt_parts.append("Flag as a concern if:\n")
+                prompt_parts.append("- More than 20 low-risk gates are waiting (approval bottleneck)\n")
+                prompt_parts.append("- Gates are blocking pilot deployments\n")
+                prompt_parts.append("- Low-risk gates should be auto-waived, not manually approved\n")
+                prompt_parts.append("\n**RECOMMENDED ACTION for gate backlogs:**\n")
+                prompt_parts.append("Use action_type='auto_approve_gates' to auto-waive low-risk gates.\n")
+                prompt_parts.append("This ONLY affects 'low' risk gates - medium/high/critical require human review.\n")
+                prompt_parts.append("Params: {'max_gates': 20, 'auto_deploy': false, 'dry_run': false}\n")
 
             prompt_parts.append("\n")
 

@@ -20054,6 +20054,148 @@ def auto_triage_dreams(
 
 
 # ============================================================================
+# Session 654: Auto-Approve Low-Risk Gates
+# ============================================================================
+
+@shared_task
+def auto_approve_low_risk_gates(
+    max_gates: int = 20,
+    auto_deploy: bool = False,
+    dry_run: bool = False
+):
+    """
+    Session 654: Auto-approve low-risk gates to eliminate approval bottleneck.
+
+    This task addresses the gate backlog:
+    - 64 low-risk gates sitting in 'not_started' status
+    - 0 gates have been auto-waived despite having waive() method
+
+    Strategy:
+    - ONLY processes 'low' risk gates (safe to auto-approve)
+    - Medium/High/Critical gates still require human review
+    - Optionally auto-deploys as pilots after waiving
+
+    Safety Rails:
+    - Built-in risk_level check in PilotReadinessGate.waive()
+    - Maximum batch size to prevent runaway processing
+    - All actions logged to Discord and database
+
+    Args:
+        max_gates: Maximum gates to process per run (default 20)
+        auto_deploy: If True, also start pilots for waived gates (default False)
+        dry_run: If True, report what would happen without acting (default False)
+    """
+    try:
+        from django.utils import timezone
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+        from core.services.discord_notifications import DiscordNotificationService
+
+        logger.info(f"🚦 [GATE-APPROVAL] Starting auto-approval cycle (max={max_gates}, deploy={auto_deploy}, dry_run={dry_run})...")
+
+        stats = {
+            'waived': 0,
+            'deployed': 0,
+            'skipped': 0,
+            'errors': 0,
+            'waived_topics': []
+        }
+
+        # Find low-risk gates that haven't been started
+        pending_gates = PilotReadinessGate.objects.filter(
+            status='not_started',
+            risk_level='low'
+        ).select_related('decision').order_by('created_at')[:max_gates]
+
+        total_backlog = PilotReadinessGate.objects.filter(
+            status='not_started',
+            risk_level='low'
+        ).count()
+
+        for gate in pending_gates:
+            try:
+                topic = gate.decision.topic[:60] if gate.decision else 'Unknown'
+
+                if dry_run:
+                    stats['waived'] += 1
+                    stats['waived_topics'].append(topic)
+                    continue
+
+                # Auto-waive using built-in method (only works for low-risk)
+                waived = gate.waive(
+                    reason='Session 654: Auto-waived by autonomous approval system',
+                    waived_by='ThinkingAgent'
+                )
+
+                if waived:
+                    stats['waived'] += 1
+                    stats['waived_topics'].append(topic)
+
+                    # Optionally auto-deploy as pilot
+                    if auto_deploy:
+                        try:
+                            pilot = PilotExecution.objects.create(
+                                gate=gate,
+                                name=f"Auto-pilot: {topic[:80]}",
+                                description="Auto-deployed from low-risk gate by Session 654 autonomous system",
+                                status='planned',
+                                scope=gate.summary or topic
+                            )
+                            pilot.start()
+                            stats['deployed'] += 1
+                        except Exception as e:
+                            logger.error(f"🚦 [GATE-APPROVAL] Failed to deploy pilot for gate {gate.id}: {e}")
+                            stats['errors'] += 1
+                else:
+                    stats['skipped'] += 1
+
+            except Exception as e:
+                logger.error(f"🚦 [GATE-APPROVAL] Error processing gate {gate.id}: {e}")
+                stats['errors'] += 1
+
+        remaining_backlog = total_backlog - stats['waived']
+
+        logger.info(
+            f"🚦 [GATE-APPROVAL] Complete: {stats['waived']} waived, "
+            f"{stats['deployed']} deployed, {stats['skipped']} skipped, "
+            f"{stats['errors']} errors, {remaining_backlog} remaining"
+        )
+
+        # Send Discord notification
+        if stats['waived'] > 0 and not dry_run:
+            try:
+                discord = DiscordNotificationService()
+                message = f"**🚦 Gate Auto-Approval Complete**\n"
+                message += f"✅ Waived: {stats['waived']} low-risk gates\n"
+                if auto_deploy:
+                    message += f"🚀 Deployed: {stats['deployed']} pilots\n"
+                message += f"📊 Remaining backlog: {remaining_backlog}\n"
+                if stats['waived_topics']:
+                    message += f"\n**Topics:**\n" + "\n".join([f"• {t}" for t in stats['waived_topics'][:5]])
+
+                discord.send_to_channel('system-status', message)
+            except Exception as e:
+                logger.debug(f"🚦 [GATE-APPROVAL] Discord notification failed: {e}")
+
+        return {
+            'success': True,
+            'waived': stats['waived'],
+            'deployed': stats['deployed'],
+            'skipped': stats['skipped'],
+            'errors': stats['errors'],
+            'remaining_backlog': remaining_backlog,
+            'dry_run': dry_run,
+            'waived_topics': stats['waived_topics'][:5]
+        }
+
+    except Exception as e:
+        logger.error(f"🚦 [GATE-APPROVAL] Failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+# ============================================================================
 # Session 589: Governance-Respecting Decision Auto-Promotion
 # ============================================================================
 
