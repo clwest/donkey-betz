@@ -488,6 +488,20 @@ app.conf.beat_schedule = {
             'expires': 14400,  # 4 hours
         }
     },
+    # Session 654: Gate Auto-Approval
+    # Auto-waive low-risk gates to eliminate approval bottleneck
+    # Addresses: 64 low-risk gates sitting in 'not_started' status
+    'gate-auto-approval': {
+        'task': 'core.tasks.auto_approve_low_risk_gates',
+        'schedule': crontab(hour='*/2', minute=15),  # Every 2 hours at :15
+        'options': {
+            'expires': 7200,  # 2 hours
+        },
+        'kwargs': {
+            'max_gates': 20,
+            'auto_deploy': False,  # Start with just waiving, not deploying
+        }
+    },
     # Session 252: Agent Mood System
     # Check for expired moods and reset them periodically
     'check-mood-expirations': {

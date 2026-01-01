@@ -33,6 +33,7 @@ class AutonomousActionExecutor:
             'update_strategy': self._execute_update_strategy,
             'schedule_followup': self._execute_schedule_followup,
             'triage_dreams': self._execute_triage_dreams,  # Session 564: Dream pipeline
+            'auto_approve_gates': self._execute_auto_approve_gates,  # Session 654: Auto-approve low-risk gates
         }
 
     def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
@@ -1076,6 +1077,146 @@ The document should:
             'skipped': results['skipped'],
             'details': results,
             'message': f"Triaged {total_processed} dreams: {len(results['promoted_to_boardroom'])} to Boardroom"
+        }
+
+    # =========================================================================
+    # Session 654: Autonomous Gate Approval
+    # =========================================================================
+
+    def _execute_auto_approve_gates(
+        self,
+        name: str,
+        params: Dict[str, Any],
+        reasoning: str
+    ) -> Dict[str, Any]:
+        """
+        Session 654: Auto-approve low-risk gates and optionally deploy as pilots.
+
+        This action:
+        1. Finds all 'not_started' gates with risk_level='low'
+        2. Auto-waives them (using the built-in waive() method)
+        3. Optionally creates and starts pilot executions
+        4. Records learnings for ThinkingAgent feedback loop
+
+        Safety Rails:
+        - ONLY processes 'low' risk gates (medium/high/critical require human review)
+        - Maximum batch size to prevent runaway processing
+        - All actions logged and tracked
+
+        Args:
+            name: Action name for logging
+            params: {
+                'max_gates': Maximum gates to process (default: 20),
+                'auto_deploy': Whether to auto-start pilots (default: False),
+                'dry_run': If True, just report what would happen (default: False)
+            }
+            reasoning: Why this action was triggered
+
+        Returns:
+            Summary of gates processed
+        """
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+
+        max_gates = params.get('max_gates', 20)
+        auto_deploy = params.get('auto_deploy', False)
+        dry_run = params.get('dry_run', False)
+
+        logger.info(f"🚦 [Session 654] Auto-approving low-risk gates (max={max_gates}, auto_deploy={auto_deploy}, dry_run={dry_run})")
+
+        # Find low-risk gates that haven't been started
+        pending_gates = PilotReadinessGate.objects.filter(
+            status='not_started',
+            risk_level='low'
+        ).order_by('created_at')[:max_gates]
+
+        results = {
+            'waived': [],
+            'deployed': [],
+            'skipped': [],
+            'errors': []
+        }
+
+        for gate in pending_gates:
+            try:
+                decision_topic = gate.decision.topic[:60] if gate.decision else 'Unknown'
+
+                if dry_run:
+                    results['waived'].append({
+                        'gate_id': str(gate.id),
+                        'topic': decision_topic,
+                        'action': 'would_waive'
+                    })
+                    continue
+
+                # Auto-waive the gate (built-in method only works for low-risk)
+                waived = gate.waive(
+                    reason=f'Auto-waived by ThinkingAgent: {reasoning[:100]}',
+                    waived_by='ThinkingAgent'
+                )
+
+                if waived:
+                    results['waived'].append({
+                        'gate_id': str(gate.id),
+                        'topic': decision_topic,
+                        'waived_at': timezone.now().isoformat()
+                    })
+
+                    # Optionally auto-deploy as pilot
+                    if auto_deploy:
+                        try:
+                            pilot = PilotExecution.objects.create(
+                                gate=gate,
+                                name=f"Auto-pilot: {decision_topic[:80]}",
+                                description=f"Auto-deployed from low-risk gate. Reasoning: {reasoning[:200]}",
+                                status='planned',
+                                scope=gate.summary or decision_topic
+                            )
+                            pilot.start()
+
+                            results['deployed'].append({
+                                'gate_id': str(gate.id),
+                                'pilot_id': str(pilot.id),
+                                'topic': decision_topic
+                            })
+                        except Exception as e:
+                            logger.error(f"Failed to deploy pilot for gate {gate.id}: {e}")
+                            results['errors'].append({
+                                'gate_id': str(gate.id),
+                                'error': f'Pilot deployment failed: {str(e)}'
+                            })
+                else:
+                    results['skipped'].append({
+                        'gate_id': str(gate.id),
+                        'topic': decision_topic,
+                        'reason': 'waive() returned False - may not be low-risk'
+                    })
+
+            except Exception as e:
+                logger.error(f"Error processing gate {gate.id}: {e}")
+                results['errors'].append({
+                    'gate_id': str(gate.id),
+                    'error': str(e)
+                })
+
+        total_processed = len(results['waived'])
+        total_deployed = len(results['deployed'])
+
+        summary_msg = f"Auto-approved {total_processed} low-risk gates"
+        if auto_deploy:
+            summary_msg += f", deployed {total_deployed} pilots"
+        if dry_run:
+            summary_msg = f"[DRY RUN] Would process {total_processed} gates"
+
+        logger.info(f"🚦 [Session 654] {summary_msg}")
+
+        return {
+            'total_processed': total_processed,
+            'total_deployed': total_deployed,
+            'total_skipped': len(results['skipped']),
+            'total_errors': len(results['errors']),
+            'dry_run': dry_run,
+            'details': results,
+            'message': summary_msg
         }
 
     def register_concerns_from_thought(self, thought_record) -> Dict[str, Any]:

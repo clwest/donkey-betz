@@ -182,10 +182,11 @@ class PilotReadinessGate(models.Model):
         self.save()
         return True
 
-    def waive(self, reason: str = 'Low risk - auto-waived'):
+    def waive(self, reason: str = 'Low risk - auto-waived', waived_by: str = 'ThinkingAgent'):
         """Waive the gate for low-risk decisions."""
         if self.risk_level == 'low':
             self.status = 'waived'
+            self.approved_by = waived_by  # Session 654: Track who waived
             self.approval_notes = reason
             self.gate_approved_at = timezone.now()
             self.save()
