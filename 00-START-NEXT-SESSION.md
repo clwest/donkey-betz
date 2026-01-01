@@ -2,8 +2,8 @@
 
 **Previous Session:** 646
 **Date:** December 31, 2025
-**Focus:** Data Flow Pipeline Verified + Bug Fixed
-**Health Score:** 100% (run `python manage.py system_health_check` to verify)
+**Focus:** Data Flow Verified + Disconnected Features Audit
+**Health Score:** 85-90% (Critical gaps found - see audit below)
 
 ---
 
@@ -30,6 +30,20 @@ Traced and verified the entire data pipeline from spider collection through agen
 **Fix:** Added None filtering in `core/services/spider_intelligence.py` lines 1020-1048.
 
 **Result:** Agents now receive proper spider context (trends, market data, creative styles).
+
+### Disconnected Features Audit - CRITICAL ISSUES FOUND
+
+Comprehensive audit revealed significant orphaned infrastructure:
+
+| Category | Finding | Impact |
+|----------|---------|--------|
+| **Decision Executor** | COMPLETELY ORPHANED | 25.7KB code never called |
+| **Celery Tasks** | 77 unscheduled (47%) | Half of task infrastructure unused |
+| **Autonomous Situations** | 7 with ZERO data | Features built but never triggered |
+| **Orphaned Services** | 8 services (230KB) | Dead code, wasted maintenance |
+| **Empty Models** | 6 model files | Tables exist, never populated |
+
+**See:** `docs/handoffs/SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` for full details.
 
 ---
 
@@ -146,20 +160,43 @@ print(f'Router: {len(router.AGENT_MAP)}')
 
 ## Recommended Next Steps for Session 647+
 
-### Priority 1: Automated Knowledge Extraction
-The learning loop is active but SharedKnowledge hasn't grown in 7 days:
-- Add automatic knowledge extraction from successful agent executions
-- Create knowledge when task is complex and success rate is high
+### CRITICAL: Fix Decision Execution Loop
+`decision_executor.py` (25.7KB) is never called - decisions accumulate but never execute:
+```python
+# Need to add in core/tasks.py:
+@shared_task(name='process_pending_decisions')
+def process_pending_decisions():
+    from core.services.decision_executor import DecisionExecutor
+    return DecisionExecutor().process_all_pending()
+```
 
-### Priority 2: Spider Quality Feedback Loop
-Agents don't feed back success/failure to spider data quality:
-- Track which spider sources lead to successful outcomes
-- Increase relevance_score for high-performing sources
+### Priority 1: Schedule Missing Celery Tasks
+77 tasks (47%) are defined but never scheduled:
+- `collect_spider_data` - Main spider collection (CRITICAL)
+- `process_pending_decisions` - Decision execution
+- `sync_agent_metrics` - Performance sync
+- `cleanup_old_spider_data` - Database maintenance
 
-### Priority 3: Chart.js Integration
-The Activity tab has chart structure but needs Chart.js integration:
-- Add line charts for agent activity over time
-- Add bar charts for category distribution
+### Priority 2: Activate Dead Situations (7)
+These situations produce ZERO data despite being fully implemented:
+- Job Match Intelligence
+- Freelance Opportunity Scout
+- SEC Filing Analyzer
+- Earnings Surprise Predictor
+- AI Model Release Monitor
+- Case Law Monitor
+- Regulatory Change Detector
+
+### Priority 3: Clean Up Orphaned Services
+8 services (230KB) with no callers - decide: integrate or remove:
+- `recommendation_engine.py` (881 lines)
+- `ab_testing.py` (15KB)
+- `platform_intelligence_briefing.py` (18KB)
+- `income_action_service.py` (12KB)
+- And 4 more...
+
+### Lower Priority: Knowledge Extraction
+The learning loop works but SharedKnowledge hasn't grown - add auto-extraction
 
 ---
 
@@ -167,7 +204,8 @@ The Activity tab has chart structure but needs Chart.js integration:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **646** | `SESSION_646_DATA_FLOW_VERIFICATION.md` | **Data pipeline verified + bug fixed** |
+| **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | **CRITICAL: Orphaned infrastructure found** |
+| **646** | `SESSION_646_DATA_FLOW_VERIFICATION.md` | Data pipeline verified + 3 bugs fixed |
 | **645** | `SESSION_645_71_AGENTS_VERIFIED.md` | All 71 agents verified running |
 | **645** | `SESSION_645_SPIDER_VERIFICATION.md` | All 77 spiders verified (72 working) |
 | 644 | (previous commit) | Research Demo 24h indicators + Celery stability |
