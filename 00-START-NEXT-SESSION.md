@@ -158,45 +158,35 @@ print(f'Router: {len(router.AGENT_MAP)}')
 
 ---
 
-## Recommended Next Steps for Session 647+
+## Session 647 Focus: Decision Execution Loop
 
-### CRITICAL: Fix Decision Execution Loop
-`decision_executor.py` (25.7KB) is never called - decisions accumulate but never execute:
-```python
-# Need to add in core/tasks.py:
-@shared_task(name='process_pending_decisions')
-def process_pending_decisions():
-    from core.services.decision_executor import DecisionExecutor
-    return DecisionExecutor().process_all_pending()
-```
+**See full roadmap:** `docs/SESSION_ROADMAP_DISCONNECTED_FIXES.md`
 
-### Priority 1: Schedule Missing Celery Tasks
-77 tasks (47%) are defined but never scheduled:
-- `collect_spider_data` - Main spider collection (CRITICAL)
-- `process_pending_decisions` - Decision execution
-- `sync_agent_metrics` - Performance sync
-- `cleanup_old_spider_data` - Database maintenance
+The audit identified 5 major areas to fix across Sessions 647-651:
 
-### Priority 2: Activate Dead Situations (7)
-These situations produce ZERO data despite being fully implemented:
-- Job Match Intelligence
-- Freelance Opportunity Scout
-- SEC Filing Analyzer
-- Earnings Surprise Predictor
-- AI Model Release Monitor
-- Case Law Monitor
-- Regulatory Change Detector
+| Session | Focus | Impact |
+|---------|-------|--------|
+| **647** | Decision Execution Loop | CRITICAL |
+| 648 | Celery Task Scheduling (77 unscheduled) | HIGH |
+| 649 | Activate 7 Dead Situations | MEDIUM |
+| 650 | Orphaned Services Cleanup (8 services) | LOW |
+| 651 | Empty Models Audit (6 model files) | LOW |
 
-### Priority 3: Clean Up Orphaned Services
-8 services (230KB) with no callers - decide: integrate or remove:
-- `recommendation_engine.py` (881 lines)
-- `ab_testing.py` (15KB)
-- `platform_intelligence_briefing.py` (18KB)
-- `income_action_service.py` (12KB)
-- And 4 more...
+### Session 647 Task: Wire Decision Executor
 
-### Lower Priority: Knowledge Extraction
-The learning loop works but SharedKnowledge hasn't grown - add auto-extraction
+`decision_executor.py` (25.7KB) is never called - decisions accumulate but never execute.
+
+**Steps:**
+1. Read `core/services/decision_executor.py` to understand architecture
+2. Create Celery task in `core/tasks.py`
+3. Add Beat schedule in `core/celery.py` (every 5 minutes)
+4. Test with existing AgentDecision records
+5. Verify decisions actually execute
+
+**Success Criteria:**
+- [ ] AgentDecision records are processed
+- [ ] Decision outcomes recorded
+- [ ] No Celery errors
 
 ---
 
@@ -204,7 +194,8 @@ The learning loop works but SharedKnowledge hasn't grown - add auto-extraction
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | **CRITICAL: Orphaned infrastructure found** |
+| **647+** | `SESSION_ROADMAP_DISCONNECTED_FIXES.md` | **5-session fix plan** |
+| **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | Orphaned infrastructure audit |
 | **646** | `SESSION_646_DATA_FLOW_VERIFICATION.md` | Data pipeline verified + 3 bugs fixed |
 | **645** | `SESSION_645_71_AGENTS_VERIFIED.md` | All 71 agents verified running |
 | **645** | `SESSION_645_SPIDER_VERIFICATION.md` | All 77 spiders verified (72 working) |
