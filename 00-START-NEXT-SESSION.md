@@ -1,9 +1,35 @@
-# Session 647 - Start Here
+# Session 648 - Start Here
 
-**Previous Session:** 646
+**Previous Session:** 647
 **Date:** December 31, 2025
-**Focus:** Data Flow Verified + Disconnected Features Audit
-**Health Score:** 85-90% (Critical gaps found - see audit below)
+**Focus:** Celery Task Scheduling (77 unscheduled tasks)
+**Health Score:** 90% (Decision Executor was working all along!)
+
+---
+
+## Session 647 Accomplishments
+
+### Decision Executor Analysis - COMPLETE (Was Misdiagnosis)
+
+**Finding:** The "Decision Executor" issue from Session 646's audit was a **misdiagnosis**.
+
+| Original Claim | Reality |
+|----------------|---------|
+| "Decisions accumulate but never execute" | 258 actions executed successfully |
+| "25.7KB of code never called" | True - but replaced by working code |
+| "CRITICAL priority" | Low - just dead code cleanup |
+
+**What actually happened:**
+- `DecisionExecutorService` (Session 619) was duplicate code
+- `AutonomousActionExecutor` (Session 544) was doing the job all along
+- 66 ThinkingAgent cycles ran in the last 7 days
+- All 258 actions completed successfully
+
+**Actions Taken:**
+1. Added Discord summary notification to `run_autonomous_thinking_cycle` (lines 18254-18278)
+2. Moved `decision_executor.py` to `core/services/_deprecated/`
+
+**See:** `docs/handoffs/SESSION_647_DECISION_EXECUTOR_ANALYSIS.md`
 
 ---
 
@@ -158,35 +184,43 @@ print(f'Router: {len(router.AGENT_MAP)}')
 
 ---
 
-## Session 647 Focus: Decision Execution Loop
+## Session 648 Focus: Celery Task Scheduling
 
 **See full roadmap:** `docs/SESSION_ROADMAP_DISCONNECTED_FIXES.md`
 
-The audit identified 5 major areas to fix across Sessions 647-651:
+Remaining tasks from the audit:
 
-| Session | Focus | Impact |
-|---------|-------|--------|
-| **647** | Decision Execution Loop | CRITICAL |
-| 648 | Celery Task Scheduling (77 unscheduled) | HIGH |
-| 649 | Activate 7 Dead Situations | MEDIUM |
-| 650 | Orphaned Services Cleanup (8 services) | LOW |
-| 651 | Empty Models Audit (6 model files) | LOW |
+| Session | Focus | Impact | Status |
+|---------|-------|--------|--------|
+| **647** | Decision Execution Loop | (was CRITICAL) | **COMPLETE** - was misdiagnosis |
+| **648** | Celery Task Scheduling (77 unscheduled) | HIGH | **CURRENT** |
+| 649 | Activate 7 Dead Situations | MEDIUM | PENDING |
+| 650 | Orphaned Services Cleanup | LOW | PENDING (decision_executor handled) |
+| 651 | Empty Models Audit | LOW | PENDING |
 
-### Session 647 Task: Wire Decision Executor
+### Session 648 Task: Schedule Critical Celery Tasks
 
-`decision_executor.py` (25.7KB) is never called - decisions accumulate but never execute.
+77 tasks (47%) are defined but never scheduled. Priority tasks to schedule:
+
+| Task | Purpose | Suggested Schedule |
+|------|---------|-------------------|
+| `collect_spider_data` | Main spider collection | Every 4 hours |
+| `sync_agent_metrics` | Performance aggregation | Every hour |
+| `cleanup_old_spider_data` | Database maintenance | Daily 3 AM |
+| `backfill_embeddings` | Fill missing embeddings | Every 6 hours |
+| `generate_collective_report` | Intelligence summary | Daily 6 AM |
 
 **Steps:**
-1. Read `core/services/decision_executor.py` to understand architecture
-2. Create Celery task in `core/tasks.py`
-3. Add Beat schedule in `core/celery.py` (every 5 minutes)
-4. Test with existing AgentDecision records
-5. Verify decisions actually execute
+1. Audit all 77 unscheduled tasks
+2. Categorize: should-schedule vs manual-only vs deprecated
+3. Add Beat schedules for priority tasks in `core/celery.py`
+4. Test each newly scheduled task
+5. Document which tasks remain manual
 
 **Success Criteria:**
-- [ ] AgentDecision records are processed
-- [ ] Decision outcomes recorded
-- [ ] No Celery errors
+- [ ] Critical tasks are scheduled
+- [ ] No task conflicts or overlaps
+- [ ] Celery Beat runs without errors
 
 ---
 
@@ -194,7 +228,8 @@ The audit identified 5 major areas to fix across Sessions 647-651:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **647+** | `SESSION_ROADMAP_DISCONNECTED_FIXES.md` | **5-session fix plan** |
+| **647** | `SESSION_647_DECISION_EXECUTOR_ANALYSIS.md` | **Decision executor was duplicate code** |
+| **646+** | `SESSION_ROADMAP_DISCONNECTED_FIXES.md` | **5-session fix plan** |
 | **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | Orphaned infrastructure audit |
 | **646** | `SESSION_646_DATA_FLOW_VERIFICATION.md` | Data pipeline verified + 3 bugs fixed |
 | **645** | `SESSION_645_71_AGENTS_VERIFIED.md` | All 71 agents verified running |

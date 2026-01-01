@@ -211,12 +211,16 @@ for s in SituationInsight.objects.values('situation__name').annotate(c=Count('id
 
 | Session | Status | Date | Notes |
 |---------|--------|------|-------|
-| 647 | PENDING | - | Decision Execution |
+| 647 | **COMPLETE** | Dec 31, 2025 | Was duplicate code, not broken. See SESSION_647 handoff |
 | 648 | PENDING | - | Celery Scheduling |
 | 649 | PENDING | - | Dead Situations |
-| 650 | PENDING | - | Orphaned Services |
+| 650 | PENDING | - | Orphaned Services (decision_executor now handled) |
 | 651 | PENDING | - | Empty Models |
 
 ---
 
-**Start with Session 647 - Decision Execution is the highest impact fix.**
+**Session 647 Finding:** The "Decision Execution" issue was a misdiagnosis. The system WAS executing
+decisions via `AutonomousActionExecutor` (Session 544). `DecisionExecutorService` (Session 619)
+was duplicate code that was never integrated. It has been moved to `_deprecated/`.
+
+**Next: Session 648 - Celery Task Scheduling is the next priority.**
