@@ -1,59 +1,60 @@
-# Session 659 - Start Here
+# Session 660 - Start Here
 
-**Previous Session:** 658
+**Previous Session:** 659
 **Date:** January 1, 2026
-**Focus:** AI Decision Promoter - GPT-5-mini Autonomous Governance
-**Health Score:** 90.6% Canonical Decisions
+**Focus:** ICC Governance Dashboard + UI Audit
+**Health Score:** 90.5% Canonical Decisions
 
 ---
 
-## Session 658 Accomplishments
+## Session 659 Accomplishments
 
-### 1. AI Decision Promoter Service - COMPLETE
+### 1. Fixed Failing Legacy Tasks
 
-Built `core/services/ai_decision_promoter.py` using GPT-5-mini Responses API:
+Deprecated 2 legacy Celery tasks with broken field references:
+- `auto_promote_decisions` → Use `ai_promote_decisions` instead
+- `propagate_new_policies` → PolicyContextService handles this
 
-| Config | Value |
-|--------|-------|
-| Model | `gpt-5-mini` (reasoning model) |
-| API | Responses API (not Chat Completions) |
-| reasoning.effort | `medium` |
-| max_output_tokens | `500` |
-| Confidence Threshold | `0.7` |
+### 2. ICC Governance Stats Dashboard - COMPLETE
 
-### 2. Celery Scheduled Task - COMPLETE
+**New API:** `/api/boardroom/governance-stats/`
 
-Added `ai_promote_decisions` task running every 4 hours:
+| Stat | Value |
+|------|-------|
+| Total Decisions | 977 |
+| Canonical | 884 (90.5%) |
+| AI-Promoted | 754 |
+| Pending Review | 89 |
 
-```python
-'ai-promote-decisions': {
-    'task': 'core.tasks.ai_promote_decisions',
-    'schedule': crontab(hour='*/4', minute=20),  # 0:20, 4:20, 8:20, etc.
-    'options': {'queue': 'long_running'},
-    'kwargs': {'batch_size': 50}
-}
-```
+**UI Enhancements:**
+- 6 stat cards (Total, Canonical, %, AI Promoted, Pending, This Week)
+- AI Promoter status bar (last run, schedule)
 
-### 3. Results
+### 3. Comprehensive UI Audit
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Canonical Decisions | 130 | 884 (90.6%) |
-| AI-Promoted | 0 | 754 |
-| Remaining Drafts | 842 | 78 |
+Created `docs/UI_AUDIT_SESSION_659.md`:
+- 29 main tabs documented
+- 60+ sub-tabs identified
+- 335 API endpoints cataloged
+- Redundancies identified (spiders in 3 places, agents in 4 places)
+
+### 4. Hidden Redundant Tab
+
+- Hidden `agent-performance` tab (redundant with Agents tab)
+- Now 6 tabs hidden total
 
 ---
 
-## System Stats (After Session 658)
+## System Stats (After Session 659)
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Running Pilots** | 18 | All at 80% System Health |
-| **Completed Pilots** | 90 | Tracked |
-| **Total Decisions** | 976 | 90.6% canonical |
+| **Total Decisions** | 977 | 90.5% canonical |
 | **AI-Promoted** | 754 | GPT-5-mini evaluated |
+| **Hidden Tabs** | 6 | Reducing clutter |
 | **Active Agents** | 71 | All routable |
 | **Spiders** | 77 | 100% health |
+| **Template Lines** | 80,747 | Needs componentization |
 
 ---
 
@@ -67,88 +68,51 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Check AI Promoter Stats
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
-from core.services.ai_decision_promoter import AIDecisionPromoterService
-stats = AIDecisionPromoterService().get_promotion_stats()
-print(f'Canonical: {stats[\"canonical\"]} ({stats[\"canonical_percentage\"]}%)')
-print(f'AI-Promoted: {stats[\"ai_promoted\"]}')
-print(f'Remaining: {stats[\"pending_draft\"]}')
-"
-
-# 4. Check Celery logs for overnight activity
-grep "SESSION 658" nohup.out | tail -20
+# 3. Check governance stats
+curl http://localhost:8000/api/boardroom/governance-stats/ | python3 -m json.tool
 ```
 
 ---
 
-## Key Files Modified (Session 658)
+## Session 660 Priorities
 
-| File | Changes |
+### P0 - Quick Wins
+1. Verify governance dashboard displays correctly in browser (ICC > Governance)
+2. Check overnight system activity
+3. Review any task failures
+
+### P1 - UI Consolidation (from audit)
+1. Consolidate Trending into ICC (currently redundant)
+2. Add Celery task monitor to ICC
+3. Add System Health dashboard to ICC
+
+### P2 - Template Improvements
+1. Consider breaking 80k-line template into components
+2. Reduce visible tabs from current count to ~15
+3. Merge Content Creation tabs into Content Studio
+
+---
+
+## Key Files
+
+| File | Purpose |
 |------|---------|
-| `core/services/ai_decision_promoter.py` | **NEW** - GPT-5-mini promotion service |
-| `core/tasks.py` | Added `ai_promote_decisions` Celery task |
-| `core/celery.py` | Added schedule (every 4h at :20) |
-| `docs/handoffs/SESSION_658_AI_DECISION_PROMOTER.md` | Full documentation |
+| `docs/UI_AUDIT_SESSION_659.md` | Comprehensive UI audit |
+| `docs/handoffs/SESSION_659_ICC_GOVERNANCE_UI_AUDIT.md` | Session handoff |
+| `core/views_agent_learning.py` | Governance stats API |
+| `core/services/ai_decision_promoter.py` | GPT-5-mini promoter |
 
 ---
 
-## GPT-5-mini Notes (Reasoning Model)
+## Recent Commits
 
-**CRITICAL:** GPT-5-mini uses different parameters than chat models!
-
-```python
-# CORRECT - Responses API
-response = client.responses.create(
-    model="gpt-5-mini",
-    input=prompt,
-    reasoning={"effort": "medium"},
-    text={"verbosity": "medium"},
-    max_output_tokens=500
-    # NO temperature parameter!
-)
-
-# WRONG - Chat Completions (don't use)
-response = client.chat.completions.create(
-    model="gpt-5-mini",
-    messages=[...],
-    temperature=0.7,  # ERROR - not supported!
-    max_tokens=500    # WRONG - use max_output_tokens
-)
+```
+55911a02 refactor(Session 659): Hide redundant agent-performance tab
+0cdcd310 feat(Session 659): ICC Governance Dashboard + UI Audit
+1f05033c fix(Session 659): Deprecate legacy decision tasks with broken field refs
+687d76a9 feat(Session 658): AI Decision Promoter - GPT-5-mini autonomous governance
 ```
 
-See `docs/architecture/GPT5_REASONING_MODELS_GUIDE.md` for full details.
-
 ---
 
-## Overnight Monitoring
-
-The AI Decision Promoter runs every 4 hours. Check tomorrow:
-
-1. **Celery logs:** `grep "SESSION 658" nohup.out`
-2. **Discord:** Check `#system-status` for promotion notifications
-3. **Stats:** Run the quick check command above
-
----
-
-## Session 659 Suggestions
-
-1. Review overnight AI promotion activity
-2. Consider archiving the remaining 78 low-quality drafts
-3. Add AI promotion stats to the UI dashboard
-4. Tune confidence threshold if needed (currently 0.7)
-
----
-
-## Key Handoff Documents
-
-| Session | Document | Focus |
-|---------|----------|-------|
-| **658** | `SESSION_658_AI_DECISION_PROMOTER.md` | **AI Decision Promoter (GPT-5-mini)** |
-| **657** | *(commits only)* | All pilots connected to all data sources |
-| **656** | *(commits only)* | Pilot card hypothesis + recommended actions |
-| **654** | `SESSION_654_AUTONOMOUS_GATE_APPROVAL.md` | Auto-waive low-risk gates |
-
----
-
-**Always read this document first when starting a new session!**
+*Ready for Session 660!*
