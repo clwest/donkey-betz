@@ -192,6 +192,33 @@ CRITICAL: When creating scripts, maintain clear speaker labels for TTS generatio
                         "required": ["voice_assignments"]
                     }
                 }
+            },
+            # Session 653: NEW COMPOSABILITY TOOL - Run debates with ANY agents
+            {
+                "type": "function",
+                "function": {
+                    "name": "run_multi_agent_debate",
+                    "description": "Run a real multi-agent debate with any agents from the system. Session 653 composability fix - enables cross-domain podcasts like 'BlockchainAuditCoordinator vs StockAuditCoordinator'.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {
+                                "type": "string",
+                                "description": "The debate topic"
+                            },
+                            "participant_agents": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of agent names to participate (e.g., ['BlockchainAuditCoordinator', 'StockAuditCoordinator', 'CTOAgent'])"
+                            },
+                            "rounds": {
+                                "type": "integer",
+                                "description": "Number of debate rounds (default: 3)"
+                            }
+                        },
+                        "required": ["topic", "participant_agents"]
+                    }
+                }
             }
         ]
 
@@ -325,6 +352,14 @@ Create a structured podcast debate with:
         elif tool_name == "assign_voices":
             return self._assign_voices(
                 arguments.get("voice_assignments", {})
+            )
+
+        # Session 653: New composability tool
+        elif tool_name == "run_multi_agent_debate":
+            return self._run_multi_agent_debate(
+                arguments.get("topic", ""),
+                arguments.get("participant_agents", []),
+                arguments.get("rounds", 3)
             )
 
         return {"error": f"Unknown tool: {tool_name}"}
@@ -507,6 +542,185 @@ Create a structured podcast debate with:
             "voice_assignments": validated,
             "available_voices": list(available_voices.keys())
         }
+
+    def _run_multi_agent_debate(
+        self,
+        topic: str,
+        participant_agents: List[str],
+        rounds: int = 3
+    ) -> Dict[str, Any]:
+        """
+        Session 653 COMPOSABILITY FIX: Run a REAL multi-agent debate!
+
+        This method actually calls the execute() method of each participating agent,
+        enabling true cross-domain podcasts like:
+        - "BlockchainAuditCoordinator vs StockAuditCoordinator on crypto regulation"
+        - "LegalDocDrafterAgent vs CTOAgent on AI compliance"
+
+        Each agent contributes their real expertise and knowledge to the debate.
+        """
+        from core.agent_router import AgentRouter
+
+        logger.info(f"🎙️ [SESSION 653] Starting REAL multi-agent debate: {topic}")
+        logger.info(f"🎙️ Participants: {participant_agents}")
+
+        router = AgentRouter()
+        transcript = []
+        agents_loaded = []
+
+        # Load all participant agents
+        for agent_name in participant_agents:
+            agent_class = router.AGENT_MAP.get(agent_name)
+            if agent_class:
+                try:
+                    agent = agent_class(user=self.user)
+                    agents_loaded.append({
+                        'name': agent_name,
+                        'agent': agent,
+                        'role': self._infer_debate_role(agent_name)
+                    })
+                    logger.info(f"✅ Loaded {agent_name} as {agents_loaded[-1]['role']}")
+                except Exception as e:
+                    logger.warning(f"Failed to load {agent_name}: {e}")
+            else:
+                logger.warning(f"Agent {agent_name} not found in router")
+
+        if len(agents_loaded) < 2:
+            return {
+                "success": False,
+                "error": f"Need at least 2 agents for debate, only loaded {len(agents_loaded)}",
+                "agents_requested": participant_agents,
+                "agents_loaded": [a['name'] for a in agents_loaded]
+            }
+
+        # Run the debate rounds
+        conversation_history = []
+
+        for round_num in range(1, rounds + 1):
+            logger.info(f"🎙️ Round {round_num}/{rounds}")
+
+            for participant in agents_loaded:
+                agent = participant['agent']
+                agent_name = participant['name']
+                role = participant['role']
+
+                # Build the debate prompt with conversation history
+                history_summary = "\n".join([
+                    f"- {t['speaker']}: {t['text'][:200]}..."
+                    for t in conversation_history[-6:]  # Last 6 turns
+                ]) if conversation_history else "This is the opening round."
+
+                debate_task = f"""You are participating in a podcast debate about: {topic}
+
+Your role in this debate: {role}
+Current round: {round_num} of {rounds}
+
+Previous discussion:
+{history_summary}
+
+Provide your perspective in 2-4 sentences. Be direct, engaging, and draw on your expertise.
+{"Make a strong opening statement." if round_num == 1 and not conversation_history else "Respond to the previous points and advance the discussion."}
+{"Summarize your key position for the conclusion." if round_num == rounds else ""}"""
+
+                try:
+                    result = agent.execute(
+                        task=debate_task,
+                        context={'debate_topic': topic, 'round': round_num},
+                        scifi_context={},
+                        spider_context={}
+                    )
+
+                    turn_text = result.message if result.success else f"{agent_name} declined to comment."
+
+                    turn = {
+                        'round': round_num,
+                        'speaker': agent_name,
+                        'role': role,
+                        'text': turn_text,
+                        'generated_by': 'real_agent'
+                    }
+                    transcript.append(turn)
+                    conversation_history.append(turn)
+
+                    logger.info(f"✅ {agent_name}: {turn_text[:100]}...")
+
+                except Exception as e:
+                    logger.error(f"Error getting response from {agent_name}: {e}")
+                    transcript.append({
+                        'round': round_num,
+                        'speaker': agent_name,
+                        'role': role,
+                        'text': f"[{agent_name} encountered an error: {str(e)[:50]}]",
+                        'generated_by': 'error'
+                    })
+
+        # Convert transcript to podcast script format
+        script = self._transcript_to_script(topic, transcript, agents_loaded)
+
+        logger.info(f"🎙️ [SESSION 653] Multi-agent debate complete: {len(transcript)} turns")
+
+        return {
+            "success": True,
+            "topic": topic,
+            "participants": [a['name'] for a in agents_loaded],
+            "participant_roles": {a['name']: a['role'] for a in agents_loaded},
+            "rounds": rounds,
+            "transcript": transcript,
+            "script": script,
+            "total_turns": len(transcript),
+            "is_cross_domain": True,
+            "generated_by": "real_multi_agent_debate"
+        }
+
+    def _infer_debate_role(self, agent_name: str) -> str:
+        """Infer a debate role based on agent name."""
+        name_lower = agent_name.lower()
+
+        if any(x in name_lower for x in ['coordinator', 'moderator', 'orchestrator']):
+            return 'MODERATOR'
+        elif any(x in name_lower for x in ['bull', 'advocate', 'optimist']):
+            return 'ADVOCATE'
+        elif any(x in name_lower for x in ['bear', 'skeptic', 'contrarian', 'critic']):
+            return 'SKEPTIC'
+        elif any(x in name_lower for x in ['analyst', 'research', 'data']):
+            return 'ANALYST'
+        else:
+            return 'EXPERT'
+
+    def _transcript_to_script(
+        self,
+        topic: str,
+        transcript: List[Dict[str, Any]],
+        participants: List[Dict[str, Any]]
+    ) -> str:
+        """Convert debate transcript to podcast script format."""
+        participant_names = [p['name'] for p in participants]
+
+        script = f"""# Cross-Domain AI Debate: {topic}
+
+[INTRO MUSIC - 5 seconds]
+
+HOST: Welcome to AI Debates! Today we have a special cross-domain discussion featuring {', '.join(participant_names)}.
+Our topic: {topic}
+
+Let's hear from our participants!
+
+"""
+        current_round = 0
+        for turn in transcript:
+            if turn['round'] != current_round:
+                current_round = turn['round']
+                script += f"\n[ROUND {current_round}]\n\n"
+
+            script += f"{turn['speaker']} ({turn['role']}): {turn['text']}\n\n"
+
+        script += """[OUTRO]
+
+HOST: That was a fascinating debate! Thank you to all our participants for their unique perspectives.
+
+[OUTRO MUSIC - 5 seconds]
+"""
+        return script
 
     async def create_podcast_episode(
         self,
