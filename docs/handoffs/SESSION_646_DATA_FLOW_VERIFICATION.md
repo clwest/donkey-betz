@@ -1,14 +1,14 @@
 # Session 646: Data Flow Pipeline Verification
 
 **Date:** December 31, 2025
-**Status:** VERIFIED + 1 BUG FIXED
+**Status:** VERIFIED + 3 BUGS FIXED
 **Focus:** End-to-end data flow from spiders to agents
 
 ---
 
 ## Executive Summary
 
-Comprehensive verification of the entire data pipeline from spider collection through embedding, learning, and agent consumption. **All systems operational** with one critical bug fixed.
+Comprehensive verification of the entire data pipeline from spider collection through embedding, learning, and agent consumption. **All systems operational** with three critical bugs fixed.
 
 ### Key Findings
 
@@ -17,9 +17,11 @@ Comprehensive verification of the entire data pipeline from spider collection th
 | Spider Data Collection | WORKING | 16,962 records, 665 in 24h |
 | Spider Embeddings | WORKING | 14,422/16,962 (85%) have embeddings |
 | Agent Memory System | WORKING | 868 memories, 100% with embeddings |
-| Collective Intelligence | WORKING | 50 knowledge items, active sharing |
-| Spider Context Injection | FIXED | Was broken by None tags in spider data |
+| Collective Intelligence | WORKING | 1,406 knowledge transfers, 82.6% success |
+| Spider Context Injection | **FIXED** | Was broken by None tags in spider data |
 | Memory Context Injection | WORKING | Auto-injects relevant memories |
+| Learning Bridges | **FIXED** | Were never imported (just `pass`) |
+| User Learning | **FIXED** | Crashed on no-user executions |
 | Learning Loop | WORKING | 2,778 dreams, 2,595 conversations in 7 days |
 
 ---
@@ -180,6 +182,60 @@ keywords.extend([str(t).lower() for t in tags[:5] if t is not None])
 
 ---
 
+### Learning Bridges Not Imported
+
+**Issue:** Learning bridges were never actually being imported - the `ready()` method just had `pass`.
+
+**Root Cause:** `core/learning_bridges/apps.py` logged success messages but never imported the bridge modules. Django `@receiver` decorators only work when modules are imported.
+
+**File:** `core/learning_bridges/apps.py`
+
+**Fix Applied:**
+```python
+# Before (broken):
+def ready(self):
+    try:
+        # Import all bridge modules to register their signals
+        pass  # <-- NOTHING IMPORTED!
+        logger.info("✅ Learning Bridges initialized")
+
+# After (fixed):
+def ready(self):
+    try:
+        from core.learning_bridges import agent_execution_bridge
+        from core.learning_bridges import application_outcome_bridge
+        from core.learning_bridges import revenue_attribution_bridge
+        from core.learning_bridges import advisor_feedback_bridge
+        from core.learning_bridges import collaboration_bridge
+        from core.learning_bridges import personalization_bridge
+        from core.learning_bridges import spider_data_bridge
+        logger.info("✅ Learning Bridges initialized")
+```
+
+**Result:** Learning bridges now fire on AgentExecution post_save.
+
+---
+
+### User Learning Null Constraint Violation
+
+**Issue:** Learning bridge crashed when AgentExecution had no user (Celery/API tasks).
+
+**Root Cause:** `UserAgentLearning.user_id` has NOT NULL constraint, but `_update_agent_performance_learning()` tried to create records without checking if user exists.
+
+**File:** `core/learning_bridges/agent_execution_bridge.py`
+
+**Fix Applied:**
+```python
+# Added to _update_agent_performance_learning() and _update_task_type_patterns():
+if not execution.user:
+    logger.debug(f"Skipping user learning for {execution.agent.name} - no user attached")
+    return
+```
+
+**Result:** Aggregate agent metrics still update; user-specific learning skipped when no user.
+
+---
+
 ## Verification Commands
 
 ```bash
@@ -207,6 +263,22 @@ week = timezone.now() - timedelta(days=7)
 print(f'Dreams (7d): {AgentDream.objects.filter(dreamed_at__gte=week).count()}')
 print(f'Convos (7d): {AgentConversation.objects.filter(started_at__gte=week).count()}')
 print(f'Memories (7d): {AgentMemory.objects.filter(created_at__gte=week).count()}')"
+
+# 4. Test learning bridges firing
+.venv/bin/python manage.py shell -c "
+from core.models import AgentExecution, Agent
+agent = Agent.objects.filter(is_active=True).first()
+before = agent.total_executions
+AgentExecution.objects.create(agent=agent, task='Test', status='completed', tokens_used=50)
+agent.refresh_from_db()
+print(f'Executions: {before} -> {agent.total_executions}')"
+
+# 5. Check collective intelligence stats
+.venv/bin/python manage.py shell -c "
+from core.services.collective_intelligence import CollectiveIntelligenceService
+stats = CollectiveIntelligenceService().get_collective_stats()
+print(f'Knowledge transfers: {stats[\"learning\"][\"total_transfers\"]}')
+print(f'Collaboration success: {stats[\"collaboration\"][\"success_rate\"]*100:.1f}%')"
 ```
 
 ---
@@ -219,7 +291,9 @@ print(f'Memories (7d): {AgentMemory.objects.filter(created_at__gte=week).count()
 | Spider Data with Embeddings | - | 14,422 (85%) | HEALTHY |
 | Agent Dreams | 2,778 | 5,810 | HEALTHY |
 | Agent Conversations | 2,595 | 5,590 | HEALTHY |
-| Agent Memories | 726 | 868 | HEALTHY |
+| Agent Memories | 726 | 869 | HEALTHY |
+| Knowledge Transfers | - | 1,406 | HEALTHY |
+| Collaborations | - | 23 (82.6% success) | HEALTHY |
 | Shared Knowledge | 0 new | 50 | STABLE |
 
 ---
@@ -269,6 +343,12 @@ print(f'Memories (7d): {AgentMemory.objects.filter(created_at__gte=week).count()
 2. **Embeddings** enable semantic search (85% coverage)
 3. **Learning system** aggregates knowledge across 71 agents
 4. **Context injection** provides agents with trends + memories
-5. **Learning loop** captures outcomes for future improvement
+5. **Learning bridges** fire on execution and update metrics
+6. **Collective intelligence** tracks 1,406 knowledge transfers
 
-**One bug was fixed** that was breaking spider context injection. All systems are now verified working.
+**Three bugs were fixed:**
+1. Spider context injection (None tags crashing `get_creative_trends()`)
+2. Learning bridges not imported (ready() method was just `pass`)
+3. User learning null constraint (crashed on Celery/API tasks)
+
+All systems are now verified working end-to-end.
