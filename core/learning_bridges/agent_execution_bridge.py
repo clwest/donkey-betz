@@ -99,8 +99,14 @@ class AgentExecutionLearningLoop:
     def _update_agent_performance_learning(self, execution: AgentExecution,
                                           was_successful: bool, performance: Dict):
         """
-        Update UserAgentLearning with execution results
+        Update UserAgentLearning with execution results.
+        Session 646: Skip user-specific learning if no user attached (Celery/API tasks).
         """
+        # Skip user-specific learning if no user is attached
+        if not execution.user:
+            logger.debug(f"Skipping user learning for {execution.agent.name} - no user attached")
+            return
+
         learning, created = UserAgentLearning.objects.get_or_create(
             user=execution.user,
             agent_name=execution.agent.name,
@@ -152,8 +158,13 @@ class AgentExecutionLearningLoop:
 
     def _update_task_type_patterns(self, execution: AgentExecution, was_successful: bool):
         """
-        Learn which types of tasks this agent excels at
+        Learn which types of tasks this agent excels at.
+        Session 646: Skip if no user attached (Celery/API tasks).
         """
+        # Skip user-specific learning if no user is attached
+        if not execution.user:
+            return
+
         task = execution.task if hasattr(execution, 'task') else ''
         task_lower = task.lower()
 
