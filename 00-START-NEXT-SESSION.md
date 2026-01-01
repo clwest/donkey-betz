@@ -21,9 +21,27 @@ Added hypothesis display to pilot cards so users know what's being tested:
 
 **Result:** All 18 running pilots now show their hypothesis.
 
-**Files Modified:** `ai_core/templates/ai_image_studio.html`
+### 2. Clickable Hypothesis with Detail Modal - COMPLETE
 
-### 2. Data Consistency Check - VERIFIED
+Clicking the hypothesis now opens a full detail modal:
+
+| Modal Section | Content |
+|---------------|---------|
+| **💡 Hypothesis** | Full text (not truncated) |
+| **📊 KPI Progress** | Visual progress bar + percentage |
+| **🎯 Target** | Target value + current value |
+| **⚡ Health Status** | Color-coded status + reasons |
+| **🎯 Actions** | List of recommended actions |
+| **⏱️ Timeline** | Started date, days running, expected duration |
+
+### 3. Trending Metrics Investigation - DOCUMENTED
+
+**Why Trending Up/Stable/Down show 0:**
+- Need at least 2 KPI snapshots to calculate trend direction
+- Currently 0/18 experiments have 2+ data points
+- Will populate automatically as `update_experiment_kpis` task runs
+
+### 4. Data Consistency Check - VERIFIED
 
 | Model | Count | Status |
 |-------|-------|--------|
