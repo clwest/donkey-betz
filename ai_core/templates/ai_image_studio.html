@@ -7436,6 +7436,88 @@
                 </div>
                 <!-- End Create Pilot Modal -->
 
+                <!-- Session 656: Pilot Detail Modal -->
+                <div class="modal fade" id="pilot-detail-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" style="color: #e5e7eb;">
+                                    <span id="pilot-modal-icon">🧪</span>
+                                    <span id="pilot-modal-title">Pilot Details</span>
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Hypothesis Section -->
+                                <div class="mb-4">
+                                    <h6 style="color: #8b5cf6;">💡 HYPOTHESIS</h6>
+                                    <p id="pilot-modal-hypothesis" style="color: #e5e7eb; line-height: 1.6; font-size: 15px;"></p>
+                                </div>
+                                <!-- KPI Section -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="p-3" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid #3b82f6;">
+                                            <h6 style="color: #3b82f6;">📊 Primary KPI</h6>
+                                            <div id="pilot-modal-kpi" style="color: #e5e7eb; font-size: 18px;"></div>
+                                            <div class="mt-2">
+                                                <div class="d-flex justify-content-between small mb-1">
+                                                    <span style="color: #9ca3af;">Progress</span>
+                                                    <span id="pilot-modal-progress" style="color: #3b82f6;"></span>
+                                                </div>
+                                                <div style="background: #333; border-radius: 4px; height: 10px;">
+                                                    <div id="pilot-modal-progress-bar" style="background: #3b82f6; height: 100%; border-radius: 4px; width: 0%;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3" style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid #22c55e;">
+                                            <h6 style="color: #22c55e;">🎯 Target</h6>
+                                            <div id="pilot-modal-target" style="color: #e5e7eb; font-size: 18px;"></div>
+                                            <div class="small text-muted mt-2">
+                                                Current: <span id="pilot-modal-current" style="color: #22c55e;"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Health & Actions Section -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <h6 style="color: #f59e0b;">⚡ Health Status</h6>
+                                        <div id="pilot-modal-health" style="color: #9ca3af;"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 style="color: #60a5fa;">🎯 Recommended Actions</h6>
+                                        <ul id="pilot-modal-actions" style="color: #9ca3af; padding-left: 20px;"></ul>
+                                    </div>
+                                </div>
+                                <!-- Timeline Section -->
+                                <div class="mb-3">
+                                    <h6 style="color: #9ca3af;">⏱️ Timeline</h6>
+                                    <div class="d-flex gap-3 flex-wrap">
+                                        <div class="small">
+                                            <span class="text-muted">Started:</span>
+                                            <span id="pilot-modal-started" style="color: #e5e7eb;"></span>
+                                        </div>
+                                        <div class="small">
+                                            <span class="text-muted">Running:</span>
+                                            <span id="pilot-modal-days" style="color: #e5e7eb;"></span>
+                                        </div>
+                                        <div class="small">
+                                            <span class="text-muted">Expected:</span>
+                                            <span id="pilot-modal-expected" style="color: #e5e7eb;"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Pilot Detail Modal -->
+
                     <!-- ========== EXPERIMENTS SUB-TAB ========== -->
                     <div class="tab-pane fade" id="icc-experiments" role="tabpanel">
 
@@ -60178,6 +60260,48 @@ ${item.generated_content}
         // Session 610: Store trend data globally for use in card rendering
         let pilotTrendData = {};
 
+        // Session 656: Show pilot detail modal with full hypothesis
+        function showPilotDetail(exp) {
+            // Populate modal with experiment data
+            document.getElementById('pilot-modal-title').textContent = exp.name || 'Pilot Details';
+            document.getElementById('pilot-modal-hypothesis').textContent = exp.hypothesis || 'No hypothesis recorded.';
+            document.getElementById('pilot-modal-kpi').textContent = exp.kpi?.primary || 'Not set';
+            document.getElementById('pilot-modal-target').textContent = exp.kpi?.target || 'Not set';
+            document.getElementById('pilot-modal-current').textContent = exp.kpi?.current || '0';
+
+            // Progress bar
+            const progress = exp.kpi?.progress_percent || 0;
+            document.getElementById('pilot-modal-progress').textContent = progress + '%';
+            document.getElementById('pilot-modal-progress-bar').style.width = Math.min(progress, 100) + '%';
+
+            // Health status
+            const healthStatus = exp.health?.status || 'unknown';
+            const healthReasons = exp.health?.reasons || [];
+            document.getElementById('pilot-modal-health').innerHTML = `
+                <span style="color: ${healthStatus === 'healthy' ? '#22c55e' : healthStatus === 'at_risk' ? '#f59e0b' : '#ef4444'};">
+                    ${healthStatus === 'healthy' ? '✅' : healthStatus === 'at_risk' ? '⚠️' : '🔴'} ${healthStatus.replace('_', ' ').toUpperCase()}
+                </span>
+                ${healthReasons.length > 0 ? '<br><small>' + healthReasons.join('<br>') + '</small>' : ''}
+            `;
+
+            // Recommended actions
+            const actions = exp.health?.recommended_actions || [];
+            document.getElementById('pilot-modal-actions').innerHTML = actions.length > 0
+                ? actions.map(a => `<li>${a}</li>`).join('')
+                : '<li class="text-muted">No actions recommended</li>';
+
+            // Timeline
+            document.getElementById('pilot-modal-started').textContent = exp.timeline?.started_at
+                ? new Date(exp.timeline.started_at).toLocaleDateString()
+                : 'Unknown';
+            document.getElementById('pilot-modal-days').textContent = `${exp.days_running || 0} days`;
+            document.getElementById('pilot-modal-expected').textContent = `~${exp.expected_duration_days || 7} days`;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('pilot-detail-modal'));
+            modal.show();
+        }
+
         async function loadPilotProgressDashboard() {
             /**
              * Session 607: Load the Pilot Progress Dashboard
@@ -60370,8 +60494,10 @@ ${item.generated_content}
                                 </div>
                                 <h6 style="color: #e5e7eb; margin-bottom: 4px;" title="${cleanName}">${cleanName.substring(0, 45)}${cleanName.length > 45 ? '...' : ''}</h6>
                                 ${exp.hypothesis ? `
-                                    <div class="small mb-2" style="color: #9ca3af; font-style: italic; line-height: 1.3;">
-                                        💡 ${exp.hypothesis.substring(0, 120)}${exp.hypothesis.length > 120 ? '...' : ''}
+                                    <div class="small mb-2" style="color: #9ca3af; font-style: italic; line-height: 1.3; cursor: pointer;"
+                                         onclick="showPilotDetail(${JSON.stringify(exp).replace(/"/g, '&quot;')})"
+                                         title="Click to see full details">
+                                        💡 ${exp.hypothesis.substring(0, 120)}${exp.hypothesis.length > 120 ? '... <span style="color: #8b5cf6;">(click to read more)</span>' : ''}
                                     </div>
                                 ` : ''}
                                 ${sourceHtml}
