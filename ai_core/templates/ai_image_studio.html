@@ -8017,30 +8017,59 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <!-- Stats Row -->
-                                <div class="row mb-4">
-                                    <div class="col-3 col-md-2">
+                                <!-- Stats Row - Session 659: Enhanced with AI Promoter Stats -->
+                                <div class="row mb-4 g-2">
+                                    <div class="col-6 col-md-2">
                                         <div class="text-center p-2" style="background: rgba(245, 158, 11, 0.15); border-radius: 8px;">
                                             <h3 id="gov-total-count" style="color: #f59e0b; margin: 0;">-</h3>
                                             <small class="text-muted">Total</small>
                                         </div>
                                     </div>
-                                    <div class="col-3 col-md-2">
+                                    <div class="col-6 col-md-2">
                                         <div class="text-center p-2" style="background: rgba(34, 197, 94, 0.15); border-radius: 8px;">
                                             <h3 id="gov-canonical-count" style="color: #22c55e; margin: 0;">-</h3>
                                             <small class="text-muted">✅ Canonical</small>
                                         </div>
                                     </div>
-                                    <div class="col-3 col-md-2">
+                                    <div class="col-6 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(236, 72, 153, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-canonical-pct" style="color: #ec4899; margin: 0;">-</h3>
+                                            <small class="text-muted">📊 Canonical %</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(59, 130, 246, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-ai-promoted" style="color: #3b82f6; margin: 0;">-</h3>
+                                            <small class="text-muted">🤖 AI Promoted</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-2">
                                         <div class="text-center p-2" style="background: rgba(107, 114, 128, 0.15); border-radius: 8px;">
                                             <h3 id="gov-pending-count" style="color: #9ca3af; margin: 0;">-</h3>
                                             <small class="text-muted">⏳ Pending</small>
                                         </div>
                                     </div>
-                                    <div class="col-3 col-md-2">
+                                    <div class="col-6 col-md-2">
                                         <div class="text-center p-2" style="background: rgba(139, 92, 246, 0.15); border-radius: 8px;">
                                             <h3 id="gov-this-week" style="color: #8b5cf6; margin: 0;">-</h3>
                                             <small class="text-muted">This Week</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- AI Promoter Status Row -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-center gap-3 p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                            <span style="font-size: 1.5rem;">🤖</span>
+                                            <div>
+                                                <strong style="color: #3b82f6;">AI Decision Promoter</strong>
+                                                <span id="gov-ai-status" class="badge ms-2" style="background: #22c55e;">Active</span>
+                                            </div>
+                                            <div class="ms-auto text-muted small">
+                                                <span id="gov-ai-last-run">Last run: -</span>
+                                                <span class="mx-2">|</span>
+                                                <span id="gov-ai-schedule">Schedule: -</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -61247,9 +61276,76 @@ ${item.generated_content}
             }
         }
 
+        // Session 659: Load Governance Stats from new API
+        async function loadGovernanceStats() {
+            console.log('📊 Loading governance stats...');
+            try {
+                const response = await authenticatedFetch('/api/boardroom/governance-stats/');
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading governance stats:', data.error);
+                    return;
+                }
+
+                const stats = data.stats;
+                const promoter = data.ai_promoter;
+
+                // Update main stat cards
+                document.getElementById('gov-total-count').textContent = stats.total;
+                document.getElementById('gov-canonical-count').textContent = stats.canonical;
+                document.getElementById('gov-canonical-pct').textContent = stats.canonical_percentage + '%';
+                document.getElementById('gov-ai-promoted').textContent = stats.ai_promoted;
+                document.getElementById('gov-pending-count').textContent = stats.pending + stats.drafts;
+                document.getElementById('gov-this-week').textContent = stats.promoted_7d;
+
+                // Update header badges
+                document.getElementById('icc-canonical-count').textContent = `${stats.canonical} Canonical`;
+                document.getElementById('icc-pending-count').textContent = `${stats.pending + stats.drafts} Pending`;
+
+                // Update AI Promoter status
+                const statusBadge = document.getElementById('gov-ai-status');
+                if (promoter.enabled) {
+                    statusBadge.textContent = 'Active';
+                    statusBadge.style.background = '#22c55e';
+                } else {
+                    statusBadge.textContent = 'Disabled';
+                    statusBadge.style.background = '#6b7280';
+                }
+
+                // Format last run time
+                if (promoter.last_run) {
+                    const lastRun = new Date(promoter.last_run);
+                    const timeAgo = getTimeAgo(lastRun);
+                    document.getElementById('gov-ai-last-run').textContent = `Last run: ${timeAgo}`;
+                }
+
+                // Format schedule
+                if (promoter.schedule) {
+                    document.getElementById('gov-ai-schedule').textContent = `Schedule: Every 4 hours`;
+                }
+
+                console.log('📊 Governance stats loaded:', stats);
+            } catch (error) {
+                console.error('Error loading governance stats:', error);
+            }
+        }
+
+        // Helper: Get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+            return Math.floor(seconds / 86400) + ' days ago';
+        }
+
         // Session 657: Load Governance Decisions for Command Center
         async function loadGovernanceDecisions(filter = '') {
             console.log('🏛️ Loading governance decisions...');
+
+            // Session 659: Also load stats
+            loadGovernanceStats();
 
             try {
                 let url = '/api/boardroom/decisions/?limit=100';
@@ -61270,21 +61366,6 @@ ${item.generated_content}
                 }
 
                 const decisions = data.decisions || [];
-                const canonical = decisions.filter(d => d.is_canonical).length;
-                const pending = decisions.filter(d => !d.is_canonical).length;
-
-                // Update stats
-                document.getElementById('gov-total-count').textContent = decisions.length;
-                document.getElementById('gov-canonical-count').textContent = canonical;
-                document.getElementById('gov-pending-count').textContent = pending;
-                document.getElementById('icc-canonical-count').textContent = `${canonical} Canonical`;
-                document.getElementById('icc-pending-count').textContent = `${pending} Pending`;
-
-                // Count this week's decisions
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                const thisWeek = decisions.filter(d => new Date(d.created_at) > oneWeekAgo).length;
-                document.getElementById('gov-this-week').textContent = thisWeek;
 
                 // Render decisions
                 const container = document.getElementById('icc-governance-list');

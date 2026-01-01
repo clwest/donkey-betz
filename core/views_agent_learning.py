@@ -1310,6 +1310,108 @@ def get_boardroom_decisions(request):
         }, status=500)
 
 
+# Session 659: Governance Stats API for AI Decision Promoter Dashboard
+@require_http_methods(["GET"])
+def get_governance_stats(request):
+    """
+    Get governance statistics for the ICC Governance dashboard.
+
+    GET /api/boardroom/governance-stats/
+
+    Returns comprehensive stats including AI Decision Promoter metrics.
+    """
+    try:
+        from core.models_unified_system import AgentDecisionSummary
+        from django.utils import timezone
+        from datetime import timedelta
+        from django_celery_beat.models import PeriodicTask
+
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+        last_7d = now - timedelta(days=7)
+
+        # Core counts
+        total = AgentDecisionSummary.objects.count()
+        canonical = AgentDecisionSummary.objects.filter(is_canonical=True).count()
+        drafts = AgentDecisionSummary.objects.filter(status='draft').count()
+        pending = AgentDecisionSummary.objects.filter(status='pending').count()
+
+        # AI Promoter stats
+        ai_promoted = AgentDecisionSummary.objects.filter(
+            promoted_by__icontains='AI'
+        ).count()
+
+        human_promoted = AgentDecisionSummary.objects.filter(
+            is_canonical=True
+        ).exclude(
+            promoted_by__icontains='AI'
+        ).exclude(
+            promoted_by__isnull=True
+        ).exclude(
+            promoted_by=''
+        ).count()
+
+        # Recent activity
+        promoted_24h = AgentDecisionSummary.objects.filter(
+            is_canonical=True,
+            promoted_at__gte=last_24h
+        ).count()
+
+        promoted_7d = AgentDecisionSummary.objects.filter(
+            is_canonical=True,
+            promoted_at__gte=last_7d
+        ).count()
+
+        new_decisions_24h = AgentDecisionSummary.objects.filter(
+            created_at__gte=last_24h
+        ).count()
+
+        # Calculate percentage
+        canonical_pct = round((canonical / total * 100), 1) if total > 0 else 0
+
+        # Get AI Promoter task info
+        ai_promoter_info = {
+            'enabled': False,
+            'last_run': None,
+            'next_run': None,
+            'schedule': None
+        }
+
+        try:
+            task = PeriodicTask.objects.filter(name='ai-promote-decisions').first()
+            if task:
+                ai_promoter_info['enabled'] = task.enabled
+                ai_promoter_info['last_run'] = task.last_run_at.isoformat() if task.last_run_at else None
+                ai_promoter_info['schedule'] = str(task.crontab) if task.crontab else str(task.interval)
+        except Exception:
+            pass
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'total': total,
+                'canonical': canonical,
+                'canonical_percentage': canonical_pct,
+                'drafts': drafts,
+                'pending': pending,
+                'ai_promoted': ai_promoted,
+                'human_promoted': human_promoted,
+                'promoted_24h': promoted_24h,
+                'promoted_7d': promoted_7d,
+                'new_decisions_24h': new_decisions_24h,
+            },
+            'ai_promoter': ai_promoter_info,
+            'timestamp': now.isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting governance stats: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @require_http_methods(["POST"])
 @login_required
 def promote_decision(request, decision_id):
