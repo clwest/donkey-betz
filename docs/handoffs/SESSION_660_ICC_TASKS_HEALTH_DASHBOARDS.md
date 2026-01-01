@@ -6,11 +6,15 @@
 
 ---
 
-## Commits This Session
+## Commits This Session (5 total)
 
-| Commit | Description |
-|--------|-------------|
-| `TBD` | feat(Session 660): ICC Tasks & Health dashboards |
+| Commit | Type | Description |
+|--------|------|-------------|
+| `eb9f6930` | feat | ICC Tasks & Health dashboards - main feature |
+| `59dd9d9a` | fix | Add tab event listeners for Tasks and Health sub-tabs |
+| `c6a1ce9b` | fix | Make Tasks/Health JS functions globally accessible |
+| `0be31015` | fix | Improve Celery health check using PID files |
+| `56083d3e` | fix | Fix spider count in health dashboard |
 
 ---
 
@@ -49,7 +53,30 @@ P1 #1 was to "Consolidate Trending into ICC" but the Trending tab was already hi
 
 ---
 
-## API Responses
+## Bug Fixes During Session
+
+### 1. JavaScript Functions Not Globally Accessible
+- **Issue:** `loadCeleryTasks()` and `loadSystemHealth()` weren't callable from onclick handlers
+- **Fix:** Changed to `window.loadCeleryTasks` and `window.loadSystemHealth`
+- **Also:** Switched from `authenticatedFetch` to plain `fetch` (public endpoints)
+
+### 2. Tab Event Listeners Not Firing
+- **Issue:** Bootstrap `shown.bs.tab` events weren't triggering data loads
+- **Fix:** Added click event listeners with setTimeout for tab transition
+
+### 3. Celery Health Check Always False
+- **Issue:** Original check looked for recent task results (none stored)
+- **Fix:** Now checks PID files (`.celery.pid`, etc.) and verifies processes are running
+- **Result:** Properly detects 4 running Celery workers
+
+### 4. Spider Count Showing Zero
+- **Issue:** `SpiderRegistry.get_spider_count()` returns a dict, not int
+- **Fix:** Extract `spider_stats.get('total', 0)` from the response
+- **Result:** Now shows 77 registered spiders
+
+---
+
+## API Responses (Final Working State)
 
 ### Celery Stats API
 
@@ -69,7 +96,7 @@ curl -s http://localhost:8000/api/celery/stats/
     "failed_24h": 0
   },
   "recent_tasks": [],
-  "timestamp": "2026-01-01T17:37:11.384923+00:00"
+  "timestamp": "2026-01-01T18:00:00.000000+00:00"
 }
 ```
 
@@ -82,24 +109,24 @@ curl -s http://localhost:8000/api/icc/health/
 ```json
 {
   "success": true,
-  "status": "degraded",
+  "status": "healthy",
   "services": {
     "redis": true,
     "daphne": true,
-    "celery": false,
+    "celery": true,
     "postgres": true
   },
   "metrics": {
     "agents": 71,
-    "spiders": 0,
+    "spiders": 77,
     "scheduled_tasks": 158,
-    "conversations_24h": 314,
-    "dreams_24h": 422,
-    "decisions_total": 978,
-    "canonical_rate": 90.6,
+    "conversations_24h": 324,
+    "dreams_24h": 432,
+    "decisions_total": 979,
+    "canonical_rate": 90.5,
     "ai_promoted": 754
   },
-  "timestamp": "2026-01-01T17:37:11.685092+00:00"
+  "timestamp": "2026-01-01T18:00:58.767517+00:00"
 }
 ```
 
@@ -109,8 +136,8 @@ curl -s http://localhost:8000/api/icc/health/
 
 | File | Changes |
 |------|---------|
-| `ai_core/templates/ai_image_studio.html` | +317 lines - Tasks & Health sub-tabs UI + JavaScript |
-| `core/views_agent_learning.py` | +192 lines - Two new API endpoints |
+| `ai_core/templates/ai_image_studio.html` | +335 lines - Tasks & Health sub-tabs UI + JavaScript + event listeners |
+| `core/views_agent_learning.py` | +215 lines - Two new API endpoints with fixes |
 | `core/urls.py` | +6 lines - URL routes for new APIs |
 | `core/auth_middleware.py` | +2 lines - Added paths to PUBLIC_PATHS |
 
@@ -126,23 +153,26 @@ curl -s http://localhost:8000/api/icc/health/
 - **Issue:** New APIs returned 401 authentication required
 - **Fix:** Added `/api/celery/` and `/api/icc/` to PUBLIC_PATHS in auth middleware
 
+### 3. Server Code Caching
+- **Issue:** Code changes not reflected until Daphne restart
+- **Learning:** Always restart Daphne after modifying Python view files
+
 ---
 
 ## Session 661 Priorities
 
 ### P0 - Quick Wins
-1. Test Tasks and Health dashboards in browser (ICC > Tasks, ICC > Health)
-2. Review overnight system activity
-3. Check for any task failures
+1. Review overnight system activity
+2. Check for any task failures
 
-### P1 - Celery Health Improvement
-- Celery shows as "false" in health check because no recent task results stored
-- Consider adding a Celery heartbeat task to prove worker is alive
+### P1 - Potential Enhancements
+1. Add auto-refresh interval (30s/60s) for Health dashboard
+2. Add filtering/search to task list
+3. Show more task history (currently limited by django-celery-results storage)
 
-### P2 - UI Improvements
-1. Add refresh buttons to Tasks and Health dashboards
-2. Consider auto-refresh interval for real-time updates
-3. Add filtering/search to task list
+### P2 - Future Considerations
+1. Add WebSocket for real-time health updates
+2. Add alerting when services go unhealthy
 
 ---
 
@@ -150,17 +180,21 @@ curl -s http://localhost:8000/api/icc/health/
 
 - [x] `/api/celery/stats/` returns valid JSON
 - [x] `/api/icc/health/` returns valid JSON
-- [ ] ICC Tasks sub-tab displays correctly in browser
-- [ ] ICC Health sub-tab displays correctly in browser
-- [ ] Service indicators show correct status
+- [x] ICC Tasks sub-tab displays correctly in browser
+- [x] ICC Health sub-tab displays correctly in browser
+- [x] Service indicators show correct status (all green)
+- [x] Spider count shows 77
+- [x] Agent count shows 71
+- [x] Celery health shows true (PID-based check)
 
 ---
 
-## Notes
+## Key Learnings
 
-- Celery health shows "false" because we check for recent task results - no tasks with results stored in past hour
-- The actual Celery workers (3) are running, just no result storage
-- Consider adding a periodic "heartbeat" task that stores results to prove workers are alive
+1. **Use `window.functionName`** for functions called via `onclick` in templates
+2. **Use `settings.BASE_DIR`** for reliable path resolution in Django views
+3. **Check method signatures** - `get_spider_count()` returns dict, not int
+4. **Restart Daphne** after Python code changes (no hot-reload)
 
 ---
 
