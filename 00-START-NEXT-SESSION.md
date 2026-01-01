@@ -53,11 +53,21 @@
 | Celery Health | Changed to PID-based detection (was task results) |
 | Spider Count | Extract `total` from dict response |
 
+### 4. Auto-Refresh Feature
+
+Added toggle buttons to both dashboards:
+- **Tasks:** `⏱️ Auto: Off/30s` - refreshes every 30 seconds
+- **Health:** `⏱️ Auto: Off/30s` - refreshes every 30 seconds
+
 ---
 
-## Session 660 Commits (6 total)
+## Session 660 Commits (10 total)
 
 ```
+9f92f73d docs(Session 660): Add auto-refresh commits to handoff
+78b4c164 feat(Session 660): Add auto-refresh toggle to Tasks dashboard
+88b343c5 feat(Session 660): Add auto-refresh toggle to Health dashboard
+8d9437ec docs(Session 660): Update start doc for Session 661
 ed675c13 docs(Session 660): Update handoff with bug fixes and final state
 56083d3e fix(Session 660): Fix spider count in health dashboard
 0be31015 fix(Session 660): Improve Celery health check using PID files
