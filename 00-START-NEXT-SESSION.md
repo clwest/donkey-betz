@@ -41,20 +41,28 @@ Reorganized the Command Center tab (710 lines) into 5 organized sub-tabs:
 
 **See:** `docs/handoffs/SESSION_654_COMMAND_CENTER_SUBTABS.md`
 
-### 3. Autonomous Gate Approval System - COMPLETE
+### 3. Autonomous Gate Approval System - COMPLETE (Full Pipeline)
 
-Implemented auto-waiving of low-risk gates to eliminate approval bottleneck:
+Implemented complete autonomous pipeline: Gate → Checklist → Pilot → Experiment
+
+| Step | Component | Implementation |
+|------|-----------|----------------|
+| 1️⃣ | **Gate Waive** | Low-risk gates auto-waived with `waived_by='ThinkingAgent'` |
+| 2️⃣ | **Checklist Complete** | All pending items auto-marked as 'waived' |
+| 3️⃣ | **Pilot Deploy** | `PilotExecution.objects.create()` when `auto_deploy=True` |
+| 4️⃣ | **Experiment Create** | `Experiment.create_from_pilot(pilot)` for dashboard visibility |
 
 | Component | Implementation |
 |-----------|----------------|
-| **Celery Task** | `auto_approve_low_risk_gates` in `core/tasks.py` |
-| **Beat Schedule** | Every 2 hours at :15 |
-| **ThinkingAgent** | New action `auto_approve_gates` |
-| **Action Handler** | `_execute_auto_approve_gates` in executor |
+| **Celery Task** | `auto_approve_low_risk_gates` in `core/tasks.py` (lines 20060-20200) |
+| **Beat Schedule** | Every 2 hours at :15 (`auto_deploy=True`) |
+| **ThinkingAgent** | New action `auto_approve_gates` + context when backlog >10 |
+| **Action Handler** | `_execute_auto_approve_gates` in executor (lines 1086-1217) |
+| **Model Update** | `waive()` method now tracks `waived_by` parameter |
 
 **Test Results:**
-- 10 gates waived in first live run
-- 54 remaining in backlog (from 64)
+- 12 pilots deployed and visible in Pilots sub-tab
+- Full pipeline verified: Gate → Checklist → Pilot → Experiment
 - Safety rails: ONLY low-risk gates, max batch size, dry_run mode
 
 **See:** `docs/handoffs/SESSION_654_AUTONOMOUS_GATE_APPROVAL.md`
@@ -113,6 +121,8 @@ curl http://localhost:8000/api/v1/reasoning/dashboard/ | python3 -m json.tool
 | **OPEN Systems** | **7/7** | ALL OPEN! |
 | **UI Sub-tabs Verified** | **9/9** | All connected |
 | **Composability** | **100%** | Any agent can work with any agent |
+| **Running Pilots** | 12 | Auto-deployed via autonomous pipeline |
+| **ThinkingAgent Actions** | 9 | Including new `auto_approve_gates` |
 
 ### Data Pipeline Activity
 

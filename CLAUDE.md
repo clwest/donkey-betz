@@ -1,24 +1,27 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** December 31, 2025 - Session 652
+**Last Updated:** December 31, 2025 - Session 654
 **Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
 
-## System Stats (Session 652)
+## System Stats (Session 654)
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 71 | All 71 routable (Session 637 complete) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Database Models** | 324+ | 37 categories |
-| **Celery Tasks** | 226 | 53 scheduled (Beat) |
+| **Celery Tasks** | 127 | 14 added in Session 648 |
 | **Services** | 93 | Business logic layer |
 | **Discord Commands** | 112 | 29 Cog categories |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Sci-Fi Features** | 14 | All active (Session 567 cleanup) |
+| **Running Pilots** | 12 | Auto-deployed via autonomous pipeline |
+| **OPEN Systems** | 7/7 | Full composability (Session 653) |
 
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation + Noise Filter
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
 **Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts
+**Autonomous Gate Approval:** Auto-waive low-risk gates → checklist → pilot → experiment (Session 654)
 **LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
 
 ---
@@ -166,12 +169,16 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **654** | **Autonomous Gate Approval Pipeline** + UI Reorganization | `SESSION_654_AUTONOMOUS_GATE_APPROVAL.md`, `SESSION_654_COMMAND_CENTER_SUBTABS.md` |
+| **653** | **7/7 Full Composability** - All walls fixed | `SESSION_653_CROSS_DOMAIN_COMPOSABILITY_AUDIT.md` |
 | 652 | Podcast Studio + Campaign Orchestrator Activated | `SESSION_652_PODCAST_STUDIO_ACTIVATION.md`, `SESSION_652_CAMPAIGN_ACTIVATION.md` |
 | 651 | Empty Models Audit - 4/6 have data | `SESSION_651_EMPTY_MODELS_AUDIT.md` |
 | 650 | Orphaned Services Audit - all services used | `SESSION_650_ORPHANED_SERVICES_AUDIT.md` |
 | 649 | Situation Triggers Fixed - 25 configs | `SESSION_649_SITUATION_TRIGGERS_FIXED.md` |
 | 648 | Celery Task Scheduling - 14 tasks added | `SESSION_648_CELERY_TASK_SCHEDULING.md` |
 | 647 | Decision Executor Analysis - was duplicate | `SESSION_647_DECISION_EXECUTOR_ANALYSIS.md` |
+| 646 | Data Flow Verification + Disconnected Features Audit | `SESSION_646_DATA_FLOW_VERIFICATION.md` |
+| 645 | 71 Agents Verified + Spider Verification | `SESSION_645_71_AGENTS_VERIFIED.md` |
 | 637 | AgentRouter expansion (47→68 routable) + agent fixes | `SESSION_637_SYSTEM_AUDIT_FIXES.md` |
 | 636 | System Health Check command + Agent Introduction Party | `SESSION_636_SYSTEM_HEALTH_CHECK.md` |
 | 596 | Experiment Tracking Registry - KPI ownership for pilots | `SESSION_596_EXPERIMENT_TRACKING.md` |
@@ -179,9 +186,6 @@ curl http://localhost:8000/health/ping/
 | 594 | AI-Powered Governance - Auto-completion & ThinkingAgent eval | `SESSION_594_PILOT_AUTO_COMPLETION.md` |
 | 593 | ThinkingAgent Auto-Gates - AI generates pilot gates | `SESSION_593_THINKING_AGENT_AUTO_GATES.md` |
 | 592 | Pilot Readiness Gate Complete - Full checklist system | `SESSION_592_PILOT_READINESS_GATE_COMPLETE.md` |
-| 588 | PA Phase 25 (81 tools) + System Insights UI | `SESSION_588_PA_PHASE25_SYSTEM_INSIGHTS.md` |
-| 573 | PA System Awareness + Celery Multi-Queue | `SESSION_573_PA_SYSTEM_AWARENESS.md` |
-| 567 | Full System Audit - 71 agents, 77 spiders | `SESSION_567_FULL_SYSTEM_AUDIT.md` |
 
 For older sessions, see `docs/handoffs/` directory.
 
