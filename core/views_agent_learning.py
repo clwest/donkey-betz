@@ -1530,16 +1530,30 @@ def get_system_health(request):
         except Exception:
             pass
 
-        # Check Celery (look for recent successful tasks)
+        # Check Celery (check for PID files indicating running workers)
         try:
-            from django_celery_results.models import TaskResult
-            recent_success = TaskResult.objects.filter(
-                date_done__gte=now - timedelta(minutes=10),
-                status='SUCCESS'
-            ).exists()
-            services['celery'] = recent_success
-        except Exception:
-            pass
+            from django.conf import settings
+            import logging
+            logger = logging.getLogger(__name__)
+            base_dir = str(settings.BASE_DIR)
+            pid_files = ['.celery.pid', '.celery-beat.pid', '.celery-broadcast.pid', '.celery-long-running.pid']
+            running_workers = 0
+            for pid_file in pid_files:
+                pid_path = os.path.join(base_dir, pid_file)
+                if os.path.exists(pid_path):
+                    try:
+                        with open(pid_path, 'r') as f:
+                            pid = int(f.read().strip())
+                        # Check if process is running (signal 0 = check existence)
+                        os.kill(pid, 0)
+                        running_workers += 1
+                    except (ValueError, ProcessLookupError, PermissionError) as e:
+                        logger.debug(f"PID check failed for {pid_file}: {e}")
+            services['celery'] = running_workers >= 2  # At least 2 workers running
+            logger.debug(f"Celery health: {running_workers} workers found, status={services['celery']}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Celery health check error: {e}")
 
         # System metrics
         agents_count = 0
