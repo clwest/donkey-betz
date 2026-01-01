@@ -65,6 +65,8 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/agent-dreams/',  # Session 564: Dreams sub-tab
         '/api/boardroom/',  # Session 564: Boardroom sub-tab
         '/api/pilot-gates/',  # Session 590: Pilot Readiness Gates
+        '/api/celery/',  # Session 660: Celery Task Monitor
+        '/api/icc/',  # Session 660: ICC Health Dashboard
         '/api/artifacts/',  # Session 564: Artifacts sub-tab
         '/api/agent-learning/',  # Session 564: Learning activity
         '/api/recent-activity/',  # Session 614: Recent Activity panel

@@ -1,60 +1,64 @@
-# Session 660 - Start Here
+# Session 661 - Start Here
 
-**Previous Session:** 659
+**Previous Session:** 660
 **Date:** January 1, 2026
-**Focus:** ICC Governance Dashboard + UI Audit
-**Health Score:** 90.5% Canonical Decisions
+**Focus:** ICC Dashboards Complete - Tasks & Health Added
+**Health Score:** 90.6% Canonical Decisions
 
 ---
 
-## Session 659 Accomplishments
+## Session 660 Accomplishments
 
-### 1. Fixed Failing Legacy Tasks
+### 1. Verified Trending Tab Already Hidden
 
-Deprecated 2 legacy Celery tasks with broken field references:
-- `auto_promote_decisions` → Use `ai_promote_decisions` instead
-- `propagate_new_policies` → PolicyContextService handles this
+P1 #1 was to consolidate Trending into ICC - but it was already hidden (Session 530). No work needed.
 
-### 2. ICC Governance Stats Dashboard - COMPLETE
+### 2. Added Celery Task Monitor to ICC
 
-**New API:** `/api/boardroom/governance-stats/`
+**New Sub-tab:** ICC > Tasks ⚙️
+**API:** `/api/celery/stats/`
 
 | Stat | Value |
 |------|-------|
-| Total Decisions | 977 |
-| Canonical | 884 (90.5%) |
-| AI-Promoted | 754 |
-| Pending Review | 89 |
+| Workers | 3 |
+| Scheduled Tasks | 158 |
+| Active | 0 |
+| Success 24h | 0 |
+| Failed 24h | 0 |
 
-**UI Enhancements:**
-- 6 stat cards (Total, Canonical, %, AI Promoted, Pending, This Week)
-- AI Promoter status bar (last run, schedule)
+### 3. Added System Health Dashboard to ICC
 
-### 3. Comprehensive UI Audit
+**New Sub-tab:** ICC > Health 💚
+**API:** `/api/icc/health/`
 
-Created `docs/UI_AUDIT_SESSION_659.md`:
-- 29 main tabs documented
-- 60+ sub-tabs identified
-- 335 API endpoints cataloged
-- Redundancies identified (spiders in 3 places, agents in 4 places)
+| Service | Status |
+|---------|--------|
+| Redis | ✅ Running |
+| Daphne | ✅ Running |
+| Celery | ⚠️ No recent results |
+| PostgreSQL | ✅ Running |
 
-### 4. Hidden Redundant Tab
-
-- Hidden `agent-performance` tab (redundant with Agents tab)
-- Now 6 tabs hidden total
+| Metric | Value |
+|--------|-------|
+| Agents | 71 |
+| Scheduled Tasks | 158 |
+| Conversations 24h | 314 |
+| Dreams 24h | 422 |
+| Total Decisions | 978 |
+| Canonical Rate | 90.6% |
 
 ---
 
-## System Stats (After Session 659)
+## System Stats (After Session 660)
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Total Decisions** | 977 | 90.5% canonical |
+| **Total Decisions** | 978 | 90.6% canonical |
 | **AI-Promoted** | 754 | GPT-5-mini evaluated |
 | **Hidden Tabs** | 6 | Reducing clutter |
 | **Active Agents** | 71 | All routable |
 | **Spiders** | 77 | 100% health |
-| **Template Lines** | 80,747 | Needs componentization |
+| **ICC Sub-tabs** | 8 | Gates, Pilots, Experiments, Learning, Activity, Governance, Tasks, Health |
 
 ---
 
@@ -68,28 +72,32 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Check governance stats
-curl http://localhost:8000/api/boardroom/governance-stats/ | python3 -m json.tool
+# 3. Test new dashboards
+# Navigate to: ICC > Tasks ⚙️
+# Navigate to: ICC > Health 💚
+
+# 4. Check APIs
+curl http://localhost:8000/api/celery/stats/ | python3 -m json.tool
+curl http://localhost:8000/api/icc/health/ | python3 -m json.tool
 ```
 
 ---
 
-## Session 660 Priorities
+## Session 661 Priorities
 
 ### P0 - Quick Wins
-1. Verify governance dashboard displays correctly in browser (ICC > Governance)
-2. Check overnight system activity
-3. Review any task failures
+1. Test Tasks and Health dashboards in browser (verify UI renders correctly)
+2. Review overnight system activity
+3. Check for any task failures
 
-### P1 - UI Consolidation (from audit)
-1. Consolidate Trending into ICC (currently redundant)
-2. Add Celery task monitor to ICC
-3. Add System Health dashboard to ICC
+### P1 - Celery Health Improvement
+1. Add Celery heartbeat task to prove workers are alive
+2. Currently shows "false" because no recent task results in DB
 
-### P2 - Template Improvements
-1. Consider breaking 80k-line template into components
-2. Reduce visible tabs from current count to ~15
-3. Merge Content Creation tabs into Content Studio
+### P2 - UI Polish
+1. Add refresh buttons to Tasks and Health dashboards
+2. Consider auto-refresh interval (30s/60s)
+3. Add filtering to task list
 
 ---
 
@@ -97,22 +105,21 @@ curl http://localhost:8000/api/boardroom/governance-stats/ | python3 -m json.too
 
 | File | Purpose |
 |------|---------|
+| `docs/handoffs/SESSION_660_ICC_TASKS_HEALTH_DASHBOARDS.md` | Session handoff |
+| `core/views_agent_learning.py` | New APIs: get_celery_stats, get_system_health |
 | `docs/UI_AUDIT_SESSION_659.md` | Comprehensive UI audit |
-| `docs/handoffs/SESSION_659_ICC_GOVERNANCE_UI_AUDIT.md` | Session handoff |
-| `core/views_agent_learning.py` | Governance stats API |
-| `core/services/ai_decision_promoter.py` | GPT-5-mini promoter |
 
 ---
 
 ## Recent Commits
 
 ```
+TBD      feat(Session 660): ICC Tasks & Health dashboards
+83a1ea55 docs(Session 659): Create handoff and update session start doc
 55911a02 refactor(Session 659): Hide redundant agent-performance tab
 0cdcd310 feat(Session 659): ICC Governance Dashboard + UI Audit
-1f05033c fix(Session 659): Deprecate legacy decision tasks with broken field refs
-687d76a9 feat(Session 658): AI Decision Promoter - GPT-5-mini autonomous governance
 ```
 
 ---
 
-*Ready for Session 660!*
+*Ready for Session 661!*
