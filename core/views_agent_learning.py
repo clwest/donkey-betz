@@ -1315,21 +1315,67 @@ def get_boardroom_decisions(request):
 def promote_decision(request, decision_id):
     """
     Promote a decision to canonical policy status.
+    Session 657: Also creates a learning record and feeds to collective intelligence.
 
     POST /api/boardroom/decisions/{decision_id}/promote/
     """
     try:
         from core.models_unified_system import AgentDecisionSummary
+        from core.models import KnowledgeTransfer
+        import redis
+        import json
+        import os
 
         decision = AgentDecisionSummary.objects.get(id=decision_id)
         decision.promote_to_canonical(promoted_by='human')
 
         logger.info(f"🏛️ [BOARDROOM] Decision promoted to canonical: {decision.topic}")
 
+        # Session 657: Create a knowledge transfer record for the canonical decision
+        learning_created = False
+        try:
+            # Create knowledge transfer to capture the canonical decision as learned knowledge
+            knowledge = KnowledgeTransfer.objects.create(
+                source_agent='BoardroomGovernance',
+                target_agent='CollectiveIntelligence',
+                knowledge_type='canonical_policy',
+                title=f"[Canonical] {decision.topic[:100]}",
+                content=decision.summary or decision.topic,
+                usefulness_score=0.9,  # High score for canonical decisions
+                applied=True,
+            )
+            learning_created = True
+            logger.info(f"🧠 [SESSION 657] Created knowledge transfer for canonical decision: {knowledge.id}")
+
+            # Broadcast to collective intelligence via Redis
+            try:
+                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+                event = {
+                    'type': 'canonical_decision_promoted',
+                    'timestamp': timezone.now().isoformat(),
+                    'decision_id': str(decision.id),
+                    'topic': decision.topic[:100],
+                    'decision_type': decision.decision_type,
+                    'summary': (decision.summary or '')[:200],
+                    'agents_involved': decision.agents_involved or [],
+                }
+                r.publish('agent_learning', json.dumps({
+                    'type': 'canonical_policy_created',
+                    'data': event
+                }))
+                r.incr('canonical_decisions:total')
+                logger.info(f"🧠 [SESSION 657] Broadcast canonical decision to collective intelligence")
+            except Exception as redis_err:
+                logger.warning(f"Redis broadcast failed: {redis_err}")
+
+        except Exception as learn_err:
+            logger.warning(f"Error creating learning from canonical decision: {learn_err}")
+
         return JsonResponse({
             'success': True,
             'message': f'Decision "{decision.topic}" promoted to canonical policy',
-            'decision_id': str(decision.id)
+            'decision_id': str(decision.id),
+            'learning_created': learning_created  # Session 657
         })
 
     except AgentDecisionSummary.DoesNotExist:
