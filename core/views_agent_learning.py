@@ -3266,14 +3266,21 @@ def get_pilot_gate_dashboard(request):
                 throughput['avg_approval_wait_hours'] = safe_avg('approval_wait_hours')
                 throughput['avg_total_gate_hours'] = safe_avg('total_gate_hours')
 
-        # Pilot duration from completed pilots
-        completed_pilots = PilotExecution.objects.filter(status='completed')
+        # Pilot duration from completed pilots (Session 655: only last 30 days to avoid old outliers)
+        from datetime import timedelta
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        completed_pilots = PilotExecution.objects.filter(
+            status='completed',
+            completed_at__gte=thirty_days_ago
+        )
         if completed_pilots.exists():
             pilot_durations = []
             for pilot in completed_pilots:
                 if pilot.started_at and pilot.completed_at:
                     duration = (pilot.completed_at - pilot.started_at).total_seconds() / 3600
-                    pilot_durations.append(duration)
+                    # Session 655: Cap at 72 hours to avoid outliers from stuck pilots
+                    if duration <= 72:
+                        pilot_durations.append(duration)
             if pilot_durations:
                 throughput['avg_pilot_duration_hours'] = round(sum(pilot_durations) / len(pilot_durations), 1)
 
