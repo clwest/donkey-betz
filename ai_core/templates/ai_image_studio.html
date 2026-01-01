@@ -57750,6 +57750,24 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
             }
 
+            // Session 660: Load Tasks data when sub-tab is shown
+            const tasksTabTrigger = document.getElementById('icc-tasks-tab');
+            if (tasksTabTrigger) {
+                tasksTabTrigger.addEventListener('shown.bs.tab', function() {
+                    loadCeleryTasks();
+                    console.log('  ✓ ICC Tasks: Loading Celery stats');
+                });
+            }
+
+            // Session 660: Load Health data when sub-tab is shown
+            const healthTabTrigger = document.getElementById('icc-health-tab');
+            if (healthTabTrigger) {
+                healthTabTrigger.addEventListener('shown.bs.tab', function() {
+                    loadSystemHealth();
+                    console.log('  ✓ ICC Health: Loading system health');
+                });
+            }
+
             // Session 369: Load Dreams tab data when switching to it
             const dreamsTabTrigger = document.getElementById('wf-dreams-tab');
             if (dreamsTabTrigger) {
