@@ -6,7 +6,7 @@
 
 ---
 
-## Commits This Session (5 total)
+## Commits This Session (9 total)
 
 | Commit | Type | Description |
 |--------|------|-------------|
@@ -15,6 +15,10 @@
 | `c6a1ce9b` | fix | Make Tasks/Health JS functions globally accessible |
 | `0be31015` | fix | Improve Celery health check using PID files |
 | `56083d3e` | fix | Fix spider count in health dashboard |
+| `ed675c13` | docs | Update handoff with bug fixes and final state |
+| `8d9437ec` | docs | Update start doc for Session 661 |
+| `88b343c5` | feat | Add auto-refresh toggle to Health dashboard |
+| `78b4c164` | feat | Add auto-refresh toggle to Tasks dashboard |
 
 ---
 
@@ -36,6 +40,7 @@ P1 #1 was to "Consolidate Trending into ICC" but the Trending tab was already hi
 - 6 stat cards: Workers, Scheduled, Active, Queued, Success 24h, Failed 24h
 - Recent tasks list with status badges (Success/Failure)
 - Auto-loads when sub-tab is clicked
+- Auto-refresh toggle (30s interval)
 
 ### 3. Added System Health Dashboard to ICC (P1 #3)
 
@@ -50,6 +55,7 @@ P1 #1 was to "Consolidate Trending into ICC" but the Trending tab was already hi
 - 9 system metrics: Agents, Spiders, Scheduled Tasks, Conversations 24h, Dreams 24h, Total Decisions, Canonical Rate, AI Promoted, Pending Review
 - Overall status indicator (healthy/degraded/unhealthy)
 - Auto-loads when sub-tab is clicked
+- Auto-refresh toggle (30s interval)
 
 ---
 
