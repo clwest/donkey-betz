@@ -3464,6 +3464,63 @@ def update_experiment_kpi(request, experiment_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+def raise_experiment_target(request, experiment_id):
+    """
+    Session 657: Raise the target value for an experiment that's exceeding expectations.
+
+    POST /api/experiments/<uuid:experiment_id>/raise-target/
+
+    Body:
+    {
+        "new_target": "90%",
+        "notes": "Optional reason for raising target"
+    }
+    """
+    try:
+        import json
+        from core.models_pilot_readiness import Experiment
+
+        exp = Experiment.objects.get(id=experiment_id)
+        data = json.loads(request.body)
+
+        old_target = exp.target_value
+        new_target = data.get('new_target')
+
+        if not new_target:
+            return JsonResponse({'success': False, 'error': 'new_target is required'}, status=400)
+
+        exp.target_value = new_target
+
+        # Track the change in extracted_metrics
+        if 'target_history' not in exp.extracted_metrics:
+            exp.extracted_metrics['target_history'] = []
+
+        exp.extracted_metrics['target_history'].append({
+            'old_target': old_target,
+            'new_target': new_target,
+            'timestamp': timezone.now().isoformat(),
+            'notes': data.get('notes', 'Target raised due to exceeding expectations')
+        })
+
+        exp.save()
+
+        return JsonResponse({
+            'success': True,
+            'experiment_id': str(exp.id),
+            'old_target': old_target,
+            'new_target': new_target,
+            'message': f'Target raised from {old_target} to {new_target}'
+        })
+
+    except Experiment.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Experiment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error raising experiment target: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
 def complete_experiment(request, experiment_id):
     """
     Session 596: Mark an experiment as complete with outcome.
