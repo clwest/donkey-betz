@@ -57750,23 +57750,17 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 });
             }
 
-            // Session 660: Load Tasks data when sub-tab is shown
-            const tasksTabTrigger = document.getElementById('icc-tasks-tab');
-            if (tasksTabTrigger) {
-                tasksTabTrigger.addEventListener('shown.bs.tab', function() {
-                    loadCeleryTasks();
-                    console.log('  ✓ ICC Tasks: Loading Celery stats');
-                });
-            }
+            // Session 660: Load Tasks data when sub-tab is clicked
+            document.getElementById('icc-tasks-tab')?.addEventListener('click', function() {
+                console.log('  ✓ ICC Tasks tab clicked, loading Celery stats...');
+                setTimeout(() => loadCeleryTasks(), 100);  // Small delay for tab transition
+            });
 
-            // Session 660: Load Health data when sub-tab is shown
-            const healthTabTrigger = document.getElementById('icc-health-tab');
-            if (healthTabTrigger) {
-                healthTabTrigger.addEventListener('shown.bs.tab', function() {
-                    loadSystemHealth();
-                    console.log('  ✓ ICC Health: Loading system health');
-                });
-            }
+            // Session 660: Load Health data when sub-tab is clicked
+            document.getElementById('icc-health-tab')?.addEventListener('click', function() {
+                console.log('  ✓ ICC Health tab clicked, loading system health...');
+                setTimeout(() => loadSystemHealth(), 100);  // Small delay for tab transition
+            });
 
             // Session 369: Load Dreams tab data when switching to it
             const dreamsTabTrigger = document.getElementById('wf-dreams-tab');
@@ -61565,11 +61559,11 @@ ${item.generated_content}
             return Math.floor(seconds / 86400) + ' days ago';
         }
 
-        // Session 660: Load Celery Task Stats
-        async function loadCeleryTasks() {
+        // Session 660: Load Celery Task Stats (window-scoped for onclick access)
+        window.loadCeleryTasks = async function() {
             console.log('⚙️ Loading Celery task stats...');
             try {
-                const response = await authenticatedFetch('/api/celery/stats/');
+                const response = await fetch('/api/celery/stats/');
                 const data = await response.json();
 
                 if (!data.success) {
@@ -61621,11 +61615,11 @@ ${item.generated_content}
             }
         }
 
-        // Session 660: Load System Health
-        async function loadSystemHealth() {
+        // Session 660: Load System Health (window-scoped for onclick access)
+        window.loadSystemHealth = async function() {
             console.log('💚 Loading system health...');
             try {
-                const response = await authenticatedFetch('/api/icc/health/');
+                const response = await fetch('/api/icc/health/');
                 const data = await response.json();
 
                 if (!data.success) {
