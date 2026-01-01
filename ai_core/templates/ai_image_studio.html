@@ -7310,6 +7310,22 @@
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Session 655: Completed Pilots & Total Gates -->
+                                <hr style="border-color: #333; margin: 15px 0;">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(16, 185, 129, 0.15); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                            <h4 id="icc-completed-pilots-count" style="color: #10b981;">0</h4>
+                                            <small class="text-muted">✅ Completed Pilots</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2" style="background: rgba(139, 92, 246, 0.15); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                                            <h4 id="icc-total-gates-count" style="color: #8b5cf6;">0</h4>
+                                            <small class="text-muted">📊 Total Gates</small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -58879,9 +58895,13 @@ The executive team has provided direction. NOW CREATE THE 3 LOGOS!
                 const completedEl = document.getElementById('icc-completed-pilots');
                 const runningEl = document.getElementById('icc-running-pilots');
                 const runningCountEl = document.getElementById('icc-running-pilots-count');  // Session 617
+                const completedCountEl = document.getElementById('icc-completed-pilots-count');  // Session 655
+                const totalGatesEl = document.getElementById('icc-total-gates-count');  // Session 655
                 if (completedEl) completedEl.textContent = dashboard.summary.completed_pilots || 0;
                 if (runningEl) runningEl.textContent = dashboard.summary.running_pilots || 0;
                 if (runningCountEl) runningCountEl.textContent = dashboard.summary.running_pilots || 0;  // Session 617
+                if (completedCountEl) completedCountEl.textContent = dashboard.summary.completed_pilots || 0;  // Session 655
+                if (totalGatesEl) totalGatesEl.textContent = dashboard.summary.total_gates || 0;  // Session 655
             }
 
             // Update recent pilots
