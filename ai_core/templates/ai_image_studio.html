@@ -8111,9 +8111,14 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="badge" style="background: #22c55e;" id="icc-tasks-success">0 Success</span>
                                             <span class="badge" style="background: #ef4444;" id="icc-tasks-failed">0 Failed</span>
-                                            <button class="btn btn-sm btn-outline-info" onclick="loadCeleryTasks()">
-                                                🔄 Refresh
-                                            </button>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="loadCeleryTasks()">
+                                                    🔄 Refresh
+                                                </button>
+                                                <button class="btn btn-outline-info" id="tasks-auto-refresh-btn" onclick="toggleTasksAutoRefresh()">
+                                                    ⏱️ Auto: Off
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="card-body">
@@ -61619,6 +61624,30 @@ ${item.generated_content}
                 console.error('Error loading Celery stats:', error);
             }
         }
+
+        // Session 660: Auto-refresh for Tasks Dashboard
+        let tasksAutoRefreshInterval = null;
+        window.toggleTasksAutoRefresh = function() {
+            const btn = document.getElementById('tasks-auto-refresh-btn');
+            if (tasksAutoRefreshInterval) {
+                // Turn off
+                clearInterval(tasksAutoRefreshInterval);
+                tasksAutoRefreshInterval = null;
+                btn.innerHTML = '⏱️ Auto: Off';
+                btn.classList.remove('active');
+                console.log('⚙️ Tasks auto-refresh disabled');
+            } else {
+                // Turn on (30 second interval)
+                loadCeleryTasks();  // Load immediately
+                tasksAutoRefreshInterval = setInterval(() => {
+                    loadCeleryTasks();
+                    console.log('⚙️ Auto-refreshed tasks data');
+                }, 30000);
+                btn.innerHTML = '⏱️ Auto: 30s';
+                btn.classList.add('active');
+                console.log('⚙️ Tasks auto-refresh enabled (30s interval)');
+            }
+        };
 
         // Session 660: Load System Health (window-scoped for onclick access)
         window.loadSystemHealth = async function() {
