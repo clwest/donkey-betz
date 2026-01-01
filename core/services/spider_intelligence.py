@@ -1019,11 +1019,14 @@ class SpiderIntelligenceService:
 
             for item in items:
                 # Extract from title, description, tags
+                # Session 646: Filter out None values to prevent join errors
+                raw_tags = item.get('tags', [])
+                safe_tags = [str(t) for t in raw_tags if t is not None] if isinstance(raw_tags, list) else []
                 text_fields = [
-                    item.get('title', ''),
-                    item.get('description', ''),
-                    ' '.join(item.get('tags', []) if isinstance(item.get('tags'), list) else []),
-                    item.get('category', ''),
+                    item.get('title', '') or '',
+                    item.get('description', '') or '',
+                    ' '.join(safe_tags),
+                    item.get('category', '') or '',
                 ]
                 combined_text = ' '.join(text_fields).lower()
 
@@ -1041,7 +1044,8 @@ class SpiderIntelligenceService:
                 if item.get('tags'):
                     tags = item.get('tags')
                     if isinstance(tags, list):
-                        keywords.extend([t.lower() for t in tags[:5]])
+                        # Session 646: Filter None values before calling lower()
+                        keywords.extend([str(t).lower() for t in tags[:5] if t is not None])
 
         # Build trending results
         trending_styles = [
