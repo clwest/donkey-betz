@@ -1,6 +1,6 @@
 # Agent Reference
 
-**Last Updated:** Session 567 (December 28, 2025) - Complete 71 Agent Audit
+**Last Updated:** Session 652 (December 31, 2025) - Podcast & Campaign Agents Activated with Test Data
 
 ---
 
@@ -377,6 +377,49 @@ Step 4: Generate social media banners
 
 ---
 
+### CampaignOrchestratorAgent (Session 513, Activated Session 652)
+
+**Purpose:** Master orchestrator for marketing campaigns with research, strategy, and content creation
+
+**Status:** ACTIVE - 1 campaign complete with 16 deliverables (5 ads, 6 social posts, 5 emails)
+
+**Location:** `core/agents/campaign_orchestrator_agent.py`
+
+**Tools:**
+- `create_campaign` - Create campaign from client brief
+- `run_research_phase` - Market trends, competitor analysis via SmartTrendingService
+- `run_strategy_phase` - Content strategy, SEO keywords, brand direction
+- `run_creation_phase` - Generate ad copy, social posts, email sequences
+- `get_campaign_status` - Check campaign progress
+
+**Campaign Phases:**
+1. **Research (0-20%)** - Market trends, competitor analysis, customer personas
+2. **Strategy (20-40%)** - Brand direction, content pillars, SEO keywords
+3. **Creation (40-90%)** - Ad copy, social posts, emails, images
+4. **Packaging (90-100%)** - Bundle deliverables, create summary
+
+**Budget Tiers:**
+- Starter ($500) - Ad copy, basic images, social posts
+- Pro ($2,000) - + email sequence, banners
+- Enterprise ($5,000) - + video, voiceover
+- Premium ($10,000) - Full brand package with 3 videos
+
+**Database Models:**
+- `Campaign` - Campaign metadata, budget tier, platforms
+- `CampaignDeliverable` - Individual deliverables (ad_copy, social_post, email, etc.)
+- `CampaignResearch` - Research findings from spider network
+
+**API Endpoints:**
+- `GET /api/campaigns/` - List campaigns
+- `POST /api/campaigns/create/` - Create campaign
+- `POST /api/campaigns/<id>/start/` - Start execution
+- `GET /api/campaigns/<id>/status/` - Check progress
+- `GET /api/campaigns/<id>/deliverables/` - Get deliverables
+
+**Cannot Access:** Image/video generation (delegates to ImageAgent, VideoAgent)
+
+---
+
 ### AutonomousContentStudioCoordinator (Session 466)
 
 **Purpose:** Orchestrates autonomous content generation with agent debates
@@ -683,9 +726,11 @@ Confidence: 0.7 (strong historical precedent)."
 
 ---
 
-### Podcast Agents (Session 496)
+### Podcast Agents (Session 496, Activated Session 652)
 
 **Purpose:** AI Podcast Studio - Generate debate podcasts with multi-agent discussions and TTS audio
+
+**Status:** ACTIVE - 1 show ("AI Debates Weekly"), 1 complete episode (22,484 char script)
 
 **Location:** `core/agents/podcast/`
 

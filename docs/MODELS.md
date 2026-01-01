@@ -1,6 +1,6 @@
 # Database Models Reference
 
-**Last Updated:** Session 567 (December 28, 2025)
+**Last Updated:** Session 652 (December 31, 2025) - Podcast & Campaign models now have data
 **Total Models:** 349 across 37 categories
 **Database:** PostgreSQL with pgvector extension
 
