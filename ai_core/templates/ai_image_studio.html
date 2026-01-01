@@ -7184,6 +7184,11 @@
                             🔄 Activity
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-governance-tab" data-bs-toggle="pill" data-bs-target="#icc-governance" type="button" role="tab">
+                            🏛️ Governance
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Sub-tab Content -->
@@ -7981,6 +7986,77 @@
 
                     </div>
                     <!-- END LEARNING SUB-TAB -->
+
+                    <!-- ========== GOVERNANCE SUB-TAB (Session 657) ========== -->
+                    <div class="tab-pane fade" id="icc-governance" role="tabpanel">
+
+                <!-- ========== SESSION 657: GOVERNANCE DASHBOARD ========== -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-4" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                <h5 class="mb-0" style="color: #f59e0b;">
+                                    <span style="font-size: 24px;">🏛️</span> Boardroom Decisions
+                                    <small class="text-muted ms-2">Promote valuable insights to canonical policies</small>
+                                </h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" style="background: #22c55e;" id="icc-canonical-count">0 Canonical</span>
+                                    <span class="badge" style="background: #6b7280;" id="icc-pending-count">0 Pending</span>
+                                    <select class="form-select form-select-sm" style="width: auto; background: #2d2d2d; border-color: #f59e0b; color: #fff;" id="icc-decision-filter" onchange="loadGovernanceDecisions(this.value)">
+                                        <option value="">All Decisions</option>
+                                        <option value="canonical">✅ Canonical Only</option>
+                                        <option value="pending">⏳ Pending Review</option>
+                                        <option value="guideline">📖 Guidelines</option>
+                                        <option value="architecture">🏗️ Architecture</option>
+                                        <option value="pipeline">⚡ Pipeline</option>
+                                        <option value="experiment">🧪 Experiment</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="loadGovernanceDecisions()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Stats Row -->
+                                <div class="row mb-4">
+                                    <div class="col-3 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(245, 158, 11, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-total-count" style="color: #f59e0b; margin: 0;">-</h3>
+                                            <small class="text-muted">Total</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(34, 197, 94, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-canonical-count" style="color: #22c55e; margin: 0;">-</h3>
+                                            <small class="text-muted">✅ Canonical</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(107, 114, 128, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-pending-count" style="color: #9ca3af; margin: 0;">-</h3>
+                                            <small class="text-muted">⏳ Pending</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3 col-md-2">
+                                        <div class="text-center p-2" style="background: rgba(139, 92, 246, 0.15); border-radius: 8px;">
+                                            <h3 id="gov-this-week" style="color: #8b5cf6; margin: 0;">-</h3>
+                                            <small class="text-muted">This Week</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Decisions List -->
+                                <div id="icc-governance-list" style="max-height: 500px; overflow-y: auto;">
+                                    <p class="text-muted text-center">Loading governance decisions...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END GOVERNANCE DASHBOARD -->
+
+                    </div>
+                    <!-- END GOVERNANCE SUB-TAB -->
 
                 </div>
                 <!-- END SUB-TAB CONTENT -->
@@ -60600,6 +60676,14 @@ ${item.generated_content}
                 });
             }
 
+            // Session 657: Governance sub-tab
+            const iccGovernanceTab = document.getElementById('icc-governance-tab');
+            if (iccGovernanceTab) {
+                iccGovernanceTab.addEventListener('shown.bs.tab', function() {
+                    loadGovernanceDecisions();
+                });
+            }
+
             // Session 614: Activity filter buttons
             document.querySelectorAll('.activity-filter').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -61160,6 +61244,138 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error halting experiment:', error);
                 showToast('❌ Error halting experiment', 'error');
+            }
+        }
+
+        // Session 657: Load Governance Decisions for Command Center
+        async function loadGovernanceDecisions(filter = '') {
+            console.log('🏛️ Loading governance decisions...');
+
+            try {
+                let url = '/api/boardroom/decisions/?limit=100';
+                if (filter === 'canonical') {
+                    url += '&is_canonical=true';
+                } else if (filter === 'pending') {
+                    url += '&is_canonical=false';
+                } else if (filter && filter !== '') {
+                    url += `&decision_type=${filter}`;
+                }
+
+                const response = await authenticatedFetch(url);
+                const data = await response.json();
+
+                if (!data.success) {
+                    console.error('Error loading governance decisions:', data.error);
+                    return;
+                }
+
+                const decisions = data.decisions || [];
+                const canonical = decisions.filter(d => d.is_canonical).length;
+                const pending = decisions.filter(d => !d.is_canonical).length;
+
+                // Update stats
+                document.getElementById('gov-total-count').textContent = decisions.length;
+                document.getElementById('gov-canonical-count').textContent = canonical;
+                document.getElementById('gov-pending-count').textContent = pending;
+                document.getElementById('icc-canonical-count').textContent = `${canonical} Canonical`;
+                document.getElementById('icc-pending-count').textContent = `${pending} Pending`;
+
+                // Count this week's decisions
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const thisWeek = decisions.filter(d => new Date(d.created_at) > oneWeekAgo).length;
+                document.getElementById('gov-this-week').textContent = thisWeek;
+
+                // Render decisions
+                const container = document.getElementById('icc-governance-list');
+
+                if (decisions.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">No decisions found matching filter.</p>';
+                    return;
+                }
+
+                // Decision type styling
+                const typeStyles = {
+                    'guideline': { bg: '#f59e0b', icon: '📖' },
+                    'architecture': { bg: '#8b5cf6', icon: '🏗️' },
+                    'pipeline': { bg: '#10b981', icon: '⚡' },
+                    'experiment': { bg: '#06b6d4', icon: '🧪' },
+                    'product': { bg: '#ec4899', icon: '🎯' },
+                    'policy': { bg: '#f59e0b', icon: '📜' }
+                };
+
+                container.innerHTML = decisions.map(d => {
+                    const style = typeStyles[d.decision_type] || { bg: '#6b7280', icon: '📋' };
+                    const isCanonical = d.is_canonical;
+                    const borderColor = isCanonical ? '#22c55e' : style.bg;
+                    const createdDate = new Date(d.created_at).toLocaleDateString();
+
+                    return `
+                        <div class="mb-3 p-3" style="background: rgba(${isCanonical ? '34, 197, 94' : '245, 158, 11'}, 0.1); border-left: 4px solid ${borderColor}; border-radius: 8px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span style="font-size: 16px;">${style.icon}</span>
+                                        <strong style="color: ${isCanonical ? '#86efac' : '#fcd34d'};">
+                                            ${isCanonical ? '✅ ' : ''}${d.topic || 'Untitled Decision'}
+                                        </strong>
+                                        ${isCanonical ? '<span class="badge" style="background: #22c55e; font-size: 10px;">Canonical</span>' : ''}
+                                    </div>
+                                    <div class="small text-muted mb-2">
+                                        <span class="badge" style="background: ${style.bg}20; color: ${style.bg}; font-size: 10px;">${d.decision_type || 'general'}</span>
+                                        <span class="ms-2">📅 ${createdDate}</span>
+                                        ${d.agents_involved ? `<span class="ms-2">👥 ${d.agents_involved.slice(0, 2).join(', ')}</span>` : ''}
+                                    </div>
+                                    ${d.summary ? `<p class="small mb-0" style="color: #9ca3af;">${d.summary.substring(0, 150)}${d.summary.length > 150 ? '...' : ''}</p>` : ''}
+                                </div>
+                                <div class="ms-3">
+                                    ${!isCanonical ? `
+                                        <button class="btn btn-sm" style="background: #22c55e; color: white; border: none;"
+                                                onclick="promoteToCanonical('${d.id}', '${(d.topic || '').replace(/'/g, "\\'")}')">
+                                            ⬆️ Promote
+                                        </button>
+                                    ` : `
+                                        <span class="badge" style="background: #22c55e20; color: #86efac;">
+                                            ✅ Adopted
+                                        </span>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                console.log('✅ Governance decisions loaded:', decisions.length);
+
+            } catch (error) {
+                console.error('Error loading governance decisions:', error);
+                document.getElementById('icc-governance-list').innerHTML =
+                    '<p class="text-danger text-center">Error loading decisions. Check console.</p>';
+            }
+        }
+
+        // Session 657: Promote decision to canonical
+        async function promoteToCanonical(decisionId, topic) {
+            if (!confirm(`Promote "${topic.substring(0, 50)}" to CANONICAL policy?\n\nThis will mark it as an official adopted decision.`)) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/boardroom/decisions/${decisionId}/promote/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('✅ Decision promoted to canonical!', 'success');
+                    loadGovernanceDecisions(document.getElementById('icc-decision-filter').value);
+                } else {
+                    showToast('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error promoting decision:', error);
+                showToast('❌ Error promoting decision', 'error');
             }
         }
 
