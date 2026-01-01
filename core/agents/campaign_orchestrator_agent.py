@@ -663,11 +663,52 @@ Always provide status updates and be transparent about what's being created."""
             logger.error(f"Creation phase failed: {e}")
             return {'success': False, 'error': str(e)}
 
-    def _generate_ad_copies(self, campaign, trends: List[str]) -> List[Dict[str, Any]]:
-        """Generate ad copy variations."""
-        # In a full implementation, this would call ContentWriterAgent
-        # For now, generate template-based variations
+    def _generate_ad_copies(self, campaign, trends: List[str], use_agent: bool = True) -> List[Dict[str, Any]]:
+        """
+        Generate ad copy variations.
 
+        Session 653 COMPOSABILITY FIX: Now uses ContentWriterAgent instead of templates!
+        """
+        if use_agent:
+            try:
+                from core.agent_router import AgentRouter
+                router = AgentRouter()
+
+                agent_class = router.AGENT_MAP.get('ContentWriterAgent')
+                if agent_class:
+                    agent = agent_class(user=self.user)
+                    task = f"""Write 5 compelling ad copy variations for a marketing campaign:
+
+Product: {campaign.product_name}
+Description: {campaign.product_description}
+Target Market: {campaign.target_market}
+Location: {campaign.target_location or 'global'}
+Trending Topics: {', '.join(trends[:5]) if trends else 'none'}
+
+For each ad copy, provide:
+1. The ad text (compelling, concise)
+2. A variant letter (A, B, C, D, E)
+3. The tone (professional, casual, urgent, emotional, etc.)
+4. Key keywords used
+
+Format: Return 5 distinct ad variations with different angles (benefit-focused, urgency, social proof, question-based, direct)."""
+
+                    result = agent.execute(
+                        task=task,
+                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                        scifi_context={},
+                        spider_context={'trends': trends}
+                    )
+
+                    # Parse agent response into structured format
+                    if result.success and result.message:
+                        logger.info(f"✅ ContentWriterAgent generated ad copies for campaign {campaign.id}")
+                        return self._parse_ad_copies_from_agent(result.message, trends)
+
+            except Exception as e:
+                logger.warning(f"Agent-based ad copy generation failed, falling back to templates: {e}")
+
+        # Fallback to template-based generation
         base_copies = []
         templates = [
             f"Discover {campaign.product_name} - {campaign.product_description[:100]}. {campaign.target_market} love it!",
@@ -680,35 +721,102 @@ Always provide status updates and be transparent about what's being created."""
         for i, template in enumerate(templates):
             base_copies.append({
                 'text': template,
-                'variant': chr(65 + i),  # A, B, C, D, E
+                'variant': chr(65 + i),
                 'tone': 'professional',
-                'keywords': trends[:3] if trends else []
+                'keywords': trends[:3] if trends else [],
+                'generated_by': 'template'
             })
 
         return base_copies
 
-    def _generate_social_posts(self, campaign, trends: List[str]) -> Dict[str, List[str]]:
-        """Generate social media posts for each platform."""
+    def _parse_ad_copies_from_agent(self, agent_response: str, trends: List[str]) -> List[Dict[str, Any]]:
+        """Parse ContentWriterAgent response into structured ad copies."""
+        copies = []
+        # Split by variant markers or numbered sections
+        sections = agent_response.split('\n\n')
+
+        for i, section in enumerate(sections[:5]):
+            if section.strip():
+                copies.append({
+                    'text': section.strip()[:500],  # Limit length
+                    'variant': chr(65 + i),
+                    'tone': 'professional',
+                    'keywords': trends[:3] if trends else [],
+                    'generated_by': 'ContentWriterAgent'
+                })
+
+        # Ensure we have at least 5 copies
+        while len(copies) < 5:
+            copies.append({
+                'text': f"Discover quality with our product. Contact us today!",
+                'variant': chr(65 + len(copies)),
+                'tone': 'professional',
+                'keywords': trends[:3] if trends else [],
+                'generated_by': 'fallback'
+            })
+
+        return copies[:5]
+
+    def _generate_social_posts(self, campaign, trends: List[str], use_agent: bool = True) -> Dict[str, List[str]]:
+        """
+        Generate social media posts for each platform.
+
+        Session 653 COMPOSABILITY FIX: Now uses SocialMediaAgent instead of templates!
+        """
+        if use_agent:
+            try:
+                from core.agent_router import AgentRouter
+                router = AgentRouter()
+
+                agent_class = router.AGENT_MAP.get('SocialMediaAgent')
+                if agent_class:
+                    agent = agent_class(user=self.user)
+                    task = f"""Create social media posts for a marketing campaign:
+
+Product: {campaign.product_name}
+Description: {campaign.product_description}
+Target Market: {campaign.target_market}
+Trending Topics: {', '.join(trends[:5]) if trends else 'none'}
+
+Create posts for each platform:
+1. FACEBOOK (2 posts): Longer form, engaging, with call-to-action
+2. INSTAGRAM (2 posts): Visual-focused captions with relevant hashtags
+3. TWITTER (2 posts): Short, punchy, under 280 characters
+
+Label each post clearly with the platform name."""
+
+                    result = agent.execute(
+                        task=task,
+                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                        scifi_context={},
+                        spider_context={'trends': trends}
+                    )
+
+                    if result.success and result.message:
+                        logger.info(f"✅ SocialMediaAgent generated posts for campaign {campaign.id}")
+                        return self._parse_social_posts_from_agent(result.message, campaign, trends)
+
+            except Exception as e:
+                logger.warning(f"Agent-based social post generation failed, falling back to templates: {e}")
+
+        # Fallback to template-based generation
         posts = {
             'facebook': [],
             'instagram': [],
             'twitter': []
         }
 
-        # Facebook posts (longer form)
         posts['facebook'] = [
             f"Introducing {campaign.product_name}! {campaign.product_description[:200]}...\n\nPerfect for {campaign.target_market}. Learn more!",
             f"Check out what our customers are saying about {campaign.product_name}! Contact us today.",
         ]
 
-        # Instagram posts (visual-focused captions)
         hashtags = ' '.join([f"#{t.replace(' ', '')}" for t in trends[:5]]) if trends else '#sale #new'
         posts['instagram'] = [
             f"{campaign.product_name} - Available now!\n\n{hashtags}",
             f"Your next favorite {campaign.product_name} is here.\n\n{hashtags}",
         ]
 
-        # Twitter posts (short and punchy)
         posts['twitter'] = [
             f"New: {campaign.product_name}! {campaign.product_description[:80]}... #new",
             f"Looking for {campaign.product_name}? We've got you! Contact us today.",
@@ -716,32 +824,165 @@ Always provide status updates and be transparent about what's being created."""
 
         return posts
 
-    def _generate_email_sequence(self, campaign) -> List[Dict[str, str]]:
-        """Generate a 5-email sequence."""
+    def _parse_social_posts_from_agent(self, agent_response: str, campaign, trends: List[str]) -> Dict[str, List[str]]:
+        """Parse SocialMediaAgent response into structured posts."""
+        posts = {'facebook': [], 'instagram': [], 'twitter': []}
+        response_lower = agent_response.lower()
+
+        # Try to extract platform-specific sections
+        for platform in ['facebook', 'instagram', 'twitter']:
+            if platform in response_lower:
+                # Find content after platform name
+                start_idx = response_lower.find(platform)
+                # Find next platform or end
+                next_platforms = [response_lower.find(p, start_idx + len(platform)) for p in ['facebook', 'instagram', 'twitter'] if response_lower.find(p, start_idx + len(platform)) > 0]
+                end_idx = min(next_platforms) if next_platforms else len(agent_response)
+
+                section = agent_response[start_idx:end_idx]
+                # Extract lines that look like posts
+                lines = [l.strip() for l in section.split('\n') if l.strip() and len(l.strip()) > 20 and platform not in l.lower()[:20]]
+                posts[platform] = lines[:2]
+
+        # Ensure each platform has at least 2 posts (fallback)
+        hashtags = ' '.join([f"#{t.replace(' ', '')}" for t in trends[:5]]) if trends else '#new'
+        defaults = {
+            'facebook': [f"{campaign.product_name} - Perfect for {campaign.target_market}!"],
+            'instagram': [f"{campaign.product_name} is here! {hashtags}"],
+            'twitter': [f"Check out {campaign.product_name}! #new"]
+        }
+
+        for platform in posts:
+            while len(posts[platform]) < 2:
+                posts[platform].append(defaults[platform][0] if defaults[platform] else f"Great {platform} post!")
+
+        return posts
+
+    def _generate_email_sequence(self, campaign, use_agent: bool = True) -> List[Dict[str, str]]:
+        """
+        Generate a 5-email nurture sequence.
+
+        Session 653 COMPOSABILITY FIX: Now uses ContentWriterAgent instead of templates!
+        """
+        if use_agent:
+            try:
+                from core.agent_router import AgentRouter
+                router = AgentRouter()
+
+                agent_class = router.AGENT_MAP.get('ContentWriterAgent')
+                if agent_class:
+                    agent = agent_class(user=self.user)
+                    task = f"""Write a 5-email nurture sequence for a marketing campaign:
+
+Product: {campaign.product_name}
+Description: {campaign.product_description}
+Target Market: {campaign.target_market}
+
+Create 5 emails with this flow:
+1. INTRODUCTION: Welcome and introduce the product
+2. VALUE: Explain why the product is right for them
+3. OFFER: Present a special offer or discount
+4. URGENCY: Last chance reminder
+5. FOLLOW-UP: Thank you and stay in touch
+
+For each email provide:
+- Subject line (compelling, under 60 chars)
+- Body (personalized, with greeting and sign-off)
+
+Label each email clearly (Email 1, Email 2, etc.)."""
+
+                    result = agent.execute(
+                        task=task,
+                        context={'campaign_id': str(campaign.id), 'phase': 'creation'},
+                        scifi_context={},
+                        spider_context={}
+                    )
+
+                    if result.success and result.message:
+                        logger.info(f"✅ ContentWriterAgent generated email sequence for campaign {campaign.id}")
+                        return self._parse_emails_from_agent(result.message, campaign)
+
+            except Exception as e:
+                logger.warning(f"Agent-based email generation failed, falling back to templates: {e}")
+
+        # Fallback to template-based generation
         emails = [
             {
                 'subject': f"Introducing {campaign.product_name}",
-                'body': f"Hi there,\n\nWe're excited to introduce {campaign.product_name}.\n\n{campaign.product_description}\n\nPerfect for {campaign.target_market}.\n\nLearn more by replying to this email!\n\nBest regards"
+                'body': f"Hi there,\n\nWe're excited to introduce {campaign.product_name}.\n\n{campaign.product_description}\n\nPerfect for {campaign.target_market}.\n\nLearn more by replying to this email!\n\nBest regards",
+                'generated_by': 'template'
             },
             {
                 'subject': f"Why {campaign.product_name} is right for you",
-                'body': f"Hi,\n\nStill thinking about {campaign.product_name}?\n\nHere's why customers love it:\n- Quality you can trust\n- Perfect for {campaign.target_market}\n- Great value\n\nReply to learn more!\n\nBest"
+                'body': f"Hi,\n\nStill thinking about {campaign.product_name}?\n\nHere's why customers love it:\n- Quality you can trust\n- Perfect for {campaign.target_market}\n- Great value\n\nReply to learn more!\n\nBest",
+                'generated_by': 'template'
             },
             {
                 'subject': f"Special offer on {campaign.product_name}",
-                'body': f"Hi,\n\nFor a limited time, we're offering a special deal on {campaign.product_name}.\n\nDon't miss out - reply now to claim your offer!\n\nBest"
+                'body': f"Hi,\n\nFor a limited time, we're offering a special deal on {campaign.product_name}.\n\nDon't miss out - reply now to claim your offer!\n\nBest",
+                'generated_by': 'template'
             },
             {
                 'subject': f"Last chance - {campaign.product_name}",
-                'body': f"Hi,\n\nThis is your last chance to take advantage of our special offer on {campaign.product_name}.\n\nReply today!\n\nBest"
+                'body': f"Hi,\n\nThis is your last chance to take advantage of our special offer on {campaign.product_name}.\n\nReply today!\n\nBest",
+                'generated_by': 'template'
             },
             {
                 'subject': f"Thank you for your interest in {campaign.product_name}",
-                'body': f"Hi,\n\nThank you for your interest in {campaign.product_name}.\n\nWe're here whenever you're ready. Just reply to this email with any questions.\n\nBest regards"
+                'body': f"Hi,\n\nThank you for your interest in {campaign.product_name}.\n\nWe're here whenever you're ready. Just reply to this email with any questions.\n\nBest regards",
+                'generated_by': 'template'
             }
         ]
 
         return emails
+
+    def _parse_emails_from_agent(self, agent_response: str, campaign) -> List[Dict[str, str]]:
+        """Parse ContentWriterAgent response into structured emails."""
+        emails = []
+        response = agent_response
+
+        # Try to split by email markers
+        for i in range(1, 6):
+            markers = [f"Email {i}", f"EMAIL {i}", f"{i}.", f"#{i}"]
+            for marker in markers:
+                if marker in response:
+                    start_idx = response.find(marker)
+                    # Find next email marker or end
+                    next_starts = []
+                    for j in range(i + 1, 7):
+                        for next_marker in [f"Email {j}", f"EMAIL {j}", f"{j}.", f"#{j}"]:
+                            idx = response.find(next_marker, start_idx + len(marker))
+                            if idx > 0:
+                                next_starts.append(idx)
+                    end_idx = min(next_starts) if next_starts else len(response)
+
+                    section = response[start_idx:end_idx]
+
+                    # Try to extract subject and body
+                    subject = f"{campaign.product_name} - Email {i}"
+                    body = section
+
+                    if 'subject' in section.lower():
+                        subj_idx = section.lower().find('subject')
+                        subj_end = section.find('\n', subj_idx)
+                        if subj_end > subj_idx:
+                            subject = section[subj_idx:subj_end].replace('Subject:', '').replace('subject:', '').strip()[:60]
+
+                    emails.append({
+                        'subject': subject,
+                        'body': section[:1000],
+                        'generated_by': 'ContentWriterAgent'
+                    })
+                    break
+
+        # Ensure we have 5 emails
+        while len(emails) < 5:
+            emails.append({
+                'subject': f"{campaign.product_name} - Update {len(emails) + 1}",
+                'body': f"Hi,\n\nThank you for your interest in {campaign.product_name}.\n\nBest regards",
+                'generated_by': 'fallback'
+            })
+
+        return emails[:5]
 
 
 # Factory function for convenience
