@@ -60520,6 +60520,22 @@ ${item.generated_content}
                                         Result: ${exp.outcome.result_summary.substring(0, 80)}...
                                     </div>
                                 ` : ''}
+                                ${exp.status === 'running' ? `
+                                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                                        <button class="btn btn-sm" style="background: #22c55e; color: white; border: none; font-size: 11px;"
+                                                onclick="event.stopPropagation(); markExperimentSuccess('${exp.id}', '${exp.name.replace(/'/g, "\\'")}')">
+                                            ✅ Success
+                                        </button>
+                                        <button class="btn btn-sm" style="background: #ef4444; color: white; border: none; font-size: 11px;"
+                                                onclick="event.stopPropagation(); markExperimentFailed('${exp.id}', '${exp.name.replace(/'/g, "\\'")}')">
+                                            ❌ Failed
+                                        </button>
+                                        <button class="btn btn-sm" style="background: #8b5cf6; color: white; border: none; font-size: 11px;"
+                                                onclick="event.stopPropagation(); showRaiseTargetModal('${exp.id}', '${exp.name.replace(/'/g, "\\'")}', '${exp.kpi.current || ''}')">
+                                            📈 Raise Target
+                                        </button>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     `;
@@ -60862,6 +60878,32 @@ ${item.generated_content}
                     const style = severityStyles[alert.severity] || severityStyles['info'];
                     const typeIcon = typeIcons[alert.type] || '📋';
 
+                    // Session 657: Add action buttons based on alert type
+                    let actionButtons = '';
+                    if (alert.type === 'target_exceeded') {
+                        actionButtons = `
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn btn-sm" style="background: #22c55e; color: white; border: none;"
+                                        onclick="markExperimentSuccess('${alert.experiment_id}', '${alert.experiment_name.replace(/'/g, "\\'")}')">
+                                    ✅ Mark Success
+                                </button>
+                                <button class="btn btn-sm" style="background: #8b5cf6; color: white; border: none;"
+                                        onclick="showRaiseTargetModal('${alert.experiment_id}', '${alert.experiment_name.replace(/'/g, "\\'")}', '${alert.current_value || ''}')">
+                                    📈 Raise Target
+                                </button>
+                            </div>
+                        `;
+                    } else if (alert.type === 'off_track' || alert.type === 'kpi_drop') {
+                        actionButtons = `
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn btn-sm" style="background: #f59e0b; color: white; border: none;"
+                                        onclick="showPilotActionModal('${alert.experiment_id}', '${alert.experiment_name.replace(/'/g, "\\'")}')">
+                                    ⚡ Take Action
+                                </button>
+                            </div>
+                        `;
+                    }
+
                     return `
                         <div class="mb-2" style="background: ${style.bg}; border: 1px solid ${style.border}; border-radius: 8px; padding: 12px;">
                             <div class="d-flex justify-content-between align-items-start">
@@ -60884,6 +60926,7 @@ ${item.generated_content}
                                     💡 ${alert.recommended_action}
                                 </div>
                             ` : ''}
+                            ${actionButtons}
                         </div>
                     `;
                 }).join('');
@@ -60893,6 +60936,230 @@ ${item.generated_content}
             } catch (error) {
                 console.error('Error loading KPI alerts:', error);
                 document.getElementById('kpi-alerts-section').style.display = 'none';
+            }
+        }
+
+        // Session 657: Mark experiment as success
+        async function markExperimentSuccess(experimentId, experimentName) {
+            if (!confirm(`Mark "${experimentName.substring(0, 50)}" as SUCCESS?\n\nThis will complete the pilot with a success status.`)) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/complete/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'success',
+                        outcome_classification: 'pass',
+                        learnings: 'Target achieved - marked as success from Pilot Dashboard'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('✅ Pilot marked as success!', 'success');
+                    loadPilotProgressDashboard();
+                    loadKPIAlerts();
+                } else {
+                    showToast('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error marking experiment success:', error);
+                showToast('❌ Error marking experiment as success', 'error');
+            }
+        }
+
+        // Session 657: Mark experiment as failed
+        async function markExperimentFailed(experimentId, experimentName) {
+            const learnings = prompt(`Mark "${experimentName.substring(0, 50)}" as FAILED?\n\nEnter what we learned from this experiment:`);
+            if (learnings === null) return;
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/complete/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'failure',
+                        outcome_classification: 'learn',
+                        learnings: learnings || 'Experiment did not achieve target'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('📝 Pilot marked as failed with learnings captured', 'info');
+                    loadPilotProgressDashboard();
+                    loadKPIAlerts();
+                } else {
+                    showToast('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error marking experiment failed:', error);
+                showToast('❌ Error marking experiment as failed', 'error');
+            }
+        }
+
+        // Session 657: Show raise target modal
+        function showRaiseTargetModal(experimentId, experimentName, currentValue) {
+            const modalHtml = `
+                <div class="modal fade" id="raiseTargetModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #8b5cf6;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" style="color: #8b5cf6;">
+                                    📈 Raise Target - ${experimentName.substring(0, 40)}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Current Value</label>
+                                    <input type="text" class="form-control" value="${currentValue}" disabled
+                                           style="background: #2d2d2d; border-color: #444; color: #22c55e;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-white">New Target</label>
+                                    <input type="text" class="form-control" id="newTargetInput"
+                                           placeholder="e.g., 90% or 100 items/week"
+                                           style="background: #2d2d2d; border-color: #8b5cf6; color: #fff;">
+                                    <small class="text-muted">Enter a higher target to continue the experiment</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Notes (optional)</label>
+                                    <textarea class="form-control" id="raiseTargetNotes" rows="2"
+                                              placeholder="Why are we raising the target?"
+                                              style="background: #2d2d2d; border-color: #444; color: #fff;"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid #333;">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn" style="background: #8b5cf6; color: white;"
+                                        onclick="submitRaiseTarget('${experimentId}')">
+                                    📈 Raise Target
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if present
+            const existing = document.getElementById('raiseTargetModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('raiseTargetModal'));
+            modal.show();
+        }
+
+        // Session 657: Submit raise target
+        async function submitRaiseTarget(experimentId) {
+            const newTarget = document.getElementById('newTargetInput').value.trim();
+            const notes = document.getElementById('raiseTargetNotes').value.trim();
+
+            if (!newTarget) {
+                showToast('❌ Please enter a new target', 'error');
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/raise-target/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        new_target: newTarget,
+                        notes: notes || 'Target raised from Pilot Dashboard'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`📈 Target raised to ${newTarget}!`, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('raiseTargetModal')).hide();
+                    loadPilotProgressDashboard();
+                    loadKPIAlerts();
+                } else {
+                    showToast('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error raising target:', error);
+                showToast('❌ Error raising target', 'error');
+            }
+        }
+
+        // Session 657: Show pilot action modal for off-track experiments
+        function showPilotActionModal(experimentId, experimentName) {
+            const modalHtml = `
+                <div class="modal fade" id="pilotActionModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="modal-header" style="border-bottom: 1px solid #333;">
+                                <h5 class="modal-title" style="color: #f59e0b;">
+                                    ⚡ Take Action - ${experimentName.substring(0, 40)}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted">This experiment is off-track. What would you like to do?</p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn" style="background: #22c55e; color: white;"
+                                            onclick="markExperimentSuccess('${experimentId}', '${experimentName.replace(/'/g, "\\'")}'); bootstrap.Modal.getInstance(document.getElementById('pilotActionModal')).hide();">
+                                        ✅ Mark as Success Anyway
+                                    </button>
+                                    <button class="btn" style="background: #ef4444; color: white;"
+                                            onclick="markExperimentFailed('${experimentId}', '${experimentName.replace(/'/g, "\\'")}'); bootstrap.Modal.getInstance(document.getElementById('pilotActionModal')).hide();">
+                                        ❌ Mark as Failed (Capture Learnings)
+                                    </button>
+                                    <button class="btn" style="background: #6b7280; color: white;"
+                                            onclick="haltExperiment('${experimentId}', '${experimentName.replace(/'/g, "\\'")}'); bootstrap.Modal.getInstance(document.getElementById('pilotActionModal')).hide();">
+                                        ⏸️ Halt Experiment
+                                    </button>
+                                    <button class="btn btn-secondary" data-bs-dismiss="modal">
+                                        ← Keep Running
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if present
+            const existing = document.getElementById('pilotActionModal');
+            if (existing) existing.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('pilotActionModal'));
+            modal.show();
+        }
+
+        // Session 657: Halt experiment
+        async function haltExperiment(experimentId, experimentName) {
+            if (!confirm(`Halt "${experimentName.substring(0, 50)}"?\n\nThis will pause the experiment without marking it as success or failure.`)) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(`/api/experiments/${experimentId}/halt/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reason: 'Halted from Pilot Dashboard'
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('⏸️ Experiment halted', 'info');
+                    loadPilotProgressDashboard();
+                    loadKPIAlerts();
+                } else {
+                    showToast('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error halting experiment:', error);
+                showToast('❌ Error halting experiment', 'error');
             }
         }
 
