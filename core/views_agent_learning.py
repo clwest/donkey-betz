@@ -3379,7 +3379,7 @@ def get_experiments(request):
             experiments.append({
                 'id': str(exp.id),
                 'name': exp.name,
-                'hypothesis': exp.hypothesis[:200] if exp.hypothesis else '',
+                'hypothesis': exp.hypothesis or '',  # Session 656: Return full hypothesis for modal
                 'status': exp.status,
                 'kpi_owner': exp.kpi_owner,
                 'primary_kpi': exp.primary_kpi,
