@@ -21,8 +21,15 @@ class LearningBridgesConfig(AppConfig):
         Called when Django starts. Imports signal handlers to register them.
         """
         try:
-            # Import all bridge modules to register their signals
-            pass
+            # Session 646: Actually import bridge modules to register their signals
+            # The @receiver decorators only work if the modules are imported
+            from core.learning_bridges import agent_execution_bridge  # noqa: F401
+            from core.learning_bridges import application_outcome_bridge  # noqa: F401
+            from core.learning_bridges import revenue_attribution_bridge  # noqa: F401
+            from core.learning_bridges import advisor_feedback_bridge  # noqa: F401
+            from core.learning_bridges import collaboration_bridge  # noqa: F401
+            from core.learning_bridges import personalization_bridge  # noqa: F401
+            from core.learning_bridges import spider_data_bridge  # noqa: F401
 
             logger.info("✅ Learning Bridges initialized - all signals registered")
             logger.info("  - Agent Execution Bridge: ✓")
