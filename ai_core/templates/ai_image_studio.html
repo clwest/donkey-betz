@@ -7157,32 +7157,40 @@
 
                 <p class="text-muted mb-4">Unified dashboard for governance, pilot readiness, and system intelligence.</p>
 
-                <!-- ========== SESSION 615: EXPERIMENT RECOMMENDATIONS ========== -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card" style="background: #1a1a1a; border: 2px solid #f59e0b;">
-                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
-                                <h5 class="mb-0" style="color: #f59e0b;">
-                                    <span style="font-size: 24px;">💡</span> Experiment Recommendations
-                                    <small class="text-muted ms-2">AI-powered next steps for your pilots</small>
-                                </h5>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span id="rec-action-badge" class="badge" style="background: #ef4444; display: none;">0 need action</span>
-                                    <span id="rec-total-badge" class="badge" style="background: #f59e0b;">0 recommendations</span>
-                                    <button class="btn btn-sm btn-outline-light" onclick="loadExperimentRecommendations()">
-                                        🔄 Refresh
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div id="experiment-recommendations-list" class="row" style="max-height: 400px; overflow-y: auto;">
-                                    <p class="text-muted text-center small">Loading recommendations...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- END EXPERIMENT RECOMMENDATIONS -->
+                <!-- Session 654: Sub-tab Navigation -->
+                <ul class="nav nav-pills nav-fill mb-4" id="icc-subtabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="icc-gates-tab" data-bs-toggle="pill" data-bs-target="#icc-gates" type="button" role="tab">
+                            🚦 Gates
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-pilots-tab" data-bs-toggle="pill" data-bs-target="#icc-pilots" type="button" role="tab">
+                            🚀 Pilots
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-experiments-tab" data-bs-toggle="pill" data-bs-target="#icc-experiments" type="button" role="tab">
+                            🧪 Experiments
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-learning-tab" data-bs-toggle="pill" data-bs-target="#icc-learning" type="button" role="tab">
+                            📚 Learning
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="icc-activity-tab" data-bs-toggle="pill" data-bs-target="#icc-activity" type="button" role="tab">
+                            🔄 Activity
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Sub-tab Content -->
+                <div class="tab-content" id="icc-subtabs-content">
+
+                    <!-- ========== GATES SUB-TAB ========== -->
+                    <div class="tab-pane fade show active" id="icc-gates" role="tabpanel">
 
                 <div class="row">
                     <!-- Left Column: Pilot Readiness Gates -->
@@ -7380,6 +7388,9 @@
                     </div>
                 </div>
 
+                    </div>
+                    <!-- END GATES SUB-TAB -->
+
                 <!-- Session 597: Create Pilot Gate Modal -->
                 <div class="modal fade" id="createPilotModal" tabindex="-1" aria-labelledby="createPilotModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg" style="margin: 50px auto;">
@@ -7408,6 +7419,36 @@
                     </div>
                 </div>
                 <!-- End Create Pilot Modal -->
+
+                    <!-- ========== EXPERIMENTS SUB-TAB ========== -->
+                    <div class="tab-pane fade" id="icc-experiments" role="tabpanel">
+
+                <!-- ========== SESSION 615: EXPERIMENT RECOMMENDATIONS ========== -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card" style="background: #1a1a1a; border: 2px solid #f59e0b;">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(245, 158, 11, 0.2); border-bottom: 1px solid #f59e0b;">
+                                <h5 class="mb-0" style="color: #f59e0b;">
+                                    <span style="font-size: 24px;">💡</span> Experiment Recommendations
+                                    <small class="text-muted ms-2">AI-powered next steps for your pilots</small>
+                                </h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="rec-action-badge" class="badge" style="background: #ef4444; display: none;">0 need action</span>
+                                    <span id="rec-total-badge" class="badge" style="background: #f59e0b;">0 recommendations</span>
+                                    <button class="btn btn-sm btn-outline-light" onclick="loadExperimentRecommendations()">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="experiment-recommendations-list" class="row" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted text-center small">Loading recommendations...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END EXPERIMENT RECOMMENDATIONS -->
 
                 <!-- ========== SESSION 596: EXPERIMENT TRACKING REGISTRY ========== -->
                 <div class="row mt-4">
@@ -7499,6 +7540,12 @@
                     </div>
                 </div>
                 <!-- END EXPERIMENT TRACKING REGISTRY -->
+
+                    </div>
+                    <!-- END EXPERIMENTS SUB-TAB -->
+
+                    <!-- ========== PILOTS SUB-TAB ========== -->
+                    <div class="tab-pane fade" id="icc-pilots" role="tabpanel">
 
                 <!-- ========== SESSION 607: PILOT PROGRESS DASHBOARD ========== -->
                 <div class="row mt-4">
@@ -7612,6 +7659,12 @@
                 </div>
                 <!-- END PILOT PROGRESS DASHBOARD -->
 
+                    </div>
+                    <!-- END PILOTS SUB-TAB -->
+
+                    <!-- ========== ACTIVITY SUB-TAB ========== -->
+                    <div class="tab-pane fade" id="icc-activity" role="tabpanel">
+
                 <!-- ========== SESSION 614: RECENT ACTIVITY PANEL ========== -->
                 <div class="row mt-4">
                     <div class="col-12">
@@ -7647,6 +7700,12 @@
                     </div>
                 </div>
                 <!-- END RECENT ACTIVITY PANEL -->
+
+                    </div>
+                    <!-- END ACTIVITY SUB-TAB -->
+
+                    <!-- ========== LEARNING SUB-TAB ========== -->
+                    <div class="tab-pane fade" id="icc-learning" role="tabpanel">
 
                 <!-- ========== SESSION 598: LEARNING LOOP DASHBOARD ========== -->
                 <div class="row mt-4">
@@ -7821,6 +7880,12 @@
                     </div>
                 </div>
                 <!-- END LEARNING VELOCITY DASHBOARD -->
+
+                    </div>
+                    <!-- END LEARNING SUB-TAB -->
+
+                </div>
+                <!-- END SUB-TAB CONTENT -->
 
             </div>
             <!-- Pilot Gates Styles -->
@@ -14270,6 +14335,106 @@
                 </div>
             </div>
             <!-- END AGENTS TAB -->
+
+            <!-- SESSION 641/644: AGENT PERFORMANCE DASHBOARD -->
+            <div class="tab-pane fade" id="agent-performance" role="tabpanel">
+                <h3 class="mb-4">📈 Agent Performance Dashboard</h3>
+                <p class="text-muted mb-4">Track agent success rates, execution times, and identify agents needing attention.</p>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-total-agents">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Total Agents</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-active-agents">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Active</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-success-rate">0%</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Success Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-total-executions">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Executions</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-active-today">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Active Today</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card text-center" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none;">
+                            <div class="card-body py-3">
+                                <h2 class="mb-0" id="perf-failures-today">0</h2>
+                                <small style="text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; font-size: 10px;">Failures Today</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Top Performers -->
+                    <div class="col-md-6">
+                        <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background: rgba(34, 197, 94, 0.1); border-bottom: 1px solid rgba(34, 197, 94, 0.3);">
+                                <h5 class="mb-0" style="color: #22c55e;">🏆 Top Performers</h5>
+                                <button class="btn btn-sm btn-outline-success" onclick="loadAgentPerformanceDashboard()">Refresh</button>
+                            </div>
+                            <div class="card-body" id="perf-top-performers" style="max-height: 400px; overflow-y: auto;">
+                                <div class="text-center py-3 text-muted">Loading top performers...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Needs Attention -->
+                    <div class="col-md-6">
+                        <div class="card mb-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <div class="card-header" style="background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+                                <h5 class="mb-0" style="color: #ef4444;">⚠️ Needs Attention</h5>
+                            </div>
+                            <div class="card-body" id="perf-needs-attention" style="max-height: 400px; overflow-y: auto;">
+                                <div class="text-center py-3 text-muted">Loading agents needing attention...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Time Distribution -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card" style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(6, 182, 212, 0.3);">
+                            <div class="card-header" style="background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.3);">
+                                <h5 class="mb-0" style="color: #06b6d4;">⚡ Average Execution Time: <span id="perf-avg-time">--</span></h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-0">Performance metrics are tracked automatically for all agent executions. Agents with low success rates or high execution times will appear in the "Needs Attention" section.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END AGENT PERFORMANCE TAB -->
 
             <!-- SESSION 241: UNIFIED INTELLIGENCE TAB (Merged Spiders + Trending) -->
             <div class="tab-pane fade" id="trending" role="tabpanel">
@@ -60219,10 +60384,47 @@ ${item.generated_content}
             const commandCenterTab = document.querySelector('[data-bs-target="#intelligence-command-center"]');
             if (commandCenterTab) {
                 commandCenterTab.addEventListener('shown.bs.tab', function() {
-                    loadExperimentRecommendations();  // Session 615: Load recommendations first
+                    // Session 654: Load data for the default Gates sub-tab
+                    loadPilotGates();
+                });
+            }
+
+            // Session 654: Sub-tab event listeners for Command Center
+            const iccGatesTab = document.getElementById('icc-gates-tab');
+            if (iccGatesTab) {
+                iccGatesTab.addEventListener('shown.bs.tab', function() {
+                    loadPilotGates();
+                });
+            }
+
+            const iccPilotsTab = document.getElementById('icc-pilots-tab');
+            if (iccPilotsTab) {
+                iccPilotsTab.addEventListener('shown.bs.tab', function() {
                     loadPilotProgressDashboard();
-                    loadKPIAlerts();  // Session 611: Also load alerts
-                    loadRecentActivity();  // Session 614: Load activity feed
+                    loadKPIAlerts();
+                });
+            }
+
+            const iccExperimentsTab = document.getElementById('icc-experiments-tab');
+            if (iccExperimentsTab) {
+                iccExperimentsTab.addEventListener('shown.bs.tab', function() {
+                    loadExperimentRecommendations();
+                    loadExperimentPortfolio();
+                });
+            }
+
+            const iccLearningTab = document.getElementById('icc-learning-tab');
+            if (iccLearningTab) {
+                iccLearningTab.addEventListener('shown.bs.tab', function() {
+                    loadLearningsDashboard();
+                    loadVelocityDashboard();
+                });
+            }
+
+            const iccActivityTab = document.getElementById('icc-activity-tab');
+            if (iccActivityTab) {
+                iccActivityTab.addEventListener('shown.bs.tab', function() {
+                    loadRecentActivity();
                 });
             }
 
@@ -79580,6 +79782,85 @@ ${item.generated_content}
                     concernsRefreshInterval = null;
                 }
             });
+        }
+
+        // ====================================================================
+        // SESSION 644: AGENT PERFORMANCE DASHBOARD
+        // ====================================================================
+
+        async function loadAgentPerformanceDashboard() {
+            try {
+                // Load stats
+                const statsRes = await fetch('/api/agent-analytics/stats/');
+                const stats = await statsRes.json();
+
+                // Update stat cards
+                document.getElementById('perf-total-agents').textContent = stats.total_agents || 0;
+                document.getElementById('perf-active-agents').textContent = stats.active_agents || 0;
+                document.getElementById('perf-success-rate').textContent = `${(stats.success_rate || 0).toFixed(1)}%`;
+                document.getElementById('perf-total-executions').textContent = (stats.total_executions || 0).toLocaleString();
+                document.getElementById('perf-active-today').textContent = stats.active_today || 0;
+                document.getElementById('perf-failures-today').textContent = stats.failures_today || 0;
+
+                // Format execution time
+                const avgTimeMs = stats.avg_execution_time_ms || 0;
+                const avgTimeSec = (avgTimeMs / 1000).toFixed(1);
+                document.getElementById('perf-avg-time').textContent = avgTimeMs > 60000
+                    ? `${(avgTimeMs / 60000).toFixed(1)} min`
+                    : `${avgTimeSec}s`;
+
+                // Load top performers
+                const perfRes = await fetch('/api/agent-analytics/top-performers/');
+                const perfData = await perfRes.json();
+                const perfContainer = document.getElementById('perf-top-performers');
+
+                if (perfData.performers && perfData.performers.length > 0) {
+                    perfContainer.innerHTML = perfData.performers.slice(0, 10).map((p, i) => `
+                        <div class="d-flex justify-content-between align-items-center p-2 mb-2"
+                             style="background: rgba(34, 197, 94, 0.1); border-radius: 8px; border-left: 3px solid #22c55e;">
+                            <div>
+                                <span class="badge bg-success me-2">#${i + 1}</span>
+                                <strong style="color: #22c55e;">${p.name.replace('Agent', '')}</strong>
+                                <small class="text-muted ms-2">${p.total_executions} runs</small>
+                            </div>
+                            <span class="badge" style="background: linear-gradient(135deg, #22c55e, #16a34a);">
+                                ${p.success_rate.toFixed(1)}%
+                            </span>
+                        </div>
+                    `).join('');
+                } else {
+                    perfContainer.innerHTML = '<p class="text-muted text-center py-3">No performance data yet</p>';
+                }
+
+                // Load needs attention
+                const attentionRes = await fetch('/api/agent-analytics/needs-attention/');
+                const attentionData = await attentionRes.json();
+                const attentionContainer = document.getElementById('perf-needs-attention');
+
+                if (attentionData.agents && attentionData.agents.length > 0) {
+                    attentionContainer.innerHTML = attentionData.agents.map(a => `
+                        <div class="d-flex justify-content-between align-items-center p-2 mb-2"
+                             style="background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid #ef4444;">
+                            <div>
+                                <strong style="color: #ef4444;">${a.name.replace('Agent', '')}</strong>
+                                <small class="text-muted ms-2">${a.reason || 'Needs review'}</small>
+                            </div>
+                            <span class="badge bg-danger">${a.success_rate ? a.success_rate.toFixed(1) + '%' : 'N/A'}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    attentionContainer.innerHTML = '<p class="text-success text-center py-3">All agents performing well!</p>';
+                }
+
+            } catch (error) {
+                console.error('Error loading agent performance:', error);
+            }
+        }
+
+        // Initialize Agent Performance tab
+        const agentPerfTab = document.getElementById('agent-performance-tab');
+        if (agentPerfTab) {
+            agentPerfTab.addEventListener('shown.bs.tab', loadAgentPerformanceDashboard);
         }
 
         // ====================================================================
