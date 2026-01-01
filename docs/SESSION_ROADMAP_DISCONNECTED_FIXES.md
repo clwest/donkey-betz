@@ -213,8 +213,8 @@ for s in SituationInsight.objects.values('situation__name').annotate(c=Count('id
 |---------|--------|------|-------|
 | 647 | **COMPLETE** | Dec 31, 2025 | Was duplicate code, not broken. See SESSION_647 handoff |
 | 648 | **COMPLETE** | Dec 31, 2025 | 14 critical tasks scheduled. See SESSION_648 handoff |
-| 649 | PENDING | - | Dead Situations |
-| 650 | PENDING | - | Orphaned Services (decision_executor now handled) |
+| 649 | **COMPLETE** | Dec 31, 2025 | 25 trigger configs fixed. See SESSION_649 handoff |
+| 650 | PENDING | - | Orphaned Services (decision_executor done) |
 | 651 | PENDING | - | Empty Models |
 
 ---
