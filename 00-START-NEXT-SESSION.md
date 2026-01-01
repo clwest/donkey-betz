@@ -1,9 +1,27 @@
-# Session 649 - Start Here
+# Session 650 - Start Here
 
-**Previous Session:** 648
+**Previous Session:** 649
 **Date:** December 31, 2025
-**Focus:** Activate 7 Dead Situations
-**Health Score:** 92% (14 critical tasks now scheduled!)
+**Focus:** Orphaned Services Cleanup
+**Health Score:** 94% (Situation triggers fixed!)
+
+---
+
+## Session 649 Accomplishments
+
+### Situation Triggers Fixed - COMPLETE
+
+Investigated "7 dead situations" claim - found configuration issues, not code bugs.
+
+| Fix | Count | Details |
+|-----|-------|---------|
+| Spider names fixed | 11 | sec_edgar→sec, youtube_trending→youtube, google_news→newsapi |
+| SEC Filing triggers created | 2 | New triggers for 13F/13D filings |
+| Field paths fixed | 12 | Added `items.0.` prefix for nested data |
+
+**Result:** 22 of 36 triggers now working (582 fires, 549 alerts). Remaining 14 are waiting for matching data (extreme thresholds or rare events).
+
+**See:** `docs/handoffs/SESSION_649_SITUATION_TRIGGERS_FIXED.md`
 
 ---
 
@@ -215,7 +233,7 @@ print(f'Router: {len(router.AGENT_MAP)}')
 
 ---
 
-## Session 649 Focus: Activate 7 Dead Situations
+## Session 650 Focus: Orphaned Services Cleanup
 
 **See full roadmap:** `docs/SESSION_ROADMAP_DISCONNECTED_FIXES.md`
 
@@ -225,34 +243,29 @@ Remaining tasks from the audit:
 |---------|-------|--------|--------|
 | **647** | Decision Execution Loop | (was CRITICAL) | **COMPLETE** - was misdiagnosis |
 | **648** | Celery Task Scheduling | HIGH | **COMPLETE** - 14 tasks scheduled |
-| **649** | Activate 7 Dead Situations | MEDIUM | **CURRENT** |
-| 650 | Orphaned Services Cleanup | LOW | PENDING |
+| **649** | Dead Situations | MEDIUM | **COMPLETE** - 25 trigger configs fixed |
+| **650** | Orphaned Services Cleanup | LOW | **CURRENT** |
 | 651 | Empty Models Audit | LOW | PENDING |
 
-### Session 649 Task: Activate Dead Autonomous Situations
+### Session 650 Task: Audit Orphaned Services
 
-7 situations exist with ZERO insights - they were built but never triggered:
+The audit identified ~8 services (230KB) that may be unused. Need to verify:
 
-| Situation | Expected Trigger | Status |
-|-----------|-----------------|--------|
-| market_opportunity | New opportunity detected | 0 insights |
-| security_alert | Security concern raised | 0 insights |
-| trend_analysis | Trend pattern detected | 0 insights |
-| content_performance | Content metrics update | 0 insights |
-| blockchain_event | On-chain event detected | 0 insights |
-| stock_alert | Stock movement detected | 0 insights |
-| narrative_shift | Narrative change detected | 0 insights |
+| Service | Size | Status |
+|---------|------|--------|
+| `decision_executor.py` | 25.7KB | ✅ DONE (Session 647 - deprecated) |
+| Other services | ~200KB | Need investigation |
 
 **Steps:**
-1. Check situation trigger configuration
-2. Verify trigger signals are connected
-3. Add test events to validate triggers fire
-4. Monitor for first insights appearing
+1. Identify all services with zero imports
+2. Check if they're used via dynamic imports or Celery
+3. Deprecate or remove truly orphaned services
+4. Document which services are kept and why
 
 **Success Criteria:**
-- [ ] All 7 situations have trigger events connected
-- [ ] Test events create insights
-- [ ] No trigger errors in logs
+- [ ] All orphaned services identified
+- [ ] Dead code removed or deprecated
+- [ ] Remaining services documented
 
 ---
 
@@ -260,7 +273,8 @@ Remaining tasks from the audit:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **648** | `SESSION_648_CELERY_TASK_SCHEDULING.md` | **14 critical tasks scheduled** |
+| **649** | `SESSION_649_SITUATION_TRIGGERS_FIXED.md` | **25 trigger configs fixed** |
+| **648** | `SESSION_648_CELERY_TASK_SCHEDULING.md` | 14 critical tasks scheduled |
 | **647** | `SESSION_647_DECISION_EXECUTOR_ANALYSIS.md` | Decision executor was duplicate code |
 | **646+** | `SESSION_ROADMAP_DISCONNECTED_FIXES.md` | **5-session fix plan** |
 | **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | Orphaned infrastructure audit |
