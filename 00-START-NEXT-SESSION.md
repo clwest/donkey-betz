@@ -1,9 +1,40 @@
-# Session 648 - Start Here
+# Session 649 - Start Here
 
-**Previous Session:** 647
+**Previous Session:** 648
 **Date:** December 31, 2025
-**Focus:** Celery Task Scheduling (77 unscheduled tasks)
-**Health Score:** 90% (Decision Executor was working all along!)
+**Focus:** Activate 7 Dead Situations
+**Health Score:** 92% (14 critical tasks now scheduled!)
+
+---
+
+## Session 648 Accomplishments
+
+### Celery Task Scheduling - COMPLETE
+
+Audited all 190 Celery tasks and scheduled 14 critical recurring tasks that were missing from Beat.
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Scheduled tasks | 113 | 127 |
+| Unscheduled critical tasks | 14 | 0 |
+
+**New schedules added:**
+- `collect_spider_data` - Every 4 hours (main spider collection)
+- `run_unified_intelligence_pipeline` - Every 6 hours
+- `run_stock_market_intelligence` - M-F at market hours
+- `run_blockchain_security_monitor` - Every 4 hours
+- `run_autonomous_content_studio` - Every 4 hours
+- `run_narrative_drift_cycle` - Every 6 hours
+- `generate_weekly_intelligence_brief` - Monday 9 AM
+- `unified_pipeline_health_check` - Every 30 minutes
+- `track_content_performance` - Daily 8 PM
+- `send_narrative_daily_digest` - Daily 8 AM
+- `maintain_dream_backlog` - Daily 3 AM
+- `cleanup_old_resolve_jobs` - Daily 4 AM
+- `cleanup_expired_uploads` - Daily 4:30 AM
+- `aggregate_roi_metrics_daily` - Daily 1 AM
+
+**See:** `docs/handoffs/SESSION_648_CELERY_TASK_SCHEDULING.md`
 
 ---
 
@@ -184,7 +215,7 @@ print(f'Router: {len(router.AGENT_MAP)}')
 
 ---
 
-## Session 648 Focus: Celery Task Scheduling
+## Session 649 Focus: Activate 7 Dead Situations
 
 **See full roadmap:** `docs/SESSION_ROADMAP_DISCONNECTED_FIXES.md`
 
@@ -193,34 +224,35 @@ Remaining tasks from the audit:
 | Session | Focus | Impact | Status |
 |---------|-------|--------|--------|
 | **647** | Decision Execution Loop | (was CRITICAL) | **COMPLETE** - was misdiagnosis |
-| **648** | Celery Task Scheduling (77 unscheduled) | HIGH | **CURRENT** |
-| 649 | Activate 7 Dead Situations | MEDIUM | PENDING |
-| 650 | Orphaned Services Cleanup | LOW | PENDING (decision_executor handled) |
+| **648** | Celery Task Scheduling | HIGH | **COMPLETE** - 14 tasks scheduled |
+| **649** | Activate 7 Dead Situations | MEDIUM | **CURRENT** |
+| 650 | Orphaned Services Cleanup | LOW | PENDING |
 | 651 | Empty Models Audit | LOW | PENDING |
 
-### Session 648 Task: Schedule Critical Celery Tasks
+### Session 649 Task: Activate Dead Autonomous Situations
 
-77 tasks (47%) are defined but never scheduled. Priority tasks to schedule:
+7 situations exist with ZERO insights - they were built but never triggered:
 
-| Task | Purpose | Suggested Schedule |
-|------|---------|-------------------|
-| `collect_spider_data` | Main spider collection | Every 4 hours |
-| `sync_agent_metrics` | Performance aggregation | Every hour |
-| `cleanup_old_spider_data` | Database maintenance | Daily 3 AM |
-| `backfill_embeddings` | Fill missing embeddings | Every 6 hours |
-| `generate_collective_report` | Intelligence summary | Daily 6 AM |
+| Situation | Expected Trigger | Status |
+|-----------|-----------------|--------|
+| market_opportunity | New opportunity detected | 0 insights |
+| security_alert | Security concern raised | 0 insights |
+| trend_analysis | Trend pattern detected | 0 insights |
+| content_performance | Content metrics update | 0 insights |
+| blockchain_event | On-chain event detected | 0 insights |
+| stock_alert | Stock movement detected | 0 insights |
+| narrative_shift | Narrative change detected | 0 insights |
 
 **Steps:**
-1. Audit all 77 unscheduled tasks
-2. Categorize: should-schedule vs manual-only vs deprecated
-3. Add Beat schedules for priority tasks in `core/celery.py`
-4. Test each newly scheduled task
-5. Document which tasks remain manual
+1. Check situation trigger configuration
+2. Verify trigger signals are connected
+3. Add test events to validate triggers fire
+4. Monitor for first insights appearing
 
 **Success Criteria:**
-- [ ] Critical tasks are scheduled
-- [ ] No task conflicts or overlaps
-- [ ] Celery Beat runs without errors
+- [ ] All 7 situations have trigger events connected
+- [ ] Test events create insights
+- [ ] No trigger errors in logs
 
 ---
 
@@ -228,7 +260,8 @@ Remaining tasks from the audit:
 
 | Session | Document | Focus |
 |---------|----------|-------|
-| **647** | `SESSION_647_DECISION_EXECUTOR_ANALYSIS.md` | **Decision executor was duplicate code** |
+| **648** | `SESSION_648_CELERY_TASK_SCHEDULING.md` | **14 critical tasks scheduled** |
+| **647** | `SESSION_647_DECISION_EXECUTOR_ANALYSIS.md` | Decision executor was duplicate code |
 | **646+** | `SESSION_ROADMAP_DISCONNECTED_FIXES.md` | **5-session fix plan** |
 | **646** | `SESSION_646_DISCONNECTED_FEATURES_AUDIT.md` | Orphaned infrastructure audit |
 | **646** | `SESSION_646_DATA_FLOW_VERIFICATION.md` | Data pipeline verified + 3 bugs fixed |

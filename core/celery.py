@@ -1290,6 +1290,144 @@ app.conf.beat_schedule = {
             'expires': 3600,  # Expire after 1 hour
         }
     },
+
+    # ==========================================================================
+    # SESSION 648: PREVIOUSLY UNSCHEDULED CRITICAL TASKS
+    # These tasks were defined but never added to Beat schedule
+    # ==========================================================================
+
+    # Spider Data Collection - Main spider network task
+    'collect-spider-data': {
+        'task': 'core.tasks.collect_spider_data',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Unified Intelligence Pipeline - Aggregates all intelligence sources
+    'run-unified-intelligence-pipeline': {
+        'task': 'core.tasks.run_unified_intelligence_pipeline',
+        'schedule': crontab(minute=30, hour='*/6'),  # Every 6 hours at :30
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Stock Market Intelligence - Market analysis
+    'run-stock-market-intelligence': {
+        'task': 'core.tasks.run_stock_market_intelligence',
+        'schedule': crontab(minute=0, hour='9,12,16', day_of_week='1-5'),  # Market hours M-F
+        'options': {
+            'expires': 3600,  # 1 hour
+            'queue': 'long_running',
+        }
+    },
+
+    # Blockchain Security Monitor - On-chain security analysis
+    'run-blockchain-security-monitor': {
+        'task': 'core.tasks.run_blockchain_security_monitor',
+        'schedule': crontab(minute=15, hour='*/4'),  # Every 4 hours at :15
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Autonomous Content Studio - Content generation system
+    'run-autonomous-content-studio': {
+        'task': 'core.tasks.run_autonomous_content_studio',
+        'schedule': crontab(minute=0, hour='*/4'),  # Every 4 hours at :00
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Narrative Drift Cycle - Trend and narrative analysis
+    'run-narrative-drift-cycle': {
+        'task': 'core.tasks.run_narrative_drift_cycle',
+        'schedule': crontab(minute=45, hour='*/6'),  # Every 6 hours at :45
+        'options': {
+            'expires': 21600,  # 6 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Weekly Intelligence Brief - Executive summary
+    'generate-weekly-intelligence-brief': {
+        'task': 'core.tasks.generate_weekly_intelligence_brief',
+        'schedule': crontab(minute=0, hour=9, day_of_week=1),  # Monday 9 AM
+        'options': {
+            'expires': 86400,  # 24 hours
+            'queue': 'long_running',
+        }
+    },
+
+    # Unified Pipeline Health Check - System health monitoring
+    'unified-pipeline-health-check': {
+        'task': 'core.tasks.unified_pipeline_health_check',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+
+    # Track Content Performance - Analytics tracking
+    'track-content-performance': {
+        'task': 'core.tasks.track_content_performance',
+        'schedule': crontab(minute=0, hour=20),  # Daily 8 PM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    # Narrative Daily Digest - Daily narrative summary
+    'send-narrative-daily-digest': {
+        'task': 'core.tasks.send_narrative_daily_digest',
+        'schedule': crontab(minute=0, hour=8),  # Daily 8 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    # Dream Backlog Maintenance - Keep dream queue healthy
+    'maintain-dream-backlog': {
+        'task': 'core.tasks.maintain_dream_backlog',
+        'schedule': crontab(minute=0, hour=3),  # Daily 3 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    # Cleanup Tasks - Database maintenance
+    'cleanup-old-resolve-jobs': {
+        'task': 'core.tasks.cleanup_old_resolve_jobs',
+        'schedule': crontab(minute=0, hour=4),  # Daily 4 AM
+        'kwargs': {'days': 30},
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    'cleanup-expired-uploads': {
+        'task': 'core.tasks.cleanup_expired_uploads',
+        'schedule': crontab(minute=30, hour=4),  # Daily 4:30 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+
+    # Daily ROI Metrics Aggregation
+    'aggregate-roi-metrics-daily': {
+        'task': 'core.tasks.aggregate_roi_metrics_daily',
+        'schedule': crontab(minute=0, hour=1),  # Daily 1 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
 }
 
 # Task routing configuration
