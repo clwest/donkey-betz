@@ -8181,9 +8181,14 @@
                                         </h5>
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="badge" id="icc-health-status" style="background: #22c55e;">Healthy</span>
-                                            <button class="btn btn-sm btn-outline-success" onclick="loadSystemHealth()">
-                                                🔄 Refresh
-                                            </button>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-success" onclick="loadSystemHealth()">
+                                                    🔄 Refresh
+                                                </button>
+                                                <button class="btn btn-outline-success" id="health-auto-refresh-btn" onclick="toggleHealthAutoRefresh()">
+                                                    ⏱️ Auto: Off
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="card-body">
@@ -61668,6 +61673,30 @@ ${item.generated_content}
                 console.error('Error loading system health:', error);
             }
         }
+
+        // Session 660: Auto-refresh for Health Dashboard
+        let healthAutoRefreshInterval = null;
+        window.toggleHealthAutoRefresh = function() {
+            const btn = document.getElementById('health-auto-refresh-btn');
+            if (healthAutoRefreshInterval) {
+                // Turn off
+                clearInterval(healthAutoRefreshInterval);
+                healthAutoRefreshInterval = null;
+                btn.innerHTML = '⏱️ Auto: Off';
+                btn.classList.remove('active');
+                console.log('💚 Auto-refresh disabled');
+            } else {
+                // Turn on (30 second interval)
+                loadSystemHealth();  // Load immediately
+                healthAutoRefreshInterval = setInterval(() => {
+                    loadSystemHealth();
+                    console.log('💚 Auto-refreshed health data');
+                }, 30000);
+                btn.innerHTML = '⏱️ Auto: 30s';
+                btn.classList.add('active');
+                console.log('💚 Auto-refresh enabled (30s interval)');
+            }
+        };
 
         // Session 657: Load Governance Decisions for Command Center
         async function loadGovernanceDecisions(filter = '') {
