@@ -124,7 +124,7 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                 "type": "function",
                 "function": {
                     "name": "initiate_content_debate",
-                    "description": "Start agent debate about what topic to cover next for a channel. Coordinates TopicMiner, Contrarian, and PerformanceAnalyst agents.",
+                    "description": "Start agent debate about what topic to cover next for a channel. By default uses TopicMiner, Contrarian, and PerformanceAnalyst, but can use ANY agents via debater_agents parameter.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -135,6 +135,11 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
                             "context": {
                                 "type": "string",
                                 "description": "Additional context for the debate (recent trends, user feedback, etc.)"
+                            },
+                            "debater_agents": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Optional list of agent names to use as debaters (e.g., ['BlockchainAuditCoordinator', 'StockAuditCoordinator', 'CTOAgent']). Defaults to TopicMiner, Contrarian, PerformanceAnalyst if not specified."
                             }
                         },
                         "required": ["channel_id"]
@@ -439,15 +444,21 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         Start agent debate about next content topic.
 
         Session 469: Now calls real debate agents (TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent)
+        Session 653: COMPOSABILITY FIX - Now accepts ANY agents via debater_agents parameter!
+                     Use AgentRouter for dynamic agent loading instead of hardcoded imports.
         """
-        # Session 468: Fixed import - these models are in models_autonomous_studio not models
         from core.models_autonomous_studio import ContentChannel, ContentDebate
-        from core.agents.content.topic_miner_agent import TopicMinerAgent
-        from core.agents.content.contrarian_agent import ContrarianAgent
-        from core.agents.content.performance_analyst_agent import PerformanceAnalystAgent
+        from core.agent_router import AgentRouter
 
         channel_id = tool_input.get('channel_id')
         additional_context = tool_input.get('context', '')
+
+        # Session 653: Accept configurable debater agents - enables cross-domain composition!
+        debater_agent_names = tool_input.get('debater_agents', [
+            'TopicMinerAgent',
+            'ContrarianAgent',
+            'PerformanceAnalystAgent'
+        ])
 
         try:
             channel = ContentChannel.objects.get(id=channel_id)
@@ -462,69 +473,78 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         scifi_context = {}  # Agents don't need sci-fi context for debates
         spider_context = {"domain_keywords": domain_keywords}
 
-        # ============================================================
-        # STEP 1: TopicMinerAgent - Find trending topics
-        # ============================================================
-        logger.info(f"🗣️ Debate Step 1: TopicMinerAgent analyzing trends for {channel.name}")
-        topic_miner = TopicMinerAgent(user=self.user)
-        topic_miner_task = f"Find trending topics in the {channel.topic_domain} domain. The channel '{channel.name}' targets {channel.target_audience or 'general audience'}. {additional_context}"
+        # Session 653: Use AgentRouter for dynamic agent instantiation
+        router = AgentRouter()
+        agent_positions = []  # Store all agent positions dynamically
 
-        try:
-            miner_result = topic_miner.execute(
-                task=topic_miner_task,
-                context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                scifi_context=scifi_context,
-                spider_context=spider_context
-            )
-            topic_miner_position = miner_result.message or "TopicMinerAgent could not find trends"
-            if miner_result.data and miner_result.data.get('tool_results'):
-                # Include tool results in position
-                topic_miner_position += f"\n\nData: {json.dumps(miner_result.data['tool_results'], indent=2)[:1000]}"
-        except Exception as e:
-            logger.error(f"TopicMinerAgent error: {e}")
-            topic_miner_position = f"TopicMinerAgent error: {str(e)}"
+        # Define role-based task templates
+        role_tasks = {
+            0: f"Find trending topics and opportunities in the {channel.topic_domain} domain. The channel '{channel.name}' targets {channel.target_audience or 'general audience'}. {additional_context}",
+            1: lambda prev: f"Challenge assumptions and suggest unique angles for content in the {channel.topic_domain} domain. Channel style: {channel.visual_style or 'modern'}. Consider what the previous agent found: {prev[:500]}",
+            2: lambda prev: f"Analyze and predict what topics would perform best based on your expertise. Domain: {channel.topic_domain}. Consider the discussion so far: {prev[:500]}",
+        }
 
-        # ============================================================
-        # STEP 2: ContrarianAgent - Challenge and suggest unique angles
-        # ============================================================
-        logger.info(f"🗣️ Debate Step 2: ContrarianAgent challenging for {channel.name}")
-        contrarian = ContrarianAgent(user=self.user)
-        contrarian_task = f"Check saturation and suggest unique angles for content in the {channel.topic_domain} domain. Channel style: {channel.visual_style or 'modern'}. Consider what TopicMiner found: {topic_miner_position[:500]}"
+        # Run each debater agent
+        for i, agent_name in enumerate(debater_agent_names):
+            logger.info(f"🗣️ Debate Step {i+1}: {agent_name} contributing for {channel.name}")
 
-        try:
-            contrarian_result = contrarian.execute(
-                task=contrarian_task,
-                context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                scifi_context=scifi_context,
-                spider_context=spider_context
-            )
-            contrarian_position = contrarian_result.message or "ContrarianAgent had no suggestions"
-            if contrarian_result.data and contrarian_result.data.get('tool_results'):
-                contrarian_position += f"\n\nData: {json.dumps(contrarian_result.data['tool_results'], indent=2)[:1000]}"
-        except Exception as e:
-            logger.error(f"ContrarianAgent error: {e}")
-            contrarian_position = f"ContrarianAgent error: {str(e)}"
+            # Get agent class from router
+            agent_class = router.AGENT_MAP.get(agent_name)
+            if not agent_class:
+                logger.warning(f"Agent {agent_name} not found in router, skipping")
+                agent_positions.append({
+                    'agent_name': agent_name,
+                    'position': f"Agent {agent_name} not found in AgentRouter"
+                })
+                continue
 
-        # ============================================================
-        # STEP 3: PerformanceAnalystAgent - Data-driven insights
-        # ============================================================
-        logger.info(f"🗣️ Debate Step 3: PerformanceAnalystAgent analyzing for {channel.name}")
-        analyst = PerformanceAnalystAgent(user=self.user)
-        analyst_task = f"Analyze historical performance for channel {channel.name} (ID: {channel.id}) and predict what topics would perform best based on data. Domain: {channel.topic_domain}."
+            # Instantiate agent
+            try:
+                agent = agent_class(user=self.user)
+            except Exception as e:
+                logger.error(f"Failed to instantiate {agent_name}: {e}")
+                agent_positions.append({
+                    'agent_name': agent_name,
+                    'position': f"Failed to instantiate: {str(e)}"
+                })
+                continue
 
-        try:
-            analyst_result = analyst.execute(
-                task=analyst_task,
-                context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
-                scifi_context=scifi_context,
-                spider_context=spider_context
-            )
-            analyst_position = analyst_result.message or "PerformanceAnalystAgent had no data insights"
-            if analyst_result.data and analyst_result.data.get('tool_results'):
-                analyst_position += f"\n\nData: {json.dumps(analyst_result.data['tool_results'], indent=2)[:1000]}"
-        except Exception as e:
-            logger.error(f"PerformanceAnalystAgent error: {e}")
-            analyst_position = f"PerformanceAnalystAgent error: {str(e)}"
+            # Build task based on position in debate
+            if i == 0:
+                task = role_tasks[0]
+            elif i < len(role_tasks):
+                prev_position = agent_positions[-1]['position'] if agent_positions else ""
+                task = role_tasks[i](prev_position)
+            else:
+                # For additional agents beyond 3, use a generic task
+                prev_position = agent_positions[-1]['position'] if agent_positions else ""
+                task = f"Contribute your unique perspective on {channel.topic_domain} content strategy. Consider the discussion so far: {prev_position[:500]}"
+
+            # Execute the agent
+            try:
+                result = agent.execute(
+                    task=task,
+                    context={"channel_id": str(channel.id), "domain_keywords": domain_keywords},
+                    scifi_context=scifi_context,
+                    spider_context=spider_context
+                )
+                position = result.message or f"{agent_name} had no response"
+                if result.data and result.data.get('tool_results'):
+                    position += f"\n\nData: {json.dumps(result.data['tool_results'], indent=2)[:1000]}"
+            except Exception as e:
+                logger.error(f"{agent_name} error: {e}")
+                position = f"{agent_name} error: {str(e)}"
+
+            agent_positions.append({
+                'agent_name': agent_name,
+                'position': position
+            })
+            logger.info(f"✅ {agent_name} contributed to debate")
+
+        # Map positions to ContentDebate fields (for backwards compatibility)
+        topic_miner_position = agent_positions[0]['position'] if len(agent_positions) > 0 else "No debaters participated"
+        contrarian_position = agent_positions[1]['position'] if len(agent_positions) > 1 else "Only one debater participated"
+        analyst_position = agent_positions[2]['position'] if len(agent_positions) > 2 else "Only two debaters participated"
 
         # ============================================================
         # STEP 4: Synthesize final decision from debate
@@ -550,18 +570,22 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         elif "deep-dive" in contrarian_position.lower() or "technical" in contrarian_position.lower():
             chosen_angle = "Technical deep-dive for engaged audiences"
 
-        # Decision reasoning
-        decision_reasoning = f"""
-        Debate synthesis from 3 agents:
+        # Session 653: Dynamic decision reasoning based on actual participants
+        participated_names = [p['agent_name'] for p in agent_positions]
+        agent_summaries = "\n".join([
+            f"        {i+1}. {p['agent_name']} contributed expertise"
+            for i, p in enumerate(agent_positions)
+        ])
 
-        1. TopicMinerAgent identified trending topics in {channel.topic_domain}
-        2. ContrarianAgent challenged mainstream approaches and suggested differentiation
-        3. PerformanceAnalystAgent provided data-driven performance predictions
+        decision_reasoning = f"""
+        Debate synthesis from {len(agent_positions)} agents:
+
+{agent_summaries}
 
         Final topic: {proposed_topic}
         Chosen angle: {chosen_angle}
 
-        This decision balances trending potential, unique positioning, and historical performance data.
+        This decision synthesizes insights from all participating agents.
         """
 
         # Create debate record with REAL agent positions
@@ -585,11 +609,12 @@ CRITICAL: Always use tools to interact with the system. Never simulate or make u
         return {
             "debate_id": str(debate.id),
             "status": "debate_complete",
-            "message": "Real agent debate completed successfully",
+            "message": f"Cross-domain agent debate completed with {len(participated_names)} agents",
             "proposed_topic": proposed_topic,
             "chosen_angle": chosen_angle,
             "final_decision": proposed_topic,
-            "agents_participated": ["TopicMinerAgent", "ContrarianAgent", "PerformanceAnalystAgent"]
+            "agents_participated": participated_names,  # Session 653: Now shows actual agents used
+            "is_cross_domain": any(name not in ['TopicMinerAgent', 'ContrarianAgent', 'PerformanceAnalystAgent'] for name in participated_names)
         }
 
     def _trigger_content_creation(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
