@@ -20357,6 +20357,84 @@ def report_execution_gap_metrics():
         }
 
 
+# ==================== SESSION 658: AI DECISION PROMOTER ====================
+
+@shared_task
+def ai_promote_decisions(batch_size: int = 50):
+    """
+    Session 658: AI-powered decision auto-promotion using GPT-5-mini.
+
+    Uses the Responses API with reasoning capabilities to evaluate
+    pending decisions and auto-promote high-quality ones to canonical.
+
+    GPT-5-mini Configuration:
+    - reasoning.effort: medium (give time to think)
+    - max_output_tokens: 500 (plenty of tokens for reasoning)
+    - No temperature (reasoning model)
+
+    Args:
+        batch_size: Number of decisions to process per run (default 50)
+
+    Returns:
+        dict with promotion results
+    """
+    logger.info(f"🤖 [SESSION 658] Starting AI decision promotion (batch_size={batch_size})...")
+
+    try:
+        from core.services.ai_decision_promoter import AIDecisionPromoterService
+
+        service = AIDecisionPromoterService()
+
+        # Run batch promotion
+        result = service.run_batch_promotion(
+            batch_size=batch_size,
+            promoter_name="AI-AutoPromoter-Celery"
+        )
+
+        # Log results
+        if result['promoted'] > 0:
+            logger.info(
+                f"🤖 [SESSION 658] AI promoted {result['promoted']} decisions "
+                f"(rejected {result['rejected']}, model: {result['model']})"
+            )
+
+            # Discord notification for significant promotions
+            if result['promoted'] >= 5:
+                try:
+                    from core.services.discord_notifications import DiscordNotificationService
+                    discord = DiscordNotificationService()
+                    message = f"**🤖 AI Decision Promoter**\n"
+                    message += f"✅ Promoted {result['promoted']} decisions to canonical\n"
+                    message += f"Model: {result['model']}\n"
+                    discord.send_to_channel('system-status', message)
+                except Exception as e:
+                    logger.debug(f"🤖 [SESSION 658] Discord notification failed: {e}")
+        else:
+            logger.info(f"🤖 [SESSION 658] No decisions promoted (evaluated {result['evaluated']})")
+
+        # Get current stats
+        stats = service.get_promotion_stats()
+
+        return {
+            'success': True,
+            'batch_size': batch_size,
+            'evaluated': result['evaluated'],
+            'promoted': result['promoted'],
+            'rejected': result['rejected'],
+            'model': result['model'],
+            'total_canonical': stats['canonical'],
+            'canonical_percentage': stats['canonical_percentage'],
+            'remaining_drafts': stats['pending_draft']
+        }
+
+    except Exception as e:
+        logger.error(f"🤖 [SESSION 658] AI promotion failed: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 # ==================== SESSION 594: PILOT AUTO-COMPLETION ====================
 
 @shared_task

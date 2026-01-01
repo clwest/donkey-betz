@@ -1442,6 +1442,20 @@ app.conf.beat_schedule = {
             'expires': 3600,  # 1 hour
         }
     },
+
+    # Session 658: AI Decision Promoter (GPT-5-mini)
+    # Uses AI to evaluate and auto-promote high-quality decisions to canonical
+    'ai-promote-decisions': {
+        'task': 'core.tasks.ai_promote_decisions',
+        'schedule': crontab(hour='*/4', minute=20),  # Every 4 hours at :20
+        'options': {
+            'expires': 14400,  # 4 hours
+            'queue': 'long_running',  # Uses OpenAI API, may take time
+        },
+        'kwargs': {
+            'batch_size': 50,  # Process 50 decisions per run
+        }
+    },
 }
 
 # Task routing configuration
