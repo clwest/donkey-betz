@@ -1,9 +1,58 @@
-# Session 655 - Start Here
+# Session 656 - Start Here
 
-**Previous Session:** 654
+**Previous Session:** 655
 **Date:** December 31, 2025
-**Focus:** UI Reorganization Complete
+**Focus:** Gate Pipeline Data Verification & UI Enhancements
 **Health Score:** 100% (all systems verified)
+
+---
+
+## Session 655 Accomplishments
+
+### 1. Fixed Stuck 'Ready' Gate - COMPLETE
+
+The auto-approve task was only processing `status='not_started'` gates, leaving gates with `status='ready'` (checklist complete but waiting for manual approval) stuck.
+
+**Fix:** Updated query in `auto_approve_low_risk_gates`:
+```python
+# Before: status='not_started'
+# After:  status__in=['not_started', 'ready']
+```
+
+**Result:** The stuck gate was processed, now 18 running pilots (was 13).
+
+### 2. Gate Pipeline UI Enhancements - COMPLETE
+
+Added two new stats to the Gate Pipeline card:
+
+| New Stat | Value | Color |
+|----------|-------|-------|
+| ✅ Completed Pilots | 90 | Green |
+| 📊 Total Gates | 145 | Purple |
+
+**Files Modified:** `ai_core/templates/ai_image_studio.html`
+
+### 3. Fixed Avg Pilot Duration Metric - COMPLETE
+
+The metric was showing 197.6h due to 29 old outlier pilots (some 600+ hours).
+
+**Fix:** Updated `core/views_agent_learning.py`:
+- Only include pilots completed in the last 30 days
+- Cap duration at 72 hours to exclude stuck pilots
+
+**Result:** Now shows 16.7h (was 197.6h)
+
+---
+
+## System Stats (After Session 655)
+
+| Component | Count | Status |
+|-----------|-------|--------|
+| **Running Pilots** | 18 | +5 from auto-approve fix |
+| **Completed Pilots** | 90 | Now visible in UI |
+| **Total Gates** | 145 | Now visible in UI |
+| **Waived Gates** | 17 | +5 from ready gate fix |
+| **Ready Gates** | 0 | Fixed (was 1 stuck) |
 
 ---
 
@@ -141,6 +190,7 @@ curl http://localhost:8000/api/v1/reasoning/dashboard/ | python3 -m json.tool
 
 | Session | Document | Focus |
 |---------|----------|-------|
+| **655** | *(commits only)* | **Gate Pipeline fixes + UI enhancements** |
 | **654** | `SESSION_654_AUTONOMOUS_GATE_APPROVAL.md` | **Auto-waive low-risk gates** |
 | **654** | `SESSION_654_RESEARCH_TAB_UI_AUDIT.md` | **9/9 Research sub-tabs verified** |
 | **654** | `SESSION_654_COMMAND_CENTER_SUBTABS.md` | **Command Center reorganized into 5 sub-tabs** |
