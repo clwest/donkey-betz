@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { assistantApi, userLearningApi } from '@/lib/api'
+import { useAuthStore } from '@/stores/authStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
@@ -86,42 +87,51 @@ export default function AssistantPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
 
   // Fetch attention items
   const { data: attentionData } = useQuery({
     queryKey: ['attention-items'],
     queryFn: () => assistantApi.getAttentionItems(),
+    enabled: isAuthenticated,
+    retry: false,
   })
 
   // Fetch learning summary
   const { data: learningData } = useQuery({
     queryKey: ['assistant-learning'],
     queryFn: () => assistantApi.getLearning(),
+    enabled: isAuthenticated,
+    retry: false,
   })
 
   // User Learning Queries
   const { data: preferencesData } = useQuery({
     queryKey: ['user-preferences'],
     queryFn: () => userLearningApi.getAllPreferences(),
-    enabled: sidebarTab === 'learning',
+    enabled: isAuthenticated && sidebarTab === 'learning',
+    retry: false,
   })
 
   const { data: styleEvolutionData } = useQuery({
     queryKey: ['style-evolution'],
     queryFn: () => userLearningApi.getStyleEvolution(),
-    enabled: sidebarTab === 'learning',
+    enabled: isAuthenticated && sidebarTab === 'learning',
+    retry: false,
   })
 
   const { data: insightsData } = useQuery({
     queryKey: ['learning-insights'],
     queryFn: () => userLearningApi.getInsights(),
-    enabled: sidebarTab === 'learning',
+    enabled: isAuthenticated && sidebarTab === 'learning',
+    retry: false,
   })
 
   const { data: velocityData } = useQuery({
     queryKey: ['learning-velocity'],
     queryFn: () => userLearningApi.getVelocity(),
-    enabled: sidebarTab === 'learning',
+    enabled: isAuthenticated && sidebarTab === 'learning',
+    retry: false,
   })
 
   // Generate insights mutation
