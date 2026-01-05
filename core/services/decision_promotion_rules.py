@@ -1,9 +1,9 @@
 """
 Decision Promotion Rules Service
-Session 589: Address Execution Gap (82% DRAFT decisions)
+Session 589: Address Pending Review backlog (DRAFT decisions awaiting action)
 
 This service implements governance-respecting auto-promotion rules
-to close the gap between decisions and actions.
+to help manage the backlog of agent-generated suggestions.
 
 ChatGPT's Strategic Guidance:
 - Don't rush autonomous execution (needs guardrails)
@@ -17,7 +17,7 @@ Tiered Promotion System:
 
 The goal is NOT to automate everything, but to:
 1. Clear the backlog of obvious, low-risk guidelines
-2. Make the execution gap visible to operators
+2. Make the pending review backlog visible to operators
 3. Respect the human-in-the-loop governance model
 """
 
@@ -226,15 +226,15 @@ class DecisionPromotionRules:
         logger.info(f"Auto-promotion complete: {result['promoted'] or result['would_promote']} decisions")
         return result
 
-    def get_execution_gap_metrics(self) -> Dict[str, Any]:
+    def get_pending_review_metrics(self) -> Dict[str, Any]:
         """
-        Get metrics showing the current execution gap.
+        Get metrics showing the current pending review backlog.
 
-        This makes the gap visible to operators so they can
+        This makes the backlog visible to operators so they can
         prioritize manual review of high-impact decisions.
 
         Returns:
-            Dict with gap analysis metrics
+            Dict with pending review analysis metrics
         """
         from core.models_unified_system import AgentDecisionSummary
 
@@ -289,14 +289,14 @@ class DecisionPromotionRules:
             .values_list('impact_area', 'count')
         )
 
-        gap_percentage = (draft_count / total * 100) if total > 0 else 0
+        pending_percentage = (draft_count / total * 100) if total > 0 else 0
 
         return {
             'total_decisions': total,
             'by_status': by_status,
-            'execution_gap': {
+            'pending_review': {
                 'draft_count': draft_count,
-                'draft_percentage': round(gap_percentage, 1),
+                'draft_percentage': round(pending_percentage, 1),
                 'canonical_count': canonical_count,
                 'rejected_count': rejected_count,
             },
@@ -307,29 +307,29 @@ class DecisionPromotionRules:
             },
             'by_decision_type': by_type,
             'by_impact_area': by_area,
-            'recommendation': self._generate_recommendation(gap_percentage, age_buckets, by_type),
+            'recommendation': self._generate_recommendation(pending_percentage, age_buckets, by_type),
         }
 
     def _generate_recommendation(
         self,
-        gap_percentage: float,
+        pending_percentage: float,
         age_buckets: Dict[str, int],
         by_type: Dict[str, int]
     ) -> str:
-        """Generate a human-readable recommendation based on the gap analysis."""
+        """Generate a human-readable recommendation based on the pending review analysis."""
 
-        if gap_percentage < 50:
-            return "Execution gap is healthy. Continue manual review cadence."
+        if pending_percentage < 50:
+            return "Review backlog is healthy. Continue manual review cadence."
 
         stale_count = age_buckets.get('over_30_days', 0) + age_buckets.get('7_to_30_days', 0)
         if stale_count > 50:
-            return f"CRITICAL: {stale_count} decisions over 7 days old. Consider batch review or running auto-promotion."
+            return f"Note: {stale_count} suggestions over 7 days old. Consider archiving or batch review."
 
         guideline_count = by_type.get('guideline', 0)
         if guideline_count > 30:
             return f"Many guidelines pending ({guideline_count}). Enable auto-promotion for low-risk guidelines."
 
-        return f"Execution gap at {gap_percentage:.0f}%. Review pending architecture/policy decisions first."
+        return f"Pending review at {pending_percentage:.0f}%. This is normal for AI systems generating many suggestions."
 
 
 # Singleton instance
@@ -350,7 +350,7 @@ def run_auto_promotion(dry_run: bool = False) -> Dict[str, Any]:
     return rules.run_auto_promotion(dry_run=dry_run)
 
 
-def get_execution_gap_metrics() -> Dict[str, Any]:
-    """Convenience function to get gap metrics."""
+def get_pending_review_metrics() -> Dict[str, Any]:
+    """Convenience function to get pending review metrics."""
     rules = DecisionPromotionRules()
-    return rules.get_execution_gap_metrics()
+    return rules.get_pending_review_metrics()
