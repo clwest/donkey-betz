@@ -51,14 +51,24 @@ open http://localhost:8000/ai-studio/
 | [CELERY_TASKS.md](CELERY_TASKS.md) | All background tasks |
 | [MODELS.md](MODELS.md) | Database models (324+) |
 | [DISCORD.md](DISCORD.md) | Discord integration (112 commands) |
-| [API_ENDPOINTS.md](API_ENDPOINTS.md) | Django REST endpoints |
+| [API_ENDPOINTS.md](API_ENDPOINTS.md) | Django REST endpoints (200+) |
+| [VIEWS.md](VIEWS.md) | Django view files (143) |
+| [MANAGEMENT_COMMANDS.md](MANAGEMENT_COMMANDS.md) | CLI management commands (43) |
+
+### Infrastructure Documentation
+
+| Document | Description |
+|----------|-------------|
+| [INFRASTRUCTURE.md](INFRASTRUCTURE.md) | Middleware, signals, decorators, routing |
+| [WEBSOCKETS.md](WEBSOCKETS.md) | Real-time WebSocket consumers (20+) |
+| [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md) | GPT-5.1 tool interface (21 tools) |
 
 ### Feature Documentation
 
 | Document | Description |
 |----------|-------------|
 | [AUTONOMOUS_SYSTEMS.md](AUTONOMOUS_SYSTEMS.md) | 19 autonomous intelligence situations |
-| [SCIFI_FEATURES.md](SCIFI_FEATURES.md) | 14 advanced AI features |
+| [SPECIAL_FEATURES.md](SPECIAL_FEATURES.md) | 14 sci-fi features (dreams, memory palace, etc.) |
 | [DAVINCI_RESOLVE.md](../DAVINCI_RESOLVE.md) | Professional video rendering |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | Colorado family law system |
 | [CONTENT_PIPELINE.md](CONTENT_PIPELINE.md) | $5-$50K content tiers |
