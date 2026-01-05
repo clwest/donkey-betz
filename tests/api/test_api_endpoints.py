@@ -2,7 +2,12 @@
 #!/usr/bin/env python3
 """
 Test API Endpoints to verify they're correctly configured
+
+NOTE: This is a script requiring live server. Run with:
+    python tests/api/test_api_endpoints.py
 """
+import pytest
+pytestmark = pytest.mark.skip(reason="Integration script requiring live server - run manually")
 
 import requests
 import json

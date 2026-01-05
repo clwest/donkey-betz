@@ -13,8 +13,8 @@ pytestmark = pytest.mark.django_db
 from core.models.agents_registry import AgentRegistry  # noqa: E402
 
 
-@pytest.fixture(scope="module")
-def registry():
+@pytest.fixture
+def registry(db):
     """
     Try to load the unified registry. If it doesn't exist in this environment,
     skip the test suite rather than failing during collection.
