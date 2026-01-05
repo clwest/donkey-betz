@@ -26,7 +26,7 @@ def agent():
     if agent is None:
         agent = UnifiedAgentTemplate.objects.create(
             name="TestAgent",
-            agent_type="content_generation",
+            specialization="content_generation",  # Fixed: was agent_type
             description="Test agent for unit testing",
             system_prompt="You are a test agent.",
             llm_provider="openai",

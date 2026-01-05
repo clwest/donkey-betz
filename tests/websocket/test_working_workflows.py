@@ -34,6 +34,63 @@ from content.models import Document
 User = get_user_model()
 
 
+@pytest.fixture
+def test_user(db):
+    """Create a test user for integration tests."""
+    user, _ = User.objects.get_or_create(
+        username="integration_test_user",
+        defaults={"email": "test@integration.com"}
+    )
+    return user
+
+
+@pytest.fixture
+def game(db, test_user):
+    """Create a test game for integration tests."""
+    league, _ = League.objects.get_or_create(
+        abbreviation="TST",
+        defaults={
+            "name": "Test League",
+            "sport_type": "nfl",
+            "current_season": "2024"
+        }
+    )
+    team1, _ = Team.objects.get_or_create(
+        abbreviation="T1",
+        league=league,
+        defaults={"name": "Team One", "city": "City1"}
+    )
+    team2, _ = Team.objects.get_or_create(
+        abbreviation="T2",
+        league=league,
+        defaults={"name": "Team Two", "city": "City2"}
+    )
+    game, _ = Game.objects.get_or_create(
+        league=league,
+        home_team=team1,
+        away_team=team2,
+        game_time=timezone.now() + timedelta(hours=24),
+        defaults={"status": "scheduled"}
+    )
+    return game
+
+
+@pytest.fixture
+def test_agent(db, test_user):
+    """Create a test agent for integration tests."""
+    agent, _ = UnifiedAgentTemplate.objects.get_or_create(
+        name="IntegrationTestAgent",
+        defaults={
+            "description": "Test agent for integration testing",
+            "system_prompt": "You are a test agent.",
+            "llm_provider": "openai",
+            "llm_model": "gpt-5-mini",
+            "is_active": True
+        }
+    )
+    return agent
+
+
 def test_system_integration():
     """Test basic system integration and data flow"""
     print("🔍 Testing System Integration...")
