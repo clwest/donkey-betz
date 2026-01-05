@@ -19985,11 +19985,11 @@ Full documentation is required for MEDIUM/HIGH/CRITICAL risk gates.
 @shared_task
 def auto_promote_low_risk_decisions(dry_run: bool = False):
     """
-    Session 589: Auto-promote low-risk decisions to close the execution gap.
+    Session 589: Auto-promote low-risk decisions to reduce pending review backlog.
 
-    This task addresses the execution gap identified in Session 588:
-    - 82% of decisions sitting in DRAFT forever
-    - Only 15% promoted to CANONICAL
+    This task addresses the pending review backlog identified in Session 588:
+    - Many agent suggestions sitting in DRAFT awaiting review
+    - Only a small percentage promoted to CANONICAL (which is expected)
 
     Uses governance-respecting rules:
     - Tier 1 (Auto-Promote): Low-risk guidelines after 24h aging
@@ -20030,7 +20030,7 @@ def auto_promote_low_risk_decisions(dry_run: bool = False):
             try:
                 from core.services.discord_notifications import DiscordNotificationService
                 discord = DiscordNotificationService()
-                message = f"**Execution Gap Reduction**\n"
+                message = f"**Review Backlog Update**\n"
                 message += f"✅ Auto-promoted {result['promoted']} low-risk guidelines\n"
                 for d in result.get('decisions', [])[:3]:
                     message += f"  • {d['topic'][:50]}...\n"
@@ -20056,46 +20056,46 @@ def auto_promote_low_risk_decisions(dry_run: bool = False):
 
 
 @shared_task
-def report_execution_gap_metrics():
+def report_pending_review_metrics():
     """
-    Session 589: Report execution gap metrics for monitoring.
+    Session 589: Report pending review metrics for monitoring.
 
-    Logs the current state of the decision execution gap so operators
-    can track progress over time.
+    Logs the current state of agent suggestion review backlog so operators
+    can track over time.
 
-    Schedule: Run daily to track gap trends.
+    Schedule: Run daily to track trends.
 
     Returns:
-        dict with gap metrics
+        dict with pending review metrics
     """
-    from core.services.decision_promotion_rules import get_execution_gap_metrics
+    from core.services.decision_promotion_rules import get_pending_review_metrics
 
-    logger.info("🏛️ [SESSION 589] Reporting execution gap metrics...")
+    logger.info("🏛️ [SESSION 589] Reporting pending review metrics...")
 
     try:
-        metrics = get_execution_gap_metrics()
-        gap = metrics.get('execution_gap', {})
+        metrics = get_pending_review_metrics()
+        review = metrics.get('pending_review', {})
 
         logger.info(
-            f"🏛️ [EXECUTION GAP] "
-            f"Draft: {gap.get('draft_count', 0)} ({gap.get('draft_percentage', 0):.0f}%) | "
-            f"Canonical: {gap.get('canonical_count', 0)} | "
+            f"🏛️ [PENDING REVIEW] "
+            f"Draft: {review.get('draft_count', 0)} ({review.get('draft_percentage', 0):.0f}%) | "
+            f"Canonical: {review.get('canonical_count', 0)} | "
             f"Auto-promotable: {metrics.get('auto_promotable', {}).get('count', 0)}"
         )
 
         # Log age distribution
         age_dist = metrics.get('age_distribution', {})
         if age_dist.get('over_30_days', 0) > 0 or age_dist.get('7_to_30_days', 0) > 50:
-            logger.warning(
-                f"🏛️ [EXECUTION GAP] Stale decisions: "
+            logger.info(
+                f"🏛️ [PENDING REVIEW] Stale suggestions: "
                 f"7-30 days: {age_dist.get('7_to_30_days', 0)}, "
                 f">30 days: {age_dist.get('over_30_days', 0)}"
             )
 
         # Log recommendation
         recommendation = metrics.get('recommendation', '')
-        if 'CRITICAL' in recommendation:
-            logger.warning(f"🏛️ [EXECUTION GAP] {recommendation}")
+        if recommendation:
+            logger.info(f"🏛️ [PENDING REVIEW] {recommendation}")
 
         return {
             'success': True,
@@ -20103,7 +20103,7 @@ def report_execution_gap_metrics():
         }
 
     except Exception as e:
-        logger.error(f"🏛️ [SESSION 589] Gap metrics failed: {e}", exc_info=True)
+        logger.error(f"🏛️ [SESSION 589] Pending review metrics failed: {e}", exc_info=True)
         return {
             'success': False,
             'error': str(e)

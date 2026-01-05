@@ -50,7 +50,7 @@ class AttentionItem:
 PRIORITY_SCORES = {
     'critical_alert': 90,
     'security_alert': 85,
-    'execution_gap': 82,    # Session 589: Added for decision execution gap
+    'pending_review': 82,    # Session 589: Added for decision pending review (renamed from execution_gap)
     'health_failure': 80,
     'execution_failure': 75,
     'overdue_task': 70,
@@ -118,11 +118,11 @@ class SystemStateAggregator:
         except Exception as e:
             self.logger.error(f"Error getting Research items: {e}")
 
-        # Session 589: Add execution gap monitoring
+        # Session 589: Add pending review monitoring
         try:
-            items.extend(self._get_execution_gap_items())
+            items.extend(self._get_pending_review_items())
         except Exception as e:
-            self.logger.error(f"Error getting Execution Gap items: {e}")
+            self.logger.error(f"Error getting Pending Review items: {e}")
 
         # Deduplicate by hashing title+summary
         seen_hashes = set()
@@ -496,60 +496,61 @@ class SystemStateAggregator:
 
         return items[:limit]
 
-    def _get_execution_gap_items(self) -> List[AttentionItem]:
+    def _get_pending_review_items(self) -> List[AttentionItem]:
         """
-        Session 589: Get attention items for execution gap (decisions not being enacted).
+        Session 589: Get attention items for pending review (agent decisions awaiting action).
 
-        This monitors the gap between cognitive decisions and actual execution,
-        a critical system health indicator identified in Session 588.
+        This monitors agent-generated decisions that haven't been reviewed yet.
+        Note: High percentages are normal - agents generate many suggestions,
+        only important ones need promotion to canonical.
 
         Checks:
-        - Percentage of decisions in DRAFT status (gap > 70% is concerning)
+        - Percentage of decisions in DRAFT status (> 70% triggers informational alert)
         - Stale drafts (decisions > 7 days old)
-        - Auto-promotable decisions that could reduce gap
+        - Auto-promotable decisions that could reduce backlog
         """
         items = []
 
         try:
-            from core.services.decision_promotion_rules import get_execution_gap_metrics
+            from core.services.decision_promotion_rules import get_pending_review_metrics
 
-            metrics = get_execution_gap_metrics()
-            gap = metrics.get('execution_gap', {})
+            metrics = get_pending_review_metrics()
+            review = metrics.get('pending_review', {})
             age_dist = metrics.get('age_distribution', {})
             auto_promotable = metrics.get('auto_promotable', {})
 
-            gap_pct = gap.get('draft_percentage', 0)
+            review_pct = review.get('draft_percentage', 0)
             stale_count = age_dist.get('7_to_30_days', 0) + age_dist.get('over_30_days', 0)
             promotable_count = auto_promotable.get('count', 0)
 
-            # Alert if gap > 70%
-            if gap_pct > 70:
+            # Alert if > 70% pending (informational, not critical)
+            if review_pct > 70:
                 items.append(AttentionItem(
-                    id='execution_gap_critical',
+                    id='pending_review_backlog',
                     section='autonomous',
-                    category='execution_gap',
-                    priority=PRIORITY_SCORES['execution_gap'],
-                    title=f"Execution Gap: {gap_pct:.0f}%",
-                    summary=f"{gap.get('draft_count', 0)} decisions in DRAFT vs {gap.get('canonical_count', 0)} canonical",
+                    category='pending_review',
+                    priority=PRIORITY_SCORES['pending_review'],
+                    title=f"Pending Review: {review_pct:.0f}%",
+                    summary=f"{review.get('draft_count', 0)} agent suggestions awaiting review",
                     action_url='/ai-studio/?tab=decisions&subtab=pending'
                 ))
 
             # Alert if many stale decisions
             if stale_count > 50:
                 items.append(AttentionItem(
-                    id='execution_gap_stale',
+                    id='pending_review_stale',
                     section='autonomous',
                     category='stale_concern',
                     priority=PRIORITY_SCORES['stale_concern'] + 5,  # Boost slightly
-                    title=f"Stale Decisions: {stale_count}",
-                    summary=f"Decisions over 7 days old awaiting action",
+                    title=f"Stale Suggestions: {stale_count}",
+                    summary=f"Agent suggestions over 7 days old - consider archiving",
                     action_url='/ai-studio/?tab=decisions&subtab=pending'
                 ))
 
             # Opportunity: auto-promotable decisions available
             if promotable_count > 0:
                 items.append(AttentionItem(
-                    id='execution_gap_promotable',
+                    id='pending_review_promotable',
                     section='autonomous',
                     category='opportunity',
                     priority=PRIORITY_SCORES['opportunity'] + 15,  # Higher priority opportunity
@@ -561,7 +562,7 @@ class SystemStateAggregator:
         except ImportError as e:
             self.logger.debug(f"Decision promotion rules not available: {e}")
         except Exception as e:
-            self.logger.error(f"Error getting execution gap metrics: {e}")
+            self.logger.error(f"Error getting pending review metrics: {e}")
 
         return items
 

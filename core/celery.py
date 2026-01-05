@@ -390,7 +390,7 @@ app.conf.beat_schedule = {
     },
     # Session 589: Governance-Respecting Low-Risk Decision Auto-Promotion
     # Complements quality-score-based promotion with tiered rules
-    # Addresses the 82% execution gap identified in Session 588
+    # Helps manage the pending review backlog
     'auto-promote-low-risk-decisions': {
         'task': 'core.tasks.auto_promote_low_risk_decisions',
         'schedule': crontab(hour='*/6'),  # Every 6 hours - conservative cadence
@@ -401,10 +401,10 @@ app.conf.beat_schedule = {
             'dry_run': False,  # Set True to report without promoting
         }
     },
-    # Session 589: Daily Execution Gap Metrics Report
-    # Tracks progress on closing the decision-action gap
-    'report-execution-gap-metrics': {
-        'task': 'core.tasks.report_execution_gap_metrics',
+    # Session 589: Daily Pending Review Metrics Report
+    # Tracks agent suggestion review backlog
+    'report-pending-review-metrics': {
+        'task': 'core.tasks.report_pending_review_metrics',
         'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
         'options': {
             'expires': 3600,  # 1 hour
