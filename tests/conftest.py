@@ -37,6 +37,26 @@ User = get_user_model()
 # Database Setup - Create pgvector extension
 # =============================================================================
 
+# Global flag to track if pgvector is available
+_pgvector_available = None
+
+
+def check_pgvector_available():
+    """Check if pgvector extension is available."""
+    global _pgvector_available
+    if _pgvector_available is not None:
+        return _pgvector_available
+
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        _pgvector_available = True
+    except Exception:
+        _pgvector_available = False
+    return _pgvector_available
+
+
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     """
@@ -44,13 +64,17 @@ def django_db_setup(django_db_setup, django_db_blocker):
     This runs once per test session before any tests execute.
     """
     with django_db_blocker.unblock():
-        from django.db import connection
-        with connection.cursor() as cursor:
-            try:
-                cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-            except Exception as e:
-                # Extension might already exist or not be available
-                print(f"Note: pgvector extension setup: {e}")
+        check_pgvector_available()
+
+
+@pytest.fixture
+def requires_pgvector(db):
+    """
+    Fixture that skips the test if pgvector is not available.
+    Use this for tests that require vector operations.
+    """
+    if not check_pgvector_available():
+        pytest.skip("pgvector extension not available")
 
 
 # =============================================================================

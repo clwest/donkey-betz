@@ -32,41 +32,12 @@ from abc import abstractmethod
 from openai import OpenAI
 from django.conf import settings
 
+from core.agents.base_agent import BaseAgent, AgentResult
+
 logger = logging.getLogger(__name__)
 
 
-class AgentResult:
-    """Standard result structure for all business research agents."""
-
-    def __init__(
-        self,
-        success: bool,
-        message: str = "",
-        data: Dict[str, Any] = None,
-        error: str = None,
-        agent_name: str = "",
-        execution_time_ms: int = 0
-    ):
-        self.success = success
-        self.message = message
-        self.data = data or {}
-        self.error = error
-        self.agent_name = agent_name
-        self.execution_time_ms = execution_time_ms
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            'success': self.success,
-            'message': self.message,
-            'data': self.data,
-            'error': self.error,
-            'agent_name': self.agent_name,
-            'execution_time_ms': self.execution_time_ms
-        }
-
-
-class BaseBusinessResearchAgent:
+class BaseBusinessResearchAgent(BaseAgent):
     """
     Base class for all business research agents.
 
