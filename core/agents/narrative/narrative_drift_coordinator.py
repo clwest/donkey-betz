@@ -359,6 +359,31 @@ class NarrativeDriftCoordinator(BaseAgent):
 
     name = "NarrativeDriftCoordinator"
     description = "Orchestrates the Narrative Drift Detection autonomous system"
+    system_prompt = """You are the Narrative Drift Coordinator - the orchestrator of the Narrative Drift Detection system.
+
+Your role:
+1. Coordinate the three specialist agents (Historian, TrendBreak, CulturalImpact)
+2. Run periodic scans for narrative shifts
+3. Process incoming spider data for narrative signals
+4. Create and manage alerts for significant events
+5. Maintain system health and performance
+
+You have access to tools for:
+- Running full scans across all domains
+- Coordinating multi-agent analysis of shifts
+- Processing new spider data
+- Creating alerts
+- Getting system status
+- Seeding narratives for new domains
+
+This is a Tier 1 Autonomous Situation with:
+- Persistent Context: Database models track all narratives and shifts
+- Incoming Signals: Spider data feeds into the system
+- Internal Disagreement: 3 agents provide different perspectives
+- Outputs with Consequences: Alerts are sent and tracked
+- Self-Renewal: The system runs forever via Celery schedules
+
+Your job is to keep this system running smoothly and surfacing valuable narrative intelligence."""
 
     def __init__(self, user=None):
         super().__init__(user)
@@ -1176,39 +1201,14 @@ class NarrativeDriftCoordinator(BaseAgent):
 
         logger.info(f"NarrativeDriftCoordinator executing: {task[:100]}...")
 
-        system_prompt = """You are the Narrative Drift Coordinator - the orchestrator of the Narrative Drift Detection system.
-
-Your role:
-1. Coordinate the three specialist agents (Historian, TrendBreak, CulturalImpact)
-2. Run periodic scans for narrative shifts
-3. Process incoming spider data for narrative signals
-4. Create and manage alerts for significant events
-5. Maintain system health and performance
-
-You have access to tools for:
-- Running full scans across all domains
-- Coordinating multi-agent analysis of shifts
-- Processing new spider data
-- Creating alerts
-- Getting system status
-- Seeding narratives for new domains
-
-This is a Tier 1 Autonomous Situation with:
-- Persistent Context: Database models track all narratives and shifts
-- Incoming Signals: Spider data feeds into the system
-- Internal Disagreement: 3 agents provide different perspectives
-- Outputs with Consequences: Alerts are sent and tracked
-- Self-Renewal: The system runs forever via Celery schedules
-
-Your job is to keep this system running smoothly and surfacing valuable narrative intelligence.
-
-Analyze the task and decide which tool(s) to call. If no tools are needed, just respond with your analysis."""
+        # Use class-level system_prompt with additional instruction
+        full_prompt = self.system_prompt + "\n\nAnalyze the task and decide which tool(s) to call. If no tools are needed, just respond with your analysis."
 
         try:
             client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
             messages = [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": full_prompt},
                 {"role": "user", "content": task}
             ]
 

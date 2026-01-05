@@ -2,7 +2,15 @@
 #!/usr/bin/env python3
 """
 Test the betting ticket functionality by verifying all necessary components and API endpoints
+
+NOTE: This is a script, not a pytest test file. Run with:
+    python tests/unit/test_betting_ticket.py
+
+Pytest should skip this file.
 """
+
+import pytest
+pytestmark = pytest.mark.skip(reason="Integration script requiring live server - run manually with python")
 
 import requests
 import json

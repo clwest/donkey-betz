@@ -2,7 +2,15 @@
 #!/usr/bin/env python3
 """
 Test script to verify frontend authentication is working correctly
+
+NOTE: This is a script, not a pytest test file. Run with:
+    python tests/unit/test_frontend_auth.py
+
+Pytest should skip this file.
 """
+
+import pytest
+pytestmark = pytest.mark.skip(reason="Integration script requiring live server - run manually with python")
 
 import requests
 import json
