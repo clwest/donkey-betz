@@ -1,207 +1,144 @@
-# Session 673 - Start Here
+# Session 674 - Start Here
 
-**Previous Session:** 672 (Agent Execution Automation - COMPLETE)
+**Previous Session:** 673 (Brain-Nervous System Connection - COMPLETE)
 **Date:** January 5, 2026
-**Focus:** New System Priorities
-**Status:** 100% Reality Score | ML Pipeline + Agent Execution Fully Automated
+**Focus:** ML Pipeline End-to-End Testing
+**Status:** 100% Reality Score | PA fully connected to ML Pipeline
 
 ---
 
-## Session 672 Summary: Agent Execution Automation COMPLETE
+## Session 673 Summary: Brain-Nervous System Connection COMPLETE
 
-### The Final Piece of the Pipeline
+### The Analogy
 
-Session 671 wired the pipeline from Spiders → Opportunities → Tasks, but tasks weren't being executed. Session 672 added the final piece:
+The ML Opportunity Pipeline is like a nervous system:
+- **Spiders** = Sensory inputs (77 data sources)
+- **ML Scoring** = Reflex processing (v5.0 model)
+- **Agents** = Organs (72 specialized workers)
+- **Personal Assistant** = Brain (conscious control)
 
-```
-BEFORE (Session 671):
-Spiders → SpiderData → ML Score → Opportunity → Task → [STOPPED HERE]
+Before Session 673, the brain (PA) couldn't query or control its nervous system.
 
-AFTER (Session 672):
-Spiders → SpiderData → ML Score → Opportunity → Task → Agent Execution → Outcome → Retrain
-   ✓          ✓           ✓           ✓          ✓          ✓                 ✓         ✓
-```
+### What Was Added: 4 New PA Tools (77 → 81 total)
 
-### What Was Added
+| Tool | Purpose | Actions |
+|------|---------|---------|
+| `opportunity_manager_tool` | Query opportunities | list, get, stats, search |
+| `task_manager_tool` | Manage task lifecycle | list, get, accept, start, apply, complete, add_note |
+| `pipeline_orchestrator_tool` | Manual execution control | execute_task, execute_opportunity, status, queue |
+| `revenue_tracker_tool` | Track revenue & ML accuracy | log_revenue, list_revenue, stats, accuracy, link_content |
 
-| Component | Details |
-|-----------|---------|
-| `execute_pending_opportunity_tasks` | New Celery task (+140 lines) |
-| Celery Beat schedule | Runs every 30 min at :15 and :45 |
-| Agent execution via router | Uses AgentRouter.route() |
-| Task status management | pending → in_progress → applied/failed |
-| Execution metadata | Saved in task.score_breakdown |
-
-### How It Works
-
-1. Finds OpportunityTasks with status='pending' or 'accepted' and primary_agent assigned
-2. Orders by priority and score (high-value tasks first)
-3. For each task:
-   - Gets agent class from `Agent.name` field
-   - Validates against `AgentRouter.AGENT_MAP`
-   - Calls `router.route()` with task context
-   - Updates task status based on result
-   - Records execution metadata
-
-### Commits from Session 672
+### Example User Interactions Now Possible
 
 ```
-[commit hash TBD] feat(Session 672): Add Agent Execution Automation task
+User: "Show my high-scoring opportunities"
+→ opportunity_manager_tool(action='list', min_score=70)
+
+User: "Accept task #123 and start working on it"
+→ task_manager_tool(action='accept', task_id='123')
+→ task_manager_tool(action='start', task_id='123')
+
+User: "I got the job! Earned $500 on Upwork"
+→ task_manager_tool(action='complete', task_id='123', outcome='won')
+→ revenue_tracker_tool(action='log_revenue', opportunity_id='X', amount=500, platform='upwork')
+
+User: "How accurate is our ML scoring?"
+→ revenue_tracker_tool(action='accuracy')
 ```
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `core/prompts/tool_descriptions.py` | +90 lines (4 tool descriptions) |
+| `core/assistant/tool_definitions.py` | +180 lines (4 tool schemas) |
+| `core/personal_ai_assistant_enhanced.py` | +708 lines (4 handlers) |
+| `CLAUDE.md` | Updated stats & sessions |
+| `docs/handoffs/SESSION_673_BRAIN_NERVOUS_SYSTEM.md` | Full handoff doc |
 
 ---
 
-## Session 671 Summary: ML Pipeline Integration COMPLETE
-
-### The Core Problem We Solved
-
-The ML Scoring Engine (v7.1) was working great, but the **pipeline was broken**:
+## Complete ML Pipeline Architecture
 
 ```
-BEFORE (Session 670):
-Spiders → SpiderData → ML Score → ??? → Agents floating disconnected
+AUTOMATED FLOW (Sessions 669-672):
+Spiders ──► SpiderData ──► ML Score ──► Opportunity ──► OpportunityTask ──► Agent ──► Outcome
+   │                          │              │               │                │         │
+   │                          │              │               │                │         │
+   └─ 77 spiders          v5.0 model    High-score       Auto-created     Celery     Revenue
+      fetch data          scores data   threshold=70     from opp         executes   tracked
 
-AFTER (Session 671):
-Spiders → SpiderData → ML Score → Opportunity → Task → Agent → Outcome → Retrain
-   ✓          ✓           ✓           ✓          ✓       ✓        ✓         ✓
-```
-
-### What Was Fixed
-
-| Gap | Solution |
-|-----|----------|
-| `score_spider_data()` missing | Added 233-line method to OpportunityScoringAgent |
-| Opportunities not auto-created | Now auto-created for scores ≥70 |
-| Tasks not auto-assigned | Now auto-created for scores ≥80 with agent assignment |
-| ML retraining not using Optuna | Updated task to use LightGBM + Optuna by default |
-
-### Automation Thresholds
-
-| Score | Action |
-|-------|--------|
-| ≥70 | Auto-create Opportunity |
-| ≥80 | Auto-create OpportunityTask + assign agent |
-| ≥90 | Priority = critical, due in 1 day |
-
-### Commits from Session 671
-
-```
-62eacdc5 feat(Session 671): Wire complete ML Opportunity Pipeline
-b65210d3 docs(Session 670): Update documentation for LightGBM + Optuna
-b6ce58c4 feat(Session 670): Add LightGBM + Optuna hyperparameter optimization
+MANUAL CONTROL (Session 673):
+Personal Assistant (Brain)
+    │
+    ├── opportunity_manager_tool ──► Query opportunities
+    ├── task_manager_tool ──► Manage task lifecycle
+    ├── pipeline_orchestrator_tool ──► Manual execution
+    └── revenue_tracker_tool ──► Track outcomes, ML accuracy
 ```
 
 ---
 
-## System Stats (Current)
+## Session 674 Priorities
 
-| Component | Count | Status |
-|-----------|-------|--------|
-| **Agents** | 72 | 69 routable + 3 entry/special |
-| **Spiders** | 77 | 72 working, 5 need API keys |
-| **Services** | 93 | All healthy |
-| **ML Model** | v7.1 | LightGBM + Optuna, 24 features, 63% R² |
-| **SpiderData** | 8,597 | All processed |
-| **Opportunities** | 153 | 73 high-scoring (≥70) |
-| **OpportunityTasks** | 150 | With agent assignments |
-| **OpportunityOutcomes** | 150 | For ML feedback loop |
+### Priority 1: End-to-End Pipeline Test
+Test the complete flow from spider data through PA control:
+1. Run `score_opportunities_from_spider_data` manually
+2. Verify opportunities are created
+3. Use PA to list and accept tasks
+4. Execute an agent via PA
+5. Log revenue and check accuracy
 
----
+### Priority 2: Pipeline Status UI Widget
+Add a "Pipeline Status" card to the frontend dashboard showing:
+- Pending tasks count
+- In-progress count
+- Revenue this month
+- ML accuracy score
 
-## Session 673 Priorities
-
-### Option A: ML Phase 3 - Spider-Specific Features
-
-From `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md`:
-- Financial features (market_cap, price_change)
-- Job features (salary_min, remote_flag)
-- Engagement features (comments, likes)
-
-### Option B: Dashboard for Pipeline Monitoring
-
-Build UI to visualize:
-- Pipeline throughput (spiders → opportunities → tasks → executions)
-- ML model performance over time
-- Agent execution success rates
-
-### Option C: Agent Execution Improvements
-
-Enhancements to the execution system:
-- Track execution outcomes for ML feedback loop
-- Add retry logic for failed executions
-- Implement execution cooldown periods
-
-### Option D: New System Priorities
-
-Check if there are other system priorities.
+### Priority 3: ML Accuracy Monitoring
+As outcomes accumulate, the `revenue_tracker_tool(action='accuracy')` can calculate:
+- Win rate (wins / total outcomes)
+- Score differential (avg winning score - avg losing score)
+- If score differential is high, ML predictions are working
 
 ---
 
-## Quick Start
+## Quick Commands
 
 ```bash
-# 1. Start platform
-make start
-make celery
+# Start services
+make start && make celery
 
-# 2. Verify pipeline status
-.venv/bin/python manage.py shell -c "
-from core.services.ml_scoring_engine import MLScoringEngine
-from core.models_unified_system import SpiderData, Opportunity, OpportunityTask
+# Test opportunity_manager_tool handler
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
+from django.contrib.auth import get_user_model
+User = get_user_model()
+user = User.objects.first()
+pa = EnhancedPersonalAIAssistant(user)
+print(pa._handle_opportunity_manager_tool({'action': 'stats'}))
+"
 
-engine = MLScoringEngine()
-print(f'ML Model: {engine.model_version} ({engine.model_type})')
-print(f'SpiderData: {SpiderData.objects.count()}')
+# Check pipeline status
+DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
+import django; django.setup()
+from core.models_unified_system import Opportunity, OpportunityTask, OpportunityRevenue
 print(f'Opportunities: {Opportunity.objects.count()}')
 print(f'Tasks: {OpportunityTask.objects.count()}')
-"
-
-# 3. Test pipeline manually
-.venv/bin/python manage.py shell -c "
-from core.agents.analysis import OpportunityScoringAgent
-agent = OpportunityScoringAgent()
-results = agent.score_spider_data(hours=24, limit=10)
-print(f'Scored: {len(results)} items')
+print(f'Revenue records: {OpportunityRevenue.objects.count()}')
 "
 ```
 
 ---
 
-## Key Documentation
+## System Stats (Session 673)
 
-| Document | Purpose |
-|----------|---------|
-| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | Full system integration + ML Pipeline section |
-| `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md` | ML roadmap (Phases 1-2 complete) |
-
----
-
-## The Complete Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    UNIFIED ML OPPORTUNITY PIPELINE                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  1. DATA       77 Spiders (scheduled) → SpiderData (8,597 records)          │
-│                                                                              │
-│  2. SCORING    score_opportunities_from_spider_data (hourly Celery)         │
-│                → OpportunityScoringAgent.score_spider_data()                │
-│                → MLScoringEngine v7.1 (LightGBM + Optuna)                   │
-│                                                                              │
-│  3. CREATION   Score ≥70 → Opportunity (153 total, 73 high-value)           │
-│                Score ≥80 → OpportunityTask (150 with agents)                │
-│                                                                              │
-│  4. EXECUTION  execute_pending_opportunity_tasks (every 30 min)     [NEW]   │
-│                → AgentRouter.route(agent_name, task, context)               │
-│                → Task status: pending → in_progress → applied/failed        │
-│                                                                              │
-│  5. FEEDBACK   User marks won/lost → OpportunityOutcome (150 records)       │
-│                → train_ml_scoring_model (weekly Celery with Optuna)         │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-*Ready for Session 673!*
+| Component | Count | Notes |
+|-----------|-------|-------|
+| Agents | 72 | 69 routable |
+| Spiders | 77 | 72 working |
+| **PA Tools** | **81** | +4 ML Pipeline tools |
+| Celery Tasks | 127 | includes execute_pending_opportunity_tasks |
+| Services | 93 | Business logic |

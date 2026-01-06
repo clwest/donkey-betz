@@ -529,6 +529,97 @@ Examples:
 - "Write a video script from this research" -> content_writer_agent with content_type='video_script'
 - "Create a newsletter from these findings" -> content_writer_agent with content_type='newsletter'""",
 
+
+    # -------------------------------------------------------------------------
+    # SESSION 672: ML PIPELINE MANAGEMENT TOOLS
+    # -------------------------------------------------------------------------
+
+    "opportunity_manager_tool": """Manage and query opportunities from the ML Pipeline.
+
+USE THIS WHEN user wants to:
+- VIEW opportunities: "Show my opportunities", "What opportunities do I have?"
+- FILTER opportunities: "Show high-scoring opportunities", "What's pending?", "Show job opportunities"
+- GET DETAILS: "Tell me more about opportunity X", "Show opportunity details"
+- CHECK STATUS: "What's the status of my opportunities?"
+
+Actions:
+- list: List opportunities with optional filters (status, category, min_score)
+- get: Get detailed info about a specific opportunity by ID
+- stats: Get opportunity statistics (counts by status, avg scores)
+- search: Search opportunities by keyword
+
+DO NOT USE FOR:
+- Scoring new spider data -> use opportunity_scoring_agent
+- Managing tasks -> use task_manager_tool
+- Tracking revenue -> use revenue_tracker_tool""",
+
+
+    "task_manager_tool": """Manage OpportunityTasks - the action items from high-scoring opportunities.
+
+USE THIS WHEN user wants to:
+- VIEW tasks: "Show my tasks", "What tasks do I have?"
+- ACCEPT tasks: "Accept this task", "I'll work on task X"
+- UPDATE STATUS: "Mark task X as done", "I applied for this", "I won/lost this"
+- CHECK PROGRESS: "What's my task progress?"
+
+Actions:
+- list: List tasks with optional filters (status, priority, agent)
+- get: Get detailed task info by ID
+- accept: Accept a pending task
+- start: Mark task as in_progress
+- apply: Mark task as applied/submitted
+- complete: Mark task as won (success)
+- fail: Mark task as lost (rejection)
+- add_note: Add a note/update to a task
+
+Task Statuses: pending, accepted, in_progress, applied, waiting, won, lost, expired, cancelled
+
+DO NOT USE FOR:
+- Viewing opportunities -> use opportunity_manager_tool
+- Executing agents -> use pipeline_orchestrator_tool""",
+
+
+    "pipeline_orchestrator_tool": """Orchestrate the ML Opportunity Pipeline - trigger agent execution manually.
+
+USE THIS WHEN user wants to:
+- EXECUTE pipeline: "Execute task X", "Run the agent for this opportunity"
+- CHECK PIPELINE: "What's running?", "Pipeline status"
+- TRIGGER AGENTS: "Have the research agent work on this", "Execute this task"
+
+Actions:
+- execute_task: Execute a specific OpportunityTask with its assigned agent
+- execute_opportunity: Run the full pipeline for an opportunity
+- status: Check pipeline execution status
+- queue: View pending execution queue
+
+This bypasses the automated Celery scheduler for manual control.
+
+DO NOT USE FOR:
+- Viewing tasks -> use task_manager_tool
+- Scoring opportunities -> use opportunity_scoring_agent""",
+
+
+    "revenue_tracker_tool": """Track revenue and outcomes for opportunities - closes the ML feedback loop.
+
+USE THIS WHEN user wants to:
+- LOG REVENUE: "I earned $500 from opportunity X", "Log revenue"
+- CHECK EARNINGS: "How much have I earned?", "Revenue stats"
+- TRACK ACCURACY: "How accurate are the predictions?", "ML accuracy"
+- LINK CONTENT: "Link this video to opportunity X"
+
+Actions:
+- log_revenue: Record revenue from an opportunity (amount, source, date)
+- list_revenue: View revenue history for an opportunity
+- stats: Get overall revenue statistics
+- accuracy: Compare predicted vs actual revenue
+- link_content: Associate created content with an opportunity
+
+This data feeds back into ML model retraining for better predictions.
+
+DO NOT USE FOR:
+- Viewing opportunities -> use opportunity_manager_tool
+- Managing tasks -> use task_manager_tool""",
+
 }
 
 

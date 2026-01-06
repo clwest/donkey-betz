@@ -61,6 +61,11 @@ def get_tool_definitions() -> List[Dict]:
         _get_marketing_strategy_agent_definition(),   # Session 337: Marketing strategy research
         _get_legal_doc_drafter_agent_definition(),    # Session 403: Pro Se Legal Assistant
         _get_content_writer_agent_definition(),       # Session 496: Written content from research
+        # Session 672: ML Pipeline Management Tools
+        _get_opportunity_manager_tool_definition(),   # Query/filter opportunities
+        _get_task_manager_tool_definition(),          # Manage OpportunityTasks
+        _get_pipeline_orchestrator_tool_definition(), # Manual pipeline execution
+        _get_revenue_tracker_tool_definition(),       # Track revenue/outcomes
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -903,5 +908,184 @@ def _get_content_writer_agent_definition() -> Dict:
                 }
             },
             "required": ["task", "content_type"]
+        }
+    }
+
+
+# =============================================================================
+# SESSION 672: ML PIPELINE MANAGEMENT TOOLS
+# =============================================================================
+
+def _get_opportunity_manager_tool_definition() -> Dict:
+    """
+    Session 672: Opportunity Manager Tool for querying/managing ML Pipeline opportunities.
+    """
+    return {
+        "type": "function",
+        "name": "opportunity_manager_tool",
+        "description": get_tool_description("opportunity_manager_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "stats", "search"],
+                    "description": "Action to perform: 'list' (filter opportunities), 'get' (details by ID), 'stats' (statistics), 'search' (keyword search)"
+                },
+                "opportunity_id": {
+                    "type": "string",
+                    "description": "Opportunity ID (required for 'get' action)"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["new", "active", "reviewing", "approved", "creating", "published", "earning", "expired", "rejected"],
+                    "description": "Filter by opportunity status"
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category (e.g., 'tech', 'jobs', 'financial')"
+                },
+                "min_score": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Minimum opportunity score (0-100)"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum results to return"
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Search query for 'search' action"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_task_manager_tool_definition() -> Dict:
+    """
+    Session 672: Task Manager Tool for managing OpportunityTasks.
+    """
+    return {
+        "type": "function",
+        "name": "task_manager_tool",
+        "description": get_tool_description("task_manager_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "get", "accept", "start", "apply", "complete", "fail", "add_note"],
+                    "description": "Action: 'list', 'get', 'accept', 'start', 'apply', 'complete' (won), 'fail' (lost), 'add_note'"
+                },
+                "task_id": {
+                    "type": "string",
+                    "description": "Task ID (required for get/accept/start/apply/complete/fail/add_note)"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["pending", "accepted", "in_progress", "applied", "waiting", "won", "lost", "expired", "cancelled"],
+                    "description": "Filter by task status (for 'list' action)"
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "urgent"],
+                    "description": "Filter by priority (for 'list' action)"
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum results to return"
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Note text (for 'add_note' action)"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_pipeline_orchestrator_tool_definition() -> Dict:
+    """
+    Session 672: Pipeline Orchestrator Tool for manual pipeline execution.
+    """
+    return {
+        "type": "function",
+        "name": "pipeline_orchestrator_tool",
+        "description": get_tool_description("pipeline_orchestrator_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["execute_task", "execute_opportunity", "status", "queue"],
+                    "description": "Action: 'execute_task' (run agent for task), 'execute_opportunity' (full pipeline), 'status', 'queue'"
+                },
+                "task_id": {
+                    "type": "string",
+                    "description": "Task ID to execute (for 'execute_task' action)"
+                },
+                "opportunity_id": {
+                    "type": "string",
+                    "description": "Opportunity ID to run pipeline for (for 'execute_opportunity' action)"
+                },
+                "agent_override": {
+                    "type": "string",
+                    "description": "Optional: Override the assigned agent with a specific agent name"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_revenue_tracker_tool_definition() -> Dict:
+    """
+    Session 672: Revenue Tracker Tool for tracking outcomes and closing the ML feedback loop.
+    """
+    return {
+        "type": "function",
+        "name": "revenue_tracker_tool",
+        "description": get_tool_description("revenue_tracker_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["log_revenue", "list_revenue", "stats", "accuracy", "link_content"],
+                    "description": "Action: 'log_revenue', 'list_revenue', 'stats', 'accuracy', 'link_content'"
+                },
+                "opportunity_id": {
+                    "type": "string",
+                    "description": "Opportunity ID (required for log_revenue, list_revenue, link_content)"
+                },
+                "amount": {
+                    "type": "number",
+                    "description": "Revenue amount in dollars (for 'log_revenue' action)"
+                },
+                "source": {
+                    "type": "string",
+                    "description": "Revenue source (e.g., 'client_payment', 'ad_revenue', 'sale')"
+                },
+                "content_id": {
+                    "type": "string",
+                    "description": "Content ID to link (for 'link_content' action)"
+                },
+                "content_type": {
+                    "type": "string",
+                    "enum": ["image", "video", "audio", "document"],
+                    "description": "Type of content being linked"
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Additional notes about the revenue"
+                }
+            },
+            "required": ["action"]
         }
     }
