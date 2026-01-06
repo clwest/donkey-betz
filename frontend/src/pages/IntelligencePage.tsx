@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { intelligenceApi, pilotsApi, experimentsApi, learningApi } from '@/lib/api'
+import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, agentsApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, Eye, ChevronRight, Loader2, Activity,
-  BookOpen, Target, BarChart3
+  BookOpen, Target, BarChart3, Globe, Bot, Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'gates' | 'pilots' | 'experiments' | 'learning' | 'activity'
+type TabType = 'gates' | 'pilots' | 'experiments' | 'learning' | 'activity' | 'spiders' | 'predictions' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -48,6 +48,31 @@ interface LearningEvent {
   event_type: string
   description: string
   timestamp: string
+}
+
+interface Spider {
+  name: string
+  status: 'active' | 'inactive' | 'error'
+  last_run: string
+  items_collected: number
+  category: string
+}
+
+interface Prediction {
+  id: string
+  title: string
+  probability: number
+  category: string
+  source: string
+  created_at: string
+}
+
+interface Agent {
+  name: string
+  display_name: string
+  status: 'healthy' | 'degraded' | 'offline'
+  executions_today: number
+  last_execution: string
 }
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
@@ -105,6 +130,27 @@ export default function IntelligencePage() {
     enabled: activeTab === 'learning' || activeTab === 'activity',
   })
 
+  // Spider Network
+  const { data: spidersData, isLoading: loadingSpiders } = useQuery({
+    queryKey: ['spider-status'],
+    queryFn: () => spidersApi.status(),
+    enabled: activeTab === 'spiders',
+  })
+
+  // Predictions
+  const { data: predictionsData, isLoading: loadingPredictions } = useQuery({
+    queryKey: ['predictions'],
+    queryFn: () => intelligenceApi.predictions(),
+    enabled: activeTab === 'predictions',
+  })
+
+  // Agent Health
+  const { data: agentsHealthData, isLoading: loadingAgents } = useQuery({
+    queryKey: ['agents-health'],
+    queryFn: () => agentsApi.health(),
+    enabled: activeTab === 'agents',
+  })
+
   // Mutations
   const approveGateMutation = useMutation({
     mutationFn: (gateId: string) => pilotsApi.approveAllItems(gateId),
@@ -157,6 +203,9 @@ export default function IntelligencePage() {
   const pilots: Pilot[] = pilotsData?.data?.pilots || []
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
   const learningEvents: LearningEvent[] = learningData?.data?.events || []
+  const spiders: Spider[] = spidersData?.data?.spiders || []
+  const predictions: Prediction[] = predictionsData?.data?.predictions || []
+  const agents: Agent[] = agentsHealthData?.data?.agents || []
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -178,6 +227,9 @@ export default function IntelligencePage() {
     { key: 'gates', label: 'Gates', icon: Target, count: gates.filter(g => g.status === 'pending').length },
     { key: 'pilots', label: 'Pilots', icon: Play, count: pilots.filter(p => p.status === 'running').length },
     { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'active').length },
+    { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
+    { key: 'predictions', label: 'Predictions', icon: Sparkles },
+    { key: 'agents', label: 'Agents', icon: Bot },
     { key: 'learning', label: 'Learning', icon: BookOpen },
     { key: 'activity', label: 'Activity', icon: Activity },
   ]
@@ -563,6 +615,250 @@ export default function IntelligencePage() {
               <p className="text-sm text-gray-500 mt-1">Agent learning activity will appear here</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Spiders Tab */}
+      {activeTab === 'spiders' && (
+        <div className="space-y-6">
+          {/* Spider Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Globe className="text-accent-green" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Active Spiders</p>
+                  <p className="text-2xl font-bold">{spiders.filter(s => s.status === 'active').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="text-accent-amber" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Inactive</p>
+                  <p className="text-2xl font-bold">{spiders.filter(s => s.status === 'inactive').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <XCircle className="text-accent-red" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Errors</p>
+                  <p className="text-2xl font-bold">{spiders.filter(s => s.status === 'error').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="text-primary-400" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Items Collected</p>
+                  <p className="text-2xl font-bold">{spiders.reduce((acc, s) => acc + (s.items_collected || 0), 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Spider Grid */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">Spider Network</h3>
+            {loadingSpiders ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            ) : spiders.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {spiders.map((spider, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'h-8 w-8 rounded-full flex items-center justify-center',
+                        spider.status === 'active' ? 'bg-accent-green/20' :
+                        spider.status === 'error' ? 'bg-accent-red/20' : 'bg-gray-500/20'
+                      )}>
+                        <Globe size={14} className={
+                          spider.status === 'active' ? 'text-accent-green' :
+                          spider.status === 'error' ? 'text-accent-red' : 'text-gray-400'
+                        } />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{spider.name}</p>
+                        <p className="text-xs text-gray-500">{spider.category}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{spider.items_collected || 0}</p>
+                      <p className="text-xs text-gray-500">items</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Globe className="mx-auto mb-2" size={32} />
+                <p>No spiders configured</p>
+                <p className="text-sm text-gray-500 mt-1">Spider network data will appear here</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Predictions Tab */}
+      {activeTab === 'predictions' && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">AI Predictions</h3>
+          {loadingPredictions ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin" size={24} />
+            </div>
+          ) : predictions.length > 0 ? (
+            <div className="space-y-3">
+              {predictions.map((pred, idx) => (
+                <div
+                  key={pred.id || idx}
+                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      'h-10 w-10 rounded-lg flex items-center justify-center',
+                      pred.probability >= 70 ? 'bg-accent-green/20' :
+                      pred.probability >= 40 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <Sparkles size={20} className={
+                        pred.probability >= 70 ? 'text-accent-green' :
+                        pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                      } />
+                    </div>
+                    <div>
+                      <p className="font-medium">{pred.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                          {pred.category}
+                        </span>
+                        <span className="text-xs text-gray-500">{pred.source}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn(
+                      'text-xl font-bold',
+                      pred.probability >= 70 ? 'text-accent-green' :
+                      pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                    )}>
+                      {pred.probability}%
+                    </p>
+                    <p className="text-xs text-gray-500">probability</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              <Sparkles className="mx-auto mb-2" size={32} />
+              <p>No predictions available</p>
+              <p className="text-sm text-gray-500 mt-1">AI predictions will appear here</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agents Tab */}
+      {activeTab === 'agents' && (
+        <div className="space-y-6">
+          {/* Agent Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Bot className="text-accent-green" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Healthy</p>
+                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'healthy').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="text-accent-amber" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Degraded</p>
+                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'degraded').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <XCircle className="text-accent-red" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Offline</p>
+                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'offline').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Activity className="text-primary-400" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Executions Today</p>
+                  <p className="text-2xl font-bold">{agents.reduce((acc, a) => acc + (a.executions_today || 0), 0)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Agent Grid */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">Agent Fleet</h3>
+            {loadingAgents ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            ) : agents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {agents.map((agent, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'h-8 w-8 rounded-full flex items-center justify-center',
+                        agent.status === 'healthy' ? 'bg-accent-green/20' :
+                        agent.status === 'degraded' ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                      )}>
+                        <Bot size={14} className={
+                          agent.status === 'healthy' ? 'text-accent-green' :
+                          agent.status === 'degraded' ? 'text-accent-amber' : 'text-accent-red'
+                        } />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{agent.display_name || agent.name}</p>
+                        <p className="text-xs text-gray-500">{agent.executions_today || 0} runs today</p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      'text-xs px-2 py-1 rounded',
+                      agent.status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
+                      agent.status === 'degraded' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                    )}>
+                      {agent.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Bot className="mx-auto mb-2" size={32} />
+                <p>No agent data available</p>
+                <p className="text-sm text-gray-500 mt-1">Agent health will appear here</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
