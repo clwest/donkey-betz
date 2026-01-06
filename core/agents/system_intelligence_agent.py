@@ -140,13 +140,21 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         }
     ]
 
-    def execute(self, task: str, context: Dict[str, Any] = None) -> AgentResult:
+    def execute(
+        self,
+        task: str,
+        context: Dict[str, Any] = None,
+        scifi_context: Dict[str, Any] = None,
+        spider_context: Dict[str, Any] = None
+    ) -> AgentResult:
         """
         Execute a system intelligence query.
 
         Args:
             task: The user's question about system status/health
             context: Optional additional context
+            scifi_context: Sci-fi feature context (unused by this agent)
+            spider_context: Spider data context (unused by this agent)
 
         Returns:
             AgentResult with system status information
