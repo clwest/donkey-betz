@@ -731,3 +731,236 @@ You score and analyze - you do NOT create content or execute workflows."""
     def _validate_task(self, task: str) -> bool:
         """Validate the task is appropriate for scoring."""
         return bool(task and task.strip())
+
+    # =========================================================================
+    # Session 671: Complete Pipeline Integration
+    # =========================================================================
+
+    def score_spider_data(self, hours: int = 24, limit: int = 100) -> List[ScoringResult]:
+        """
+        Score spider data and create opportunities for high-scoring items.
+
+        This is the main entry point called by the Celery task
+        `score_opportunities_from_spider_data`.
+
+        Args:
+            hours: Look back period in hours (default: 24)
+            limit: Maximum items to process (default: 100)
+
+        Returns:
+            List of ScoringResult objects
+        """
+        logger.info(f"[PIPELINE] Scoring spider data from last {hours}h (limit: {limit})")
+
+        results = []
+
+        try:
+            from django.utils import timezone
+            from core.models_unified_system import SpiderData, Opportunity, OpportunityTask
+
+            cutoff = timezone.now() - timedelta(hours=hours)
+
+            # Get unprocessed spider data (not yet linked to an opportunity)
+            # Note: Opportunity.spider_data has related_name='scored_opportunities'
+            spider_data_qs = SpiderData.objects.filter(
+                created_at__gte=cutoff,
+                is_actionable=True,
+                scored_opportunities__isnull=True  # Not yet processed into an opportunity
+            ).order_by('-relevance_score')[:limit]
+
+            logger.info(f"[PIPELINE] Found {spider_data_qs.count()} unprocessed spider data items")
+
+            opportunities_created = 0
+            tasks_created = 0
+
+            for data in spider_data_qs:
+                try:
+                    # Score using ML engine
+                    score_data = self._calculate_score(data)
+
+                    result = ScoringResult(
+                        success=True,
+                        profit_potential=score_data.get('profit_potential', 50),
+                        competition_level=score_data.get('competition_level', 50),
+                        effort_required=score_data.get('effort_required', 50),
+                        time_sensitivity=score_data.get('time_sensitivity', 50),
+                        overall_score=score_data.get('overall_score', 50),
+                        suggested_content_types=score_data.get('content_types', []),
+                        confidence_level=int(score_data.get('confidence', 70)),
+                        data_sources=[data.spider_name],
+                    )
+
+                    # Create Opportunity for high-scoring items (70+)
+                    if result.overall_score >= 70:
+                        opportunity = self._create_opportunity_from_score(data, score_data)
+                        if opportunity:
+                            result.opportunity_id = str(opportunity.id)
+                            opportunities_created += 1
+
+                            # Auto-create task for very high scores (80+)
+                            if result.overall_score >= 80:
+                                task = self._create_task_from_opportunity(opportunity, score_data)
+                                if task:
+                                    tasks_created += 1
+
+                    results.append(result)
+
+                except Exception as e:
+                    logger.warning(f"[PIPELINE] Error scoring {data.id}: {e}")
+                    results.append(ScoringResult(
+                        success=False,
+                        error=str(e)
+                    ))
+
+            logger.info(
+                f"[PIPELINE] Complete: {len(results)} scored, "
+                f"{opportunities_created} opportunities, {tasks_created} tasks"
+            )
+
+        except Exception as e:
+            logger.error(f"[PIPELINE] Fatal error: {e}")
+            results.append(ScoringResult(success=False, error=str(e)))
+
+        return results
+
+    def _create_opportunity_from_score(
+        self,
+        spider_data,
+        score_data: Dict[str, Any]
+    ) -> Optional['Opportunity']:
+        """
+        Create an Opportunity record from scored spider data.
+
+        Args:
+            spider_data: The SpiderData instance
+            score_data: Score results from _calculate_score
+
+        Returns:
+            Created Opportunity or None if creation fails
+        """
+        try:
+            from core.models_unified_system import Opportunity
+
+            raw_data = spider_data.raw_data or {}
+            title = raw_data.get('title', f"{spider_data.data_type} from {spider_data.spider_name}")
+
+            # Determine category from spider name
+            category = self._determine_category(spider_data.spider_name)
+
+            opportunity = Opportunity.objects.create(
+                spider_data=spider_data,
+                title=title[:255],
+                description=raw_data.get('description', '')[:2000],
+                category=category,
+                source=spider_data.spider_name,
+                source_url=raw_data.get('url', ''),
+
+                # Scores
+                overall_score=score_data.get('overall_score', 50),
+                profit_potential=score_data.get('profit_potential', 50),
+                competition_level=score_data.get('competition_level', 50),
+                effort_required=score_data.get('effort_required', 50),
+                time_sensitivity=score_data.get('time_sensitivity', 50),
+
+                # ML metadata
+                suggested_content_types=score_data.get('content_types', []),
+                metadata={
+                    'scoring_method': score_data.get('scoring_method', 'unknown'),
+                    'ml_score': score_data.get('ml_score'),
+                    'rule_score': score_data.get('rule_score'),
+                    'hybrid_score': score_data.get('hybrid_score'),
+                    'model_version': score_data.get('model_version'),
+                    'confidence': score_data.get('confidence'),
+                    'explanation': score_data.get('explanation'),
+                },
+
+                status='new',
+            )
+
+            logger.info(f"[PIPELINE] Created opportunity {opportunity.id} (score: {opportunity.overall_score})")
+            return opportunity
+
+        except Exception as e:
+            logger.error(f"[PIPELINE] Failed to create opportunity: {e}")
+            return None
+
+    def _create_task_from_opportunity(
+        self,
+        opportunity,
+        score_data: Dict[str, Any]
+    ) -> Optional['OpportunityTask']:
+        """
+        Create an OpportunityTask from a high-scoring Opportunity.
+
+        Args:
+            opportunity: The Opportunity instance
+            score_data: Score results
+
+        Returns:
+            Created OpportunityTask or None
+        """
+        try:
+            from core.models_unified_system import OpportunityTask
+
+            # Use the model's factory method if available
+            if hasattr(OpportunityTask, 'create_from_opportunity'):
+                task = OpportunityTask.create_from_opportunity(opportunity, score_data)
+                logger.info(f"[PIPELINE] Created task {task.id} for opportunity {opportunity.id}")
+                return task
+
+            # Fallback: create manually
+            from django.utils import timezone
+            from datetime import timedelta
+
+            # Determine priority
+            score = opportunity.overall_score
+            if score >= 90:
+                priority = 'critical'
+                days_until_due = 1
+            elif score >= 80:
+                priority = 'high'
+                days_until_due = 3
+            else:
+                priority = 'medium'
+                days_until_due = 7
+
+            task = OpportunityTask.objects.create(
+                opportunity=opportunity,
+                title=f"Act on: {opportunity.title[:100]}",
+                description=f"High-scoring opportunity (score: {score}). Suggested content: {', '.join(score_data.get('content_types', []))}",
+                priority=priority,
+                status='pending',
+                due_date=timezone.now() + timedelta(days=days_until_due),
+            )
+
+            # Assign agent
+            relevant_agents = opportunity.get_relevant_agents()
+            if relevant_agents:
+                task.primary_agent = relevant_agents[0]
+                task.save()
+
+            logger.info(f"[PIPELINE] Created task {task.id} (priority: {priority})")
+            return task
+
+        except Exception as e:
+            logger.error(f"[PIPELINE] Failed to create task: {e}")
+            return None
+
+    def _determine_category(self, spider_name: str) -> str:
+        """Determine opportunity category from spider name."""
+        spider_lower = spider_name.lower()
+
+        category_mappings = {
+            'freelance': ['freelancer', 'upwork', 'fiverr', 'remoteok', 'weworkremotely'],
+            'content': ['youtube', 'tiktok', 'instagram', 'twitter', 'reddit'],
+            'digital_product': ['gumroad', 'teachable', 'udemy', 'skillshare'],
+            'software': ['github', 'producthunt', 'hackernews'],
+            'course': ['coursera', 'edx', 'khan'],
+            'template': ['envato', 'creative_market'],
+        }
+
+        for category, keywords in category_mappings.items():
+            if any(kw in spider_lower for kw in keywords):
+                return category
+
+        return 'content'  # Default
