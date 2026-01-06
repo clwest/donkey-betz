@@ -1,88 +1,65 @@
-# Session 689 - Start Here
+# Session 690 - Start Here
 
-**Previous Session:** 688 (UI Audit - 8 Pages Fixed)
+**Previous Session:** 689 (Intelligence Command Center - Opportunity Modal)
 **Date:** January 6, 2026
-**Focus:** Intelligence Tab Sub-tabs Audit
+**Focus:** Continue Intelligence Tab Deep Dive
 **Status:** 100% Reality Score | Human-in-the-Loop Complete
 
-> **PRIORITY:** Intelligence tab sub-tabs - verify all 6 sub-tabs display real data!
+> **PRIORITY:** Continue auditing Intelligence Command Center sub-tabs
 
 ---
 
-## Session 688 Summary: UI Audit Pages Fixed
+## Session 689 Summary: Opportunity Modal + Test Data Cleanup
 
-### What Was Fixed
+### What Was Built
 
-Fixed 8 React pages to display real backend data:
+**Opportunity Detail Modal** - Click any opportunity in Intelligence page:
+- Full opportunity details (title, description, category, source, status)
+- Smart score display:
+  - Shows detailed breakdown if scores exist (profit/competition/effort/timing)
+  - Shows prominent overall score if only match_score exists
+- Action buttons: Mark Working, View Source, Dismiss
+- Keywords display and source URL link
 
-| Page | Route | Fix Applied |
-|------|-------|-------------|
-| **Legal** | `/legal` | Auth whitelist + anonymous handling |
-| **Podcast** | `/podcast` | Auth whitelist + anonymous handling |
-| **Content** | `/content` | Auth whitelist + anonymous handling |
-| **Betting** | `/betting` | Auth whitelist for odds/wagers APIs |
-| **Intelligence** | `/intelligence` | Auth whitelist for pilots/experiments |
-| **Portfolio** | `/portfolio` | Auth whitelist + revenue_dashboard fix |
-| **Admin** | `/admin` | Auth whitelist for spider-health |
-| **Agents** | `/agents` | WebSocket fixes + data mapping |
+### Backend Additions
+- `opportunity_dismiss` endpoint - Mark opportunities as dismissed
+- Auth middleware whitelist for `/api/opportunities/`
 
-### Key Patterns Applied
+### Test Data Cleanup
+Deleted 2 test pilot gates from an earlier session:
+- "Research target customers for: An Onion Bar - a restaurant that only serves raw onions with salt"
+- "Analyze competitors for: An Onion Bar..."
 
-1. **Auth Middleware Whitelist** - Added 20+ API paths to PUBLIC_PATHS
-2. **Anonymous User Handling** - Return empty data instead of 500 errors
-3. **WebSocket Data Mapping** - Handle nested `data.timestamp` structures
-4. **Field Name Mapping** - Map API fields to frontend expectations
-
-### Commits (10 total)
-
+### Commits (Session 689)
 ```
-aa87468e fix(Session 688): Add empty state for Live Learning section
-1891005a fix(Session 688): Fix Learning sub-tab data display on Agents page
-2359e932 fix(Session 688): Filter out WebSocket connection messages
-8eef90ec fix(Session 688): Handle nested WebSocket data in AgentsPage
-fd3d076a fix(Session 688): Add safe date formatter for timestamps
-d838d19a fix(Session 688): Add anonymous user handling to content_calendar
-0f4ff3e3 fix(Session 688): Admin page API auth fixes
-1954796b fix(Session 688): Portfolio page API auth fixes
-0f5eaa19 fix(Session 688): Enable public access for Podcast APIs
-b45e3190 fix(Session 688): Enable public access for Legal APIs
+963b49b7 fix(Session 688): Improve opportunity modal score display and button labels
+8979c2e3 feat(Session 688): Add opportunity detail modal with action buttons
 ```
 
 ### Handoff Doc
-`docs/handoffs/SESSION_688_UI_AUDIT_PAGES_FIXED.md`
+`docs/handoffs/SESSION_689_OPPORTUNITY_MODAL.md`
 
 ---
 
-## Session 689 Priority: Intelligence Tab Sub-tabs
+## Session 690 Priority: Intelligence Deep Dive Continues
 
-### Intelligence Page Sub-tabs to Audit
+### Intelligence Page Status
 
-| Sub-tab | Expected Data | APIs to Check |
-|---------|---------------|---------------|
-| **Overview** | Skynet status, summary stats | `/api/v1/intelligence/skynet/status/` |
-| **Pilots** | Active pilots, progress | `/api/pilots/` |
-| **Experiments** | Running experiments | `/api/experiments/` |
-| **Gates** | Pilot readiness gates | `/api/pilot-gates/` |
-| **Opportunities** | Business opportunities | `/api/v1/intelligence/opportunities/` |
-| **Predictions** | AI predictions | `/api/v1/intelligence/predictions/` |
+| Sub-tab | Status | Notes |
+|---------|--------|-------|
+| **Overview** | Working | Skynet status, opportunities, predictions display |
+| **Pilots** | Working | 29 gates showing |
+| **Experiments** | Working | Empty (no experiments) |
+| **Gates** | Working | Shows pilot readiness gates |
+| **Opportunities** | IMPROVED | Modal now shows details + actions |
+| **Predictions** | Working | AI predictions display |
 
-### Checklist for Each Sub-tab
+### Remaining Work
 
-1. **API Connections** - Are endpoints being called?
-2. **Data Mapping** - Is response data correctly mapped?
-3. **Loading States** - Do spinners show while fetching?
-4. **Error States** - Are errors handled gracefully?
-5. **Empty States** - What shows when no data exists?
-6. **Actions** - Do buttons (approve, reject, complete) work?
-
----
-
-## Pages Still to Audit
-
-| Page | Route | Status |
-|------|-------|--------|
-| **Assistant** | `/assistant` | Not audited |
-| **Settings** | `/settings` | Not audited |
+1. **Pilot Actions** - Test approve/reject/complete buttons
+2. **Gate Actions** - Test gate workflow buttons
+3. **Assistant Page** - Not audited yet
+4. **Settings Page** - Not audited yet
 
 ---
 
@@ -98,42 +75,33 @@ open http://localhost:3003/
 # Test Intelligence APIs
 curl -s http://localhost:8000/api/v1/intelligence/skynet/status/
 curl -s http://localhost:8000/api/pilots/
-curl -s http://localhost:8000/api/experiments/
-curl -s http://localhost:8000/api/pilot-gates/
+curl -s http://localhost:8000/api/opportunities/ | python3 -m json.tool
 
-# Check API health
-curl -s http://localhost:8000/health/ping/
+# Check pilot gates count
+curl -s http://localhost:8000/api/pilot-gates/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Gates: {len(d.get(\"gates\", d.get(\"results\", [])))}')"
 ```
 
 ---
 
-## System Stats (Session 688)
+## System Stats (Session 689)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
 | Agents | 72 | All synced |
 | Spiders | 77 | 72 working |
-| Celery Tasks | 128 | All scheduled |
-| Discord Commands | 113 | Full coverage |
-| PA Tools | 78 | 5.73% endpoint coverage |
-| React Pages Audited | 10/12 | 2 remaining |
+| Pilot Gates | 29 | 2 test gates deleted |
+| Opportunities | 153 | 150 scored |
+| React Pages Audited | 10/12 | Assistant, Settings remaining |
 
 ---
 
-## Architecture Reference
+## Files Modified (Session 689)
 
-### UI Data Flow
-```
-React Page → useQuery() → api.ts → Django View → Database
-                ↓
-            Loading State
-                ↓
-            Data Mapping
-                ↓
-            UI Components
-```
-
-### Files by Page
-- **Intelligence:** `frontend/src/pages/IntelligencePage.tsx`
-- **API Definitions:** `frontend/src/lib/api.ts`
-- **Auth Middleware:** `core/auth_middleware.py`
+| File | Changes |
+|------|---------|
+| `frontend/src/pages/IntelligencePage.tsx` | Opportunity modal, score display, actions |
+| `frontend/src/lib/api.ts` | opportunitiesApi endpoints |
+| `core/views_opportunity.py` | opportunity_dismiss endpoint |
+| `core/urls.py` | dismiss URL route |
+| `core/auth_middleware.py` | /api/opportunities/ whitelist |
+| `frontend/src/pages/AgentsPage.tsx` | TypeScript fixes |
