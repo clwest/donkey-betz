@@ -46,11 +46,11 @@ interface AttentionItem {
 }
 
 interface AttentionStats {
-  pending: number
-  urgent: number
-  total_today: number
+  pending_count: number
+  by_urgency: Record<string, number>
   avg_decision_time_ms: number | null
-  approval_rate: number | null
+  ml_agreement_rate: number | null
+  total_with_ml_context: number
 }
 
 interface SystemState {
@@ -73,6 +73,11 @@ interface Preferences {
   require_review_above_confidence: number
   trusted_agents: string[]
   blocked_sources: string[]
+  // Learned stats
+  topic_weights: Record<string, number>
+  avg_decision_time_ms: number | null
+  approval_rate: number | null
+  total_decisions: number
 }
 
 // Urgency config
@@ -403,7 +408,7 @@ export default function HumanPage() {
             <Bell className="text-accent-amber" size={24} />
             <div>
               <p className="text-sm text-gray-400">Pending</p>
-              <p className="text-2xl font-bold">{stats.pending || 0}</p>
+              <p className="text-2xl font-bold">{stats.pending_count || 0}</p>
             </div>
           </div>
         </div>
@@ -412,7 +417,9 @@ export default function HumanPage() {
             <AlertTriangle className="text-accent-red" size={24} />
             <div>
               <p className="text-sm text-gray-400">Urgent</p>
-              <p className="text-2xl font-bold">{stats.urgent || 0}</p>
+              <p className="text-2xl font-bold">
+                {(stats.by_urgency?.critical || 0) + (stats.by_urgency?.high || 0)}
+              </p>
             </div>
           </div>
         </div>
@@ -431,9 +438,9 @@ export default function HumanPage() {
           <div className="flex items-center gap-3">
             <TrendingUp className="text-accent-green" size={24} />
             <div>
-              <p className="text-sm text-gray-400">Approval Rate</p>
+              <p className="text-sm text-gray-400">ML Agreement</p>
               <p className="text-2xl font-bold">
-                {stats.approval_rate ? `${Math.round(stats.approval_rate * 100)}%` : '--'}
+                {stats.ml_agreement_rate ? `${Math.round(stats.ml_agreement_rate * 100)}%` : '--'}
               </p>
             </div>
           </div>
@@ -773,18 +780,18 @@ export default function HumanPage() {
             <h3 className="text-lg font-semibold mb-4">Your Stats</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="p-4 rounded-lg bg-dark-bg">
-                <p className="text-2xl font-bold">{stats.total_today || 0}</p>
-                <p className="text-sm text-gray-400">Decisions Today</p>
+                <p className="text-2xl font-bold">{preferences.total_decisions || 0}</p>
+                <p className="text-sm text-gray-400">Total Decisions</p>
               </div>
               <div className="p-4 rounded-lg bg-dark-bg">
                 <p className="text-2xl font-bold">
-                  {stats.avg_decision_time_ms ? `${Math.round(stats.avg_decision_time_ms / 1000)}s` : '--'}
+                  {preferences.avg_decision_time_ms ? `${Math.round(preferences.avg_decision_time_ms / 1000)}s` : '--'}
                 </p>
                 <p className="text-sm text-gray-400">Avg Decision Time</p>
               </div>
               <div className="p-4 rounded-lg bg-dark-bg">
                 <p className="text-2xl font-bold">
-                  {stats.approval_rate ? `${Math.round(stats.approval_rate * 100)}%` : '--'}
+                  {preferences.approval_rate ? `${Math.round(preferences.approval_rate * 100)}%` : '--'}
                 </p>
                 <p className="text-sm text-gray-400">Approval Rate</p>
               </div>
