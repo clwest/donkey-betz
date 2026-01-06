@@ -8,6 +8,7 @@ import AgentsPage from '@/pages/AgentsPage'
 import IntelligencePage from '@/pages/IntelligencePage'
 import ContentPage from '@/pages/ContentPage'
 import SettingsPage from '@/pages/SettingsPage'
+import ProfilePage from '@/pages/ProfilePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -39,6 +40,7 @@ function App() {
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="content" element={<ContentPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   )
