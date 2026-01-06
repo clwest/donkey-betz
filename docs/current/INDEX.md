@@ -26,7 +26,7 @@ open http://localhost:8000/ai-studio/
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 71 | 68 routable, 3 sub-agents |
+| **Agents** | 72 | 69 routable, 3 sub-agents (Session 663: +SystemIntelligenceAgent) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **Services** | 93+ | Business logic layer |
 | **Celery Tasks** | 127+ | Background job processing |
@@ -72,6 +72,13 @@ open http://localhost:8000/ai-studio/
 | [DAVINCI_RESOLVE.md](../DAVINCI_RESOLVE.md) | Professional video rendering |
 | [LEGAL_ASSISTANT.md](LEGAL_ASSISTANT.md) | Colorado family law system |
 | [CONTENT_PIPELINE.md](CONTENT_PIPELINE.md) | $5-$50K content tiers |
+
+### Integration & Learning
+
+| Document | Description |
+|----------|-------------|
+| [SYSTEM_INTEGRATION_GUIDE.md](SYSTEM_INTEGRATION_GUIDE.md) | Complete guide to how all components work together (Session 666) |
+| [LEARNING_SYSTEM.md](LEARNING_SYSTEM.md) | Agent learning hooks and collective intelligence |
 
 ### Operations
 
@@ -218,6 +225,8 @@ ai_core/spiders/specialized/          - 77 spider implementations
 
 | Session | Focus |
 |---------|-------|
+| **666** | **System Integration Guide** - Deep system review documentation |
+| **663** | **SystemIntelligenceAgent** - Platform health + routing (6 commits) |
 | 660 | ICC Tasks & Health Dashboards |
 | 659 | ICC Governance UI Audit |
 | 658 | AI Decision Promoter |
