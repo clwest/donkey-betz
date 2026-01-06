@@ -126,6 +126,10 @@ export default function AgentsPage() {
   })
 
   const { status: learningWsStatus } = useLearningFeed((event) => {
+    // Session 688: Filter out connection messages - only show real learning events
+    if (event.type === 'connection_established' || event.type === 'pong') {
+      return
+    }
     setLearningEvents((prev) => [event, ...prev].slice(0, 50))
   })
 
@@ -136,7 +140,8 @@ export default function AgentsPage() {
   // Parse activity data
   const recentActivities: RecentActivity[] = recentActivityResponse?.data?.activities || []
   const learningActivity = learningActivityResponse?.data || {}
-  const learningFeed = learningActivity?.feed || []
+  // Session 688: API returns feed_items, not feed
+  const learningFeed = learningActivity?.feed_items || learningActivity?.feed || []
   const learningStats = learningActivity?.stats || {}
 
   const isConnected = agentWsStatus === 'connected' || learningWsStatus === 'connected'
@@ -636,7 +641,13 @@ export default function AgentsPage() {
 
             {learningFeed.length > 0 ? (
               <div className="space-y-3 max-h-[400px] overflow-auto">
-                {learningFeed.map((transfer: { id: string; from_agent: string; to_agent: string; knowledge_title: string; transfer_type: string; timestamp: string }, idx: number) => (
+                {/* Session 688: API returns teacher/student, not from_agent/to_agent */}
+                {learningFeed.map((transfer: { id?: string; teacher?: string; student?: string; from_agent?: string; to_agent?: string; knowledge_full?: { title?: string }; knowledge_title?: string; type?: string; transfer_type?: string; timestamp: string }, idx: number) => {
+                  const fromAgent = transfer.teacher || transfer.from_agent || 'Unknown'
+                  const toAgent = transfer.student || transfer.to_agent || 'Unknown'
+                  const title = transfer.knowledge_full?.title || transfer.knowledge_title || 'Knowledge shared'
+                  const transferType = transfer.type || transfer.transfer_type || 'transfer'
+                  return (
                   <div
                     key={`transfer-${transfer.id || idx}`}
                     className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-accent-cyan/50 transition-colors"
@@ -646,13 +657,13 @@ export default function AgentsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-accent-cyan">{transfer.from_agent}</span>
+                        <span className="font-medium text-accent-cyan">{fromAgent}</span>
                         <span className="text-gray-500">→</span>
-                        <span className="font-medium text-accent-green">{transfer.to_agent}</span>
+                        <span className="font-medium text-accent-green">{toAgent}</span>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">{transfer.knowledge_title}</p>
+                      <p className="text-sm text-gray-400 mt-1 truncate">{title}</p>
                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                        <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transfer.transfer_type}</span>
+                        <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transferType.replace('_', ' ')}</span>
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
                           {formatTimestamp(transfer.timestamp, 'full')}
@@ -660,7 +671,8 @@ export default function AgentsPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-400">
