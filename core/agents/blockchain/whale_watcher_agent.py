@@ -2,6 +2,7 @@
 WhaleWatcherAgent - Monitors large token movements and whale activity.
 
 Session 461: Part of the Blockchain Audit Agent Group
+Session 683: Added ML Integration (GNN for wallet transaction network analysis)
 
 This agent specializes in:
 - Tracking large value transfers (whale movements)
@@ -9,6 +10,7 @@ This agent specializes in:
 - Detecting accumulation/distribution patterns
 - Alerting on significant exchange flows
 - Tracking known whale addresses
+- ML-powered wallet network analysis (GNN) - Session 683
 """
 
 import json
@@ -295,10 +297,17 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
                     execution_time = int((time.time() - start_time) * 1000)
 
                     if all_results:
+                        # Session 683: Run ML analysis on wallet transaction data
+                        ml_insights = self._analyze_wallet_network_with_ml(all_results)
+
                         result = AgentResult(
                             success=True,
                             message=f"Whale monitoring completed with {len(all_results)} analysis(es)",
-                            data={'results': all_results, 'query': task},
+                            data={
+                                'results': all_results,
+                                'query': task,
+                                'ml_analysis': ml_insights  # Session 683: Add ML analysis
+                            },
                             agent_name=self.name,
                             execution_time_ms=execution_time,
                             decisions_made=self._tt_decision_count,
@@ -671,3 +680,129 @@ You CANNOT create images, videos, or perform non-blockchain operations."""
             logger.debug(f"Could not send Discord whale alert: {e}")
 
         return alert
+
+    # =========================================================================
+    # SESSION 683: ML INTEGRATION - GNN FOR WALLET NETWORK ANALYSIS
+    # =========================================================================
+
+    def _analyze_wallet_network_with_ml(self, results: list) -> Dict[str, Any]:
+        """
+        Use ML models to analyze wallet transaction networks.
+
+        Session 683: Integrates the Agent-Model Router to auto-select GNN
+        for analyzing wallet-to-wallet transaction relationships.
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            # Build graph data from transaction results
+            graph_data = self._build_wallet_graph(results)
+
+            if not graph_data.get('nodes') or len(graph_data['nodes']) < 2:
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient wallet data for network analysis'
+                }
+
+            # Get router and run auto-selection (should select GNN for graph data)
+            router = get_agent_model_router()
+            result = router.auto_route(graph_data, max_models=2)
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'unknown'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'wallet_count': len(graph_data['nodes']),
+                'transaction_count': len(graph_data['edges']),
+            }
+
+        except ImportError as e:
+            logger.warning(f"ML router not available: {e}")
+            return {'ml_used': False, 'reason': f'ML not available: {e}'}
+        except Exception as e:
+            logger.warning(f"ML analysis error: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {e}'}
+
+    def _build_wallet_graph(self, results: list) -> Dict[str, Any]:
+        """
+        Build graph representation of wallet transaction networks.
+
+        Creates nodes for wallets and edges for transactions between them.
+        """
+        nodes = []
+        edges = []
+        node_ids = set()
+
+        for result_item in results:
+            data = result_item.get('data', {})
+
+            # Extract from_address and to_address from various result types
+            from_addr = data.get('from_address')
+            to_addr = data.get('to_address')
+
+            if from_addr:
+                if from_addr not in node_ids:
+                    nodes.append({
+                        'id': from_addr,
+                        'type': 'wallet',
+                        'label': f"{from_addr[:8]}..."
+                    })
+                    node_ids.add(from_addr)
+
+            if to_addr:
+                if to_addr not in node_ids:
+                    nodes.append({
+                        'id': to_addr,
+                        'type': 'wallet',
+                        'label': f"{to_addr[:8]}..."
+                    })
+                    node_ids.add(to_addr)
+
+            # Create edge for transaction
+            if from_addr and to_addr:
+                edges.append([from_addr, to_addr])
+
+            # Also extract from alert data if present
+            alert_data = data.get('alert', {})
+            alert_from = alert_data.get('from_address')
+            alert_to = alert_data.get('to_address')
+
+            if alert_from and alert_from not in node_ids:
+                nodes.append({
+                    'id': alert_from,
+                    'type': 'whale',
+                    'usd_value': alert_data.get('usd_value'),
+                    'label': f"🐋 {alert_from[:8]}..."
+                })
+                node_ids.add(alert_from)
+
+            if alert_to and alert_to not in node_ids:
+                nodes.append({
+                    'id': alert_to,
+                    'type': 'destination',
+                    'label': f"{alert_to[:8]}..."
+                })
+                node_ids.add(alert_to)
+
+            if alert_from and alert_to:
+                edges.append([alert_from, alert_to])
+
+        # Add known exchange wallets as nodes if they appear in context
+        for exchange in WHALE_CATEGORIES.get('exchange', []):
+            exchange_id = f"exchange_{exchange}"
+            if exchange_id not in node_ids:
+                nodes.append({
+                    'id': exchange_id,
+                    'type': 'exchange',
+                    'name': exchange,
+                    'label': f"🏦 {exchange}"
+                })
+                node_ids.add(exchange_id)
+
+        return {
+            'nodes': nodes,
+            'edges': edges
+        }

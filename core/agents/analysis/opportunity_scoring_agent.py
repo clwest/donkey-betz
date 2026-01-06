@@ -4,16 +4,20 @@ Opportunity Scoring Agent - Clean Architecture
 
 Session 280: Phase 3 - Agent Architecture Unification
 Session 470: Market Intelligence Architecture - ML Scoring Integration
+Session 683: Added ML Integration (RL for opportunity ranking optimization)
 
 This agent transforms raw spider data into scored, actionable opportunities
 that feed into the content creation pipeline.
 
-Now supports hybrid ML + rule-based scoring with SHAP explainability.
+Now supports:
+- Hybrid ML + rule-based scoring with SHAP explainability
+- RL-powered opportunity ranking optimization (Session 683)
 
 Tools Available:
     - score_data: Score spider data for opportunities
     - analyze_trend: Analyze and score a specific trend
     - get_top_opportunities: Get highest-scored opportunities
+    - ML: RL optimization for opportunity ranking (auto-invoked)
 
 Usage:
     from core.agents.analysis import OpportunityScoringAgent
@@ -333,6 +337,9 @@ You score and analyze - you do NOT create content or execute workflows."""
                             result_summary=str(tool_result)[:100]
                         )
 
+                    # Session 683: Run RL optimization on scored opportunities
+                    ml_insights = self._optimize_ranking_with_rl(tool_calls_made)
+
                     execution_time = int((time.time() - start_time) * 1000)
 
                     result = AgentResult(
@@ -341,6 +348,7 @@ You score and analyze - you do NOT create content or execute workflows."""
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'ml_analysis': ml_insights,  # Session 683: Add RL optimization
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,
@@ -976,3 +984,109 @@ You score and analyze - you do NOT create content or execute workflows."""
                 return category
 
         return 'content'  # Default
+
+    # =========================================================================
+    # SESSION 683: ML INTEGRATION - RL FOR OPPORTUNITY RANKING OPTIMIZATION
+    # =========================================================================
+
+    def _optimize_ranking_with_rl(self, tool_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Use ML models to optimize opportunity ranking.
+
+        Session 683: Integrates the Agent-Model Router to auto-select RL
+        for decision optimization on opportunity prioritization.
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            # Build decision data from scoring results
+            decision_data = self._build_decision_data(tool_results)
+
+            if not decision_data.get('actions') or len(decision_data['actions']) < 2:
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient opportunities for ranking optimization'
+                }
+
+            # Get router and run auto-selection (should select RL for decision tasks)
+            router = get_agent_model_router()
+
+            # Provide hint that this is a decision/optimization task
+            from ml.auto_selection import TaskType
+            result = router.auto_route(
+                decision_data,
+                task_hint=TaskType.DECISION,
+                max_models=2
+            )
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'unknown'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'opportunities_optimized': len(decision_data.get('actions', [])),
+            }
+
+        except ImportError as e:
+            logger.warning(f"ML router not available: {e}")
+            return {'ml_used': False, 'reason': f'ML not available: {e}'}
+        except Exception as e:
+            logger.warning(f"ML analysis error: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {e}'}
+
+    def _build_decision_data(self, tool_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Build decision data suitable for RL optimization.
+
+        Creates state-action representation for opportunity ranking.
+        """
+        actions = []
+        states = []
+
+        for tool_result in tool_results:
+            result_data = tool_result.get('result', {})
+
+            # Extract opportunities from various tool results
+            opportunities = []
+            if 'opportunities' in result_data:
+                opportunities = result_data['opportunities']
+            elif 'top_opportunities' in result_data:
+                opportunities = result_data['top_opportunities']
+            elif 'analysis' in result_data and isinstance(result_data['analysis'], dict):
+                opportunities = [result_data['analysis']]
+
+            for opp in opportunities:
+                if isinstance(opp, dict):
+                    # State: current opportunity features
+                    state = {
+                        'profit_potential': opp.get('profit_potential', 50),
+                        'competition_level': opp.get('competition_level', 50),
+                        'effort_required': opp.get('effort_required', 50),
+                        'time_sensitivity': opp.get('time_sensitivity', 50),
+                        'overall_score': opp.get('overall_score', 50),
+                    }
+                    states.append(state)
+
+                    # Action: prioritize/defer/skip
+                    score = opp.get('overall_score', 50)
+                    if score >= 80:
+                        action = 'prioritize'
+                    elif score >= 60:
+                        action = 'queue'
+                    else:
+                        action = 'defer'
+
+                    actions.append({
+                        'opportunity_id': opp.get('id', opp.get('title', 'unknown')),
+                        'action': action,
+                        'score': score,
+                    })
+
+        return {
+            'decision_type': 'opportunity_ranking',
+            'states': states,
+            'actions': actions,
+            'reward_function': 'maximize_roi',  # Hint for RL model
+        }

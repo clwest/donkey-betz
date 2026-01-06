@@ -6,6 +6,7 @@ Session 293: Business Research Extension
 Session 303: Unified Intelligence Search + Auto Spider Refresh
 Session 304: Learning Infrastructure Integration
 Session 354: Mythology Validation - Prevents unrealistic claims in research output
+Session 683: Added ML Integration (GNN+Text for entity analysis)
 
 This agent analyzes competitors in a given market/industry.
 It uses web search and spider data to:
@@ -13,6 +14,7 @@ It uses web search and spider data to:
 2. Analyze their features, pricing, positioning
 3. Generate SWOT analysis
 4. Find market gaps and opportunities
+5. ML-powered relationship analysis
 
 Tools Available:
     - web_search: Search for competitor information
@@ -33,6 +35,80 @@ import re
 from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration Helpers
+# =============================================================================
+
+def analyze_competitors_with_ml(graph_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze competitor relationships using ML models (GNN for entity graphs).
+
+    Args:
+        graph_data: Dict with 'nodes' (competitors) and 'edges' (relationships)
+
+    Returns:
+        Dict with ML analysis results including community detection
+    """
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        result = router.auto_route(
+            data=graph_data,
+            task_hint=TaskType.GRAPH,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'graph'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'communities': result.prediction.get('communities') if hasattr(result, 'prediction') and result.prediction else None,
+            'centrality_scores': result.prediction.get('centrality') if hasattr(result, 'prediction') and result.prediction else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML competitor graph analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+
+def analyze_competitor_text_with_ml(text_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze competitor text mentions using ML models (DistilBERT for text).
+
+    Args:
+        text_data: Dict with 'texts' key containing competitor mentions
+
+    Returns:
+        Dict with ML text analysis results
+    """
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        result = router.auto_route(
+            data=text_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'sentiment': result.prediction.get('sentiment') if hasattr(result, 'prediction') and result.prediction else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML competitor text analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 def strip_html_tags(text: str) -> str:
@@ -47,8 +123,6 @@ def strip_html_tags(text: str) -> str:
         return clean_text
     except Exception:
         return re.sub(r'<[^>]+>', '', text).strip()
-
-logger = logging.getLogger(__name__)
 
 
 class CompetitorAnalysisAgent(BaseAgent):
@@ -320,6 +394,107 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.agent_intelligence_context import get_agent_intelligence_context
             self._agent_intelligence = get_agent_intelligence_context()
         return self._agent_intelligence
+
+    def _analyze_market_with_ml(
+        self,
+        competitors: List[Dict[str, Any]],
+        mentions: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 683: Analyze competitor market using ML models.
+
+        Uses GNN for relationship analysis and Text models for sentiment.
+
+        Args:
+            competitors: List of competitor dicts with name, features, etc.
+            mentions: List of mention dicts with title, content, etc.
+
+        Returns:
+            Dict with combined ML analysis results
+        """
+        ml_results = {'ml_used': False}
+
+        # Build competitor relationship graph for GNN
+        if len(competitors) >= 2:
+            try:
+                graph_data = self._build_competitor_graph(competitors, mentions)
+                if graph_data.get('nodes') and graph_data.get('edges'):
+                    graph_ml = analyze_competitors_with_ml(graph_data)
+                    if graph_ml.get('ml_used'):
+                        ml_results['graph_analysis'] = graph_ml
+                        ml_results['ml_used'] = True
+            except Exception as e:
+                logger.warning(f"Competitor graph analysis failed: {e}")
+
+        # Build text data for sentiment analysis
+        if mentions:
+            try:
+                texts = [
+                    f"{m.get('title', '')} {m.get('description', '')}"
+                    for m in mentions if m.get('title')
+                ][:50]
+
+                if texts:
+                    text_data = {'texts': texts, 'analysis_type': 'competitor_sentiment'}
+                    text_ml = analyze_competitor_text_with_ml(text_data)
+                    if text_ml.get('ml_used'):
+                        ml_results['text_analysis'] = text_ml
+                        ml_results['ml_used'] = True
+            except Exception as e:
+                logger.warning(f"Competitor text analysis failed: {e}")
+
+        return ml_results
+
+    def _build_competitor_graph(
+        self,
+        competitors: List[Dict[str, Any]],
+        mentions: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 683: Build competitor relationship graph for GNN analysis.
+
+        Creates nodes for competitors and edges for shared features/markets.
+
+        Args:
+            competitors: List of competitor data
+            mentions: List of mentions that may reference multiple competitors
+
+        Returns:
+            Dict with 'nodes' and 'edges' for graph analysis
+        """
+        nodes = []
+        edges = []
+        node_ids = {}
+
+        # Create nodes for each competitor
+        for i, comp in enumerate(competitors):
+            name = comp.get('name', f'competitor_{i}')
+            node_ids[name.lower()] = i
+            nodes.append({
+                'id': i,
+                'name': name,
+                'features': comp.get('features', []),
+                'market': comp.get('market', 'general')
+            })
+
+        # Create edges based on co-mentions in data
+        competitor_names = [n['name'].lower() for n in nodes]
+        for mention in mentions:
+            text = f"{mention.get('title', '')} {mention.get('description', '')}".lower()
+            mentioned = [name for name in competitor_names if name in text]
+
+            # Create edges between co-mentioned competitors
+            for i, name1 in enumerate(mentioned):
+                for name2 in mentioned[i + 1:]:
+                    if name1 in node_ids and name2 in node_ids:
+                        edges.append({
+                            'source': node_ids[name1],
+                            'target': node_ids[name2],
+                            'type': 'co_mention',
+                            'weight': 1.0
+                        })
+
+        return {'nodes': nodes, 'edges': edges}
 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
@@ -771,6 +946,33 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                     # Session 350: Pass project_context for domain-aware synthesis
                     synthesis = self._synthesize_analysis(task, all_competitor_data, project_context)
 
+                    # Session 683: Run ML analysis on competitor data
+                    ml_analysis = {'ml_used': False}
+                    try:
+                        # Extract competitors and mentions from raw data
+                        competitors = []
+                        mentions = []
+                        for source_data in all_competitor_data:
+                            data = source_data.get('data', {})
+                            if isinstance(data, list):
+                                for item in data:
+                                    if 'name' in item or 'competitor_name' in item:
+                                        competitors.append(item)
+                                    else:
+                                        mentions.append(item)
+                            elif isinstance(data, dict) and data.get('name'):
+                                competitors.append(data)
+
+                        if competitors or mentions:
+                            ml_analysis = self._analyze_market_with_ml(competitors, mentions)
+                            if ml_analysis.get('ml_used'):
+                                logger.info(
+                                    f"ML competitor analysis: graph={ml_analysis.get('graph_analysis', {}).get('ml_used', False)}, "
+                                    f"text={ml_analysis.get('text_analysis', {}).get('ml_used', False)}"
+                                )
+                    except Exception as e:
+                        logger.warning(f"ML integration in execute failed: {e}")
+
                     # Session 294: Save to database with embedding for semantic search
                     # Session 349: Pass project_id to link research to project
                     saved_result = None
@@ -808,6 +1010,7 @@ Return a comprehensive competitive landscape analysis with DOMAIN-RELEVANT data.
                             'raw_data': all_competitor_data,
                             'query': task,
                             'saved_id': str(saved_result.id) if saved_result else None,
+                            'ml_analysis': ml_analysis,  # Session 683: ML insights
                             # Session 352: Include viability for scores 50-79 (< 50 exits early)
                             'viability': {
                                 'score': viability_score,

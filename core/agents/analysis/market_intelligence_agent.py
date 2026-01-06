@@ -3,18 +3,21 @@ Market Intelligence Agent - Clean Architecture
 ===============================================
 
 Session 385: Phase 4 - Market Intelligence Integration
+Session 683: Added ML Integration (GNN for market entity relationship analysis)
 
 This agent provides comprehensive financial market intelligence by combining:
 - SEC EDGAR filings (8-K, 10-K, 10-Q)
 - Cryptocurrency market data (CoinGecko)
 - Stock market data (Yahoo Finance)
 - Financial news correlation
+- ML-powered entity relationship analysis (GNN) - Session 683
 
 Tools Available:
     - get_sec_filings: Fetch recent SEC filings with impact analysis
     - get_market_overview: Get combined crypto/stock market overview
     - analyze_filing_impact: Analyze potential market impact of SEC filings
     - get_sector_performance: Get performance data by sector
+    - ML: GNN analysis for market entity relationships (auto-invoked)
 
 Usage:
     from core.agents.analysis import MarketIntelligenceAgent
@@ -344,6 +347,27 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             else:
                 analysis = assistant_message.content
 
+            # Session 683: Run ML analysis on collected market data
+            ml_insights = {}
+            if collected_data:
+                # Combine all collected data for ML analysis
+                market_data_for_ml = {
+                    'filings': collected_data.get('get_sec_filings', {}).get('filings', []),
+                    'stocks': collected_data.get('get_market_overview', {}).get('stocks', {}),
+                    'crypto': collected_data.get('get_market_overview', {}).get('crypto', {}),
+                }
+                ml_insights = self._analyze_with_ml(market_data_for_ml)
+
+                # Enhance analysis with ML insights
+                if ml_insights.get('ml_used'):
+                    ml_summary = f"\n\n**ML Analysis (GNN):**\n"
+                    ml_summary += f"- Models Used: {', '.join(ml_insights['models_used'])}\n"
+                    ml_summary += f"- Confidence: {ml_insights['confidence']}\n"
+                    ml_summary += f"- Entities Analyzed: {ml_insights['entity_count']} nodes, {ml_insights['relationship_count']} relationships\n"
+                    if ml_insights.get('ml_insights'):
+                        ml_summary += f"- Insights: {ml_insights['ml_insights']}\n"
+                    analysis += ml_summary
+
             # Build result
             execution_time = int((time.time() - start_time) * 1000)
 
@@ -354,6 +378,7 @@ You analyze and report - you do NOT give trading advice or recommendations."""
                     'analysis': analysis,
                     'collected_data': collected_data,
                     'tool_calls': tool_calls_made,
+                    'ml_analysis': ml_insights,  # Session 683: Add ML analysis to data
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time,
@@ -591,4 +616,137 @@ You analyze and report - you do NOT give trading advice or recommendations."""
             'matches': matching[:limit],
             'total_matches': len(matching),
             'source': 'sec_edgar'
+        }
+
+    # =========================================================================
+    # SESSION 683: ML INTEGRATION - GNN FOR MARKET ENTITY ANALYSIS
+    # =========================================================================
+
+    def _analyze_with_ml(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Use ML models to analyze market entity relationships.
+
+        Session 683: Integrates the Agent-Model Router to auto-select GNN
+        for analyzing relationships between market entities (companies,
+        sectors, filings, etc.).
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            # Build graph data from market entities
+            graph_data = self._build_market_graph(market_data)
+
+            if not graph_data.get('nodes') or len(graph_data['nodes']) < 2:
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient entities for graph analysis'
+                }
+
+            # Get router and run auto-selection (should select GNN for graph data)
+            router = get_agent_model_router()
+            result = router.auto_route(graph_data, max_models=2)
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'unknown'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'entity_count': len(graph_data['nodes']),
+                'relationship_count': len(graph_data['edges']),
+            }
+
+        except ImportError as e:
+            logger.warning(f"ML router not available: {e}")
+            return {'ml_used': False, 'reason': f'ML not available: {e}'}
+        except Exception as e:
+            logger.warning(f"ML analysis error: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {e}'}
+
+    def _build_market_graph(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build graph representation of market entities.
+
+        Creates nodes for: companies, sectors, filings
+        Creates edges for: company-filing, company-sector, sector-correlations
+        """
+        nodes = []
+        edges = []
+        node_ids = set()
+
+        # Process SEC filings
+        filings = market_data.get('filings', [])
+        for filing in filings:
+            company = filing.get('company', 'Unknown')
+
+            # Add company node
+            if company not in node_ids:
+                nodes.append({
+                    'id': company,
+                    'type': 'company',
+                    'label': company
+                })
+                node_ids.add(company)
+
+            # Add filing node
+            filing_id = f"filing_{filing.get('form_type', '8K')}_{company}"
+            if filing_id not in node_ids:
+                nodes.append({
+                    'id': filing_id,
+                    'type': 'filing',
+                    'form_type': filing.get('form_type'),
+                    'is_high_impact': filing.get('is_high_impact', False),
+                    'label': f"{filing.get('form_type', '8K')} - {company}"
+                })
+                node_ids.add(filing_id)
+
+                # Company -> Filing edge
+                edges.append([company, filing_id])
+
+        # Process stock data
+        stocks = market_data.get('stocks', {}).get('assets', [])
+        for stock in stocks:
+            symbol = stock.get('symbol', '')
+            if symbol and symbol not in node_ids:
+                nodes.append({
+                    'id': symbol,
+                    'type': 'stock',
+                    'price': stock.get('current_price'),
+                    'change': stock.get('change_percent'),
+                    'label': symbol
+                })
+                node_ids.add(symbol)
+
+        # Process crypto data
+        crypto = market_data.get('crypto', {}).get('assets', [])
+        for coin in crypto:
+            symbol = coin.get('symbol', '').upper()
+            if symbol and symbol not in node_ids:
+                nodes.append({
+                    'id': symbol,
+                    'type': 'crypto',
+                    'price': coin.get('current_price'),
+                    'change': coin.get('price_change_percentage_24h'),
+                    'label': symbol
+                })
+                node_ids.add(symbol)
+
+        # Create correlation edges between assets with similar price movements
+        all_assets = stocks + crypto
+        for i, asset1 in enumerate(all_assets):
+            for asset2 in all_assets[i+1:]:
+                change1 = asset1.get('change_percent') or asset1.get('price_change_percentage_24h') or 0
+                change2 = asset2.get('change_percent') or asset2.get('price_change_percentage_24h') or 0
+
+                # Similar direction and magnitude = potential correlation
+                if change1 * change2 > 0 and abs(change1 - change2) < 5:
+                    id1 = asset1.get('symbol', '').upper()
+                    id2 = asset2.get('symbol', '').upper()
+                    if id1 and id2:
+                        edges.append([id1, id2])
+
+        return {
+            'nodes': nodes,
+            'edges': edges
         }

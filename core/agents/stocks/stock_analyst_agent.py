@@ -3,6 +3,8 @@ Stock Analyst Agent
 ===================
 
 Session 461: Analyzes SEC filings, fundamentals, and valuations.
+Session 683: Added ML Integration (LSTM for price trend forecasting)
+
 Equivalent to SmartContractAuditorAgent in the blockchain audit system.
 
 Key capabilities:
@@ -10,6 +12,7 @@ Key capabilities:
 - Fundamental analysis (P/E, debt ratios, cash flow)
 - Peer comparison
 - Risk assessment
+- ML-powered price trend forecasting (LSTM/Prophet) - Session 683
 """
 
 import logging
@@ -177,6 +180,18 @@ Alert on:
             # Determine severity
             severity = self._assess_severity(analysis)
 
+            # Session 683: Run ML analysis for price trend forecasting
+            ml_insights = self._analyze_price_trends_with_ml(context.get('ticker'), fundamental_data)
+
+            # Enhance analysis with ML insights
+            if ml_insights.get('ml_used'):
+                ml_summary = f"\n\n**ML Price Analysis (LSTM/Prophet):**\n"
+                ml_summary += f"- Models Used: {', '.join(ml_insights['models_used'])}\n"
+                ml_summary += f"- Confidence: {ml_insights['confidence']}\n"
+                if ml_insights.get('ml_insights'):
+                    ml_summary += f"- Trend Forecast: {ml_insights['ml_insights']}\n"
+                analysis += ml_summary
+
             execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
             result = AgentResult(
@@ -188,6 +203,7 @@ Alert on:
                     'ticker': context.get('ticker'),
                     'filing_data': filing_data,
                     'fundamental_data': fundamental_data,
+                    'ml_analysis': ml_insights,  # Session 683: Add ML analysis
                 },
                 agent_name=self.name,
                 execution_time_ms=execution_time
@@ -346,3 +362,106 @@ Provide:
             return 'MEDIUM'
         else:
             return 'LOW'
+
+    # =========================================================================
+    # SESSION 683: ML INTEGRATION - LSTM FOR PRICE TREND FORECASTING
+    # =========================================================================
+
+    def _analyze_price_trends_with_ml(self, ticker: str, fundamental_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Use ML models to analyze price trends and forecast future movements.
+
+        Session 683: Integrates the Agent-Model Router to auto-select LSTM/Prophet
+        for time series price analysis.
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            # Build time series data from price history
+            time_series_data = self._build_price_time_series(ticker, fundamental_data)
+
+            if not time_series_data.get('timestamp') or len(time_series_data['timestamp']) < 5:
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient price history for time series analysis'
+                }
+
+            # Get router and run auto-selection (should select LSTM/Prophet for time series)
+            router = get_agent_model_router()
+            result = router.auto_route(time_series_data, max_models=2)
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'unknown'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'data_points': len(time_series_data.get('timestamp', [])),
+                'score': round(result.score, 4) if result.score else None,
+            }
+
+        except ImportError as e:
+            logger.warning(f"ML router not available: {e}")
+            return {'ml_used': False, 'reason': f'ML not available: {e}'}
+        except Exception as e:
+            logger.warning(f"ML analysis error: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {e}'}
+
+    def _build_price_time_series(self, ticker: str, fundamental_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build time series data from price history.
+
+        Extracts timestamp and price data suitable for LSTM/Prophet analysis.
+        """
+        timestamps = []
+        prices = []
+
+        # Try to extract from fundamental_data
+        if isinstance(fundamental_data, dict):
+            # Check for historical price data
+            price_history = fundamental_data.get('price_history', [])
+            if price_history:
+                for entry in price_history:
+                    if isinstance(entry, dict):
+                        ts = entry.get('timestamp') or entry.get('date')
+                        price = entry.get('price') or entry.get('close')
+                        if ts and price:
+                            timestamps.append(str(ts))
+                            prices.append(float(price))
+
+            # Or check for recent prices
+            recent_prices = fundamental_data.get('recent_prices', [])
+            if recent_prices and not prices:
+                for i, price in enumerate(recent_prices):
+                    timestamps.append(f"T-{len(recent_prices) - i}")
+                    prices.append(float(price))
+
+        # If no data found, try to get from spider network
+        if not prices:
+            try:
+                from core.models_unified_system import SpiderData
+                from django.utils import timezone
+
+                cutoff = timezone.now() - timedelta(days=30)
+                data = SpiderData.objects.filter(
+                    spider_name__in=['yahoo_finance', 'polygon_spider'],
+                    created_at__gte=cutoff
+                ).order_by('-created_at')[:30]
+
+                for entry in data:
+                    raw = entry.raw_data or {}
+                    if ticker and ticker.upper() in str(raw).upper():
+                        price = raw.get('current_price') or raw.get('price')
+                        if price:
+                            timestamps.append(str(entry.created_at.date()))
+                            prices.append(float(price))
+
+            except Exception as e:
+                logger.warning(f"Error fetching price history: {e}")
+
+        return {
+            'timestamp': timestamps,
+            'price': prices,
+            'ticker': ticker
+        }

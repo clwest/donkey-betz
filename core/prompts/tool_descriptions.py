@@ -622,6 +622,44 @@ DO NOT USE FOR:
 
 
     # -------------------------------------------------------------------------
+    # SESSION 683: ML ANALYSIS TOOL
+    # -------------------------------------------------------------------------
+
+    "ml_analysis": """Analyze data using auto-selected ML models. The system detects data type and picks optimal models.
+
+USE THIS WHEN user wants to:
+- ANALYZE DATA: "Analyze this data", "What patterns are in this data?"
+- PREDICT: "Predict next price", "Forecast this time series"
+- DETECT: "Find anomalies", "Detect outliers", "Find unusual patterns"
+- CLUSTER: "Group similar items", "Identify clusters"
+- GRAPH ANALYSIS: "Analyze relationships", "Find communities in this network"
+
+Auto-Detection by Data Type:
+- Time series data (timestamps, prices, metrics) -> LSTM, Prophet for forecasting
+- Graph data (nodes, edges, relationships) -> GNN for community detection, link prediction
+- Anomaly detection needs -> VAE Autoencoder, Isolation Forest
+- Decision optimization -> Reinforcement Learning (DQN, PPO)
+- Text data -> DistilBERT, Embeddings for NLP analysis
+- General classification/regression -> LightGBM, XGBoost
+
+Returns:
+- Task detected (time_series, graph, anomaly, etc.)
+- Models used with confidence scores
+- Predictions/analysis results
+- Selection reasoning (why these models were chosen)
+
+Example data formats:
+- Time series: {"timestamp": ["2024-01-01", "2024-01-02"], "price": [100, 105]}
+- Graph: {"nodes": ["A", "B", "C"], "edges": [["A", "B"], ["B", "C"]]}
+- Text: {"text": "Analyze this document content..."}
+
+DO NOT USE FOR:
+- Simple queries about data -> just answer conversationally
+- Image/video generation -> use generation agents
+- Web research -> use web_search""",
+
+
+    # -------------------------------------------------------------------------
     # SESSION 674: UNIVERSAL AGENT TOOL
     # -------------------------------------------------------------------------
 

@@ -1386,6 +1386,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_pipeline_orchestrator_tool(arguments)
             elif function_name == 'revenue_tracker_tool':
                 result = self._handle_revenue_tracker_tool(arguments)
+            # Session 683: ML Analysis Tool - auto-select ML models for data analysis
+            elif function_name == 'ml_analysis':
+                result = self._handle_ml_analysis(arguments)
             # Session 674: Universal Agent Tool - connects PA to ALL agents
             elif function_name == 'universal_agent_tool':
                 result = self._handle_universal_agent_tool(arguments)
@@ -11021,6 +11024,83 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in revenue_tracker_tool: {e}")
             return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # SESSION 683: ML ANALYSIS TOOL - AUTO-SELECT OPTIMAL ML MODELS
+    # =========================================================================
+
+    def _handle_ml_analysis(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle ml_analysis tool - auto-select optimal ML models for data analysis.
+
+        Session 683: This tool allows GPT to invoke the Agent-Model Router's
+        auto_route() method to analyze data using the best ML models.
+
+        Features:
+        - Auto-detects data type (time series, graph, text, anomaly, etc.)
+        - Selects optimal models from 15+ available ML models
+        - Returns predictions with confidence scores
+        - Explains why models were selected
+        """
+        from core.services.agent_model_router import get_agent_model_router
+
+        try:
+            data = arguments.get('data', {})
+            task_type_str = arguments.get('task_type', 'auto')
+            analysis_goal = arguments.get('analysis_goal', '')
+            max_models = arguments.get('max_models', 2)
+
+            logger.info(f"🤖 ML Analysis: task_type={task_type_str}, max_models={max_models}")
+            logger.info(f"   Data keys: {list(data.keys()) if isinstance(data, dict) else type(data)}")
+            logger.info(f"   Goal: {analysis_goal}")
+
+            # Get the Agent-Model Router
+            router = get_agent_model_router()
+
+            # Convert task type string to TaskType enum if not 'auto'
+            task_hint = None
+            if task_type_str != 'auto':
+                try:
+                    from ml.auto_selection import TaskType
+                    task_hint = TaskType(task_type_str)
+                except (ValueError, ImportError) as e:
+                    logger.warning(f"Could not parse task_type '{task_type_str}': {e}")
+
+            # Run auto-route with the data
+            result = router.auto_route(
+                data=data,
+                task_hint=task_hint,
+                max_models=max_models
+            )
+
+            # Format response for GPT
+            response = {
+                'success': result.success,
+                'task_detected': result.auto_selection.get('task_type', 'unknown'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'score': round(result.score, 4) if result.score else None,
+                'analysis': result.explanation,
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+                'characteristics_detected': result.auto_selection.get('characteristics', []),
+            }
+
+            # Add prediction details if available
+            if result.predictions:
+                response['predictions'] = result.predictions
+
+            logger.info(f"✅ ML Analysis complete: {response['task_detected']} -> {response['models_used']}")
+            return response
+
+        except Exception as e:
+            logger.error(f"Error in ml_analysis: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'task_detected': 'error',
+                'models_used': [],
+                'analysis': f'ML analysis failed: {str(e)}'
+            }
 
     # =========================================================================
     # SESSION 674: UNIVERSAL AGENT TOOL - CONNECTS PA TO ALL 42+ AGENTS

@@ -2,6 +2,7 @@
 BlockchainAuditCoordinator - Orchestrates all blockchain audit agents.
 
 Session 461: Part of the Blockchain Audit Agent Group
+Session 683: Added ML Integration (Anomaly Detection for alert correlation)
 
 This coordinator:
 - Routes tasks to appropriate audit agents
@@ -9,6 +10,7 @@ This coordinator:
 - Manages alert severity and deduplication
 - Integrates with Discord for notifications
 - Connects to the autonomous intelligence loop
+- Uses ML for anomaly detection in alert patterns
 """
 
 import json
@@ -17,6 +19,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +177,166 @@ You have access to:
         super().__init__(user)
         self._agents = {}
         self._alert_history = []
+
+    # === Session 683: ML Integration Methods ===
+
+    def _detect_alert_anomalies_with_ml(self, alerts: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Detect anomalies in alert patterns using ML (VAE/Autoencoder).
+
+        Uses the Agent-Model Router to detect unusual alert patterns that
+        may indicate coordinated attacks or emerging threats.
+
+        Args:
+            alerts: List of security alerts with severity and timestamps
+
+        Returns:
+            Dict with ML analysis results including anomaly detection
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build alert data for anomaly detection
+            alert_data = self._build_alert_data_for_ml(alerts)
+
+            if not alert_data.get('features'):
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient alert data for ML analysis'
+                }
+
+            # Route to optimal ML model (VAE/Autoencoder for anomaly detection)
+            result = router.auto_route(
+                data=alert_data,
+                task_hint=TaskType.ANOMALY,
+                max_models=2
+            )
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'anomaly'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'anomalies_detected': self._extract_anomalies_from_result(result),
+                'threat_level': self._assess_threat_level(result),
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML anomaly detection failed: {e}")
+            return {
+                'ml_used': False,
+                'reason': f'ML error: {str(e)}'
+            }
+
+    def _build_alert_data_for_ml(self, alerts: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Build alert feature data for ML anomaly detection.
+
+        Extracts features like severity, type, timing, and frequency.
+
+        Args:
+            alerts: List of security alerts
+
+        Returns:
+            Feature data dict for ML routing
+        """
+        features = []
+        timestamps = []
+
+        severity_map = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'INFO': 0}
+
+        for alert in alerts:
+            feature_vector = []
+
+            # Severity as numeric
+            severity = alert.get('severity', 'LOW')
+            feature_vector.append(severity_map.get(severity, 0))
+
+            # Alert type encoding
+            alert_types = ['exploit', 'whale', 'vulnerability', 'suspicious', 'other']
+            alert_type = alert.get('type', 'other').lower()
+            type_value = alert_types.index(alert_type) if alert_type in alert_types else len(alert_types)
+            feature_vector.append(type_value)
+
+            # Source encoding
+            sources = ['etherscan', 'coingecko', 'rekt_news', 'manual', 'other']
+            source = alert.get('source', 'other').lower()
+            source_value = sources.index(source) if source in sources else len(sources)
+            feature_vector.append(source_value)
+
+            features.append(feature_vector)
+
+            # Extract timestamp
+            ts = alert.get('timestamp') or alert.get('created_at')
+            if ts:
+                timestamps.append(ts if isinstance(ts, str) else ts.isoformat())
+
+        return {
+            'features': features,
+            'timestamps': timestamps,
+            'data_type': 'security_alerts'
+        }
+
+    def _extract_anomalies_from_result(self, ml_result) -> List[Dict[str, Any]]:
+        """
+        Session 683: Extract detected anomalies from ML result.
+
+        Args:
+            ml_result: EnsemblePrediction from ML router
+
+        Returns:
+            List of anomaly descriptions
+        """
+        try:
+            anomalies = []
+            if hasattr(ml_result, 'prediction') and ml_result.prediction:
+                pred = ml_result.prediction
+                if isinstance(pred, list):
+                    for i, is_anomaly in enumerate(pred):
+                        if is_anomaly:
+                            anomalies.append({
+                                'index': i,
+                                'confidence': ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5,
+                                'description': 'Unusual alert pattern detected'
+                            })
+            return anomalies
+        except Exception:
+            return []
+
+    def _assess_threat_level(self, ml_result) -> str:
+        """
+        Session 683: Assess overall threat level from ML analysis.
+
+        Args:
+            ml_result: EnsemblePrediction from ML router
+
+        Returns:
+            Threat level: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', or 'NORMAL'
+        """
+        try:
+            confidence = ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5
+            anomaly_count = 0
+
+            if hasattr(ml_result, 'prediction') and ml_result.prediction:
+                pred = ml_result.prediction
+                if isinstance(pred, list):
+                    anomaly_count = sum(1 for p in pred if p)
+
+            if anomaly_count >= 5 or confidence > 0.9:
+                return 'CRITICAL'
+            elif anomaly_count >= 3 or confidence > 0.75:
+                return 'HIGH'
+            elif anomaly_count >= 1 or confidence > 0.6:
+                return 'MEDIUM'
+            elif confidence > 0.4:
+                return 'LOW'
+            return 'NORMAL'
+        except Exception:
+            return 'UNKNOWN'
 
     def _get_agent(self, agent_name: str):
         """Lazy-load and cache agent instances."""
@@ -462,7 +625,12 @@ You have access to:
         # Session 461: Auto-consult Elon Musk for high-risk blockchain findings
         advisor_consultation = self._request_blockchain_advisor_consultation(section_data)
 
-        return {
+        # Session 683: Add ML anomaly detection to security report
+        ml_analysis = {}
+        if self._alert_history:
+            ml_analysis = self._detect_alert_anomalies_with_ml(self._alert_history)
+
+        result = {
             "success": True,
             "report_type": report_type,
             "time_range_hours": time_range_hours,
@@ -471,6 +639,18 @@ You have access to:
             "advisor_consultation": advisor_consultation,  # Session 461
             "generated_at": datetime.now().isoformat()
         }
+
+        # Session 683: Add ML insights to report
+        if ml_analysis.get('ml_used'):
+            result['ml_analysis'] = {
+                'models_used': ml_analysis.get('models_used', []),
+                'confidence': ml_analysis.get('confidence', 0),
+                'anomalies_detected': ml_analysis.get('anomalies_detected', []),
+                'threat_level': ml_analysis.get('threat_level', 'UNKNOWN'),
+                'ml_insights': ml_analysis.get('ml_insights', ''),
+            }
+
+        return result
 
     def _request_blockchain_advisor_consultation(self, section_data: Dict) -> Optional[Dict]:
         """

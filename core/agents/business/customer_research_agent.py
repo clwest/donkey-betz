@@ -7,6 +7,7 @@ Session 303: Unified Intelligence Search + Auto Spider Refresh
 Session 304: Learning Infrastructure Integration
 Session 325: Unified Spider Network - Same semantic search as CompetitorAnalysisAgent
 Session 354: Mythology Validation - Prevents unrealistic claims in research output
+Session 683: Added ML Integration (Clustering for customer segmentation)
 
 This agent researches potential customers for a business idea.
 It uses spider data (Reddit, HackerNews, YouTube, tech news) and web search to:
@@ -14,6 +15,7 @@ It uses spider data (Reddit, HackerNews, YouTube, tech news) and web search to:
 2. Extract pain points and needs
 3. Analyze customer sentiment
 4. Build customer personas
+5. ML-powered customer clustering
 
 Tools Available:
     - spider_query: Query spider network with SEMANTIC SEARCH (all categories)
@@ -37,6 +39,7 @@ from typing import Dict, Any, List
 from collections import Counter
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 
 def strip_html_tags(text: str) -> str:
@@ -54,6 +57,44 @@ def strip_html_tags(text: str) -> str:
 
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration Helpers for Customer Segmentation
+# =============================================================================
+
+def cluster_customers_with_ml(customer_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Cluster customers using ML models for segmentation.
+
+    Args:
+        customer_data: Dict with customer features and behaviors
+
+    Returns:
+        Dict with ML clustering results
+    """
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        result = router.auto_route(
+            data=customer_data,
+            task_hint=TaskType.CLUSTERING,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'clustering'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'clusters': result.prediction.get('clusters') if hasattr(result, 'prediction') and result.prediction else None,
+            'cluster_labels': result.prediction.get('labels') if hasattr(result, 'prediction') and result.prediction else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML customer clustering failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class CustomerResearchAgent(BaseAgent):
@@ -426,6 +467,109 @@ If asked to create content, explain you can only research and suggest using the 
             from core.services.agent_intelligence_context import get_agent_intelligence_context
             self._agent_intelligence = get_agent_intelligence_context()
         return self._agent_intelligence
+
+    def _segment_customers_with_ml(
+        self,
+        discussions: List[Dict[str, Any]],
+        pain_points: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 683: Segment customers using ML clustering.
+
+        Uses clustering models to identify distinct customer segments
+        based on their discussions and pain points.
+
+        Args:
+            discussions: List of customer discussion data
+            pain_points: List of extracted pain points
+
+        Returns:
+            Dict with ML segmentation results
+        """
+        if not discussions or len(discussions) < 3:
+            return {'ml_used': False, 'reason': 'Insufficient data for segmentation'}
+
+        try:
+            # Build feature vectors from discussions
+            customer_features = self._build_customer_features(discussions, pain_points)
+
+            if not customer_features.get('features'):
+                return {'ml_used': False, 'reason': 'Could not extract features'}
+
+            ml_result = cluster_customers_with_ml(customer_features)
+
+            if ml_result.get('ml_used'):
+                logger.info(
+                    f"ML customer segmentation: {len(discussions)} discussions, "
+                    f"models={ml_result.get('models_used')}, "
+                    f"confidence={ml_result.get('confidence')}"
+                )
+
+            return ml_result
+
+        except Exception as e:
+            logger.warning(f"Customer segmentation ML failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_customer_features(
+        self,
+        discussions: List[Dict[str, Any]],
+        pain_points: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Session 683: Build feature vectors for customer clustering.
+
+        Extracts features from discussions for ML clustering:
+        - Pain point categories
+        - Sentiment indicators
+        - Source diversity
+        - Topic keywords
+
+        Args:
+            discussions: List of customer discussions
+            pain_points: List of extracted pain points
+
+        Returns:
+            Dict with feature vectors for clustering
+        """
+        features = []
+        labels = []
+
+        # Build pain point category map
+        pain_categories = {}
+        for pp in pain_points:
+            text = pp.get('text', '').lower()
+            for indicator in self.PAIN_INDICATORS:
+                if indicator in text:
+                    pain_categories[indicator] = pain_categories.get(indicator, 0) + 1
+
+        for disc in discussions:
+            text = f"{disc.get('title', '')} {disc.get('content', '')}".lower()
+            source = disc.get('source', 'unknown')
+
+            # Extract features
+            feature_vector = {
+                'has_pain': 1 if any(ind in text for ind in self.PAIN_INDICATORS) else 0,
+                'has_desire': 1 if any(ind in text for ind in self.DESIRE_INDICATORS) else 0,
+                'is_question': 1 if '?' in text else 0,
+                'text_length': len(text),
+                'source': source,
+                'similarity': disc.get('similarity', 0.5),
+            }
+
+            # Add pain indicator counts
+            for indicator in self.PAIN_INDICATORS[:5]:
+                feature_vector[f'pain_{indicator}'] = 1 if indicator in text else 0
+
+            features.append(feature_vector)
+            labels.append(disc.get('title', '')[:50])
+
+        return {
+            'features': features,
+            'labels': labels,
+            'pain_categories': pain_categories,
+            'n_samples': len(features)
+        }
 
     def _get_project_context(self, project_id: str) -> Dict[str, Any]:
         """
@@ -892,6 +1036,27 @@ Return comprehensive customer research with personas, pain points, and real quot
                     # Synthesize the customer research
                     synthesis = self._synthesize_research(task, all_research_data)
 
+                    # Session 683: Run ML segmentation on customer data
+                    ml_analysis = {'ml_used': False}
+                    try:
+                        # Extract discussions and pain points for ML
+                        all_discussions = synthesis.get('raw_data', [])
+                        all_pain_points = synthesis.get('pain_points', [])
+
+                        if all_discussions:
+                            ml_analysis = self._segment_customers_with_ml(
+                                all_discussions,
+                                all_pain_points
+                            )
+                            if ml_analysis.get('ml_used'):
+                                logger.info(
+                                    f"ML customer segmentation complete: "
+                                    f"models={ml_analysis.get('models_used')}, "
+                                    f"confidence={ml_analysis.get('confidence')}"
+                                )
+                    except Exception as e:
+                        logger.warning(f"ML integration in execute failed: {e}")
+
                     # Session 294: Save to database with embedding for semantic search
                     # Session 349: Pass project_id to link research to project
                     saved_result = None
@@ -926,6 +1091,7 @@ Return comprehensive customer research with personas, pain points, and real quot
                             'raw_data': all_research_data,
                             'query': task,
                             'saved_id': str(saved_result.id) if saved_result else None,
+                            'ml_analysis': ml_analysis,  # Session 683: ML segmentation insights
                             # Session 352: Include viability for scores 50-79 (< 50 exits early)
                             'viability': {
                                 'score': viability_score,

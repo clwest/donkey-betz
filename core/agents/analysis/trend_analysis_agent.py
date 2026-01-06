@@ -3,6 +3,7 @@ Trend Analysis Agent - Clean Architecture
 ==========================================
 
 Session 280: Phase 3 - Agent Architecture Unification
+Session 683: Added ML Integration (LSTM/Prophet for trend forecasting)
 
 This agent provides intelligent trend analysis by analyzing patterns
 across all spider data and generating actionable insights.
@@ -31,6 +32,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +253,129 @@ You analyze and report - you do NOT create content or execute workflows."""
             from core.services.spider_semantic_search import get_spider_semantic_search
             self._semantic_search = get_spider_semantic_search()
         return self._semantic_search
+
+    # === Session 683: ML Integration Methods ===
+
+    def _analyze_trends_with_ml(self, trend_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Analyze trend data using ML models (LSTM/Prophet).
+
+        Uses the Agent-Model Router to automatically select optimal models
+        for trend forecasting and pattern detection.
+
+        Args:
+            trend_data: List of trend data points with timestamps and values
+
+        Returns:
+            Dict with ML analysis results including predictions and confidence
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build time series data from trends
+            time_series_data = self._build_trend_time_series(trend_data)
+
+            if not time_series_data.get('values'):
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient trend data for ML analysis'
+                }
+
+            # Route to optimal ML model (LSTM/Prophet for time series)
+            result = router.auto_route(
+                data=time_series_data,
+                task_hint=TaskType.TIME_SERIES,
+                max_models=2
+            )
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'time_series'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'prediction': result.prediction if hasattr(result, 'prediction') else None,
+                'trend_direction': self._determine_trend_direction(result),
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML analysis failed for trends: {e}")
+            return {
+                'ml_used': False,
+                'reason': f'ML error: {str(e)}'
+            }
+
+    def _build_trend_time_series(self, trend_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Build time series data structure from trend data.
+
+        Converts trend mentions/scores over time into ML-compatible format.
+
+        Args:
+            trend_data: List of trends with mentions, scores, timestamps
+
+        Returns:
+            Time series data dict for ML routing
+        """
+        if not trend_data:
+            return {'timestamps': [], 'values': []}
+
+        timestamps = []
+        values = []
+
+        for trend in trend_data:
+            # Extract timestamp (may be in different formats)
+            ts = trend.get('timestamp') or trend.get('created_at') or trend.get('date')
+            if ts:
+                if isinstance(ts, str):
+                    try:
+                        from dateutil import parser
+                        ts = parser.parse(ts)
+                    except Exception:
+                        continue
+                timestamps.append(ts.isoformat() if hasattr(ts, 'isoformat') else str(ts))
+
+            # Extract value (mentions, score, or count)
+            value = trend.get('mentions') or trend.get('score') or trend.get('count') or 1
+            values.append(float(value))
+
+        # If no timestamps, create synthetic ones based on position
+        if not timestamps and values:
+            from datetime import datetime, timedelta
+            now = datetime.now()
+            timestamps = [(now - timedelta(hours=i)).isoformat() for i in range(len(values), 0, -1)]
+
+        return {
+            'timestamps': timestamps,
+            'values': values,
+            'data_type': 'trend_mentions'
+        }
+
+    def _determine_trend_direction(self, ml_result) -> str:
+        """
+        Session 683: Determine overall trend direction from ML prediction.
+
+        Args:
+            ml_result: EnsemblePrediction from ML router
+
+        Returns:
+            String indicating trend direction: 'rising', 'falling', 'stable'
+        """
+        try:
+            if hasattr(ml_result, 'prediction') and ml_result.prediction:
+                pred = ml_result.prediction
+                if isinstance(pred, (list, tuple)) and len(pred) >= 2:
+                    # Compare last predicted vs first
+                    if pred[-1] > pred[0] * 1.05:
+                        return 'rising'
+                    elif pred[-1] < pred[0] * 0.95:
+                        return 'falling'
+            return 'stable'
+        except Exception:
+            return 'unknown'
 
     def execute(
         self,
@@ -543,6 +668,9 @@ You analyze and report - you do NOT create content or execute workflows."""
             jobs = self.intelligence_service.get_job_market_summary(hours=hours, limit=10)
             summary = self.intelligence_service.get_data_summary(hours=hours)
 
+            # Session 683: Add ML analysis for trend forecasting
+            ml_insights = self._analyze_trends_with_ml(trends) if trends else {}
+
             # Build report
             report = TrendReport(
                 success=True,
@@ -559,10 +687,21 @@ You analyze and report - you do NOT create content or execute workflows."""
                 confidence_score=min(1.0, (summary.get('total_items', 0) if summary else 0) / 100),
             )
 
-            return {
+            result = {
                 'success': True,
                 'report': report.to_dict()
             }
+
+            # Session 683: Add ML insights to result
+            if ml_insights.get('ml_used'):
+                result['ml_analysis'] = {
+                    'models_used': ml_insights.get('models_used', []),
+                    'confidence': ml_insights.get('confidence', 0),
+                    'trend_direction': ml_insights.get('trend_direction', 'unknown'),
+                    'ml_insights': ml_insights.get('ml_insights', ''),
+                }
+
+            return result
 
         except Exception as e:
             logger.error(f"Error generating briefing: {e}")

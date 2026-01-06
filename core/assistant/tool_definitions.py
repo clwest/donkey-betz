@@ -66,6 +66,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_task_manager_tool_definition(),          # Manage OpportunityTasks
         _get_pipeline_orchestrator_tool_definition(), # Manual pipeline execution
         _get_revenue_tracker_tool_definition(),       # Track revenue/outcomes
+        # Session 683: ML Analysis Tool - auto-select optimal ML models
+        _get_ml_analysis_tool_definition(),           # Analyze data with ML models
         # Session 674: Universal Agent Tool - connects PA to ALL 42 previously unreachable agents
         _get_universal_agent_tool_definition(),       # Invoke ANY agent by name
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
@@ -1089,6 +1091,49 @@ def _get_revenue_tracker_tool_definition() -> Dict:
                 }
             },
             "required": ["action"]
+        }
+    }
+
+
+# =============================================================================
+# SESSION 683: ML ANALYSIS TOOL
+# =============================================================================
+
+def _get_ml_analysis_tool_definition() -> Dict:
+    """
+    Session 683: ML Analysis Tool - auto-select optimal ML models for data analysis.
+
+    This tool allows GPT to invoke the Agent-Model Router's auto_route() method
+    to analyze data using the best ML models (LSTM, GNN, VAE, RL, etc.).
+    """
+    return {
+        "type": "function",
+        "name": "ml_analysis",
+        "description": get_tool_description("ml_analysis"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "description": "Data to analyze. Can be: time series (with 'timestamp'/'price' keys), graph (with 'nodes'/'edges' keys), text content, or numerical arrays."
+                },
+                "task_type": {
+                    "type": "string",
+                    "enum": ["auto", "time_series", "graph", "text", "anomaly", "clustering", "classification", "regression", "decision"],
+                    "default": "auto",
+                    "description": "Type of analysis. Use 'auto' to let the system auto-detect from data structure."
+                },
+                "analysis_goal": {
+                    "type": "string",
+                    "description": "What you want to learn from the data (e.g., 'predict next price', 'find anomalies', 'identify clusters', 'detect relationships')"
+                },
+                "max_models": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Maximum number of models to use for ensemble prediction (1-5)"
+                }
+            },
+            "required": ["data"]
         }
     }
 

@@ -925,6 +925,11 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 
 **Part of:** Market Intelligence Desk (First Tier 1 Autonomous Situation)
 
+**ML Integration (Session 683):**
+- **StockAnalystAgent:** LSTM for price trend forecasting
+- **MarketIntelligenceAgent:** GNN for market entity relationship analysis
+- Agents auto-invoke ML models via Agent-Model Router
+
 #### BullCaseAgent
 
 **Purpose:** Makes arguments for price appreciation (long thesis)
@@ -1094,6 +1099,10 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 - Orchestrates all blockchain sub-agents
 - Generates comprehensive audit reports
 
+**ML Integration (Session 683):**
+- **WhaleWatcherAgent:** GNN for wallet transaction network analysis
+- Auto-invokes ML models via Agent-Model Router
+
 #### SmartContractAuditorAgent (Non-routable)
 
 **Purpose:** Audit smart contract code for vulnerabilities
@@ -1120,10 +1129,13 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 
 **Purpose:** Track large wallet movements
 
+**ML Integration (Session 683):** GNN for wallet transaction network analysis
+
 **Tools:**
 - `track_whales` - Monitor large holder wallets
 - `analyze_movements` - Analyze large transaction patterns
 - `predict_impact` - Estimate market impact of whale moves
+- `_analyze_wallet_network_with_ml` - GNN-powered network analysis (auto-invoked)
 
 ---
 
@@ -1372,7 +1384,7 @@ These agents exist in `agents/` directory and are used by the legacy system:
 
 ### Specialized
 - `WorkflowOrchestrationAgent` - Complex workflows
-- `OpportunityScoringAgent` - Score opportunities
+- `OpportunityScoringAgent` - Score opportunities **(ML: RL for ranking optimization - Session 683)**
 - `PromptEngineeringAgent` - Prompt optimization
 - `DataAnalystAgent` - Data analysis
 - `MemoryIsolationAgent` - Memory namespace management
