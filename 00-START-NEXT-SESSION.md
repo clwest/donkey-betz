@@ -1,93 +1,93 @@
-# Session 661 - Start Here
+# Session 664 - Start Here
 
-**Previous Session:** 660
-**Date:** January 1, 2026
-**Focus:** ICC Tasks & Health Dashboards Complete
+**Previous Session:** 663
+**Date:** January 5, 2026
+**Focus:** SystemIntelligenceAgent Complete - Platform Health Architecture
 **Health Score:** 90.5% Canonical Decisions | All Services Healthy
 
 ---
 
-## Session 660 Accomplishments
+## Session 663 Accomplishments
 
-### 1. Added Celery Task Monitor to ICC
+### 1. Created SystemIntelligenceAgent
 
-**New Sub-tab:** ICC > Tasks ⚙️
-**API:** `/api/celery/stats/`
+**New Agent:** `core/agents/system_intelligence_agent.py` (~408 lines)
 
-| Stat | Value |
-|------|-------|
-| Workers | 3 |
-| Scheduled Tasks | 158 |
-| Active | 0 |
-| Queued | 0 |
+Purpose: Dedicated agent for platform health and attention monitoring. When users ask PA about "system status", "pending review", or "what needs attention", the PA now routes to this agent which queries real system data.
 
-### 2. Added System Health Dashboard to ICC
+**Architecture:**
+```
+User → PA → AgentRouter → SystemIntelligenceAgent → SystemStateAggregator
+                                     ↓
+                        Rich context + recommendations
+```
 
-**New Sub-tab:** ICC > Health 💚
-**API:** `/api/icc/health/`
+### 2. Enhanced AttentionItem Dataclass
 
-| Service | Status |
-|---------|--------|
-| Redis | ✅ Running |
-| Daphne | ✅ Running |
-| Celery | ✅ Running |
-| PostgreSQL | ✅ Running |
+Added new fields to `core/services/system_state_aggregator.py`:
 
-| Metric | Value |
-|--------|-------|
-| Agents | 71 |
-| Spiders | 77 |
-| Scheduled Tasks | 158 |
-| Conversations 24h | 324 |
-| Dreams 24h | 432 |
-| Total Decisions | 979 |
-| Canonical Rate | 90.5% |
-| AI Promoted | 754 |
+| Field | Purpose |
+|-------|---------|
+| `severity` | 'info', 'warning', 'critical' |
+| `explanation` | What the metric means in plain English |
+| `recommended_action` | What the user can do about it |
+| `location` | UI location (e.g., "Intelligence > Decisions") |
 
-### 3. Bug Fixes (4 total)
+### 3. Added Routing Configuration
 
-| Fix | Issue |
-|-----|-------|
-| JS Scope | Made functions globally accessible via `window.` |
-| Event Listeners | Added click handlers for sub-tab data loading |
-| Celery Health | Changed to PID-based detection (was task results) |
-| Spider Count | Extract `total` from dict response |
+**File:** `core/agents/routing_config.py`
 
-### 4. Auto-Refresh Feature
+Added SystemIntelligenceAgent with:
+- Keywords: "system status", "pending review", "what needs attention", etc.
+- Priority: 30 (high - system queries route here)
+- Examples: "what needs my attention", "check system health"
 
-Added toggle buttons to both dashboards:
-- **Tasks:** `⏱️ Auto: Off/30s` - refreshes every 30 seconds
-- **Health:** `⏱️ Auto: Off/30s` - refreshes every 30 seconds
+### 4. UI Integration
+
+- Backend API returns enhanced fields (severity, explanation, recommended_action, location)
+- Frontend shows severity-based colors with pulse animation for critical items
+
+### 5. Learning Hooks Integration
+
+Added all required hooks per `docs/current/LEARNING_SYSTEM.md`:
+- `_record_learning_outcome()` - XP and pattern detection
+- `_create_execution_memory()` - Memory of executions
+- `_share_knowledge()` - Knowledge sharing for critical alerts
 
 ---
 
-## Session 660 Commits (10 total)
+## Session 663 Commits (6 total)
 
 ```
-9f92f73d docs(Session 660): Add auto-refresh commits to handoff
-78b4c164 feat(Session 660): Add auto-refresh toggle to Tasks dashboard
-88b343c5 feat(Session 660): Add auto-refresh toggle to Health dashboard
-8d9437ec docs(Session 660): Update start doc for Session 661
-ed675c13 docs(Session 660): Update handoff with bug fixes and final state
-56083d3e fix(Session 660): Fix spider count in health dashboard
-0be31015 fix(Session 660): Improve Celery health check using PID files
-c6a1ce9b fix(Session 660): Make Tasks/Health functions globally accessible
-59dd9d9a fix(Session 660): Add tab event listeners for Tasks and Health sub-tabs
-eb9f6930 feat(Session 660): ICC Tasks & Health dashboards
+8075264f fix(Session 663): Add required execute() parameters to SystemIntelligenceAgent
+f246bec0 fix(Session 663): Add SystemIntelligenceAgent to routing config
+62ef3d58 feat(Session 663): Connect Needs Attention UI to enhanced attention items
+41a060a0 fix(Session 663): Fix AgentResult constructor in SystemIntelligenceAgent
+ef0c6294 fix(Session 663): Add learning hooks to SystemIntelligenceAgent
+a9c77ded feat(Session 663): Add SystemIntelligenceAgent for platform health monitoring
 ```
 
 ---
 
-## System Stats (After Session 660)
+## Bugs Fixed in Session 663
+
+| Bug | Fix |
+|-----|-----|
+| `AgentResult.__init__() got unexpected argument 'result'` | Use `message=` and `data=` |
+| `execute() got unexpected argument 'scifi_context'` | Added all 4 required params |
+| PA gave hypothetical responses | Added agent to routing_config.py |
+
+---
+
+## System Stats (After Session 663)
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Total Decisions** | 979 | 90.5% canonical |
-| **AI-Promoted** | 754 | GPT-5-mini evaluated |
-| **Hidden Tabs** | 6 | Reducing clutter |
-| **Active Agents** | 71 | All routable |
+| **Agents** | 72 | 69 routable (+1 SystemIntelligenceAgent) |
 | **Spiders** | 77 | All registered |
-| **ICC Sub-tabs** | 8 | Gates, Pilots, Experiments, Learning, Activity, Governance, Tasks, Health |
+| **Services** | 93 | All healthy |
+| **Scheduled Tasks** | 158 | Celery Beat |
+| **Canonical Rate** | 90.5% | Stable |
 
 ---
 
@@ -101,33 +101,32 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test new dashboards
-# Navigate to: ICC > Tasks ⚙️
-# Navigate to: ICC > Health 💚
+# 3. Test SystemIntelligenceAgent
+# In PA chat, ask: "What needs my attention?"
+# Should return real system data with severity levels
 
 # 4. Check APIs
-curl http://localhost:8000/api/celery/stats/ | python3 -m json.tool
-curl http://localhost:8000/api/icc/health/ | python3 -m json.tool
+curl http://localhost:8000/health/ping/
 ```
 
 ---
 
-## Session 661 Priorities
+## Session 664 Priorities
 
-### P0 - Quick Wins
-1. Review overnight system activity
-2. Check for any task failures
-3. Verify dashboards still working after overnight
+### P0 - Verify Session 663 Changes
+1. Test PA routing: Ask "what's the pending review status?" - should get real data
+2. Verify UI shows severity colors in Needs Attention panel
+3. Check no regressions in other PA functionality
 
-### P1 - Potential Enhancements
-1. Add auto-refresh interval (30s/60s) for Health dashboard
-2. Add filtering/search to task list
-3. Show more task history (django-celery-results storage)
+### P1 - From Previous Sessions
+1. Continue service tests from plan (`tests/services/` - ~143 tests planned)
+2. Review UI audit recommendations (Session 659)
+3. Consider adding more attention item types with rich explanations
 
-### P2 - From UI Audit (Session 659)
-1. Consider merging Content Creation tabs (Images, Video, Audio) into Content Studio
-2. Break 80k-line template into component files
-3. Reduce visible tabs further
+### P2 - Enhancements
+1. Add Discord integration for system health notifications
+2. Add more AttentionItem categories to SystemStateAggregator
+3. Consider caching for SystemIntelligenceAgent responses
 
 ---
 
@@ -135,10 +134,22 @@ curl http://localhost:8000/api/icc/health/ | python3 -m json.tool
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_660_ICC_TASKS_HEALTH_DASHBOARDS.md` | Session handoff with bug fixes |
-| `core/views_agent_learning.py` | APIs: get_celery_stats, get_system_health |
-| `docs/UI_AUDIT_SESSION_659.md` | Comprehensive UI audit |
+| `docs/handoffs/SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` | Complete handoff with architecture |
+| `core/agents/system_intelligence_agent.py` | New agent for system health |
+| `core/agents/routing_config.py` | Agent routing configuration |
+| `core/services/system_state_aggregator.py` | AttentionItem with enhanced fields |
+| `docs/current/LEARNING_SYSTEM.md` | Learning hooks documentation |
 
 ---
 
-*Ready for Session 661!*
+## Key Learnings from Session 663
+
+1. **Always add to routing_config.py** - Without this, agents aren't discoverable
+2. **Match execute() signature** - Must accept `task, context, scifi_context, spider_context`
+3. **Use correct AgentResult fields** - `message` and `data`, NOT `result` and `metadata`
+4. **Add learning hooks** - Required for collective intelligence integration
+5. **Test full flow** - PA → Router → Agent → Result
+
+---
+
+*Ready for Session 664!*

@@ -6,7 +6,7 @@
 ## System Stats (Session 663)
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 72 | 48 routable + 24 sub-agents (Session 663: +SystemIntelligenceAgent) |
+| **Agents** | 72 | 69 routable (Session 663: +SystemIntelligenceAgent) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Database Models** | 324+ | 37 categories |
@@ -169,7 +169,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
-| **663** | **SystemIntelligenceAgent** - Platform health monitoring | `SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` |
+| **663** | **SystemIntelligenceAgent** - Platform health + routing config + learning hooks (6 commits) | `SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` |
 | **655** | **Gate Pipeline Fixes** + UI Enhancements | *(commits: c5aa87cd, ae29466c, 9b82eeec)* |
 | **654** | **Autonomous Gate Approval Pipeline** + UI Reorganization | `SESSION_654_AUTONOMOUS_GATE_APPROVAL.md`, `SESSION_654_COMMAND_CENTER_SUBTABS.md` |
 | **653** | **7/7 Full Composability** - All walls fixed | `SESSION_653_CROSS_DOMAIN_COMPOSABILITY_AUDIT.md` |
