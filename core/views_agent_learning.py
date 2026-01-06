@@ -3892,6 +3892,33 @@ def get_pilot_gate_dashboard(request):
 # SESSION 596: EXPERIMENT TRACKING REGISTRY
 # ============================================================================
 
+def _get_full_extracted_metrics(exp):
+    """
+    Session 693: Get full extracted metrics from source checklist item.
+    Previously stored metrics were truncated at 1000 chars - fetch full content from source.
+    """
+    metrics = exp.extracted_metrics or {}
+
+    # Try to get full content from source checklist item
+    if exp.pilot and exp.pilot.gate:
+        try:
+            success_metrics_item = exp.pilot.gate.checklist_items.filter(
+                item_type='success_metrics'
+            ).first()
+            if success_metrics_item and success_metrics_item.documentation_notes:
+                # Return full content from source
+                return {
+                    'raw_content': success_metrics_item.documentation_notes,
+                    'source': metrics.get('source', 'ai_generated'),
+                    # Preserve any other fields (kpi_history, target_history, etc.)
+                    **{k: v for k, v in metrics.items() if k not in ['raw_content', 'source']}
+                }
+        except Exception:
+            pass
+
+    return metrics
+
+
 @require_http_methods(["GET"])
 def get_experiments(request):
     """
@@ -3922,7 +3949,7 @@ def get_experiments(request):
             risk_level = "medium"
 
             if exp.pilot and exp.pilot.gate and exp.pilot.gate.decision:
-                decision_topic = exp.pilot.gate.decision.topic[:80]
+                decision_topic = exp.pilot.gate.decision.topic  # Session 693: Return full topic
                 decision_id = str(exp.pilot.gate.decision.id)
                 risk_level = exp.pilot.gate.risk_level
 
@@ -3936,7 +3963,8 @@ def get_experiments(request):
                 'target_value': exp.target_value,
                 'current_value': exp.current_value,
                 'secondary_kpis': exp.secondary_kpis,
-                'extracted_metrics': exp.extracted_metrics,
+                # Session 693: Fetch full metrics from source checklist item
+                'extracted_metrics': _get_full_extracted_metrics(exp),
                 'started_at': exp.started_at.isoformat() if exp.started_at else None,
                 'ended_at': exp.ended_at.isoformat() if exp.ended_at else None,
                 'learnings': exp.learnings,

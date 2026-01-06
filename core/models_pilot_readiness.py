@@ -784,7 +784,7 @@ class Experiment(models.Model):
         success_metrics_item = gate.checklist_items.filter(item_type='success_metrics').first()
         if success_metrics_item and success_metrics_item.documentation_notes:
             extracted = {
-                'raw_content': success_metrics_item.documentation_notes[:1000],
+                'raw_content': success_metrics_item.documentation_notes,  # Session 693: Return full metrics
                 'source': 'ai_generated',
             }
 
