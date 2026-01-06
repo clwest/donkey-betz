@@ -1,43 +1,51 @@
-# Session 671 - Start Here
+# Session 672 - Start Here
 
-**Previous Session:** 670 (ML Scoring Engine Phase 2 - COMPLETE)
+**Previous Session:** 671 (ML Pipeline Integration - COMPLETE)
 **Date:** January 5, 2026
-**Focus:** Continue ML Improvements or New Priorities
-**Status:** 100% Reality Score | ML Engine v7.1 (LightGBM) with 24 Features
+**Focus:** New System Priorities
+**Status:** 100% Reality Score | ML Pipeline Fully Wired
 
 ---
 
-## Session 670 Summary: ML Phase 2 - COMPLETE
+## Session 671 Summary: ML Pipeline Integration COMPLETE
 
-### Part 1: Feature Engineering (24 Features)
+### The Core Problem We Solved
 
-1. **Embedding Similarity Feature** - `_get_embedding_similarity()`
-   - Compares spider content to historically successful opportunities
-   - Uses cosine similarity with 2-hour cache
+The ML Scoring Engine (v7.1) was working great, but the **pipeline was broken**:
 
-2. **Temporal Features (4)** - hour_of_day, day_of_week, is_weekend, is_business_hours
+```
+BEFORE (Session 670):
+Spiders → SpiderData → ML Score → ??? → Agents floating disconnected
 
-3. **Text Quality Features (4)** - description_length, title_word_count, has_numbers, has_question
+AFTER (Session 671):
+Spiders → SpiderData → ML Score → Opportunity → Task → Agent → Outcome → Retrain
+   ✓          ✓           ✓           ✓          ✓       ✓        ✓         ✓
+```
 
-### Part 2: LightGBM + Optuna Optimization
+### What Was Fixed
 
-Added alternative model backend and automatic hyperparameter tuning:
+| Gap | Solution |
+|-----|----------|
+| `score_spider_data()` missing | Added 233-line method to OpportunityScoringAgent |
+| Opportunities not auto-created | Now auto-created for scores ≥70 |
+| Tasks not auto-assigned | Now auto-created for scores ≥80 with agent assignment |
+| ML retraining not using Optuna | Updated task to use LightGBM + Optuna by default |
 
-**New Capabilities:**
-- `MODEL_TYPE_LIGHTGBM` and `MODEL_TYPE_XGBOOST` constants
-- `optimize_hyperparameters()` - Bayesian search with Optuna (50 trials, 5-fold CV)
-- `train_model_with_optimization()` - Full pipeline with auto-tuning
-- LightGBM is now the default model backend
+### Automation Thresholds
 
-**Model Performance Comparison:**
+| Score | Action |
+|-------|--------|
+| ≥70 | Auto-create Opportunity |
+| ≥80 | Auto-create OpportunityTask + assign agent |
+| ≥90 | Priority = critical, due in 1 day |
 
-| Version | Model | Test R² | Improvement |
-|---------|-------|---------|-------------|
-| v6.0 | XGBoost (default params) | 0.3158 | Baseline |
-| v7.0 | XGBoost + Optuna | 0.5383 | +70% |
-| **v7.1** | **LightGBM + Optuna** | **0.6276** | **+99%** ✓ |
+### Commits from Session 671
 
-**v7.1 is now the active model.**
+```
+62eacdc5 feat(Session 671): Wire complete ML Opportunity Pipeline
+b65210d3 docs(Session 670): Update documentation for LightGBM + Optuna
+b6ce58c4 feat(Session 670): Add LightGBM + Optuna hyperparameter optimization
+```
 
 ---
 
@@ -48,47 +56,38 @@ Added alternative model backend and automatic hyperparameter tuning:
 | **Agents** | 72 | 69 routable + 3 entry/special |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **Services** | 93 | All healthy |
-| **ML Model** | v7.1 | LightGBM + Optuna, 24 features |
+| **ML Model** | v7.1 | LightGBM + Optuna, 24 features, 63% R² |
+| **SpiderData** | 8,597 | All processed |
+| **Opportunities** | 153 | 73 high-scoring (≥70) |
+| **OpportunityTasks** | 150 | With agent assignments |
+| **OpportunityOutcomes** | 150 | For ML feedback loop |
 
 ---
 
-## Session 671 Priorities
+## Session 672 Priorities
 
-### Option A: ML Phase 3 - Spider-Specific Features
+### Option A: Agent Execution Automation
 
-From the roadmap in `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md`:
+The pipeline creates tasks, but agents don't automatically execute them yet.
+Could add a Celery task to process pending OpportunityTasks.
 
-```python
-# Category-specific features
-'financial_market_cap',      # Financial spider specific
-'financial_price_change',
-'tech_github_stars',
-'jobs_salary_min',
-'jobs_remote_flag',
+### Option B: ML Phase 3 - Spider-Specific Features
 
-# Engagement features
-'has_comments',
-'comment_count',
-'has_likes',
-'engagement_score',
-```
+From `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md`:
+- Financial features (market_cap, price_change)
+- Job features (salary_min, remote_flag)
+- Engagement features (comments, likes)
 
-### Option B: ML Phase 4 - A/B Testing Framework
+### Option C: Dashboard for Pipeline Monitoring
 
-Set up randomized scoring strategy testing to measure real-world impact.
+Build UI to visualize:
+- Pipeline throughput (spiders → opportunities → tasks)
+- ML model performance over time
+- Agent execution success rates
 
-### Option C: New System Priorities
+### Option D: New System Priorities
 
-Check if there are other system priorities that take precedence over ML improvements.
-
----
-
-## Key Documentation
-
-| Document | Purpose |
-|----------|---------|
-| `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md` | Full ML roadmap with code examples |
-| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | System integration guide |
+Check if there are other system priorities.
 
 ---
 
@@ -99,63 +98,62 @@ Check if there are other system priorities that take precedence over ML improvem
 make start
 make celery
 
-# 2. Verify ML engine v7.1 (LightGBM)
-.venv/bin/python manage.py shell -c "
-from core.services.ml_scoring_engine import MLScoringEngine, FEATURE_NAMES
-engine = MLScoringEngine()
-print(f'ML Model: {engine.model_version}')
-print(f'Model Type: {engine.model_type}')
-print(f'Features: {len(FEATURE_NAMES)}')
-"
-
-# 3. Test scoring with SHAP explanation
+# 2. Verify pipeline status
 .venv/bin/python manage.py shell -c "
 from core.services.ml_scoring_engine import MLScoringEngine
-from core.models_unified_system import SpiderData
+from core.models_unified_system import SpiderData, Opportunity, OpportunityTask
 
 engine = MLScoringEngine()
-sd = SpiderData.objects.order_by('-created_at').first()
-result = engine.score_opportunity(sd)
-print(f'Hybrid Score: {result.hybrid_score:.1f}')
-print(f'Confidence: {result.confidence:.1f}')
-print(f'Top factors: {[f[\"feature\"] for f in result.shap_explanation.get_top_features(3)]}')
+print(f'ML Model: {engine.model_version} ({engine.model_type})')
+print(f'SpiderData: {SpiderData.objects.count()}')
+print(f'Opportunities: {Opportunity.objects.count()}')
+print(f'Tasks: {OpportunityTask.objects.count()}')
 "
 
-# 4. Train new model with Optuna optimization (optional)
+# 3. Test pipeline manually
 .venv/bin/python manage.py shell -c "
-from core.services.ml_scoring_engine import MLScoringEngine, MODEL_TYPE_LIGHTGBM
-engine = MLScoringEngine(model_type=MODEL_TYPE_LIGHTGBM)
-result = engine.train_model_with_optimization(
-    training_data,  # Your training data
-    version='v8.0',
-    n_trials=50,
-    cv_folds=5
-)
-print(f'Best CV Score: {result[\"optimization\"][\"best_cv_score\"]:.4f}')
+from core.agents.analysis import OpportunityScoringAgent
+agent = OpportunityScoringAgent()
+results = agent.score_spider_data(hours=24, limit=10)
+print(f'Scored: {len(results)} items')
 "
 ```
 
 ---
 
-## ML Feature Progression
+## Key Documentation
 
-| Version | Features | Model | Test R² | Notes |
-|---------|----------|-------|---------|-------|
-| v4.0 | 15 | XGBoost | - | 47% dead features |
-| v5.0 | 15 | XGBoost | - | Fixed text extraction |
-| v6.0 | 24 | XGBoost | 0.3158 | +embedding, temporal, text quality |
-| v7.0 | 24 | XGBoost + Optuna | 0.5383 | +70% improvement |
-| **v7.1** | 24 | **LightGBM + Optuna** | **0.6276** | **+99% improvement** |
+| Document | Purpose |
+|----------|---------|
+| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | Full system integration + ML Pipeline section |
+| `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md` | ML roadmap (Phases 1-2 complete) |
 
 ---
 
-## Commits from Session 670
+## The Complete Pipeline
 
 ```
-b6ce58c4 feat(Session 670): Add LightGBM + Optuna hyperparameter optimization
-bd4b6bba feat(Session 670): ML Scoring Engine Phase 2 - 24 features + v6.0 model
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    UNIFIED ML OPPORTUNITY PIPELINE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. DATA       77 Spiders (scheduled) → SpiderData (8,597 records)          │
+│                                                                              │
+│  2. SCORING    score_opportunities_from_spider_data (hourly Celery)         │
+│                → OpportunityScoringAgent.score_spider_data()                │
+│                → MLScoringEngine v7.1 (LightGBM + Optuna)                   │
+│                                                                              │
+│  3. CREATION   Score ≥70 → Opportunity (153 total, 73 high-value)           │
+│                Score ≥80 → OpportunityTask (150 with agents)                │
+│                                                                              │
+│  4. EXECUTION  Task → Agent executes (content, research, applications)      │
+│                                                                              │
+│  5. FEEDBACK   User marks won/lost → OpportunityOutcome (150 records)       │
+│                → train_ml_scoring_model (weekly Celery with Optuna)         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-*Ready for Session 671!*
+*Ready for Session 672!*
