@@ -233,12 +233,12 @@ export default function IntelligencePage() {
   const actOnOpportunityMutation = useMutation({
     mutationFn: (id: string) => opportunitiesApi.act(id),
     onSuccess: () => {
-      setActionResult({ type: 'success', message: 'Started working on opportunity! Task created.' })
+      setActionResult({ type: 'success', message: 'Opportunity marked as in-progress!' })
       setSelectedOpportunityId(null)
       queryClient.invalidateQueries({ queryKey: ['intelligence-opportunities'] })
     },
     onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to start opportunity task' })
+      setActionResult({ type: 'error', message: 'Failed to update opportunity' })
     },
   })
 
@@ -1083,73 +1083,116 @@ export default function IntelligencePage() {
                     <p className="text-gray-300">{opp.description}</p>
                   </div>
 
-                  {/* Score Breakdown */}
-                  <div className="bg-dark-bg rounded-lg p-4">
-                    <h4 className="font-semibold mb-4 flex items-center gap-2">
-                      <Target size={18} className="text-primary-400" />
-                      Score Breakdown
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-400 flex items-center gap-1">
-                              <DollarSign size={14} /> Profit Potential (35%)
-                            </span>
-                            <span className="text-sm font-medium">{opp.scores?.profit_potential || 0}%</span>
+                  {/* Score Section - Show breakdown only if detailed scores exist */}
+                  {(() => {
+                    const hasDetailedScores = opp.scores?.profit_potential || opp.scores?.competition_level ||
+                                              opp.scores?.effort_required || opp.scores?.time_sensitivity
+                    const overallScore = opp.scores?.overall_score || 0
+
+                    return (
+                      <div className="bg-dark-bg rounded-lg p-4">
+                        <h4 className="font-semibold mb-4 flex items-center gap-2">
+                          <Target size={18} className="text-primary-400" />
+                          {hasDetailedScores ? 'Score Breakdown' : 'Opportunity Score'}
+                        </h4>
+
+                        {hasDetailedScores ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                                      <DollarSign size={14} /> Profit Potential (35%)
+                                    </span>
+                                    <span className="text-sm font-medium">{opp.scores?.profit_potential || 0}%</span>
+                                  </div>
+                                  <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                                    <div className="h-full bg-accent-green rounded-full" style={{ width: `${opp.scores?.profit_potential || 0}%` }} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                                      <Users size={14} /> Competition (35%)
+                                    </span>
+                                    <span className="text-sm font-medium">{opp.scores?.competition_level || 0}%</span>
+                                  </div>
+                                  <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                                    <div className="h-full bg-accent-amber rounded-full" style={{ width: `${opp.scores?.competition_level || 0}%` }} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-3">
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                                      <Wrench size={14} /> Effort Required (20%)
+                                    </span>
+                                    <span className="text-sm font-medium">{opp.scores?.effort_required || 0}%</span>
+                                  </div>
+                                  <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                                    <div className="h-full bg-accent-cyan rounded-full" style={{ width: `${opp.scores?.effort_required || 0}%` }} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                                      <Clock size={14} /> Time Sensitivity (10%)
+                                    </span>
+                                    <span className="text-sm font-medium">{opp.scores?.time_sensitivity || 0}%</span>
+                                  </div>
+                                  <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary-500 rounded-full" style={{ width: `${opp.scores?.time_sensitivity || 0}%` }} />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-dark-border flex items-center justify-between">
+                              <span className="text-lg font-semibold">Overall Score</span>
+                              <span className={cn(
+                                'text-2xl font-bold',
+                                overallScore >= 70 ? 'text-accent-green' :
+                                overallScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {overallScore}%
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          /* Simple score display when no detailed breakdown */
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-gray-400 text-sm">AI-calculated relevance score</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {overallScore >= 70 ? 'High potential opportunity' :
+                                 overallScore >= 50 ? 'Moderate potential' : 'Lower priority'}
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <span className={cn(
+                                'text-4xl font-bold',
+                                overallScore >= 70 ? 'text-accent-green' :
+                                overallScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {overallScore}%
+                              </span>
+                              <div className="w-24 h-2 bg-dark-border rounded-full overflow-hidden mt-2">
+                                <div
+                                  className={cn(
+                                    'h-full rounded-full',
+                                    overallScore >= 70 ? 'bg-accent-green' :
+                                    overallScore >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                                  )}
+                                  style={{ width: `${overallScore}%` }}
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                            <div className="h-full bg-accent-green rounded-full" style={{ width: `${opp.scores?.profit_potential || 0}%` }} />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-400 flex items-center gap-1">
-                              <Users size={14} /> Competition (35%)
-                            </span>
-                            <span className="text-sm font-medium">{opp.scores?.competition_level || 0}%</span>
-                          </div>
-                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                            <div className="h-full bg-accent-amber rounded-full" style={{ width: `${opp.scores?.competition_level || 0}%` }} />
-                          </div>
-                        </div>
+                        )}
                       </div>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-400 flex items-center gap-1">
-                              <Wrench size={14} /> Effort Required (20%)
-                            </span>
-                            <span className="text-sm font-medium">{opp.scores?.effort_required || 0}%</span>
-                          </div>
-                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                            <div className="h-full bg-accent-cyan rounded-full" style={{ width: `${opp.scores?.effort_required || 0}%` }} />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-400 flex items-center gap-1">
-                              <Clock size={14} /> Time Sensitivity (10%)
-                            </span>
-                            <span className="text-sm font-medium">{opp.scores?.time_sensitivity || 0}%</span>
-                          </div>
-                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
-                            <div className="h-full bg-primary-500 rounded-full" style={{ width: `${opp.scores?.time_sensitivity || 0}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-dark-border flex items-center justify-between">
-                      <span className="text-lg font-semibold">Overall Score</span>
-                      <span className={cn(
-                        'text-2xl font-bold',
-                        (opp.scores?.overall_score || 0) >= 70 ? 'text-accent-green' :
-                        (opp.scores?.overall_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {opp.scores?.overall_score || 0}%
-                      </span>
-                    </div>
-                  </div>
+                    )
+                  })()}
 
                   {/* Keywords */}
                   {opp.keywords && opp.keywords.length > 0 && (
@@ -1217,13 +1260,14 @@ export default function IntelligencePage() {
                       onClick={() => actOnOpportunityMutation.mutate(selectedOpportunityId)}
                       disabled={actOnOpportunityMutation.isPending || opp.status === 'acted_on' || opp.status === 'creating'}
                       className="btn btn-primary flex items-center gap-2"
+                      title="Mark this opportunity as in-progress"
                     >
                       {actOnOpportunityMutation.isPending ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
                         <Rocket size={16} />
                       )}
-                      {opp.status === 'acted_on' || opp.status === 'creating' ? 'Already Started' : 'Start Task'}
+                      {opp.status === 'acted_on' || opp.status === 'creating' ? 'In Progress' : 'Mark Working'}
                     </button>
                   </div>
                 </div>
