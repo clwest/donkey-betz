@@ -1392,6 +1392,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 674: Universal Agent Tool - connects PA to ALL agents
             elif function_name == 'universal_agent_tool':
                 result = self._handle_universal_agent_tool(arguments)
+            # Session 695: SKIN Layer - Workspace Tool for project execution
+            elif function_name == 'workspace_tool':
+                result = self._handle_workspace_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -11114,17 +11117,22 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         unreachable agents (organs), enabling:
         - Blockchain auditing
         - Stock analysis
-        - Code generation/review
+        - Code generation/review (with SKIN layer workspace integration!)
         - Podcast creation
         - Market analysis
         - Narrative tracking
         - And more...
+
+        Session 695: Development agents now write to workspace via SKIN layer.
         """
         from core.agent_router import AgentRouter, AgentNotFoundError
 
         agent_name = arguments.get('agent_name')
         task = arguments.get('task')
         context = arguments.get('context', {})
+        # Session 695: Workspace options
+        write_to_workspace = arguments.get('write_to_workspace', True)
+        base_path = arguments.get('base_path', '')
 
         if not agent_name:
             return {'success': False, 'error': 'agent_name is required'}
@@ -11145,24 +11153,88 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                     'hint': "Use one of the available agent names exactly as shown"
                 }
 
-            # Execute the agent
-            logger.info(f"Universal Agent Tool: Invoking {agent_name} for task: {task[:50]}...")
+            # Session 695: SKIN Layer Integration for ALL agents
+            # All agents inherit workspace methods from BaseAgent.
+            # These agents are specifically enabled for workspace file writing.
+            WORKSPACE_AWARE_AGENTS = [
+                # Development Agents - Primary workspace users
+                'FullStackDeveloperAgent',
+                'CodeGeneratorAgent',
+                'CodeReviewAgent',
+                'DevOpsAgent',
 
-            result = router.route(
-                agent_name=agent_name,
-                task=task,
-                context=context
-            )
+                # Content Agents - Can write content files
+                'ContentWriterAgent',
+                'ContentStrategyAgent',
+                'TechnicalDocumentAgent',
+
+                # Strategy Agents - Can write strategy docs
+                'BrandIdentityAgent',
+                'SEOOptimizerAgent',
+                'BrandStrategyAgent',
+                'MarketingStrategyAgent',
+
+                # Research Agents - Can write research reports
+                'ResearchAgent',
+                'CompetitorAnalysisAgent',
+                'CustomerResearchAgent',
+                'TrendAnalysisAgent',
+                'MarketIntelligenceAgent',
+
+                # Analysis Agents - Can write analysis reports
+                'StockAnalystAgent',
+                'OpportunityScoringAgent',
+
+                # Legal Agents - Can write legal documents
+                'LegalDocDrafterAgent',
+
+                # System Agents - Can write system docs
+                'SystemIntelligenceAgent',
+            ]
+
+            if agent_name in WORKSPACE_AWARE_AGENTS and write_to_workspace:
+                logger.info(f"Universal Agent Tool: Using workspace-aware execution for {agent_name}")
+
+                # Get the agent class directly
+                agent_class = router.get_agent_class(agent_name)
+                if agent_class and hasattr(agent_class, 'execute_with_workspace'):
+                    agent_instance = agent_class(user=self.user)
+                    result = agent_instance.execute_with_workspace(
+                        task=task,
+                        context=context,
+                        user=self.user,
+                        write_to_workspace=write_to_workspace,
+                        base_path=base_path
+                    )
+                else:
+                    # Fallback to standard routing
+                    result = router.route(
+                        agent_name=agent_name,
+                        task=task,
+                        context=context
+                    )
+            else:
+                # Standard execution for non-workspace agents
+                logger.info(f"Universal Agent Tool: Invoking {agent_name} for task: {task[:50]}...")
+                result = router.route(
+                    agent_name=agent_name,
+                    task=task,
+                    context=context
+                )
 
             # Convert AgentResult to dict
             if result.success:
-                return {
+                response = {
                     'success': True,
                     'agent_name': result.agent_name,
                     'message': result.message,
                     'data': result.data,
                     'execution_time_ms': getattr(result, 'execution_time_ms', None)
                 }
+                # Session 695: Include workspace write info if available
+                if result.data and 'workspace_write' in result.data:
+                    response['workspace_write'] = result.data['workspace_write']
+                return response
             else:
                 return {
                     'success': False,
@@ -11185,4 +11257,312 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'success': False,
                 'error': str(e),
                 'agent_name': agent_name
+            }
+
+    # =========================================================================
+    # SESSION 695: SKIN LAYER - WORKSPACE TOOL FOR PROJECT EXECUTION
+    # =========================================================================
+
+    def _handle_workspace_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle workspace management - the SKIN layer where AI touches reality.
+
+        This tool enables agents to:
+        - Register and manage project workspaces
+        - Write code to real files with full audit trail
+        - Execute git operations
+        - Rollback changes when needed
+        """
+        from core.services.workspace_manager import WorkspaceManager
+        from core.models_skin_layer import ProjectWorkspace, WorkspaceOperation
+
+        action = arguments.get('action')
+        if not action:
+            return {'success': False, 'error': 'action is required'}
+
+        try:
+            manager = WorkspaceManager(user=self.user)
+
+            # ===== REGISTER =====
+            if action == 'register':
+                path = arguments.get('path')
+                name = arguments.get('name')
+                if not path:
+                    return {'success': False, 'error': 'path is required for register action'}
+
+                workspace = manager.register_workspace(root_path=path, name=name)
+                return {
+                    'success': True,
+                    'message': f"Registered workspace: {workspace.name}",
+                    'workspace': {
+                        'id': str(workspace.id),
+                        'name': workspace.name,
+                        'path': workspace.root_path,
+                        'is_active': workspace.is_active,
+                        'tech_stack': workspace.tech_stack
+                    }
+                }
+
+            # ===== LIST =====
+            elif action == 'list':
+                workspaces = ProjectWorkspace.objects.filter(user=self.user).order_by('-updated_at')
+                return {
+                    'success': True,
+                    'workspaces': [
+                        {
+                            'id': str(w.id),
+                            'name': w.name,
+                            'path': w.root_path,
+                            'is_active': w.is_active,
+                            'tech_stack': w.tech_stack.get('frontend_framework', 'Unknown'),
+                            'total_operations': w.total_operations
+                        }
+                        for w in workspaces
+                    ],
+                    'count': workspaces.count()
+                }
+
+            # ===== SET_ACTIVE =====
+            elif action == 'set_active':
+                name = arguments.get('name')
+                workspace_id = arguments.get('workspace_id')
+                if not name and not workspace_id:
+                    return {'success': False, 'error': 'name or workspace_id required'}
+
+                # Find workspace
+                if workspace_id:
+                    workspace = ProjectWorkspace.objects.filter(user=self.user, id=workspace_id).first()
+                else:
+                    workspace = ProjectWorkspace.objects.filter(user=self.user, name__icontains=name).first()
+
+                if not workspace:
+                    return {'success': False, 'error': f'Workspace not found: {name or workspace_id}'}
+
+                # Deactivate all, activate this one
+                ProjectWorkspace.objects.filter(user=self.user, is_active=True).update(is_active=False)
+                workspace.is_active = True
+                workspace.save()
+
+                return {
+                    'success': True,
+                    'message': f"Activated workspace: {workspace.name}",
+                    'workspace': {
+                        'id': str(workspace.id),
+                        'name': workspace.name,
+                        'path': workspace.root_path
+                    }
+                }
+
+            # ===== STATUS =====
+            elif action == 'status':
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {
+                        'success': False,
+                        'error': 'No active workspace. Use "register" or "set_active" first.',
+                        'hint': 'Try: workspace_tool action="list" to see available workspaces'
+                    }
+
+                context = manager.get_workspace_context_for_agent(workspace, 'PersonalAssistant', 'status')
+                return {
+                    'success': True,
+                    'workspace': {
+                        'id': str(workspace.id),
+                        'name': workspace.name,
+                        'path': workspace.root_path,
+                        'tech_stack': workspace.tech_stack,
+                        'total_operations': workspace.total_operations,
+                        'total_files_written': workspace.total_files_written,
+                        'current_branch': workspace.current_branch
+                    },
+                    'context': context
+                }
+
+            # ===== SCAN =====
+            elif action == 'scan':
+                workspace_id = arguments.get('workspace_id')
+                workspace = manager.get_active_workspace() if not workspace_id else \
+                    ProjectWorkspace.objects.filter(user=self.user, id=workspace_id).first()
+
+                if not workspace:
+                    return {'success': False, 'error': 'No workspace to scan'}
+
+                from core.services.workspace_manager import WorkspaceScanner
+                scanner = WorkspaceScanner()
+                context = scanner.scan_workspace(workspace)
+
+                return {
+                    'success': True,
+                    'message': f"Scanned workspace: {workspace.name}",
+                    'stats': {
+                        'total_files': context.total_files,
+                        'total_directories': context.total_directories,
+                        'total_lines_of_code': context.total_lines_of_code,
+                        'file_types': context.file_type_counts,
+                        'scan_duration_ms': context.scan_duration_ms
+                    }
+                }
+
+            # ===== WRITE =====
+            elif action == 'write':
+                path = arguments.get('path')
+                content = arguments.get('content')
+                agent_name = arguments.get('agent_name', 'PersonalAssistant')
+
+                if not path:
+                    return {'success': False, 'error': 'path is required for write action'}
+                if content is None:
+                    return {'success': False, 'error': 'content is required for write action'}
+
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                operation = manager.write_file(workspace, path, content, agent_name)
+                return {
+                    'success': operation.success,
+                    'message': f"{'Wrote' if operation.success else 'Failed to write'} {path}",
+                    'operation_id': str(operation.id),
+                    'file_path': operation.file_path,
+                    'error': operation.error_message if not operation.success else None
+                }
+
+            # ===== READ =====
+            elif action == 'read':
+                path = arguments.get('path')
+                if not path:
+                    return {'success': False, 'error': 'path is required for read action'}
+
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                import os
+                full_path = os.path.join(workspace.root_path, path)
+                if not os.path.exists(full_path):
+                    return {'success': False, 'error': f'File not found: {path}'}
+
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                return {
+                    'success': True,
+                    'file_path': path,
+                    'content': content[:50000],  # Limit to 50k chars
+                    'truncated': len(content) > 50000
+                }
+
+            # ===== GIT_STATUS =====
+            elif action == 'git_status':
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                from core.services.workspace_manager import GitIntegrator
+                git = GitIntegrator()
+                status = git.status(workspace)
+                return {
+                    'success': True,
+                    'git_status': status
+                }
+
+            # ===== GIT_COMMIT =====
+            elif action == 'git_commit':
+                message = arguments.get('message')
+                agent_name = arguments.get('agent_name', 'PersonalAssistant')
+                if not message:
+                    return {'success': False, 'error': 'message is required for git_commit'}
+
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                operation = manager.git_commit(workspace, message, agent_name)
+                return {
+                    'success': operation.success,
+                    'message': f"{'Committed' if operation.success else 'Failed to commit'}: {message[:50]}...",
+                    'operation_id': str(operation.id),
+                    'error': operation.error_message if not operation.success else None
+                }
+
+            # ===== GIT_BRANCH =====
+            elif action == 'git_branch':
+                branch_name = arguments.get('branch_name')
+                agent_name = arguments.get('agent_name', 'PersonalAssistant')
+                if not branch_name:
+                    return {'success': False, 'error': 'branch_name is required'}
+
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                from core.services.workspace_manager import GitIntegrator
+                git = GitIntegrator()
+                operation = git.create_branch(workspace, branch_name, self.user, agent_name)
+                return {
+                    'success': operation.success,
+                    'message': f"{'Created branch' if operation.success else 'Failed'}: {branch_name}",
+                    'operation_id': str(operation.id),
+                    'error': operation.error_message if not operation.success else None
+                }
+
+            # ===== OPERATIONS =====
+            elif action == 'operations':
+                limit = arguments.get('limit', 10)
+                workspace = manager.get_active_workspace()
+                if not workspace:
+                    return {'success': False, 'error': 'No active workspace'}
+
+                ops = WorkspaceOperation.objects.filter(workspace=workspace).order_by('-created_at')[:limit]
+                return {
+                    'success': True,
+                    'operations': [
+                        {
+                            'id': str(op.id),
+                            'type': op.operation_type,
+                            'agent': op.agent_name,
+                            'file_path': op.file_path,
+                            'success': op.success,
+                            'created_at': op.created_at.isoformat(),
+                            'can_rollback': op.can_rollback and not op.rolled_back
+                        }
+                        for op in ops
+                    ]
+                }
+
+            # ===== ROLLBACK =====
+            elif action == 'rollback':
+                operation_id = arguments.get('operation_id')
+                if not operation_id:
+                    return {'success': False, 'error': 'operation_id is required for rollback'}
+
+                operation = WorkspaceOperation.objects.filter(id=operation_id, user=self.user).first()
+                if not operation:
+                    return {'success': False, 'error': f'Operation not found: {operation_id}'}
+
+                rollback_op = manager.rollback_operation(operation)
+                return {
+                    'success': rollback_op.success,
+                    'message': f"{'Rolled back' if rollback_op.success else 'Failed to rollback'} operation",
+                    'rollback_operation_id': str(rollback_op.id),
+                    'error': rollback_op.error_message if not rollback_op.success else None
+                }
+
+            else:
+                return {
+                    'success': False,
+                    'error': f'Unknown action: {action}',
+                    'valid_actions': [
+                        'register', 'list', 'set_active', 'status', 'scan',
+                        'write', 'read', 'git_status', 'git_commit', 'git_branch',
+                        'operations', 'rollback'
+                    ]
+                }
+
+        except Exception as e:
+            logger.error(f"Error in workspace_tool: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'action': action
             }

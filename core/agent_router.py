@@ -414,6 +414,21 @@ class AgentRouter:
             self._semantic_router = get_semantic_router()
         return self._semantic_router
 
+    def get_agent_class(self, agent_name: str) -> Optional[Type[BaseAgent]]:
+        """
+        Session 695: Get the agent class for direct instantiation.
+
+        Used by SKIN layer to instantiate workspace-aware agents directly
+        rather than going through the standard route() method.
+
+        Args:
+            agent_name: Name of the agent class
+
+        Returns:
+            The agent class or None if not found
+        """
+        return self.AGENT_MAP.get(agent_name)
+
     def route_by_query(
         self,
         query: str,

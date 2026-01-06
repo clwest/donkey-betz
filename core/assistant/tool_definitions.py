@@ -70,6 +70,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_ml_analysis_tool_definition(),           # Analyze data with ML models
         # Session 674: Universal Agent Tool - connects PA to ALL 42 previously unreachable agents
         _get_universal_agent_tool_definition(),       # Invoke ANY agent by name
+        # Session 695: SKIN Layer - Workspace Tool for project execution
+        _get_workspace_tool_definition(),             # Manage workspaces where agents write code
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1134,6 +1136,73 @@ def _get_ml_analysis_tool_definition() -> Dict:
                 }
             },
             "required": ["data"]
+        }
+    }
+
+
+def _get_workspace_tool_definition() -> Dict:
+    """
+    Session 695: Workspace Tool - SKIN layer for project execution.
+
+    This tool enables agents to actually write code to real projects,
+    bridging the gap between AI code generation and file system execution.
+    """
+    return {
+        "type": "function",
+        "name": "workspace_tool",
+        "description": get_tool_description("workspace_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "register", "list", "set_active", "status", "scan",
+                        "write", "read", "git_status", "git_commit", "git_branch",
+                        "operations", "rollback"
+                    ],
+                    "description": "Action to perform on workspace"
+                },
+                "path": {
+                    "type": "string",
+                    "description": "For 'register': absolute path to project root. For 'write'/'read': relative file path within workspace."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "For 'register': project name. For 'set_active': workspace name or ID."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "For 'write': content to write to file."
+                },
+                "message": {
+                    "type": "string",
+                    "description": "For 'git_commit': commit message."
+                },
+                "branch_name": {
+                    "type": "string",
+                    "description": "For 'git_branch': name of the new branch."
+                },
+                "operation_id": {
+                    "type": "string",
+                    "description": "For 'rollback': ID of the operation to rollback."
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "description": "Optional: specific workspace ID (defaults to active workspace)."
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "For 'operations': max number of operations to return."
+                },
+                "agent_name": {
+                    "type": "string",
+                    "default": "PersonalAssistant",
+                    "description": "Name of the agent performing the operation (for audit trail)."
+                }
+            },
+            "required": ["action"]
         }
     }
 

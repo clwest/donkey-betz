@@ -1,22 +1,24 @@
 # Platform Capabilities
 
-**Last Updated:** Session 663 (January 5, 2026) - Added SystemIntelligenceAgent for platform health monitoring
+**Last Updated:** Session 695 (January 6, 2026) - Added SKIN Layer for workspace management
 
 ---
 
-## System Overview (Session 567 Audit)
+## System Overview (Session 695)
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) |
+| **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) - ALL have workspace integration |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
-| **PA Tools** | **81** | +4 ML Pipeline tools (Session 673) |
-| **Database Models** | **324+** | 37 categories |
+| **PA Tools** | **83** | +workspace_tool (Session 695) |
+| **Database Models** | **332+** | 37 categories (+3 SKIN layer) |
 | **Celery Tasks** | **226** | 53 scheduled via Beat |
-| **Services** | **93** | Business logic layer |
+| **Services** | **95** | Business logic layer (+workspace_manager.py) |
 | **Discord Commands** | **112** | 29 Cog categories |
 | **Advisors** | **25** | Famous figures + domain experts |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
+| **SKIN Layer** | **3 models** | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
+| **WORKSPACE_AWARE_AGENTS** | **22** | Development, Content, Strategy, Research, Analysis, Legal |
 
 ---
 
@@ -80,10 +82,108 @@
 | **PA Tools** | **82 Tools (+universal_agent_tool)** | **Production (Session 674)** |
 | **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
 | **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
+| **SKIN Layer** | **Workspace Management + File Writing + Git** | **Production (Session 695)** |
 
 ---
 
-## Personal Assistant Tools (77 Total)
+## SKIN Layer - Project Execution System (Session 695)
+
+**The "SKIN" where AI touches reality** - enables all 72 agents to write code and content to real project workspaces with full audit trail and rollback capability.
+
+### Human Body Metaphor (Complete)
+
+| Layer | Component | Purpose |
+|-------|-----------|---------|
+| **CONSCIOUSNESS** | Human Operator | The self, makes final decisions |
+| **EYES/EARS/HANDS** | Human Interface Layer | Attention items, feedback, preferences |
+| **BRAIN** | ThinkingAgent | Complex reasoning and evaluation |
+| **NERVOUS SYSTEM** | Agent-Model Router | Routes tasks to appropriate agents |
+| **ORGANS** | 72 Specialized Agents | Each handles specific domain tasks |
+| **SENSORY INPUTS** | 77 Spiders | Gather real-world data |
+| **SKIN** | WorkspaceManager + workspace_tool | **Where AI touches reality** |
+
+### Database Models
+
+| Model | Fields | Purpose |
+|-------|--------|---------|
+| **ProjectWorkspace** | 23 | Target project directories agents work on |
+| **WorkspaceOperation** | 27 | Audit trail of every file/command operation |
+| **WorkspaceContext** | 15 | Cached understanding of project structure |
+
+### workspace_tool (12 Actions)
+
+| Action | Description |
+|--------|-------------|
+| `register` | Register a new project directory |
+| `list` | List all user's workspaces |
+| `set_active` | Switch active workspace |
+| `status` | Get workspace status with tech stack |
+| `scan` | Rescan and update workspace context |
+| `write` | Write content to a file |
+| `read` | Read a file from workspace |
+| `git_status` | Get git status |
+| `git_commit` | Commit changes with agent attribution |
+| `git_branch` | Create a new branch |
+| `operations` | View recent operations/audit trail |
+| `rollback` | Rollback a specific operation |
+
+### WORKSPACE_AWARE_AGENTS (22 Agents)
+
+These agents are automatically enabled for workspace file writing via `universal_agent_tool`:
+
+| Category | Agents |
+|----------|--------|
+| **Development** | FullStackDeveloperAgent, CodeGeneratorAgent, CodeReviewAgent, DevOpsAgent |
+| **Content** | ContentWriterAgent, ContentStrategyAgent, TechnicalDocumentAgent |
+| **Strategy** | BrandIdentityAgent, SEOOptimizerAgent, BrandStrategyAgent, MarketingStrategyAgent |
+| **Research** | ResearchAgent, CompetitorAnalysisAgent, CustomerResearchAgent, TrendAnalysisAgent, MarketIntelligenceAgent |
+| **Analysis** | StockAnalystAgent, OpportunityScoringAgent |
+| **Legal** | LegalDocDrafterAgent |
+| **System** | SystemIntelligenceAgent |
+
+### Security Features
+
+1. **Protected Paths** - `.env`, `secrets/`, credentials cannot be modified
+2. **Permission Flags** - `allow_file_write`, `allow_file_delete`, `allow_command_execution`
+3. **Human Review** - Optional `require_human_review` flag for sensitive operations
+4. **Audit Trail** - Every operation logged with before/after content
+5. **Rollback** - Any operation can be undone using stored content
+6. **Agent Attribution** - Every change tracked to specific agent
+
+### Usage Examples
+
+**Register a workspace (via PA):**
+```
+User: "Register my project at /path/to/project"
+PA uses workspace_tool with action="register", path="/path/to/project"
+```
+
+**Write code (via agent):**
+```python
+from core.agents.fullstack_developer_agent import FullStackDeveloperAgent
+
+agent = FullStackDeveloperAgent(user=user)
+result = agent.execute_with_workspace(
+    task="Create a React component for user profile",
+    context={},
+    user=user,
+    write_to_workspace=True,
+    base_path="src/components"
+)
+# Files are automatically written to the workspace
+```
+
+### Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/models_skin_layer.py` | ~350 | 3 database models |
+| `core/services/workspace_manager.py` | ~850 | Core SKIN services |
+| `core/agents/base_agent.py` | +250 | Workspace methods for all agents |
+
+---
+
+## Personal Assistant Tools (83 Total)
 
 Session 586 brought PA tools to 77, covering sports, betting, content, agents, spiders, legal, and more.
 

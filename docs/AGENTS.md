@@ -1,14 +1,34 @@
 # Agent Reference
 
-**Last Updated:** Session 663 (January 5, 2026) - Added SystemIntelligenceAgent for platform health monitoring
+**Last Updated:** Session 695 (January 6, 2026) - SKIN Layer enables all agents to write to real workspaces
 
 ---
 
 ## Overview
 
-**Total Agents: 72** | **Routable: 48** | **Non-Routable (Sub-agents): 24**
+**Total Agents: 72** | **Routable: 48** | **Non-Routable (Sub-agents): 24** | **Workspace-Aware: 22**
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
+
+### SKIN Layer Integration (Session 695)
+
+**All 72 agents** now inherit workspace methods from BaseAgent, enabling them to write code and content to real project directories:
+
+| Method | Purpose |
+|--------|---------|
+| `_get_workspace_manager(user)` | Get WorkspaceManager instance |
+| `_write_files_to_workspace(files, user, base_path)` | Write files with audit trail |
+| `_parse_code_files(content)` | Parse code blocks from LLM output |
+| `execute_with_workspace(task, context, user, ...)` | Execute + write files |
+
+**22 agents** are specifically marked as WORKSPACE_AWARE_AGENTS and can be triggered via `universal_agent_tool` to write directly to workspaces:
+- Development: FullStackDeveloperAgent, CodeGeneratorAgent, CodeReviewAgent, DevOpsAgent
+- Content: ContentWriterAgent, ContentStrategyAgent, TechnicalDocumentAgent
+- Strategy: BrandIdentityAgent, SEOOptimizerAgent, BrandStrategyAgent, MarketingStrategyAgent
+- Research: ResearchAgent, CompetitorAnalysisAgent, CustomerResearchAgent, TrendAnalysisAgent, MarketIntelligenceAgent
+- Analysis: StockAnalystAgent, OpportunityScoringAgent
+- Legal: LegalDocDrafterAgent
+- System: SystemIntelligenceAgent
 
 ### Agent Categories Summary
 
@@ -93,7 +113,7 @@ self._share_knowledge(knowledge_type='trend', title='...', knowledge_value={...}
 
 ---
 
-## Complete Agent Reference (71 Agents)
+## Complete Agent Reference (72 Agents)
 
 ### PersonalAssistantAgent
 

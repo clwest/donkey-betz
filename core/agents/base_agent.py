@@ -1911,6 +1911,260 @@ Use phrases like "potential", "may help", "typically", "can vary" instead of abs
     def __repr__(self) -> str:
         return f"<{self.name}>"
 
+    # =========================================================================
+    # SESSION 695: SKIN LAYER INTEGRATION - Workspace file writing for all agents
+    # =========================================================================
+
+    def _get_workspace_manager(self, user=None):
+        """
+        Session 695: Get WorkspaceManager for file operations.
+
+        The SKIN layer enables agents to write generated code to real project
+        workspaces with full audit trail and rollback capability.
+
+        Args:
+            user: User for workspace lookup (defaults to self.user)
+
+        Returns:
+            WorkspaceManager instance or None if unavailable
+        """
+        target_user = user or self.user
+        if not target_user:
+            return None
+
+        try:
+            from core.services.workspace_manager import WorkspaceManager
+            return WorkspaceManager(user=target_user)
+        except Exception as e:
+            logger.warning(f"Could not initialize WorkspaceManager: {e}")
+            return None
+
+    def _write_files_to_workspace(
+        self,
+        files: List[Dict[str, str]],
+        user=None,
+        base_path: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Session 695: Write generated files to the active workspace.
+
+        This is the core SKIN layer method that enables agents to write
+        real files to project directories with full audit trail.
+
+        Args:
+            files: List of {filename, language, content} dicts
+            user: User for workspace lookup (defaults to self.user)
+            base_path: Optional base path prefix for all files
+
+        Returns:
+            Dict with written files, operations, and any errors
+        """
+        target_user = user or self.user
+        manager = self._get_workspace_manager(target_user)
+
+        if not manager:
+            return {
+                'written': False,
+                'reason': 'WorkspaceManager not available',
+                'files_generated': len(files)
+            }
+
+        workspace = manager.get_active_workspace()
+        if not workspace:
+            return {
+                'written': False,
+                'reason': 'No active workspace. Register a workspace first.',
+                'files_generated': len(files)
+            }
+
+        # Check permissions
+        if not workspace.allow_file_write:
+            return {
+                'written': False,
+                'reason': 'Workspace does not allow file writes',
+                'workspace': workspace.name,
+                'files_generated': len(files)
+            }
+
+        written_files = []
+        failed_files = []
+        operations = []
+
+        for file_info in files:
+            filename = file_info.get('filename', '')
+            content = file_info.get('content', '')
+
+            # Construct full path
+            if base_path:
+                file_path = f"{base_path}/{filename}".lstrip('/')
+            else:
+                file_path = filename.lstrip('/')
+
+            # Skip empty filenames
+            if not file_path:
+                continue
+
+            try:
+                # Write file using WorkspaceManager
+                operation = manager.write_file(
+                    workspace=workspace,
+                    file_path=file_path,
+                    content=content,
+                    agent_name=self.name
+                )
+
+                if operation.success:
+                    written_files.append({
+                        'path': file_path,
+                        'operation_id': str(operation.id),
+                        'size': len(content)
+                    })
+                    operations.append(str(operation.id))
+                else:
+                    failed_files.append({
+                        'path': file_path,
+                        'error': operation.error_message
+                    })
+
+            except Exception as e:
+                logger.error(f"Failed to write {file_path}: {e}")
+                failed_files.append({
+                    'path': file_path,
+                    'error': str(e)
+                })
+
+        return {
+            'written': len(written_files) > 0,
+            'workspace': workspace.name,
+            'workspace_path': workspace.root_path,
+            'files_written': written_files,
+            'files_failed': failed_files,
+            'operations': operations,
+            'total_written': len(written_files),
+            'total_failed': len(failed_files)
+        }
+
+    def _parse_code_files(self, content: str) -> List[Dict[str, str]]:
+        """
+        Session 695: Parse generated content into individual files.
+
+        Extracts files from LLM output that uses the format:
+        ### path/to/file.ext
+        ```language
+        content
+        ```
+
+        Args:
+            content: Raw LLM output containing file definitions
+
+        Returns:
+            List of {filename, language, content} dicts
+        """
+        import re
+
+        files = []
+        pattern = r'###\s+([^\n]+)\n```(\w+)?\n(.*?)```'
+        matches = re.findall(pattern, content, re.DOTALL)
+
+        for filename, language, code in matches:
+            files.append({
+                "filename": filename.strip(),
+                "language": language or "text",
+                "content": code.strip()
+            })
+
+        return files
+
+    def execute_with_workspace(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        user=None,
+        write_to_workspace: bool = True,
+        base_path: str = ""
+    ) -> 'AgentResult':
+        """
+        Session 695: Execute agent task and optionally write output to workspace.
+
+        This is the SKIN-layer-aware wrapper around execute() that:
+        1. Runs the standard agent execution
+        2. Extracts any generated files from the result
+        3. Writes them to the active workspace
+        4. Returns result with workspace write info
+
+        Args:
+            task: The task description
+            context: Additional context
+            user: User for workspace (defaults to self.user)
+            write_to_workspace: Whether to write files to workspace
+            base_path: Base path within workspace for files
+
+        Returns:
+            AgentResult with workspace_write info in data
+        """
+        target_user = user or self.user
+
+        # Execute standard agent logic
+        result = self.execute(
+            task=task,
+            context=context,
+            scifi_context=context.get('scifi_context', {}),
+            spider_context=context.get('spider_context', {})
+        )
+
+        # If generation failed or no workspace write, return as-is
+        if not result.success or not write_to_workspace:
+            return result
+
+        # Extract files from result
+        files_to_write = []
+
+        if result.data:
+            # Check for files in the results (from tool calls)
+            results = result.data.get('results', [])
+            for r in results:
+                data = r.get('data', {})
+                if 'files' in data:
+                    files_to_write.extend(data['files'])
+
+            # Try to parse from raw code if no files found
+            if not files_to_write:
+                for r in results:
+                    data = r.get('data', {})
+                    if 'code' in data:
+                        parsed = self._parse_code_files(data['code'])
+                        files_to_write.extend(parsed)
+
+        # Also try parsing from message if it contains code blocks
+        if not files_to_write and result.message:
+            parsed = self._parse_code_files(result.message)
+            files_to_write.extend(parsed)
+
+        # Write files to workspace
+        if files_to_write:
+            write_result = self._write_files_to_workspace(
+                files=files_to_write,
+                user=target_user,
+                base_path=base_path
+            )
+
+            # Add workspace write info to result data
+            if result.data is None:
+                result.data = {}
+
+            result.data['workspace_write'] = write_result
+
+            # Update message to include write status
+            if write_result.get('written'):
+                result.message = (
+                    f"{result.message}\n\n"
+                    f"📁 Wrote {write_result['total_written']} files to workspace '{write_result['workspace']}'"
+                )
+                if write_result.get('total_failed', 0) > 0:
+                    result.message += f" ({write_result['total_failed']} failed)"
+
+        return result
+
 
 class _NullProgressTracker:
     """
