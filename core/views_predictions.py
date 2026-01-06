@@ -500,6 +500,18 @@ def generate_predictions_from_dreams(request):
     created_predictions = []
 
     for dream in dreams:
+        # Session 692: Calculate confidence from dream scores instead of hardcoding 0.6
+        # Weight: 40% vividness, 30% creativity, 30% actionability
+        vividness = getattr(dream, 'vividness_score', 0.7) or 0.7
+        creativity = getattr(dream, 'creativity_score', 0.7) or 0.7
+        actionability = getattr(dream, 'actionability_score', 0.5) or 0.5
+
+        # Calculate weighted confidence (0.4-0.95 range)
+        raw_confidence = (vividness * 0.4) + (creativity * 0.3) + (actionability * 0.3)
+        # Scale to 0.4-0.95 range (never too low, never certain)
+        confidence = 0.4 + (raw_confidence * 0.55)
+        confidence = round(min(0.95, max(0.4, confidence)), 2)
+
         # Create prediction from dream
         prediction = AgentPrediction.objects.create(
             agent=dream.agent,
@@ -509,7 +521,7 @@ def generate_predictions_from_dreams(request):
             tags=dream.related_topics if dream.related_topics else [],
             source='dream',
             source_reference={'dream_id': str(dream.id)},
-            confidence=0.6,  # Dreams get moderate confidence
+            confidence=confidence,  # Session 692: Dynamic confidence from dream scores
             timeframe='quarter',
             deadline=timezone.now() + timedelta(days=90),
         )
