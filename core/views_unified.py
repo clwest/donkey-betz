@@ -1,6 +1,14 @@
 """
 Unified Views for the integrated AI Platform
 Combines functionality from AI Studio, Django/DBAO, and Sports interfaces
+
+Session 688 DEPRECATION NOTICE:
+===============================
+The TemplateView classes in this file are DEPRECATED.
+React frontend is now the only UI (see frontend/src/pages/).
+These classes remain for reference but are no longer used.
+URLs now redirect to React routes (see core/urls_unified.py).
+API views (QuickApplyAPIView, etc.) are still active.
 """
 from django.shortcuts import render, redirect
 from django.views import View

@@ -14,6 +14,15 @@ from django.conf.urls.static import static
 from django.http import HttpResponsePermanentRedirect
 from rest_framework.routers import DefaultRouter
 
+# Session 688: React frontend redirect views
+from core.views_redirect import (
+    ai_studio_redirect, ai_nexus_redirect, content_studio_redirect,
+    ai_production_hub_redirect, command_redirect, diagnostics_redirect,
+    income_builder_redirect, neural_orchestra_redirect, login_redirect,
+    visualization_redirect, assistant_redirect,
+)
+from core.views_react import react_app
+
 
 # Session 237: Redirect handler for legacy broken URLs
 def legacy_portfolio_image_redirect(request, path):
@@ -1327,15 +1336,15 @@ urlpatterns = [
     # Django admin
     path('admin/', admin.site.urls),
 
-    # Main dashboard pages
-    path('ai-nexus/', login_required(lambda request: render(request, 'ai_nexus.html')), name='ai-nexus'),
-    path('content-studio/', login_required(lambda request: render(request, 'content_studio.html')), name='content-studio'),
-    path('ai-studio/', ai_image_studio, name='ai-image-studio'),  # Session 32: New AI Image Studio
-    path('ai-production-hub/', login_required(lambda request: render(request, 'ai_production_hub.html')), name='ai-production-hub'),
-    path('command/', login_required(lambda request: render(request, 'command_center.html')), name='command-center'),
-    path('diagnostics/', login_required(lambda request: render(request, 'diagnostic_dashboard.html')), name='diagnostics'),
-    path('income-builder/', income_builder_view, name='income-builder'),
-    path('neural-orchestra/', neural_orchestra_view, name='neural-orchestra'),
+    # Session 688: Legacy dashboard pages redirect to React frontend
+    path('ai-nexus/', ai_nexus_redirect, name='ai-nexus'),
+    path('content-studio/', content_studio_redirect, name='content-studio'),
+    path('ai-studio/', ai_studio_redirect, name='ai-image-studio'),
+    path('ai-production-hub/', ai_production_hub_redirect, name='ai-production-hub'),
+    path('command/', command_redirect, name='command-center'),
+    path('diagnostics/', diagnostics_redirect, name='diagnostics'),
+    path('income-builder/', income_builder_redirect, name='income-builder'),
+    path('neural-orchestra/', neural_orchestra_redirect, name='neural-orchestra'),
 
     # Session 145: Neural Orchestra API endpoints - REAL DATA!
     path('api/neural-orchestra/ecosystem/live-feed/', neural_ecosystem_feed, name='neural-ecosystem-feed'),
@@ -1346,12 +1355,11 @@ urlpatterns = [
     path('api/neural-orchestra/websocket-config/', neural_orchestra_websocket_bridge, name='neural-websocket-config'),
     path('api/neural-orchestra/debug/', neural_orchestra_debug_info, name='neural-orchestra-debug'),
 
-    # Authentication URLs
-    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('accounts/logout/', lambda request: (logout(request), redirect('/'))[1], name='logout'),
+    # Session 688: Authentication redirects to React
+    path('accounts/login/', login_redirect, name='login'),
+    path('accounts/logout/', lambda request: (logout(request), redirect('/login'))[1], name='logout'),
 
-    # Diagnostic Endpoints - Complete Backend Visibility
-    path('diagnostics/', diagnostic_dashboard, name='diagnostics-dashboard'),
+    # Diagnostic Endpoints - Complete Backend Visibility (API only, redirect above handles page)
     path('api/diagnostics/', diagnostic_master_endpoint, name='diagnostics-master'),
     path('api/diagnostics/test-spiders/', test_spider_network, name='diagnostics-test-spiders'),
     path('api/diagnostics/test-income-builder/', test_income_builder, name='diagnostics-test-income'),
@@ -1903,7 +1911,7 @@ urlpatterns = [
     path('api/agents/debug-registry/', lambda r: __import__('agents.views_deployment_execute_improved', fromlist=['debug_agent_registry']).debug_agent_registry(r), name='debug_agent_registry'),
     path('api/agents/run-tests/', lambda r: __import__('agents.agent_testing_system', fromlist=['run_agent_tests']).run_agent_tests(r), name='run_agent_tests'),
     path('api/agents/test-status/', lambda r: __import__('agents.agent_testing_system', fromlist=['get_agent_test_status']).get_agent_test_status(r), name='get_agent_test_status'),
-    path('agent-testing/', lambda r: __import__('django.shortcuts', fromlist=['render']).render(r, 'agent_testing_dashboard.html'), name='agent_testing_dashboard'),
+    path('agent-testing/', neural_orchestra_redirect, name='agent_testing_dashboard'),  # Session 688: Redirect to React /agents
     path('api/agents/connections/', lambda r: __import__('ai_core.api.agent_api', fromlist=['AgentSpiderConnectionAPI']).AgentSpiderConnectionAPI.as_view()(r), name='agent_spider_connections'),
 
     # Simple Agent API endpoints (without complex models)
@@ -3440,3 +3448,13 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns.append(path('health/', include('backend.auto_endpoints.urls')))  # public health
+
+# =========================================================================
+# Session 688: React Frontend Catch-All (MUST BE LAST!)
+# =========================================================================
+# This catches all remaining routes and serves the React SPA.
+# React Router handles client-side routing for these paths.
+# Excludes: /api/, /admin/, /media/, /static/, /ws/, /health/
+urlpatterns.append(
+    re_path(r'^(?!api/|admin/|media/|static/|ws/|health/).*$', react_app, name='react-app')
+)

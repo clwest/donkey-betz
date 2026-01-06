@@ -174,10 +174,16 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+# Session 688: React frontend is now the primary UI
+# Django templates deprecated - React build served from frontend/dist
+REACT_BUILD_DIR = BASE_DIR / 'frontend' / 'dist'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [
+            REACT_BUILD_DIR,  # Session 688: React build is the only UI
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'debug': True,  # Disable template caching in development
@@ -496,9 +502,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',  # for any project-level static files
-] if os.path.exists(BASE_DIR / 'static') else []
+
+# Session 688: Include React build assets
+# Use tuple format (prefix, path) to serve /static/assets/ from frontend/dist/assets/
+_staticfiles_dirs = []
+if os.path.exists(BASE_DIR / 'frontend' / 'dist' / 'assets'):
+    _staticfiles_dirs.append(('assets', BASE_DIR / 'frontend' / 'dist' / 'assets'))
+if os.path.exists(BASE_DIR / 'static'):
+    _staticfiles_dirs.append(BASE_DIR / 'static')
+STATICFILES_DIRS = _staticfiles_dirs
 
 # WhiteNoise configuration for production
 WHITENOISE_USE_FINDERS = True
@@ -526,9 +538,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'core.UnifiedUser'
 
 # Authentication URLs
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/intelligence/'
-LOGOUT_REDIRECT_URL = '/'
+# Session 688: Login URL points to React login page
+LOGIN_URL = '/login'
+LOGIN_REDIRECT_URL = '/dashboard'
+LOGOUT_REDIRECT_URL = '/login'
 
 # Development Tools
 if DEBUG:
