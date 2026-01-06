@@ -16,18 +16,12 @@
 1. **Gates Disappearing After Approval** - Approved gates now stay visible until pilot starts
 2. **All Predictions at 60%** - Confidence now calculated from dream scores (vividness, creativity, actionability)
 3. **Prediction Text Truncated** - Full prediction text now returned from API
+4. **Experiments Tab Empty** - Fixed URL routing conflict, now shows 45 running experiments!
 
 ### Features Added
 
-1. **Prediction Detail Modal** - Click any prediction to see:
-   - Full prediction text (not truncated)
-   - Confidence gauge with color coding
-   - Agent name and type
-   - All tags (not limited)
-   - Source info with dream reference
-   - Deadline with days remaining
-   - Verification status
-   - Engagement metrics (upvotes, views)
+1. **Prediction Detail Modal** - Click any prediction to see full details
+2. **Experiments Tab Working** - Shows 45 running experiments with KPI tracking
 
 ### Commits (Session 692)
 ```
@@ -40,7 +34,8 @@ ef6f7801 Start Pilot mutation handles API response
 4dfe5c11 Show approved gates until pilot starts
 bd43c2ec Predictions have varied confidence from dream scores
 2775abcf Rich prediction display with full data
-+ Final commit with prediction detail modal
+21249e8f Prediction detail modal + full text display
+45e539f7 Experiments tab now displays 45 pilot experiments
 ```
 
 ### Handoff Doc

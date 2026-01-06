@@ -66,6 +66,25 @@ confidence = 0.4 + (raw_confidence * 0.55)  # Scale to 0.4-0.95 range
 'prediction': pred.prediction or ''
 ```
 
+### 4. Experiments Tab Showing Empty (45 experiments now visible!)
+
+**Problem:** Experiments sub-tab showed "No active experiments" despite 49 experiments in database
+
+**Root Cause:** Two URL routes both mapped to `/api/experiments/`:
+- Line 1761: `list_experiments` → A/B experiments (0 records)
+- Line 2858: `get_experiments` → Pilot experiments (49 records)
+
+Django matched the first route, returning wrong data. Also, the endpoint required authentication.
+
+**Fix:**
+1. Added new endpoint `/api/pilot-experiments/` in `core/urls.py`
+2. Added to `PUBLIC_PATHS` in `core/auth_middleware.py`
+3. Updated `frontend/src/lib/api.ts` to call `/pilot-experiments/`
+4. Fixed `Experiment` TypeScript interface to match API:
+   - `status: 'running'` not `'active'`
+   - `current_value`/`target_value` not `kpi_current`/`kpi_target`
+   - Added `primary_kpi`, `hypothesis`, `decision_topic`, etc.
+
 ---
 
 ## Features Added
@@ -120,14 +139,17 @@ Clicking any prediction card now opens a full modal showing:
 ### Backend
 | File | Changes |
 |------|---------|
-| `core/views_agent_learning.py` | Fixed gate filtering to show approved gates until pilot starts |
+| `core/views_agent_learning.py` | Fixed gate filtering, added REST framework imports |
 | `core/views_predictions.py` | Dynamic confidence calculation from dream scores |
 | `core/intelligence_api.py` | Return full prediction text, expanded API response |
+| `core/urls.py` | Added `/api/pilot-experiments/` endpoint |
+| `core/auth_middleware.py` | Added `/api/pilot-experiments/` to PUBLIC_PATHS |
 
 ### Frontend
 | File | Changes |
 |------|---------|
-| `frontend/src/pages/IntelligencePage.tsx` | Added Prediction interface, selectedPrediction state, clickable cards, detail modal (~180 lines) |
+| `frontend/src/pages/IntelligencePage.tsx` | Prediction modal, Experiment interface fix, status mapping |
+| `frontend/src/lib/api.ts` | Changed experiments API to call `/pilot-experiments/` |
 
 ---
 
@@ -165,7 +187,6 @@ Now returns expanded prediction data:
 
 ## Commits (Session 692)
 
-From conversation summary (prior commits):
 - `e1f1a361` - Fix 3 implementation handlers
 - `693fc5cc` - Status-aware labels in Implementation Review modal
 - `2af4c7fd` - Force fresh data on Pilots tab switch
@@ -175,6 +196,8 @@ From conversation summary (prior commits):
 - `4dfe5c11` - Show approved gates until pilot starts
 - `bd43c2ec` - Predictions have varied confidence from dream scores
 - `2775abcf` - Rich prediction display with full data
+- `21249e8f` - Prediction detail modal + full text display
+- `45e539f7` - Experiments tab now displays 45 pilot experiments
 
 ---
 
@@ -186,6 +209,7 @@ From conversation summary (prior commits):
 | Running Pilots | 45 |
 | Completed Pilots | 12 |
 | Total Pilots | 57 |
+| Running Experiments | 45 |
 | Predictions | 39+ |
 
 ---
