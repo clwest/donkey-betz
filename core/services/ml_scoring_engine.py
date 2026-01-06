@@ -62,8 +62,9 @@ def _get_sklearn():
     return _sklearn
 
 
-# Feature definitions
+# Feature definitions (Session 670: Expanded to 24 features)
 FEATURE_NAMES = [
+    # Original features (15)
     'relevance_score',           # 0-100 from spider
     'source_authority',          # Source quality score
     'data_freshness_hours',      # Hours since creation
@@ -79,6 +80,21 @@ FEATURE_NAMES = [
     'keyword_urgent',            # Boolean: contains urgency keywords
     'keyword_opportunity',       # Boolean: contains opportunity keywords
     'historical_success_rate',   # Past success rate for similar items
+
+    # Session 670: Embedding similarity feature (1)
+    'embedding_similarity',      # Semantic similarity to successful opportunities
+
+    # Session 670: Temporal features (4)
+    'hour_of_day',               # 0-23 hour when created
+    'day_of_week',               # 0-6 (Monday=0)
+    'is_weekend',                # Boolean: Saturday or Sunday
+    'is_business_hours',         # Boolean: 9-17 weekday
+
+    # Session 670: Text quality features (4)
+    'description_length',        # Description character count
+    'title_word_count',          # Number of words in title
+    'has_numbers',               # Boolean: title contains numbers
+    'has_question',              # Boolean: title is a question
 ]
 
 # Source authority scores (0-100)
@@ -387,8 +403,21 @@ class MLScoringEngine:
         spider_name = spider_data.spider_name.lower()
         category = self._categorize_spider(spider_name)
 
+        # Session 670: Extract temporal features
+        created_at = spider_data.created_at
+        hour_of_day = created_at.hour
+        day_of_week = created_at.weekday()  # Monday=0, Sunday=6
+        is_weekend = 1.0 if day_of_week >= 5 else 0.0
+        is_business_hours = 1.0 if (9 <= hour_of_day <= 17 and day_of_week < 5) else 0.0
+
+        # Session 670: Extract text quality features
+        title_word_count = len(title.split()) if title else 0
+        has_numbers = 1.0 if any(c.isdigit() for c in title) else 0.0
+        has_question = 1.0 if '?' in title else 0.0
+
         # Extract features - use all_text for keyword detection for better coverage
         features = [
+            # Original features (15)
             spider_data.relevance_score or 50,                          # relevance_score
             SOURCE_AUTHORITY.get(spider_name, SOURCE_AUTHORITY['default']),  # source_authority
             min(freshness_hours, 168),                                   # data_freshness_hours (cap at 1 week)
@@ -404,6 +433,21 @@ class MLScoringEngine:
             1.0 if any(kw in all_text_lower for kw in URGENT_KEYWORDS) else 0.0,       # keyword_urgent
             1.0 if any(kw in all_text_lower for kw in OPPORTUNITY_KEYWORDS) else 0.0,  # keyword_opportunity
             self._get_historical_success_rate(spider_name),             # historical_success_rate
+
+            # Session 670: Embedding similarity (1)
+            self._get_embedding_similarity(spider_data),                # embedding_similarity
+
+            # Session 670: Temporal features (4)
+            hour_of_day,                                                # hour_of_day (0-23)
+            day_of_week,                                                # day_of_week (0-6)
+            is_weekend,                                                 # is_weekend
+            is_business_hours,                                          # is_business_hours
+
+            # Session 670: Text quality features (4)
+            min(len(description), 5000),                                # description_length
+            title_word_count,                                           # title_word_count
+            has_numbers,                                                # has_numbers
+            has_question,                                               # has_question
         ]
 
         return np.array([features])
@@ -427,6 +471,92 @@ class MLScoringEngine:
         elif spider_name in news_spiders:
             return 'news'
         return 'other'
+
+    def _get_embedding_similarity(self, spider_data) -> float:
+        """
+        Session 670: Get semantic similarity to historically successful opportunities.
+
+        Compares the spider data's embedding to embeddings from opportunities
+        that resulted in 'won' outcomes, returning average cosine similarity.
+
+        Returns:
+            float: Similarity score 0.0-1.0 (0.5 = neutral/no data)
+        """
+        # Check if spider_data has an embedding
+        embedding = None
+        if hasattr(spider_data, 'embedding') and spider_data.embedding:
+            embedding = spider_data.embedding
+        elif hasattr(spider_data, 'embedding_vector') and spider_data.embedding_vector:
+            embedding = spider_data.embedding_vector
+
+        if not embedding:
+            return 0.5  # Neutral default when no embedding
+
+        try:
+            from django.core.cache import cache
+
+            cache_key = f"ml_embedding_sim_{spider_data.spider_name}"
+            cached_embeddings = cache.get(cache_key)
+
+            if cached_embeddings is None:
+                from core.models_unified_system import SpiderData, OpportunityOutcome
+
+                # Get embeddings from successful opportunities (won outcomes)
+                successful_spider_ids = OpportunityOutcome.objects.filter(
+                    outcome='won',
+                    task__opportunity__spider_data__isnull=False
+                ).values_list('task__opportunity__spider_data_id', flat=True)[:100]
+
+                successful_embeddings = list(
+                    SpiderData.objects.filter(
+                        id__in=successful_spider_ids
+                    ).exclude(
+                        embedding__isnull=True
+                    ).values_list('embedding', flat=True)[:50]
+                )
+
+                # Cache for 2 hours
+                cache.set(cache_key, successful_embeddings, 7200)
+                cached_embeddings = successful_embeddings
+
+            if not cached_embeddings:
+                return 0.5  # No successful embeddings to compare
+
+            # Calculate average cosine similarity
+            query_vec = np.array(embedding)
+            if query_vec.ndim == 0 or len(query_vec) == 0:
+                return 0.5
+
+            similarities = []
+            for emb in cached_embeddings:
+                try:
+                    target_vec = np.array(emb)
+                    if target_vec.ndim == 0 or len(target_vec) == 0:
+                        continue
+                    if len(query_vec) != len(target_vec):
+                        continue
+
+                    # Cosine similarity
+                    dot = np.dot(query_vec, target_vec)
+                    norm_q = np.linalg.norm(query_vec)
+                    norm_t = np.linalg.norm(target_vec)
+
+                    if norm_q > 0 and norm_t > 0:
+                        sim = dot / (norm_q * norm_t)
+                        similarities.append(float(sim))
+                except Exception:
+                    continue
+
+            if similarities:
+                avg_sim = np.mean(similarities)
+                # Normalize to 0-1 range (cosine sim is -1 to 1)
+                return float(max(0, min(1, (avg_sim + 1) / 2)))
+
+            return 0.5
+
+        except Exception as e:
+            logger.debug(f"Embedding similarity error: {e}")
+            return 0.5
 
     # Default success rates as fallback when insufficient data
     DEFAULT_SUCCESS_RATES = {
