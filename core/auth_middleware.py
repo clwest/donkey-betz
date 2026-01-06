@@ -147,6 +147,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/agents/health/',  # Agent health status
         '/api/recent-activity/',  # Recent system activity feed
         '/api/agent-learning/',  # Learning activity feed
+
+        # Session 688: Intelligence Page APIs (read-only for React frontend)
+        '/api/v1/intelligence/skynet/status/',  # Skynet intelligence status
+        '/api/v1/intelligence/opportunities/',  # Opportunities list
+        '/api/v1/intelligence/predictions/',  # AI predictions
+        '/api/pilots/',  # Pilots dashboard and list
+        '/api/experiments/',  # Experiments list
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

@@ -1038,7 +1038,7 @@ def get_style_shifts(request):
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def list_experiments(request):
     """
     List all A/B experiments.

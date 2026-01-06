@@ -4,7 +4,7 @@ This provides the skynet status endpoint for the frontend
 """
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from datetime import datetime
 import asyncio
@@ -23,7 +23,7 @@ view_generated_file = ViewGeneratedFileView.as_view()
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def skynet_status(request):
     """Provide Skynet Intelligence Engine status"""
     return Response({
@@ -51,7 +51,7 @@ def skynet_status(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def live_opportunities(request):
     """Get live opportunities"""
     return Response({
@@ -69,7 +69,7 @@ def live_opportunities(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def live_predictions(request):
     """Get live predictions"""
     return Response({
