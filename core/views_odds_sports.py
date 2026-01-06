@@ -606,7 +606,7 @@ def live_betting_opportunities(request):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def list_betting_markets(request):
     """
     List available betting markets with filtering - migrated from DBAO
@@ -670,7 +670,7 @@ def list_betting_markets(request):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def get_bankroll_management(request):
     """
     Get user bankroll management information - migrated from DBAO
@@ -691,7 +691,7 @@ def get_bankroll_management(request):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def get_bankroll_stats(request):
     """
     Detailed bankroll performance statistics - migrated from DBAO

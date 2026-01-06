@@ -154,6 +154,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/intelligence/predictions/',  # AI predictions
         '/api/pilots/',  # Pilots dashboard and list
         '/api/experiments/',  # Experiments list
+
+        # Session 688: Betting Page APIs (read-only for React frontend)
+        '/api/v1/betting/stats/',  # Betting statistics
+        '/api/v1/betting/wagers/',  # User wagers
+        '/api/v1/betting/arbitrage/',  # Arbitrage opportunities
+        '/api/v1/sports/live-odds',  # Live odds
+        '/api/v1/odds/bankroll/',  # Bankroll management
+        '/api/v1/odds/markets/',  # Betting markets
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
