@@ -49,6 +49,12 @@ export const agentsApi = {
   health: () => api.get('/v1/agents/health/'),
   execute: (agentName: string, task: string) =>
     api.post('/v1/agents/execute/', { agent_name: agentName, task }),
+  executionHistory: (limit = 20) => api.get(`/v1/agents/execution-history/?limit=${limit}`),
+}
+
+export const activityApi = {
+  recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
+  learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
 }
 
 export const intelligenceApi = {
