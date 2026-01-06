@@ -493,6 +493,7 @@ def transcribe_only(request):
 def get_attention_items(request):
     """
     Session 574: Get attention items for the PA UI.
+    Session 663: Enhanced with explanation, severity, location fields.
 
     Returns actionable items from SystemStateAggregator that need user attention.
     Each item can be clicked to execute via PA.
@@ -516,12 +517,25 @@ def get_attention_items(request):
                 'action_url': item.action_url if hasattr(item, 'action_url') else '',
                 # Suggested action for click-to-execute
                 'suggested_action': _get_suggested_action(item),
+                # Session 663: New enhanced fields from SystemIntelligenceAgent work
+                'severity': getattr(item, 'severity', 'info'),  # info, warning, critical
+                'explanation': getattr(item, 'explanation', '')[:300] if getattr(item, 'explanation', '') else '',
+                'recommended_action': getattr(item, 'recommended_action', '')[:200] if getattr(item, 'recommended_action', '') else '',
+                'location': getattr(item, 'location', ''),
             })
+
+        # Session 663: Add summary counts by severity
+        severity_counts = {
+            'critical': len([i for i in items if getattr(i, 'severity', 'info') == 'critical']),
+            'warning': len([i for i in items if getattr(i, 'severity', 'info') == 'warning']),
+            'info': len([i for i in items if getattr(i, 'severity', 'info') == 'info']),
+        }
 
         return Response({
             'success': True,
             'items': attention_items,
             'count': len(attention_items),
+            'severity_counts': severity_counts,
         })
 
     except Exception as e:
