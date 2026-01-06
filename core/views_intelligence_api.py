@@ -167,11 +167,11 @@ def intelligence_activity_feed(request):
         }, status=500)
 
 
-@login_required
 @require_http_methods(["GET"])
 def spider_network_status(request):
     """
     Get spider network status and statistics
+    Session 687: Removed @login_required - public endpoint for Dashboard
 
     GET /api/v1/intelligence/spider-status/
 

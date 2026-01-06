@@ -367,6 +367,7 @@ export const portfolioApi = {
 }
 
 // Human Interface Layer (Session 686)
+// Note: Paths don't include /api/ prefix since baseURL is already '/api'
 export const humanApi = {
   // Attention Stream
   attention: (params?: { limit?: number; urgency?: string[]; status?: string[] }) => {
@@ -374,31 +375,31 @@ export const humanApi = {
     if (params?.limit) searchParams.set('limit', params.limit.toString())
     if (params?.urgency) params.urgency.forEach(u => searchParams.append('urgency', u))
     if (params?.status) params.status.forEach(s => searchParams.append('status', s))
-    return api.get(`/api/human/attention/?${searchParams.toString()}`)
+    return api.get(`/human/attention/?${searchParams.toString()}`)
   },
-  attentionStats: () => api.get('/api/human/attention/stats/'),
+  attentionStats: () => api.get('/human/attention/stats/'),
   decide: (itemId: string, decision: string, feedback?: string, confidence?: number) =>
-    api.post(`/api/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
+    api.post(`/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
   defer: (itemId: string, remindAt: string) =>
-    api.post(`/api/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
+    api.post(`/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
 
   // Control Panel
-  control: () => api.get('/api/human/control/'),
+  control: () => api.get('/human/control/'),
   pauseAgent: (agentName: string, reason?: string) =>
-    api.post('/api/human/control/pause/', { agent: agentName, reason }),
+    api.post('/human/control/pause/', { agent: agentName, reason }),
   resumeAgent: (agentName: string, reason?: string) =>
-    api.post('/api/human/control/resume/', { agent: agentName, reason }),
+    api.post('/human/control/resume/', { agent: agentName, reason }),
   setQuietMode: (enabled: boolean, durationMinutes?: number) =>
-    api.post('/api/human/control/quiet/', { enabled, duration_minutes: durationMinutes }),
+    api.post('/human/control/quiet/', { enabled, duration_minutes: durationMinutes }),
   setReviewMode: (enabled: boolean) =>
-    api.post('/api/human/control/review/', { enabled }),
+    api.post('/human/control/review/', { enabled }),
   adjustThreshold: (threshold: number) =>
-    api.post('/api/human/control/threshold/', { threshold }),
+    api.post('/human/control/threshold/', { threshold }),
 
   // Preferences
-  preferences: () => api.get('/api/human/preferences/'),
+  preferences: () => api.get('/human/preferences/'),
   updatePreferences: (data: Record<string, unknown>) =>
-    api.put('/api/human/preferences/', data),
+    api.put('/human/preferences/', data),
 }
 
 export const adminApi = {
