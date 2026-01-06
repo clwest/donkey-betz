@@ -2227,12 +2227,14 @@ export default function IntelligencePage() {
                     </div>
                   )}
 
-                  {/* Target Description */}
+                  {/* Target Description - Session 692: Status-aware labels */}
                   {implementationDetail.target_description && (
                     <div>
                       <h4 className="font-semibold mb-2 flex items-center gap-2">
                         <Target size={18} className="text-accent-cyan" />
-                        What Needs to Be Built
+                        {implementationDetail.status === 'completed' ? 'What Was Built' :
+                         implementationDetail.status === 'failed' ? 'What Failed to Build' :
+                         'What Needs to Be Built'}
                       </h4>
                       <p className="text-gray-300 text-sm bg-dark-bg p-4 rounded-lg border border-dark-border">
                         {implementationDetail.target_description}
@@ -2240,28 +2242,43 @@ export default function IntelligencePage() {
                     </div>
                   )}
 
-                  {/* Recommended Action */}
+                  {/* Recommended Action - Session 692: Status-aware labels */}
                   {implementationDetail.plan?.recommended_action && (
-                    <div className="bg-primary-600/10 border border-primary-600/30 rounded-lg p-4">
-                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary-400">
+                    <div className={cn(
+                      "rounded-lg p-4",
+                      implementationDetail.status === 'completed'
+                        ? "bg-accent-green/10 border border-accent-green/30"
+                        : "bg-primary-600/10 border border-primary-600/30"
+                    )}>
+                      <h4 className={cn(
+                        "font-semibold mb-2 flex items-center gap-2",
+                        implementationDetail.status === 'completed' ? "text-accent-green" : "text-primary-400"
+                      )}>
                         <Flag size={18} />
-                        Recommended Action
+                        {implementationDetail.status === 'completed' ? 'Action Taken' :
+                         implementationDetail.status === 'requires_human' ? 'Action Required' :
+                         'Recommended Action'}
                       </h4>
                       <p className="text-gray-300 text-sm">{implementationDetail.plan.recommended_action}</p>
                     </div>
                   )}
 
-                  {/* Key Insights */}
+                  {/* Key Insights - Session 692: Status-aware labels */}
                   {implementationDetail.plan?.key_insights && implementationDetail.plan.key_insights.length > 0 && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Lightbulb size={18} className="text-accent-amber" />
-                        Key Insights ({implementationDetail.plan.key_insights.length})
+                        <Lightbulb size={18} className={implementationDetail.status === 'completed' ? "text-accent-green" : "text-accent-amber"} />
+                        {implementationDetail.status === 'completed'
+                          ? `Insights Applied (${implementationDetail.plan.key_insights.length})`
+                          : `Key Insights (${implementationDetail.plan.key_insights.length})`}
                       </h4>
                       <div className="space-y-2">
                         {implementationDetail.plan.key_insights.map((insight, idx) => (
                           <div key={idx} className="flex items-start gap-3 bg-dark-bg rounded-lg p-3 border border-dark-border">
-                            <span className="text-accent-amber font-bold text-sm">{idx + 1}.</span>
+                            <span className={cn(
+                              "font-bold text-sm",
+                              implementationDetail.status === 'completed' ? "text-accent-green" : "text-accent-amber"
+                            )}>{implementationDetail.status === 'completed' ? '✓' : `${idx + 1}.`}</span>
                             <p className="text-gray-300 text-sm">{insight}</p>
                           </div>
                         ))}
@@ -2269,18 +2286,23 @@ export default function IntelligencePage() {
                     </div>
                   )}
 
-                  {/* Implementation Steps */}
+                  {/* Implementation Steps - Session 692: Status-aware labels */}
                   {implementationDetail.plan?.steps && implementationDetail.plan.steps.length > 0 && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <CheckCircle size={18} className="text-accent-green" />
-                        Implementation Steps
+                        <CheckCircle size={18} className={implementationDetail.status === 'completed' ? "text-accent-green" : "text-gray-400"} />
+                        {implementationDetail.status === 'completed' ? 'Completed Steps' : 'Implementation Steps'}
                       </h4>
                       <div className="space-y-2">
                         {implementationDetail.plan.steps.map((step, idx) => (
                           <div key={idx} className="flex items-center gap-3 text-sm">
-                            <span className="w-6 h-6 rounded-full bg-dark-border flex items-center justify-center text-xs text-gray-400">
-                              {idx + 1}
+                            <span className={cn(
+                              "w-6 h-6 rounded-full flex items-center justify-center text-xs",
+                              implementationDetail.status === 'completed'
+                                ? "bg-accent-green/20 text-accent-green"
+                                : "bg-dark-border text-gray-400"
+                            )}>
+                              {implementationDetail.status === 'completed' ? '✓' : idx + 1}
                             </span>
                             <span className="text-gray-300">{step}</span>
                           </div>
