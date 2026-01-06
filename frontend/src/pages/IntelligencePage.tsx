@@ -1139,7 +1139,7 @@ export default function IntelligencePage() {
         </div>
       )}
 
-      {/* Predictions Tab */}
+      {/* Predictions Tab - Session 692: Rich prediction display */}
       {activeTab === 'predictions' && (
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">AI Predictions</h3>
@@ -1148,42 +1148,111 @@ export default function IntelligencePage() {
               <Loader2 className="animate-spin" size={24} />
             </div>
           ) : predictions.length > 0 ? (
-            <div className="space-y-3">
-              {predictions.map((pred, idx) => (
+            <div className="space-y-4">
+              {predictions.map((pred: any, idx: number) => (
                 <div
                   key={pred.id || idx}
-                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      'h-10 w-10 rounded-lg flex items-center justify-center',
-                      pred.probability >= 70 ? 'bg-accent-green/20' :
-                      pred.probability >= 40 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <Sparkles size={20} className={
-                        pred.probability >= 70 ? 'text-accent-green' :
-                        pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
-                      } />
-                    </div>
-                    <div>
-                      <p className="font-medium">{pred.title}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
-                          {pred.category}
-                        </span>
-                        <span className="text-xs text-gray-500">{pred.source}</span>
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'h-12 w-12 rounded-lg flex items-center justify-center shrink-0',
+                        pred.probability >= 70 ? 'bg-accent-green/20' :
+                        pred.probability >= 40 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                      )}>
+                        <Sparkles size={24} className={
+                          pred.probability >= 70 ? 'text-accent-green' :
+                          pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                        } />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg">{pred.title}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                            {pred.category}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
+                            {pred.source_type || 'analysis'}
+                          </span>
+                          {pred.is_featured && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber">
+                              ⭐ Featured
+                            </span>
+                          )}
+                          {pred.status && pred.status !== 'pending' && (
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded',
+                              pred.status === 'verified_true' ? 'bg-accent-green/20 text-accent-green' :
+                              pred.status === 'verified_false' ? 'bg-accent-red/20 text-accent-red' :
+                              'bg-gray-600/20 text-gray-400'
+                            )}>
+                              {pred.status.replace('_', ' ')}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right shrink-0">
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        pred.probability >= 70 ? 'text-accent-green' :
+                        pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {pred.probability}%
+                      </p>
+                      <p className="text-xs text-gray-500">confidence</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      'text-xl font-bold',
-                      pred.probability >= 70 ? 'text-accent-green' :
-                      pred.probability >= 40 ? 'text-accent-amber' : 'text-accent-red'
-                    )}>
-                      {pred.probability}%
+
+                  {/* Prediction text */}
+                  {pred.prediction && (
+                    <p className="text-sm text-gray-300 mb-3 line-clamp-3">
+                      {pred.prediction}
                     </p>
-                    <p className="text-xs text-gray-500">probability</p>
+                  )}
+
+                  {/* Tags */}
+                  {pred.tags && pred.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {pred.tags.slice(0, 3).map((tag: string, i: number) => (
+                        <span key={i} className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
+                          #{tag.slice(0, 30)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer row */}
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-border">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <Bot size={12} />
+                        {pred.agent_name || pred.source}
+                        {pred.agent_type && <span className="text-gray-600">({pred.agent_type})</span>}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} />
+                        {pred.timeframe || 'quarter'}
+                        {pred.days_remaining !== null && pred.days_remaining !== undefined && (
+                          <span className={pred.days_remaining < 30 ? 'text-accent-amber' : ''}>
+                            ({pred.days_remaining}d left)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {(pred.upvotes > 0 || pred.views > 0) && (
+                        <>
+                          <span>👍 {pred.upvotes}</span>
+                          <span>👁 {pred.views}</span>
+                        </>
+                      )}
+                      <span>
+                        {pred.created_at ? new Date(pred.created_at).toLocaleDateString() : ''}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
