@@ -173,7 +173,7 @@ def live_predictions(request):
             predictions_data.append({
                 'id': str(pred.id),
                 'title': pred.title[:100] if pred.title else 'Prediction',
-                'prediction': pred.prediction[:500] if pred.prediction else '',  # Full prediction text
+                'prediction': pred.prediction or '',  # Session 692: Return full prediction text, not truncated
                 'probability': int((pred.confidence or 0.5) * 100),
                 'category': pred.category or 'general',
 

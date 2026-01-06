@@ -6,7 +6,7 @@ import {
   Play, Pause, RefreshCw, ChevronRight, Loader2, Activity,
   BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
   Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag,
-  Trash2
+  Trash2, Tag, ArrowUp, Eye, Star
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -148,10 +148,32 @@ interface Spider {
 interface Prediction {
   id: string
   title: string
+  prediction: string  // Full prediction text
   probability: number
   category: string
-  source: string
+  // Agent info
+  agent_name: string
+  agent_type: string | null
+  // Source info
+  source_type: string  // dream, analysis, pattern, etc.
+  source_reference: { dream_id?: string } | null
+  // Legacy field for backwards compat
+  source?: string
+  // Tags
+  tags: string[]
+  // Timing
+  timeframe: string
+  deadline: string | null
+  days_remaining: number | null
   created_at: string
+  // Status & Verification
+  status: string
+  is_featured: boolean
+  verified_at: string | null
+  accuracy_score: number | null
+  // Engagement
+  upvotes: number
+  views: number
 }
 
 interface Agent {
@@ -185,6 +207,8 @@ export default function IntelligencePage() {
   const [selectedPilotId, setSelectedPilotId] = useState<string | null>(null)
   // Session 691: Implementation review modal state
   const [selectedImplementationId, setSelectedImplementationId] = useState<string | null>(null)
+  // Session 692: Prediction detail modal state
+  const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null)
   const queryClient = useQueryClient()
 
   // Core queries
@@ -1139,7 +1163,7 @@ export default function IntelligencePage() {
         </div>
       )}
 
-      {/* Predictions Tab - Session 692: Rich prediction display */}
+      {/* Predictions Tab - Session 692: Rich prediction display with modal */}
       {activeTab === 'predictions' && (
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">AI Predictions</h3>
@@ -1149,10 +1173,11 @@ export default function IntelligencePage() {
             </div>
           ) : predictions.length > 0 ? (
             <div className="space-y-4">
-              {predictions.map((pred: any, idx: number) => (
+              {predictions.map((pred: Prediction, idx: number) => (
                 <div
                   key={pred.id || idx}
-                  className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
+                  onClick={() => setSelectedPrediction(pred)}
                 >
                   {/* Header row */}
                   <div className="flex items-start justify-between gap-4 mb-3">
@@ -1206,9 +1231,9 @@ export default function IntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Prediction text */}
+                  {/* Prediction text - truncated */}
                   {pred.prediction && (
-                    <p className="text-sm text-gray-300 mb-3 line-clamp-3">
+                    <p className="text-sm text-gray-300 mb-3 line-clamp-2">
                       {pred.prediction}
                     </p>
                   )}
@@ -1218,9 +1243,12 @@ export default function IntelligencePage() {
                     <div className="flex flex-wrap gap-1 mb-3">
                       {pred.tags.slice(0, 3).map((tag: string, i: number) => (
                         <span key={i} className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
-                          #{tag.slice(0, 30)}
+                          #{tag.slice(0, 25)}
                         </span>
                       ))}
+                      {pred.tags.length > 3 && (
+                        <span className="text-xs text-gray-500">+{pred.tags.length - 3} more</span>
+                      )}
                     </div>
                   )}
 
@@ -1230,14 +1258,13 @@ export default function IntelligencePage() {
                       <span className="flex items-center gap-1">
                         <Bot size={12} />
                         {pred.agent_name || pred.source}
-                        {pred.agent_type && <span className="text-gray-600">({pred.agent_type})</span>}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock size={12} />
                         {pred.timeframe || 'quarter'}
                         {pred.days_remaining !== null && pred.days_remaining !== undefined && (
                           <span className={pred.days_remaining < 30 ? 'text-accent-amber' : ''}>
-                            ({pred.days_remaining}d left)
+                            ({pred.days_remaining}d)
                           </span>
                         )}
                       </span>
@@ -2538,6 +2565,201 @@ export default function IntelligencePage() {
             <div className="flex items-center justify-end gap-3 p-6 border-t border-dark-border bg-dark-bg/50">
               <button
                 onClick={() => setSelectedImplementationId(null)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 692: Prediction Detail Modal */}
+      {selectedPrediction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-card border border-dark-border rounded-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border">
+              <div className="flex-1 min-w-0 pr-4">
+                <h3 className="text-xl font-bold">{selectedPrediction.title}</h3>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                    {selectedPrediction.category}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">
+                    {selectedPrediction.timeframe}
+                  </span>
+                  <span className={cn(
+                    'text-xs px-2 py-1 rounded',
+                    selectedPrediction.status === 'verified' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedPrediction.status === 'expired' ? 'bg-gray-500/20 text-gray-400' :
+                    'bg-accent-amber/20 text-accent-amber'
+                  )}>
+                    {selectedPrediction.status}
+                  </span>
+                  {selectedPrediction.is_featured && (
+                    <span className="text-xs px-2 py-1 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
+                      <Star size={12} /> Featured
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPrediction(null)}
+                className="p-2 hover:bg-dark-bg rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Probability Gauge */}
+              <div className="bg-dark-bg rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Target size={18} className="text-primary-400" />
+                    Confidence Level
+                  </h4>
+                  <span className={cn(
+                    'text-2xl font-bold',
+                    selectedPrediction.probability >= 70 ? 'text-accent-green' :
+                    selectedPrediction.probability >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                  )}>
+                    {selectedPrediction.probability}%
+                  </span>
+                </div>
+                <div className="h-3 bg-dark-border rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all',
+                      selectedPrediction.probability >= 70 ? 'bg-accent-green' :
+                      selectedPrediction.probability >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                    )}
+                    style={{ width: `${selectedPrediction.probability}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Full Prediction Text */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <FileText size={18} className="text-accent-cyan" />
+                  Prediction Details
+                </h4>
+                <div className="bg-dark-bg rounded-lg p-4">
+                  <p className="text-gray-300 whitespace-pre-wrap">{selectedPrediction.prediction}</p>
+                </div>
+              </div>
+
+              {/* Agent Info */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Brain size={18} className="text-primary-400" />
+                  <span className="text-sm text-gray-400">Agent:</span>
+                  <span className="font-medium">{selectedPrediction.agent_name}</span>
+                </div>
+                {selectedPrediction.agent_type && (
+                  <span className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-400">
+                    {selectedPrediction.agent_type}
+                  </span>
+                )}
+              </div>
+
+              {/* Source Info */}
+              <div>
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Lightbulb size={18} className="text-accent-amber" />
+                  Source
+                </h4>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-1 rounded bg-accent-amber/20 text-accent-amber">
+                    {selectedPrediction.source_type}
+                  </span>
+                  {selectedPrediction.source_reference?.dream_id && (
+                    <span className="text-sm text-gray-400">
+                      Dream ID: {selectedPrediction.source_reference.dream_id}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Tags */}
+              {selectedPrediction.tags && selectedPrediction.tags.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Tag size={18} className="text-primary-400" />
+                    Tags
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPrediction.tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-2 py-1 rounded-full bg-primary-600/20 text-primary-400 border border-primary-600/30"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timing */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedPrediction.deadline && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Clock size={18} className="text-accent-cyan" />
+                      Deadline
+                    </h4>
+                    <p className="text-gray-300">{new Date(selectedPrediction.deadline).toLocaleDateString()}</p>
+                    {selectedPrediction.days_remaining !== null && selectedPrediction.days_remaining >= 0 && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        {selectedPrediction.days_remaining} days remaining
+                      </p>
+                    )}
+                  </div>
+                )}
+                {selectedPrediction.verified_at && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <CheckCircle size={18} className="text-accent-green" />
+                      Verified
+                    </h4>
+                    <p className="text-gray-300">{new Date(selectedPrediction.verified_at).toLocaleDateString()}</p>
+                    {selectedPrediction.accuracy_score !== null && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        Accuracy: {(selectedPrediction.accuracy_score * 100).toFixed(0)}%
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Engagement */}
+              <div className="flex items-center gap-6 pt-4 border-t border-dark-border">
+                <div className="flex items-center gap-2">
+                  <ArrowUp size={18} className="text-accent-green" />
+                  <span className="font-medium">{selectedPrediction.upvotes}</span>
+                  <span className="text-sm text-gray-400">upvotes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Eye size={18} className="text-gray-400" />
+                  <span className="font-medium">{selectedPrediction.views}</span>
+                  <span className="text-sm text-gray-400">views</span>
+                </div>
+              </div>
+
+              {/* Created timestamp */}
+              <div className="text-sm text-gray-500">
+                Created: {new Date(selectedPrediction.created_at).toLocaleString()}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end p-6 border-t border-dark-border bg-dark-bg/50">
+              <button
+                onClick={() => setSelectedPrediction(null)}
                 className="btn btn-secondary"
               >
                 Close

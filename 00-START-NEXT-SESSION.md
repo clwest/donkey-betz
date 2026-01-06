@@ -1,49 +1,54 @@
-# Session 692 - Start Here
+# Session 693 - Start Here
 
-**Previous Session:** 691 (Implementation Review UI)
+**Previous Session:** 692 (Prediction Detail Modal)
 **Date:** January 6, 2026
-**Focus:** Bug Fixes + Remaining Pages
-**Status:** 100% Reality Score | Implementation Pipeline Active
+**Focus:** Remaining Page Audits
+**Status:** 100% Reality Score | Intelligence Page Complete
 
-> **PRIORITY:** Fix remaining bugs, audit Assistant & Settings pages
+> **PRIORITY:** Audit Assistant & Settings pages
 
 ---
 
-## Session 691 Summary: Implementation Review UI
+## Session 692 Summary: Prediction Detail Modal
 
-### What Was Built
+### Bugs Fixed
 
-1. **Implementation Review Modal** - Full modal showing:
-   - Why implementation needs review
-   - What needs to be built
-   - Recommended action
-   - Key insights
-   - Implementation steps
-   - Execution results
+1. **Gates Disappearing After Approval** - Approved gates now stay visible until pilot starts
+2. **All Predictions at 60%** - Confidence now calculated from dream scores (vividness, creativity, actionability)
+3. **Prediction Text Truncated** - Full prediction text now returned from API
 
-2. **Clickable Implementation Badges** - Click "Needs Review" to open modal
+### Features Added
 
-3. **FullStackDeveloperAgent Bug Fix** - Fixed parameter mismatch:
-   ```python
-   # Fixed: task= instead of prompt=
-   agent.execute(task=prompt, context={...}, scifi_context={}, spider_context={})
-   ```
+1. **Prediction Detail Modal** - Click any prediction to see:
+   - Full prediction text (not truncated)
+   - Confidence gauge with color coding
+   - Agent name and type
+   - All tags (not limited)
+   - Source info with dream reference
+   - Deadline with days remaining
+   - Verification status
+   - Engagement metrics (upvotes, views)
 
-### Commits (Session 691)
+### Commits (Session 692)
 ```
-16c31489 feat(Session 691): Implementation Review UI + FullStackDeveloperAgent fix
+e1f1a361 Fix 3 implementation handlers
+693fc5cc Status-aware labels in Implementation Review modal
+2af4c7fd Force fresh data on Pilots tab switch
+4043c2d0 Mark Ready button shows checklist % and errors
+df8d8554 Add "Approve All Items" button
+ef6f7801 Start Pilot mutation handles API response
+4dfe5c11 Show approved gates until pilot starts
+bd43c2ec Predictions have varied confidence from dream scores
+2775abcf Rich prediction display with full data
++ Final commit with prediction detail modal
 ```
 
 ### Handoff Doc
-`docs/handoffs/SESSION_691_IMPLEMENTATION_REVIEW_UI.md`
+`docs/handoffs/SESSION_692_PREDICTION_DETAIL_MODAL.md`
 
 ---
 
-## Session 692 Priority: Bug Fixes
-
-### Known Bugs to Address
-1. User-reported bugs (ask user)
-2. Remaining code_generation implementation issues
+## Session 693 Priority: Page Audits
 
 ### Pages Still Needing Audit (2/12)
 
@@ -57,7 +62,7 @@
 | Analysis | Working | 687 |
 | Betting | Working | 687-688 |
 | Discord | Working | 688 |
-| Intelligence | COMPLETE | 688-691 |
+| Intelligence | COMPLETE | 688-692 |
 | Research | Working | 688 |
 | **Assistant** | NOT AUDITED | - |
 | **Settings** | NOT AUDITED | - |
@@ -73,44 +78,42 @@ make start && make celery
 # Access React frontend
 open http://localhost:3000/
 
-# Test Implementation Review Modal
-# 1. Go to Intelligence > Pilots
-# 2. Click a "Needs Review" badge
+# Test Prediction Modal
+# 1. Go to Intelligence > Predictions
+# 2. Click any prediction card to see full details
 
-# Check implementation details via API
-curl -s http://localhost:8000/api/pilots/<pilot_id>/implementation/ | python3 -m json.tool
-
-# Manually trigger implementation
-curl -s -X POST http://localhost:8000/api/pilots/<pilot_id>/implement/
+# Check pilot stats
+curl -s http://localhost:8000/api/pilots/executions/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Running: {len([p for p in d.get(\"pilots\",[]) if p.get(\"status\")==\"running\"])}'); print(f'Completed: {len([p for p in d.get(\"pilots\",[]) if p.get(\"status\")==\"completed\"])}')"
 ```
 
 ---
 
-## System Stats (Session 691)
+## System Stats (Session 692)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
 | Agents | 72 | All synced |
 | Spiders | 77 | 72 working |
-| Pilot Gates | 21 | Actionable |
-| Running Pilots | 7 | In Pilots tab |
+| Gates | 35 | Actionable |
+| Running Pilots | 45 | In Pilots tab |
 | Completed Pilots | 12 | With implementations |
-| Implementations | 10 | Now viewable in UI |
+| Total Pilots | 57 | Session 692 growth |
+| Predictions | 39+ | With varied confidence |
 | React Pages Audited | 10/12 | Assistant, Settings remaining |
 
 ---
 
-## Files Modified (Session 691)
+## Files Modified (Session 692)
 
 ### New Files
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_691_IMPLEMENTATION_REVIEW_UI.md` | Session handoff |
+| `docs/handoffs/SESSION_692_PREDICTION_DETAIL_MODAL.md` | Session handoff |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `frontend/src/pages/IntelligencePage.tsx` | Implementation review modal |
-| `frontend/src/lib/api.ts` | implementationDetail() API |
-| `core/services/implementation_executor.py` | Fixed agent call |
-| `docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md` | Added UI section |
+| `frontend/src/pages/IntelligencePage.tsx` | Prediction detail modal (~180 lines) |
+| `core/intelligence_api.py` | Full prediction text, expanded API |
+| `core/views_agent_learning.py` | Fixed gate filtering |
+| `core/views_predictions.py` | Dynamic confidence calculation |
