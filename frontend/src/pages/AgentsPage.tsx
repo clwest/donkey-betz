@@ -5,6 +5,14 @@ import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent 
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
+// Session 688: Safe date formatter to handle invalid/missing timestamps
+const formatTimestamp = (timestamp: string | number | undefined | null, format: 'time' | 'full' = 'time'): string => {
+  if (!timestamp) return 'Just now'
+  const date = new Date(timestamp)
+  if (isNaN(date.getTime())) return 'Just now'
+  return format === 'time' ? date.toLocaleTimeString() : date.toLocaleString()
+}
+
 // Activity item from the recent-activity API
 interface RecentActivity {
   type: 'dream' | 'conversation' | 'decision' | 'pilot' | 'knowledge'
@@ -423,7 +431,7 @@ export default function AgentsPage() {
                         <p className="text-sm text-gray-400 mt-1 truncate">{update.message}</p>
                       )}
                       <p className="text-xs text-gray-500 mt-1">
-                        {new Date(update.timestamp).toLocaleTimeString()}
+                        {formatTimestamp(update.timestamp)}
                       </p>
                     </div>
                   </div>
@@ -486,7 +494,7 @@ export default function AgentsPage() {
                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
-                          {new Date(activity.timestamp).toLocaleString()}
+                          {formatTimestamp(activity.timestamp, 'full')}
                         </span>
                         {activity.agent_name && (
                           <span className="flex items-center gap-1">
@@ -616,7 +624,7 @@ export default function AgentsPage() {
                         <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transfer.transfer_type}</span>
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
-                          {new Date(transfer.timestamp).toLocaleString()}
+                          {formatTimestamp(transfer.timestamp, 'full')}
                         </span>
                       </div>
                     </div>
