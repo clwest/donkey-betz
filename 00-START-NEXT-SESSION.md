@@ -1,37 +1,44 @@
 # Session 690 - Start Here
 
-**Previous Session:** 689 (Intelligence Command Center - Opportunity Modal)
+**Previous Session:** 689 (Intelligence Command Center Deep Dive)
 **Date:** January 6, 2026
-**Focus:** Continue Intelligence Tab Deep Dive
+**Focus:** Continue Frontend Audit
 **Status:** 100% Reality Score | Human-in-the-Loop Complete
 
-> **PRIORITY:** Continue auditing Intelligence Command Center sub-tabs
+> **PRIORITY:** Audit remaining pages (Assistant, Settings)
 
 ---
 
-## Session 689 Summary: Opportunity Modal + Test Data Cleanup
+## Session 689 Summary: Intelligence Command Center Complete
 
 ### What Was Built
 
-**Opportunity Detail Modal** - Click any opportunity in Intelligence page:
-- Full opportunity details (title, description, category, source, status)
-- Smart score display:
-  - Shows detailed breakdown if scores exist (profit/competition/effort/timing)
-  - Shows prominent overall score if only match_score exists
+**1. Opportunity Detail Modal** - Click any opportunity:
+- Full opportunity details with smart score display
 - Action buttons: Mark Working, View Source, Dismiss
-- Keywords display and source URL link
 
-### Backend Additions
-- `opportunity_dismiss` endpoint - Mark opportunities as dismissed
-- Auth middleware whitelist for `/api/opportunities/`
+**2. Pilot Gate Detail Modal** - Click any gate:
+- Complete decision context (key insights, rationale, suggested feature, participants)
+- Recommended action prominently displayed
+- Checklist progress
+- Action buttons: Start Gate, Mark Ready, Approve & Start Pilot, Decline
+
+**3. Decline Functionality** - NEW:
+- Red trash icon button in gate modal
+- Permanently dismisses unwanted pilot gates
+- Sets gate.status='declined' and decision.status='rejected'
+- Declined gates hidden from default list (can query with ?status=declined)
 
 ### Test Data Cleanup
-Deleted 2 test pilot gates from an earlier session:
-- "Research target customers for: An Onion Bar - a restaurant that only serves raw onions with salt"
-- "Analyze competitors for: An Onion Bar..."
+- Deleted 2 "Onion Bar" test gates
+- Declined 1 "Food Gift Ideas" gate
+- 28 active gates remaining
 
 ### Commits (Session 689)
 ```
+464f61b8 feat(Session 689): Add decline functionality for pilot gates
+00935a38 feat(Session 689): Add comprehensive pilot gate detail modal
+78fa595c docs(Session 689): Add handoff doc and update session start
 963b49b7 fix(Session 688): Improve opportunity modal score display and button labels
 8979c2e3 feat(Session 688): Add opportunity detail modal with action buttons
 ```
@@ -41,25 +48,30 @@ Deleted 2 test pilot gates from an earlier session:
 
 ---
 
-## Session 690 Priority: Intelligence Deep Dive Continues
+## Session 690 Priority: Remaining Pages
 
-### Intelligence Page Status
+### Pages Audited (10/12)
 
-| Sub-tab | Status | Notes |
-|---------|--------|-------|
-| **Overview** | Working | Skynet status, opportunities, predictions display |
-| **Pilots** | Working | 29 gates showing |
-| **Experiments** | Working | Empty (no experiments) |
-| **Gates** | Working | Shows pilot readiness gates |
-| **Opportunities** | IMPROVED | Modal now shows details + actions |
-| **Predictions** | Working | AI predictions display |
+| Page | Status | Session |
+|------|--------|---------|
+| Dashboard | Working | 686 |
+| Agents | Working | 686-687 |
+| Spiders | Working | 687 |
+| Knowledge | Working | 687 |
+| Documents | Working | 687 |
+| Analysis | Working | 687 |
+| Betting | Working | 687-688 |
+| Discord | Working | 688 |
+| Intelligence | COMPLETE | 688-689 |
+| Research | Working | 688 |
+| **Assistant** | NOT AUDITED | - |
+| **Settings** | NOT AUDITED | - |
 
 ### Remaining Work
 
-1. **Pilot Actions** - Test approve/reject/complete buttons
-2. **Gate Actions** - Test gate workflow buttons
-3. **Assistant Page** - Not audited yet
-4. **Settings Page** - Not audited yet
+1. **Assistant Page** - Full audit needed
+2. **Settings Page** - Full audit needed
+3. Consider adding actual task creation for "Mark Working"
 
 ---
 
@@ -89,7 +101,7 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -c "import sys,json; d=
 |-----------|-------|-------|
 | Agents | 72 | All synced |
 | Spiders | 77 | 72 working |
-| Pilot Gates | 29 | 2 test gates deleted |
+| Pilot Gates | 28 | 2 deleted + 1 declined |
 | Opportunities | 153 | 150 scored |
 | React Pages Audited | 10/12 | Assistant, Settings remaining |
 
@@ -99,9 +111,9 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -c "import sys,json; d=
 
 | File | Changes |
 |------|---------|
-| `frontend/src/pages/IntelligencePage.tsx` | Opportunity modal, score display, actions |
+| `frontend/src/pages/IntelligencePage.tsx` | Opportunity modal, gate detail modal, decline button |
 | `frontend/src/lib/api.ts` | opportunitiesApi endpoints |
+| `core/views_agent_learning.py` | Gate detail fields, decline action, filter declined gates |
 | `core/views_opportunity.py` | opportunity_dismiss endpoint |
 | `core/urls.py` | dismiss URL route |
 | `core/auth_middleware.py` | /api/opportunities/ whitelist |
-| `frontend/src/pages/AgentsPage.tsx` | TypeScript fixes |
