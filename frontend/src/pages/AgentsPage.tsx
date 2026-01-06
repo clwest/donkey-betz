@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { agentsApi, activityApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 // Session 688: Safe date formatter to handle invalid/missing timestamps
@@ -34,14 +34,49 @@ const getUpdateStatus = (update: AgentUpdate): string => {
   return update.status || (update.data as Record<string, unknown>)?.stage as string || 'active'
 }
 
+// Session 694: Learning feed item with rich data
+interface LearningFeedItem {
+  id?: string
+  timestamp: string
+  type: string
+  source: string
+  description: string
+  teacher?: string
+  student?: string
+  knowledge?: string
+  knowledge_full?: {
+    title: string
+    summary: string
+    key_insights: string[]
+    knowledge_type: string
+    confidence: number
+  }
+  key_points?: string[]
+  was_useful?: boolean
+  usefulness_score?: number
+  effectiveness_gain?: number
+}
+
+// Session 694: Top learner from API
+interface TopLearner {
+  name: string
+  knowledge_count: number
+  effectiveness: number
+  teaches: number
+  learns_from: number
+}
+
 // Activity item from the recent-activity API
 interface RecentActivity {
+  id?: string
   type: 'dream' | 'conversation' | 'decision' | 'pilot' | 'knowledge'
   icon: string
   title: string
   subtitle: string
   timestamp: string
+  timestamp_display?: string  // Session 694: Friendly format like "20m ago"
   agent_name?: string
+  agents?: string[]  // Session 694: List of participating agents
   data?: Record<string, unknown>
 }
 
@@ -145,8 +180,10 @@ export default function AgentsPage() {
   const recentActivities: RecentActivity[] = recentActivityResponse?.data?.activities || []
   const learningActivity = learningActivityResponse?.data || {}
   // Session 688: API returns feed_items, not feed
-  const learningFeed = learningActivity?.feed_items || learningActivity?.feed || []
+  // Session 694: Properly typed with rich data
+  const learningFeed: LearningFeedItem[] = learningActivity?.feed_items || learningActivity?.feed || []
   const learningStats = learningActivity?.stats || {}
+  const topLearners: TopLearner[] = learningActivity?.top_learners || []
 
   const isConnected = agentWsStatus === 'connected' || learningWsStatus === 'connected'
 
@@ -514,23 +551,46 @@ export default function AgentsPage() {
               <div className="space-y-3 max-h-[500px] overflow-auto">
                 {recentActivities.map((activity, idx) => (
                   <div
-                    key={`activity-${activity.timestamp}-${idx}`}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors"
+                    key={`activity-${activity.id || activity.timestamp}-${idx}`}
+                    className="flex items-start gap-3 p-4 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors"
                   >
+                    {/* Session 694: Show emoji icon if available, otherwise use icon component */}
                     <div className={cn(
-                      'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+                      'h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg',
                       getActivityColor(activity.type)
                     )}>
-                      {getActivityIcon(activity.type)}
+                      {typeof activity.icon === 'string' ? activity.icon : getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{activity.title}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-dark-card text-gray-400 capitalize">
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded capitalize',
+                          activity.type === 'dream' ? 'bg-accent-purple/20 text-accent-purple' :
+                          activity.type === 'conversation' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                          activity.type === 'decision' ? 'bg-accent-amber/20 text-accent-amber' :
+                          activity.type === 'pilot' ? 'bg-accent-green/20 text-accent-green' :
+                          'bg-accent-pink/20 text-accent-pink'
+                        )}>
                           {activity.type}
                         </span>
+                        {/* Session 694: Show friendly timestamp */}
+                        {activity.timestamp_display && (
+                          <span className="text-xs text-gray-500">{activity.timestamp_display}</span>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">{activity.subtitle}</p>
+                      <p className="text-sm text-gray-200 mt-1 font-medium">{activity.title}</p>
+                      <p className="text-sm text-gray-400 mt-0.5">{activity.subtitle}</p>
+                      {/* Session 694: Show participating agents */}
+                      {activity.agents && activity.agents.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {activity.agents.map((agent, agentIdx) => (
+                            <span key={agentIdx} className="text-xs px-2 py-0.5 rounded bg-dark-card text-gray-400 flex items-center gap-1">
+                              <Bot size={10} />
+                              {agent}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
@@ -596,6 +656,62 @@ export default function AgentsPage() {
             </div>
           )}
 
+          {/* Session 694: Top Learners Section */}
+          {topLearners.length > 0 && (
+            <div className="card">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <Trophy size={18} className="text-accent-amber" />
+                Top Learners
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {topLearners.slice(0, 6).map((learner, idx) => (
+                  <div
+                    key={learner.name}
+                    className={cn(
+                      "p-3 rounded-lg border transition-colors",
+                      idx === 0 ? "border-accent-amber/50 bg-accent-amber/5" :
+                      idx === 1 ? "border-gray-400/50 bg-gray-400/5" :
+                      idx === 2 ? "border-orange-600/50 bg-orange-600/5" :
+                      "border-dark-border"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {idx < 3 && (
+                        <span className={cn(
+                          "text-sm font-bold",
+                          idx === 0 ? "text-accent-amber" :
+                          idx === 1 ? "text-gray-400" :
+                          "text-orange-600"
+                        )}>
+                          #{idx + 1}
+                        </span>
+                      )}
+                      <span className="font-medium truncate">{learner.name.replace('Agent', '')}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <Brain size={12} className="text-accent-cyan" />
+                        <span>{learner.knowledge_count} knowledge</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <TrendingUp size={12} className="text-accent-green" />
+                        <span>{learner.effectiveness}% effective</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <Users size={12} className="text-accent-purple" />
+                        <span>Teaches {learner.teaches}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <Zap size={12} className="text-accent-pink" />
+                        <span>Learns from {learner.learns_from}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Real-time Learning Events */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
@@ -641,7 +757,7 @@ export default function AgentsPage() {
             )}
           </div>
 
-          {/* Learning Feed from API */}
+          {/* Session 694: Enhanced Knowledge Transfers with rich data */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Knowledge Transfers</h3>
@@ -656,37 +772,100 @@ export default function AgentsPage() {
             </div>
 
             {learningFeed.length > 0 ? (
-              <div className="space-y-3 max-h-[400px] overflow-auto">
-                {/* Session 688: API returns teacher/student, not from_agent/to_agent */}
-                {learningFeed.map((transfer: { id?: string; teacher?: string; student?: string; from_agent?: string; to_agent?: string; knowledge_full?: { title?: string }; knowledge_title?: string; type?: string; transfer_type?: string; timestamp: string }, idx: number) => {
-                  const fromAgent = transfer.teacher || transfer.from_agent || 'Unknown'
-                  const toAgent = transfer.student || transfer.to_agent || 'Unknown'
-                  const title = transfer.knowledge_full?.title || transfer.knowledge_title || 'Knowledge shared'
-                  const transferType = transfer.type || transfer.transfer_type || 'transfer'
+              <div className="space-y-3 max-h-[500px] overflow-auto">
+                {learningFeed.map((transfer, idx) => {
+                  const fromAgent = transfer.teacher || 'Unknown'
+                  const toAgent = transfer.student || 'Unknown'
+                  const title = transfer.knowledge_full?.title?.replace(/^\[Learned\]\s*/g, '') || 'Knowledge shared'
+                  const transferType = transfer.type || 'transfer'
+                  const confidence = transfer.knowledge_full?.confidence
+                  const keyInsights = transfer.knowledge_full?.key_insights || transfer.key_points || []
+                  const knowledgeType = transfer.knowledge_full?.knowledge_type
+
                   return (
-                  <div
-                    key={`transfer-${transfer.id || idx}`}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-accent-cyan/50 transition-colors"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
-                      <Brain size={16} className="text-accent-cyan" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-accent-cyan">{fromAgent}</span>
-                        <span className="text-gray-500">→</span>
-                        <span className="font-medium text-accent-green">{toAgent}</span>
+                    <div
+                      key={`transfer-${transfer.id || idx}`}
+                      className={cn(
+                        "p-4 rounded-lg border transition-colors",
+                        transfer.was_useful
+                          ? "border-accent-green/30 bg-accent-green/5 hover:border-accent-green/50"
+                          : "border-dark-border hover:border-accent-cyan/50"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0",
+                          transfer.was_useful ? "bg-accent-green/20" : "bg-accent-cyan/20"
+                        )}>
+                          <Brain size={18} className={transfer.was_useful ? "text-accent-green" : "text-accent-cyan"} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {/* Header with agents and badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-accent-cyan">{fromAgent.replace('Agent', '')}</span>
+                            <span className="text-gray-500">→</span>
+                            <span className="font-medium text-accent-green">{toAgent.replace('Agent', '')}</span>
+                            {transfer.was_useful !== undefined && (
+                              <span className={cn(
+                                "text-xs px-2 py-0.5 rounded flex items-center gap-1",
+                                transfer.was_useful
+                                  ? "bg-accent-green/20 text-accent-green"
+                                  : "bg-gray-500/20 text-gray-400"
+                              )}>
+                                <ThumbsUp size={10} />
+                                {transfer.was_useful ? 'Useful' : 'Low Impact'}
+                              </span>
+                            )}
+                            {knowledgeType && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
+                                {knowledgeType}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Title */}
+                          <p className="text-sm text-gray-200 mt-1 font-medium">{title}</p>
+
+                          {/* Key Insights - Session 694: Filter for strings only (some may be objects) */}
+                          {keyInsights.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {keyInsights.slice(0, 3).map((insight, insightIdx) => {
+                                // Handle both string insights and object insights
+                                const displayText = typeof insight === 'string'
+                                  ? insight
+                                  : String((insight as Record<string, unknown>)?.type || 'Insight')
+                                return (
+                                  <span key={insightIdx} className="text-xs px-2 py-0.5 rounded bg-dark-card text-gray-400">
+                                    {displayText}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {/* Metrics row */}
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transferType.replace('_', ' ')}</span>
+                            {confidence !== undefined && (
+                              <span className="flex items-center gap-1">
+                                <TrendingUp size={12} className="text-accent-amber" />
+                                {(confidence * 100).toFixed(0)}% confidence
+                              </span>
+                            )}
+                            {transfer.usefulness_score !== undefined && (
+                              <span className="flex items-center gap-1">
+                                <ThumbsUp size={12} />
+                                {(transfer.usefulness_score * 100).toFixed(0)}% score
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Clock size={12} />
+                              {formatTimestamp(transfer.timestamp, 'full')}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1 truncate">{title}</p>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                        <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transferType.replace('_', ' ')}</span>
-                        <span className="flex items-center gap-1">
-                          <Clock size={12} />
-                          {formatTimestamp(transfer.timestamp, 'full')}
-                        </span>
-                      </div>
                     </div>
-                  </div>
                   )
                 })}
               </div>
