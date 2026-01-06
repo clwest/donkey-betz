@@ -350,9 +350,11 @@ class PilotReadinessGate(models.Model):
         """Create standard checklist items based on risk level."""
 
         # Define items per risk level
+        # Session 693: Added success_metrics to ALL risk levels for extracted metrics
         standard_items = {
             'low': [
                 ('basic_review', 'Basic Review', 'Quick review of approach', False),
+                ('success_metrics', 'Success Metrics', 'How we measure success', False),
             ],
             'medium': [
                 ('threat_model', 'Threat Model', 'Document potential threats and mitigations', True),
@@ -366,6 +368,7 @@ class PilotReadinessGate(models.Model):
                 ('adversarial_test', 'Adversarial Test Plan', 'How to test for abuse/failure', True),
                 ('kill_switch', 'Kill Switch Criteria', 'When and how to stop the pilot', True),
                 ('rollback_procedure', 'Rollback Procedure', 'How to undo if things go wrong', True),
+                ('success_metrics', 'Success Metrics', 'How we measure success', True),
             ],
             'critical': [
                 ('threat_model', 'Threat Model', 'Comprehensive threat analysis with external review', True),
@@ -376,6 +379,7 @@ class PilotReadinessGate(models.Model):
                 ('rollback_procedure', 'Rollback Procedure', 'Tested rollback with data recovery', True),
                 ('executive_approval', 'Executive Approval', 'Sign-off from leadership', True),
                 ('legal_review', 'Legal Review', 'Legal team has reviewed', True),
+                ('success_metrics', 'Success Metrics', 'How we measure success - with stakeholder sign-off', True),
             ],
         }
 
