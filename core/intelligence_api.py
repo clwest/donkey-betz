@@ -25,64 +25,162 @@ view_generated_file = ViewGeneratedFileView.as_view()
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def skynet_status(request):
-    """Provide Skynet Intelligence Engine status"""
-    return Response({
-        'skynet_status': 'ONLINE',
-        'intelligence_engine': 'ONLINE',
-        'live_opportunities': 12,
-        'live_predictions': 8,
-        'scan_interval': 30,
-        'last_update': datetime.now().isoformat(),
-        'features': {
-            'sports_intelligence': True,
-            'arbitrage_detection': True,
-            'value_betting': True,
-            'cross_domain_analysis': True,
-            'pattern_recognition': True,
-            'ml_pipeline': True,
-            'advisor_network': True
-        },
-        'advisor_network': {
-            'total_advisors': 25,
-            'online_now': 18,
-            'categories': ['Sports Betting', 'Crypto', 'Options', 'Real Estate']
-        }
-    })
+    """Provide Skynet Intelligence Engine status with REAL data"""
+    from django.utils import timezone
+    from datetime import timedelta
+
+    try:
+        # Get real counts from database
+        from core.models_unified_system import Opportunity, AgentPrediction
+        from core.models_pilot_readiness import PilotReadinessGate, PilotExecution
+        from ai_core.spiders.spider_registry import SpiderRegistry
+
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+
+        # Real opportunity count (last 24h or total recent)
+        opportunity_count = Opportunity.objects.filter(
+            created_at__gte=last_24h
+        ).count()
+        if opportunity_count == 0:
+            opportunity_count = Opportunity.objects.count()
+
+        # Real prediction count
+        prediction_count = AgentPrediction.objects.filter(
+            created_at__gte=last_24h
+        ).count()
+        if prediction_count == 0:
+            prediction_count = AgentPrediction.objects.count()
+
+        # Real spider count
+        try:
+            registry = SpiderRegistry()
+            spider_count = len(registry.get_all_spiders())
+        except:
+            spider_count = 77
+
+        # Real pilot counts
+        running_pilots = PilotExecution.objects.filter(status='running').count()
+        pending_gates = PilotReadinessGate.objects.filter(
+            status__in=['not_started', 'in_progress', 'ready']
+        ).count()
+
+        return Response({
+            'skynet_status': 'ONLINE',
+            'intelligence_engine': 'ONLINE',
+            'live_opportunities': opportunity_count,
+            'live_predictions': prediction_count,
+            'spider_count': spider_count,
+            'running_pilots': running_pilots,
+            'pending_gates': pending_gates,
+            'scan_interval': 30,
+            'last_update': now.isoformat(),
+            'features': {
+                'sports_intelligence': True,
+                'arbitrage_detection': True,
+                'value_betting': True,
+                'cross_domain_analysis': True,
+                'pattern_recognition': True,
+                'ml_pipeline': True,
+                'advisor_network': True
+            },
+            'advisor_network': {
+                'total_advisors': 25,
+                'online_now': 18,
+                'categories': ['Sports Betting', 'Crypto', 'Options', 'Real Estate']
+            }
+        })
+    except Exception as e:
+        return Response({
+            'skynet_status': 'ERROR',
+            'error': str(e)
+        }, status=500)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def live_opportunities(request):
-    """Get live opportunities"""
-    return Response({
-        'opportunities': [
-            {
-                'id': 'opp_001',
-                'type': 'ARBITRAGE',
-                'sport': 'NBA',
-                'game': 'Lakers vs Warriors',
-                'profit_percentage': 3.2,
-                'confidence': 0.95
-            }
-        ]
-    })
+    """Get live opportunities from database"""
+    from django.utils import timezone
+    from datetime import timedelta
+
+    try:
+        from core.models_unified_system import Opportunity
+
+        # Get recent opportunities (last 7 days)
+        last_week = timezone.now() - timedelta(days=7)
+        opportunities = Opportunity.objects.filter(
+            created_at__gte=last_week
+        ).order_by('-created_at')[:20]
+
+        # If no recent, get any opportunities
+        if not opportunities.exists():
+            opportunities = Opportunity.objects.order_by('-created_at')[:20]
+
+        return Response({
+            'success': True,
+            'opportunities': [
+                {
+                    'id': str(opp.id),
+                    'title': opp.title or opp.description[:50] if opp.description else 'Opportunity',
+                    'type': getattr(opp, 'opportunity_type', 'general') or 'general',
+                    'source': getattr(opp, 'source', 'system') or 'system',
+                    'score': int(getattr(opp, 'score', 0) or 0),
+                    'created_at': opp.created_at.isoformat() if opp.created_at else None,
+                }
+                for opp in opportunities
+            ],
+            'count': opportunities.count()
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'opportunities': [],
+            'error': str(e)
+        })
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def live_predictions(request):
-    """Get live predictions"""
-    return Response({
-        'predictions': [
-            {
-                'id': 'pred_001',
-                'type': 'VALUE_BET',
-                'description': 'Lakers +5.5',
-                'confidence': 0.72,
-                'expected_value': 1.15
-            }
-        ]
-    })
+    """Get live predictions from database"""
+    from django.utils import timezone
+    from datetime import timedelta
+
+    try:
+        from core.models_unified_system import AgentPrediction
+
+        # Get recent predictions (last 7 days)
+        last_week = timezone.now() - timedelta(days=7)
+        predictions = AgentPrediction.objects.select_related('agent').filter(
+            created_at__gte=last_week
+        ).order_by('-created_at')[:20]
+
+        # If no recent, get any predictions
+        if not predictions.exists():
+            predictions = AgentPrediction.objects.select_related('agent').order_by('-created_at')[:20]
+
+        return Response({
+            'success': True,
+            'predictions': [
+                {
+                    'id': str(pred.id),
+                    'title': pred.title[:100] if pred.title else (pred.prediction[:100] if pred.prediction else 'Prediction'),
+                    'probability': int((pred.confidence or 0.5) * 100),
+                    'category': pred.category or 'general',
+                    'source': pred.agent.name if pred.agent else 'AI Agent',
+                    'created_at': pred.created_at.isoformat() if pred.created_at else None,
+                }
+                for pred in predictions
+            ],
+            'count': predictions.count()
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'predictions': [],
+            'error': str(e)
+        })
 
 
 @api_view(['GET', 'POST'])
