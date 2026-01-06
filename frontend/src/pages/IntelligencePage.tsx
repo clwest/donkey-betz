@@ -5,8 +5,8 @@ import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, ChevronRight, Loader2, Activity,
   BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
-  Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag,
-  Trash2, Tag, ArrowUp, Eye, Star
+  Rocket, Ban, DollarSign, Clock, Users, User, Wrench, Lightbulb, FileText, Flag,
+  Trash2, Tag, ArrowUp, Eye, Star, FlaskConical, AlertOctagon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -116,6 +116,7 @@ interface PilotMetrics {
 }
 
 // Session 692: Updated to match actual API response from /api/pilot-experiments/
+// Session 693: Extended with all rich data fields
 interface Experiment {
   id: string
   name: string
@@ -125,11 +126,22 @@ interface Experiment {
   primary_kpi: string
   target_value: string
   current_value: string
+  secondary_kpis: string[]
+  extracted_metrics?: {
+    source: string
+    raw_content: string
+  }
+  started_at: string | null
+  ended_at: string | null
+  learnings: string | null
   pilot_id: string | null
   decision_topic: string
   decision_id: string | null
   risk_level: string
   is_halted: boolean
+  halted_at: string | null
+  halted_by: string
+  halt_reason: string
   outcome_classification: string
 }
 
@@ -218,6 +230,8 @@ export default function IntelligencePage() {
   const [selectedImplementationId, setSelectedImplementationId] = useState<string | null>(null)
   // Session 692: Prediction detail modal state
   const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null)
+  // Session 693: Experiment detail modal state
+  const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   const queryClient = useQueryClient()
 
   // Core queries
@@ -969,54 +983,104 @@ export default function IntelligencePage() {
             </div>
           ) : experiments.length > 0 ? (
             <div className="space-y-3">
-              {/* Session 692: Map API fields (current_value, target_value, running) to display */}
+              {/* Session 692: Map API fields | Session 693: Rich experiment cards */}
               {experiments.map((experiment) => (
                 <div
                   key={experiment.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  className="p-4 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedExperiment(experiment)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      'h-10 w-10 rounded-lg flex items-center justify-center',
-                      experiment.status === 'running' ? 'bg-primary-500/20' :
-                      experiment.status === 'success' ? 'bg-accent-green/20' : 'bg-accent-red/20'
-                    )}>
-                      <BarChart3 size={20} className={
-                        experiment.status === 'running' ? 'text-primary-400' :
-                        experiment.status === 'success' ? 'text-accent-green' : 'text-accent-red'
-                      } />
-                    </div>
-                    <div>
-                      <p className="font-medium">{experiment.name || experiment.decision_topic}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-sm text-gray-400">
-                          {experiment.primary_kpi}: <span className="text-accent-cyan">
-                            {experiment.current_value || '0'}
-                          </span> / {experiment.target_value || '100'}
-                        </span>
+                  {/* Header Row */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                        experiment.status === 'running' ? 'bg-primary-500/20' :
+                        experiment.status === 'success' ? 'bg-accent-green/20' : 'bg-accent-red/20'
+                      )}>
+                        <BarChart3 size={20} className={
+                          experiment.status === 'running' ? 'text-primary-400' :
+                          experiment.status === 'success' ? 'text-accent-green' : 'text-accent-red'
+                        } />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{experiment.name || experiment.decision_topic}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={cn(
+                            'px-2 py-0.5 text-xs rounded',
+                            experiment.status === 'running' ? 'bg-primary-500/20 text-primary-400' :
+                            experiment.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                            experiment.status === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                            'bg-accent-amber/20 text-accent-amber'
+                          )}>
+                            {experiment.status}
+                          </span>
+                          <span className={cn(
+                            'px-2 py-0.5 text-xs rounded',
+                            experiment.risk_level === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                            experiment.risk_level === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                            'bg-accent-green/20 text-accent-green'
+                          )}>
+                            {experiment.risk_level} risk
+                          </span>
+                          {experiment.is_halted && (
+                            <span className="px-2 py-0.5 text-xs rounded bg-gray-500/20 text-gray-400">
+                              HALTED
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {experiment.status === 'running' && !experiment.is_halted && (
+                        <button
+                          className="btn btn-secondary text-sm text-accent-red flex items-center gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            haltExperimentMutation.mutate(experiment.id)
+                          }}
+                          disabled={isLoading}
+                        >
+                          {haltExperimentMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Pause size={14} />}
+                          Halt
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      'px-2 py-1 text-xs rounded',
-                      experiment.status === 'running' ? 'bg-primary-500/20 text-primary-400' :
-                      experiment.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
-                      experiment.status === 'failure' ? 'bg-accent-red/20 text-accent-red' :
-                      'bg-accent-amber/20 text-accent-amber'
-                    )}>
-                      {experiment.status}
-                    </span>
-                    {experiment.status === 'running' && (
-                      <button
-                        className="btn btn-secondary text-sm text-accent-red flex items-center gap-1"
-                        onClick={() => haltExperimentMutation.mutate(experiment.id)}
-                        disabled={isLoading}
-                      >
-                        {haltExperimentMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Pause size={14} />}
-                        Halt
-                      </button>
-                    )}
+
+                  {/* Hypothesis */}
+                  {experiment.hypothesis && (
+                    <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                      <span className="text-gray-500">Hypothesis:</span> {experiment.hypothesis}
+                    </p>
+                  )}
+
+                  {/* KPI and Metrics Row */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <span className="text-gray-500">KPI:</span>{' '}
+                        <span className="text-gray-300">{experiment.primary_kpi}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Progress:</span>{' '}
+                        <span className="text-accent-cyan">{experiment.current_value || '0'}</span>
+                        <span className="text-gray-500"> / </span>
+                        <span className="text-gray-300">{experiment.target_value || '100'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-gray-400">
+                      <div className="flex items-center gap-1">
+                        <User size={14} />
+                        <span>{experiment.kpi_owner}</span>
+                      </div>
+                      {experiment.started_at && (
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} />
+                          <span>{new Date(experiment.started_at).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2767,6 +2831,235 @@ export default function IntelligencePage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 693: Experiment Detail Modal */}
+      {selectedExperiment && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-card rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <FlaskConical size={20} className="text-primary-400" />
+                  <h3 className="text-xl font-bold truncate">{selectedExperiment.name || selectedExperiment.decision_topic}</h3>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs rounded font-medium',
+                    selectedExperiment.status === 'running' ? 'bg-primary-500/20 text-primary-400' :
+                    selectedExperiment.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedExperiment.status === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                    'bg-accent-amber/20 text-accent-amber'
+                  )}>
+                    {selectedExperiment.status.toUpperCase()}
+                  </span>
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs rounded font-medium',
+                    selectedExperiment.risk_level === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                    selectedExperiment.risk_level === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                    'bg-accent-green/20 text-accent-green'
+                  )}>
+                    {selectedExperiment.risk_level.toUpperCase()} RISK
+                  </span>
+                  <span className={cn(
+                    'px-2 py-0.5 text-xs rounded font-medium',
+                    selectedExperiment.outcome_classification === 'pending' ? 'bg-gray-500/20 text-gray-400' :
+                    selectedExperiment.outcome_classification === 'positive' ? 'bg-accent-green/20 text-accent-green' :
+                    'bg-accent-red/20 text-accent-red'
+                  )}>
+                    {selectedExperiment.outcome_classification}
+                  </span>
+                  {selectedExperiment.is_halted && (
+                    <span className="px-2 py-0.5 text-xs rounded font-medium bg-accent-red/30 text-accent-red flex items-center gap-1">
+                      <AlertOctagon size={12} />
+                      HALTED
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedExperiment(null)}
+                className="p-2 hover:bg-dark-border rounded-lg transition-colors flex-shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Hypothesis Section */}
+              {selectedExperiment.hypothesis && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Hypothesis</h4>
+                  <p className="text-gray-300 bg-dark-bg/50 rounded-lg p-4 whitespace-pre-wrap">
+                    {selectedExperiment.hypothesis}
+                  </p>
+                </div>
+              )}
+
+              {/* KPI Progress Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-dark-bg/50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Primary KPI</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-medium text-primary-400">{selectedExperiment.primary_kpi}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-accent-cyan">{selectedExperiment.current_value || '0'}</span>
+                    <span className="text-gray-500">/</span>
+                    <span className="text-xl text-gray-400">{selectedExperiment.target_value || '100'}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-3 h-2 bg-dark-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary-500 to-accent-cyan rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, (parseFloat(selectedExperiment.current_value || '0') / parseFloat(selectedExperiment.target_value || '100')) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-dark-bg/50 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Ownership</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="text-primary-400" />
+                      <span className="text-gray-400">KPI Owner:</span>
+                      <span className="text-gray-200 font-medium">{selectedExperiment.kpi_owner}</span>
+                    </div>
+                    {selectedExperiment.pilot_id && (
+                      <div className="flex items-center gap-2">
+                        <Rocket size={16} className="text-accent-amber" />
+                        <span className="text-gray-400">Pilot ID:</span>
+                        <span className="text-gray-200 font-mono text-sm">{selectedExperiment.pilot_id.slice(0, 8)}...</span>
+                      </div>
+                    )}
+                    {selectedExperiment.decision_id && (
+                      <div className="flex items-center gap-2">
+                        <Target size={16} className="text-accent-green" />
+                        <span className="text-gray-400">Decision ID:</span>
+                        <span className="text-gray-200 font-mono text-sm">{selectedExperiment.decision_id.slice(0, 8)}...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Timing Section */}
+              <div className="bg-dark-bg/50 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Timeline</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {selectedExperiment.started_at && (
+                    <div>
+                      <span className="text-xs text-gray-500 uppercase">Started</span>
+                      <p className="text-gray-300">{new Date(selectedExperiment.started_at).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{new Date(selectedExperiment.started_at).toLocaleTimeString()}</p>
+                    </div>
+                  )}
+                  {selectedExperiment.ended_at && (
+                    <div>
+                      <span className="text-xs text-gray-500 uppercase">Ended</span>
+                      <p className="text-gray-300">{new Date(selectedExperiment.ended_at).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{new Date(selectedExperiment.ended_at).toLocaleTimeString()}</p>
+                    </div>
+                  )}
+                  {selectedExperiment.started_at && !selectedExperiment.ended_at && (
+                    <div>
+                      <span className="text-xs text-gray-500 uppercase">Duration</span>
+                      <p className="text-accent-cyan font-medium">
+                        {Math.floor((Date.now() - new Date(selectedExperiment.started_at).getTime()) / (1000 * 60 * 60 * 24))} days running
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Halt Information (if halted) */}
+              {selectedExperiment.is_halted && (
+                <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-accent-red uppercase tracking-wide mb-2 flex items-center gap-2">
+                    <AlertOctagon size={16} />
+                    Experiment Halted
+                  </h4>
+                  {selectedExperiment.halt_reason && (
+                    <p className="text-gray-300 mb-2"><span className="text-gray-500">Reason:</span> {selectedExperiment.halt_reason}</p>
+                  )}
+                  {selectedExperiment.halted_by && (
+                    <p className="text-gray-400 text-sm"><span className="text-gray-500">By:</span> {selectedExperiment.halted_by}</p>
+                  )}
+                  {selectedExperiment.halted_at && (
+                    <p className="text-gray-400 text-sm"><span className="text-gray-500">At:</span> {new Date(selectedExperiment.halted_at).toLocaleString()}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Extracted Metrics (if available) */}
+              {selectedExperiment.extracted_metrics?.raw_content && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    Extracted Metrics
+                    <span className="ml-2 text-xs font-normal text-gray-500">
+                      (Source: {selectedExperiment.extracted_metrics.source})
+                    </span>
+                  </h4>
+                  <div className="bg-dark-bg/50 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+                      {selectedExperiment.extracted_metrics.raw_content}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Learnings (if completed) */}
+              {selectedExperiment.learnings && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Learnings</h4>
+                  <p className="text-gray-300 bg-accent-green/10 border border-accent-green/30 rounded-lg p-4 whitespace-pre-wrap">
+                    {selectedExperiment.learnings}
+                  </p>
+                </div>
+              )}
+
+              {/* Decision Topic */}
+              {selectedExperiment.decision_topic && (
+                <div className="pt-4 border-t border-dark-border">
+                  <span className="text-xs text-gray-500 uppercase">Decision Topic</span>
+                  <p className="text-gray-400 text-sm mt-1">{selectedExperiment.decision_topic}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-dark-border bg-dark-bg/50">
+              <div className="text-sm text-gray-500">
+                ID: <span className="font-mono">{selectedExperiment.id.slice(0, 8)}...</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedExperiment.status === 'running' && !selectedExperiment.is_halted && (
+                  <button
+                    onClick={() => {
+                      haltExperimentMutation.mutate(selectedExperiment.id)
+                      setSelectedExperiment(null)
+                    }}
+                    className="btn btn-secondary text-accent-red flex items-center gap-1"
+                    disabled={isLoading}
+                  >
+                    <Pause size={14} />
+                    Halt Experiment
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedExperiment(null)}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
