@@ -44,8 +44,27 @@ def revenue_dashboard(request):
 
     Get comprehensive revenue dashboard data.
     """
+    # Session 688: Handle anonymous users - return empty dashboard data
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return api_success({
+            'distribution': {
+                'total_revenue': 0,
+                'total_sales': 0,
+                'total_views': 0,
+                'total_downloads': 0,
+                'total_listings': 0,
+            },
+            'opportunities': {
+                'total_amount': 0,
+                'total_net': 0,
+                'total_fees': 0,
+                'count': 0,
+            },
+            'platform_breakdown': [],
+            'daily_trend': [],
+            'top_performers': [],
+            'best_platform': None,
+        })
 
     # Time range
     days = int(request.GET.get('days', 30))
