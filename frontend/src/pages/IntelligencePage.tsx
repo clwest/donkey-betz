@@ -17,20 +17,35 @@ interface ActionResult {
 
 interface Gate {
   id: string
-  title: string
-  status: 'pending' | 'approved' | 'blocked'
-  checklist_progress: number
-  decision_title: string
-  created_at: string
+  decision_topic: string
+  summary: string
+  status: string  // not_started, in_progress, ready, approved, blocked, waived
+  status_display: string
+  risk_level: string
+  checklist_percentage: number
+  checklist_total: number
+  checklist_completed: number
+  created_at?: string
+  running_pilot?: {
+    id: string
+    name: string
+    status: string
+    hours_running: number
+    started_at: string
+  } | null
 }
 
 interface Pilot {
   id: string
-  name: string
-  status: 'running' | 'completed' | 'failed'
-  progress: number
-  gate_title: string
-  started_at: string
+  decision_topic: string
+  decision_type: string
+  status: string  // running, completed, failed, etc.
+  risk_level: string
+  hours_running?: number
+  auto_complete_in_hours?: number
+  outcome?: string
+  started_at?: string
+  completed_at?: string
 }
 
 interface Experiment {
@@ -153,10 +168,11 @@ export default function IntelligencePage() {
 
   // Mutations
   const approveGateMutation = useMutation({
-    mutationFn: (gateId: string) => pilotsApi.approveAllItems(gateId),
-    onSuccess: () => {
-      setActionResult({ type: 'success', message: 'Gate approved! All checklist items passed.' })
-      queryClient.invalidateQueries({ queryKey: ['pilot-gates'] })
+    mutationFn: (gateId: string) => pilotsApi.updateGateStatus(gateId, 'approve', 'Approved via UI'),
+    onSuccess: async () => {
+      setActionResult({ type: 'success', message: 'Gate approved! Ready to start pilot.' })
+      // Force immediate refetch to update UI with new status
+      await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to approve gate' })
@@ -165,10 +181,11 @@ export default function IntelligencePage() {
 
   const startPilotMutation = useMutation({
     mutationFn: (gateId: string) => pilotsApi.startPilot(gateId),
-    onSuccess: () => {
+    onSuccess: async () => {
       setActionResult({ type: 'success', message: 'Pilot started successfully!' })
-      queryClient.invalidateQueries({ queryKey: ['pilot-gates'] })
-      queryClient.invalidateQueries({ queryKey: ['pilots-dashboard'] })
+      // Force immediate refetch to update UI
+      await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+      await queryClient.refetchQueries({ queryKey: ['pilots-dashboard'] })
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to start pilot' })
@@ -200,7 +217,10 @@ export default function IntelligencePage() {
   const status = statusData?.data || {}
   const opportunities = opportunitiesData?.data?.opportunities || []
   const gates: Gate[] = gatesData?.data?.gates || []
-  const pilots: Pilot[] = pilotsData?.data?.pilots || []
+  // Pilots API returns running_pilots and completed_pilots separately
+  const runningPilots = pilotsData?.data?.running_pilots || []
+  const completedPilots = pilotsData?.data?.completed_pilots || []
+  const pilots: Pilot[] = [...runningPilots, ...completedPilots]
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
   const learningEvents: LearningEvent[] = learningData?.data?.events || []
   const spiders: Spider[] = spidersData?.data?.spiders || []
@@ -224,7 +244,7 @@ export default function IntelligencePage() {
   }
 
   const tabs: { key: TabType; label: string; icon: React.ElementType; count?: number }[] = [
-    { key: 'gates', label: 'Gates', icon: Target, count: gates.filter(g => g.status === 'pending').length },
+    { key: 'gates', label: 'Gates', icon: Target, count: gates.filter(g => ['not_started', 'in_progress', 'ready'].includes(g.status)).length },
     { key: 'pilots', label: 'Pilots', icon: Play, count: pilots.filter(p => p.status === 'running').length },
     { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'active').length },
     { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
@@ -303,7 +323,7 @@ export default function IntelligencePage() {
             <Target className="text-accent-cyan" size={24} />
             <div>
               <p className="text-sm text-gray-400">Pending Gates</p>
-              <p className="text-2xl font-bold">{gates.filter(g => g.status === 'pending').length || status.pending_gates || 0}</p>
+              <p className="text-2xl font-bold">{gates.filter(g => ['not_started', 'in_progress', 'ready'].includes(g.status)).length || status.pending_gates || 0}</p>
             </div>
           </div>
         </div>
@@ -351,10 +371,10 @@ export default function IntelligencePage() {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       'h-10 w-10 rounded-lg flex items-center justify-center',
-                      gate.status === 'approved' ? 'bg-accent-green/20' :
+                      gate.status === 'approved' || gate.status === 'waived' ? 'bg-accent-green/20' :
                       gate.status === 'blocked' ? 'bg-accent-red/20' : 'bg-accent-amber/20'
                     )}>
-                      {gate.status === 'approved' ? (
+                      {gate.status === 'approved' || gate.status === 'waived' ? (
                         <CheckCircle size={20} className="text-accent-green" />
                       ) : gate.status === 'blocked' ? (
                         <AlertTriangle size={20} className="text-accent-red" />
@@ -363,44 +383,94 @@ export default function IntelligencePage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{gate.title || gate.decision_title}</p>
+                      <p className="font-medium">{gate.decision_topic || gate.summary}</p>
                       <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{gate.status_display || gate.status}</span>
                         <div className="w-24 h-1.5 bg-dark-bg rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary-500 rounded-full"
-                            style={{ width: `${gate.checklist_progress || 0}%` }}
+                            style={{ width: `${gate.checklist_percentage || 0}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-500">{gate.checklist_progress || 0}%</span>
+                        <span className="text-xs text-gray-500">{gate.checklist_completed}/{gate.checklist_total}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {gate.status === 'pending' && (
-                      <>
-                        <button
-                          className="btn btn-secondary text-sm flex items-center gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            approveGateMutation.mutate(gate.id)
-                          }}
-                          disabled={isLoading}
-                        >
-                          {approveGateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                          Approve All
-                        </button>
-                        <button
-                          className="btn btn-primary text-sm flex items-center gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            startPilotMutation.mutate(gate.id)
-                          }}
-                          disabled={isLoading}
-                        >
-                          {startPilotMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                          Start Pilot
-                        </button>
-                      </>
+                    {/* not_started → Start Gate */}
+                    {gate.status === 'not_started' && (
+                      <button
+                        className="btn btn-secondary text-sm flex items-center gap-1"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            await pilotsApi.updateGateStatus(gate.id, 'start')
+                            setActionResult({ type: 'success', message: 'Gate started!' })
+                            await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                          } catch {
+                            setActionResult({ type: 'error', message: 'Failed to start gate' })
+                          }
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Play size={14} />
+                        Start Gate
+                      </button>
+                    )}
+                    {/* in_progress → Mark Ready */}
+                    {gate.status === 'in_progress' && (
+                      <button
+                        className="btn btn-secondary text-sm flex items-center gap-1"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            await pilotsApi.updateGateStatus(gate.id, 'ready')
+                            setActionResult({ type: 'success', message: 'Gate marked ready!' })
+                            await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                          } catch {
+                            setActionResult({ type: 'error', message: 'Failed to mark ready' })
+                          }
+                        }}
+                        disabled={isLoading}
+                      >
+                        <CheckCircle size={14} />
+                        Mark Ready
+                      </button>
+                    )}
+                    {/* ready → Approve */}
+                    {gate.status === 'ready' && (
+                      <button
+                        className="btn btn-secondary text-sm flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          approveGateMutation.mutate(gate.id)
+                        }}
+                        disabled={isLoading}
+                      >
+                        {approveGateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                        Approve
+                      </button>
+                    )}
+                    {/* approved + no running pilot → Start Pilot */}
+                    {gate.status === 'approved' && !gate.running_pilot && (
+                      <button
+                        className="btn btn-primary text-sm flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startPilotMutation.mutate(gate.id)
+                        }}
+                        disabled={isLoading}
+                      >
+                        {startPilotMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                        Start Pilot
+                      </button>
+                    )}
+                    {/* approved + running pilot → Show pilot status */}
+                    {gate.status === 'approved' && gate.running_pilot && (
+                      <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green flex items-center gap-1">
+                        <Play size={12} />
+                        Pilot Running ({gate.running_pilot.hours_running}h)
+                      </span>
                     )}
                     <ChevronRight size={16} className="text-gray-500" />
                   </div>
@@ -446,19 +516,19 @@ export default function IntelligencePage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{pilot.name || pilot.gate_title}</p>
+                      <p className="font-medium">{pilot.decision_topic}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="w-32 h-1.5 bg-dark-bg rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full',
-                              pilot.status === 'running' ? 'bg-accent-green' :
-                              pilot.status === 'completed' ? 'bg-accent-cyan' : 'bg-accent-red'
-                            )}
-                            style={{ width: `${pilot.progress || 0}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-500">{pilot.progress || 0}% complete</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{pilot.decision_type}</span>
+                        {pilot.hours_running !== undefined && (
+                          <span className="text-xs text-gray-500">{pilot.hours_running}h running</span>
+                        )}
+                        {pilot.outcome && (
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded',
+                            pilot.outcome === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                            pilot.outcome === 'failure' ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+                          )}>{pilot.outcome}</span>
+                        )}
                       </div>
                     </div>
                   </div>
