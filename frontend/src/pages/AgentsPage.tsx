@@ -1,9 +1,20 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { agentsApi } from '@/lib/api'
+import { agentsApi, activityApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
+
+// Activity item from the recent-activity API
+interface RecentActivity {
+  type: 'dream' | 'conversation' | 'decision' | 'pilot' | 'knowledge'
+  icon: string
+  title: string
+  subtitle: string
+  timestamp: string
+  agent_name?: string
+  data?: Record<string, unknown>
+}
 
 interface Agent {
   name: string
@@ -62,6 +73,20 @@ export default function AgentsPage() {
     queryFn: () => agentsApi.comprehensive(),
   })
 
+  // Recent activity from REST API
+  const { data: recentActivityResponse, refetch: refetchActivity, isRefetching: isRefetchingActivity } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => activityApi.recent(30, 72),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  // Learning activity from REST API
+  const { data: learningActivityResponse, refetch: refetchLearning, isRefetching: isRefetchingLearning } = useQuery({
+    queryKey: ['learning-activity'],
+    queryFn: () => activityApi.learning(30),
+    refetchInterval: 30000,
+  })
+
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
     setRealtimeUpdates((prev) => [update, ...prev].slice(0, 50))
@@ -75,7 +100,37 @@ export default function AgentsPage() {
   const categories = agentsData?.categories || {}
   const stats = agentsData?.stats || { total: 72, routable: 69, categories_count: 15 }
 
+  // Parse activity data
+  const recentActivities: RecentActivity[] = recentActivityResponse?.data?.activities || []
+  const learningActivity = learningActivityResponse?.data || {}
+  const learningFeed = learningActivity?.feed || []
+  const learningStats = learningActivity?.stats || {}
+
   const isConnected = agentWsStatus === 'connected' || learningWsStatus === 'connected'
+
+  // Get activity icon based on type
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'dream': return <Brain size={16} className="text-accent-purple" />
+      case 'conversation': return <MessageSquare size={16} className="text-accent-cyan" />
+      case 'decision': return <Sparkles size={16} className="text-accent-amber" />
+      case 'pilot': return <Activity size={16} className="text-accent-green" />
+      case 'knowledge': return <Zap size={16} className="text-accent-pink" />
+      default: return <Bot size={16} className="text-primary-400" />
+    }
+  }
+
+  // Get activity color based on type
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'dream': return 'bg-accent-purple/20'
+      case 'conversation': return 'bg-accent-cyan/20'
+      case 'decision': return 'bg-accent-amber/20'
+      case 'pilot': return 'bg-accent-green/20'
+      case 'knowledge': return 'bg-accent-pink/20'
+      default: return 'bg-primary-500/20'
+    }
+  }
 
   // Filter agents based on search query
   const filteredCategories = useMemo(() => {
@@ -323,108 +378,261 @@ export default function AgentsPage() {
       )}
 
       {activeTab === 'activity' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">
-            Real-time Agent Activity
-            {agentWsStatus === 'connected' && (
-              <span className="ml-2 h-2 w-2 rounded-full bg-accent-green inline-block animate-pulse" />
-            )}
-          </h3>
-          {realtimeUpdates.length > 0 ? (
-            <div className="space-y-3 max-h-[500px] overflow-auto">
-              {realtimeUpdates.map((update, idx) => (
-                <div
-                  key={`${update.timestamp}-${idx}`}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-dark-border"
-                >
-                  <div className={cn(
-                    'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
-                    update.type === 'agent_completed' ? 'bg-accent-green/20' :
-                    update.type === 'agent_error' ? 'bg-accent-red/20' :
-                    'bg-primary-500/20'
-                  )}>
-                    <Bot size={16} className={
-                      update.type === 'agent_completed' ? 'text-accent-green' :
-                      update.type === 'agent_error' ? 'text-accent-red' :
-                      'text-primary-400'
-                    } />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{update.agent_name}</span>
-                      <span className={cn(
-                        'text-xs px-2 py-0.5 rounded',
-                        update.type === 'agent_completed' ? 'bg-accent-green/20 text-accent-green' :
-                        update.type === 'agent_error' ? 'bg-accent-red/20 text-accent-red' :
-                        'bg-primary-500/20 text-primary-400'
-                      )}>
-                        {update.status}
-                      </span>
+        <div className="space-y-4">
+          {/* Real-time Updates Section */}
+          {realtimeUpdates.length > 0 && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-accent-green animate-pulse" />
+                  Live Updates
+                </h3>
+                <span className="text-xs text-gray-500">{realtimeUpdates.length} events</span>
+              </div>
+              <div className="space-y-3 max-h-[300px] overflow-auto">
+                {realtimeUpdates.slice(0, 10).map((update, idx) => (
+                  <div
+                    key={`rt-${update.timestamp}-${idx}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border bg-dark-hover/50"
+                  >
+                    <div className={cn(
+                      'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+                      update.type === 'agent_completed' ? 'bg-accent-green/20' :
+                      update.type === 'agent_error' ? 'bg-accent-red/20' :
+                      'bg-primary-500/20'
+                    )}>
+                      <Bot size={16} className={
+                        update.type === 'agent_completed' ? 'text-accent-green' :
+                        update.type === 'agent_error' ? 'text-accent-red' :
+                        'text-primary-400'
+                      } />
                     </div>
-                    {update.message && (
-                      <p className="text-sm text-gray-400 mt-1 truncate">{update.message}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(update.timestamp).toLocaleTimeString()}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{update.agent_name}</span>
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded',
+                          update.type === 'agent_completed' ? 'bg-accent-green/20 text-accent-green' :
+                          update.type === 'agent_error' ? 'bg-accent-red/20 text-accent-red' :
+                          'bg-primary-500/20 text-primary-400'
+                        )}>
+                          {update.status}
+                        </span>
+                      </div>
+                      {update.message && (
+                        <p className="text-sm text-gray-400 mt-1 truncate">{update.message}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(update.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent System Activity */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Recent Activity</h3>
+              <button
+                onClick={() => refetchActivity()}
+                disabled={isRefetchingActivity}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <RefreshCw size={14} className={cn(isRefetchingActivity && 'animate-spin')} />
+                Refresh
+              </button>
+            </div>
+
+            {/* Activity Type Legend */}
+            <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b border-dark-border">
+              {[
+                { type: 'dream', label: 'Dreams', icon: <Brain size={14} /> },
+                { type: 'conversation', label: 'Conversations', icon: <MessageSquare size={14} /> },
+                { type: 'decision', label: 'Decisions', icon: <Sparkles size={14} /> },
+                { type: 'pilot', label: 'Pilots', icon: <Activity size={14} /> },
+                { type: 'knowledge', label: 'Knowledge', icon: <Zap size={14} /> },
+              ].map(({ type, label, icon }) => (
+                <div key={type} className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className={cn('p-1 rounded', getActivityColor(type))}>{icon}</span>
+                  {label}
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-400">
-              <Activity className="mx-auto mb-2" size={32} />
-              <p>Waiting for agent activity...</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Real-time updates will appear here when agents execute tasks
-              </p>
-            </div>
-          )}
+
+            {recentActivities.length > 0 ? (
+              <div className="space-y-3 max-h-[500px] overflow-auto">
+                {recentActivities.map((activity, idx) => (
+                  <div
+                    key={`activity-${activity.timestamp}-${idx}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors"
+                  >
+                    <div className={cn(
+                      'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+                      getActivityColor(activity.type)
+                    )}>
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{activity.title}</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-dark-card text-gray-400 capitalize">
+                          {activity.type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">{activity.subtitle}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} />
+                          {new Date(activity.timestamp).toLocaleString()}
+                        </span>
+                        {activity.agent_name && (
+                          <span className="flex items-center gap-1">
+                            <Bot size={12} />
+                            {activity.agent_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Activity className="mx-auto mb-2" size={32} />
+                <p>No recent activity</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Agent dreams, conversations, and decisions will appear here
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {activeTab === 'learning' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">
-            Learning Feed
-            {learningWsStatus === 'connected' && (
-              <span className="ml-2 h-2 w-2 rounded-full bg-accent-green inline-block animate-pulse" />
-            )}
-          </h3>
-          {learningEvents.length > 0 ? (
-            <div className="space-y-3 max-h-[500px] overflow-auto">
-              {learningEvents.map((event, idx) => (
-                <div
-                  key={`${event.timestamp}-${idx}`}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-dark-border"
-                >
-                  <div className="h-8 w-8 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
-                    <Zap size={16} className="text-accent-cyan" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{event.agent_name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
-                        {event.event_type}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-400 mt-1">{event.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                    </p>
-                  </div>
+        <div className="space-y-4">
+          {/* Learning Stats */}
+          {Object.keys(learningStats).length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="card p-4">
+                <div className="flex items-center gap-2 text-accent-cyan mb-1">
+                  <Brain size={16} />
+                  <span className="text-xs text-gray-400">Total Knowledge</span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-400">
-              <Zap className="mx-auto mb-2" size={32} />
-              <p>Waiting for learning events...</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Agent learning activity will appear here in real-time
-              </p>
+                <p className="text-xl font-bold">{learningStats.total_knowledge || 0}</p>
+              </div>
+              <div className="card p-4">
+                <div className="flex items-center gap-2 text-accent-green mb-1">
+                  <Users size={16} />
+                  <span className="text-xs text-gray-400">Connections</span>
+                </div>
+                <p className="text-xl font-bold">{learningStats.total_connections || 0}</p>
+              </div>
+              <div className="card p-4">
+                <div className="flex items-center gap-2 text-accent-amber mb-1">
+                  <Zap size={16} />
+                  <span className="text-xs text-gray-400">Transfers (24h)</span>
+                </div>
+                <p className="text-xl font-bold">{learningStats.transfers_last_day || 0}</p>
+              </div>
+              <div className="card p-4">
+                <div className="flex items-center gap-2 text-accent-purple mb-1">
+                  <Activity size={16} />
+                  <span className="text-xs text-gray-400">Active Learners</span>
+                </div>
+                <p className="text-xl font-bold">{learningStats.active_learners || 0}</p>
+              </div>
             </div>
           )}
+
+          {/* Real-time Learning Events */}
+          {learningEvents.length > 0 && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-accent-cyan animate-pulse" />
+                  Live Learning
+                </h3>
+              </div>
+              <div className="space-y-3 max-h-[200px] overflow-auto">
+                {learningEvents.slice(0, 5).map((event, idx) => (
+                  <div
+                    key={`live-${event.timestamp}-${idx}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border bg-accent-cyan/5"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
+                      <Zap size={16} className="text-accent-cyan" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{event.agent_name}</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
+                          {event.event_type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">{event.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Learning Feed from API */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Knowledge Transfers</h3>
+              <button
+                onClick={() => refetchLearning()}
+                disabled={isRefetchingLearning}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <RefreshCw size={14} className={cn(isRefetchingLearning && 'animate-spin')} />
+                Refresh
+              </button>
+            </div>
+
+            {learningFeed.length > 0 ? (
+              <div className="space-y-3 max-h-[400px] overflow-auto">
+                {learningFeed.map((transfer: { id: string; from_agent: string; to_agent: string; knowledge_title: string; transfer_type: string; timestamp: string }, idx: number) => (
+                  <div
+                    key={`transfer-${transfer.id || idx}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-accent-cyan/50 transition-colors"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
+                      <Brain size={16} className="text-accent-cyan" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-accent-cyan">{transfer.from_agent}</span>
+                        <span className="text-gray-500">→</span>
+                        <span className="font-medium text-accent-green">{transfer.to_agent}</span>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">{transfer.knowledge_title}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <span className="px-2 py-0.5 rounded bg-dark-card capitalize">{transfer.transfer_type}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} />
+                          {new Date(transfer.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Zap className="mx-auto mb-2" size={32} />
+                <p>No knowledge transfers yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Agent learning activity will appear here
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
