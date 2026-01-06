@@ -2849,6 +2849,10 @@ def get_pilot_readiness_gates(request):
 
         queryset = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
 
+        # Session 689: Exclude declined gates by default (unless specifically requested)
+        if status != 'declined':
+            queryset = queryset.exclude(status='declined')
+
         if status:
             queryset = queryset.filter(status=status)
         if risk_level:
@@ -3024,12 +3028,12 @@ def get_pilot_gate_detail(request, gate_id):
 @require_http_methods(["POST"])
 def update_gate_status(request, gate_id):
     """
-    Update gate status (start, ready, approve, block).
+    Update gate status (start, ready, approve, block, decline).
 
     POST /api/pilot-gates/<gate_id>/status/
 
     Body:
-    - action: 'start' | 'ready' | 'approve' | 'block' | 'waive'
+    - action: 'start' | 'ready' | 'approve' | 'block' | 'waive' | 'decline'
     - notes: Optional notes (required for approve/block)
     - approved_by: Required for approve action
     """
@@ -3059,6 +3063,19 @@ def update_gate_status(request, gate_id):
         elif action == 'waive':
             success = gate.waive(reason=notes)
             message = 'Gate waived' if success else 'Only low-risk gates can be waived'
+        # Session 689: Add decline action to permanently dismiss unwanted gates
+        elif action == 'decline':
+            # Mark gate as declined
+            gate.status = 'declined'
+            gate.approval_notes = notes or 'Declined by user'
+            gate.save()
+            # Also mark the associated decision as rejected
+            if gate.decision:
+                gate.decision.status = 'rejected'
+                gate.decision.save()
+                logger.info(f"🚫 Gate declined: {gate.summary} (decision also rejected)")
+            success = True
+            message = 'Gate declined and removed from queue'
         else:
             return JsonResponse({'success': False, 'error': f'Unknown action: {action}'}, status=400)
 
