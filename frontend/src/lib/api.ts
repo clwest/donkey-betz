@@ -65,6 +65,12 @@ export const dreamsApi = {
   markShown: (dreamIds: string[]) => api.post('/agent-dreams/mark-shown/', { dream_ids: dreamIds }),
 }
 
+// Session 695: Conversations API for Conversation Thread Viewer
+export const conversationsApi = {
+  list: (limit = 20) => api.get(`/agent-conversations/?limit=${limit}`),
+  detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
+}
+
 export const intelligenceApi = {
   status: () => api.get('/v1/intelligence/skynet/status/'),
   opportunities: () => api.get('/v1/intelligence/opportunities/'),

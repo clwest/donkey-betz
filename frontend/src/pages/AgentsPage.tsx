@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -97,6 +97,42 @@ interface Dream {
   dreamed_at: string
 }
 
+// Session 695: Conversation interface for Conversation Thread Viewer
+interface ConversationMessage {
+  id: string
+  agent: string
+  agent_emoji: string
+  content: string
+  type: 'question' | 'answer' | 'synthesis' | 'opening' | 'response'
+  sequence: number
+  relevance: number
+  created_at: string
+}
+
+interface ConversationParticipant {
+  name: string
+  emoji: string
+}
+
+interface Conversation {
+  id: string
+  topic: string
+  type: string
+  type_display: string
+  trigger: string
+  status: 'active' | 'concluded' | 'abandoned'
+  initiator: string
+  initiator_emoji: string
+  participants: ConversationParticipant[]
+  message_count: number
+  quality_score: number
+  conclusion: string
+  insights: string[]
+  started_at: string
+  ended_at: string | null
+  messages: ConversationMessage[]
+}
+
 interface Agent {
   name: string
   category: string
@@ -149,6 +185,8 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   // Session 695: Dream Gallery Modal state
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null)
+  // Session 695: Conversation Thread Viewer state
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({
@@ -181,6 +219,14 @@ export default function AgentsPage() {
     todayCount: dreamsResponse?.data?.today_count || 0,
     unreadCount: dreamsResponse?.data?.unread_count || 0,
   }
+
+  // Session 695: Conversations for Conversation Thread Viewer
+  const { data: conversationsResponse } = useQuery({
+    queryKey: ['agent-conversations'],
+    queryFn: () => conversationsApi.list(50),
+    refetchInterval: 60000,
+  })
+  const conversations: Conversation[] = conversationsResponse?.data?.conversations || []
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
@@ -596,16 +642,28 @@ export default function AgentsPage() {
                   const matchingDream = activity.type === 'dream' && activity.id
                     ? dreams.find(d => d.id === activity.id)
                     : null
-                  const isClickable = activity.type === 'dream' && matchingDream
+                  const isDreamClickable = activity.type === 'dream' && matchingDream
+
+                  // Session 695: Find matching conversation for click handler
+                  const matchingConversation = activity.type === 'conversation' && activity.id
+                    ? conversations.find(c => c.id === activity.id)
+                    : null
+                  const isConversationClickable = activity.type === 'conversation' && matchingConversation
 
                   return (
                   <div
                     key={`activity-${activity.id || activity.timestamp}-${idx}`}
-                    onClick={isClickable ? () => setSelectedDream(matchingDream) : undefined}
+                    onClick={
+                      isDreamClickable ? () => setSelectedDream(matchingDream) :
+                      isConversationClickable ? () => setSelectedConversation(matchingConversation) :
+                      undefined
+                    }
                     className={cn(
                       "flex items-start gap-3 p-4 rounded-lg border border-dark-border transition-colors",
-                      isClickable
+                      isDreamClickable
                         ? "hover:border-accent-purple/50 cursor-pointer hover:bg-accent-purple/5"
+                        : isConversationClickable
+                        ? "hover:border-accent-cyan/50 cursor-pointer hover:bg-accent-cyan/5"
                         : "hover:border-primary-500/50"
                     )}
                   >
@@ -628,11 +686,17 @@ export default function AgentsPage() {
                         )}>
                           {activity.type}
                         </span>
-                        {/* Session 695: Show "Click to view" hint for dreams */}
-                        {isClickable && (
+                        {/* Session 695: Show "Click to view" hint for clickable items */}
+                        {isDreamClickable && (
                           <span className="text-xs text-accent-purple/60 flex items-center gap-1">
                             <Eye size={10} />
                             Click to view
+                          </span>
+                        )}
+                        {isConversationClickable && (
+                          <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
+                            <Eye size={10} />
+                            Click to view thread
                           </span>
                         )}
                         {/* Session 694: Show friendly timestamp */}
@@ -1095,6 +1159,181 @@ export default function AgentsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 695: Conversation Thread Viewer Modal */}
+      {selectedConversation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-blue/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🗣️</span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedConversation.status === 'concluded' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedConversation.status === 'active' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {selectedConversation.status}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-accent-blue/20 text-accent-blue capitalize">
+                    {selectedConversation.type_display || selectedConversation.type.replace('_', ' ')}
+                  </span>
+                  {selectedConversation.quality_score > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
+                      <Sparkles size={10} />
+                      {Math.round(selectedConversation.quality_score * 100)}% quality
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedConversation.topic}</h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Users size={14} />
+                  <span>{selectedConversation.participants.length} participants</span>
+                  <span className="text-gray-600">•</span>
+                  <MessageSquare size={14} />
+                  <span>{selectedConversation.message_count} messages</span>
+                  <span className="text-gray-600">•</span>
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedConversation.started_at, 'full')}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedConversation(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Participants Strip */}
+            <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500">Participants:</span>
+              {selectedConversation.participants.map((participant, idx) => (
+                <span
+                  key={idx}
+                  className="text-xs px-2 py-1 rounded-full bg-dark-card text-gray-300 flex items-center gap-1"
+                >
+                  <span>{participant.emoji || '🤖'}</span>
+                  {participant.name}
+                </span>
+              ))}
+            </div>
+
+            {/* Message Thread */}
+            <div className="p-6 overflow-y-auto max-h-[50vh] space-y-4">
+              {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
+                selectedConversation.messages.map((msg, idx) => (
+                  <div
+                    key={msg.id || idx}
+                    className={cn(
+                      "flex gap-3",
+                      msg.type === 'synthesis' && "bg-accent-green/5 rounded-lg p-3 border border-accent-green/20"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-lg",
+                      msg.type === 'synthesis' ? "bg-accent-green/20" :
+                      msg.type === 'question' ? "bg-accent-cyan/20" :
+                      "bg-dark-hover"
+                    )}>
+                      {msg.agent_emoji || '🤖'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{msg.agent}</span>
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded",
+                          msg.type === 'synthesis' ? "bg-accent-green/20 text-accent-green" :
+                          msg.type === 'question' ? "bg-accent-cyan/20 text-accent-cyan" :
+                          msg.type === 'answer' ? "bg-accent-amber/20 text-accent-amber" :
+                          "bg-dark-card text-gray-400"
+                        )}>
+                          {msg.type}
+                        </span>
+                        {msg.relevance > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {Math.round(msg.relevance * 100)}% relevance
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
+                        {msg.content}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {formatTimestamp(msg.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
+                  <p>No messages available</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Message thread was not captured for this conversation
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Conclusion Section */}
+            {selectedConversation.conclusion && (
+              <div className="px-6 py-4 border-t border-dark-border bg-accent-green/5">
+                <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
+                  <CheckCircle size={14} />
+                  Conclusion
+                </h3>
+                <p className="text-sm text-gray-200 leading-relaxed">
+                  {selectedConversation.conclusion}
+                </p>
+              </div>
+            )}
+
+            {/* Insights Section */}
+            {selectedConversation.insights && selectedConversation.insights.length > 0 && (
+              <div className="px-6 py-4 border-t border-dark-border">
+                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <Lightbulb size={14} />
+                  Insights Generated
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedConversation.insights.map((insight, idx) => (
+                    <span
+                      key={idx}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-dark-hover text-gray-300 border border-dark-border"
+                    >
+                      {typeof insight === 'string' ? insight : 'Insight'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>ID: {selectedConversation.id.slice(0, 8)}...</span>
+                <span className="text-gray-600">•</span>
+                <span>Trigger: {selectedConversation.trigger}</span>
+                {selectedConversation.ended_at && (
+                  <>
+                    <span className="text-gray-600">•</span>
+                    <span>Ended: {formatTimestamp(selectedConversation.ended_at, 'full')}</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedConversation(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
