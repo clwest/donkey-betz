@@ -2,6 +2,7 @@
 TransactionMonitorAgent - Monitors blockchain transactions for suspicious patterns.
 
 Session 461: Part of the Blockchain Audit Agent Group
+Session 683: Added ML Integration (Anomaly Detection for transaction patterns)
 
 This agent specializes in:
 - Detecting suspicious transaction patterns
@@ -10,6 +11,7 @@ This agent specializes in:
 - Tracking known malicious addresses
 - Analyzing gas price anomalies
 - Detecting potential exploits
+- ML-powered transaction anomaly detection
 """
 
 import json
@@ -18,6 +20,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from ..base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +67,102 @@ class TransactionMonitorAgent(BaseAgent):
     """Agent specialized in monitoring blockchain transactions for suspicious activity."""
 
     name = "TransactionMonitorAgent"
+
+    # === Session 683: ML Integration Methods ===
+
+    def _detect_transaction_anomalies_with_ml(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Detect anomalies in transaction patterns using ML.
+
+        Uses VAE/Autoencoder for anomaly detection to identify unusual
+        transaction patterns that may indicate attacks.
+
+        Args:
+            transactions: List of transaction data
+
+        Returns:
+            Dict with ML analysis results
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build transaction feature data
+            tx_data = self._build_transaction_feature_data(transactions)
+
+            if not tx_data.get('features'):
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient transaction data for ML analysis'
+                }
+
+            result = router.auto_route(
+                data=tx_data,
+                task_hint=TaskType.ANOMALY,
+                max_models=2
+            )
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'anomaly'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'anomalous_transactions': self._extract_tx_anomalies(result, transactions),
+                'threat_level': self._assess_tx_threat_level(result),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML transaction analysis failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_transaction_feature_data(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build feature data from transactions for ML analysis."""
+        features = []
+        timestamps = []
+
+        for tx in transactions:
+            features.append([
+                float(tx.get('value', 0)),
+                float(tx.get('gas_price', 0)),
+                float(tx.get('gas_used', 0)),
+                1 if tx.get('is_contract_call') else 0,
+            ])
+            if tx.get('timestamp'):
+                timestamps.append(tx['timestamp'])
+
+        return {
+            'features': features,
+            'timestamps': timestamps,
+            'data_type': 'transaction_patterns'
+        }
+
+    def _extract_tx_anomalies(self, ml_result, transactions: List[Dict]) -> List[Dict[str, Any]]:
+        """Extract anomalous transactions from ML result."""
+        anomalies = []
+        if hasattr(ml_result, 'prediction') and ml_result.prediction:
+            pred = ml_result.prediction
+            if isinstance(pred, list):
+                for i, is_anomaly in enumerate(pred):
+                    if is_anomaly and i < len(transactions):
+                        anomalies.append({
+                            'tx_hash': transactions[i].get('hash', f'tx_{i}'),
+                            'confidence': ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5,
+                            'reason': 'ML-detected anomaly'
+                        })
+        return anomalies
+
+    def _assess_tx_threat_level(self, ml_result) -> str:
+        """Assess transaction threat level from ML analysis."""
+        confidence = ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5
+        if confidence > 0.85:
+            return 'CRITICAL'
+        elif confidence > 0.7:
+            return 'HIGH'
+        elif confidence > 0.5:
+            return 'MEDIUM'
+        return 'LOW'
 
     system_prompt = """You are TransactionMonitorAgent, an expert blockchain investigator specializing in transaction analysis and attack detection.
 

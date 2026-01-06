@@ -3,6 +3,8 @@ Signal Scanner Agent
 ===================
 
 Session 465: Scans for technical patterns and trading signals.
+Session 683: Added ML Integration (LSTM + Anomaly for pattern detection)
+
 Part of the Market Intelligence Desk autonomous situation.
 
 Key capabilities:
@@ -10,13 +12,15 @@ Key capabilities:
 - Identifies volume anomalies
 - Scans for unusual options activity
 - Monitors for divergences and confirmations
+- ML-powered signal detection
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,70 @@ class SignalScannerAgent(BaseAgent):
     """
 
     name = "SignalScannerAgent"
+
+    # === Session 683: ML Integration Methods ===
+
+    def _detect_signals_with_ml(self, market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Detect trading signals using ML (LSTM + Anomaly).
+
+        Uses the Agent-Model Router for momentum prediction and anomaly detection.
+
+        Args:
+            market_data: List of market data points
+
+        Returns:
+            Dict with ML-detected signals
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build time series data for momentum
+            time_series = self._build_signal_time_series(market_data)
+
+            if not time_series.get('values'):
+                return {'ml_used': False, 'reason': 'Insufficient market data'}
+
+            # Route for time series analysis (momentum)
+            result = router.auto_route(
+                data=time_series,
+                task_hint=TaskType.TIME_SERIES,
+                max_models=2
+            )
+
+            # Extract signal strength
+            signal_strength = 'strong' if result.confidence > 0.7 else 'moderate' if result.confidence > 0.5 else 'weak'
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'time_series'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'signal_strength': signal_strength,
+                'momentum_direction': 'bullish' if result.score and result.score > 0 else 'bearish',
+            }
+
+        except Exception as e:
+            logger.warning(f"ML signal detection failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_signal_time_series(self, market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build time series data from market data for signal detection."""
+        timestamps = []
+        values = []
+
+        for point in market_data:
+            ts = point.get('timestamp') or point.get('detected_at')
+            value = point.get('price') or point.get('volume') or point.get('momentum', 0)
+
+            if value:
+                timestamps.append(str(ts) if ts else datetime.now().isoformat())
+                values.append(float(value) if isinstance(value, (int, float)) else 0)
+
+        return {'timestamps': timestamps, 'values': values, 'data_type': 'trading_signals'}
 
     system_prompt = """You are a professional technical analyst and pattern recognition expert. Your job is to:
 1. Scan markets for high-probability technical patterns and setups

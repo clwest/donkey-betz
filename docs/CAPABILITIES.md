@@ -1531,6 +1531,82 @@ print(f"Explanation: {result['explanation']}")
 
 ---
 
+## Agent-Model Router (Sessions 677-683)
+
+**Status:** COMPLETE (All 6 Phases + GPT Integration)
+
+Intelligent ML model routing with auto-selection, connecting specialized ML models to agents and GPT assistant.
+
+### Architecture (6 Phases)
+
+| Phase | Session | Focus | Tests |
+|-------|---------|-------|-------|
+| 1 | 677 | Foundation (Registry, Router) | 30 |
+| 2 | 678 | Time-Series (LSTM, Prophet) | 29 |
+| 3 | 679 | Anomaly Detection (VAE) | 28 |
+| 4 | 680 | Reinforcement Learning | 35 |
+| 5 | 681 | Graph Neural Networks | 37 |
+| 6 | 682 | Model Auto-Selection | 59 |
+| **Total** | | | **218** |
+
+### ML Models Available (17)
+
+| Model | Task Type | Use Case |
+|-------|-----------|----------|
+| lstm | TIME_SERIES | Price forecasting, trend analysis |
+| prophet | TIME_SERIES | Seasonal pattern detection |
+| gnn | GRAPH | Network analysis, relationship detection |
+| autoencoder | ANOMALY | Outlier detection |
+| rl_dqn | DECISION | Strategy optimization |
+| rl_ppo | DECISION | Policy learning |
+| distilbert | TEXT | NLP, sentiment analysis |
+| xgboost | CLASSIFICATION | Tabular data classification |
+| lightgbm | CLASSIFICATION | Fast gradient boosting |
+
+### GPT Integration (Session 683)
+
+**New Tool:** `ml_analysis` - GPT can invoke ML models for data analysis
+
+```python
+# GPT tool call
+{
+    "name": "ml_analysis",
+    "parameters": {
+        "data": {"timestamp": ["2024-01-01"], "price": [100]},
+        "task_type": "auto",  # auto-detects from data
+        "analysis_goal": "predict next price"
+    }
+}
+```
+
+### Agent Integration (Session 683)
+
+| Agent | ML Model | Use Case |
+|-------|----------|----------|
+| MarketIntelligenceAgent | GNN | Market entity relationship analysis |
+| StockAnalystAgent | LSTM | Price trend forecasting |
+| WhaleWatcherAgent | GNN | Wallet transaction network analysis |
+| OpportunityScoringAgent | RL | Opportunity ranking optimization |
+
+### Usage
+
+```python
+from core.services.agent_model_router import get_agent_model_router
+from ml.auto_selection import TaskType
+
+router = get_agent_model_router()
+
+# Auto-select models based on data
+result = router.auto_route({"timestamp": [...], "price": [...]})
+print(f"Task: {result.auto_selection['task_type']}")  # 'time_series'
+print(f"Models: {result.models_used}")  # ['lstm', 'prophet']
+
+# With task hint
+result = router.auto_route(data, task_hint=TaskType.GRAPH)
+```
+
+---
+
 ## Narrative Drift Detector (Session 471)
 
 **Status:** COMPLETE (Tier 1 Autonomous Situation #2)

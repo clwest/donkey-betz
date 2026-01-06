@@ -1,5 +1,6 @@
 """
 Session 471: Narrative Drift Coordinator
+Session 683: Added ML Integration (DistilBERT for text classification)
 
 The main orchestrator for the Narrative Drift Detector.
 Tier 1 Autonomous Situation #2
@@ -21,8 +22,47 @@ from django.utils import timezone
 from decimal import Decimal
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration Helpers
+# =============================================================================
+
+def analyze_narrative_text_with_ml(text_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze narrative text using ML models (DistilBERT for text classification).
+
+    Args:
+        text_data: Dict with 'texts' key containing list of text samples
+
+    Returns:
+        Dict with ML analysis results
+    """
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        result = router.auto_route(
+            data=text_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'sentiment_score': result.score if hasattr(result, 'score') else None,
+            'text_features': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML narrative analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 # =============================================================================
@@ -1129,6 +1169,74 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
             'narratives': created
         }
 
+    def _analyze_evidence_with_ml(self, evidence_texts: List[str], domain: str = None) -> Dict[str, Any]:
+        """
+        Session 683: Analyze narrative evidence using ML models.
+
+        Uses DistilBERT for text classification to detect:
+        - Sentiment patterns across evidence
+        - Topic clustering
+        - Anomalous narratives
+
+        Args:
+            evidence_texts: List of evidence text excerpts
+            domain: Optional narrative domain for context
+
+        Returns:
+            Dict with ML analysis results
+        """
+        if not evidence_texts or len(evidence_texts) < 2:
+            return {'ml_used': False, 'reason': 'Insufficient evidence texts'}
+
+        try:
+            # Build text data for ML analysis
+            text_data = {
+                'texts': evidence_texts[:50],  # Limit to 50 samples
+                'domain': domain,
+                'analysis_type': 'narrative_classification'
+            }
+
+            ml_result = analyze_narrative_text_with_ml(text_data)
+
+            if ml_result.get('ml_used'):
+                logger.info(
+                    f"ML narrative analysis: {len(evidence_texts)} texts, "
+                    f"models={ml_result.get('models_used')}, "
+                    f"confidence={ml_result.get('confidence')}"
+                )
+
+            return ml_result
+
+        except Exception as e:
+            logger.warning(f"ML evidence analysis failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_evidence_texts_for_ml(self, narrative_id: str, hours_back: int = 24) -> List[str]:
+        """
+        Session 683: Build list of evidence texts for ML analysis.
+
+        Args:
+            narrative_id: UUID of the narrative
+            hours_back: Hours to look back for evidence
+
+        Returns:
+            List of evidence text excerpts
+        """
+        from core.models_narrative_drift import NarrativeEvidence
+
+        try:
+            cutoff = timezone.now() - timedelta(hours=hours_back)
+            evidence = NarrativeEvidence.objects.filter(
+                narrative_id=narrative_id,
+                created_at__gte=cutoff
+            ).values_list('excerpt', flat=True)[:50]
+
+            return [e for e in evidence if e and len(e) > 20]
+
+        except Exception as e:
+            logger.warning(f"Failed to build evidence texts: {e}")
+            return []
+
     def run_autonomous_cycle(self) -> Dict[str, Any]:
         """
         Run a complete autonomous cycle.
@@ -1242,13 +1350,40 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
 
             execution_time = int((time.time() - start_time) * 1000)
 
+            # Session 683: Run ML analysis on any narrative evidence found
+            ml_analysis = {'ml_used': False}
+            try:
+                # Get recent evidence texts for ML analysis
+                from core.models_narrative_drift import Narrative, NarrativeEvidence
+                from datetime import timedelta
+
+                recent_narratives = Narrative.objects.filter(
+                    status__in=['emerging', 'dominant', 'shifting']
+                )[:5]
+
+                all_evidence_texts = []
+                for narrative in recent_narratives:
+                    evidence_texts = self._build_evidence_texts_for_ml(
+                        str(narrative.id), hours_back=24
+                    )
+                    all_evidence_texts.extend(evidence_texts)
+
+                if all_evidence_texts:
+                    ml_analysis = self._analyze_evidence_with_ml(
+                        all_evidence_texts[:50],
+                        domain=recent_narratives[0].domain if recent_narratives else None
+                    )
+            except Exception as e:
+                logger.warning(f"ML integration in execute failed: {e}")
+
             result = AgentResult(
                 success=True,
                 agent_name=self.name,
                 message=assistant_message.content or "Task executed successfully",
                 data={
                     'tool_calls': tool_calls_results,
-                    'response': assistant_message.content
+                    'response': assistant_message.content,
+                    'ml_analysis': ml_analysis  # Session 683: ML insights
                 },
                 execution_time_ms=execution_time
             )

@@ -3,6 +3,7 @@ Content Strategy Agent - Clean Architecture
 ============================================
 
 Session 280: Phase 2 - Agent Architecture Unification
+Session 683: Added ML Integration (Text + Clustering for content performance prediction)
 
 This agent analyzes spider intelligence and trending topics to recommend
 what content the user should create next. It follows the clean architecture
@@ -32,9 +33,10 @@ Usage:
 
 import logging
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +230,164 @@ the user should use ImageAgent, VideoAgent, etc."""
             'style_suggestions': ['friendly', 'clear', 'engaging', 'informative']
         }
     }
+
+    # === Session 683: ML Integration Methods ===
+
+    def _analyze_content_with_ml(
+        self,
+        content_data: List[Dict[str, Any]],
+        niche: str = 'general'
+    ) -> Dict[str, Any]:
+        """
+        Session 683: Analyze content performance using ML (Clustering + Text).
+
+        Uses the Agent-Model Router to cluster content by performance patterns
+        and classify content topics for better recommendations.
+
+        Args:
+            content_data: List of content items with performance metrics
+            niche: Content niche for context
+
+        Returns:
+            Dict with ML analysis including content clusters and predictions
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build content data for ML
+            ml_data = self._build_content_data_for_ml(content_data)
+
+            if not ml_data.get('features'):
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient content data for ML analysis'
+                }
+
+            # Route to optimal ML model (Clustering for segmentation)
+            result = router.auto_route(
+                data=ml_data,
+                task_hint=TaskType.CLUSTERING,
+                max_models=2
+            )
+
+            # Extract cluster insights
+            clusters = self._extract_content_clusters(result)
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'clustering'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'content_clusters': clusters,
+                'performance_prediction': self._predict_content_performance(result, niche),
+                'selection_reason': result.auto_selection.get('selection_reason', ''),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML content analysis failed: {e}")
+            return {
+                'ml_used': False,
+                'reason': f'ML error: {str(e)}'
+            }
+
+    def _build_content_data_for_ml(self, content_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Build content feature data for ML clustering.
+
+        Extracts features like engagement metrics, topics, and content types.
+
+        Args:
+            content_data: List of content items
+
+        Returns:
+            Feature data dict for ML routing
+        """
+        features = []
+        labels = []
+
+        for item in content_data:
+            feature_vector = []
+
+            # Extract engagement metrics
+            feature_vector.append(float(item.get('score', 0)))
+            feature_vector.append(float(item.get('engagement', 0)))
+            feature_vector.append(float(item.get('views', 0)))
+            feature_vector.append(float(item.get('shares', 0)))
+
+            # Content type as numeric
+            content_types = ['logo', 'thumbnail', 'social_post', 'brand_identity', 'product_photo', 'illustration']
+            ct = item.get('content_type', 'other')
+            feature_vector.append(content_types.index(ct) if ct in content_types else len(content_types))
+
+            features.append(feature_vector)
+            labels.append(item.get('title', item.get('topic', 'unknown'))[:50])
+
+        return {
+            'features': features,
+            'labels': labels,
+            'data_type': 'content_performance'
+        }
+
+    def _extract_content_clusters(self, ml_result) -> List[Dict[str, Any]]:
+        """
+        Session 683: Extract content clusters from ML result.
+
+        Args:
+            ml_result: EnsemblePrediction from ML router
+
+        Returns:
+            List of cluster descriptions
+        """
+        try:
+            clusters = []
+            if hasattr(ml_result, 'prediction') and ml_result.prediction:
+                # Group by cluster labels
+                pred = ml_result.prediction
+                if isinstance(pred, list):
+                    unique_clusters = set(pred)
+                    for cluster_id in unique_clusters:
+                        clusters.append({
+                            'cluster_id': cluster_id,
+                            'size': pred.count(cluster_id),
+                            'description': f'Content cluster {cluster_id}'
+                        })
+            return clusters
+        except Exception:
+            return []
+
+    def _predict_content_performance(self, ml_result, niche: str) -> Dict[str, Any]:
+        """
+        Session 683: Predict content performance based on ML analysis.
+
+        Args:
+            ml_result: EnsemblePrediction from ML router
+            niche: Content niche
+
+        Returns:
+            Performance prediction dict
+        """
+        try:
+            confidence = ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5
+
+            # Get niche-specific recommendations
+            strategy = self.NICHE_STRATEGIES.get(niche, self.NICHE_STRATEGIES.get('tech', {}))
+            recommended = strategy.get('recommended_content', ['youtube_thumbnail'])
+
+            return {
+                'recommended_type': recommended[0] if recommended else 'social_post',
+                'confidence': round(confidence, 2),
+                'best_performing_style': strategy.get('style_suggestions', ['modern'])[0],
+                'predicted_engagement': 'high' if confidence > 0.7 else 'medium' if confidence > 0.4 else 'standard'
+            }
+        except Exception:
+            return {
+                'recommended_type': 'social_post',
+                'confidence': 0.5,
+                'predicted_engagement': 'standard'
+            }
 
     def execute(
         self,
@@ -460,6 +620,11 @@ the user should use ImageAgent, VideoAgent, etc."""
         spider_trends = spider_context.get('relevant_trends', [])
         trend_topics = [t.get('topic', '') for t in spider_trends[:5]]
 
+        # Session 683: Analyze trends with ML for better recommendations
+        ml_analysis = {}
+        if spider_trends:
+            ml_analysis = self._analyze_content_with_ml(spider_trends, niche)
+
         recommendations = []
         for content_type in strategy.get('recommended_content', [])[:3]:
             ct_info = self.CONTENT_TYPES.get(content_type, {})
@@ -471,7 +636,7 @@ the user should use ImageAgent, VideoAgent, etc."""
                 'style_suggestions': strategy.get('style_suggestions', [])
             })
 
-        return {
+        result = {
             'success': True,
             'niche': niche,
             'timeframe': timeframe,
@@ -479,6 +644,18 @@ the user should use ImageAgent, VideoAgent, etc."""
             'style_suggestions': strategy.get('style_suggestions', []),
             'recommendations': recommendations
         }
+
+        # Session 683: Add ML insights to result
+        if ml_analysis.get('ml_used'):
+            result['ml_analysis'] = {
+                'models_used': ml_analysis.get('models_used', []),
+                'confidence': ml_analysis.get('confidence', 0),
+                'content_clusters': ml_analysis.get('content_clusters', []),
+                'performance_prediction': ml_analysis.get('performance_prediction', {}),
+                'ml_insights': ml_analysis.get('ml_insights', ''),
+            }
+
+        return result
 
     def _recommend_content(
         self,

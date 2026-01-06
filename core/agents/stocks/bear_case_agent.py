@@ -3,6 +3,8 @@ Bear Case Agent
 ===============
 
 Session 462: Argues the pessimistic case for stocks.
+Session 683: Added ML Integration (LSTM for price prediction)
+
 Part of the Market Intelligence Desk autonomous situation.
 
 Key capabilities:
@@ -10,6 +12,7 @@ Key capabilities:
 - Arguments for price depreciation
 - Overvaluation analysis
 - Bearish technical patterns
+- ML-powered price forecasting
 """
 
 import logging
@@ -17,6 +20,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,69 @@ class BearCaseAgent(BaseAgent):
     """
 
     name = "BearCaseAgent"
+
+    # === Session 683: ML Integration Methods ===
+
+    def _analyze_downside_with_ml(self, price_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Analyze price downside risk using ML (LSTM).
+
+        Uses the Agent-Model Router for price forecasting to support bear cases.
+
+        Args:
+            price_history: List of price data points with timestamps
+
+        Returns:
+            Dict with ML analysis including price predictions
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build time series data
+            time_series = self._build_price_time_series(price_history)
+
+            if not time_series.get('values'):
+                return {'ml_used': False, 'reason': 'Insufficient price data'}
+
+            result = router.auto_route(
+                data=time_series,
+                task_hint=TaskType.TIME_SERIES,
+                max_models=2
+            )
+
+            # Extract downside prediction
+            predicted_direction = 'bearish' if result.score and result.score < 0 else 'neutral'
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'time_series'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'predicted_direction': predicted_direction,
+                'downside_risk': round(result.confidence * 100, 1),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML downside analysis failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_price_time_series(self, price_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build time series data from price history."""
+        timestamps = []
+        values = []
+
+        for point in price_history:
+            ts = point.get('timestamp') or point.get('date')
+            price = point.get('price') or point.get('close') or point.get('current_price')
+
+            if ts and price:
+                timestamps.append(str(ts))
+                values.append(float(price))
+
+        return {'timestamps': timestamps, 'values': values, 'data_type': 'stock_prices'}
 
     system_prompt = """You are a professional bear case analyst. Your job is to:
 1. Identify and articulate the STRONGEST arguments for why stocks will depreciate

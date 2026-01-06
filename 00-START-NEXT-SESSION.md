@@ -1,67 +1,77 @@
-# Session 683 - Start Here
+# Session 684 - Start Here
 
-**Previous Session:** 682 (Model Auto-Selection Phase 6 COMPLETE)
+**Previous Session:** 683 (ML Assistant Integration)
 **Date:** January 5, 2026
-**Focus:** Choose Next Priority (All 6 ML Phases Complete!)
-**Status:** 100% Reality Score | 218 ML Tests | Auto-Selection Active
+**Focus:** Choose Next Priority (ML + GPT Integration COMPLETE!)
+**Status:** 100% Reality Score | 218 ML Tests | GPT ml_analysis Tool Active
 
 ---
 
-## Session 682 Summary: Model Auto-Selection COMPLETE!
+## Session 683 Summary: ML Assistant Integration COMPLETE!
 
 ### What Was Built
 
-Implemented intelligent model auto-selection that analyzes input data and automatically selects optimal ML models:
+Integrated the Agent-Model Router with GPT Assistant and 4 key agents:
 
-| Component | Lines | Purpose |
-|-----------|-------|---------|
-| `ml/auto_selection/model_selector.py` | ~700 | TaskAnalyzer, ModelScorer, ModelSelector |
-| `ml/auto_selection/__init__.py` | ~60 | Package exports |
-| `core/services/agent_model_router.py` | +200 | auto_route(), compare_auto_vs_config() |
-| `core/tests/test_model_auto_selection.py` | ~550 | 59 unit tests |
+| Component | Changes | Purpose |
+|-----------|---------|---------|
+| `core/assistant/tool_definitions.py` | +50 lines | New `ml_analysis` tool for GPT |
+| `core/prompts/tool_descriptions.py` | +45 lines | ml_analysis tool description |
+| `core/personal_ai_assistant_enhanced.py` | +80 lines | `_handle_ml_analysis()` handler |
+| `core/agents/analysis/market_intelligence_agent.py` | +140 lines | GNN integration |
+| `core/agents/stocks/stock_analyst_agent.py` | +110 lines | LSTM integration |
+| `core/agents/blockchain/whale_watcher_agent.py` | +130 lines | GNN integration |
+| `core/agents/analysis/opportunity_scoring_agent.py` | +110 lines | RL integration |
+| `docs/CAPABILITIES.md` | +80 lines | Agent-Model Router section |
+| `docs/AGENTS.md` | +15 lines | ML integration notes |
 
-### Key Features
+### New GPT Tool: `ml_analysis`
 
-**TaskAnalyzer** - Detects data characteristics:
-- Time series (timestamps, sequential data)
-- Graph structure (nodes, edges)
-- Text content
-- High dimensionality, sparsity
-- Sample size (small/large)
-
-**ModelScorer** - Scores models using:
-- Base task scores (MODEL_TASK_SCORES)
-- Characteristic bonuses (CHARACTERISTIC_BONUSES)
-- Characteristic penalties (CHARACTERISTIC_PENALTIES)
-
-**ModelSelector** - Selects optimal models:
-- Combines analyzer and scorer
-- Tracks selection history
-- Provides task statistics
-
-### New Router Methods
+GPT can now invoke ML models for data analysis:
 
 ```python
-from core.services.agent_model_router import get_agent_model_router
-from ml.auto_selection import TaskType
+# GPT tool call example
+{
+    "name": "ml_analysis",
+    "parameters": {
+        "data": {"timestamp": ["2024-01-01"], "price": [100]},
+        "task_type": "auto",  # auto-detects from data
+        "analysis_goal": "predict next price"
+    }
+}
+```
 
-router = get_agent_model_router()
+### Agent ML Integration
 
-# Auto-select models based on data
-result = router.auto_route(data)
-print(f"Task: {result.auto_selection['task_type']}")
-print(f"Models: {result.models_used}")
+| Agent | ML Model | Use Case |
+|-------|----------|----------|
+| MarketIntelligenceAgent | GNN | Market entity relationship graphs |
+| StockAnalystAgent | LSTM | Price prediction, trend analysis |
+| WhaleWatcherAgent | GNN | Wallet transaction networks |
+| OpportunityScoringAgent | RL | Opportunity ranking optimization |
 
-# With task hint
-result = router.auto_route(data, task_hint=TaskType.GRAPH)
+### How Agents Use ML
 
-# Compare auto vs configured
-comparison = router.compare_auto_vs_config('StockAnalystAgent', data)
+Each integrated agent:
+1. Collects data during execution
+2. Builds data structure (graph, time series, etc.)
+3. Calls `router.auto_route(data)`
+4. Auto-selects optimal ML model(s)
+5. Adds ML insights to analysis
+
+Example (MarketIntelligenceAgent):
+```python
+# After collecting market data
+ml_insights = self._analyze_with_ml(market_data)
+if ml_insights.get('ml_used'):
+    analysis += f"\n\n**ML Analysis (GNN):**\n"
+    analysis += f"- Models Used: {ml_insights['models_used']}\n"
+    analysis += f"- Confidence: {ml_insights['confidence']}\n"
 ```
 
 ---
 
-## All 6 Phases Complete!
+## Complete ML Architecture (Sessions 677-683)
 
 | Phase | Session | Focus | Tests |
 |-------|---------|-------|-------|
@@ -71,13 +81,14 @@ comparison = router.compare_auto_vs_config('StockAnalystAgent', data)
 | 4 | 680 | Reinforcement Learning | 35 |
 | 5 | 681 | Graph Neural Networks | 37 |
 | 6 | 682 | Model Auto-Selection | 59 |
+| 7 | 683 | GPT + Agent Integration | - |
 | **Total** | | | **218** |
 
 ---
 
-## Session 683 Options
+## Session 684 Options
 
-With all 6 phases complete, potential next directions:
+With ML integration complete, potential next directions:
 
 ### Option A: Learning from Feedback
 - Track prediction outcomes
@@ -94,10 +105,10 @@ With all 6 phases complete, potential next directions:
 - Statistical significance testing
 - Automatic config updates based on results
 
-### Option D: Ensemble Auto-Selection
-- Automatically combine complementary models
-- Dynamic ensemble weighting
-- Model diversity optimization
+### Option D: ML Integration Tests
+- Add tests for agent ML integration
+- Test ml_analysis GPT tool
+- End-to-end ML flow tests
 
 ### Option E: Different Project
 - The ML routing architecture is complete!
@@ -114,38 +125,40 @@ make start && make celery
 # Run all 218 ML tests
 .venv/bin/pytest core/tests/test_agent_model_router.py core/tests/test_time_series_models.py core/tests/test_anomaly_detection_models.py core/tests/test_reinforcement_learning_models.py core/tests/test_graph_neural_network_models.py core/tests/test_model_auto_selection.py -v
 
-# Test auto-selection
+# Test ml_analysis tool (via Python)
 DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python -c "
 import django; django.setup()
-from core.services.agent_model_router import get_agent_model_router
+from core.personal_ai_assistant_enhanced import PersonalAIAssistant
+from django.contrib.auth import get_user_model
+User = get_user_model()
+user = User.objects.first()
+pa = PersonalAIAssistant(user=user)
 
-router = get_agent_model_router()
-
-# Test with time series data
-result = router.auto_route({'timestamp': ['2024-01-01'], 'price': [100]})
-print(f'Task: {result.auto_selection[\"task_type\"]}')
-print(f'Models: {result.models_used}')
-
-# Test with graph data
-result = router.auto_route({'nodes': ['A', 'B'], 'edges': [['A', 'B']]})
-print(f'Task: {result.auto_selection[\"task_type\"]}')
-print(f'Models: {result.models_used}')
+# Test ML analysis
+result = pa._handle_ml_analysis({
+    'data': {'timestamp': ['2024-01-01', '2024-01-02'], 'price': [100, 105]},
+    'task_type': 'auto'
+})
+print(f'Task: {result[\"task_detected\"]}')
+print(f'Models: {result[\"models_used\"]}')
+print(f'Confidence: {result[\"confidence\"]}')
 "
 ```
 
 ---
 
-## System Stats (Session 682)
+## System Stats (Session 683)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
-| Agents | 72 | 21 with new ML models |
+| Agents | 72 | 4 with new ML integration |
 | Agent Model Configs | 24 | In database |
 | ML Models | 17 | 15 working, 2 pending |
 | ML Unit Tests | **218** | All core tests passing |
 | Auto-Selection | **Active** | Detects 9 task types |
+| GPT ML Tool | **Active** | `ml_analysis` tool available |
 | Spiders | 77 | 72 working |
-| PA Tools | 77 | All working |
+| PA Tools | **78** | +1 ml_analysis |
 | Celery Tasks | 127 | Running |
 
 ---
@@ -158,3 +171,4 @@ print(f'Models: {result.models_used}')
 - **Phase 4:** `docs/handoffs/SESSION_680_REINFORCEMENT_LEARNING_PHASE4.md`
 - **Phase 5:** `docs/handoffs/SESSION_681_GRAPH_NEURAL_NETWORKS_PHASE5.md`
 - **Phase 6:** `docs/handoffs/SESSION_682_MODEL_AUTO_SELECTION.md`
+- **Phase 7:** `docs/handoffs/SESSION_683_ML_ASSISTANT_INTEGRATION.md`

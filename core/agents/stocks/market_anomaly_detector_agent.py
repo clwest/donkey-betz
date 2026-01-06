@@ -3,6 +3,8 @@ Market Anomaly Detector Agent
 =============================
 
 Session 461: Detects pump & dump, unusual options activity, manipulation.
+Session 683: Added ML Integration (VAE for anomaly detection)
+
 Equivalent to ExploitDetectorAgent in the blockchain audit system.
 
 Key capabilities:
@@ -10,6 +12,7 @@ Key capabilities:
 - Unusual options flow analysis
 - Market manipulation flags
 - Coordinated trading detection
+- ML-powered anomaly detection
 """
 
 import logging
@@ -17,6 +20,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,72 @@ class MarketAnomalyDetectorAgent(BaseAgent):
     """
 
     name = "MarketAnomalyDetectorAgent"
+
+    # === Session 683: ML Integration Methods ===
+
+    def _detect_anomalies_with_ml(self, market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Detect market anomalies using ML (VAE/Autoencoder).
+
+        Uses the Agent-Model Router for anomaly detection to identify
+        unusual market patterns that may indicate manipulation.
+
+        Args:
+            market_data: List of market data points
+
+        Returns:
+            Dict with ML anomaly detection results
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build feature data for anomaly detection
+            feature_data = self._build_anomaly_feature_data(market_data)
+
+            if not feature_data.get('features'):
+                return {'ml_used': False, 'reason': 'Insufficient market data'}
+
+            result = router.auto_route(
+                data=feature_data,
+                task_hint=TaskType.ANOMALY,
+                max_models=2
+            )
+
+            # Extract anomalies
+            anomaly_count = 0
+            if hasattr(result, 'prediction') and result.prediction:
+                if isinstance(result.prediction, list):
+                    anomaly_count = sum(1 for p in result.prediction if p)
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'anomaly'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'anomalies_detected': anomaly_count,
+                'manipulation_risk': 'HIGH' if anomaly_count > 3 else 'MEDIUM' if anomaly_count > 1 else 'LOW',
+            }
+
+        except Exception as e:
+            logger.warning(f"ML anomaly detection failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_anomaly_feature_data(self, market_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build feature data for ML anomaly detection."""
+        features = []
+
+        for item in market_data:
+            features.append([
+                float(item.get('price', 0)),
+                float(item.get('change_pct', 0) or 0),
+                float(item.get('volume', 0)),
+                float(item.get('market_cap', 0) or 0),
+            ])
+
+        return {'features': features, 'data_type': 'market_anomaly'}
 
     system_prompt = """You are a market surveillance specialist detecting:
 1. Pump & dump schemes (rapid price rise on low-cap stocks followed by crash)

@@ -3,6 +3,7 @@ SEO Optimizer Agent - Clean Architecture
 =========================================
 
 Session 280: Phase 2 - Agent Architecture Unification
+Session 683: Added ML Integration (Text for keyword optimization)
 
 This agent optimizes content for discoverability by generating hashtags,
 keywords, descriptions, and metadata.
@@ -27,11 +28,56 @@ Usage:
 import logging
 import time
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration Helpers for SEO Optimization
+# =============================================================================
+
+def analyze_keywords_with_ml(text_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze text data using ML models for keyword optimization.
+
+    Uses DistilBERT for semantic text analysis to:
+    - Extract key topics and themes
+    - Identify related keywords
+    - Analyze text sentiment and tone
+
+    Args:
+        text_data: Dict with 'texts' key containing content to analyze
+
+    Returns:
+        Dict with ML analysis results
+    """
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        result = router.auto_route(
+            data=text_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'topics': result.prediction.get('topics') if hasattr(result, 'prediction') and result.prediction else None,
+            'sentiment': result.prediction.get('sentiment') if hasattr(result, 'prediction') and result.prediction else None,
+            'keywords': result.prediction.get('keywords') if hasattr(result, 'prediction') and result.prediction else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML keyword analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class SEOOptimizerAgent(BaseAgent):
@@ -175,6 +221,76 @@ You CANNOT create content - just optimize for discoverability."""
         'illustration': ['illustration', 'illustrator', 'digitalart', 'drawing', 'artwork', 'artist']
     }
 
+    def _optimize_with_ml(self, topic: str, content_description: str = None) -> Dict[str, Any]:
+        """
+        Session 683: Optimize SEO using ML text analysis.
+
+        Uses DistilBERT to analyze text and extract:
+        - Semantic topics
+        - Related keywords
+        - Optimal hashtag categories
+
+        Args:
+            topic: Topic or content description
+            content_description: Optional detailed description
+
+        Returns:
+            Dict with ML analysis results
+        """
+        text_content = topic
+        if content_description:
+            text_content = f"{topic} {content_description}"
+
+        if not text_content or len(text_content.strip()) < 10:
+            return {'ml_used': False, 'reason': 'Insufficient text for analysis'}
+
+        try:
+            text_data = {
+                'texts': [text_content],
+                'analysis_type': 'seo_optimization'
+            }
+
+            ml_result = analyze_keywords_with_ml(text_data)
+
+            if ml_result.get('ml_used'):
+                logger.info(
+                    f"ML SEO optimization: "
+                    f"models={ml_result.get('models_used')}, "
+                    f"confidence={ml_result.get('confidence')}"
+                )
+
+                # Enhance with ML-suggested keywords
+                ml_keywords = ml_result.get('keywords', [])
+                if ml_keywords:
+                    ml_result['suggested_hashtags'] = [
+                        f"#{kw.replace(' ', '').lower()}" for kw in ml_keywords[:5]
+                    ]
+
+            return ml_result
+
+        except Exception as e:
+            logger.warning(f"ML SEO optimization failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_text_for_ml(self, topic: str, platform: str = None) -> Dict[str, Any]:
+        """
+        Session 683: Build text data for ML keyword analysis.
+
+        Args:
+            topic: Topic to analyze
+            platform: Optional target platform
+
+        Returns:
+            Dict with text data for ML
+        """
+        context = f"SEO optimization for {platform}" if platform else "General SEO"
+
+        return {
+            'texts': [f"{topic} - {context}"],
+            'platform': platform,
+            'analysis_type': 'keyword_extraction'
+        }
+
     def execute(
         self,
         task: str,
@@ -235,12 +351,38 @@ You CANNOT create content - just optimize for discoverability."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 683: Run ML analysis on SEO content
+                    ml_analysis = {'ml_used': False}
+                    try:
+                        # Extract topic from tool calls or task
+                        topic_text = task
+                        for tc in tool_calls_made:
+                            args = tc.get('arguments', {})
+                            if args.get('topic'):
+                                topic_text = args.get('topic')
+                                break
+                            elif args.get('content_description'):
+                                topic_text = args.get('content_description')
+                                break
+
+                        if topic_text:
+                            ml_analysis = self._optimize_with_ml(topic_text)
+                            if ml_analysis.get('ml_used'):
+                                logger.info(
+                                    f"ML SEO analysis complete: "
+                                    f"models={ml_analysis.get('models_used')}, "
+                                    f"confidence={ml_analysis.get('confidence')}"
+                                )
+                    except Exception as e:
+                        logger.warning(f"ML integration in execute failed: {e}")
+
                     result = AgentResult(
                         success=True,
                         message="SEO optimization completed",
                         data={
                             'task': task,
                             'tool_results': tool_calls_made,
+                            'ml_analysis': ml_analysis,  # Session 683: ML insights
                         },
                         agent_name=self.name,
                         execution_time_ms=execution_time,

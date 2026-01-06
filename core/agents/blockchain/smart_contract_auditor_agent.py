@@ -2,6 +2,7 @@
 SmartContractAuditorAgent - Audits Solidity/EVM smart contracts for security vulnerabilities.
 
 Session 461: Part of the Blockchain Audit Agent Group
+Session 683: Added ML Integration (Anomaly Detection for vulnerability patterns)
 
 This agent specializes in:
 - Reentrancy attack detection
@@ -11,6 +12,7 @@ This agent specializes in:
 - Front-running vulnerability detection
 - Gas optimization suggestions
 - Common exploit pattern matching
+- ML-powered anomaly detection in code patterns
 """
 
 import json
@@ -19,6 +21,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from ..base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +76,84 @@ class SmartContractAuditorAgent(BaseAgent):
     """Agent specialized in smart contract security auditing."""
 
     name = "SmartContractAuditorAgent"
+
+    # === Session 683: ML Integration Methods ===
+
+    def _detect_code_anomalies_with_ml(self, code_features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Session 683: Detect anomalies in smart contract code patterns using ML.
+
+        Uses VAE/Autoencoder for anomaly detection to identify unusual
+        code patterns that may indicate vulnerabilities.
+
+        Args:
+            code_features: List of extracted code features
+
+        Returns:
+            Dict with ML analysis results
+        """
+        try:
+            from core.services.agent_model_router import get_agent_model_router
+
+            router = get_agent_model_router()
+
+            # Build feature data
+            feature_data = self._build_code_feature_data(code_features)
+
+            if not feature_data.get('features'):
+                return {
+                    'ml_used': False,
+                    'reason': 'Insufficient code features for ML analysis'
+                }
+
+            result = router.auto_route(
+                data=feature_data,
+                task_hint=TaskType.ANOMALY,
+                max_models=2
+            )
+
+            return {
+                'ml_used': True,
+                'task_type': result.auto_selection.get('task_type', 'anomaly'),
+                'models_used': result.models_used,
+                'confidence': round(result.confidence, 2),
+                'ml_insights': result.explanation,
+                'anomalous_patterns': self._extract_code_anomalies(result),
+                'risk_score': self._calculate_ml_risk_score(result),
+            }
+
+        except Exception as e:
+            logger.warning(f"ML code analysis failed: {e}")
+            return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
+
+    def _build_code_feature_data(self, code_features: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build feature data for ML analysis."""
+        features = []
+        for feature in code_features:
+            features.append([
+                feature.get('severity_score', 0),
+                len(feature.get('patterns', [])),
+                feature.get('line_count', 0),
+            ])
+        return {'features': features, 'data_type': 'code_patterns'}
+
+    def _extract_code_anomalies(self, ml_result) -> List[Dict[str, Any]]:
+        """Extract anomalous code patterns from ML result."""
+        anomalies = []
+        if hasattr(ml_result, 'prediction') and ml_result.prediction:
+            for i, is_anomaly in enumerate(ml_result.prediction):
+                if is_anomaly:
+                    anomalies.append({
+                        'index': i,
+                        'confidence': ml_result.confidence if hasattr(ml_result, 'confidence') else 0.5
+                    })
+        return anomalies
+
+    def _calculate_ml_risk_score(self, ml_result) -> float:
+        """Calculate risk score from ML analysis."""
+        if hasattr(ml_result, 'confidence'):
+            return round(ml_result.confidence * 100, 1)
+        return 50.0
 
     system_prompt = """You are SmartContractAuditorAgent, an expert blockchain security auditor specializing in Solidity and EVM-based smart contracts.
 
