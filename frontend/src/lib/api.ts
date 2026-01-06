@@ -81,11 +81,11 @@ export const spidersApi = {
 
 export const pilotsApi = {
   dashboard: () => api.get('/pilots/dashboard/'),
-  gates: () => api.get('/pilot-gates/dashboard/'),
+  gates: () => api.get('/pilot-gates/'),  // List of gates, not dashboard
   progress: () => api.get('/pilots/progress/'),
   gateDetail: (gateId: string) => api.get(`/pilot-gates/${gateId}/`),
-  updateGateStatus: (gateId: string, status: string) =>
-    api.patch(`/pilot-gates/${gateId}/status/`, { status }),
+  updateGateStatus: (gateId: string, action: string, notes?: string) =>
+    api.post(`/pilot-gates/${gateId}/status/`, { action, notes, approved_by: 'UI User' }),
   approveAllItems: (gateId: string) =>
     api.post(`/pilot-gates/${gateId}/approve-all/`),
   startPilot: (gateId: string) =>
