@@ -179,6 +179,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 688: Portfolio Page APIs (read-only for React frontend)
         '/api/distribution/',  # Distribution endpoints (stats, platforms, accounts, content)
+
+        # Session 688: Admin Page APIs (read-only for React frontend)
+        '/api/spider-health/',  # Spider health summary and executions
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
