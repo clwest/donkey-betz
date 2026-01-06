@@ -2849,11 +2849,19 @@ def get_pilot_readiness_gates(request):
 
         queryset = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
 
-        # Session 689: Exclude declined and approved/waived gates by default
-        # Declined = user rejected, Approved/Waived = pilot started (shows in Pilots tab)
+        # Session 692: Fixed gate filtering to show approved gates until pilot starts
+        # Previously excluded all approved gates, but user needs to click "Start Pilot"
+        # Now: exclude declined + approved gates that HAVE a running pilot
         if not status:
-            # Default view: show gates needing action (not_started, in_progress, ready, blocked)
-            queryset = queryset.exclude(status__in=['declined', 'approved', 'waived'])
+            # Get IDs of approved gates that have running pilots (these go to Pilots tab)
+            from core.models_pilot_readiness import PilotExecution
+            gates_with_running_pilots = PilotExecution.objects.filter(
+                status='running'
+            ).values_list('gate_id', flat=True)
+
+            # Exclude: declined, waived, and approved gates WITH running pilots
+            queryset = queryset.exclude(status__in=['declined', 'waived'])
+            queryset = queryset.exclude(status='approved', id__in=gates_with_running_pilots)
 
         if status:
             queryset = queryset.filter(status=status)
