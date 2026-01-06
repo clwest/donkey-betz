@@ -125,7 +125,8 @@ def live_opportunities(request):
                     'title': opp.title or opp.description[:50] if opp.description else 'Opportunity',
                     'type': getattr(opp, 'opportunity_type', 'general') or 'general',
                     'source': getattr(opp, 'source', 'system') or 'system',
-                    'score': int(getattr(opp, 'score', 0) or 0),
+                    # Session 688: Use match_score or overall_score from the model (not 'score')
+                    'score': int(getattr(opp, 'match_score', 0) or getattr(opp, 'overall_score', 0) or 0),
                     'created_at': opp.created_at.isoformat() if opp.created_at else None,
                 }
                 for opp in opportunities
