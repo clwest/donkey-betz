@@ -2996,7 +2996,9 @@ def get_pilot_gate_detail(request, gate_id):
                     'suggested_feature': gate.decision.suggested_feature or '',
                     'rationale': gate.decision.rationale or '',
                     'participants': gate.decision.participants or [],
-                    'conversation': gate.decision.conversation or '',
+                    # conversation is a ForeignKey - serialize to basic info
+                    'conversation_id': str(gate.decision.conversation.id) if gate.decision.conversation else None,
+                    'conversation_title': gate.decision.conversation.topic if gate.decision.conversation else '',
                 },
                 'status': gate.status,
                 'risk_level': gate.risk_level,
