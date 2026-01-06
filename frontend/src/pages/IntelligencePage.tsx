@@ -289,13 +289,20 @@ export default function IntelligencePage() {
     },
   })
 
+  // Session 692: Improved error handling for startPilot mutation
   const startPilotMutation = useMutation({
     mutationFn: (gateId: string) => pilotsApi.startPilot(gateId),
-    onSuccess: async () => {
-      setActionResult({ type: 'success', message: 'Pilot started successfully!' })
-      // Force immediate refetch to update UI
-      await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
-      await queryClient.refetchQueries({ queryKey: ['pilots-dashboard'] })
+    onSuccess: async (response) => {
+      // Check response.data.success since API may return 200 with success: false
+      if (response.data?.success === false) {
+        setActionResult({ type: 'error', message: response.data?.message || 'Failed to start pilot' })
+      } else {
+        const pilotName = response.data?.pilot?.name?.slice(0, 50) || 'Success'
+        setActionResult({ type: 'success', message: `Pilot started: ${pilotName}` })
+        // Force immediate refetch to update UI
+        await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+        await queryClient.refetchQueries({ queryKey: ['pilots-dashboard'] })
+      }
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to start pilot' })
