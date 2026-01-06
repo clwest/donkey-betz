@@ -181,6 +181,14 @@ export default function IntelligencePage() {
     enabled: activeTab === 'pilots',
   })
 
+  // Session 689: Fetch gate detail for pilot modal (to get rich decision context)
+  const selectedPilot = selectedPilotId ? [...(pilotsData?.data?.running_pilots || []).map((p: Pilot) => ({ ...p, status: 'running' })), ...(pilotsData?.data?.completed_pilots || []).map((p: Pilot) => ({ ...p, status: 'completed' }))].find(p => p.id === selectedPilotId) : null
+  const { data: pilotGateDetailData, isLoading: loadingPilotGateDetail } = useQuery({
+    queryKey: ['pilot-gate-detail', selectedPilot?.gate_id],
+    queryFn: () => pilotsApi.gateDetail(selectedPilot!.gate_id),
+    enabled: !!selectedPilot?.gate_id,
+  })
+
   const { data: experimentsData, isLoading: loadingExperiments } = useQuery({
     queryKey: ['experiments-list'],
     queryFn: () => experimentsApi.list(),
@@ -299,8 +307,8 @@ export default function IntelligencePage() {
     success_count: 0, failure_count: 0, partial_count: 0,
     success_rate: 0, avg_duration_hours: 0
   }
-  // Session 689: Find selected pilot for modal
-  const selectedPilot = selectedPilotId ? pilots.find(p => p.id === selectedPilotId) : null
+  // Session 689: Get gate decision data for pilot modal
+  const pilotGateDecision = pilotGateDetailData?.data?.gate?.decision || null
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
   // Session 688: API returns feed_items with different field names - map them
   const rawLearningEvents = learningData?.data?.feed_items || learningData?.data?.events || []
@@ -1835,7 +1843,7 @@ export default function IntelligencePage() {
                         AI Evaluation & Learnings
                       </h4>
                       <div className="space-y-3">
-                        {selectedPilot.learnings.map((learning, idx) => (
+                        {selectedPilot.learnings.map((learning: { type: string; outcome: string; confidence: number; impact_area: string; decision_type: string; hours_running: number }, idx: number) => (
                           <div key={idx} className="bg-dark-bg rounded-lg p-4 border border-dark-border">
                             <div className="flex items-center justify-between mb-2">
                               <span className={cn(
@@ -1879,6 +1887,84 @@ export default function IntelligencePage() {
                               </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Decision Context from Gate */}
+              {loadingPilotGateDetail ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span className="ml-2 text-gray-400">Loading decision context...</span>
+                </div>
+              ) : pilotGateDecision && (
+                <>
+                  {/* Recommended Action */}
+                  {pilotGateDecision.recommended_stance && (
+                    <div className="bg-primary-600/10 border border-primary-600/30 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary-400">
+                        <Flag size={18} />
+                        Recommended Action
+                      </h4>
+                      <p className="text-gray-300 text-sm">{pilotGateDecision.recommended_stance}</p>
+                    </div>
+                  )}
+
+                  {/* Rationale */}
+                  {pilotGateDecision.rationale && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <FileText size={18} className="text-accent-cyan" />
+                        Rationale
+                      </h4>
+                      <p className="text-gray-300 text-sm">{pilotGateDecision.rationale}</p>
+                    </div>
+                  )}
+
+                  {/* Key Insights */}
+                  {pilotGateDecision.key_insights && pilotGateDecision.key_insights.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Lightbulb size={18} className="text-accent-amber" />
+                        Key Insights
+                      </h4>
+                      <div className="space-y-2">
+                        {pilotGateDecision.key_insights.map((insight: string, idx: number) => (
+                          <div key={idx} className="flex items-start gap-3 bg-dark-bg rounded-lg p-3">
+                            <span className="text-accent-amber font-bold">{idx + 1}.</span>
+                            <p className="text-gray-300 text-sm">{insight}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suggested Feature */}
+                  {pilotGateDecision.suggested_feature && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Wrench size={18} className="text-accent-green" />
+                        Suggested Feature
+                      </h4>
+                      <p className="text-gray-300 text-sm">{pilotGateDecision.suggested_feature}</p>
+                    </div>
+                  )}
+
+                  {/* Participants */}
+                  {pilotGateDecision.participants && pilotGateDecision.participants.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Users size={18} className="text-primary-400" />
+                        Participants
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {pilotGateDecision.participants.map((participant: string, idx: number) => (
+                          <span key={idx} className="text-xs px-2 py-1 rounded-full bg-primary-600/20 text-primary-400 border border-primary-600/30">
+                            {participant}
+                          </span>
                         ))}
                       </div>
                     </div>
