@@ -40,7 +40,10 @@ SYSTEM_STATE_KEYWORDS = [
     'status', 'what should i', 'catch me up', 'what needs',
     'attention', 'priority', 'urgent', 'focus on',
     'system state', 'overview', 'summary', 'whats going on',
-    "what's going on", 'happening', 'to do', 'action items'
+    "what's going on", 'happening', 'to do', 'action items',
+    # Session 663: Added pending review / decision metrics keywords
+    'pending review', 'pending', 'review backlog', 'decisions',
+    'draft decisions', 'agent suggestions', 'auto-promote', 'promotable'
 ]
 
 # Session 574: Keywords that trigger full platform briefing

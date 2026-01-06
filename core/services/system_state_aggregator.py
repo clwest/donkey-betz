@@ -531,7 +531,7 @@ class SystemStateAggregator:
                     category='pending_review',
                     priority=PRIORITY_SCORES['pending_review'],
                     title=f"Pending Review: {review_pct:.0f}%",
-                    summary=f"{review.get('draft_count', 0)} agent suggestions awaiting review",
+                    summary=f"Intelligence > Decisions: {review.get('draft_count', 0)} agent suggestions in draft, {review.get('canonical_count', 0)} promoted. High % is normal - only important ones need promotion.",
                     action_url='/ai-studio/?tab=decisions&subtab=pending'
                 ))
 
