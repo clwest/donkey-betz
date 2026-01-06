@@ -16,7 +16,6 @@ import {
   Eye,
   Bot,
   Settings,
-  ChevronDown,
   ChevronRight,
   ThumbsUp,
   ThumbsDown,
@@ -221,13 +220,22 @@ export default function HumanPage() {
   const [activeTab, setActiveTab] = useState<'attention' | 'control' | 'preferences'>('attention')
   const [selectedItem, setSelectedItem] = useState<AttentionItem | null>(null)
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
+  const [localPrefs, setLocalPrefs] = useState<Partial<Preferences>>({})
   const queryClient = useQueryClient()
 
   // REST API queries
-  const { data: attentionResponse, isLoading: loadingAttention, refetch: refetchAttention } = useQuery({
+  const { data: attentionResponse, isLoading: loadingAttention, refetch: refetchAttention, error: attentionError } = useQuery({
     queryKey: ['human-attention', urgencyFilter],
     queryFn: () => humanApi.attention({ limit: 50, urgency: urgencyFilter.length > 0 ? urgencyFilter : undefined }),
   })
+
+  // Debug: Log API response
+  if (attentionError) {
+    console.error('Human Attention API Error:', attentionError)
+  }
+  if (attentionResponse) {
+    console.log('Human Attention API Response:', attentionResponse.data)
+  }
 
   const { data: statsResponse, isLoading: loadingStats } = useQuery({
     queryKey: ['human-attention-stats'],
@@ -286,12 +294,27 @@ export default function HumanPage() {
     onSuccess: () => refetchControl(),
   })
 
+  const updatePrefsMutation = useMutation({
+    mutationFn: (data: Partial<Preferences>) => humanApi.updatePreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['human-preferences'] })
+      setLocalPrefs({})
+    },
+  })
+
+  // Helper to update a preference
+  const updatePref = (key: keyof Preferences, value: unknown) => {
+    const newPrefs = { ...localPrefs, [key]: value }
+    setLocalPrefs(newPrefs)
+    updatePrefsMutation.mutate({ [key]: value })
+  }
+
   // Data extraction
   const attentionItems: AttentionItem[] = attentionResponse?.data?.items || []
   const stats: AttentionStats = statsResponse?.data?.stats || {}
   const systemState: SystemState = controlResponse?.data?.state || {}
   const preferences: Preferences = preferencesResponse?.data?.preferences || {}
-  const agentsList = agentsResponse?.data?.data?.agents || []
+  const agentsList = agentsResponse?.data?.agents || []
 
   // Group items by urgency
   const groupedItems = useMemo(() => {
@@ -313,6 +336,25 @@ export default function HumanPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  // Show error if API call failed
+  if (attentionError) {
+    return (
+      <div className="card text-center py-12">
+        <XCircle className="mx-auto mb-4 text-accent-red" size={48} />
+        <h3 className="text-lg font-semibold mb-2">Failed to Load Attention Items</h3>
+        <p className="text-gray-400 mb-4">
+          {(attentionError as Error)?.message || 'Authentication may be required. Please log in again.'}
+        </p>
+        <button
+          onClick={() => refetchAttention()}
+          className="btn btn-primary"
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -652,9 +694,9 @@ export default function HumanPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Minimum Urgency to Notify</label>
                 <select
-                  value={preferences.min_urgency_to_notify || 'medium'}
+                  value={localPrefs.min_urgency_to_notify ?? preferences.min_urgency_to_notify ?? 'medium'}
                   className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white"
-                  onChange={() => {}}
+                  onChange={(e) => updatePref('min_urgency_to_notify', e.target.value)}
                 >
                   <option value="critical">Critical Only</option>
                   <option value="high">High and Above</option>
@@ -665,9 +707,9 @@ export default function HumanPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Preferred Channel</label>
                 <select
-                  value={preferences.preferred_channel || 'discord'}
+                  value={localPrefs.preferred_channel ?? preferences.preferred_channel ?? 'discord'}
                   className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white"
-                  onChange={() => {}}
+                  onChange={(e) => updatePref('preferred_channel', e.target.value)}
                 >
                   <option value="discord">Discord</option>
                   <option value="web">Web Dashboard</option>
@@ -677,9 +719,9 @@ export default function HumanPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Review Depth</label>
                 <select
-                  value={preferences.review_depth || 'standard'}
+                  value={localPrefs.review_depth ?? preferences.review_depth ?? 'standard'}
                   className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white"
-                  onChange={() => {}}
+                  onChange={(e) => updatePref('review_depth', e.target.value)}
                 >
                   <option value="quick">Quick (&lt; 30s)</option>
                   <option value="standard">Standard (30s-2min)</option>
@@ -689,11 +731,12 @@ export default function HumanPage() {
               <div className="flex items-center justify-between p-4 rounded-lg bg-dark-bg">
                 <span>Auto-approve Low Risk Items</span>
                 <button
+                  onClick={() => updatePref('auto_approve_low_risk', !preferences.auto_approve_low_risk)}
                   className={cn(
                     'px-3 py-1 rounded-full text-sm font-medium transition-colors',
                     preferences.auto_approve_low_risk
                       ? 'bg-accent-green text-white'
-                      : 'bg-dark-card text-gray-400'
+                      : 'bg-dark-card text-gray-400 hover:bg-dark-hover'
                   )}
                 >
                   {preferences.auto_approve_low_risk ? 'ON' : 'OFF'}
@@ -709,7 +752,8 @@ export default function HumanPage() {
                 <label className="block text-sm font-medium mb-2">Start Time</label>
                 <input
                   type="time"
-                  value={preferences.quiet_hours_start || '22:00'}
+                  value={localPrefs.quiet_hours_start ?? preferences.quiet_hours_start ?? '22:00'}
+                  onChange={(e) => updatePref('quiet_hours_start', e.target.value)}
                   className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white"
                 />
               </div>
@@ -717,7 +761,8 @@ export default function HumanPage() {
                 <label className="block text-sm font-medium mb-2">End Time</label>
                 <input
                   type="time"
-                  value={preferences.quiet_hours_end || '08:00'}
+                  value={localPrefs.quiet_hours_end ?? preferences.quiet_hours_end ?? '08:00'}
+                  onChange={(e) => updatePref('quiet_hours_end', e.target.value)}
                   className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white"
                 />
               </div>

@@ -5,6 +5,12 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Use '/' for dev, '/static/' only for production builds served through Django
+  base: '/',
+  build: {
+    // Output assets to 'assets' subfolder
+    assetsDir: 'assets',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

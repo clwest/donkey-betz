@@ -98,6 +98,14 @@ app.conf.beat_schedule = {
             'expires': 3600,
         }
     },
+    # Session 687: Human Interface attention items from system events
+    'generate-human-attention-items': {
+        'task': 'core.tasks.generate_human_attention_items',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,
+        }
+    },
     # Sports Prediction Evaluation & Bet Settlement
     # Updated Session 23: Using new PredictionEvaluator system
     'evaluate-completed-predictions': {

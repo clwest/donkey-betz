@@ -1,18 +1,19 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 5, 2026 - Session 676
-**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + 15 Sci-Fi Features
+**Last Updated:** January 5, 2026 - Session 687
+**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + Human Interface Layer
 
-## System Stats (Session 676)
+## System Stats (Session 687)
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 72 | 69 routable (Session 663: +SystemIntelligenceAgent) |
+| **Agents** | 72 | All synced to database (Session 687) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **PA Tools** | 82 | +universal_agent_tool connects ALL 69 agents (Session 674) |
-| **ML Models** | 9 | LightGBM, XGBoost, RF, Isolation Forest, K-Means, MLP, DistilBERT, Embeddings, Cosine |
-| **Database Models** | 324+ | 37 categories |
-| **Celery Tasks** | 127 | 14 added in Session 648 |
-| **Services** | 93 | Business logic layer |
+| **ML Models** | 17 | 15 working (Sessions 677-685) |
+| **Human Models** | 5 | HumanAttentionItem, FeedbackRecord, Preference, etc. (Session 686) |
+| **Database Models** | 329+ | 37 categories (+5 Human Interface) |
+| **Celery Tasks** | 128 | +generate_human_attention_items (Session 687) |
+| **Services** | 94 | +human_attention_bridge.py (Session 687) |
 | **Discord Commands** | 112 | 29 Cog categories |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Sci-Fi Features** | 14 | All active (Session 567 cleanup) |
@@ -170,6 +171,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **687** | **UI Data Display Audit** - Dashboard + Human page real data, Human Attention Bridge, Celery task | `SESSION_687_UI_DATA_DISPLAY_AUDIT.md` |
+| **686** | **Human Interface Layer** - Complete human-in-the-loop system (models, service, API, React, Discord) | `docs/designs/HUMAN_INTERFACE_LAYER.md` |
 | **677** | **Agent-Model Router Phase 1** - Foundation complete: models, registry, router, 24 configs, 30 tests | `SESSION_677_AGENT_MODEL_ROUTER_PHASE1.md` |
 | **676** | **Agent-Model Routing Architecture** - Design for agent-specific ML models (9 existing + 7 new) | `SESSION_676_AGENT_MODEL_ROUTING_ARCHITECTURE.md` |
 | **675** | **End-to-End Verification + Task Generation Fix** - Verified architecture, fixed ResearchAgent prompts | `SESSION_675_END_TO_END_VERIFICATION.md` |
