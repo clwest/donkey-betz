@@ -1,9 +1,53 @@
-# Session 672 - Start Here
+# Session 673 - Start Here
 
-**Previous Session:** 671 (ML Pipeline Integration - COMPLETE)
+**Previous Session:** 672 (Agent Execution Automation - COMPLETE)
 **Date:** January 5, 2026
 **Focus:** New System Priorities
-**Status:** 100% Reality Score | ML Pipeline Fully Wired
+**Status:** 100% Reality Score | ML Pipeline + Agent Execution Fully Automated
+
+---
+
+## Session 672 Summary: Agent Execution Automation COMPLETE
+
+### The Final Piece of the Pipeline
+
+Session 671 wired the pipeline from Spiders → Opportunities → Tasks, but tasks weren't being executed. Session 672 added the final piece:
+
+```
+BEFORE (Session 671):
+Spiders → SpiderData → ML Score → Opportunity → Task → [STOPPED HERE]
+
+AFTER (Session 672):
+Spiders → SpiderData → ML Score → Opportunity → Task → Agent Execution → Outcome → Retrain
+   ✓          ✓           ✓           ✓          ✓          ✓                 ✓         ✓
+```
+
+### What Was Added
+
+| Component | Details |
+|-----------|---------|
+| `execute_pending_opportunity_tasks` | New Celery task (+140 lines) |
+| Celery Beat schedule | Runs every 30 min at :15 and :45 |
+| Agent execution via router | Uses AgentRouter.route() |
+| Task status management | pending → in_progress → applied/failed |
+| Execution metadata | Saved in task.score_breakdown |
+
+### How It Works
+
+1. Finds OpportunityTasks with status='pending' or 'accepted' and primary_agent assigned
+2. Orders by priority and score (high-value tasks first)
+3. For each task:
+   - Gets agent class from `Agent.name` field
+   - Validates against `AgentRouter.AGENT_MAP`
+   - Calls `router.route()` with task context
+   - Updates task status based on result
+   - Records execution metadata
+
+### Commits from Session 672
+
+```
+[commit hash TBD] feat(Session 672): Add Agent Execution Automation task
+```
 
 ---
 
@@ -64,26 +108,28 @@ b6ce58c4 feat(Session 670): Add LightGBM + Optuna hyperparameter optimization
 
 ---
 
-## Session 672 Priorities
+## Session 673 Priorities
 
-### Option A: Agent Execution Automation
-
-The pipeline creates tasks, but agents don't automatically execute them yet.
-Could add a Celery task to process pending OpportunityTasks.
-
-### Option B: ML Phase 3 - Spider-Specific Features
+### Option A: ML Phase 3 - Spider-Specific Features
 
 From `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md`:
 - Financial features (market_cap, price_change)
 - Job features (salary_min, remote_flag)
 - Engagement features (comments, likes)
 
-### Option C: Dashboard for Pipeline Monitoring
+### Option B: Dashboard for Pipeline Monitoring
 
 Build UI to visualize:
-- Pipeline throughput (spiders → opportunities → tasks)
+- Pipeline throughput (spiders → opportunities → tasks → executions)
 - ML model performance over time
 - Agent execution success rates
+
+### Option C: Agent Execution Improvements
+
+Enhancements to the execution system:
+- Track execution outcomes for ML feedback loop
+- Add retry logic for failed executions
+- Implement execution cooldown periods
 
 ### Option D: New System Priorities
 
@@ -146,7 +192,9 @@ print(f'Scored: {len(results)} items')
 │  3. CREATION   Score ≥70 → Opportunity (153 total, 73 high-value)           │
 │                Score ≥80 → OpportunityTask (150 with agents)                │
 │                                                                              │
-│  4. EXECUTION  Task → Agent executes (content, research, applications)      │
+│  4. EXECUTION  execute_pending_opportunity_tasks (every 30 min)     [NEW]   │
+│                → AgentRouter.route(agent_name, task, context)               │
+│                → Task status: pending → in_progress → applied/failed        │
 │                                                                              │
 │  5. FEEDBACK   User marks won/lost → OpportunityOutcome (150 records)       │
 │                → train_ml_scoring_model (weekly Celery with Optuna)         │
@@ -156,4 +204,4 @@ print(f'Scored: {len(results)} items')
 
 ---
 
-*Ready for Session 672!*
+*Ready for Session 673!*

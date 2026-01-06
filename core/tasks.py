@@ -2313,6 +2313,145 @@ def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
 
 
 @shared_task
+def execute_pending_opportunity_tasks(limit: int = 20):
+    """
+    Session 672: Execute pending OpportunityTasks by triggering assigned agents.
+
+    This task completes the ML Opportunity Pipeline by automatically executing
+    agents assigned to high-scoring opportunities.
+
+    Pipeline flow:
+    Spiders → SpiderData → ML Score → Opportunity → Task → [THIS] → Agent → Outcome
+
+    Args:
+        limit: Maximum tasks to execute per run (default: 20)
+
+    Returns:
+        Dict with execution statistics
+    """
+    logger.info(f"🤖 [AGENT EXECUTOR] Starting execution of pending opportunity tasks (limit: {limit})")
+
+    try:
+        from core.models_unified_system import OpportunityTask, Agent
+        from core.agent_router import AgentRouter
+        from django.utils import timezone
+
+        router = AgentRouter()
+
+        # Find pending/accepted tasks with assigned agents
+        pending_tasks = OpportunityTask.objects.filter(
+            status__in=['pending', 'accepted'],
+            primary_agent__isnull=False
+        ).select_related(
+            'primary_agent', 'opportunity', 'user'
+        ).order_by(
+            '-priority', '-opportunity_score', 'created_at'
+        )[:limit]
+
+        stats = {
+            'status': 'completed',
+            'tasks_found': pending_tasks.count(),
+            'tasks_executed': 0,
+            'tasks_succeeded': 0,
+            'tasks_failed': 0,
+            'errors': []
+        }
+
+        for task in pending_tasks:
+            try:
+                # Get agent class name (stored in Agent.name field)
+                agent_name = task.primary_agent.name
+                if not agent_name:
+                    logger.warning(f"⚠️ [AGENT EXECUTOR] Task {task.id} has agent without name")
+                    continue
+
+                # Check if agent exists in router
+                if not router.is_valid_agent(agent_name):
+                    logger.warning(f"⚠️ [AGENT EXECUTOR] Unknown agent: {agent_name} for task {task.id}")
+                    stats['errors'].append(f"Unknown agent: {agent_name}")
+                    continue
+
+                # Build execution context from opportunity
+                opportunity = task.opportunity
+                context = {
+                    'task_id': str(task.id),
+                    'task_title': task.title,
+                    'task_description': task.description,
+                    'opportunity_id': str(opportunity.id) if opportunity else None,
+                    'opportunity_title': opportunity.title if opportunity else None,
+                    'opportunity_source': opportunity.source if opportunity else None,
+                    'opportunity_url': opportunity.url if opportunity else None,
+                    'opportunity_score': task.opportunity_score,
+                    'score_breakdown': task.score_breakdown,
+                    'priority': task.priority,
+                    'user_id': task.user_id,
+                    'auto_execution': True,
+                }
+
+                # Mark task as in_progress
+                task.status = 'in_progress'
+                task.save(update_fields=['status', 'updated_at'])
+
+                logger.info(f"🤖 [AGENT EXECUTOR] Executing {agent_name} for task: {task.title[:50]}...")
+
+                # Execute agent via router (router gathers scifi_context and spider_context internally)
+                result = router.route(
+                    agent_name=agent_name,
+                    task=f"Execute opportunity task: {task.title}\n\nDescription: {task.description}",
+                    context=context
+                )
+
+                stats['tasks_executed'] += 1
+
+                # Update task status based on result
+                if result.success:
+                    task.status = 'applied'  # Mark as applied/submitted
+                    task.applied_at = timezone.now()
+                    stats['tasks_succeeded'] += 1
+                    logger.info(f"✅ [AGENT EXECUTOR] Task {task.id} completed successfully by {agent_name}")
+                else:
+                    task.status = 'pending'  # Reset to pending for retry
+                    stats['tasks_failed'] += 1
+                    stats['errors'].append(f"Task {task.id}: {result.error or 'Unknown error'}")
+                    logger.warning(f"⚠️ [AGENT EXECUTOR] Task {task.id} failed: {result.error}")
+
+                # Save result metadata
+                if not task.score_breakdown:
+                    task.score_breakdown = {}
+                task.score_breakdown['execution_result'] = {
+                    'agent': agent_name,
+                    'success': result.success,
+                    'executed_at': timezone.now().isoformat(),
+                    'message_preview': str(result.message)[:500] if result.message else None,
+                }
+                task.save()
+
+            except Exception as task_error:
+                logger.error(f"❌ [AGENT EXECUTOR] Error executing task {task.id}: {task_error}")
+                stats['tasks_failed'] += 1
+                stats['errors'].append(f"Task {task.id}: {str(task_error)}")
+                # Reset task to pending on error
+                task.status = 'pending'
+                task.save(update_fields=['status', 'updated_at'])
+
+        logger.info(
+            f"🤖 [AGENT EXECUTOR] Completed - "
+            f"Executed: {stats['tasks_executed']}, "
+            f"Succeeded: {stats['tasks_succeeded']}, "
+            f"Failed: {stats['tasks_failed']}"
+        )
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"❌ [AGENT EXECUTOR] Task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+@shared_task
 def expire_old_opportunities():
     """
     Mark old opportunities as expired.

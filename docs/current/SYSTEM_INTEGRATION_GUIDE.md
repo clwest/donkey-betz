@@ -777,9 +777,9 @@ tail -f logs/celery.log
 
 ---
 
-## ML Opportunity Pipeline (Session 671)
+## ML Opportunity Pipeline (Session 671-672)
 
-The ML Scoring Engine (v7.1 LightGBM + Optuna) is the **intelligence core** that transforms raw spider data into actionable opportunities.
+The ML Scoring Engine (v7.1 LightGBM + Optuna) is the **intelligence core** that transforms raw spider data into actionable opportunities. **Session 672 added automated agent execution.**
 
 ### Pipeline Architecture
 
@@ -827,9 +827,19 @@ The ML Scoring Engine (v7.1 LightGBM + Optuna) is the **intelligence core** that
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         4. AGENT EXECUTION                                   │
+│                    4. AGENT EXECUTION (Session 672)                         │
 │                                                                              │
-│   OpportunityTask ───► Agent executes via task tools                        │
+│   execute_pending_opportunity_tasks (every 30 min Celery task)             │
+│                    │                                                         │
+│                    ▼                                                         │
+│   For each pending OpportunityTask with assigned agent:                     │
+│   • Get agent class from Agent.name field                                   │
+│   • Validate against AgentRouter.AGENT_MAP                                  │
+│   • Call router.route(agent_name, task, context)                            │
+│   • Update status: pending → in_progress → applied/failed                   │
+│   • Save execution metadata in task.score_breakdown                         │
+│                                                                              │
+│   Supported execution types:                                                │
 │   • Content creation (Image, Video, Audio agents)                           │
 │   • Research and analysis (Research, Market agents)                         │
 │   • Application submission (for job opportunities)                          │
