@@ -3448,6 +3448,33 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 695-696: SKIN Layer - Workspace Management API
+# =========================================================================
+from rest_framework.routers import DefaultRouter as WorkspaceRouter
+from core.views_workspace_api import (
+    ProjectWorkspaceViewSet,
+    WorkspaceOperationViewSet,
+    workspace_dashboard,
+    file_history,
+    pending_reviews,
+)
+
+# Create dedicated router for workspace API
+workspace_router = WorkspaceRouter()
+workspace_router.register(r'workspaces', ProjectWorkspaceViewSet, basename='workspace')
+workspace_router.register(r'workspace-operations', WorkspaceOperationViewSet, basename='workspace-operation')
+
+urlpatterns += [
+    # Workspace Router URLs
+    path('api/', include(workspace_router.urls)),
+
+    # Additional Workspace Endpoints
+    path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
+    path('api/workspaces/<uuid:workspace_id>/file-history/', file_history, name='workspace-file-history'),
+    path('api/workspace-operations/pending-reviews/', pending_reviews, name='workspace-pending-reviews'),
+]
+
+# =========================================================================
 # Session 686: Human Interface Layer API
 # =========================================================================
 from core.views_human_interface import get_human_interface_urls
