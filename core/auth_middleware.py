@@ -133,6 +133,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 642: Celery Monitoring
         '/api/celery/',  # Celery status endpoint
+
+        # Session 687: Dashboard APIs (read-only stats for React frontend)
+        '/api/ecosystem/stats/',  # Ecosystem statistics
+        '/api/ecosystem/live-feed/',  # Live activity feed
+        '/api/dashboard/stats/',  # Dashboard statistics
+        '/api/v1/intelligence/spider-status/',  # Spider status
+        '/api/spider-intelligence/report/',  # Daily spider report
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
