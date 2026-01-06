@@ -594,8 +594,9 @@ def active_case(request):
     """
     user = get_current_user(request)
 
+    # Session 688: Return empty for anonymous users instead of 401
     if not user:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
+        return JsonResponse({'has_active_case': False})
 
     if request.method == "GET":
         # Get active case from user preferences or session

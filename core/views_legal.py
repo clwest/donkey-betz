@@ -11,7 +11,7 @@ import logging
 from django.utils import timezone
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -38,13 +38,17 @@ LEGAL_DOCUMENT_TYPES = {
 # =============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def list_legal_case_files(request):
     """
     List all legal case files for the current user.
     Returns documents from the LegalDocument model.
     """
     user = request.user
+
+    # Session 688: Return empty for anonymous users
+    if not user.is_authenticated:
+        return Response({'documents': [], 'stats': {'total': 0, 'court_orders': 0, 'motions': 0, 'evidence': 0}})
 
     try:
         from core.models_unified_system import LegalDocument
