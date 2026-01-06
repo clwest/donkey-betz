@@ -172,7 +172,7 @@ curl http://localhost:8000/health/ping/
 | **669** | **ML Scoring Engine Phase 1** - Fixed dead features (0%→64% keyword_ai), trained v5.0 | `00-START-NEXT-SESSION.md` |
 | **668** | **ML Scoring Engine Assessment** - Found 47% dead features, created 4-phase improvement roadmap | `SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md` |
 | **666** | **Deep System Review** - SYSTEM_INTEGRATION_GUIDE.md (798 lines), verified all integrations | `docs/current/SYSTEM_INTEGRATION_GUIDE.md` |
-| **663** | **SystemIntelligenceAgent** - Platform health + routing config + learning hooks (6 commits) | `SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` |
+| **663** | **SystemIntelligenceAgent** + **Agents Tab** + **Activity/Learning Tabs** (10 commits) | `SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` |
 | **655** | **Gate Pipeline Fixes** + UI Enhancements | *(commits: c5aa87cd, ae29466c, 9b82eeec)* |
 | **654** | **Autonomous Gate Approval Pipeline** + UI Reorganization | `SESSION_654_AUTONOMOUS_GATE_APPROVAL.md`, `SESSION_654_COMMAND_CENTER_SUBTABS.md` |
 | **653** | **7/7 Full Composability** - All walls fixed | `SESSION_653_CROSS_DOMAIN_COMPOSABILITY_AUDIT.md` |

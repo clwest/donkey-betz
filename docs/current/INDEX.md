@@ -225,8 +225,11 @@ ai_core/spiders/specialized/          - 77 spider implementations
 
 | Session | Focus |
 |---------|-------|
+| **670** | **ML Scoring Engine Phase 2** - 24 features, v6.0 model |
+| **669** | **ML Scoring Engine Phase 1** - Fixed dead features, v5.0 model |
+| **668** | **ML Assessment** - Found 47% dead features, created roadmap |
 | **666** | **System Integration Guide** - Deep system review documentation |
-| **663** | **SystemIntelligenceAgent** - Platform health + routing (6 commits) |
+| **663** | **SystemIntelligenceAgent** + **Agents Tab** + **Activity/Learning Tabs** (10 commits) |
 | 660 | ICC Tasks & Health Dashboards |
 | 659 | ICC Governance UI Audit |
 | 658 | AI Decision Promoter |
@@ -234,8 +237,6 @@ ai_core/spiders/specialized/          - 77 spider implementations
 | 653 | 7/7 Full Composability |
 | 652 | Podcast Studio + Campaign Orchestrator |
 | 648 | Celery Task Scheduling (14 tasks) |
-| 645 | 71 Agents Verified |
-| 637 | AgentRouter expansion (47→68 routable) |
 
 ---
 
