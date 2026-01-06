@@ -1159,7 +1159,7 @@ from core.views_agent_ecosystem import (
 from core.views_agent_orchestration import (
     list_agents, get_agents_by_specialization, orchestrate_multi_agent_task,
     suggest_agent, route_task, get_agent_status, health_check_agents, get_agent_details,
-    refresh_agent_discovery
+    refresh_agent_discovery, comprehensive_agents_list
 )
 from core.views_odds_sports import (
     convert_odds, calculate_expected_value, calculate_kelly_criterion, detect_arbitrage,
@@ -2492,7 +2492,8 @@ urlpatterns = [
     path('api/v1/agents/health/', health_check_agents, name='agents-health'),
     path('api/v1/agents/<str:agent_id>/details/', get_agent_details, name='agent-details'),
     path('api/v1/agents/discovery/refresh/', refresh_agent_discovery, name='agent-discovery-refresh'),
-    
+    path('api/v1/agents/comprehensive/', comprehensive_agents_list, name='agents-comprehensive'),  # Session 663
+
     # Odds & Sports Analytics APIs (from DBAO tools-manifest)
     path('api/v1/odds/convert-odds/', convert_odds, name='odds-convert'),
     path('api/v1/odds/expected-value/', calculate_expected_value, name='expected-value'),
