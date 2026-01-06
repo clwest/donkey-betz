@@ -593,14 +593,20 @@ export default function AgentsPage() {
           )}
 
           {/* Real-time Learning Events */}
-          {learningEvents.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-accent-cyan animate-pulse" />
-                  Live Learning
-                </h3>
-              </div>
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <span className={cn(
+                  "h-2 w-2 rounded-full",
+                  learningEvents.length > 0 ? "bg-accent-cyan animate-pulse" : "bg-gray-500"
+                )} />
+                Live Learning
+              </h3>
+              <span className="text-xs text-gray-500">
+                {learningWsStatus === 'connected' ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            {learningEvents.length > 0 ? (
               <div className="space-y-3 max-h-[200px] overflow-auto">
                 {learningEvents.slice(0, 5).map((event, idx) => (
                   <div
@@ -622,8 +628,14 @@ export default function AgentsPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-6 text-gray-400">
+                <Zap size={24} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Waiting for real-time learning events...</p>
+                <p className="text-xs mt-1">Events appear here as agents learn and share knowledge</p>
+              </div>
+            )}
+          </div>
 
           {/* Learning Feed from API */}
           <div className="card">
