@@ -140,6 +140,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/dashboard/stats/',  # Dashboard statistics
         '/api/v1/intelligence/spider-status/',  # Spider status
         '/api/spider-intelligence/report/',  # Daily spider report
+
+        # Session 688: Agents Page APIs (read-only for React frontend)
+        '/api/v1/agents/comprehensive/',  # Agent list with categories
+        '/api/v1/agents/list/',  # Basic agent list
+        '/api/v1/agents/health/',  # Agent health status
+        '/api/recent-activity/',  # Recent system activity feed
+        '/api/agent-learning/',  # Learning activity feed
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
