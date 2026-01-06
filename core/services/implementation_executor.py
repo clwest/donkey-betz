@@ -318,62 +318,49 @@ Please provide:
 class WorkflowUpdateHandler(BaseHandler):
     """
     Handle workflow template updates.
+
+    Session 691: Returns workflow specification for manual implementation
+    since WorkflowTemplate model doesn't exist yet.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        try:
-            # Create or update workflow template
-            from core.models_unified_system import WorkflowTemplate
+        # Build workflow specification
+        template_name = f"From Pilot: {decision.topic[:50]}"
+        workflow_spec = {
+            'name': template_name,
+            'description': decision.suggested_feature or decision.recommended_stance,
+            'workflow_type': 'pilot_derived',
+            'steps': self._build_workflow_steps(decision),
+            'metadata': {
+                'source_pilot': str(implementation.pilot.id),
+                'decision_type': decision.decision_type,
+                'impact_area': decision.impact_area,
+                'key_insights': decision.key_insights or [],
+                'rationale': decision.rationale
+            }
+        }
 
-            template_name = f"From Pilot: {decision.topic[:50]}"
-            template, created = WorkflowTemplate.objects.get_or_create(
-                name=template_name,
-                defaults={
-                    'description': decision.suggested_feature or decision.recommended_stance,
-                    'workflow_type': 'pilot_derived',
-                    'steps': self._build_workflow_steps(decision),
-                    'is_active': True,
-                    'metadata': {
-                        'source_pilot': str(implementation.pilot.id),
-                        'decision_type': decision.decision_type,
-                        'impact_area': decision.impact_area
-                    }
-                }
-            )
-
-            action = 'Created' if created else 'Updated'
-
-            return {
+        return {
+            'success': True,
+            'executed_by': 'WorkflowUpdateHandler',
+            'actions': [{
+                'type': 'workflow_spec_generated',
+                'description': f"Generated workflow specification: {template_name}",
+                'performed_by': 'WorkflowUpdateHandler',
                 'success': True,
-                'executed_by': 'WorkflowUpdateHandler',
-                'actions': [{
-                    'type': 'workflow_template_update',
-                    'description': f"{action} workflow template: {template_name}",
-                    'performed_by': 'WorkflowUpdateHandler',
-                    'success': True,
-                    'result': {
-                        'template_id': str(template.id),
-                        'template_name': template_name,
-                        'created': created
-                    }
-                }],
-                'artifacts': [{
-                    'type': 'workflow_template',
-                    'id': str(template.id),
-                    'name': template_name
-                }],
-                'summary': f"{action} workflow template: {template_name}"
-            }
-
-        except Exception as e:
-            logger.error(f"Workflow update failed: {e}")
-            return {
-                'requires_human': True,
-                'reason': f"Workflow update failed: {str(e)}"
-            }
+                'result': workflow_spec
+            }],
+            'artifacts': [{
+                'type': 'workflow_specification',
+                'name': template_name,
+                'spec': workflow_spec
+            }],
+            'summary': f"Workflow specification generated: {template_name}. Ready for manual implementation.",
+            'workflow_spec': workflow_spec
+        }
 
     def _build_workflow_steps(self, decision) -> list:
         """Build workflow steps from decision insights."""
@@ -392,21 +379,18 @@ class WorkflowUpdateHandler(BaseHandler):
 class PromptUpdateHandler(BaseHandler):
     """
     Handle prompt registry updates.
+
+    Session 691: Returns prompt specification for manual implementation
+    since PromptTemplate model doesn't exist yet.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        try:
-            # Store as a prompt learning in the registry
-            from core.prompts import get_prompt_registry
-
-            registry = get_prompt_registry()
-
-            # Add as a learned prompt enhancement
-            prompt_key = f"pilot_learning_{implementation.pilot.id}"
-            prompt_content = f"""
+        # Build prompt specification
+        prompt_key = f"pilot_learning_{implementation.pilot.id}"
+        prompt_content = f"""
 # Learned from Pilot: {decision.topic}
 
 ## Key Insights:
@@ -419,67 +403,63 @@ class PromptUpdateHandler(BaseHandler):
 {decision.rationale}
 """
 
-            # Store in database for persistence
-            from core.models_unified_system import PromptTemplate
-            template, created = PromptTemplate.objects.get_or_create(
-                name=prompt_key,
-                defaults={
-                    'content': prompt_content,
-                    'category': 'pilot_learnings',
-                    'description': f"Learning from pilot: {decision.topic[:100]}",
-                    'is_active': True
-                }
-            )
+        prompt_spec = {
+            'key': prompt_key,
+            'content': prompt_content,
+            'category': 'pilot_learnings',
+            'description': f"Learning from pilot: {decision.topic[:100]}",
+            'metadata': {
+                'source_pilot': str(implementation.pilot.id),
+                'decision_type': decision.decision_type,
+                'impact_area': decision.impact_area
+            }
+        }
 
-            return {
+        return {
+            'success': True,
+            'executed_by': 'PromptUpdateHandler',
+            'actions': [{
+                'type': 'prompt_spec_generated',
+                'description': f"Generated prompt specification: {prompt_key}",
+                'performed_by': 'PromptUpdateHandler',
                 'success': True,
-                'executed_by': 'PromptUpdateHandler',
-                'actions': [{
-                    'type': 'prompt_update',
-                    'description': f"Added prompt learning: {prompt_key}",
-                    'performed_by': 'PromptUpdateHandler',
-                    'success': True,
-                    'result': {
-                        'prompt_key': prompt_key,
-                        'created': created
-                    }
-                }],
-                'summary': f"Added prompt learning from pilot"
-            }
-
-        except Exception as e:
-            logger.error(f"Prompt update failed: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+                'result': prompt_spec
+            }],
+            'artifacts': [{
+                'type': 'prompt_specification',
+                'key': prompt_key,
+                'spec': prompt_spec
+            }],
+            'summary': f"Prompt specification generated: {prompt_key}. Ready for manual implementation.",
+            'prompt_spec': prompt_spec
+        }
 
 
 class TaskCreationHandler(BaseHandler):
     """
     Create human tasks for implementations that require manual work.
+
+    Session 691: Returns task specification for manual implementation
+    since ActionableTask model doesn't exist yet.
     """
 
     def execute(self, implementation) -> Dict[str, Any]:
         plan = implementation.implementation_plan
         decision = implementation.pilot.gate.decision
 
-        try:
-            from core.models_unified_system import ActionableTask
+        # Determine priority based on impact
+        priority_map = {
+            'security': 'high',
+            'infrastructure': 'high',
+            'product': 'medium',
+            'agents': 'medium',
+            'workflow': 'low'
+        }
+        priority = priority_map.get(decision.impact_area, 'medium')
 
-            # Determine priority based on impact
-            priority_map = {
-                'security': 'high',
-                'infrastructure': 'high',
-                'product': 'medium',
-                'agents': 'medium',
-                'workflow': 'low'
-            }
-            priority = priority_map.get(decision.impact_area, 'medium')
-
-            task = ActionableTask.objects.create(
-                title=f"Implement: {decision.topic[:80]}",
-                description=f"""
+        # Build task specification
+        task_title = f"Implement: {decision.topic[:80]}"
+        task_description = f"""
 ## Pilot Implementation Required
 
 **Pilot:** {implementation.pilot.name}
@@ -501,45 +481,40 @@ class TaskCreationHandler(BaseHandler):
 
 ---
 *This task was auto-generated from a completed pilot that requires human implementation.*
-""",
-                task_type='pilot_implementation',
-                priority=priority,
-                metadata={
-                    'pilot_id': str(implementation.pilot.id),
-                    'implementation_id': str(implementation.id),
-                    'decision_id': str(decision.id),
-                    'auto_generated': True
-                }
-            )
+"""
 
-            return {
+        task_spec = {
+            'title': task_title,
+            'description': task_description,
+            'task_type': 'pilot_implementation',
+            'priority': priority,
+            'metadata': {
+                'pilot_id': str(implementation.pilot.id),
+                'implementation_id': str(implementation.id),
+                'decision_id': str(decision.id),
+                'auto_generated': True
+            }
+        }
+
+        return {
+            'success': True,
+            'executed_by': 'TaskCreationHandler',
+            'actions': [{
+                'type': 'task_spec_generated',
+                'description': f"Generated task specification: {task_title}",
+                'performed_by': 'TaskCreationHandler',
                 'success': True,
-                'executed_by': 'TaskCreationHandler',
-                'actions': [{
-                    'type': 'task_creation',
-                    'description': f"Created human task: {task.title}",
-                    'performed_by': 'TaskCreationHandler',
-                    'success': True,
-                    'result': {
-                        'task_id': str(task.id),
-                        'priority': priority
-                    }
-                }],
-                'artifacts': [{
-                    'type': 'actionable_task',
-                    'id': str(task.id),
-                    'title': task.title,
-                    'priority': priority
-                }],
-                'summary': f"Created {priority}-priority task for human implementation"
-            }
-
-        except Exception as e:
-            logger.error(f"Task creation failed: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+                'result': task_spec
+            }],
+            'artifacts': [{
+                'type': 'task_specification',
+                'title': task_title,
+                'priority': priority,
+                'spec': task_spec
+            }],
+            'summary': f"Task specification generated ({priority} priority): {task_title}. Ready for manual creation.",
+            'task_spec': task_spec
+        }
 
 
 class ExperimentSetupHandler(BaseHandler):
