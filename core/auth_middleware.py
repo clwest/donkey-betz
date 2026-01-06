@@ -168,6 +168,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/content-calendar/',  # Content calendar
         '/api/creative-projects/',  # Creative projects
         '/api/v1/content/templates/',  # Content templates
+
+        # Session 688: Legal Page APIs (read-only for React frontend)
+        '/api/legal/case-files/',  # Legal documents
+        '/api/legal/cases/',  # Legal cases
+        '/api/legal/active-case/',  # Active case
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
