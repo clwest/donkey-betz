@@ -223,6 +223,44 @@ export const assistantApi = {
   reset: () => api.post('/assistant/reset/'),
 }
 
+export const bettingApi = {
+  // Overview & Stats
+  stats: () => api.get('/v1/betting/stats/'),
+  recent: (limit = 20) => api.get(`/v1/betting/recent/?limit=${limit}`),
+  wagers: () => api.get('/v1/betting/wagers/'),
+
+  // Live Odds
+  liveOdds: () => api.get('/v1/sports/live-odds/'),
+  liveOddsWithScores: () => api.get('/v1/sports/live-odds-scores/'),
+  liveOpportunities: () => api.get('/v1/sports/live-opportunities/'),
+
+  // Arbitrage
+  arbitrageScan: () => api.get('/v1/betting/arbitrage/scan/'),
+  detectArbitrage: (data: { odds: number[] }) => api.post('/v1/odds/arbitrage/', data),
+
+  // Markets
+  markets: () => api.get('/v1/odds/markets/'),
+  futures: () => api.get('/v1/betting/futures/'),
+
+  // Bankroll
+  bankroll: () => api.get('/v1/odds/bankroll/'),
+  bankrollStats: () => api.get('/v1/odds/bankroll/stats/'),
+
+  // Line Movement
+  lineMovement: (gameId?: string) => api.get(gameId ? `/v1/betting/line-movement/${gameId}/` : '/v1/betting/line-movement/'),
+  movers: () => api.get('/v1/betting/movers/'),
+
+  // Intelligence
+  intelligence: () => api.get('/v1/sports/betting-intelligence/'),
+
+  // Wager Management
+  placeBet: (data: { game_id: string; bet_type: string; pick: string; odds: number; stake: number }) =>
+    api.post('/v1/betting/place/', data),
+  logWager: (data: Record<string, unknown>) => api.post('/v1/betting/wager/', data),
+  settleWager: (wagerId: string, result: string) => api.post(`/v1/betting/wagers/${wagerId}/settle/`, { result }),
+  cancelWager: (wagerId: string) => api.post(`/v1/betting/wagers/${wagerId}/cancel/`),
+}
+
 export const userLearningApi = {
   // Dashboard & Profile
   dashboard: () => api.get('/learning/dashboard/'),

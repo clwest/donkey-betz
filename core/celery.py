@@ -207,6 +207,15 @@ app.conf.beat_schedule = {
             'expires': 3300,  # 55 minutes
         }
     },
+    # Session 672: Agent Execution Automation (completes ML Pipeline)
+    'execute-opportunity-tasks': {
+        'task': 'core.tasks.execute_pending_opportunity_tasks',
+        'schedule': crontab(minute='15,45'),  # Every 30 minutes at :15 and :45
+        'args': (20,),  # limit=20 tasks per run
+        'options': {
+            'expires': 1500,  # 25 minutes
+        }
+    },
     'expire-old-opportunities': {
         'task': 'core.tasks.expire_old_opportunities',
         'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
