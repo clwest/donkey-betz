@@ -1,94 +1,89 @@
-# Session 684 - Start Here
+# Session 685 - Start Here
 
-**Previous Session:** 683 (ML Assistant Integration)
+**Previous Session:** 684 (ML Integration Expansion)
 **Date:** January 5, 2026
-**Focus:** Choose Next Priority (ML + GPT Integration COMPLETE!)
-**Status:** 100% Reality Score | 218 ML Tests | GPT ml_analysis Tool Active
+**Focus:** Choose Next Priority
+**Status:** 100% Reality Score | 218 ML Tests | 36 Agents with ML Auto-Selection
 
 ---
 
-## Session 683 Summary: ML Assistant Integration COMPLETE!
+## Session 684 Summary: ML Integration Expanded to 36 Agents
 
 ### What Was Built
 
-Integrated the Agent-Model Router with GPT Assistant and 4 key agents:
+Extended ML integration from 4 agents to 36 agents (32 new integrations):
 
-| Component | Changes | Purpose |
-|-----------|---------|---------|
-| `core/assistant/tool_definitions.py` | +50 lines | New `ml_analysis` tool for GPT |
-| `core/prompts/tool_descriptions.py` | +45 lines | ml_analysis tool description |
-| `core/personal_ai_assistant_enhanced.py` | +80 lines | `_handle_ml_analysis()` handler |
-| `core/agents/analysis/market_intelligence_agent.py` | +140 lines | GNN integration |
-| `core/agents/stocks/stock_analyst_agent.py` | +110 lines | LSTM integration |
-| `core/agents/blockchain/whale_watcher_agent.py` | +130 lines | GNN integration |
-| `core/agents/analysis/opportunity_scoring_agent.py` | +110 lines | RL integration |
-| `docs/CAPABILITIES.md` | +80 lines | Agent-Model Router section |
-| `docs/AGENTS.md` | +15 lines | ML integration notes |
+| Commit | Agents Added | Total |
+|--------|--------------|-------|
+| Session 683 | 4 initial (MarketIntelligence, StockAnalyst, WhaleWatcher, OpportunityScoring) | 4 |
+| `f9835b6b` | 19 agents (Research, Content, Code, Blockchain, Workflow, etc.) | 23 |
+| `a5299caf` | 13 agents (Strategy, Business, Markets, Content Studio, Narrative) | 36 |
 
-### New GPT Tool: `ml_analysis`
+### Agents with ML Integration (36 Total)
 
-GPT can now invoke ML models for data analysis:
+| Category | Agents | ML Task Type |
+|----------|--------|--------------|
+| **Analysis** | MarketIntelligenceAgent, TrendAnalysisAgent, OpportunityScoringAgent | GNN, TEXT, RL |
+| **Stocks** | StockAnalystAgent | LSTM |
+| **Blockchain** | WhaleWatcherAgent, BlockchainAuditCoordinator, SmartContractAuditorAgent, TransactionMonitorAgent, ExploitDetectorAgent | GNN, TEXT, ANOMALY |
+| **Research** | ResearchAgent, CompetitorAnalysisAgent, CustomerResearchAgent | TEXT |
+| **Content** | ContentWriterAgent, ContentStrategyAgent | TEXT |
+| **Code** | CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent | TEXT |
+| **Strategy** | BrandIdentityAgent, SocialMediaAgent, SEOOptimizerAgent | TEXT |
+| **Business** | BrandStrategyAgent, MarketingStrategyAgent | TEXT |
+| **Markets** | PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector | LSTM, ANOMALY |
+| **Content Studio** | TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent | TEXT, LSTM |
+| **Narrative** | NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetectorAgent, CulturalImpactAgent | TEXT, ANOMALY |
+| **Orchestration** | WorkflowAgent, WorkflowOrchestrationAgent | TEXT |
+| **Podcast** | PodcastCoordinatorAgent | TEXT |
 
+### ML Integration Pattern
+
+Each agent includes:
 ```python
-# GPT tool call example
-{
-    "name": "ml_analysis",
-    "parameters": {
-        "data": {"timestamp": ["2024-01-01"], "price": [100]},
-        "task_type": "auto",  # auto-detects from data
-        "analysis_goal": "predict next price"
-    }
-}
-```
+from ml.auto_selection import TaskType
 
-### Agent ML Integration
-
-| Agent | ML Model | Use Case |
-|-------|----------|----------|
-| MarketIntelligenceAgent | GNN | Market entity relationship graphs |
-| StockAnalystAgent | LSTM | Price prediction, trend analysis |
-| WhaleWatcherAgent | GNN | Wallet transaction networks |
-| OpportunityScoringAgent | RL | Opportunity ranking optimization |
-
-### How Agents Use ML
-
-Each integrated agent:
-1. Collects data during execution
-2. Builds data structure (graph, time series, etc.)
-3. Calls `router.auto_route(data)`
-4. Auto-selects optimal ML model(s)
-5. Adds ML insights to analysis
-
-Example (MarketIntelligenceAgent):
-```python
-# After collecting market data
-ml_insights = self._analyze_with_ml(market_data)
-if ml_insights.get('ml_used'):
-    analysis += f"\n\n**ML Analysis (GNN):**\n"
-    analysis += f"- Models Used: {ml_insights['models_used']}\n"
-    analysis += f"- Confidence: {ml_insights['confidence']}\n"
+def analyze_with_ml(data: dict) -> dict:
+    """Analyze data using ML models."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=data,
+            task_hint=TaskType.TEXT,  # or TIME_SERIES, ANOMALY, GRAPH
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+        }
+    except Exception as e:
+        return {'ml_used': False, 'reason': str(e)}
 ```
 
 ---
 
-## Complete ML Architecture (Sessions 677-683)
+## Complete ML Architecture (Sessions 677-684)
 
-| Phase | Session | Focus | Tests |
-|-------|---------|-------|-------|
-| 1 | 677 | Foundation (Registry, Router) | 30 |
-| 2 | 678 | Time-Series (LSTM, Prophet) | 29 |
-| 3 | 679 | Anomaly Detection (VAE) | 28 |
-| 4 | 680 | Reinforcement Learning | 35 |
-| 5 | 681 | Graph Neural Networks | 37 |
-| 6 | 682 | Model Auto-Selection | 59 |
-| 7 | 683 | GPT + Agent Integration | - |
-| **Total** | | | **218** |
+| Phase | Session | Focus | Deliverable |
+|-------|---------|-------|-------------|
+| 1 | 677 | Foundation | Registry, Router, Config |
+| 2 | 678 | Time-Series | LSTM, Prophet models |
+| 3 | 679 | Anomaly Detection | VAE Autoencoder |
+| 4 | 680 | Reinforcement Learning | RL optimization |
+| 5 | 681 | Graph Neural Networks | GNN for relationships |
+| 6 | 682 | Model Auto-Selection | TaskAnalyzer, ModelScorer |
+| 7 | 683 | GPT Integration | ml_analysis tool |
+| 8 | 684 | Agent Expansion | 36 agents with ML |
+
+**Total ML Tests:** 218 passing
 
 ---
 
-## Session 684 Options
-
-With ML integration complete, potential next directions:
+## Session 685 Options
 
 ### Option A: Learning from Feedback
 - Track prediction outcomes
@@ -110,8 +105,13 @@ With ML integration complete, potential next directions:
 - Test ml_analysis GPT tool
 - End-to-end ML flow tests
 
-### Option E: Different Project
-- The ML routing architecture is complete!
+### Option E: Complete Agent Coverage
+- Remaining 36 agents without ML
+- Creation agents (Image, Video, Audio, 3D)
+- Executive agents (CTO, COO, etc.)
+
+### Option F: Different Project
+- ML architecture is comprehensive!
 - Work on something else entirely
 
 ---
@@ -147,11 +147,11 @@ print(f'Confidence: {result[\"confidence\"]}')
 
 ---
 
-## System Stats (Session 683)
+## System Stats (Session 684)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
-| Agents | 72 | 4 with new ML integration |
+| Agents | 72 | **36 with ML integration (50%)** |
 | Agent Model Configs | 24 | In database |
 | ML Models | 17 | 15 working, 2 pending |
 | ML Unit Tests | **218** | All core tests passing |
