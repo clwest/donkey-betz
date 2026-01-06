@@ -2,53 +2,33 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { podcastApi } from '@/lib/api'
 import {
-  Mic, Radio, Play, Users, MessageSquare,
+  Mic, Radio, Play,
   Loader2, CheckCircle, XCircle, Plus, Clock,
-  Headphones, Wand2, ChevronRight
+  Wand2, ChevronRight, FileText
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'overview' | 'shows' | 'episodes' | 'debates' | 'generate'
+type TabType = 'overview' | 'episodes' | 'generate'
 
 interface ActionResult {
   type: 'success' | 'error'
   message: string
 }
 
-interface PodcastShow {
-  id: string
-  name: string
-  description: string
-  episodes_count: number
-  total_plays: number
-  status: 'active' | 'paused' | 'archived'
-  created_at: string
-}
-
 interface PodcastEpisode {
   id: string
-  title: string
-  description: string
-  show_name: string
-  duration: number
-  plays: number
-  status: 'draft' | 'published' | 'scheduled'
-  published_at?: string
-}
-
-interface Debate {
-  id: string
-  topic: string
-  status: 'pending' | 'in_progress' | 'completed'
-  participants: string[]
-  created_at: string
+  topic?: string
+  title?: string
+  style?: string
+  status?: string
+  script?: string
+  audio_url?: string
+  created_at?: string
 }
 
 const tabs = [
   { id: 'overview' as TabType, label: 'Overview', icon: Radio },
-  { id: 'shows' as TabType, label: 'Shows', icon: Headphones },
   { id: 'episodes' as TabType, label: 'Episodes', icon: Mic },
-  { id: 'debates' as TabType, label: 'Debates', icon: Users },
   { id: 'generate' as TabType, label: 'Generate', icon: Wand2 },
 ]
 
@@ -65,16 +45,11 @@ function Toast({ result, onClose }: { result: ActionResult; onClose: () => void 
   )
 }
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 export default function PodcastPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [generateTopic, setGenerateTopic] = useState('')
+  const [generateStyle, setGenerateStyle] = useState('conversational')
   const queryClient = useQueryClient()
 
   // Fetch stats
@@ -83,56 +58,40 @@ export default function PodcastPage() {
     queryFn: () => podcastApi.stats(),
   })
 
-  // Fetch shows
-  const { data: showsData, isLoading: loadingShows } = useQuery({
-    queryKey: ['podcast-shows'],
-    queryFn: () => podcastApi.shows(),
-    enabled: activeTab === 'shows' || activeTab === 'overview',
-  })
-
-  // Fetch episodes
+  // Fetch episodes list
   const { data: episodesData, isLoading: loadingEpisodes } = useQuery({
-    queryKey: ['podcast-episodes'],
-    queryFn: () => podcastApi.episodes(),
-    enabled: activeTab === 'episodes' || activeTab === 'overview',
-  })
-
-  // Fetch debates
-  const { data: debatesData, isLoading: loadingDebates } = useQuery({
-    queryKey: ['podcast-debates'],
-    queryFn: () => podcastApi.debates(),
-    enabled: activeTab === 'debates',
+    queryKey: ['podcast-list'],
+    queryFn: () => podcastApi.list(),
   })
 
   // Generate script mutation
   const generateScriptMutation = useMutation({
-    mutationFn: (topic: string) => podcastApi.generateScript(topic),
+    mutationFn: ({ topic, style }: { topic: string; style?: string }) =>
+      podcastApi.generateScript(topic, style),
     onSuccess: () => {
       setActionResult({ type: 'success', message: 'Script generated! Check your episodes.' })
       setGenerateTopic('')
-      queryClient.invalidateQueries({ queryKey: ['podcast-episodes'] })
+      queryClient.invalidateQueries({ queryKey: ['podcast-list'] })
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to generate script.' })
     },
   })
 
-  // Create debate mutation
-  const createDebateMutation = useMutation({
-    mutationFn: (topic: string) => podcastApi.createDebate(topic),
+  // Create episode mutation
+  const createMutation = useMutation({
+    mutationFn: (data: { topic: string; style?: string }) => podcastApi.create(data),
     onSuccess: () => {
-      setActionResult({ type: 'success', message: 'Debate created! Agents are preparing arguments.' })
-      queryClient.invalidateQueries({ queryKey: ['podcast-debates'] })
+      setActionResult({ type: 'success', message: 'Episode created!' })
+      queryClient.invalidateQueries({ queryKey: ['podcast-list'] })
     },
     onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to create debate.' })
+      setActionResult({ type: 'error', message: 'Failed to create episode.' })
     },
   })
 
   const stats = statsData?.data || {}
-  const shows: PodcastShow[] = showsData?.data?.shows || showsData?.data || []
   const episodes: PodcastEpisode[] = episodesData?.data?.episodes || episodesData?.data || []
-  const debates: Debate[] = debatesData?.data?.debates || debatesData?.data || []
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -142,7 +101,14 @@ export default function PodcastPage() {
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault()
     if (generateTopic.trim()) {
-      generateScriptMutation.mutate(generateTopic)
+      generateScriptMutation.mutate({ topic: generateTopic, style: generateStyle })
+    }
+  }
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (generateTopic.trim()) {
+      createMutation.mutate({ topic: generateTopic, style: generateStyle })
     }
   }
 
@@ -194,16 +160,7 @@ export default function PodcastPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="card">
               <div className="flex items-center gap-3">
-                <Headphones className="text-accent-purple" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Shows</p>
-                  <p className="text-2xl font-bold">{stats.total_shows || shows.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <Mic className="text-accent-green" size={24} />
+                <Mic className="text-accent-purple" size={24} />
                 <div>
                   <p className="text-sm text-gray-400">Episodes</p>
                   <p className="text-2xl font-bold">{stats.total_episodes || episodes.length}</p>
@@ -212,167 +169,92 @@ export default function PodcastPage() {
             </div>
             <div className="card">
               <div className="flex items-center gap-3">
-                <Play className="text-accent-cyan" size={24} />
+                <FileText className="text-accent-green" size={24} />
                 <div>
-                  <p className="text-sm text-gray-400">Total Plays</p>
-                  <p className="text-2xl font-bold">{(stats.total_plays || 0).toLocaleString()}</p>
+                  <p className="text-sm text-gray-400">With Scripts</p>
+                  <p className="text-2xl font-bold">{stats.with_scripts || episodes.filter(e => e.script).length}</p>
                 </div>
               </div>
             </div>
             <div className="card">
               <div className="flex items-center gap-3">
-                <Users className="text-accent-amber" size={24} />
+                <Play className="text-accent-cyan" size={24} />
                 <div>
-                  <p className="text-sm text-gray-400">Debates</p>
-                  <p className="text-2xl font-bold">{stats.total_debates || debates.length}</p>
+                  <p className="text-sm text-gray-400">With Audio</p>
+                  <p className="text-2xl font-bold">{stats.with_audio || episodes.filter(e => e.audio_url).length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Clock className="text-accent-amber" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Processing</p>
+                  <p className="text-2xl font-bold">{stats.processing || episodes.filter(e => e.status === 'processing').length}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Recent Episodes & Shows */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Recent Episodes */}
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Recent Episodes</h3>
-              {loadingEpisodes ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="animate-spin" size={24} />
-                </div>
-              ) : episodes.length > 0 ? (
-                <div className="space-y-3">
-                  {episodes.slice(0, 5).map((episode) => (
-                    <div
-                      key={episode.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <button className="h-8 w-8 rounded-full bg-accent-purple/20 flex items-center justify-center hover:bg-accent-purple/30">
-                          <Play size={14} className="text-accent-purple" />
-                        </button>
-                        <div>
-                          <p className="font-medium text-sm">{episode.title}</p>
-                          <p className="text-xs text-gray-500">{episode.show_name}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm">{formatDuration(episode.duration)}</p>
-                        <p className="text-xs text-gray-500">{episode.plays} plays</p>
+          {/* Recent Episodes */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">Recent Episodes</h3>
+            {loadingEpisodes ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            ) : episodes.length > 0 ? (
+              <div className="space-y-3">
+                {episodes.slice(0, 5).map((episode) => (
+                  <div
+                    key={episode.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button className="h-8 w-8 rounded-full bg-accent-purple/20 flex items-center justify-center hover:bg-accent-purple/30">
+                        <Play size={14} className="text-accent-purple" />
+                      </button>
+                      <div>
+                        <p className="font-medium text-sm">{episode.topic || episode.title || 'Untitled'}</p>
+                        <p className="text-xs text-gray-500">{episode.style || 'Standard'}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <Mic className="mx-auto mb-2" size={32} />
-                  <p>No episodes yet</p>
-                </div>
-              )}
-            </div>
-
-            {/* Shows */}
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Your Shows</h3>
-              {loadingShows ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="animate-spin" size={24} />
-                </div>
-              ) : shows.length > 0 ? (
-                <div className="space-y-3">
-                  {shows.slice(0, 5).map((show) => (
-                    <div
-                      key={show.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-accent-purple/20 flex items-center justify-center">
-                          <Headphones size={18} className="text-accent-purple" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{show.name}</p>
-                          <p className="text-xs text-gray-500">{show.episodes_count} episodes</p>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2">
                       <span className={cn(
                         'text-xs px-2 py-1 rounded',
-                        show.status === 'active' ? 'bg-accent-green/20 text-accent-green' :
-                        show.status === 'paused' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
+                        episode.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                        episode.status === 'processing' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
                       )}>
-                        {show.status}
+                        {episode.status || 'draft'}
                       </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <Headphones className="mx-auto mb-2" size={32} />
-                  <p>No shows yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Shows Tab */}
-      {activeTab === 'shows' && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Podcast Shows</h3>
-            <button
-              className="btn btn-primary text-sm flex items-center gap-2"
-              onClick={() => setActionResult({ type: 'success', message: 'Create show coming soon!' })}
-            >
-              <Plus size={14} />
-              New Show
-            </button>
-          </div>
-          {loadingShows ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : shows.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {shows.map((show) => (
-                <div
-                  key={show.id}
-                  className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="h-12 w-12 rounded-lg bg-accent-purple/20 flex items-center justify-center">
-                      <Headphones size={24} className="text-accent-purple" />
-                    </div>
-                    <span className={cn(
-                      'text-xs px-2 py-1 rounded',
-                      show.status === 'active' ? 'bg-accent-green/20 text-accent-green' :
-                      show.status === 'paused' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
-                    )}>
-                      {show.status}
-                    </span>
                   </div>
-                  <h4 className="font-medium mb-1">{show.name}</h4>
-                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">{show.description}</p>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{show.episodes_count} episodes</span>
-                    <span>{show.total_plays.toLocaleString()} plays</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-400">
-              <Headphones className="mx-auto mb-2" size={48} />
-              <p>No shows created</p>
-              <p className="text-sm text-gray-500 mt-1">Create your first podcast show to get started</p>
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Mic className="mx-auto mb-2" size={32} />
+                <p>No episodes yet</p>
+                <p className="text-sm text-gray-500 mt-1">Generate your first episode to get started</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* Episodes Tab */}
       {activeTab === 'episodes' && (
         <div className="card">
-          <h3 className="text-lg font-semibold mb-4">All Episodes</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">All Episodes</h3>
+            <button
+              className="btn btn-primary text-sm flex items-center gap-2"
+              onClick={() => setActiveTab('generate')}
+            >
+              <Plus size={14} />
+              New Episode
+            </button>
+          </div>
           {loadingEpisodes ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="animate-spin" size={32} />
@@ -389,28 +271,30 @@ export default function PodcastPage() {
                       <Play size={20} className="text-accent-purple" />
                     </button>
                     <div>
-                      <p className="font-medium">{episode.title}</p>
+                      <p className="font-medium">{episode.topic || episode.title || 'Untitled'}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{episode.show_name}</span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Clock size={10} /> {formatDuration(episode.duration)}
+                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{episode.style || 'Standard'}</span>
+                        <span className="text-xs text-gray-500">
+                          {episode.created_at ? new Date(episode.created_at).toLocaleDateString() : ''}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{episode.plays.toLocaleString()} plays</p>
-                      <p className="text-xs text-gray-500">
-                        {episode.published_at ? new Date(episode.published_at).toLocaleDateString() : 'Not published'}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      {episode.script && (
+                        <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">Script</span>
+                      )}
+                      {episode.audio_url && (
+                        <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">Audio</span>
+                      )}
                     </div>
                     <span className={cn(
                       'text-xs px-2 py-1 rounded',
-                      episode.status === 'published' ? 'bg-accent-green/20 text-accent-green' :
-                      episode.status === 'scheduled' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-accent-amber/20 text-accent-amber'
+                      episode.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                      episode.status === 'processing' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
                     )}>
-                      {episode.status}
+                      {episode.status || 'draft'}
                     </span>
                     <ChevronRight size={16} className="text-gray-500" />
                   </div>
@@ -424,75 +308,6 @@ export default function PodcastPage() {
               <p className="text-sm text-gray-500 mt-1">Generate your first episode to get started</p>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Debates Tab */}
-      {activeTab === 'debates' && (
-        <div className="space-y-6">
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">AI Debates</h3>
-              <button
-                className="btn btn-primary text-sm flex items-center gap-2"
-                onClick={() => {
-                  const topic = prompt('Enter debate topic:')
-                  if (topic) createDebateMutation.mutate(topic)
-                }}
-                disabled={createDebateMutation.isPending}
-              >
-                {createDebateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                New Debate
-              </button>
-            </div>
-            {loadingDebates ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="animate-spin" size={32} />
-              </div>
-            ) : debates.length > 0 ? (
-              <div className="space-y-3">
-                {debates.map((debate) => (
-                  <div
-                    key={debate.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        'h-10 w-10 rounded-lg flex items-center justify-center',
-                        debate.status === 'completed' ? 'bg-accent-green/20' :
-                        debate.status === 'in_progress' ? 'bg-accent-amber/20' : 'bg-gray-500/20'
-                      )}>
-                        <MessageSquare size={20} className={
-                          debate.status === 'completed' ? 'text-accent-green' :
-                          debate.status === 'in_progress' ? 'text-accent-amber' : 'text-gray-400'
-                        } />
-                      </div>
-                      <div>
-                        <p className="font-medium">{debate.topic}</p>
-                        <p className="text-xs text-gray-500">{debate.participants.join(' vs ')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        'text-xs px-2 py-1 rounded',
-                        debate.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
-                        debate.status === 'in_progress' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
-                      )}>
-                        {debate.status}
-                      </span>
-                      <ChevronRight size={16} className="text-gray-500" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-400">
-                <Users className="mx-auto mb-2" size={48} />
-                <p>No debates yet</p>
-                <p className="text-sm text-gray-500 mt-1">Create a debate topic to watch AI agents argue different perspectives</p>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
@@ -511,7 +326,30 @@ export default function PodcastPage() {
                   className="w-full h-32 bg-dark-bg border border-dark-border rounded-lg p-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
                 />
               </div>
-              <div className="flex justify-end">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Style</label>
+                <select
+                  value={generateStyle}
+                  onChange={(e) => setGenerateStyle(e.target.value)}
+                  className="w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-white focus:outline-none focus:border-primary-500"
+                >
+                  <option value="conversational">Conversational</option>
+                  <option value="educational">Educational</option>
+                  <option value="storytelling">Storytelling</option>
+                  <option value="interview">Interview Style</option>
+                  <option value="debate">Debate Format</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  className="btn btn-secondary flex items-center gap-2"
+                  disabled={createMutation.isPending || !generateTopic.trim()}
+                >
+                  {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                  Create Episode
+                </button>
                 <button
                   type="submit"
                   className="btn btn-primary flex items-center gap-2"
@@ -525,31 +363,27 @@ export default function PodcastPage() {
           </div>
 
           <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Generation Options</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div
-                className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
-                onClick={() => setActionResult({ type: 'success', message: 'Solo episode mode selected' })}
-              >
-                <Mic size={24} className="text-accent-purple mb-3" />
-                <h4 className="font-medium mb-1">Solo Episode</h4>
-                <p className="text-sm text-gray-400">Single narrator exploring a topic in depth</p>
+            <h3 className="text-lg font-semibold mb-4">Style Guide</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-dark-bg">
+                <h4 className="font-medium mb-2">Conversational</h4>
+                <p className="text-sm text-gray-400">Natural, casual tone as if talking to a friend</p>
               </div>
-              <div
-                className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
-                onClick={() => setActionResult({ type: 'success', message: 'Interview mode selected' })}
-              >
-                <Users size={24} className="text-accent-green mb-3" />
-                <h4 className="font-medium mb-1">Interview</h4>
-                <p className="text-sm text-gray-400">Simulated interview with an AI expert</p>
+              <div className="p-4 rounded-lg bg-dark-bg">
+                <h4 className="font-medium mb-2">Educational</h4>
+                <p className="text-sm text-gray-400">Structured learning with clear explanations</p>
               </div>
-              <div
-                className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
-                onClick={() => setActionResult({ type: 'success', message: 'Debate mode selected' })}
-              >
-                <MessageSquare size={24} className="text-accent-amber mb-3" />
-                <h4 className="font-medium mb-1">Debate</h4>
-                <p className="text-sm text-gray-400">Two AI agents debating opposing viewpoints</p>
+              <div className="p-4 rounded-lg bg-dark-bg">
+                <h4 className="font-medium mb-2">Storytelling</h4>
+                <p className="text-sm text-gray-400">Narrative-driven with engaging story arcs</p>
+              </div>
+              <div className="p-4 rounded-lg bg-dark-bg">
+                <h4 className="font-medium mb-2">Interview</h4>
+                <p className="text-sm text-gray-400">Q&A format with expert perspectives</p>
+              </div>
+              <div className="p-4 rounded-lg bg-dark-bg">
+                <h4 className="font-medium mb-2">Debate</h4>
+                <p className="text-sm text-gray-400">Multiple viewpoints discussing a topic</p>
               </div>
             </div>
           </div>

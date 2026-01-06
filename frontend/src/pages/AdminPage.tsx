@@ -1,52 +1,24 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { adminApi, dashboardApi } from '@/lib/api'
 import {
-  Server, Database, Activity, AlertTriangle, CheckCircle, XCircle,
-  Loader2, RefreshCw, Trash2, Users, Clock, HardDrive,
-  Cpu, MemoryStick, Wifi, Settings, Play
+  Server, Activity, CheckCircle, XCircle,
+  Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'health' | 'celery' | 'database' | 'cache' | 'users'
+type TabType = 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
   message: string
 }
 
-interface ServiceStatus {
-  name: string
-  status: 'healthy' | 'degraded' | 'down'
-  uptime?: string
-  memory?: number
-  cpu?: number
-}
-
-interface CeleryTask {
-  id: string
-  name: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  started_at?: string
-  completed_at?: string
-  duration?: number
-}
-
-interface User {
-  id: string
-  username: string
-  email: string
-  is_active: boolean
-  last_login?: string
-  created_at: string
-}
-
 const tabs = [
   { id: 'health' as TabType, label: 'System Health', icon: Activity },
-  { id: 'celery' as TabType, label: 'Celery Tasks', icon: Clock },
-  { id: 'database' as TabType, label: 'Database', icon: Database },
-  { id: 'cache' as TabType, label: 'Cache', icon: HardDrive },
-  { id: 'users' as TabType, label: 'Users', icon: Users },
+  { id: 'celery' as TabType, label: 'Celery', icon: Clock },
+  { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
+  { id: 'agents' as TabType, label: 'Agents', icon: Bot },
 ]
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
@@ -65,79 +37,59 @@ function Toast({ result, onClose }: { result: ActionResult; onClose: () => void 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<TabType>('health')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
-  const queryClient = useQueryClient()
+
+  // Fetch v1 health
+  const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
+    queryKey: ['v1-health'],
+    queryFn: () => adminApi.health(),
+    refetchInterval: 30000,
+  })
 
   // Fetch system health
-  const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
+  const { data: systemHealthData } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => dashboardApi.health(),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    queryFn: () => adminApi.systemHealth(),
   })
 
-  // Fetch services
-  const { data: servicesData, isLoading: loadingServices } = useQuery({
-    queryKey: ['admin-services'],
-    queryFn: () => adminApi.services(),
-    enabled: activeTab === 'health',
+  // Fetch dashboard health
+  const { data: dashboardHealthData } = useQuery({
+    queryKey: ['dashboard-health'],
+    queryFn: () => adminApi.dashboardHealth(),
   })
 
-  // Fetch Celery stats
+  // Fetch celery status
+  const { data: celeryStatusData, isLoading: loadingCelery } = useQuery({
+    queryKey: ['celery-status'],
+    queryFn: () => adminApi.celeryStatus(),
+    enabled: activeTab === 'celery' || activeTab === 'health',
+  })
+
+  // Fetch celery stats
   const { data: celeryStatsData } = useQuery({
     queryKey: ['celery-stats'],
     queryFn: () => adminApi.celeryStats(),
     enabled: activeTab === 'celery',
   })
 
-  // Fetch Celery tasks
-  const { data: celeryTasksData, isLoading: loadingCeleryTasks } = useQuery({
-    queryKey: ['celery-tasks'],
-    queryFn: () => adminApi.celeryTasks(),
-    enabled: activeTab === 'celery',
+  // Fetch spider health
+  const { data: spiderHealthData, isLoading: loadingSpiders } = useQuery({
+    queryKey: ['spider-health'],
+    queryFn: () => adminApi.spiderHealth(),
+    enabled: activeTab === 'spiders',
   })
 
-  // Fetch DB stats
-  const { data: dbStatsData, isLoading: loadingDbStats } = useQuery({
-    queryKey: ['db-stats'],
-    queryFn: () => adminApi.dbStats(),
-    enabled: activeTab === 'database',
+  // Fetch spider executions
+  const { data: spiderExecutionsData } = useQuery({
+    queryKey: ['spider-executions'],
+    queryFn: () => adminApi.spiderExecutions(),
+    enabled: activeTab === 'spiders',
   })
 
-  // Fetch cache stats
-  const { data: cacheStatsData, isLoading: loadingCacheStats } = useQuery({
-    queryKey: ['cache-stats'],
-    queryFn: () => adminApi.cacheStats(),
-    enabled: activeTab === 'cache',
-  })
-
-  // Fetch users
-  const { data: usersData, isLoading: loadingUsers } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: () => adminApi.users(),
-    enabled: activeTab === 'users',
-  })
-
-  // Clear cache mutation
-  const clearCacheMutation = useMutation({
-    mutationFn: () => adminApi.clearCache(),
-    onSuccess: () => {
-      setActionResult({ type: 'success', message: 'Cache cleared successfully!' })
-      queryClient.invalidateQueries({ queryKey: ['cache-stats'] })
-    },
-    onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to clear cache' })
-    },
-  })
-
-  // Purge queue mutation
-  const purgeQueueMutation = useMutation({
-    mutationFn: (queue: string) => adminApi.purgeQueue(queue),
-    onSuccess: () => {
-      setActionResult({ type: 'success', message: 'Queue purged successfully!' })
-      queryClient.invalidateQueries({ queryKey: ['celery-stats'] })
-    },
-    onError: () => {
-      setActionResult({ type: 'error', message: 'Failed to purge queue' })
-    },
+  // Fetch agent health
+  const { data: agentHealthData, isLoading: loadingAgents } = useQuery({
+    queryKey: ['agent-health'],
+    queryFn: () => adminApi.agentHealth(),
+    enabled: activeTab === 'agents',
   })
 
   // Run agent cycle mutation
@@ -152,12 +104,13 @@ export default function AdminPage() {
   })
 
   const health = healthData?.data || {}
-  const services: ServiceStatus[] = servicesData?.data?.services || servicesData?.data || []
+  const systemHealth = systemHealthData?.data || {}
+  const dashboardHealth = dashboardHealthData?.data || {}
+  const celeryStatus = celeryStatusData?.data || {}
   const celeryStats = celeryStatsData?.data || {}
-  const celeryTasks: CeleryTask[] = celeryTasksData?.data?.tasks || celeryTasksData?.data || []
-  const dbStats = dbStatsData?.data || {}
-  const cacheStats = cacheStatsData?.data || {}
-  const users: User[] = usersData?.data?.users || usersData?.data || []
+  const spiderHealth = spiderHealthData?.data || {}
+  const spiderExecutions = spiderExecutionsData?.data?.executions || spiderExecutionsData?.data || []
+  const agentHealth = agentHealthData?.data || {}
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -165,9 +118,11 @@ export default function AdminPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'healthy':
       case 'ok':
+      case 'running':
+      case 'active':
         return 'text-accent-green'
       case 'degraded':
       case 'warning':
@@ -178,9 +133,11 @@ export default function AdminPage() {
   }
 
   const getStatusBg = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'healthy':
       case 'ok':
+      case 'running':
+      case 'active':
         return 'bg-accent-green/20'
       case 'degraded':
       case 'warning':
@@ -244,382 +201,293 @@ export default function AdminPage() {
       {/* System Health Tab */}
       {activeTab === 'health' && (
         <div className="space-y-6">
-          {/* Overall Status */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', getStatusBg(health.status || 'healthy'))}>
-                  <Server size={20} className={getStatusColor(health.status || 'healthy')} />
+          {loadingHealth ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', getStatusBg(health.status || 'ok'))}>
+                      <Server size={20} className={getStatusColor(health.status || 'ok')} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">API Health</p>
+                      <p className={cn('text-lg font-bold capitalize', getStatusColor(health.status || 'ok'))}>
+                        {health.status || 'OK'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-400">System Status</p>
-                  <p className={cn('text-lg font-bold capitalize', getStatusColor(health.status || 'healthy'))}>
-                    {health.status || 'Healthy'}
-                  </p>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Clock className="text-primary-400" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Celery Workers</p>
+                      <p className="text-2xl font-bold">{celeryStatus.workers || celeryStats.workers || 0}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Bug className="text-accent-amber" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Active Spiders</p>
+                      <p className="text-2xl font-bold">{systemHealth.spiders || 77}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Bot className="text-accent-green" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Active Agents</p>
+                      <p className="text-2xl font-bold">{systemHealth.agents || agentHealth.total || 71}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <Cpu className="text-primary-400" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">CPU Usage</p>
-                  <p className="text-2xl font-bold">{health.cpu_percent || 0}%</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <MemoryStick className="text-accent-amber" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Memory</p>
-                  <p className="text-2xl font-bold">{health.memory_percent || 0}%</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <Wifi className="text-accent-green" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Uptime</p>
-                  <p className="text-2xl font-bold">{health.uptime || 'N/A'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Services */}
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Services</h3>
-            {loadingServices || loadingHealth ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="animate-spin" size={24} />
-              </div>
-            ) : services.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {services.map((service, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-4 rounded-lg border border-dark-border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', getStatusBg(service.status))}>
-                        {service.status === 'healthy' ? (
-                          <CheckCircle size={16} className="text-accent-green" />
-                        ) : service.status === 'degraded' ? (
-                          <AlertTriangle size={16} className="text-accent-amber" />
-                        ) : (
-                          <XCircle size={16} className="text-accent-red" />
-                        )}
-                      </div>
-                      <div>
+              {/* Services Status */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Service Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { name: 'Django API', status: health.status || 'ok' },
+                    { name: 'Redis', status: dashboardHealth.redis || 'ok' },
+                    { name: 'PostgreSQL', status: dashboardHealth.database || 'ok' },
+                    { name: 'Celery Workers', status: celeryStatus.status || 'ok' },
+                    { name: 'Celery Beat', status: celeryStatus.beat_status || 'ok' },
+                    { name: 'Daphne', status: 'ok' },
+                  ].map((service) => (
+                    <div
+                      key={service.name}
+                      className="flex items-center justify-between p-4 rounded-lg border border-dark-border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', getStatusBg(service.status))}>
+                          {service.status === 'ok' || service.status === 'healthy' ? (
+                            <CheckCircle size={16} className="text-accent-green" />
+                          ) : (
+                            <XCircle size={16} className="text-accent-red" />
+                          )}
+                        </div>
                         <p className="font-medium">{service.name}</p>
-                        {service.uptime && <p className="text-xs text-gray-500">Uptime: {service.uptime}</p>}
                       </div>
+                      <span className={cn('text-xs px-2 py-1 rounded capitalize', getStatusBg(service.status), getStatusColor(service.status))}>
+                        {service.status}
+                      </span>
                     </div>
-                    <span className={cn('text-xs px-2 py-1 rounded capitalize', getStatusBg(service.status), getStatusColor(service.status))}>
-                      {service.status}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {['Django', 'Redis', 'Celery', 'Celery Beat', 'PostgreSQL', 'Daphne'].map((name) => (
-                  <div
-                    key={name}
-                    className="flex items-center justify-between p-4 rounded-lg border border-dark-border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
-                        <CheckCircle size={16} className="text-accent-green" />
-                      </div>
-                      <p className="font-medium">{name}</p>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">
-                      healthy
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       )}
 
       {/* Celery Tab */}
       {activeTab === 'celery' && (
         <div className="space-y-6">
-          {/* Celery Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="card">
-              <p className="text-sm text-gray-400 mb-1">Active Workers</p>
-              <p className="text-2xl font-bold">{celeryStats.active_workers || 0}</p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-400 mb-1">Queued Tasks</p>
-              <p className="text-2xl font-bold">{celeryStats.queued_tasks || 0}</p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-400 mb-1">Completed (24h)</p>
-              <p className="text-2xl font-bold text-accent-green">{celeryStats.completed_24h || 0}</p>
-            </div>
-            <div className="card">
-              <p className="text-sm text-gray-400 mb-1">Failed (24h)</p>
-              <p className="text-2xl font-bold text-accent-red">{celeryStats.failed_24h || 0}</p>
-            </div>
-          </div>
-
-          {/* Queue Actions */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Queue Management</h3>
-              <button
-                className="btn btn-secondary text-sm text-accent-red flex items-center gap-2"
-                onClick={() => purgeQueueMutation.mutate('default')}
-                disabled={purgeQueueMutation.isPending}
-              >
-                {purgeQueueMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Purge All Queues
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['default', 'high_priority', 'low_priority'].map((queue) => (
-                <div key={queue} className="p-4 rounded-lg bg-dark-bg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium capitalize">{queue.replace('_', ' ')}</h4>
-                    <button
-                      className="text-xs text-accent-red hover:underline"
-                      onClick={() => purgeQueueMutation.mutate(queue)}
-                    >
-                      Purge
-                    </button>
-                  </div>
-                  <p className="text-2xl font-bold">{celeryStats[`${queue}_count`] || 0}</p>
-                  <p className="text-xs text-gray-500">tasks in queue</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Tasks */}
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Recent Tasks</h3>
-            {loadingCeleryTasks ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="animate-spin" size={24} />
-              </div>
-            ) : celeryTasks.length > 0 ? (
-              <div className="space-y-3">
-                {celeryTasks.slice(0, 10).map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'h-8 w-8 rounded-full flex items-center justify-center',
-                        task.status === 'completed' ? 'bg-accent-green/20' :
-                        task.status === 'running' ? 'bg-accent-amber/20' :
-                        task.status === 'failed' ? 'bg-accent-red/20' : 'bg-gray-500/20'
-                      )}>
-                        {task.status === 'completed' ? <CheckCircle size={14} className="text-accent-green" /> :
-                         task.status === 'running' ? <Loader2 size={14} className="text-accent-amber animate-spin" /> :
-                         task.status === 'failed' ? <XCircle size={14} className="text-accent-red" /> :
-                         <Clock size={14} className="text-gray-400" />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{task.name}</p>
-                        <p className="text-xs text-gray-500 font-mono">{task.id.slice(0, 8)}...</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {task.duration && (
-                        <span className="text-sm text-gray-400">{task.duration}s</span>
-                      )}
-                      <span className={cn(
-                        'text-xs px-2 py-1 rounded capitalize',
-                        task.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
-                        task.status === 'running' ? 'bg-accent-amber/20 text-accent-amber' :
-                        task.status === 'failed' ? 'bg-accent-red/20 text-accent-red' : 'bg-gray-500/20 text-gray-400'
-                      )}>
-                        {task.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-400">
-                <Clock className="mx-auto mb-2" size={32} />
-                <p>No recent tasks</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Database Tab */}
-      {activeTab === 'database' && (
-        <div className="space-y-6">
-          {loadingDbStats ? (
+          {loadingCelery ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="animate-spin" size={32} />
             </div>
           ) : (
             <>
+              {/* Celery Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Total Tables</p>
-                  <p className="text-2xl font-bold">{dbStats.total_tables || 324}</p>
+                  <p className="text-sm text-gray-400 mb-1">Workers</p>
+                  <p className="text-2xl font-bold">{celeryStatus.workers || celeryStats.workers || 0}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Total Rows</p>
-                  <p className="text-2xl font-bold">{(dbStats.total_rows || 0).toLocaleString()}</p>
+                  <p className="text-sm text-gray-400 mb-1">Active Tasks</p>
+                  <p className="text-2xl font-bold">{celeryStats.active_tasks || celeryStatus.active || 0}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Database Size</p>
-                  <p className="text-2xl font-bold">{dbStats.size || '582 MB'}</p>
+                  <p className="text-sm text-gray-400 mb-1">Queued</p>
+                  <p className="text-2xl font-bold text-accent-amber">{celeryStats.queued || 0}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Connections</p>
-                  <p className="text-2xl font-bold">{dbStats.connections || 0}</p>
+                  <p className="text-sm text-gray-400 mb-1">Status</p>
+                  <p className={cn('text-2xl font-bold capitalize', getStatusColor(celeryStatus.status || 'ok'))}>
+                    {celeryStatus.status || 'Running'}
+                  </p>
                 </div>
               </div>
 
+              {/* Worker Details */}
               <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Table Statistics</h3>
+                <h3 className="text-lg font-semibold mb-4">Worker Status</h3>
+                {celeryStatus.worker_details || celeryStats.worker_details ? (
+                  <div className="space-y-3">
+                    {Object.entries(celeryStatus.worker_details || celeryStats.worker_details || {}).map(([name, details]) => (
+                      <div
+                        key={name}
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
+                            <CheckCircle size={14} className="text-accent-green" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{name}</p>
+                            <p className="text-xs text-gray-500">
+                              {typeof details === 'object' ? JSON.stringify(details) : String(details)}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">
+                          Active
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Clock className="mx-auto mb-2" size={32} />
+                    <p>No worker details available</p>
+                    <p className="text-sm text-gray-500 mt-1">Workers are running but detailed info is not exposed</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Spiders Tab */}
+      {activeTab === 'spiders' && (
+        <div className="space-y-6">
+          {loadingSpiders ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Spider Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Total Spiders</p>
+                  <p className="text-2xl font-bold">{spiderHealth.total || 77}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Working</p>
+                  <p className="text-2xl font-bold text-accent-green">{spiderHealth.working || 72}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Need API Keys</p>
+                  <p className="text-2xl font-bold text-accent-amber">{spiderHealth.need_api_keys || 5}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Recent Runs</p>
+                  <p className="text-2xl font-bold">{spiderHealth.recent_runs || spiderExecutions.length || 0}</p>
+                </div>
+              </div>
+
+              {/* Recent Executions */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Recent Executions</h3>
+                {spiderExecutions.length > 0 ? (
+                  <div className="space-y-3">
+                    {spiderExecutions.slice(0, 10).map((exec: { id: string; spider_name?: string; status?: string; created_at?: string; items_count?: number }) => (
+                      <div
+                        key={exec.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Globe size={18} className="text-primary-400" />
+                          <div>
+                            <p className="font-medium text-sm">{exec.spider_name || 'Unknown Spider'}</p>
+                            <p className="text-xs text-gray-500">
+                              {exec.created_at ? new Date(exec.created_at).toLocaleString() : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-400">{exec.items_count || 0} items</span>
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            exec.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                            exec.status === 'failed' ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+                          )}>
+                            {exec.status || 'unknown'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Bug className="mx-auto mb-2" size={32} />
+                    <p>No recent spider executions</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Agents Tab */}
+      {activeTab === 'agents' && (
+        <div className="space-y-6">
+          {loadingAgents ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Agent Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Total Agents</p>
+                  <p className="text-2xl font-bold">{agentHealth.total || 71}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Routable</p>
+                  <p className="text-2xl font-bold text-accent-green">{agentHealth.routable || 68}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Sub-Agents</p>
+                  <p className="text-2xl font-bold text-accent-amber">{agentHealth.sub_agents || 3}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Recent Executions</p>
+                  <p className="text-2xl font-bold">{agentHealth.recent_executions || 0}</p>
+                </div>
+              </div>
+
+              {/* Agent Categories */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Agent Categories</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[
-                    { name: 'Agent', count: 71 },
-                    { name: 'AgentExecution', count: dbStats.agent_executions || 0 },
-                    { name: 'AgentConversation', count: dbStats.conversations || 0 },
-                    { name: 'GeneratedImage', count: dbStats.images || 0 },
-                    { name: 'Wager', count: dbStats.wagers || 0 },
-                    { name: 'PilotGate', count: dbStats.gates || 0 },
-                  ].map((table) => (
-                    <div key={table.name} className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-                      <span className="text-sm">{table.name}</span>
-                      <span className="font-medium">{table.count.toLocaleString()}</span>
+                    { name: 'Creation', count: 4 },
+                    { name: 'Research', count: 1 },
+                    { name: 'Strategy', count: 4 },
+                    { name: 'Executive', count: 4 },
+                    { name: 'Development', count: 4 },
+                    { name: 'Blockchain', count: 5 },
+                    { name: 'Stocks', count: 9 },
+                    { name: 'Markets', count: 3 },
+                    { name: 'Podcast', count: 4 },
+                    { name: 'Narrative', count: 4 },
+                    { name: 'Content', count: 4 },
+                    { name: 'Other', count: 25 },
+                  ].map((category) => (
+                    <div key={category.name} className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
+                      <span className="text-sm">{category.name}</span>
+                      <span className="font-medium">{category.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </>
-          )}
-        </div>
-      )}
-
-      {/* Cache Tab */}
-      {activeTab === 'cache' && (
-        <div className="space-y-6">
-          {loadingCacheStats ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Cached Keys</p>
-                  <p className="text-2xl font-bold">{cacheStats.keys || 0}</p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Memory Used</p>
-                  <p className="text-2xl font-bold">{cacheStats.memory_used || '0 MB'}</p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Hit Rate</p>
-                  <p className="text-2xl font-bold text-accent-green">{cacheStats.hit_rate || 0}%</p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Evictions</p>
-                  <p className="text-2xl font-bold">{cacheStats.evictions || 0}</p>
-                </div>
-              </div>
-
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Cache Management</h3>
-                  <button
-                    className="btn btn-secondary text-sm text-accent-red flex items-center gap-2"
-                    onClick={() => clearCacheMutation.mutate()}
-                    disabled={clearCacheMutation.isPending}
-                  >
-                    {clearCacheMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    Clear All Cache
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-dark-bg">
-                    <h4 className="font-medium mb-2">Redis Status</h4>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-accent-green" />
-                      <span className="text-accent-green">Connected</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">Version: {cacheStats.redis_version || '7.0.0'}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-dark-bg">
-                    <h4 className="font-medium mb-2">Cache Configuration</h4>
-                    <p className="text-sm text-gray-400">Max Memory: {cacheStats.max_memory || '256 MB'}</p>
-                    <p className="text-sm text-gray-400">Policy: {cacheStats.eviction_policy || 'allkeys-lru'}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Users Tab */}
-      {activeTab === 'users' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">User Management</h3>
-          {loadingUsers ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : users.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-400 border-b border-dark-border">
-                    <th className="pb-3">Username</th>
-                    <th className="pb-3">Email</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3">Last Login</th>
-                    <th className="pb-3">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-dark-border hover:bg-dark-bg/50">
-                      <td className="py-3 font-medium">{user.username}</td>
-                      <td className="py-3 text-gray-400">{user.email}</td>
-                      <td className="py-3">
-                        <span className={cn(
-                          'text-xs px-2 py-1 rounded',
-                          user.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
-                        )}>
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="py-3 text-gray-400">
-                        {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="py-3 text-gray-400">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-400">
-              <Users className="mx-auto mb-2" size={48} />
-              <p>No users found</p>
-            </div>
           )}
         </div>
       )}

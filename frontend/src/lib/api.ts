@@ -285,105 +285,107 @@ export const userLearningApi = {
 }
 
 export const legalApi = {
-  // Documents
-  documents: () => api.get('/legal/documents/'),
-  documentDetail: (docId: string) => api.get(`/legal/documents/${docId}/`),
+  // Documents (case files)
+  documents: () => api.get('/legal/case-files/'),
+  documentDetail: (docId: string) => api.get(`/legal/case-files/${docId}/`),
   uploadDocument: (formData: FormData) =>
-    api.post('/legal/documents/upload/', formData, {
+    api.post('/legal/case-files/upload/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-  analyzeDocument: (docId: string) => api.post(`/legal/documents/${docId}/analyze/`),
+  analyzeDocument: (docId: string) => api.post(`/legal/case-files/${docId}/analyze/`),
+  deleteDocument: (docId: string) => api.delete(`/legal/case-files/${docId}/delete/`),
 
   // Cases
   cases: () => api.get('/legal/cases/'),
   caseDetail: (caseId: string) => api.get(`/legal/cases/${caseId}/`),
-  createCase: (data: { title: string; description: string; case_type: string }) =>
-    api.post('/legal/cases/', data),
+  caseContext: (caseId: string) => api.get(`/legal/cases/${caseId}/context/`),
+  activeCase: () => api.get('/legal/active-case/'),
 
-  // Research
-  research: (query: string) => api.post('/legal/research/', { query }),
-  researchHistory: () => api.get('/legal/research/history/'),
+  // Litigation
+  litigationDocuments: (caseId: string) => api.get(`/legal/litigation/${caseId}/documents/`),
+  uploadLitigationDoc: (caseId: string, formData: FormData) =>
+    api.post(`/legal/litigation/${caseId}/documents/upload/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  knowledgeGraph: (caseId: string) => api.get(`/legal/litigation/${caseId}/knowledge-graph/`),
+  generateResponse: (docId: string) => api.post(`/legal/litigation/${docId}/generate-response/`),
+  listResponses: (caseId: string) => api.get(`/legal/litigation/${caseId}/responses/`),
 
-  // Templates
-  templates: () => api.get('/legal/templates/'),
-  generateDocument: (templateId: string, data: Record<string, unknown>) =>
-    api.post(`/legal/templates/${templateId}/generate/`, data),
-
-  // Stats
-  stats: () => api.get('/legal/stats/'),
+  // Export
+  exportSection: (data: { section: string; format: string }) => api.post('/legal/export-section/', data),
 }
 
 export const podcastApi = {
-  // Shows
-  shows: () => api.get('/podcast/shows/'),
-  showDetail: (showId: string) => api.get(`/podcast/shows/${showId}/`),
-  createShow: (data: { name: string; description: string }) =>
-    api.post('/podcast/shows/', data),
+  // Episodes list
+  list: () => api.get('/podcasts/list/'),
+  create: (data: { topic: string; style?: string }) => api.post('/podcasts/create/', data),
 
-  // Episodes
-  episodes: (showId?: string) => api.get(showId ? `/podcast/shows/${showId}/episodes/` : '/podcast/episodes/'),
-  episodeDetail: (episodeId: string) => api.get(`/podcast/episodes/${episodeId}/`),
-  createEpisode: (showId: string, data: { title: string; description: string }) =>
-    api.post(`/podcast/shows/${showId}/episodes/`, data),
+  // Episode details
+  status: (episodeId: string) => api.get(`/podcasts/${episodeId}/status/`),
+  script: (episodeId: string) => api.get(`/podcasts/${episodeId}/script/`),
+  delete: (episodeId: string) => api.delete(`/podcasts/${episodeId}/`),
 
   // Generation
   generateScript: (topic: string, style?: string) =>
-    api.post('/podcast/generate/script/', { topic, style }),
-  generateAudio: (episodeId: string) => api.post(`/podcast/episodes/${episodeId}/generate-audio/`),
-
-  // Debates
-  debates: () => api.get('/podcast/debates/'),
-  createDebate: (topic: string) => api.post('/podcast/debates/', { topic }),
+    api.post('/v1/content/podcast/generate/', { topic, style }),
 
   // Stats
-  stats: () => api.get('/podcast/stats/'),
+  stats: () => api.get('/podcasts/stats/'),
+
+  // V1 podcasts list
+  v1List: () => api.get('/v1/podcasts/'),
 }
 
 export const portfolioApi = {
-  // Overview
-  overview: () => api.get('/distribution/overview/'),
-  revenue: () => api.get('/distribution/revenue/'),
-  revenueByChannel: () => api.get('/distribution/revenue/by-channel/'),
+  // Platforms
+  platforms: () => api.get('/distribution/platforms/'),
+  platformDetail: (platformId: string) => api.get(`/distribution/platforms/${platformId}/`),
+  createPlatform: (data: Record<string, unknown>) => api.post('/distribution/platforms/create/', data),
 
-  // Channels
-  channels: () => api.get('/distribution/channels/'),
-  channelDetail: (channelId: string) => api.get(`/distribution/channels/${channelId}/`),
+  // Accounts
+  accounts: () => api.get('/distribution/accounts/'),
+  connectPlatform: (data: Record<string, unknown>) => api.post('/distribution/accounts/connect/', data),
 
-  // Content Performance
-  performance: () => api.get('/distribution/performance/'),
-  topContent: () => api.get('/distribution/top-content/'),
+  // Content
+  content: () => api.get('/distribution/content/'),
+  createContent: (data: Record<string, unknown>) => api.post('/distribution/content/create/', data),
+  submitContent: (distId: string) => api.post(`/distribution/content/${distId}/submit/`),
+  publishContent: (distId: string) => api.post(`/distribution/content/${distId}/publish/`),
 
-  // Analytics
-  analytics: () => api.get('/distribution/analytics/'),
-  trends: () => api.get('/distribution/trends/'),
+  // Stats & Analytics
+  stats: () => api.get('/distribution/stats/'),
+  platformAnalytics: (platformId: string) => api.get(`/distribution/analytics/${platformId}/`),
+  recommendations: () => api.get('/distribution/recommendations/'),
 
-  // Export
-  exportRevenue: (format: 'json' | 'csv') =>
-    api.get(`/distribution/revenue/export/?format=${format}`),
+  // Revenue
+  revenueDashboard: () => api.get('/distribution/revenue/dashboard/'),
+  platformRevenue: (platformName: string) => api.get(`/distribution/revenue/platform/${platformName}/`),
+  comparePlatforms: () => api.get('/distribution/revenue/compare/'),
+
+  // Integrations
+  integrations: () => api.get('/distribution/integrations/'),
 }
 
 export const adminApi = {
   // System Health
-  systemHealth: () => api.get('/v1/health/'),
-  services: () => api.get('/v1/admin/services/'),
+  health: () => api.get('/v1/health/'),
+  systemHealth: () => api.get('/system-health/'),
+  iccHealth: () => api.get('/icc/health/'),
+  dashboardHealth: () => api.get('/dashboard/health/'),
 
   // Celery
-  celeryStats: () => api.get('/v1/admin/celery/stats/'),
-  celeryTasks: () => api.get('/v1/admin/celery/tasks/'),
-  purgeQueue: (queue: string) => api.post('/v1/admin/celery/purge/', { queue }),
+  celeryStatus: () => api.get('/celery/status/'),
+  celeryStats: () => api.get('/celery/stats/'),
 
-  // Database
-  dbStats: () => api.get('/v1/admin/db/stats/'),
+  // Monitoring
+  monitoringHealth: () => api.get('/monitoring/health/'),
+  monitoringSchedules: () => api.get('/monitoring/schedules/'),
 
-  // Logs
-  logs: (level?: string, limit?: number) =>
-    api.get(`/v1/admin/logs/?level=${level || 'all'}&limit=${limit || 100}`),
+  // Spider Health
+  spiderHealth: () => api.get('/spider-health/summary/'),
+  spiderExecutions: () => api.get('/spider-health/executions/'),
+  runSpider: (spiderName: string) => api.post(`/spider-health/run/${spiderName}/`),
 
-  // Cache
-  cacheStats: () => api.get('/v1/admin/cache/stats/'),
-  clearCache: () => api.post('/v1/admin/cache/clear/'),
-
-  // Users
-  users: () => api.get('/v1/admin/users/'),
-  userDetail: (userId: string) => api.get(`/v1/admin/users/${userId}/`),
+  // Agent Health
+  agentHealth: () => api.get('/v1/agents/health/'),
 }
