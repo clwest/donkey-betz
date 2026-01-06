@@ -119,7 +119,9 @@ export default function AgentsPage() {
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
     // Session 688: Filter out connection messages - only show real agent activity
-    if (update.type === 'connection_established' || update.type === 'pong') {
+    // Cast to string for runtime check since WebSocket may send types not in the union
+    const msgType = update.type as string
+    if (msgType === 'connection_established' || msgType === 'pong') {
       return
     }
     setRealtimeUpdates((prev) => [update, ...prev].slice(0, 50))
@@ -127,7 +129,9 @@ export default function AgentsPage() {
 
   const { status: learningWsStatus } = useLearningFeed((event) => {
     // Session 688: Filter out connection messages - only show real learning events
-    if (event.type === 'connection_established' || event.type === 'pong') {
+    // Cast to string for runtime check since WebSocket may send types not in the union
+    const msgType = event.type as string
+    if (msgType === 'connection_established' || msgType === 'pong') {
       return
     }
     setLearningEvents((prev) => [event, ...prev].slice(0, 50))

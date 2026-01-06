@@ -154,6 +154,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/intelligence/predictions/',  # AI predictions
         '/api/pilots/',  # Pilots dashboard and list
         '/api/experiments/',  # Experiments list
+        '/api/opportunities/',  # Session 688: Opportunities list and detail
 
         # Session 688: Betting Page APIs (read-only for React frontend)
         '/api/v1/betting/stats/',  # Betting statistics

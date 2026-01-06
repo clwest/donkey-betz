@@ -450,6 +450,64 @@ def opportunity_act(request, opportunity_id):
         }, status=500)
 
 
+# Session 688: Dismiss opportunity endpoint
+@csrf_exempt
+@require_http_methods(["POST"])
+def opportunity_dismiss(request, opportunity_id):
+    """
+    POST /api/opportunities/<id>/dismiss/
+    Dismiss an opportunity (mark as dismissed/not interested).
+
+    Request body:
+        - reason: Why dismissed (optional)
+    """
+    try:
+        from core.models_unified_system import Opportunity, OpportunityAction
+
+        opportunity = Opportunity.objects.get(id=opportunity_id)
+
+        # Parse request body
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            data = {}
+
+        reason = data.get('reason', 'Dismissed from UI')
+
+        # Update opportunity status
+        opportunity.status = 'dismissed'
+        opportunity.save()
+
+        # Create action record
+        user = request.user if request.user.is_authenticated else None
+        if user:
+            OpportunityAction.objects.create(
+                opportunity=opportunity,
+                user=user,
+                action_type='dismissed',
+                notes=reason,
+            )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Opportunity dismissed: {opportunity.title}',
+            'opportunity_id': str(opportunity.id),
+            'status': opportunity.status,
+        })
+
+    except Opportunity.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Opportunity not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error dismissing opportunity: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def opportunity_top(request):

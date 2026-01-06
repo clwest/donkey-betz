@@ -567,6 +567,7 @@ from core.views_opportunity import (
     opportunity_detail,
     opportunity_score,
     opportunity_act,
+    opportunity_dismiss,  # Session 688
     opportunity_top,
     opportunity_rescore,
     opportunity_analyze,
@@ -1501,6 +1502,7 @@ urlpatterns = [
     path('api/opportunities/analyze/', opportunity_analyze, name='opportunity-analyze'),
     path('api/opportunities/<uuid:opportunity_id>/', opportunity_detail, name='opportunity-detail'),
     path('api/opportunities/<uuid:opportunity_id>/act/', opportunity_act, name='opportunity-act'),
+    path('api/opportunities/<uuid:opportunity_id>/dismiss/', opportunity_dismiss, name='opportunity-dismiss'),  # Session 688
     path('api/opportunities/<uuid:opportunity_id>/rescore/', opportunity_rescore, name='opportunity-rescore'),
 
     # Session 224: Revenue Reality API (Phase 2 - Creative Intelligence Empire)

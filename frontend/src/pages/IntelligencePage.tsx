@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, agentsApi } from '@/lib/api'
+import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, agentsApi, opportunitiesApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, Eye, ChevronRight, Loader2, Activity,
-  BookOpen, Target, BarChart3, Globe, Bot, Sparkles
+  BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
+  Rocket, Ban, DollarSign, Clock, Users, Wrench
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -112,6 +113,8 @@ export default function IntelligencePage() {
   const [activeTab, setActiveTab] = useState<TabType>('gates')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [selectedGate, setSelectedGate] = useState<string | null>(null)
+  // Session 688: Opportunity modal state
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Core queries
@@ -123,6 +126,13 @@ export default function IntelligencePage() {
   const { data: opportunitiesData } = useQuery({
     queryKey: ['intelligence-opportunities'],
     queryFn: () => intelligenceApi.opportunities(),
+  })
+
+  // Session 688: Fetch opportunity detail when selected
+  const { data: opportunityDetailData, isLoading: loadingOpportunityDetail } = useQuery({
+    queryKey: ['opportunity-detail', selectedOpportunityId],
+    queryFn: () => opportunitiesApi.detail(selectedOpportunityId!),
+    enabled: !!selectedOpportunityId,
   })
 
   // Tab-specific queries
@@ -216,6 +226,31 @@ export default function IntelligencePage() {
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to trigger KPI update' })
+    },
+  })
+
+  // Session 688: Opportunity action mutations
+  const actOnOpportunityMutation = useMutation({
+    mutationFn: (id: string) => opportunitiesApi.act(id),
+    onSuccess: () => {
+      setActionResult({ type: 'success', message: 'Started working on opportunity! Task created.' })
+      setSelectedOpportunityId(null)
+      queryClient.invalidateQueries({ queryKey: ['intelligence-opportunities'] })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to start opportunity task' })
+    },
+  })
+
+  const dismissOpportunityMutation = useMutation({
+    mutationFn: (id: string) => opportunitiesApi.dismiss(id, 'Dismissed from UI'),
+    onSuccess: () => {
+      setActionResult({ type: 'success', message: 'Opportunity dismissed' })
+      setSelectedOpportunityId(null)
+      queryClient.invalidateQueries({ queryKey: ['intelligence-opportunities'] })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to dismiss opportunity' })
     },
   })
 
@@ -963,7 +998,7 @@ export default function IntelligencePage() {
               <div
                 key={opp.id}
                 className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
-                onClick={() => setActionResult({ type: 'success', message: `Viewing opportunity: ${opp.title}` })}
+                onClick={() => setSelectedOpportunityId(opp.id)}
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{opp.title}</p>
@@ -975,6 +1010,226 @@ export default function IntelligencePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session 688: Opportunity Detail Modal */}
+      {selectedOpportunityId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-card rounded-lg border border-dark-border max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {(() => {
+              // Session 688: Extract opportunity from response
+              const opp = opportunityDetailData?.data?.opportunity
+
+              if (loadingOpportunityDetail) {
+                return (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="animate-spin" size={32} />
+                  </div>
+                )
+              }
+
+              if (!opp) {
+                return (
+                  <div className="p-6 text-center text-gray-400">
+                    <AlertTriangle className="mx-auto mb-2" size={32} />
+                    <p>Failed to load opportunity details</p>
+                    <button
+                      onClick={() => setSelectedOpportunityId(null)}
+                      className="btn btn-secondary mt-4"
+                    >
+                      Close
+                    </button>
+                  </div>
+                )
+              }
+
+              return (
+              <>
+                {/* Modal Header */}
+                <div className="flex items-start justify-between p-6 border-b border-dark-border">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-xl font-bold">{opp.title}</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                        {opp.category || 'General'}
+                      </span>
+                      <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">
+                        {opp.source_type || 'System'}
+                      </span>
+                      <span className={cn(
+                        'text-xs px-2 py-1 rounded',
+                        opp.status === 'active' ? 'bg-accent-green/20 text-accent-green' :
+                        opp.status === 'acted_on' ? 'bg-accent-amber/20 text-accent-amber' :
+                        'bg-gray-500/20 text-gray-400'
+                      )}>
+                        {opp.status || 'active'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedOpportunityId(null)}
+                    className="p-2 hover:bg-dark-bg rounded-lg transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-6">
+                  {/* Description */}
+                  <div>
+                    <p className="text-gray-300">{opp.description}</p>
+                  </div>
+
+                  {/* Score Breakdown */}
+                  <div className="bg-dark-bg rounded-lg p-4">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
+                      <Target size={18} className="text-primary-400" />
+                      Score Breakdown
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-400 flex items-center gap-1">
+                              <DollarSign size={14} /> Profit Potential (35%)
+                            </span>
+                            <span className="text-sm font-medium">{opp.scores?.profit_potential || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                            <div className="h-full bg-accent-green rounded-full" style={{ width: `${opp.scores?.profit_potential || 0}%` }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-400 flex items-center gap-1">
+                              <Users size={14} /> Competition (35%)
+                            </span>
+                            <span className="text-sm font-medium">{opp.scores?.competition_level || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                            <div className="h-full bg-accent-amber rounded-full" style={{ width: `${opp.scores?.competition_level || 0}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-400 flex items-center gap-1">
+                              <Wrench size={14} /> Effort Required (20%)
+                            </span>
+                            <span className="text-sm font-medium">{opp.scores?.effort_required || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                            <div className="h-full bg-accent-cyan rounded-full" style={{ width: `${opp.scores?.effort_required || 0}%` }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-400 flex items-center gap-1">
+                              <Clock size={14} /> Time Sensitivity (10%)
+                            </span>
+                            <span className="text-sm font-medium">{opp.scores?.time_sensitivity || 0}%</span>
+                          </div>
+                          <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                            <div className="h-full bg-primary-500 rounded-full" style={{ width: `${opp.scores?.time_sensitivity || 0}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-dark-border flex items-center justify-between">
+                      <span className="text-lg font-semibold">Overall Score</span>
+                      <span className={cn(
+                        'text-2xl font-bold',
+                        (opp.scores?.overall_score || 0) >= 70 ? 'text-accent-green' :
+                        (opp.scores?.overall_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {opp.scores?.overall_score || 0}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Keywords */}
+                  {opp.keywords && opp.keywords.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Keywords</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {opp.keywords.map((kw: string, idx: number) => (
+                          <span key={idx} className="text-xs px-2 py-1 rounded-full bg-dark-bg text-gray-400 border border-dark-border">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source URL */}
+                  {opp.url && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Source</h4>
+                      <a
+                        href={opp.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors"
+                      >
+                        <ExternalLink size={16} />
+                        View Source
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Created At */}
+                  <div className="text-sm text-gray-500">
+                    Discovered: {new Date(opp.created_at).toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Modal Footer - Action Buttons */}
+                <div className="flex items-center justify-between p-6 border-t border-dark-border bg-dark-bg/50">
+                  <button
+                    onClick={() => dismissOpportunityMutation.mutate(selectedOpportunityId)}
+                    disabled={dismissOpportunityMutation.isPending}
+                    className="btn btn-secondary text-accent-red flex items-center gap-2"
+                  >
+                    {dismissOpportunityMutation.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Ban size={16} />
+                    )}
+                    Dismiss
+                  </button>
+                  <div className="flex items-center gap-3">
+                    {opp.url && (
+                      <a
+                        href={opp.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-secondary flex items-center gap-2"
+                      >
+                        <ExternalLink size={16} />
+                        View Source
+                      </a>
+                    )}
+                    <button
+                      onClick={() => actOnOpportunityMutation.mutate(selectedOpportunityId)}
+                      disabled={actOnOpportunityMutation.isPending || opp.status === 'acted_on' || opp.status === 'creating'}
+                      className="btn btn-primary flex items-center gap-2"
+                    >
+                      {actOnOpportunityMutation.isPending ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Rocket size={16} />
+                      )}
+                      {opp.status === 'acted_on' || opp.status === 'creating' ? 'Already Started' : 'Start Task'}
+                    </button>
+                  </div>
+                </div>
+              </>
+              )
+            })()}
           </div>
         </div>
       )}
