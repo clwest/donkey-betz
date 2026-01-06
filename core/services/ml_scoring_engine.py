@@ -1,17 +1,21 @@
 """
-ML Scoring Engine - XGBoost + SHAP Explainability
-==================================================
+ML Scoring Engine - LightGBM/XGBoost + SHAP Explainability
+==========================================================
 
 Session 470: Market Intelligence Architecture Implementation
+Session 670: Phase 2 - 24 features with embedding, temporal, text quality
+Session 670: Phase 3 - LightGBM with Optuna hyperparameter optimization
+
 Policy: Hybrid rule + ML scoring with SHAP explainability
 
 This engine provides:
-1. Feature extraction from SpiderData
-2. XGBoost-based opportunity scoring
-3. SHAP explanations for each prediction
-4. Hybrid scoring: 60% ML + 40% rule-based
-5. Confidence calibration
-6. Model versioning and persistence
+1. Feature extraction from SpiderData (24 features)
+2. LightGBM or XGBoost-based opportunity scoring
+3. Optuna hyperparameter optimization
+4. SHAP explanations for each prediction
+5. Hybrid scoring: 60% ML + 40% rule-based
+6. Confidence calibration
+7. Model versioning and persistence
 
 Usage:
     from core.services.ml_scoring_engine import get_ml_scoring_engine
@@ -19,6 +23,9 @@ Usage:
     engine = get_ml_scoring_engine()
     result = engine.score_opportunity(spider_data)
     explanation = result.get_explanation()
+
+    # Train with hyperparameter optimization
+    engine.train_model_with_optimization(training_data, n_trials=50)
 """
 
 import logging
@@ -34,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 # Lazy imports for ML libraries (may not always be needed)
 _xgboost = None
+_lightgbm = None
+_optuna = None
 _shap = None
 _sklearn = None
 
@@ -44,6 +53,24 @@ def _get_xgboost():
         import xgboost as xgb
         _xgboost = xgb
     return _xgboost
+
+
+def _get_lightgbm():
+    global _lightgbm
+    if _lightgbm is None:
+        import lightgbm as lgb
+        _lightgbm = lgb
+    return _lightgbm
+
+
+def _get_optuna():
+    global _optuna
+    if _optuna is None:
+        import optuna
+        # Suppress Optuna logging
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+        _optuna = optuna
+    return _optuna
 
 
 def _get_shap():
@@ -60,6 +87,12 @@ def _get_sklearn():
         from sklearn import preprocessing, model_selection, metrics
         _sklearn = {'preprocessing': preprocessing, 'model_selection': model_selection, 'metrics': metrics}
     return _sklearn
+
+
+# Model type constants
+MODEL_TYPE_XGBOOST = 'xgboost'
+MODEL_TYPE_LIGHTGBM = 'lightgbm'
+DEFAULT_MODEL_TYPE = MODEL_TYPE_LIGHTGBM  # Session 670: LightGBM is now default
 
 
 # Feature definitions (Session 670: Expanded to 24 features)
@@ -232,8 +265,11 @@ class MLScoringEngine:
     """
     ML-based opportunity scoring engine with SHAP explainability.
 
+    Session 670: Now supports LightGBM (default) and XGBoost backends
+    with Optuna hyperparameter optimization.
+
     Provides hybrid scoring combining:
-    - XGBoost ML predictions (60% weight)
+    - LightGBM/XGBoost ML predictions (60% weight)
     - Rule-based heuristics (40% weight)
     - SHAP explanations for transparency
     """
@@ -245,13 +281,20 @@ class MLScoringEngine:
     ML_WEIGHT = 0.6
     RULE_WEIGHT = 0.4
 
-    def __init__(self):
-        """Initialize the ML scoring engine."""
+    def __init__(self, model_type: str = None):
+        """
+        Initialize the ML scoring engine.
+
+        Args:
+            model_type: 'lightgbm' or 'xgboost'. Defaults to LightGBM.
+        """
         self.model = None
         self.model_version = "v1.0"
+        self.model_type = model_type or DEFAULT_MODEL_TYPE
         self.explainer = None
         self._feature_scaler = None
         self._is_trained = False
+        self._best_params = None  # Store optimized hyperparameters
 
         # Try to load existing model
         self._load_model()
@@ -275,13 +318,15 @@ class MLScoringEngine:
                 self.model = saved_data['model']
                 self._feature_scaler = saved_data.get('scaler')
                 self.model_version = saved_data.get('version', 'v1.0')
+                self.model_type = saved_data.get('model_type', MODEL_TYPE_XGBOOST)
+                self._best_params = saved_data.get('best_params')
                 self._is_trained = True
 
-                # Create SHAP explainer
+                # Create SHAP explainer (works for both XGBoost and LightGBM)
                 shap = _get_shap()
                 self.explainer = shap.TreeExplainer(self.model)
 
-                logger.info(f"Loaded ML model {self.model_version} from {model_path}")
+                logger.info(f"Loaded ML model {self.model_version} ({self.model_type}) from {model_path}")
                 return True
             except Exception as e:
                 logger.warning(f"Failed to load model: {e}")
@@ -302,10 +347,12 @@ class MLScoringEngine:
                 'model': self.model,
                 'scaler': self._feature_scaler,
                 'version': self.model_version,
+                'model_type': self.model_type,
+                'best_params': self._best_params,
                 'trained_at': datetime.now().isoformat(),
                 'feature_names': FEATURE_NAMES
             }, model_path)
-            logger.info(f"Saved ML model to {model_path}")
+            logger.info(f"Saved ML model {self.model_version} ({self.model_type}) to {model_path}")
             return True
         except Exception as e:
             logger.error(f"Failed to save model: {e}")
@@ -840,17 +887,136 @@ class MLScoringEngine:
 
         return min(100, max(0, confidence))
 
+    def _create_model(self, params: Dict[str, Any] = None):
+        """
+        Create a model instance based on model_type.
+
+        Args:
+            params: Hyperparameters for the model. If None, uses defaults.
+
+        Returns:
+            Model instance (LightGBM or XGBoost regressor)
+        """
+        if self.model_type == MODEL_TYPE_LIGHTGBM:
+            lgb = _get_lightgbm()
+            default_params = {
+                'n_estimators': 200,
+                'max_depth': 6,
+                'learning_rate': 0.05,
+                'num_leaves': 31,
+                'min_child_samples': 20,
+                'reg_alpha': 0.1,
+                'reg_lambda': 0.1,
+                'random_state': 42,
+                'verbose': -1,
+                'force_col_wise': True,
+            }
+            if params:
+                default_params.update(params)
+            return lgb.LGBMRegressor(**default_params)
+        else:
+            xgb = _get_xgboost()
+            default_params = {
+                'n_estimators': 100,
+                'max_depth': 5,
+                'learning_rate': 0.1,
+                'random_state': 42,
+                'objective': 'reg:squarederror',
+            }
+            if params:
+                default_params.update(params)
+            return xgb.XGBRegressor(**default_params)
+
+    def optimize_hyperparameters(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        n_trials: int = 50,
+        cv_folds: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Use Optuna to find optimal hyperparameters.
+
+        Args:
+            X: Feature matrix
+            y: Target values
+            n_trials: Number of optimization trials
+            cv_folds: Number of cross-validation folds
+
+        Returns:
+            Dict with best parameters and optimization results
+        """
+        optuna = _get_optuna()
+        sklearn = _get_sklearn()
+
+        def objective(trial):
+            if self.model_type == MODEL_TYPE_LIGHTGBM:
+                lgb = _get_lightgbm()
+                params = {
+                    'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                    'max_depth': trial.suggest_int('max_depth', 3, 10),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                    'num_leaves': trial.suggest_int('num_leaves', 10, 100),
+                    'min_child_samples': trial.suggest_int('min_child_samples', 5, 50),
+                    'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 10.0, log=True),
+                    'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 10.0, log=True),
+                    'random_state': 42,
+                    'verbose': -1,
+                    'force_col_wise': True,
+                }
+                model = lgb.LGBMRegressor(**params)
+            else:
+                xgb = _get_xgboost()
+                params = {
+                    'n_estimators': trial.suggest_int('n_estimators', 50, 300),
+                    'max_depth': trial.suggest_int('max_depth', 3, 10),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
+                    'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
+                    'subsample': trial.suggest_float('subsample', 0.6, 1.0),
+                    'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
+                    'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 10.0, log=True),
+                    'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 10.0, log=True),
+                    'random_state': 42,
+                    'objective': 'reg:squarederror',
+                }
+                model = xgb.XGBRegressor(**params)
+
+            # Cross-validation
+            scores = sklearn['model_selection'].cross_val_score(
+                model, X, y, cv=cv_folds, scoring='r2'
+            )
+            return scores.mean()
+
+        # Create and run study
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+
+        logger.info(f"Optuna optimization complete: best R2 = {study.best_value:.4f}")
+
+        return {
+            'best_params': study.best_params,
+            'best_score': study.best_value,
+            'n_trials': n_trials,
+            'model_type': self.model_type
+        }
+
     def train_model(
         self,
         training_data: List[Dict[str, Any]],
-        version: str = None
+        version: str = None,
+        model_type: str = None,
+        params: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """
-        Train the XGBoost model on historical outcome data.
+        Train the model on historical outcome data.
+
+        Session 670: Now supports both LightGBM and XGBoost.
 
         Args:
             training_data: List of dicts with 'features' and 'outcome' keys
             version: Model version string
+            model_type: 'lightgbm' or 'xgboost'. Uses instance default if None.
+            params: Custom hyperparameters. Uses defaults if None.
 
         Returns:
             Training metrics dict
@@ -861,7 +1027,10 @@ class MLScoringEngine:
                 'error': f'Insufficient training data: {len(training_data)} samples (need 10+)'
             }
 
-        xgb = _get_xgboost()
+        # Update model type if specified
+        if model_type:
+            self.model_type = model_type
+
         sklearn = _get_sklearn()
         shap = _get_shap()
 
@@ -880,14 +1049,8 @@ class MLScoringEngine:
             X_train_scaled = self._feature_scaler.fit_transform(X_train)
             X_test_scaled = self._feature_scaler.transform(X_test)
 
-            # Train XGBoost
-            self.model = xgb.XGBRegressor(
-                n_estimators=100,
-                max_depth=5,
-                learning_rate=0.1,
-                random_state=42,
-                objective='reg:squarederror'
-            )
+            # Create and train model
+            self.model = self._create_model(params)
             self.model.fit(X_train_scaled, y_train)
 
             # Evaluate
@@ -899,7 +1062,7 @@ class MLScoringEngine:
             train_r2 = sklearn['metrics'].r2_score(y_train, train_pred)
             test_r2 = sklearn['metrics'].r2_score(y_test, test_pred)
 
-            # Create SHAP explainer
+            # Create SHAP explainer (works for both LightGBM and XGBoost)
             self.explainer = shap.TreeExplainer(self.model)
 
             # Update version
@@ -911,6 +1074,7 @@ class MLScoringEngine:
                 self.model_version = f"v{current_num + 1}.0"
 
             self._is_trained = True
+            self._best_params = params
 
             # Save model
             self.save_model()
@@ -926,6 +1090,7 @@ class MLScoringEngine:
             return {
                 'success': True,
                 'version': self.model_version,
+                'model_type': self.model_type,
                 'metrics': {
                     'train_mse': float(train_mse),
                     'test_mse': float(test_mse),
@@ -942,6 +1107,81 @@ class MLScoringEngine:
 
         except Exception as e:
             logger.error(f"Training error: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def train_model_with_optimization(
+        self,
+        training_data: List[Dict[str, Any]],
+        version: str = None,
+        model_type: str = None,
+        n_trials: int = 50,
+        cv_folds: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Train model with Optuna hyperparameter optimization.
+
+        Session 670: Full training pipeline with automatic tuning.
+
+        Args:
+            training_data: List of dicts with 'features' and 'outcome' keys
+            version: Model version string
+            model_type: 'lightgbm' or 'xgboost'. Uses instance default if None.
+            n_trials: Number of Optuna optimization trials
+            cv_folds: Number of cross-validation folds
+
+        Returns:
+            Training metrics dict with optimization results
+        """
+        if len(training_data) < 10:
+            return {
+                'success': False,
+                'error': f'Insufficient training data: {len(training_data)} samples (need 10+)'
+            }
+
+        # Update model type if specified
+        if model_type:
+            self.model_type = model_type
+
+        sklearn = _get_sklearn()
+
+        try:
+            # Prepare data
+            X = np.array([d['features'] for d in training_data])
+            y = np.array([d['outcome'] for d in training_data])
+
+            # Scale features for optimization
+            scaler = sklearn['preprocessing'].StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+
+            # Run hyperparameter optimization
+            logger.info(f"Starting Optuna optimization with {n_trials} trials...")
+            opt_results = self.optimize_hyperparameters(
+                X_scaled, y, n_trials=n_trials, cv_folds=cv_folds
+            )
+
+            # Train final model with best params
+            logger.info(f"Training final model with optimized params...")
+            result = self.train_model(
+                training_data,
+                version=version,
+                params=opt_results['best_params']
+            )
+
+            if result['success']:
+                result['optimization'] = {
+                    'n_trials': n_trials,
+                    'cv_folds': cv_folds,
+                    'best_cv_score': opt_results['best_score'],
+                    'best_params': opt_results['best_params']
+                }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Training with optimization error: {e}")
             return {
                 'success': False,
                 'error': str(e)
