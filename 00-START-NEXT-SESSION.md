@@ -1,49 +1,44 @@
-# Session 693 - Start Here
+# Session 694 - Start Here
 
-**Previous Session:** 692 (Prediction Detail Modal)
+**Previous Session:** 693 (Experiments & Agents Tabs)
 **Date:** January 6, 2026
-**Focus:** Remaining Page Audits
-**Status:** 100% Reality Score | Intelligence Page Complete
+**Focus:** Final Page Audits
+**Status:** 100% Reality Score | Intelligence Command Center COMPLETE
 
-> **PRIORITY:** Audit Assistant & Settings pages
+> **PRIORITY:** Audit Assistant & Settings pages (final 2 pages)
 
 ---
 
-## Session 692 Summary: Prediction Detail Modal
-
-### Bugs Fixed
-
-1. **Gates Disappearing After Approval** - Approved gates now stay visible until pilot starts
-2. **All Predictions at 60%** - Confidence now calculated from dream scores (vividness, creativity, actionability)
-3. **Prediction Text Truncated** - Full prediction text now returned from API
-4. **Experiments Tab Empty** - Fixed URL routing conflict, now shows 45 running experiments!
+## Session 693 Summary: Experiments & Agents Tabs
 
 ### Features Added
 
-1. **Prediction Detail Modal** - Click any prediction to see full details
-2. **Experiments Tab Working** - Shows 45 running experiments with KPI tracking
+1. **Rich Experiment Cards** - Hypothesis preview, risk badges, KPI owner, timing
+2. **Experiment Detail Modal** - Full data display with progress bar, halt info, extracted metrics
+3. **Success Metrics for All Risk Levels** - Now all gates get success_metrics checklist item
+4. **Agents Tab Fixed** - Now displays 28 agents with execution stats
 
-### Commits (Session 692)
+### Bugs Fixed
+
+1. **Truncated Decision Topic** - Was 80 chars, now full text
+2. **Truncated Extracted Metrics** - Was 1000 chars, now full content
+3. **Only 6 Experiments Had Metrics** - Added success_metrics to all risk levels
+4. **Agents Tab Empty** - Fixed auth decorator + response format
+
+### Commits (Session 693)
 ```
-e1f1a361 Fix 3 implementation handlers
-693fc5cc Status-aware labels in Implementation Review modal
-2af4c7fd Force fresh data on Pilots tab switch
-4043c2d0 Mark Ready button shows checklist % and errors
-df8d8554 Add "Approve All Items" button
-ef6f7801 Start Pilot mutation handles API response
-4dfe5c11 Show approved gates until pilot starts
-bd43c2ec Predictions have varied confidence from dream scores
-2775abcf Rich prediction display with full data
-21249e8f Prediction detail modal + full text display
-45e539f7 Experiments tab now displays 45 pilot experiments
+99d59712 Rich experiment cards + detail modal
+188aa7d2 Return full decision_topic and extracted_metrics
+9b10a80a Add success_metrics to all risk levels
+38e190ff Fix Agents tab in Intelligence Command Center
 ```
 
 ### Handoff Doc
-`docs/handoffs/SESSION_692_PREDICTION_DETAIL_MODAL.md`
+`docs/handoffs/SESSION_693_EXPERIMENTS_AND_AGENTS_TABS.md`
 
 ---
 
-## Session 693 Priority: Page Audits
+## Session 694 Priority: Final Page Audits
 
 ### Pages Still Needing Audit (2/12)
 
@@ -57,7 +52,7 @@ bd43c2ec Predictions have varied confidence from dream scores
 | Analysis | Working | 687 |
 | Betting | Working | 687-688 |
 | Discord | Working | 688 |
-| Intelligence | COMPLETE | 688-692 |
+| Intelligence | COMPLETE | 688-693 |
 | Research | Working | 688 |
 | **Assistant** | NOT AUDITED | - |
 | **Settings** | NOT AUDITED | - |
@@ -73,42 +68,46 @@ make start && make celery
 # Access React frontend
 open http://localhost:3000/
 
-# Test Prediction Modal
-# 1. Go to Intelligence > Predictions
-# 2. Click any prediction card to see full details
+# Test Intelligence Command Center
+# All 8 sub-tabs now working:
+# - Gates, Pilots, Experiments, Learning, Activity, Spiders, Predictions, Agents
 
-# Check pilot stats
-curl -s http://localhost:8000/api/pilots/executions/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Running: {len([p for p in d.get(\"pilots\",[]) if p.get(\"status\")==\"running\"])}'); print(f'Completed: {len([p for p in d.get(\"pilots\",[]) if p.get(\"status\")==\"completed\"])}')"
+# Check agent count
+curl -s http://localhost:8000/api/v1/agents/list/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Agents: {len(d.get(\"agents\", []))}')"
+
+# Check experiment metrics
+curl -s http://localhost:8000/api/pilot-experiments/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Experiments with metrics: {sum(1 for e in d.get(\"experiments\",[]) if e.get(\"extracted_metrics\",{}).get(\"raw_content\"))}/{len(d.get(\"experiments\",[]))}')"
 ```
 
 ---
 
-## System Stats (Session 692)
+## System Stats (Session 693)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
-| Agents | 72 | All synced |
+| Agents | 72 | 28 in templates, all synced |
 | Spiders | 77 | 72 working |
-| Gates | 35 | Actionable |
+| Gates | 37 | All have success_metrics |
 | Running Pilots | 45 | In Pilots tab |
 | Completed Pilots | 12 | With implementations |
 | Total Pilots | 57 | Session 692 growth |
+| Experiments | 49 | 28+ with extracted metrics |
 | Predictions | 39+ | With varied confidence |
 | React Pages Audited | 10/12 | Assistant, Settings remaining |
 
 ---
 
-## Files Modified (Session 692)
+## Files Modified (Session 693)
 
 ### New Files
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_692_PREDICTION_DETAIL_MODAL.md` | Session handoff |
+| `docs/handoffs/SESSION_693_EXPERIMENTS_AND_AGENTS_TABS.md` | Session handoff |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `frontend/src/pages/IntelligencePage.tsx` | Prediction detail modal (~180 lines) |
-| `core/intelligence_api.py` | Full prediction text, expanded API |
-| `core/views_agent_learning.py` | Fixed gate filtering |
-| `core/views_predictions.py` | Dynamic confidence calculation |
+| `frontend/src/pages/IntelligencePage.tsx` | Rich experiment cards, detail modal (~290 lines) |
+| `core/views_agent_learning.py` | Full decision_topic, _get_full_extracted_metrics() |
+| `core/models_pilot_readiness.py` | Full raw_content, success_metrics all risk levels |
+| `core/views_agent_orchestration.py` | AllowAny auth, agents response format |
