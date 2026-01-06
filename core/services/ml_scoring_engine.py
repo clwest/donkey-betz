@@ -98,11 +98,31 @@ SOURCE_AUTHORITY = {
     'default': 50
 }
 
-# Keyword sets for feature extraction
-AI_KEYWORDS = {'ai', 'ml', 'machine learning', 'deep learning', 'gpt', 'llm', 'neural', 'automation'}
-TRENDING_KEYWORDS = {'viral', 'trending', 'hot', 'breaking', 'surge', 'boom', 'skyrocket'}
-URGENT_KEYWORDS = {'urgent', 'asap', 'immediate', 'now', 'today', 'limited', 'deadline'}
-OPPORTUNITY_KEYWORDS = {'opportunity', 'potential', 'growth', 'profit', 'revenue', 'income'}
+# Keyword sets for feature extraction (Session 669: Expanded for better coverage)
+AI_KEYWORDS = {
+    'ai', 'ml', 'machine learning', 'deep learning', 'gpt', 'llm', 'neural', 'automation',
+    'artificial intelligence', 'chatgpt', 'claude', 'openai', 'anthropic', 'copilot',
+    'gemini', 'transformer', 'diffusion', 'midjourney', 'generative', 'agent',
+    'embedding', 'fine-tune', 'prompt', 'model', 'algorithm', 'prediction',
+    'classification', 'regression', 'nlp', 'computer vision', 'robotics'
+}
+TRENDING_KEYWORDS = {
+    'viral', 'trending', 'hot', 'breaking', 'surge', 'boom', 'skyrocket',
+    'exploding', 'soaring', 'rising', 'popular', 'best', 'top', 'leading',
+    'fastest', 'record', 'unprecedented', 'massive', 'huge', 'major',
+    'significant', 'breakthrough', 'revolutionary', 'disrupting', 'emerging'
+}
+URGENT_KEYWORDS = {
+    'urgent', 'asap', 'immediate', 'now', 'today', 'limited', 'deadline',
+    'expires', 'ending', 'last chance', 'hurry', 'quick', 'fast',
+    'closing', 'final', 'soon', 'critical', 'emergency', 'alert', 'warning'
+}
+OPPORTUNITY_KEYWORDS = {
+    'opportunity', 'potential', 'growth', 'profit', 'revenue', 'income',
+    'earn', 'money', 'salary', 'remote', 'hiring', 'job', 'position',
+    'role', 'career', 'freelance', 'contract', 'gig', 'project',
+    'investment', 'roi', 'return', 'yield', 'gains', 'bonus', 'equity'
+}
 
 
 @dataclass
@@ -275,6 +295,75 @@ class MLScoringEngine:
             logger.error(f"Failed to save model: {e}")
             return False
 
+    def _extract_text_content(self, spider_data) -> Tuple[str, str, bool]:
+        """
+        Extract title and description text from spider data.
+
+        Session 669: Fixed to properly extract text from raw_data['items'] array
+        structure used by spiders, not raw_data['title'] which doesn't exist.
+
+        Returns: (title, description, has_url)
+        """
+        raw_data = spider_data.raw_data or {}
+        title = ''
+        description = ''
+        has_url = False
+
+        # Try direct fields first (legacy/simple structure)
+        if raw_data.get('title'):
+            title = raw_data['title']
+            description = raw_data.get('description', '') or raw_data.get('content', '') or ''
+            has_url = bool(raw_data.get('url'))
+        else:
+            # Extract from items array (current spider structure)
+            items = raw_data.get('items', [])
+            if items and isinstance(items, list):
+                # Aggregate titles from first few items
+                titles = []
+                descriptions = []
+                for item in items[:5]:  # First 5 items
+                    if isinstance(item, dict):
+                        # Try various title field names
+                        item_title = (
+                            item.get('title') or
+                            item.get('headline') or
+                            item.get('name') or
+                            item.get('subject') or
+                            ''
+                        )
+                        if item_title:
+                            titles.append(str(item_title))
+
+                        # Try various description field names
+                        item_desc = (
+                            item.get('description') or
+                            item.get('summary') or
+                            item.get('content') or
+                            item.get('text') or
+                            ''
+                        )
+                        if item_desc:
+                            descriptions.append(str(item_desc)[:200])
+
+                        # Check for URLs
+                        if item.get('url') or item.get('link'):
+                            has_url = True
+
+                title = ' | '.join(titles) if titles else ''
+                description = ' '.join(descriptions) if descriptions else ''
+
+        # Also check processed_data as fallback
+        if not title:
+            processed = spider_data.processed_data or {}
+            if isinstance(processed, dict):
+                title = processed.get('title', '') or processed.get('summary', '') or ''
+
+        # Use embedding_text as final fallback (often contains cleaned text)
+        if not title and spider_data.embedding_text:
+            title = spider_data.embedding_text[:500]
+
+        return title, description, has_url
+
     def extract_features(self, spider_data) -> np.ndarray:
         """
         Extract features from a SpiderData instance.
@@ -284,8 +373,11 @@ class MLScoringEngine:
         from django.utils import timezone
 
         raw_data = spider_data.raw_data or {}
-        title = raw_data.get('title', '') or ''
+
+        # Session 669: Use proper text extraction
+        title, description, has_url = self._extract_text_content(spider_data)
         title_lower = title.lower()
+        all_text_lower = (title + ' ' + description).lower()
 
         # Calculate freshness
         age = timezone.now() - spider_data.created_at
@@ -295,22 +387,22 @@ class MLScoringEngine:
         spider_name = spider_data.spider_name.lower()
         category = self._categorize_spider(spider_name)
 
-        # Extract features
+        # Extract features - use all_text for keyword detection for better coverage
         features = [
             spider_data.relevance_score or 50,                          # relevance_score
             SOURCE_AUTHORITY.get(spider_name, SOURCE_AUTHORITY['default']),  # source_authority
             min(freshness_hours, 168),                                   # data_freshness_hours (cap at 1 week)
             min(len(title), 200),                                        # title_length
-            1.0 if raw_data.get('url') else 0.0,                        # has_url
+            1.0 if has_url else 0.0,                                    # has_url
             1.0 if category == 'tech' else 0.0,                         # category_tech
             1.0 if category == 'financial' else 0.0,                    # category_financial
             1.0 if category == 'jobs' else 0.0,                         # category_jobs
             1.0 if category == 'creative' else 0.0,                     # category_creative
             1.0 if category == 'news' else 0.0,                         # category_news
-            1.0 if any(kw in title_lower for kw in AI_KEYWORDS) else 0.0,           # keyword_ai
-            1.0 if any(kw in title_lower for kw in TRENDING_KEYWORDS) else 0.0,     # keyword_trending
-            1.0 if any(kw in title_lower for kw in URGENT_KEYWORDS) else 0.0,       # keyword_urgent
-            1.0 if any(kw in title_lower for kw in OPPORTUNITY_KEYWORDS) else 0.0,  # keyword_opportunity
+            1.0 if any(kw in all_text_lower for kw in AI_KEYWORDS) else 0.0,           # keyword_ai
+            1.0 if any(kw in all_text_lower for kw in TRENDING_KEYWORDS) else 0.0,     # keyword_trending
+            1.0 if any(kw in all_text_lower for kw in URGENT_KEYWORDS) else 0.0,       # keyword_urgent
+            1.0 if any(kw in all_text_lower for kw in OPPORTUNITY_KEYWORDS) else 0.0,  # keyword_opportunity
             self._get_historical_success_rate(spider_name),             # historical_success_rate
         ]
 
@@ -336,20 +428,72 @@ class MLScoringEngine:
             return 'news'
         return 'other'
 
+    # Default success rates as fallback when insufficient data
+    DEFAULT_SUCCESS_RATES = {
+        'remoteok': 0.65,
+        'weworkremotely': 0.60,
+        'hackernews': 0.55,
+        'techcrunch': 0.50,
+        'producthunt': 0.45,
+        'coingecko': 0.40,
+        'adzuna': 0.60,
+        'github_jobs': 0.55,
+        'default': 0.35
+    }
+
     def _get_historical_success_rate(self, spider_name: str) -> float:
-        """Get historical success rate for a spider source."""
-        # Note: Query OpportunityOutcome for actual rates
-        # For now, use default rates based on source type
-        default_rates = {
-            'remoteok': 0.65,
-            'weworkremotely': 0.60,
-            'hackernews': 0.55,
-            'techcrunch': 0.50,
-            'producthunt': 0.45,
-            'coingecko': 0.40,
-            'default': 0.35
-        }
-        return default_rates.get(spider_name, default_rates['default'])
+        """
+        Get historical success rate for a spider source from actual outcome data.
+
+        Session 669: Fixed to query actual OpportunityOutcome data instead of
+        using hardcoded values. Falls back to defaults when <5 samples available.
+        """
+        from django.core.cache import cache
+
+        cache_key = f"ml_spider_success_rate_{spider_name}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            from core.models_unified_system import OpportunityOutcome
+            from django.db.models import Count
+
+            # Query outcomes for this spider source
+            outcomes = OpportunityOutcome.objects.filter(
+                task__opportunity__spider_data__spider_name=spider_name
+            ).values('outcome').annotate(count=Count('id'))
+
+            total = sum(item['count'] for item in outcomes)
+
+            if total < 5:
+                # Insufficient data, use default
+                rate = self.DEFAULT_SUCCESS_RATES.get(spider_name, self.DEFAULT_SUCCESS_RATES['default'])
+                logger.debug(f"Spider {spider_name}: insufficient data ({total}), using default {rate}")
+            else:
+                # Calculate weighted success rate from actual outcomes
+                outcome_weights = {
+                    'won': 1.0,
+                    'partial': 0.5,
+                    'lost': 0.0,
+                    'expired': 0.1,
+                    'cancelled': 0.2,
+                }
+
+                weighted_sum = sum(
+                    item['count'] * outcome_weights.get(item['outcome'], 0.3)
+                    for item in outcomes
+                )
+                rate = weighted_sum / total
+                logger.debug(f"Spider {spider_name}: actual rate {rate:.3f} from {total} outcomes")
+
+            # Cache for 1 hour
+            cache.set(cache_key, rate, 3600)
+            return rate
+
+        except Exception as e:
+            logger.warning(f"Error getting historical success rate for {spider_name}: {e}")
+            return self.DEFAULT_SUCCESS_RATES.get(spider_name, self.DEFAULT_SUCCESS_RATES['default'])
 
     def _calculate_rule_score(self, spider_data, features: np.ndarray) -> Tuple[float, Dict[str, str]]:
         """
@@ -444,6 +588,27 @@ class MLScoringEngine:
         try:
             # Extract features
             features = self.extract_features(spider_data)
+
+            # Session 669: Validation logging for feature quality monitoring
+            if logger.isEnabledFor(logging.DEBUG):
+                feature_dict = dict(zip(FEATURE_NAMES, features[0]))
+                zero_features = [name for name, val in feature_dict.items() if val == 0]
+                active_features = len(FEATURE_NAMES) - len(zero_features)
+                logger.debug(
+                    f"Features for {spider_data.spider_name}: "
+                    f"{active_features}/{len(FEATURE_NAMES)} active, "
+                    f"keywords=[ai:{feature_dict.get('keyword_ai', 0):.0f}, "
+                    f"trend:{feature_dict.get('keyword_trending', 0):.0f}, "
+                    f"opp:{feature_dict.get('keyword_opportunity', 0):.0f}]"
+                )
+
+            # Warn if too many features are zero (indicates extraction issues)
+            zero_count = sum(1 for val in features[0] if val == 0)
+            if zero_count > 10:
+                logger.warning(
+                    f"High zero-feature count for {spider_data.spider_name}: "
+                    f"{zero_count}/{len(FEATURE_NAMES)} features are zero"
+                )
 
             # Calculate rule-based score
             rule_score, rule_reasoning = self._calculate_rule_score(spider_data, features)
