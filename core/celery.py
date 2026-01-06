@@ -454,11 +454,12 @@ app.conf.beat_schedule = {
     },
     # Session 247: Agent Dreams (Idle Thoughts & Creative Ideas)
     # Agents dream up creative ideas when they're idle
+    # Session 688: Reduced from 15 min to 2 hours to save OpenAI credits (~$20/night was too expensive)
     'agent-dream-cycle': {
         'task': 'core.tasks.generate_agent_dreams',
-        'schedule': crontab(minute='*/15'),  # Every 15 minutes - agents dream when idle
+        'schedule': crontab(minute=0, hour='*/2'),  # Every 2 hours (was every 15 min)
         'options': {
-            'expires': 900,  # 15 minutes
+            'expires': 7200,  # 2 hours
         }
     },
     'broadcast-dream-journal': {
