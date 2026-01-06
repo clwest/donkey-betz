@@ -13,6 +13,27 @@ const formatTimestamp = (timestamp: string | number | undefined | null, format: 
   return format === 'time' ? date.toLocaleTimeString() : date.toLocaleString()
 }
 
+// Session 688: Extract timestamp from WebSocket update (may be nested in data)
+const getUpdateTimestamp = (update: AgentUpdate): string | undefined => {
+  // Try direct timestamp first, then nested in data
+  return update.timestamp || (update.data as Record<string, unknown>)?.timestamp as string
+}
+
+// Session 688: Extract agent name from WebSocket update (may be nested)
+const getUpdateAgentName = (update: AgentUpdate): string => {
+  return update.agent_name || (update.data as Record<string, unknown>)?.agent_type as string || 'Agent'
+}
+
+// Session 688: Extract message from WebSocket update (may be nested)
+const getUpdateMessage = (update: AgentUpdate): string | undefined => {
+  return update.message || (update.data as Record<string, unknown>)?.message as string
+}
+
+// Session 688: Extract status from WebSocket update (may be nested)
+const getUpdateStatus = (update: AgentUpdate): string => {
+  return update.status || (update.data as Record<string, unknown>)?.stage as string || 'active'
+}
+
 // Activity item from the recent-activity API
 interface RecentActivity {
   type: 'dream' | 'conversation' | 'decision' | 'pilot' | 'knowledge'
@@ -398,9 +419,14 @@ export default function AgentsPage() {
                 <span className="text-xs text-gray-500">{realtimeUpdates.length} events</span>
               </div>
               <div className="space-y-3 max-h-[300px] overflow-auto">
-                {realtimeUpdates.slice(0, 10).map((update, idx) => (
+                {realtimeUpdates.slice(0, 10).map((update, idx) => {
+                  const agentName = getUpdateAgentName(update)
+                  const status = getUpdateStatus(update)
+                  const message = getUpdateMessage(update)
+                  const timestamp = getUpdateTimestamp(update)
+                  return (
                   <div
-                    key={`rt-${update.timestamp}-${idx}`}
+                    key={`rt-${timestamp}-${idx}`}
                     className="flex items-start gap-3 p-3 rounded-lg border border-dark-border bg-dark-hover/50"
                   >
                     <div className={cn(
@@ -417,25 +443,26 @@ export default function AgentsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{update.agent_name}</span>
+                        <span className="font-medium">{agentName}</span>
                         <span className={cn(
                           'text-xs px-2 py-0.5 rounded',
                           update.type === 'agent_completed' ? 'bg-accent-green/20 text-accent-green' :
                           update.type === 'agent_error' ? 'bg-accent-red/20 text-accent-red' :
                           'bg-primary-500/20 text-primary-400'
                         )}>
-                          {update.status}
+                          {status}
                         </span>
                       </div>
-                      {update.message && (
-                        <p className="text-sm text-gray-400 mt-1 truncate">{update.message}</p>
+                      {message && (
+                        <p className="text-sm text-gray-400 mt-1 truncate">{message}</p>
                       )}
                       <p className="text-xs text-gray-500 mt-1">
-                        {formatTimestamp(update.timestamp)}
+                        {formatTimestamp(timestamp)}
                       </p>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
