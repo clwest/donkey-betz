@@ -1,12 +1,12 @@
 # Agent Reference
 
-**Last Updated:** Session 652 (December 31, 2025) - Podcast & Campaign Agents Activated with Test Data
+**Last Updated:** Session 663 (January 5, 2026) - Added SystemIntelligenceAgent for platform health monitoring
 
 ---
 
 ## Overview
 
-**Total Agents: 71** | **Routable: 47** | **Non-Routable (Sub-agents): 24**
+**Total Agents: 72** | **Routable: 48** | **Non-Routable (Sub-agents): 24**
 
 The platform uses a **Clean Agent Architecture** where each agent is specialized with isolated tools. Agents cannot call each other's tools directly - they must delegate through the WorkflowAgent.
 
@@ -36,8 +36,8 @@ The platform uses a **Clean Agent Architecture** where each agent is specialized
 | Stocks | 9 | 1 | Market intelligence, bull/bear debates |
 | Markets | 3 | 3 | Prediction markets, sports odds, arbitrage |
 | Entry Point | 1 | 1 | Personal Assistant routing |
-| Special | 1 | 0 | Thinking/reasoning agent |
-| **TOTAL** | **71** | **47** | |
+| Special | 2 | 1 | Thinking/reasoning + system intelligence |
+| **TOTAL** | **72** | **48** | |
 
 **Session 400 Addition:** All agents now automatically inject learned knowledge into their prompts via `_build_prompt()`. The knowledge pipeline is:
 ```
@@ -1279,6 +1279,65 @@ _generate_impact_paragraph(incidents, original) → str             # Build 4
 - `synthesize_analysis` - Synthesize multi-factor analysis
 
 **Special:** Uses extended thinking tokens for complex reasoning
+
+---
+
+### SystemIntelligenceAgent (Session 663 - Routable)
+
+**Purpose:** Platform health and attention monitoring - the PA's expert for system status questions
+
+**Location:** `core/agents/system_intelligence_agent.py`
+
+**Architecture:**
+```
+User → PA → AgentRouter → SystemIntelligenceAgent → SystemStateAggregator
+                                    ↓
+                          Rich context + recommendations
+```
+
+**Tools:**
+- `get_system_attention` - Get all current attention items with rich context (explanation, recommended action, severity)
+- `get_item_details` - Get detailed information about a specific attention item by ID
+
+**AttentionItem Fields:**
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier (e.g., 'pending_review_backlog') |
+| `section` | Platform section: command_center, autonomous, research |
+| `category` | Type: alert, health, overdue, stale, pending_review |
+| `priority` | Urgency score 1-100 (higher = more urgent) |
+| `severity` | info (normal), warning (should address), critical (immediate) |
+| `title` | What the item is |
+| `summary` | Brief description |
+| `explanation` | What this metric means in plain English |
+| `recommended_action` | What the user can do about it |
+| `location` | Where in the UI to find this |
+
+**Key Features:**
+- Single source of truth for system health
+- Rich explanations (not just raw numbers)
+- Actionable recommendations for each issue
+- Automatic scaling - new attention items work without code changes
+- Understands context (e.g., high "Pending Review" is normal, not a crisis)
+
+**Behavior:**
+1. For general status requests ("what needs attention?"):
+   - Groups items by severity (critical → warnings → info)
+   - Summarizes overall health with counts
+   - Highlights top 2-3 most important items
+
+2. For specific metric questions ("what's the pending review status?"):
+   - Provides full explanation and context
+   - Gives specific recommended action
+   - Shows where to find it in the UI
+
+**Routing:**
+The PA delegates to SystemIntelligenceAgent when users ask about:
+- System status, health, what needs attention
+- Specific metrics like "pending review", "execution status"
+- Platform overview, what's happening, catch me up
+
+**Cannot Access:** Creation, editing, research tools (focused on system awareness only)
 
 ---
 

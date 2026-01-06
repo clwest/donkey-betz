@@ -296,6 +296,9 @@ from core.agents.stocks import (
 # Thinking Agent (Session 593: AI-powered evaluation and reasoning)
 from core.agents.thinking_agent import ThinkingAgent
 
+# System Intelligence Agent (Session 663: Platform health and attention monitoring)
+from core.agents.system_intelligence_agent import SystemIntelligenceAgent
+
 __all__ = [
     # Base
     'BaseAgent',
@@ -445,4 +448,7 @@ __all__ = [
 
     # Thinking Agent (1) - Session 593
     'ThinkingAgent',
+
+    # System Intelligence Agent (1) - Session 663
+    'SystemIntelligenceAgent',
 ]
