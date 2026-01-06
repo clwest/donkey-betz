@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 // Session 693: Removed agentsApi - agents tab removed (redundant with main Agents page)
-import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, opportunitiesApi } from '@/lib/api'
+// Session 694: Removed learningApi, activityApi - tabs removed (redundant with main Agents page)
+import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
-  Play, Pause, RefreshCw, ChevronRight, Loader2, Activity,
-  BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
+  Play, Pause, RefreshCw, ChevronRight, Loader2,
+  Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
   Rocket, Ban, DollarSign, Clock, Users, User, Wrench, Lightbulb, FileText, Flag,
   Trash2, Tag, ArrowUp, Eye, Star, FlaskConical, AlertOctagon
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 // Session 693: Removed 'agents' tab - redundant with main Agents page
-type TabType = 'gates' | 'pilots' | 'experiments' | 'learning' | 'activity' | 'spiders' | 'predictions'
+// Session 694: Removed 'learning' and 'activity' tabs - redundant with main Agents page
+type TabType = 'gates' | 'pilots' | 'experiments' | 'spiders' | 'predictions'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -147,18 +149,7 @@ interface Experiment {
   outcome_classification: string
 }
 
-interface LearningEvent {
-  id?: string
-  agent_name: string  // Mapped from source or teacher
-  event_type: string  // Mapped from type
-  description: string
-  timestamp: string
-  // Session 688: Additional fields from API
-  teacher?: string
-  student?: string
-  source?: string
-  type?: string
-}
+// Session 694: Removed LearningEvent and ActivityFeedItem interfaces - tabs moved to Agents page
 
 interface Spider {
   name: string
@@ -292,11 +283,7 @@ export default function IntelligencePage() {
     enabled: activeTab === 'experiments',
   })
 
-  const { data: learningData, isLoading: loadingLearning } = useQuery({
-    queryKey: ['learning-activity'],
-    queryFn: () => learningApi.activity(),
-    enabled: activeTab === 'learning' || activeTab === 'activity',
-  })
+  // Session 694: Removed learning and activity queries - tabs moved to Agents page
 
   // Spider Network
   const { data: spidersData, isLoading: loadingSpiders } = useQuery({
@@ -407,16 +394,7 @@ export default function IntelligencePage() {
   // Session 689: Get gate decision data for pilot modal
   const pilotGateDecision = pilotGateDetailData?.data?.gate?.decision || null
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
-  // Session 688: API returns feed_items with different field names - map them
-  const rawLearningEvents = learningData?.data?.feed_items || learningData?.data?.events || []
-  const learningEvents: LearningEvent[] = rawLearningEvents.map((e: { timestamp: string; type?: string; source?: string; teacher?: string; description?: string }, idx: number) => ({
-    ...e,
-    id: `learning-${idx}`,
-    agent_name: e.source || e.teacher || 'Unknown Agent',
-    event_type: e.type || 'activity',
-    description: e.description || '',
-    timestamp: e.timestamp,
-  }))
+  // Session 694: Removed learningEvents and activityFeedItems - tabs moved to Agents page
   const spiders: Spider[] = spidersData?.data?.spiders || []
   const predictions: Prediction[] = predictionsData?.data?.predictions || []
 
@@ -443,8 +421,7 @@ export default function IntelligencePage() {
     { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'running').length },
     { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
     { key: 'predictions', label: 'Predictions', icon: Sparkles },
-    { key: 'learning', label: 'Learning', icon: BookOpen },
-    { key: 'activity', label: 'Activity', icon: Activity },
+    // Session 694: Removed learning and activity tabs - available on Agents page
   ]
 
   return (
@@ -1075,49 +1052,7 @@ export default function IntelligencePage() {
         </div>
       )}
 
-      {(activeTab === 'learning' || activeTab === 'activity') && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">
-            {activeTab === 'learning' ? 'Agent Learning Feed' : 'Recent Activity'}
-          </h3>
-          {loadingLearning ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="animate-spin" size={24} />
-            </div>
-          ) : learningEvents.length > 0 ? (
-            <div className="space-y-3 max-h-[500px] overflow-auto">
-              {learningEvents.map((event, idx) => (
-                <div
-                  key={event.id || idx}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                >
-                  <div className="h-8 w-8 rounded-full bg-accent-cyan/20 flex items-center justify-center flex-shrink-0">
-                    <BookOpen size={14} className="text-accent-cyan" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{event.agent_name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
-                        {event.event_type}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-400 mt-1">{event.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(event.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-400">
-              <BookOpen className="mx-auto mb-2" size={32} />
-              <p>No learning events yet</p>
-              <p className="text-sm text-gray-500 mt-1">Agent learning activity will appear here</p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Session 694: Removed Learning and Activity tabs - available on Agents page */}
 
       {/* Spiders Tab */}
       {activeTab === 'spiders' && (
