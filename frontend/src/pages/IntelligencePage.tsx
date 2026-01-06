@@ -58,11 +58,16 @@ interface Experiment {
 }
 
 interface LearningEvent {
-  id: string
-  agent_name: string
-  event_type: string
+  id?: string
+  agent_name: string  // Mapped from source or teacher
+  event_type: string  // Mapped from type
   description: string
   timestamp: string
+  // Session 688: Additional fields from API
+  teacher?: string
+  student?: string
+  source?: string
+  type?: string
 }
 
 interface Spider {
@@ -159,10 +164,10 @@ export default function IntelligencePage() {
     enabled: activeTab === 'predictions',
   })
 
-  // Agent Health
-  const { data: agentsHealthData, isLoading: loadingAgents } = useQuery({
-    queryKey: ['agents-health'],
-    queryFn: () => agentsApi.health(),
+  // Session 688: Use agents list endpoint instead of health (which returns system stats, not agent array)
+  const { data: agentsListData, isLoading: loadingAgents } = useQuery({
+    queryKey: ['agents-list'],
+    queryFn: () => agentsApi.list(),
     enabled: activeTab === 'agents',
   })
 
@@ -222,10 +227,27 @@ export default function IntelligencePage() {
   const completedPilots = pilotsData?.data?.completed_pilots || []
   const pilots: Pilot[] = [...runningPilots, ...completedPilots]
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
-  const learningEvents: LearningEvent[] = learningData?.data?.events || []
+  // Session 688: API returns feed_items with different field names - map them
+  const rawLearningEvents = learningData?.data?.feed_items || learningData?.data?.events || []
+  const learningEvents: LearningEvent[] = rawLearningEvents.map((e: { timestamp: string; type?: string; source?: string; teacher?: string; description?: string }, idx: number) => ({
+    ...e,
+    id: `learning-${idx}`,
+    agent_name: e.source || e.teacher || 'Unknown Agent',
+    event_type: e.type || 'activity',
+    description: e.description || '',
+    timestamp: e.timestamp,
+  }))
   const spiders: Spider[] = spidersData?.data?.spiders || []
   const predictions: Prediction[] = predictionsData?.data?.predictions || []
-  const agents: Agent[] = agentsHealthData?.data?.agents || []
+  // Session 688: Use list API and map to expected format
+  const agentsRaw = agentsListData?.data?.agents || []
+  const agents: Agent[] = agentsRaw.map((a: { name: string; isActive: boolean; totalExecutions: number; lastActive: string }) => ({
+    name: a.name,
+    display_name: a.name.replace(/Agent$/, '').replace(/([A-Z])/g, ' $1').trim(),
+    status: a.isActive ? 'healthy' : 'offline',
+    executions_today: a.totalExecutions,
+    last_execution: a.lastActive,
+  }))
 
   // Clear toast after 3 seconds
   if (actionResult) {
