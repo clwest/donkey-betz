@@ -1,0 +1,1459 @@
+"""
+WorkspaceManager Service - SKIN Layer Central Orchestrator
+
+This is the main interface between agents and the file system.
+It manages project workspaces, handles file operations, and maintains
+the audit trail for all changes.
+
+Human Body Metaphor:
+    This service IS the SKIN - the boundary where AI touches reality.
+
+Session: 695
+"""
+
+import json
+import logging
+import subprocess
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+from uuid import UUID
+
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.utils import timezone
+
+from core.models_skin_layer import (
+    ProjectWorkspace,
+    WorkspaceContext,
+    WorkspaceOperation,
+)
+
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+
+class FileWriter:
+    """
+    Handles safe file writing with rollback support.
+    All file operations are logged for audit trail.
+    """
+
+    def write_file(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str,
+        content: str,
+        agent_name: str,
+        agent_task: str = ""
+    ) -> WorkspaceOperation:
+        """
+        Write a file with full audit trail.
+
+        Args:
+            workspace: Target workspace
+            file_path: Relative path from workspace root
+            content: Content to write
+            agent_name: Which agent is writing
+            agent_task: Task description
+
+        Returns:
+            WorkspaceOperation record
+        """
+        start_time = time.time()
+        full_path = Path(workspace.root_path) / file_path
+
+        # Capture before state for rollback
+        content_before = ''
+        size_before = None
+        operation_type = 'file_create'
+
+        if full_path.exists():
+            try:
+                content_before = full_path.read_text(encoding='utf-8')
+                size_before = full_path.stat().st_size
+                operation_type = 'file_modify'
+            except Exception as e:
+                logger.warning(f"Could not read existing file {file_path}: {e}")
+
+        # Create parent directories
+        try:
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            return self._create_failed_operation(
+                workspace, agent_name, agent_task, operation_type,
+                file_path, f"Failed to create directories: {e}"
+            )
+
+        # Write file
+        try:
+            full_path.write_text(content, encoding='utf-8')
+            size_after = full_path.stat().st_size
+            success = True
+            error = ''
+            logger.info(f"✅ Wrote {file_path} ({size_after} bytes)")
+        except Exception as e:
+            success = False
+            error = str(e)
+            size_after = None
+            logger.error(f"❌ Failed to write {file_path}: {e}")
+
+        execution_time = int((time.time() - start_time) * 1000)
+
+        # Create operation record
+        operation = WorkspaceOperation.objects.create(
+            workspace=workspace,
+            user=workspace.user,
+            agent_name=agent_name,
+            agent_task=agent_task,
+            operation_type=operation_type,
+            file_path=file_path,
+            file_content_before=content_before,
+            file_content_after=content if success else '',
+            file_size_before=size_before,
+            file_size_after=size_after,
+            success=success,
+            error_message=error,
+            execution_time_ms=execution_time,
+            requires_review=workspace.require_human_review,
+        )
+
+        # Update workspace stats
+        if success:
+            workspace.total_files_written += 1
+            workspace.total_operations += 1
+            workspace.last_operation_at = timezone.now()
+            workspace.save(update_fields=[
+                'total_files_written', 'total_operations', 'last_operation_at'
+            ])
+
+        return operation
+
+    def delete_file(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str,
+        agent_name: str,
+        agent_task: str = ""
+    ) -> WorkspaceOperation:
+        """Delete a file with audit trail."""
+        if not workspace.allow_file_delete:
+            return self._create_failed_operation(
+                workspace, agent_name, agent_task, 'file_delete',
+                file_path, "File deletion not allowed on this workspace"
+            )
+
+        start_time = time.time()
+        full_path = Path(workspace.root_path) / file_path
+
+        # Capture before state
+        content_before = ''
+        size_before = None
+
+        if full_path.exists():
+            try:
+                content_before = full_path.read_text(encoding='utf-8')
+                size_before = full_path.stat().st_size
+            except Exception:
+                pass
+
+            try:
+                full_path.unlink()
+                success = True
+                error = ''
+                logger.info(f"🗑️ Deleted {file_path}")
+            except Exception as e:
+                success = False
+                error = str(e)
+                logger.error(f"❌ Failed to delete {file_path}: {e}")
+        else:
+            success = False
+            error = "File does not exist"
+
+        execution_time = int((time.time() - start_time) * 1000)
+
+        operation = WorkspaceOperation.objects.create(
+            workspace=workspace,
+            user=workspace.user,
+            agent_name=agent_name,
+            agent_task=agent_task,
+            operation_type='file_delete',
+            file_path=file_path,
+            file_content_before=content_before,
+            file_content_after='',
+            file_size_before=size_before,
+            file_size_after=None,
+            success=success,
+            error_message=error,
+            execution_time_ms=execution_time,
+        )
+
+        if success:
+            workspace.total_operations += 1
+            workspace.last_operation_at = timezone.now()
+            workspace.save(update_fields=['total_operations', 'last_operation_at'])
+
+        return operation
+
+    def rollback_operation(self, operation: WorkspaceOperation) -> WorkspaceOperation:
+        """
+        Rollback a file operation to its previous state.
+
+        Args:
+            operation: The operation to rollback
+
+        Returns:
+            New WorkspaceOperation record for the rollback
+        """
+        if not operation.can_rollback:
+            raise ValueError("This operation cannot be rolled back")
+
+        if operation.rolled_back:
+            raise ValueError("This operation has already been rolled back")
+
+        workspace = operation.workspace
+        full_path = Path(workspace.root_path) / operation.file_path
+
+        try:
+            if operation.operation_type == 'file_create':
+                # Delete the created file
+                if full_path.exists():
+                    full_path.unlink()
+                logger.info(f"⏪ Rolled back file creation: {operation.file_path}")
+
+            elif operation.operation_type == 'file_modify':
+                # Restore previous content
+                full_path.write_text(operation.file_content_before, encoding='utf-8')
+                logger.info(f"⏪ Rolled back file modification: {operation.file_path}")
+
+            elif operation.operation_type == 'file_delete':
+                # Recreate the deleted file
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                full_path.write_text(operation.file_content_before, encoding='utf-8')
+                logger.info(f"⏪ Rolled back file deletion: {operation.file_path}")
+
+            success = True
+            error = ''
+
+        except Exception as e:
+            success = False
+            error = str(e)
+            logger.error(f"❌ Rollback failed: {e}")
+
+        # Mark original operation as rolled back
+        operation.rolled_back = True
+        operation.save(update_fields=['rolled_back'])
+
+        # Create rollback operation record
+        rollback_op = WorkspaceOperation.objects.create(
+            workspace=workspace,
+            user=workspace.user,
+            agent_name='system_rollback',
+            agent_task=f'Rollback of operation {operation.id}',
+            operation_type=operation.operation_type,
+            file_path=operation.file_path,
+            file_content_before=operation.file_content_after,
+            file_content_after=operation.file_content_before,
+            success=success,
+            error_message=error,
+            can_rollback=False,  # Rollbacks can't be rolled back
+        )
+
+        operation.rollback_operation = rollback_op
+        operation.save(update_fields=['rollback_operation'])
+
+        return rollback_op
+
+    def _create_failed_operation(
+        self,
+        workspace: ProjectWorkspace,
+        agent_name: str,
+        agent_task: str,
+        operation_type: str,
+        file_path: str,
+        error: str
+    ) -> WorkspaceOperation:
+        """Create a failed operation record."""
+        return WorkspaceOperation.objects.create(
+            workspace=workspace,
+            user=workspace.user,
+            agent_name=agent_name,
+            agent_task=agent_task,
+            operation_type=operation_type,
+            file_path=file_path,
+            success=False,
+            error_message=error,
+            can_rollback=False,
+        )
+
+
+class GitIntegrator:
+    """Handles git operations on workspaces."""
+
+    def status(self, workspace: ProjectWorkspace) -> Dict[str, Any]:
+        """Get git status of the workspace."""
+        try:
+            result = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                cwd=workspace.root_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            lines = result.stdout.strip().split('\n') if result.stdout.strip() else []
+
+            return {
+                'success': True,
+                'branch': self._get_current_branch(workspace),
+                'modified': [l[3:] for l in lines if l.startswith(' M')],
+                'added': [l[3:] for l in lines if l.startswith('A ')],
+                'untracked': [l[3:] for l in lines if l.startswith('??')],
+                'deleted': [l[3:] for l in lines if l.startswith(' D')],
+                'staged': [l[3:] for l in lines if l[0] in 'MADRC'],
+            }
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'error': 'Git status timed out'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def commit(
+        self,
+        workspace: ProjectWorkspace,
+        message: str,
+        agent_name: str
+    ) -> WorkspaceOperation:
+        """Create a git commit."""
+        if not workspace.allow_git_operations:
+            return self._create_git_operation(
+                workspace, agent_name, 'git_commit',
+                f'git commit -m "{message}"',
+                success=False, error="Git operations not allowed"
+            )
+
+        start_time = time.time()
+
+        try:
+            # Stage all changes
+            subprocess.run(
+                ['git', 'add', '-A'],
+                cwd=workspace.root_path,
+                capture_output=True,
+                timeout=30
+            )
+
+            # Create commit with agent attribution
+            full_message = f"{message}\n\n🤖 Generated by {agent_name}"
+            result = subprocess.run(
+                ['git', 'commit', '-m', full_message],
+                cwd=workspace.root_path,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            success = result.returncode == 0
+            output = result.stdout + result.stderr
+
+            if success:
+                workspace.total_commits += 1
+                workspace.save(update_fields=['total_commits'])
+                logger.info(f"✅ Git commit: {message[:50]}...")
+
+        except subprocess.TimeoutExpired:
+            success = False
+            output = "Git commit timed out"
+        except Exception as e:
+            success = False
+            output = str(e)
+
+        execution_time = int((time.time() - start_time) * 1000)
+
+        return self._create_git_operation(
+            workspace, agent_name, 'git_commit',
+            f'git commit -m "{message}"',
+            success=success,
+            output=output,
+            exit_code=result.returncode if 'result' in locals() else -1,
+            execution_time=execution_time
+        )
+
+    def create_branch(
+        self,
+        workspace: ProjectWorkspace,
+        branch_name: str,
+        agent_name: str = "workspace_manager"
+    ) -> WorkspaceOperation:
+        """Create and switch to a new branch."""
+        if not workspace.allow_git_operations:
+            return self._create_git_operation(
+                workspace, agent_name, 'git_branch',
+                f'git checkout -b {branch_name}',
+                success=False, error="Git operations not allowed"
+            )
+
+        start_time = time.time()
+
+        try:
+            result = subprocess.run(
+                ['git', 'checkout', '-b', branch_name],
+                cwd=workspace.root_path,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            success = result.returncode == 0
+            output = result.stdout + result.stderr
+
+            if success:
+                workspace.current_branch = branch_name
+                workspace.save(update_fields=['current_branch'])
+                logger.info(f"✅ Created branch: {branch_name}")
+
+        except subprocess.TimeoutExpired:
+            success = False
+            output = "Git branch creation timed out"
+        except Exception as e:
+            success = False
+            output = str(e)
+
+        execution_time = int((time.time() - start_time) * 1000)
+
+        return self._create_git_operation(
+            workspace, agent_name, 'git_branch',
+            f'git checkout -b {branch_name}',
+            success=success,
+            output=output,
+            exit_code=result.returncode if 'result' in locals() else -1,
+            execution_time=execution_time
+        )
+
+    def _get_current_branch(self, workspace: ProjectWorkspace) -> str:
+        """Get the current git branch."""
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                cwd=workspace.root_path,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            return result.stdout.strip() if result.returncode == 0 else 'unknown'
+        except Exception:
+            return 'unknown'
+
+    def _create_git_operation(
+        self,
+        workspace: ProjectWorkspace,
+        agent_name: str,
+        operation_type: str,
+        command: str,
+        success: bool = False,
+        output: str = '',
+        error: str = '',
+        exit_code: int = -1,
+        execution_time: int = 0
+    ) -> WorkspaceOperation:
+        """Create a git operation record."""
+        workspace.total_operations += 1
+        workspace.last_operation_at = timezone.now()
+        workspace.save(update_fields=['total_operations', 'last_operation_at'])
+
+        return WorkspaceOperation.objects.create(
+            workspace=workspace,
+            user=workspace.user,
+            agent_name=agent_name,
+            operation_type=operation_type,
+            command=command,
+            command_output=output,
+            command_error=error if not success else '',
+            exit_code=exit_code,
+            success=success,
+            error_message=error if not success else '',
+            execution_time_ms=execution_time,
+            can_rollback=False,  # Git operations can't be easily rolled back
+        )
+
+
+class WorkspaceScanner:
+    """Scans and analyzes project structure."""
+
+    # Directories to always skip
+    SKIP_DIRS = {
+        'node_modules', '__pycache__', '.git', '.venv', 'venv',
+        '.idea', '.vscode', 'dist', 'build', '.next', '.nuxt',
+        'coverage', '.pytest_cache', '.mypy_cache', 'eggs',
+        '*.egg-info', '.tox', '.cache'
+    }
+
+    # File extensions to count
+    CODE_EXTENSIONS = {
+        '.py', '.js', '.ts', '.tsx', '.jsx', '.vue', '.svelte',
+        '.html', '.css', '.scss', '.sass', '.less',
+        '.json', '.yaml', '.yml', '.toml', '.md',
+        '.sql', '.graphql', '.prisma'
+    }
+
+    def scan_workspace(
+        self,
+        workspace: ProjectWorkspace,
+        max_depth: int = 5
+    ) -> WorkspaceContext:
+        """
+        Scan workspace and create/update WorkspaceContext.
+
+        Args:
+            workspace: The workspace to scan
+            max_depth: How deep to scan directories
+
+        Returns:
+            Updated WorkspaceContext
+        """
+        start_time = time.time()
+        root = Path(workspace.root_path)
+
+        file_tree = {}
+        key_files = {}
+        file_type_counts = {}
+        total_files = 0
+        total_directories = 0
+        total_lines = 0
+
+        def should_skip(path: Path) -> bool:
+            """Check if path should be skipped."""
+            return any(
+                part in self.SKIP_DIRS or part.startswith('.')
+                for part in path.parts
+            )
+
+        def scan_directory(path: Path, depth: int = 0):
+            nonlocal total_files, total_directories, total_lines
+
+            if depth > max_depth:
+                return
+
+            try:
+                for item in path.iterdir():
+                    rel_path = item.relative_to(root)
+
+                    if should_skip(rel_path):
+                        continue
+
+                    if item.is_dir():
+                        total_directories += 1
+                        scan_directory(item, depth + 1)
+
+                    elif item.is_file():
+                        total_files += 1
+                        dir_path = str(rel_path.parent)
+                        filename = rel_path.name
+
+                        # Build file tree
+                        if dir_path not in file_tree:
+                            file_tree[dir_path] = []
+                        file_tree[dir_path].append(filename)
+
+                        # Count file types
+                        ext = item.suffix.lower()
+                        if ext:
+                            file_type_counts[ext] = file_type_counts.get(ext, 0) + 1
+
+                        # Count lines for code files
+                        if ext in self.CODE_EXTENSIONS:
+                            try:
+                                content = item.read_text(encoding='utf-8', errors='ignore')
+                                total_lines += len(content.split('\n'))
+                            except Exception:
+                                pass
+
+                        # Identify key files
+                        self._identify_key_file(rel_path, key_files)
+
+            except PermissionError:
+                pass
+
+        scan_directory(root)
+
+        # Detect tech stack
+        tech_stack = self._detect_tech_stack(root, file_tree)
+
+        # Update workspace tech stack if not set
+        if not workspace.tech_stack:
+            workspace.tech_stack = tech_stack
+            workspace.save(update_fields=['tech_stack'])
+
+        # Detect coding patterns
+        coding_patterns = self._detect_coding_patterns(file_tree, key_files)
+
+        # Detect dependencies
+        dependencies = self._detect_dependencies(root)
+
+        # Detect import aliases
+        import_aliases = self._detect_import_aliases(root)
+
+        # Infer directory purposes
+        directory_purposes = self._infer_directory_purposes(file_tree)
+
+        scan_duration = int((time.time() - start_time) * 1000)
+
+        # Create or update context
+        context, created = WorkspaceContext.objects.update_or_create(
+            workspace=workspace,
+            defaults={
+                'file_tree': file_tree,
+                'key_files': key_files,
+                'coding_patterns': coding_patterns,
+                'dependencies': dependencies,
+                'import_aliases': import_aliases,
+                'directory_purposes': directory_purposes,
+                'total_files': total_files,
+                'total_directories': total_directories,
+                'total_lines_of_code': total_lines,
+                'file_type_counts': file_type_counts,
+                'scan_depth': max_depth,
+                'scan_duration_ms': scan_duration,
+                'excluded_patterns': list(self.SKIP_DIRS),
+            }
+        )
+
+        action = "Created" if created else "Updated"
+        logger.info(
+            f"📊 {action} workspace context: {total_files} files, "
+            f"{total_directories} dirs, {total_lines} lines ({scan_duration}ms)"
+        )
+
+        return context
+
+    def _identify_key_file(self, rel_path: Path, key_files: Dict[str, str]):
+        """Identify if a file is a key file."""
+        name = rel_path.name.lower()
+        path_str = str(rel_path)
+
+        # Entry points
+        if name in ('app.tsx', 'app.jsx', 'app.js', 'main.tsx', 'main.ts'):
+            key_files['main_entry'] = path_str
+        elif name in ('index.tsx', 'index.jsx') and 'pages' not in path_str:
+            if 'main_entry' not in key_files:
+                key_files['main_entry'] = path_str
+
+        # Routes
+        if name in ('routes.tsx', 'router.tsx', 'routes.ts', 'router.ts'):
+            key_files['routes'] = path_str
+        elif 'app/routes' in path_str.lower() or 'pages' in path_str.lower():
+            if 'routes_dir' not in key_files:
+                key_files['routes_dir'] = str(rel_path.parent)
+
+        # Django files
+        if name == 'urls.py':
+            key_files['urls'] = path_str
+        elif name == 'models.py' and 'migrations' not in path_str:
+            if 'models' not in key_files:
+                key_files['models'] = path_str
+        elif name == 'settings.py':
+            key_files['settings'] = path_str
+        elif name == 'views.py':
+            if 'views' not in key_files:
+                key_files['views'] = path_str
+
+        # API client
+        if name in ('client.ts', 'api.ts', 'client.js', 'api.js'):
+            if 'api' in path_str.lower():
+                key_files['api_client'] = path_str
+
+        # Config files
+        if name == 'package.json':
+            key_files['package_json'] = path_str
+        elif name in ('tsconfig.json', 'jsconfig.json'):
+            key_files['tsconfig'] = path_str
+        elif name == 'tailwind.config.js' or name == 'tailwind.config.ts':
+            key_files['tailwind_config'] = path_str
+        elif name == 'requirements.txt':
+            key_files['requirements'] = path_str
+        elif name == 'pyproject.toml':
+            key_files['pyproject'] = path_str
+
+    def _detect_tech_stack(
+        self,
+        root: Path,
+        file_tree: Dict[str, List[str]]
+    ) -> Dict[str, str]:
+        """Auto-detect the tech stack of a project."""
+        tech_stack = {}
+
+        # Check package.json
+        package_json = root / 'package.json'
+        if package_json.exists():
+            try:
+                pkg = json.loads(package_json.read_text())
+                deps = {**pkg.get('dependencies', {}), **pkg.get('devDependencies', {})}
+
+                if 'react' in deps or 'react-dom' in deps:
+                    tech_stack['frontend'] = 'react'
+                elif 'vue' in deps:
+                    tech_stack['frontend'] = 'vue'
+                elif 'svelte' in deps:
+                    tech_stack['frontend'] = 'svelte'
+                elif 'next' in deps:
+                    tech_stack['frontend'] = 'nextjs'
+                elif '@angular/core' in deps:
+                    tech_stack['frontend'] = 'angular'
+
+                if 'express' in deps:
+                    tech_stack['backend'] = 'express'
+                elif 'fastify' in deps:
+                    tech_stack['backend'] = 'fastify'
+                elif 'nestjs' in deps or '@nestjs/core' in deps:
+                    tech_stack['backend'] = 'nestjs'
+
+                if 'tailwindcss' in deps:
+                    tech_stack['styling'] = 'tailwind'
+                elif 'styled-components' in deps:
+                    tech_stack['styling'] = 'styled-components'
+
+                if 'typescript' in deps:
+                    tech_stack['language'] = 'typescript'
+
+            except Exception:
+                pass
+
+        # Check Python
+        if (root / 'manage.py').exists():
+            tech_stack['backend'] = 'django'
+        elif (root / 'requirements.txt').exists():
+            try:
+                reqs = (root / 'requirements.txt').read_text().lower()
+                if 'django' in reqs:
+                    tech_stack['backend'] = 'django'
+                elif 'fastapi' in reqs:
+                    tech_stack['backend'] = 'fastapi'
+                elif 'flask' in reqs:
+                    tech_stack['backend'] = 'flask'
+            except Exception:
+                pass
+
+        # Check for databases
+        if (root / 'docker-compose.yml').exists() or (root / 'docker-compose.yaml').exists():
+            tech_stack['containerization'] = 'docker'
+            try:
+                compose_file = root / 'docker-compose.yml'
+                if not compose_file.exists():
+                    compose_file = root / 'docker-compose.yaml'
+                compose = compose_file.read_text().lower()
+                if 'postgres' in compose:
+                    tech_stack['database'] = 'postgresql'
+                elif 'mysql' in compose:
+                    tech_stack['database'] = 'mysql'
+                elif 'mongo' in compose:
+                    tech_stack['database'] = 'mongodb'
+            except Exception:
+                pass
+
+        return tech_stack
+
+    def _detect_coding_patterns(
+        self,
+        file_tree: Dict[str, List[str]],
+        key_files: Dict[str, str]
+    ) -> Dict[str, str]:
+        """Detect coding patterns used in the project."""
+        patterns = {}
+
+        # Check for component patterns
+        for dir_path, files in file_tree.items():
+            tsx_files = [f for f in files if f.endswith('.tsx')]
+            jsx_files = [f for f in files if f.endswith('.jsx')]
+
+            if tsx_files and 'components' in dir_path.lower():
+                # Check naming convention
+                pascal_case = sum(1 for f in tsx_files if f[0].isupper())
+                if pascal_case > len(tsx_files) / 2:
+                    patterns['component_naming'] = 'PascalCase'
+
+            if 'hooks' in dir_path.lower():
+                hook_files = [f for f in files if f.startswith('use')]
+                if hook_files:
+                    patterns['hook_pattern'] = 'use*.ts in hooks/'
+
+        # Check for test patterns
+        for dir_path, files in file_tree.items():
+            test_files = [f for f in files if 'test' in f.lower() or 'spec' in f.lower()]
+            if test_files:
+                if any(f.startswith('test_') for f in test_files):
+                    patterns['test_pattern'] = 'test_*.py (pytest style)'
+                elif any('.test.' in f or '.spec.' in f for f in test_files):
+                    patterns['test_pattern'] = '*.test.ts/*.spec.ts (Jest style)'
+                break
+
+        return patterns
+
+    def _detect_dependencies(self, root: Path) -> Dict[str, Dict[str, str]]:
+        """Detect project dependencies."""
+        dependencies = {}
+
+        # Frontend dependencies
+        package_json = root / 'package.json'
+        if package_json.exists():
+            try:
+                pkg = json.loads(package_json.read_text())
+                deps = pkg.get('dependencies', {})
+                # Get top 10 most important deps
+                important_deps = {
+                    k: v for k, v in list(deps.items())[:10]
+                }
+                if important_deps:
+                    dependencies['frontend'] = important_deps
+            except Exception:
+                pass
+
+        # Python dependencies
+        requirements = root / 'requirements.txt'
+        if requirements.exists():
+            try:
+                lines = requirements.read_text().strip().split('\n')
+                py_deps = {}
+                for line in lines[:10]:  # Top 10
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        parts = line.split('==')
+                        name = parts[0].split('>=')[0].split('<=')[0].strip()
+                        version = parts[1] if len(parts) > 1 else 'latest'
+                        py_deps[name] = version
+                if py_deps:
+                    dependencies['backend'] = py_deps
+            except Exception:
+                pass
+
+        return dependencies
+
+    def _detect_import_aliases(self, root: Path) -> Dict[str, str]:
+        """Detect import aliases from tsconfig/jsconfig."""
+        aliases = {}
+
+        for config_name in ['tsconfig.json', 'jsconfig.json']:
+            config_path = root / config_name
+            if config_path.exists():
+                try:
+                    config = json.loads(config_path.read_text())
+                    paths = config.get('compilerOptions', {}).get('paths', {})
+                    base_url = config.get('compilerOptions', {}).get('baseUrl', '.')
+
+                    for alias, targets in paths.items():
+                        # Remove wildcard
+                        clean_alias = alias.rstrip('/*')
+                        if targets:
+                            clean_target = targets[0].rstrip('/*')
+                            aliases[clean_alias] = clean_target
+
+                except Exception:
+                    pass
+
+        return aliases
+
+    def _infer_directory_purposes(
+        self,
+        file_tree: Dict[str, List[str]]
+    ) -> Dict[str, str]:
+        """Infer the purpose of each directory."""
+        purposes = {}
+
+        purpose_map = {
+            'components': 'Reusable UI components',
+            'pages': 'Route page components',
+            'views': 'Django views or page components',
+            'hooks': 'Custom React hooks',
+            'utils': 'Utility functions',
+            'lib': 'Library code and utilities',
+            'services': 'Business logic services',
+            'api': 'API client and endpoints',
+            'models': 'Data models',
+            'store': 'State management (Redux/Zustand)',
+            'context': 'React context providers',
+            'types': 'TypeScript type definitions',
+            'styles': 'CSS/SCSS stylesheets',
+            'assets': 'Static assets (images, fonts)',
+            'tests': 'Test files',
+            '__tests__': 'Test files',
+            'migrations': 'Database migrations',
+            'templates': 'HTML templates',
+            'agents': 'AI agent implementations',
+            'spiders': 'Data collection spiders',
+        }
+
+        for dir_path in file_tree.keys():
+            dir_name = Path(dir_path).name.lower()
+            for key, purpose in purpose_map.items():
+                if key in dir_name:
+                    purposes[dir_path] = purpose
+                    break
+
+        return purposes
+
+
+class WorkspaceManager:
+    """
+    Central service for managing project workspaces.
+    This is the main interface between agents and the file system.
+
+    Usage:
+        manager = WorkspaceManager(user)
+        workspace = manager.register_workspace('/path/to/project')
+        manager.set_active_workspace(workspace.id)
+
+        # Later, when an agent generates code:
+        result = manager.execute_agent_output(
+            workspace=workspace,
+            agent_name='FullStackDeveloperAgent',
+            agent_result={'files': [...]},
+            auto_apply=True
+        )
+    """
+
+    def __init__(self, user: User):
+        self.user = user
+        self.file_writer = FileWriter()
+        self.git_integrator = GitIntegrator()
+        self.scanner = WorkspaceScanner()
+
+    # ==================== Workspace Management ====================
+
+    def register_workspace(
+        self,
+        root_path: str,
+        name: str = None,
+        set_active: bool = True
+    ) -> ProjectWorkspace:
+        """
+        Register an existing project directory as a workspace.
+        Scans and understands the project structure.
+
+        Args:
+            root_path: Path to the project directory
+            name: Optional name (defaults to directory name)
+            set_active: Whether to set this as the active workspace
+
+        Returns:
+            Created ProjectWorkspace
+        """
+        path = Path(root_path).resolve()
+
+        if not path.exists():
+            raise ValueError(f"Path does not exist: {root_path}")
+
+        if not path.is_dir():
+            raise ValueError(f"Path is not a directory: {root_path}")
+
+        # Check if already registered
+        existing = ProjectWorkspace.objects.filter(
+            user=self.user,
+            root_path=str(path)
+        ).first()
+
+        if existing:
+            logger.info(f"Workspace already registered: {existing.name}")
+            if set_active:
+                self.set_active_workspace(existing.id)
+            return existing
+
+        # Detect git remote if available
+        git_remote = ''
+        try:
+            result = subprocess.run(
+                ['git', 'remote', 'get-url', 'origin'],
+                cwd=str(path),
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                git_remote = result.stdout.strip()
+        except Exception:
+            pass
+
+        # Get current branch
+        current_branch = ''
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                cwd=str(path),
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                current_branch = result.stdout.strip()
+        except Exception:
+            pass
+
+        # Create workspace
+        workspace = ProjectWorkspace.objects.create(
+            user=self.user,
+            name=name or path.name,
+            root_path=str(path),
+            workspace_type='local',
+            git_remote_url=git_remote,
+            current_branch=current_branch,
+            is_active=set_active,
+            protected_paths=['.env', '.env.local', 'secrets/', 'credentials/'],
+        )
+
+        # Scan project structure
+        self.scanner.scan_workspace(workspace)
+
+        logger.info(f"✅ Registered workspace: {workspace.name} at {workspace.root_path}")
+
+        return workspace
+
+    def get_active_workspace(self) -> Optional[ProjectWorkspace]:
+        """Get the user's currently active workspace."""
+        return ProjectWorkspace.objects.filter(
+            user=self.user,
+            is_active=True
+        ).first()
+
+    def set_active_workspace(self, workspace_id: UUID) -> ProjectWorkspace:
+        """Set a workspace as the active target for operations."""
+        workspace = ProjectWorkspace.objects.get(id=workspace_id, user=self.user)
+        workspace.is_active = True
+        workspace.save()  # This triggers deactivation of others via save()
+
+        logger.info(f"🎯 Active workspace: {workspace.name}")
+        return workspace
+
+    def list_workspaces(self) -> List[ProjectWorkspace]:
+        """List all workspaces for the user."""
+        return list(ProjectWorkspace.objects.filter(user=self.user))
+
+    def rescan_workspace(self, workspace: ProjectWorkspace) -> WorkspaceContext:
+        """Rescan a workspace to update its context."""
+        return self.scanner.scan_workspace(workspace)
+
+    # ==================== Agent Interface ====================
+
+    def execute_agent_output(
+        self,
+        workspace: ProjectWorkspace,
+        agent_name: str,
+        agent_result: Dict[str, Any],
+        agent_task: str = "",
+        auto_apply: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Take an agent's output and apply it to the workspace.
+        This is the KEY BRIDGE between agents and file system.
+
+        Args:
+            workspace: Target workspace
+            agent_name: Which agent produced this output
+            agent_result: The agent's return value with 'files' or 'code'
+            agent_task: Description of what the agent was doing
+            auto_apply: If True, write immediately. If False, queue for review.
+
+        Returns:
+            Execution result with operations performed
+        """
+        if not workspace.allow_file_write:
+            return {
+                'success': False,
+                'error': 'File writing not allowed on this workspace',
+                'operations': []
+            }
+
+        operations = []
+
+        # Extract files from agent result
+        files_to_write = self._extract_files_from_result(agent_result)
+
+        if not files_to_write:
+            return {
+                'success': True,
+                'message': 'No files to write',
+                'operations': []
+            }
+
+        for file_info in files_to_write:
+            # Determine target path using workspace context
+            target_path = self._resolve_file_path(workspace, file_info)
+
+            # Check if path is protected
+            if self._is_protected_path(workspace, target_path):
+                operations.append({
+                    'file': target_path,
+                    'status': 'blocked',
+                    'reason': 'Path is protected',
+                    'success': False
+                })
+                continue
+
+            if auto_apply or not workspace.require_human_review:
+                # Write immediately
+                operation = self.file_writer.write_file(
+                    workspace=workspace,
+                    file_path=target_path,
+                    content=file_info['content'],
+                    agent_name=agent_name,
+                    agent_task=agent_task
+                )
+                operations.append({
+                    'file': target_path,
+                    'status': 'written' if operation.success else 'failed',
+                    'operation_id': str(operation.id),
+                    'success': operation.success,
+                    'error': operation.error_message if not operation.success else None,
+                    'lines': len(file_info['content'].split('\n'))
+                })
+            else:
+                # Queue for human review
+                operation = WorkspaceOperation.objects.create(
+                    workspace=workspace,
+                    user=workspace.user,
+                    agent_name=agent_name,
+                    agent_task=agent_task,
+                    operation_type='file_create' if not (Path(workspace.root_path) / target_path).exists() else 'file_modify',
+                    file_path=target_path,
+                    file_content_after=file_info['content'],
+                    success=False,  # Not applied yet
+                    requires_review=True,
+                    can_rollback=True,
+                )
+                operations.append({
+                    'file': target_path,
+                    'status': 'pending_review',
+                    'operation_id': str(operation.id),
+                    'success': True,
+                    'lines': len(file_info['content'].split('\n'))
+                })
+
+        return {
+            'success': all(op.get('success', False) for op in operations),
+            'operations': operations,
+            'workspace': workspace.name,
+            'agent': agent_name,
+            'files_processed': len(operations),
+            'files_written': len([op for op in operations if op.get('status') == 'written']),
+            'files_pending': len([op for op in operations if op.get('status') == 'pending_review']),
+            'files_blocked': len([op for op in operations if op.get('status') == 'blocked']),
+        }
+
+    def get_workspace_context_for_agent(
+        self,
+        workspace: ProjectWorkspace,
+        agent_name: str,
+        task: str
+    ) -> Dict[str, Any]:
+        """
+        Get relevant workspace context for an agent to use.
+        Agents call this to understand WHERE to put their output.
+
+        Args:
+            workspace: The workspace
+            agent_name: Which agent is asking
+            task: What the agent is trying to do
+
+        Returns:
+            Context dict with project structure info
+        """
+        try:
+            context = workspace.context
+        except WorkspaceContext.DoesNotExist:
+            # Scan if no context exists
+            context = self.scanner.scan_workspace(workspace)
+
+        return {
+            'workspace_name': workspace.name,
+            'root_path': workspace.root_path,
+            'tech_stack': workspace.tech_stack,
+            'key_files': context.key_files,
+            'file_tree': context.file_tree,
+            'coding_patterns': context.coding_patterns,
+            'dependencies': context.dependencies,
+            'import_aliases': context.import_aliases,
+            'directory_purposes': context.directory_purposes,
+            'protected_paths': workspace.protected_paths,
+            'total_files': context.total_files,
+        }
+
+    # ==================== File Operations ====================
+
+    def read_file(self, workspace: ProjectWorkspace, file_path: str) -> Optional[str]:
+        """Read a file from the workspace."""
+        full_path = Path(workspace.root_path) / file_path
+        if full_path.exists():
+            try:
+                return full_path.read_text(encoding='utf-8')
+            except Exception as e:
+                logger.error(f"Failed to read {file_path}: {e}")
+        return None
+
+    def write_file(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str,
+        content: str,
+        agent_name: str,
+        agent_task: str = ""
+    ) -> WorkspaceOperation:
+        """Write a file to the workspace with audit logging."""
+        if self._is_protected_path(workspace, file_path):
+            return self.file_writer._create_failed_operation(
+                workspace, agent_name, agent_task, 'file_create',
+                file_path, "Path is protected"
+            )
+        return self.file_writer.write_file(
+            workspace, file_path, content, agent_name, agent_task
+        )
+
+    def delete_file(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str,
+        agent_name: str
+    ) -> WorkspaceOperation:
+        """Delete a file from the workspace."""
+        if self._is_protected_path(workspace, file_path):
+            return self.file_writer._create_failed_operation(
+                workspace, agent_name, '', 'file_delete',
+                file_path, "Path is protected"
+            )
+        return self.file_writer.delete_file(workspace, file_path, agent_name)
+
+    def list_files(
+        self,
+        workspace: ProjectWorkspace,
+        pattern: str = "**/*"
+    ) -> List[str]:
+        """List files in the workspace matching a pattern."""
+        root = Path(workspace.root_path)
+        files = []
+        for p in root.glob(pattern):
+            if p.is_file():
+                rel = str(p.relative_to(root))
+                # Skip common ignore patterns
+                if not any(skip in rel for skip in ['node_modules', '__pycache__', '.git']):
+                    files.append(rel)
+        return files[:1000]  # Limit to 1000 files
+
+    # ==================== Git Operations ====================
+
+    def git_status(self, workspace: ProjectWorkspace) -> Dict[str, Any]:
+        """Get git status of the workspace."""
+        return self.git_integrator.status(workspace)
+
+    def git_commit(
+        self,
+        workspace: ProjectWorkspace,
+        message: str,
+        agent_name: str
+    ) -> WorkspaceOperation:
+        """Create a git commit."""
+        return self.git_integrator.commit(workspace, message, agent_name)
+
+    def git_create_branch(
+        self,
+        workspace: ProjectWorkspace,
+        branch_name: str
+    ) -> WorkspaceOperation:
+        """Create a new branch for agent work."""
+        return self.git_integrator.create_branch(workspace, branch_name)
+
+    # ==================== Review Operations ====================
+
+    def get_pending_reviews(self, workspace: ProjectWorkspace = None) -> List[WorkspaceOperation]:
+        """Get operations pending human review."""
+        qs = WorkspaceOperation.objects.filter(
+            user=self.user,
+            requires_review=True,
+            reviewed_by_human=False
+        )
+        if workspace:
+            qs = qs.filter(workspace=workspace)
+        return list(qs.order_by('-created_at'))
+
+    def approve_operation(
+        self,
+        operation: WorkspaceOperation,
+        feedback: str = ""
+    ) -> WorkspaceOperation:
+        """Approve a pending operation and apply it."""
+        if not operation.requires_review:
+            raise ValueError("Operation does not require review")
+
+        if operation.reviewed_by_human:
+            raise ValueError("Operation already reviewed")
+
+        # Apply the operation
+        if operation.operation_type in ('file_create', 'file_modify'):
+            result = self.file_writer.write_file(
+                workspace=operation.workspace,
+                file_path=operation.file_path,
+                content=operation.file_content_after,
+                agent_name=operation.agent_name,
+                agent_task=operation.agent_task
+            )
+            operation.success = result.success
+
+        operation.reviewed_by_human = True
+        operation.human_approved = True
+        operation.human_feedback = feedback
+        operation.reviewed_at = timezone.now()
+        operation.save()
+
+        logger.info(f"✅ Approved operation: {operation.file_path}")
+        return operation
+
+    def reject_operation(
+        self,
+        operation: WorkspaceOperation,
+        feedback: str = ""
+    ) -> WorkspaceOperation:
+        """Reject a pending operation."""
+        operation.reviewed_by_human = True
+        operation.human_approved = False
+        operation.human_feedback = feedback
+        operation.reviewed_at = timezone.now()
+        operation.can_rollback = False
+        operation.save()
+
+        logger.info(f"❌ Rejected operation: {operation.file_path}")
+        return operation
+
+    def rollback_operation(self, operation: WorkspaceOperation) -> WorkspaceOperation:
+        """Rollback an operation."""
+        return self.file_writer.rollback_operation(operation)
+
+    # ==================== History ====================
+
+    def get_operation_history(
+        self,
+        workspace: ProjectWorkspace = None,
+        limit: int = 50
+    ) -> List[WorkspaceOperation]:
+        """Get operation history."""
+        qs = WorkspaceOperation.objects.filter(user=self.user)
+        if workspace:
+            qs = qs.filter(workspace=workspace)
+        return list(qs.order_by('-created_at')[:limit])
+
+    def get_file_history(
+        self,
+        workspace: ProjectWorkspace,
+        file_path: str
+    ) -> List[WorkspaceOperation]:
+        """Get history of operations on a specific file."""
+        return list(WorkspaceOperation.objects.filter(
+            workspace=workspace,
+            file_path=file_path
+        ).order_by('-created_at'))
+
+    # ==================== Internal Methods ====================
+
+    def _extract_files_from_result(self, agent_result: Dict) -> List[Dict]:
+        """Extract file information from an agent's result."""
+        files = []
+
+        # Handle 'files' key (list of file dicts)
+        if 'files' in agent_result:
+            for f in agent_result['files']:
+                if isinstance(f, dict):
+                    files.append({
+                        'filename': f.get('filename', f.get('path', 'unknown')),
+                        'content': f.get('content', f.get('code', '')),
+                        'language': f.get('language', 'auto')
+                    })
+
+        # Handle 'code' key with file parsing
+        elif 'code' in agent_result and isinstance(agent_result['code'], str):
+            # Try to parse multiple files from code block
+            code = agent_result['code']
+            parsed_files = self._parse_files_from_code(code)
+            if parsed_files:
+                files.extend(parsed_files)
+            else:
+                # Single code block
+                files.append({
+                    'filename': agent_result.get('filename', 'generated_code'),
+                    'content': code,
+                    'language': 'auto'
+                })
+
+        # Handle 'data' -> 'results' pattern from some agents
+        elif 'data' in agent_result:
+            data = agent_result['data']
+            if isinstance(data, dict) and 'results' in data:
+                for result in data['results']:
+                    if isinstance(result, dict) and 'data' in result:
+                        inner = result['data']
+                        if isinstance(inner, dict) and 'files' in inner:
+                            files.extend(inner['files'])
+
+        return files
+
+    def _parse_files_from_code(self, code: str) -> List[Dict]:
+        """Parse multiple files from a code string with ### markers."""
+        import re
+        files = []
+
+        # Pattern: ### path/to/file.ext
+        pattern = r'###\s+([^\n]+)\n```(\w+)?\n(.*?)```'
+        matches = re.findall(pattern, code, re.DOTALL)
+
+        for filename, language, content in matches:
+            files.append({
+                'filename': filename.strip(),
+                'language': language or 'auto',
+                'content': content.strip()
+            })
+
+        return files
+
+    def _resolve_file_path(self, workspace: ProjectWorkspace, file_info: Dict) -> str:
+        """
+        Intelligently determine where a file should go based on:
+        - Filename/extension
+        - Workspace structure
+        - Existing patterns
+        """
+        filename = file_info['filename']
+
+        # If it's already a path, use it
+        if '/' in filename:
+            return filename
+
+        try:
+            context = workspace.context
+        except WorkspaceContext.DoesNotExist:
+            return filename
+
+        # Use context to find the right directory
+        ext = Path(filename).suffix.lower()
+        suggested_dir = context.get_directory_for_file_type(ext)
+
+        if suggested_dir and suggested_dir != '.':
+            return f"{suggested_dir}/{filename}"
+
+        return filename
+
+    def _is_protected_path(self, workspace: ProjectWorkspace, file_path: str) -> bool:
+        """Check if a path is protected."""
+        for protected in workspace.protected_paths:
+            if file_path.startswith(protected) or file_path == protected:
+                return True
+            # Also check if the protected pattern appears anywhere
+            if protected.endswith('/'):
+                if protected.rstrip('/') in file_path:
+                    return True
+        return False
+
+
+# ==================== Singleton Instance ====================
+
+_workspace_manager_instances: Dict[int, WorkspaceManager] = {}
+
+
+def get_workspace_manager(user: User) -> WorkspaceManager:
+    """Get or create a WorkspaceManager for a user."""
+    user_id = user.id
+    if user_id not in _workspace_manager_instances:
+        _workspace_manager_instances[user_id] = WorkspaceManager(user)
+    return _workspace_manager_instances[user_id]

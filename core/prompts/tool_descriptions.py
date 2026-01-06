@@ -718,6 +718,49 @@ DO NOT USE FOR:
 - Strategy -> use strategy agents (brand_strategy_agent, etc.)
 - Executive decisions -> use cto_agent, coo_agent, etc.""",
 
+
+    # -------------------------------------------------------------------------
+    # SESSION 695: SKIN LAYER - WORKSPACE MANAGEMENT TOOL
+    # -------------------------------------------------------------------------
+
+    "workspace_tool": """🔧 SKIN LAYER: Manage project workspaces where agents write code.
+
+This tool bridges AI agents to real file systems - the "SKIN" where AI touches reality.
+
+USE THIS WHEN user wants to:
+- REGISTER a project: "Register this project", "Add workspace at /path/to/project"
+- LIST workspaces: "Show my workspaces", "List registered projects"
+- SET ACTIVE: "Switch to project X", "Set X as active workspace"
+- CHECK STATUS: "Workspace status", "What's the current workspace?"
+- SCAN structure: "Rescan the project", "Analyze project structure"
+- WRITE FILES: "Write this code to file X", "Create file at path"
+- GIT OPERATIONS: "Commit these changes", "Create a branch"
+- VIEW OPERATIONS: "Show recent operations", "What did agents change?"
+- ROLLBACK: "Undo the last file change", "Rollback operation X"
+
+Actions:
+- register: Register a new project directory as workspace
+- list: List all user's workspaces
+- set_active: Switch active workspace
+- status: Get current workspace status with tech stack
+- scan: Rescan and update workspace context
+- write: Write content to a file (with audit trail)
+- read: Read a file from workspace
+- git_status: Get git status of workspace
+- git_commit: Commit changes with agent attribution
+- git_branch: Create a new branch
+- operations: View recent operations/audit trail
+- rollback: Rollback a specific operation
+
+This enables:
+- FullStackDeveloperAgent to actually write code to projects
+- CodeGeneratorAgent to create real files
+- DevOpsAgent to execute commands
+- Complete audit trail of all agent modifications
+
+⚠️ IMPORTANT: All file operations are logged and can be rolled back.
+Protected paths (like .env) cannot be modified by agents.""",
+
 }
 
 

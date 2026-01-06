@@ -318,3 +318,138 @@ class CaseDocumentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# ==================== SKIN Layer Models (Session 695) ====================
+from .models_skin_layer import ProjectWorkspace, WorkspaceOperation, WorkspaceContext
+
+
+@admin.register(ProjectWorkspace)
+class ProjectWorkspaceAdmin(admin.ModelAdmin):
+    """Admin interface for project workspaces (SKIN layer)."""
+
+    list_display = (
+        'name', 'user', 'workspace_type', 'is_active',
+        'frontend_framework', 'backend_framework',
+        'total_operations', 'total_files_written', 'updated_at'
+    )
+    list_filter = ('workspace_type', 'is_active', 'allow_file_write', 'require_human_review')
+    search_fields = ('name', 'root_path', 'description')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'total_operations', 'total_files_written', 'total_commits')
+
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'user', 'description', 'is_active')
+        }),
+        ('Location', {
+            'fields': ('workspace_type', 'root_path', 'git_remote_url', 'current_branch')
+        }),
+        ('Tech Stack', {
+            'fields': ('tech_stack', 'entry_points')
+        }),
+        ('Permissions', {
+            'fields': (
+                'allow_file_write', 'allow_file_delete',
+                'allow_command_execution', 'allow_git_operations',
+                'protected_paths', 'require_human_review'
+            )
+        }),
+        ('Statistics', {
+            'fields': ('total_operations', 'total_files_written', 'total_commits', 'last_operation_at'),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(WorkspaceOperation)
+class WorkspaceOperationAdmin(admin.ModelAdmin):
+    """Admin interface for workspace operations (SKIN layer audit trail)."""
+
+    list_display = (
+        'operation_type', 'file_path_short', 'agent_name',
+        'success', 'workspace', 'requires_review', 'reviewed_by_human', 'created_at'
+    )
+    list_filter = ('operation_type', 'success', 'requires_review', 'reviewed_by_human', 'rolled_back')
+    search_fields = ('file_path', 'agent_name', 'agent_task', 'command')
+    readonly_fields = (
+        'id', 'created_at', 'file_size_before', 'file_size_after',
+        'execution_time_ms', 'reviewed_at'
+    )
+
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        (None, {
+            'fields': ('workspace', 'user', 'agent_name', 'agent_task', 'operation_type')
+        }),
+        ('File Operation', {
+            'fields': ('file_path', 'file_content_before', 'file_content_after', 'file_size_before', 'file_size_after'),
+            'classes': ('collapse',)
+        }),
+        ('Command Operation', {
+            'fields': ('command', 'command_output', 'command_error', 'exit_code'),
+            'classes': ('collapse',)
+        }),
+        ('Result', {
+            'fields': ('success', 'error_message', 'execution_time_ms')
+        }),
+        ('Human Review', {
+            'fields': ('requires_review', 'reviewed_by_human', 'human_approved', 'human_feedback', 'reviewed_at')
+        }),
+        ('Rollback', {
+            'fields': ('can_rollback', 'rolled_back', 'rollback_operation')
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def file_path_short(self, obj):
+        """Truncate file path for display."""
+        if obj.file_path and len(obj.file_path) > 40:
+            return f"...{obj.file_path[-37:]}"
+        return obj.file_path or obj.command[:40] if obj.command else '-'
+    file_path_short.short_description = 'File/Command'
+
+
+@admin.register(WorkspaceContext)
+class WorkspaceContextAdmin(admin.ModelAdmin):
+    """Admin interface for workspace context (SKIN layer understanding)."""
+
+    list_display = (
+        'workspace', 'total_files', 'total_directories',
+        'total_lines_of_code', 'last_scanned_at'
+    )
+    search_fields = ('workspace__name',)
+    readonly_fields = ('workspace', 'last_scanned_at', 'scan_duration_ms')
+
+    fieldsets = (
+        (None, {
+            'fields': ('workspace',)
+        }),
+        ('File Structure', {
+            'fields': ('file_tree', 'key_files', 'directory_purposes'),
+            'classes': ('collapse',)
+        }),
+        ('Patterns & Dependencies', {
+            'fields': ('coding_patterns', 'dependencies', 'import_aliases'),
+            'classes': ('collapse',)
+        }),
+        ('Statistics', {
+            'fields': (
+                'total_files', 'total_directories', 'total_lines_of_code',
+                'file_type_counts'
+            )
+        }),
+        ('Scan Info', {
+            'fields': ('last_scanned_at', 'scan_depth', 'scan_duration_ms', 'excluded_patterns'),
+            'classes': ('collapse',)
+        }),
+    )
