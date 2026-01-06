@@ -48,6 +48,23 @@ def content_calendar_main(request):
     - Top performing topics
     - Calendar events for grid rendering
     """
+    # Session 688: Handle anonymous users - return empty calendar data
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'success': True,
+            'channels': [],
+            'upcoming': [],
+            'past_content': [],
+            'top_topics': [],
+            'calendar_events': [],
+            'stats': {
+                'total_channels': 0,
+                'active_channels': 0,
+                'scheduled_this_week': 0,
+                'created_this_month': 0,
+            }
+        })
+
     user = request.user
 
     # Get user's channels
