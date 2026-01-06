@@ -1,6 +1,6 @@
 # System Integration Guide
 
-**Generated:** Session 666 (January 5, 2026)
+**Generated:** Session 667 (January 5, 2026)
 **Purpose:** Complete guide to how all components work together
 **Status:** Deep system review with verification commands
 
@@ -773,6 +773,119 @@ celery -A core inspect scheduled
 
 # Check for errors
 tail -f logs/celery.log
+```
+
+---
+
+## ML Opportunity Pipeline (Session 671)
+
+The ML Scoring Engine (v7.1 LightGBM + Optuna) is the **intelligence core** that transforms raw spider data into actionable opportunities.
+
+### Pipeline Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         1. DATA COLLECTION                                   │
+│                                                                              │
+│   77 Spiders (scheduled) ───► SpiderData (stored with embeddings)           │
+│   • Runs every 10-15 minutes via Celery Beat                                │
+│   • Categories: News, Financial, Tech, Jobs, Legal, etc.                    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         2. ML SCORING                                        │
+│                                                                              │
+│   score_opportunities_from_spider_data (hourly Celery task)                 │
+│                    │                                                         │
+│                    ▼                                                         │
+│   OpportunityScoringAgent.score_spider_data()                               │
+│                    │                                                         │
+│                    ▼                                                         │
+│   MLScoringEngine v7.1 (LightGBM + Optuna)                                  │
+│   • 24 features (embedding, temporal, text quality, keywords)               │
+│   • Test R² = 0.6276 (63% predictive accuracy)                              │
+│   • SHAP explainability for every score                                     │
+│   • Hybrid: 60% ML + 40% rule-based                                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         3. OPPORTUNITY CREATION                              │
+│                                                                              │
+│   High score (≥70) ───► Opportunity record created                          │
+│                    │                                                         │
+│                    ▼                                                         │
+│   OpportunityTask.create_from_opportunity() assigns:                        │
+│   • Priority (critical/high/medium/low based on score)                      │
+│   • Due date (based on time_sensitivity)                                    │
+│   • Primary agent (via get_relevant_agents())                               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         4. AGENT EXECUTION                                   │
+│                                                                              │
+│   OpportunityTask ───► Agent executes via task tools                        │
+│   • Content creation (Image, Video, Audio agents)                           │
+│   • Research and analysis (Research, Market agents)                         │
+│   • Application submission (for job opportunities)                          │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         5. FEEDBACK LOOP                                     │
+│                                                                              │
+│   User marks outcome (won/lost/expired) ───► OpportunityOutcome             │
+│                    │                                                         │
+│                    ▼                                                         │
+│   retrain_ml_model_from_outcomes (scheduled Celery task)                    │
+│   • Extracts features from outcomes                                         │
+│   • Retrains model with new data                                            │
+│   • System gets smarter over time                                           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Models
+
+| Model | Purpose |
+|-------|---------|
+| `SpiderData` | Raw data from 77 spiders with embeddings |
+| `Opportunity` | Scored opportunity with suggested content types |
+| `OpportunityTask` | Actionable task assigned to an agent |
+| `OpportunityOutcome` | Win/loss record for ML retraining |
+| `MLModelVersion` | Trained model storage with version history |
+
+### Verification Commands
+
+```bash
+# Check ML model version
+.venv/bin/python manage.py shell -c "
+from core.services.ml_scoring_engine import MLScoringEngine
+engine = MLScoringEngine()
+print(f'Model: {engine.model_version}, Type: {engine.model_type}')
+"
+
+# Check opportunity pipeline task
+celery -A core inspect scheduled | grep score_opportunities
+
+# View recent opportunities
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import Opportunity
+print(f'Total: {Opportunity.objects.count()}')
+print(f'High-value (70+): {Opportunity.objects.filter(overall_score__gte=70).count()}')
+"
+
+# View outcomes for ML feedback
+.venv/bin/python manage.py shell -c "
+from core.models_unified_system import OpportunityOutcome
+print(f'Outcomes: {OpportunityOutcome.objects.count()}')
+"
 ```
 
 ---

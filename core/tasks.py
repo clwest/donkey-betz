@@ -2457,21 +2457,24 @@ def generate_opportunity_report():
 # =============================================================================
 
 @shared_task
-def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
+def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100, use_optuna: bool = True):
     """
     Train or retrain the ML scoring model using OpportunityOutcome data.
 
     Session 470: Market Intelligence Architecture - Phase 1
+    Session 671: Updated to use LightGBM + Optuna optimization
 
     This task:
     - Collects training data from OpportunityOutcome records
-    - Trains an XGBoost model with SHAP explainability
+    - Trains a LightGBM model with Optuna hyperparameter optimization
+    - Provides SHAP explainability for predictions
     - Stores the trained model and metrics
     - Updates the active model version
 
     Args:
         force_retrain: If True, retrain even if current model is recent
         min_samples: Minimum samples required for training (default: 100)
+        use_optuna: If True, use Optuna hyperparameter optimization (default: True)
 
     Returns:
         Dict with training statistics and model version
@@ -2556,7 +2559,16 @@ def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100):
                 }
 
         # Train the model
-        training_result = ml_engine.train_model(training_data)
+        # Session 671: Use Optuna optimization for better hyperparameters
+        if use_optuna and hasattr(ml_engine, 'train_model_with_optimization'):
+            logger.info("🧠 [ML SCORING] Using Optuna hyperparameter optimization...")
+            training_result = ml_engine.train_model_with_optimization(
+                training_data,
+                n_trials=30,  # Reduced from 50 for scheduled runs
+                cv_folds=5
+            )
+        else:
+            training_result = ml_engine.train_model(training_data)
 
         duration = time.time() - start_time
 
