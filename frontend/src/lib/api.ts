@@ -63,6 +63,18 @@ export const intelligenceApi = {
   predictions: () => api.get('/v1/intelligence/predictions/'),
 }
 
+// Session 688: Opportunity detail and actions
+export const opportunitiesApi = {
+  list: (params?: { status?: string; category?: string; min_score?: number }) =>
+    api.get('/opportunities/', { params }),
+  detail: (id: string) => api.get(`/opportunities/${id}/`),
+  act: (id: string, data?: { workflow?: string; content_types?: string[]; notes?: string }) =>
+    api.post(`/opportunities/${id}/act/`, data || {}),
+  dismiss: (id: string, reason?: string) =>
+    api.post(`/opportunities/${id}/dismiss/`, { reason }),
+  top: (limit = 10) => api.get(`/opportunities/top/?limit=${limit}`),
+}
+
 export const ecosystemApi = {
   stats: () => api.get('/ecosystem/stats/'),
   liveFeed: () => api.get('/ecosystem/live-feed/'),
