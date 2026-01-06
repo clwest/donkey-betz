@@ -2987,6 +2987,12 @@ def get_pilot_gate_detail(request, gate_id):
                     'impact_area': gate.decision.impact_area,
                     'status': gate.decision.status,
                     'recommended_stance': gate.decision.recommended_stance,
+                    # Session 689: Add rich decision context for UI display
+                    'key_insights': gate.decision.key_insights or [],
+                    'suggested_feature': gate.decision.suggested_feature or '',
+                    'rationale': gate.decision.rationale or '',
+                    'participants': gate.decision.participants or [],
+                    'conversation': gate.decision.conversation or '',
                 },
                 'status': gate.status,
                 'risk_level': gate.risk_level,
