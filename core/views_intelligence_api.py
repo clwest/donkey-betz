@@ -172,21 +172,23 @@ def spider_network_status(request):
     """
     Get spider network status and statistics
     Session 687: Removed @login_required - public endpoint for Dashboard
+    Session 688: Updated to return spiders array for React frontend
 
     GET /api/v1/intelligence/spider-status/
 
     Returns: {
         "success": true,
-        "spider_count": 46,
-        "active_spiders": [...],
+        "spider_count": 77,
+        "spiders": [{name, status, category, items_collected, last_run}, ...],
         "total_data_points": 1000,
         "last_24h_data": 50
     }
     """
     try:
         from ai_core.spiders.spider_registry import spider_registry
+        from django.db.models import Count, Max
 
-        # Get spider list
+        # Get spider list from registry
         spider_list = spider_registry.list_spiders()
 
         # Get data statistics
@@ -195,16 +197,41 @@ def spider_network_status(request):
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
 
+        # Get spider stats from database (items collected, last run)
+        spider_stats = SpiderData.objects.values('spider_name').annotate(
+            items_collected=Count('id'),
+            last_run=Max('created_at')
+        )
+        stats_by_name = {s['spider_name']: s for s in spider_stats}
+
         # Get active spiders (those that have recent data)
-        active_spiders = SpiderData.objects.filter(
-            created_at__gte=timezone.now() - timedelta(hours=24)
-        ).values('spider_name').distinct()
+        active_spider_names = set(
+            SpiderData.objects.filter(
+                created_at__gte=timezone.now() - timedelta(hours=24)
+            ).values_list('spider_name', flat=True).distinct()
+        )
+
+        # Build spiders array for frontend
+        spiders = []
+        for spider_name, spider_info in spider_list.items():
+            stats = stats_by_name.get(spider_name, {})
+            config = spider_info.get('config', {})
+            spiders.append({
+                'name': spider_name,
+                'status': 'active' if spider_name in active_spider_names else 'inactive',
+                'category': config.get('category', 'general'),
+                'items_collected': stats.get('items_collected', 0),
+                'last_run': stats.get('last_run').isoformat() if stats.get('last_run') else None,
+            })
+
+        # Sort by items collected (most active first)
+        spiders.sort(key=lambda x: x['items_collected'], reverse=True)
 
         return JsonResponse({
             'success': True,
             'spider_count': len(spider_list),
-            'total_spiders': spider_list,
-            'active_spiders': [s['spider_name'] for s in active_spiders],
+            'spiders': spiders,
+            'active_spiders': list(active_spider_names),
             'total_data_points': total_data,
             'last_24h_data': last_24h,
             'timestamp': timezone.now().isoformat()
@@ -214,6 +241,7 @@ def spider_network_status(request):
         logger.error(f"Error in spider_network_status: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
+            'spiders': [],
             'error': 'Failed to retrieve spider network status'
         }, status=500)
 
