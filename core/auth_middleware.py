@@ -162,6 +162,12 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/sports/live-odds',  # Live odds
         '/api/v1/odds/bankroll/',  # Bankroll management
         '/api/v1/odds/markets/',  # Betting markets
+
+        # Session 688: Content Page APIs (read-only for React frontend)
+        '/api/v1/gallery/',  # Gallery endpoints
+        '/api/content-calendar/',  # Content calendar
+        '/api/creative-projects/',  # Creative projects
+        '/api/v1/content/templates/',  # Content templates
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
