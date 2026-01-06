@@ -20,8 +20,35 @@ import logging
 from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def predict_performance_with_ml(performance_data: dict) -> dict:
+    """Predict content performance using ML models (LSTM time series)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        # Use TIME_SERIES task type for performance prediction
+        result = router.auto_route(
+            data=performance_data,
+            task_hint=TaskType.TIME_SERIES,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'time_series'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'performance_prediction': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML performance prediction failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class PerformanceAnalystAgent(BaseAgent):

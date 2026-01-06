@@ -16,8 +16,32 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration for Arbitrage Detection (Anomaly)
+# =============================================================================
+
+def detect_arb_anomalies_with_ml(odds_data: dict) -> dict:
+    """Detect arbitrage anomalies using ML models."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(data=odds_data, task_hint=TaskType.ANOMALY, max_models=2)
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'anomaly'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'anomalies': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML arbitrage detection failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class ArbitrageDetector(BaseAgent):

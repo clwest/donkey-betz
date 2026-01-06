@@ -17,8 +17,32 @@ from datetime import datetime
 import json
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration for Prediction Markets (LSTM+Anomaly)
+# =============================================================================
+
+def analyze_market_data_with_ml(market_data: dict) -> dict:
+    """Analyze prediction market data using ML models."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(data=market_data, task_hint=TaskType.TIME_SERIES, max_models=2)
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'time_series'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'predictions': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML market analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class PredictionMarketAnalyst(BaseAgent):

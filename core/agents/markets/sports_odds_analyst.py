@@ -17,8 +17,32 @@ from datetime import datetime, timedelta
 import json
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Session 683: ML Integration for Sports Odds (LSTM)
+# =============================================================================
+
+def analyze_odds_with_ml(odds_data: dict) -> dict:
+    """Analyze sports odds using ML models for forecasting."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(data=odds_data, task_hint=TaskType.TIME_SERIES, max_models=2)
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'time_series'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'line_predictions': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML odds analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class SportsOddsAnalyst(BaseAgent):
