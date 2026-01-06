@@ -3,12 +3,14 @@ Agent-Model Router - Routes Agents to Optimal ML Models
 ========================================================
 
 Session 677: Phase 1 of Agent-Model Routing Architecture
+Session 682: Phase 6 - Added auto_route() for automatic model selection
 
 This module provides the central routing logic that:
 1. Looks up the AgentModelConfig for a given agent
 2. Gets the appropriate model(s) from the ModelRegistry
 3. Makes predictions using weighted ensemble
 4. Records performance metrics
+5. Auto-selects models based on data characteristics (Phase 6)
 
 Usage:
     from core.services.agent_model_router import get_agent_model_router
@@ -16,6 +18,10 @@ Usage:
     router = get_agent_model_router()
     result = router.route('ResearchAgent', task_data)
     # result.score, result.confidence, result.explanation
+
+    # Auto-select models based on data (Session 682)
+    result = router.auto_route(data)
+    # result.score, result.auto_selection (with task_type, recommended_models)
 
     # Or use async version
     result = await router.route_async('StockAnalystAgent', market_data)
@@ -33,6 +39,11 @@ from core.services.model_registry import (
     BaseModelWrapper,
     ModelPrediction,
     get_model_registry,
+)
+from ml.auto_selection import (
+    get_model_selector,
+    AutoSelectionResult,
+    TaskType,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,9 +63,11 @@ class EnsemblePrediction:
     models_used: List[str] = field(default_factory=list)
     fallback_used: bool = False
     error: Optional[str] = None
+    # Session 682: Auto-selection info when using auto_route()
+    auto_selection: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             'success': self.success,
             'score': self.score,
             'confidence': self.confidence,
@@ -67,6 +80,9 @@ class EnsemblePrediction:
             'fallback_used': self.fallback_used,
             'error': self.error,
         }
+        if self.auto_selection:
+            result['auto_selection'] = self.auto_selection
+        return result
 
 
 class AgentModelRouter:
@@ -293,6 +309,221 @@ class AgentModelRouter:
             None,
             lambda: self.route(agent_name, data, **kwargs)
         )
+
+    # =========================================================================
+    # AUTO-SELECTION METHODS (Session 682 - Phase 6)
+    # =========================================================================
+
+    def auto_route(
+        self,
+        data: Any,
+        task_hint: Optional[TaskType] = None,
+        max_models: int = 2,
+        min_score: float = 0.3,
+        agent_name: Optional[str] = None,
+        **kwargs
+    ) -> EnsemblePrediction:
+        """
+        Automatically select and route to optimal models based on data characteristics.
+
+        This method analyzes the input data to detect task type and characteristics,
+        then selects the best models without requiring pre-configured agent settings.
+
+        Args:
+            data: Input data for prediction
+            task_hint: Optional hint about task type (TaskType enum)
+            max_models: Maximum models to use (default 2)
+            min_score: Minimum score threshold for model selection
+            agent_name: Optional agent name for tracking
+            **kwargs: Additional parameters passed to models
+
+        Returns:
+            EnsemblePrediction with scores and auto_selection info
+
+        Example:
+            router = get_agent_model_router()
+
+            # Auto-detect task type
+            result = router.auto_route(price_data)
+            # result.auto_selection['task_type'] == 'time_series'
+            # result.models_used == ['lstm', 'prophet']
+
+            # With task hint
+            result = router.auto_route(wallet_graph, task_hint=TaskType.GRAPH)
+        """
+        start_time = time.time()
+
+        # Get the model selector
+        selector = get_model_selector(self._registry)
+
+        # Perform auto-selection
+        selection = selector.select_models(
+            data=data,
+            task_hint=task_hint,
+            max_models=max_models,
+            min_score=min_score,
+            agent_name=agent_name,
+        )
+
+        if not selection.success:
+            return EnsemblePrediction(
+                success=False,
+                agent_name=agent_name or "auto",
+                error=selection.error or "Auto-selection failed",
+                latency_ms=(time.time() - start_time) * 1000,
+                auto_selection=selection.to_dict(),
+            )
+
+        # Get models based on selection
+        models = []
+        for model_name in selection.recommended_models:
+            model = self._registry.get_model(model_name)
+            if model and model.is_available():
+                weight = selection.model_weights.get(model_name, 0.5)
+                models.append((model, weight, model_name))
+
+        if not models:
+            return EnsemblePrediction(
+                success=False,
+                agent_name=agent_name or "auto",
+                error="No selected models available",
+                latency_ms=(time.time() - start_time) * 1000,
+                auto_selection=selection.to_dict(),
+            )
+
+        # Make predictions with selected models
+        model_predictions: Dict[str, ModelPrediction] = {}
+        model_weights: Dict[str, float] = {}
+
+        for model, weight, name in models:
+            try:
+                pred = model.predict(data, **kwargs)
+                model_predictions[name] = pred
+                model_weights[name] = weight
+            except Exception as e:
+                logger.warning(f"Auto-route: Error with {name}: {e}")
+
+        if not model_predictions:
+            return EnsemblePrediction(
+                success=False,
+                agent_name=agent_name or "auto",
+                error="All auto-selected model predictions failed",
+                latency_ms=(time.time() - start_time) * 1000,
+                auto_selection=selection.to_dict(),
+            )
+
+        # Combine predictions
+        combined_score = 0.0
+        combined_confidence = 0.0
+        total_weight = 0.0
+        model_scores = {}
+        all_explanations = {}
+
+        for name, pred in model_predictions.items():
+            if pred.success:
+                weight = model_weights[name]
+                combined_score += pred.score * weight
+                combined_confidence += pred.confidence * weight
+                total_weight += weight
+                model_scores[name] = pred.score
+                if pred.explanation:
+                    all_explanations[name] = pred.explanation
+
+        if total_weight > 0:
+            combined_score /= total_weight
+            combined_confidence /= total_weight
+
+        # Build auto-selection summary for result
+        auto_selection_info = {
+            'task_type': selection.task_analysis.task_type.value if selection.task_analysis else 'unknown',
+            'characteristics': [c.value for c in selection.task_analysis.characteristics] if selection.task_analysis else [],
+            'recommended_models': selection.recommended_models,
+            'selection_reason': selection.selection_reason,
+            'selection_confidence': selection.confidence,
+            'selection_latency_ms': selection.latency_ms,
+        }
+
+        return EnsemblePrediction(
+            success=True,
+            score=combined_score,
+            confidence=combined_confidence,
+            model_scores=model_scores,
+            model_weights=model_weights,
+            explanation=all_explanations,
+            latency_ms=(time.time() - start_time) * 1000,
+            agent_name=agent_name or "auto",
+            models_used=list(model_predictions.keys()),
+            fallback_used=selection.fallback_used,
+            auto_selection=auto_selection_info,
+        )
+
+    async def auto_route_async(
+        self,
+        data: Any,
+        task_hint: Optional[TaskType] = None,
+        **kwargs
+    ) -> EnsemblePrediction:
+        """Async version of auto_route()."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: self.auto_route(data, task_hint=task_hint, **kwargs)
+        )
+
+    def compare_auto_vs_config(
+        self,
+        agent_name: str,
+        data: Any,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Compare auto-selected models vs configured models for an agent.
+
+        Useful for evaluating if auto-selection would pick better models
+        than the current configuration.
+
+        Args:
+            agent_name: Agent to compare
+            data: Input data
+            **kwargs: Additional parameters
+
+        Returns:
+            Dict with both results and comparison
+        """
+        # Get configured result
+        config_result = self.route(agent_name, data, **kwargs)
+
+        # Get auto-selected result
+        auto_result = self.auto_route(data, agent_name=agent_name, **kwargs)
+
+        # Build comparison
+        config_models = config_result.models_used
+        auto_models = auto_result.models_used
+
+        return {
+            'agent_name': agent_name,
+            'configured': {
+                'models': config_models,
+                'score': config_result.score,
+                'confidence': config_result.confidence,
+                'latency_ms': config_result.latency_ms,
+            },
+            'auto_selected': {
+                'models': auto_models,
+                'score': auto_result.score,
+                'confidence': auto_result.confidence,
+                'latency_ms': auto_result.latency_ms,
+                'task_type': auto_result.auto_selection.get('task_type') if auto_result.auto_selection else None,
+                'selection_reason': auto_result.auto_selection.get('selection_reason') if auto_result.auto_selection else None,
+            },
+            'models_match': set(config_models) == set(auto_models),
+            'score_difference': auto_result.score - config_result.score,
+            'recommendation': 'use_auto' if auto_result.score > config_result.score else 'keep_config',
+        }
+
+    def get_model_selector(self):
+        """Get the ModelSelector instance for advanced usage."""
+        return get_model_selector(self._registry)
 
     def _record_prediction(self, agent_name: str, success: bool, latency_ms: float):
         """Record prediction metrics in database."""
