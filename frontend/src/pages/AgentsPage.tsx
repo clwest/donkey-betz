@@ -118,6 +118,10 @@ export default function AgentsPage() {
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
+    // Session 688: Filter out connection messages - only show real agent activity
+    if (update.type === 'connection_established' || update.type === 'pong') {
+      return
+    }
     setRealtimeUpdates((prev) => [update, ...prev].slice(0, 50))
   })
 
