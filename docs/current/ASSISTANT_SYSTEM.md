@@ -20,7 +20,7 @@
 
 ## Overview
 
-The Assistant System is the GPT-5.1 interface layer that coordinates 21 tools/agents for AI-powered content creation, research, and orchestration. It uses a mixin architecture for clean separation of concerns.
+The Assistant System is the GPT-5.1 interface layer that coordinates 81 tools/agents for AI-powered content creation, research, orchestration, and ML Pipeline management. It uses a mixin architecture for clean separation of concerns.
 
 ### Package Structure
 
@@ -182,7 +182,7 @@ Utility functions for ID resolution and range parsing.
 
 ## Tool Definitions
 
-### 21 Tools Organized by Category
+### Core Tools Organized by Category (25 documented below, 81 total)
 
 #### Creation Tools (6)
 
@@ -224,6 +224,23 @@ Utility functions for ID resolution and range parsing.
 | `web_search` | Web search integration |
 | `create_project_from_research` | Project creation from research |
 | `strategic_review` | Research analysis |
+
+#### ML Pipeline Tools (4) - Session 673
+
+| Tool | Purpose |
+|------|---------|
+| `opportunity_manager_tool` | Query, filter, search opportunities from ML Pipeline |
+| `task_manager_tool` | Manage OpportunityTask lifecycle (accept, apply, complete) |
+| `pipeline_orchestrator_tool` | Manual pipeline execution, status, queue |
+| `revenue_tracker_tool` | Log revenue, track ML prediction accuracy |
+
+#### Universal Agent Tool (1) - Session 674
+
+| Tool | Purpose |
+|------|---------|
+| `universal_agent_tool` | Invoke ANY of 69 routable agents by name - blockchain, stocks, development, podcast, markets, narrative, etc. |
+
+This single tool connects the PA (brain) to ALL 42 previously unreachable agents (organs).
 
 ---
 

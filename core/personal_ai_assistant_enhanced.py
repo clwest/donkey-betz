@@ -1386,6 +1386,9 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_pipeline_orchestrator_tool(arguments)
             elif function_name == 'revenue_tracker_tool':
                 result = self._handle_revenue_tracker_tool(arguments)
+            # Session 674: Universal Agent Tool - connects PA to ALL agents
+            elif function_name == 'universal_agent_tool':
+                result = self._handle_universal_agent_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -11018,3 +11021,88 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error in revenue_tracker_tool: {e}")
             return {'success': False, 'error': str(e)}
+
+    # =========================================================================
+    # SESSION 674: UNIVERSAL AGENT TOOL - CONNECTS PA TO ALL 42+ AGENTS
+    # =========================================================================
+
+    def _handle_universal_agent_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle universal agent invocation - routes ANY agent through AgentRouter.
+
+        This single handler connects the PA (brain) to all 42 previously
+        unreachable agents (organs), enabling:
+        - Blockchain auditing
+        - Stock analysis
+        - Code generation/review
+        - Podcast creation
+        - Market analysis
+        - Narrative tracking
+        - And more...
+        """
+        from core.agent_router import AgentRouter, AgentNotFoundError
+
+        agent_name = arguments.get('agent_name')
+        task = arguments.get('task')
+        context = arguments.get('context', {})
+
+        if not agent_name:
+            return {'success': False, 'error': 'agent_name is required'}
+        if not task:
+            return {'success': False, 'error': 'task is required'}
+
+        try:
+            # Initialize router with user
+            router = AgentRouter(user=self.user)
+
+            # Validate agent exists
+            if not router.is_valid_agent(agent_name):
+                available = router.get_available_agents()
+                return {
+                    'success': False,
+                    'error': f"Unknown agent: '{agent_name}'",
+                    'available_agents': available[:20],  # Show first 20
+                    'hint': "Use one of the available agent names exactly as shown"
+                }
+
+            # Execute the agent
+            logger.info(f"Universal Agent Tool: Invoking {agent_name} for task: {task[:50]}...")
+
+            result = router.route(
+                agent_name=agent_name,
+                task=task,
+                context=context
+            )
+
+            # Convert AgentResult to dict
+            if result.success:
+                return {
+                    'success': True,
+                    'agent_name': result.agent_name,
+                    'message': result.message,
+                    'data': result.data,
+                    'execution_time_ms': getattr(result, 'execution_time_ms', None)
+                }
+            else:
+                return {
+                    'success': False,
+                    'agent_name': agent_name,
+                    'error': result.error or 'Agent execution failed',
+                    'message': result.message
+                }
+
+        except AgentNotFoundError as e:
+            logger.error(f"Agent not found: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'hint': "Check the agent name spelling. Use exact agent class names."
+            }
+
+        except Exception as e:
+            logger.error(f"Error in universal_agent_tool: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'agent_name': agent_name
+            }
