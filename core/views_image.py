@@ -4158,7 +4158,7 @@ def track_image_download(request, image_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 688: Allow public access for React frontend
 def unified_gallery(request):
     """
     Unified gallery endpoint combining images, videos, and audio.
@@ -4213,6 +4213,16 @@ def unified_gallery(request):
 
         # Collect results from different media types
         all_items = []
+
+        # Session 688: Handle anonymous users - return empty gallery
+        if not user.is_authenticated:
+            return Response({
+                'count': 0,
+                'next': None,
+                'previous': None,
+                'results': [],
+                'items': []  # For compatibility with React frontend
+            })
 
         # Fetch images if requested
         if media_type in ['all', 'images']:

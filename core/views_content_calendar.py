@@ -35,9 +35,9 @@ from core.services.memory_context_service import get_memory_context_service
 logger = logging.getLogger(__name__)
 
 
-@login_required
 @require_http_methods(["GET"])
 def content_calendar_main(request):
+    # Session 688: Removed @login_required for React frontend access
     """
     GET /api/content-calendar/
 
