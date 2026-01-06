@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ecosystemApi, dashboardApi, spidersApi } from '@/lib/api'
+import { ecosystemApi, dashboardApi, spidersApi, activityApi } from '@/lib/api'
 import { useWebSocket, type WebSocketStatus } from '@/hooks/useWebSocket'
 import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -16,7 +16,7 @@ interface StatCardProps {
 
 interface DashboardUpdate {
   type: string
-  data: Record<string, unknown>
+  data: { subtitle?: string; icon?: string; [key: string]: unknown }
   timestamp: string
 }
 
@@ -95,6 +95,24 @@ export default function DashboardPage() {
     queryFn: () => dashboardApi.health(),
   })
 
+  // Fetch initial recent activity
+  const { data: initialActivity } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => activityApi.recent(20, 24),
+  })
+
+  // Initialize recentActivity with fetched data
+  useEffect(() => {
+    if (initialActivity?.data?.activities) {
+      const formatted = initialActivity.data.activities.map((a: { type: string; title: string; subtitle?: string; timestamp: string; icon?: string }) => ({
+        type: a.title || a.type,
+        timestamp: a.timestamp,
+        data: { subtitle: a.subtitle, icon: a.icon },
+      }))
+      setRecentActivity(formatted)
+    }
+  }, [initialActivity])
+
   // Mutations for quick actions
   const agentCycleMutation = useMutation({
     mutationFn: () => dashboardApi.runAgentCycle(),
@@ -110,8 +128,14 @@ export default function DashboardPage() {
   const spiderCheckMutation = useMutation({
     mutationFn: () => spidersApi.status(),
     onSuccess: (data) => {
-      const spiderCount = data?.data?.active_spiders || data?.data?.total || 'Unknown'
-      setActionResult({ type: 'success', message: `Spiders checked: ${spiderCount} active` })
+      const d = data?.data || {}
+      const spiderCount = d.spider_count || 0
+      const last24h = d.last_24h_data || 0
+      const totalData = d.total_data_points || 0
+      setActionResult({
+        type: 'success',
+        message: `${spiderCount} spiders | ${last24h} collected (24h) | ${totalData.toLocaleString()} total data points`
+      })
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to check spider status' })
@@ -184,7 +208,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="System Health"
-          value={health.status === 'ok' ? 'Healthy' : 'Check'}
+          value={['ok', 'healthy'].includes(health.status) ? 'Healthy' : (health.status || 'Check')}
           icon={Activity}
           color="#06b6d4"
         />
@@ -244,11 +268,14 @@ export default function DashboardPage() {
                   key={`${update.timestamp}-${idx}`}
                   className="flex items-center gap-3 p-2 rounded-lg bg-dark-bg"
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary-500/20 flex items-center justify-center">
-                    <Activity size={14} className="text-primary-400" />
+                  <div className="h-8 w-8 rounded-full bg-primary-500/20 flex items-center justify-center text-sm">
+                    {update.data?.icon || <Activity size={14} className="text-primary-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{update.type}</p>
+                    {update.data?.subtitle && (
+                      <p className="text-xs text-gray-400 truncate">{update.data.subtitle}</p>
+                    )}
                     <p className="text-xs text-gray-500">
                       {new Date(update.timestamp).toLocaleTimeString()}
                     </p>
@@ -259,7 +286,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-gray-400 text-sm text-center py-8">
               <Activity className="mx-auto mb-2 opacity-50" size={24} />
-              <p>Waiting for real-time updates...</p>
+              <p>No recent activity</p>
             </div>
           )}
         </div>

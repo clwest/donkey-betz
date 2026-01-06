@@ -143,6 +143,9 @@ Output Format:
             # Build response
             response = self._build_arb_report(events, arb_opps, alerts, context)
 
+            # Session 687: Create Human Interface attention items for HOT arbs
+            self._create_attention_items(arb_opps)
+
             # Record learning
             try:
                 self._record_learning_outcome(
@@ -600,3 +603,44 @@ Output Format:
     def _elapsed_ms(self, start_time: datetime) -> int:
         """Calculate elapsed time in milliseconds."""
         return int((datetime.now() - start_time).total_seconds() * 1000)
+
+    def _create_attention_items(self, arb_opps: List[Dict]) -> None:
+        """Session 687: Create Human Interface attention items for actionable arbs."""
+        try:
+            from core.services.human_attention_bridge import attention_bridge
+            from dateutil.parser import parse as parse_datetime
+
+            # Only create attention for HOT and GOOD arbs
+            for arb in arb_opps:
+                if arb.get('rating') not in ['HOT', 'GOOD']:
+                    continue
+
+                # Parse game time as expiry
+                expires_at = None
+                if arb.get('commence_time'):
+                    try:
+                        expires_at = parse_datetime(arb['commence_time'])
+                    except Exception:
+                        pass
+
+                attention_bridge.create_arbitrage_attention(
+                    opportunity={
+                        'id': arb.get('event_id', ''),
+                        'title': arb.get('matchup', 'Arbitrage Opportunity'),
+                        'profit_pct': arb.get('profit_pct', 0),
+                        'markets': [arb.get('home_book', ''), arb.get('away_book', '')],
+                        'sport': arb.get('sport', ''),
+                        'rating': arb.get('rating', ''),
+                        'stake_home': arb.get('stake_home', 0),
+                        'stake_away': arb.get('stake_away', 0),
+                        'guaranteed_profit': arb.get('guaranteed_profit', 0),
+                        'home_team': arb.get('home_team', ''),
+                        'away_team': arb.get('away_team', ''),
+                        'game_time': arb.get('game_time', ''),
+                        'expires_at': expires_at,
+                    }
+                )
+                logger.info(f"Created attention item for {arb.get('rating')} arb: {arb.get('matchup')}")
+
+        except Exception as e:
+            logger.warning(f"Failed to create attention items for arbs: {e}")

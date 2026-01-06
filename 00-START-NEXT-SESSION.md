@@ -1,114 +1,74 @@
-# Session 687 - Start Here
+# Session 688 - Start Here
 
-**Previous Session:** 686 (Human Interface Layer)
+**Previous Session:** 687 (UI Data Display Audit)
 **Date:** January 5, 2026
-**Focus:** UI Data Display Audit - Show ALL the data!
-**Status:** 100% Reality Score | Human-in-the-Loop Complete | **Full Architecture Connected**
+**Focus:** Continue UI Audit + Human Interface Polish
+**Status:** 100% Reality Score | Human-in-the-Loop Complete | **Human Attention Bridge Integrated**
 
-> **PRIORITY:** The backend is working great - now ensure ALL data displays correctly on the React UI!
+> **PRIORITY:** Dashboard and Human page now working - continue auditing remaining pages!
 
 ---
 
-## Session 686 Summary: Human Interface Layer
+## Session 687 Summary: UI Data Display Audit
 
 ### What Was Built
 
-Implemented the "Human" layer that connects the operator to the autonomous AI ecosystem, completing the architectural metaphor:
+Connected real backend data to the React frontend and created the Human Attention Bridge service.
 
-| Component | Analogy | Implementation |
-|-----------|---------|----------------|
-| **Brain** | Autonomous reasoning | ThinkingAgent |
-| **Nervous System** | ML auto-selection | Agent-Model Router (Sessions 677-685) |
-| **Organs** | Specialized workers | 72+ Agents |
-| **Human** | Operator control | **HumanInterfaceLayer (Session 686)** |
+### Fixes Applied
 
-### Backend (Django)
+| Issue | Fix |
+|-------|-----|
+| Dashboard Recent Activity empty | Added API fetch on mount + WebSocket updates |
+| Agent count mismatch (57 vs 72) | Synced database with AgentRouter.AGENT_MAP |
+| Human page no real data | Created Human Attention Bridge + sample items |
+| No automated attention generation | Added Celery task (every 15 minutes) |
 
-**Models** (`core/models_human_interface.py`):
-| Model | Purpose |
-|-------|---------|
-| `HumanAttentionItem` | Items requiring human review (urgency, ML predictions, decisions) |
-| `HumanFeedbackRecord` | Records for ML learning from human decisions |
-| `HumanPreference` | Notification/review preferences (explicit + learned) |
-| `HumanControlAction` | Audit log of control actions |
-| `HumanSystemState` | Global state (paused, quiet mode, review mode) |
+### New Components
 
-**Service** (`core/services/human_interface_service.py`):
-- Attention stream with priority scoring
-- Decision recording with ML override tracking
-- Agent pause/resume with audit trail
-- Quiet mode and review mode controls
-- Preference learning from feedback
+**Human Attention Bridge** (`core/services/human_attention_bridge.py`):
+- Creates attention items from system events
+- Integrates with: Pilot gates, agent failures, arbitrage, system alerts, content review, spider data
+- Django signals for auto-creation on model changes
+- Singleton: `attention_bridge`
 
-**API Endpoints** (`core/views_human_interface.py`):
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/human/attention/` | GET | Attention stream |
-| `/api/human/attention/{id}/decide/` | POST | Record decision |
-| `/api/human/attention/{id}/defer/` | POST | Defer item |
-| `/api/human/attention/stats/` | GET | Attention statistics |
-| `/api/human/control/` | GET | System control state |
-| `/api/human/control/pause/` | POST | Pause an agent |
-| `/api/human/control/resume/` | POST | Resume an agent |
-| `/api/human/control/quiet/` | POST | Toggle quiet mode |
-| `/api/human/control/review/` | POST | Toggle review mode |
-| `/api/human/control/threshold/` | POST | Adjust ML threshold |
-| `/api/human/preferences/` | GET/PUT | User preferences |
+**ArbitrageDetector Integration:**
+- HOT/GOOD opportunities now create attention items
+- Connects arbitrage detection to Human Interface
 
-### Frontend (React)
+**Celery Task:**
+- `generate_human_attention_items` - Scans system and creates attention items
+- Scheduled every 15 minutes via Celery Beat
 
-**HumanPage.tsx** with 3 tabs:
-1. **Attention Stream** - Prioritized items by urgency with decision modal
-2. **Control Panel** - Quiet mode, review mode, ML threshold, agent pause/resume
-3. **Preferences** - Notification settings, quiet hours, stats
+### Files Changed
 
-**Navigation:** Added "Human" link to sidebar (between AI Assistant and Agents)
+| File | Change |
+|------|--------|
+| `frontend/src/pages/DashboardPage.tsx` | Added initial activity fetch |
+| `frontend/src/pages/HumanPage.tsx` | Added debug logging, error handling |
+| `core/services/human_attention_bridge.py` | **NEW** - 439 lines |
+| `core/agents/markets/arbitrage_detector.py` | Added Human Interface integration |
+| `core/tasks.py` | Added `generate_human_attention_items` |
+| `core/celery.py` | Added beat schedule |
 
-### Discord Commands
-
-Uses command GROUP (counts as 1 command toward 100 limit):
-| Command | Description |
-|---------|-------------|
-| `/human attention` | View items requiring your attention |
-| `/human control` | View system control state |
-| `/human decide <id> <decision>` | Make a decision on an item |
-| `/human pause <agent>` | Pause an agent |
-| `/human resume <agent>` | Resume a paused agent |
-| `/human quiet [duration]` | Toggle quiet mode |
-
-### Commit
-```
-23ac04b6 feat(Session 686): Human Interface Layer - Connect Human to AI Ecosystem
-12 files changed, 3,415 insertions
-```
+### Handoff Doc
+`docs/handoffs/SESSION_687_UI_DATA_DISPLAY_AUDIT.md`
 
 ---
 
-## Complete Architecture (Sessions 677-686)
+## Session 688 Priority: Continue UI Audit
 
-| Phase | Session | Focus | Deliverable |
-|-------|---------|-------|-------------|
-| 1-9 | 677-685 | ML Architecture | Agent-Model Router with 100% coverage |
-| **10** | **686** | **Human Layer** | **HumanInterfaceLayer** |
+### Pages Audited (Session 687)
 
-**The AI ecosystem is now fully connected:**
-- Agents do the work
-- ML selects the best models
-- ThinkingAgent reasons autonomously
-- **Human oversees and controls everything**
+| Page | Route | Status |
+|------|-------|--------|
+| **Dashboard** | `/dashboard` | DONE - Real-time activity working |
+| **Human** | `/human` | DONE - Attention stream shows real data |
 
----
-
-## Session 687 Priority: UI Data Display Audit
-
-**Goal:** Ensure ALL backend data displays correctly on the React frontend!
-
-### Pages to Audit
+### Pages to Audit (Session 688)
 
 | Page | Route | What to Check |
 |------|-------|---------------|
-| **Dashboard** | `/dashboard` | Ecosystem stats, health status, real-time updates |
-| **Human** | `/human` | Attention items, control state, preferences |
 | **Agents** | `/agents` | Agent list, categories, activity, learning events |
 | **Intelligence** | `/intelligence` | Pilots, gates, experiments, opportunities |
 | **Betting** | `/betting` | Odds, wagers, arbitrage, bankroll |
@@ -130,37 +90,6 @@ Uses command GROUP (counts as 1 command toward 100 limit):
 6. **Real-time Updates** - Are WebSockets connected and working?
 7. **Refresh Actions** - Can users manually refresh data?
 
-### Quick Start Commands
-
-```bash
-# Start everything
-make start && make celery
-
-# Open React app
-open http://localhost:5173/  # Vite dev server
-
-# Check API health
-curl -s http://localhost:8000/health/ping/
-
-# Check what APIs exist
-grep -r "api\." frontend/src/lib/api.ts | head -30
-```
-
-### Known Issues to Check
-
-- [ ] Dashboard real-time updates via WebSocket
-- [ ] Human page attention items (needs data populated)
-- [ ] Agents page learning feed
-- [ ] Intelligence page pilot gates
-- [ ] Admin page Celery worker status
-
-### After Audit Complete
-
-Once all pages display data correctly:
-- Option A: Populate Human attention items from existing systems
-- Option B: Add ML feedback loop
-- Option C: Proactive notifications
-
 ---
 
 ## Quick Commands
@@ -169,32 +98,69 @@ Once all pages display data correctly:
 # Start services
 make start && make celery
 
+# Access React frontend
+open http://localhost:3003/  # Direct React app
+
+# Check API health
+curl -s http://localhost:8000/health/ping/
+
 # Test Human Interface API
 curl -s http://localhost:8000/api/human/attention/ -H "Authorization: Token YOUR_TOKEN"
-curl -s http://localhost:8000/api/human/control/ -H "Authorization: Token YOUR_TOKEN"
 
-# Access React frontend
-open http://localhost:8000/ai-studio/  # Then navigate to Human page
+# Manually run attention generation
+.venv/bin/python manage.py shell -c "
+from core.tasks import generate_human_attention_items
+result = generate_human_attention_items()
+print(result)
+"
 
-# Run Discord bot (for /human commands)
-python manage.py run_discord_bot
+# Restart Celery Beat (picks up new schedule)
+pkill -f 'celery.*beat' && .venv/bin/celery -A core beat --loglevel=info &
 ```
 
 ---
 
-## System Stats (Session 686)
+## System Stats (Session 687)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
-| Agents | 72 | All with ML integration |
+| Agents | 72 | Synced to database |
 | ML Models | 17 | 15 working |
-| ML Tests | 218 | All passing |
-| Human Models | **5** | New in Session 686 |
-| Human API Endpoints | **11** | New in Session 686 |
-| Discord Commands | **113** | +1 group (/human with 6 subcommands) |
+| Human Models | 5 | Attention items populated |
+| Human API Endpoints | 11 | All working |
+| Discord Commands | 113 | Including /human group |
 | Spiders | 77 | 72 working |
 | PA Tools | 78 | Including ml_analysis |
-| Celery Tasks | 127 | Running |
+| Celery Tasks | 128 | +1 (generate_human_attention_items) |
+
+---
+
+## Data Flow Architecture
+
+```
+System Events
+    │
+    ├── Pilot Gate Status Change ──────────┐
+    ├── Agent Execution Failed ────────────┤
+    ├── ArbitrageDetector HOT/GOOD Arbs ───┤
+    ├── System Health Alerts ──────────────┤
+    └── Spider Data Alerts ────────────────┘
+                                           │
+                                           ▼
+                              HumanAttentionBridge
+                                           │
+                                           ▼
+                              HumanInterfaceService
+                                           │
+                                           ▼
+                              HumanAttentionItem (DB)
+                                           │
+                                           ▼
+                              /api/human/attention/
+                                           │
+                                           ▼
+                              React HumanPage.tsx
+```
 
 ---
 
@@ -204,15 +170,13 @@ python manage.py run_discord_bot
 - **Design:** `docs/designs/HUMAN_INTERFACE_LAYER.md`
 - **Models:** `core/models_human_interface.py`
 - **Service:** `core/services/human_interface_service.py`
+- **Bridge:** `core/services/human_attention_bridge.py` (NEW in 687)
 - **API:** `core/views_human_interface.py`
 - **React:** `frontend/src/pages/HumanPage.tsx`
 - **Discord:** `core/services/discord_bot.py` (HumanInterfaceCommands)
 
+### Session 687 Handoff
+- `docs/handoffs/SESSION_687_UI_DATA_DISPLAY_AUDIT.md`
+
 ### ML Architecture (Sessions 677-685)
-- **Phase 1:** `docs/handoffs/SESSION_677_AGENT_MODEL_ROUTER_PHASE1.md`
-- **Phase 2:** `docs/handoffs/SESSION_678_TIME_SERIES_PHASE2.md`
-- **Phase 3:** `docs/handoffs/SESSION_679_ANOMALY_DETECTION_PHASE3.md`
-- **Phase 4:** `docs/handoffs/SESSION_680_REINFORCEMENT_LEARNING_PHASE4.md`
-- **Phase 5:** `docs/handoffs/SESSION_681_GRAPH_NEURAL_NETWORKS_PHASE5.md`
-- **Phase 6:** `docs/handoffs/SESSION_682_MODEL_AUTO_SELECTION.md`
-- **Phase 7:** `docs/handoffs/SESSION_683_ML_ASSISTANT_INTEGRATION.md`
+- Phase 1-9 documentation in `docs/handoffs/`

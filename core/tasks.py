@@ -21933,3 +21933,137 @@ def _send_gate_processing_discord(results: dict):
 
     except Exception as e:
         logger.debug(f"🚀 [SESSION 619] Discord notification failed: {e}")
+
+
+# =============================================================================
+# Session 687: Human Interface - Attention Item Generation
+# =============================================================================
+
+@shared_task
+def generate_human_attention_items():
+    """
+    Generate attention items from various system events.
+
+    This task runs periodically to check for:
+    - Failed agent executions
+    - Pilot gates pending approval
+    - High-value spider data
+    - System health issues
+
+    Returns:
+        Dict with generation statistics
+    """
+    logger.info("🧑 [HUMAN INTERFACE] Starting attention item generation")
+
+    try:
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.services.human_attention_bridge import attention_bridge
+
+        User = get_user_model()
+        stats = {
+            'pilot_gates': 0,
+            'failed_executions': 0,
+            'system_alerts': 0,
+            'high_value_spiders': 0,
+        }
+
+        # 1. Check for pilot gates pending approval
+        try:
+            from core.models_pilot_readiness import PilotReadinessGate
+            pending_gates = PilotReadinessGate.objects.filter(status='pending_review')
+            for gate in pending_gates:
+                attention_bridge.create_pilot_gate_attention(gate)
+                stats['pilot_gates'] += 1
+        except Exception as e:
+            logger.debug(f"Pilot gate check skipped: {e}")
+
+        # 2. Check for recent failed agent executions
+        try:
+            from core.models_unified_system import AgentExecution
+            recent_failures = AgentExecution.objects.filter(
+                status='failed',
+                created_at__gte=timezone.now() - timedelta(hours=1)
+            ).select_related('template')[:10]
+
+            critical_agents = [
+                'ThinkingAgent', 'ArbitrageDetector', 'PredictionMarketAnalyst',
+                'BlockchainAuditCoordinator', 'StockAuditCoordinator',
+                'SystemIntelligenceAgent',
+            ]
+
+            for execution in recent_failures:
+                agent_name = execution.template.name if execution.template else ''
+                if agent_name in critical_agents:
+                    attention_bridge.create_agent_execution_attention(execution)
+                    stats['failed_executions'] += 1
+        except Exception as e:
+            logger.debug(f"Agent execution check skipped: {e}")
+
+        # 3. Check system health
+        try:
+            from core.services.system_state_aggregator import get_system_state_aggregator
+            agg = get_system_state_aggregator()
+            state = agg.get_system_state()
+
+            # Alert if API costs are high
+            if state.get('api_costs_today', 0) > 50:  # $50 threshold
+                attention_bridge.create_system_alert(
+                    alert_type='api_costs',
+                    title='High API Costs Today',
+                    summary=f"API costs have reached ${state['api_costs_today']:.2f} today. Review usage patterns.",
+                    urgency='medium',
+                    payload={'costs': state['api_costs_today']}
+                )
+                stats['system_alerts'] += 1
+
+            # Alert if many tasks are queued
+            if state.get('celery_pending_tasks', 0) > 100:
+                attention_bridge.create_system_alert(
+                    alert_type='task_queue',
+                    title='High Task Queue',
+                    summary=f"{state['celery_pending_tasks']} tasks pending in Celery queue.",
+                    urgency='medium',
+                    payload={'pending_tasks': state['celery_pending_tasks']}
+                )
+                stats['system_alerts'] += 1
+        except Exception as e:
+            logger.debug(f"System health check skipped: {e}")
+
+        # 4. Check for high-value spider data
+        try:
+            from core.models_unified_system import SpiderData
+            recent_spider_data = SpiderData.objects.filter(
+                created_at__gte=timezone.now() - timedelta(hours=1),
+                data_type__in=['market_alert', 'security_alert', 'price_alert', 'breaking_news']
+            )[:5]
+
+            for data in recent_spider_data:
+                attention_bridge.create_spider_alert(
+                    spider_name=data.spider_name,
+                    alert_type=data.data_type,
+                    title=f"Spider Alert: {data.data_type.replace('_', ' ').title()}",
+                    summary=str(data.raw_data)[:200] if data.raw_data else 'New data available',
+                    data=data.raw_data,
+                    urgency='medium'
+                )
+                stats['high_value_spiders'] += 1
+        except Exception as e:
+            logger.debug(f"Spider data check skipped: {e}")
+
+        total = sum(stats.values())
+        logger.info(f"🧑 [HUMAN INTERFACE] Generated {total} attention items: {stats}")
+
+        return {
+            'status': 'completed',
+            'items_created': total,
+            'breakdown': stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [HUMAN INTERFACE] Attention generation failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
