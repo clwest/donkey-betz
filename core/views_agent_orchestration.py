@@ -79,6 +79,102 @@ def list_agents(request):
         'results': agents_data
     })
 
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def comprehensive_agents_list(request):
+    """
+    Session 663: Comprehensive agents list with real data from AgentRouter.
+    Returns all 72 agents grouped by category with descriptions and status.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        from core.agent_router import AgentRouter
+        from core.agents.routing_config import AGENT_ROUTING_CONFIG
+
+        # Get all agents from the router
+        router = AgentRouter()
+        agent_map = router.AGENT_MAP
+
+        # Build comprehensive agent data
+        agents_data = []
+        categories = {}
+
+        for agent_name, agent_class in agent_map.items():
+            # Get routing config for this agent
+            routing_config = AGENT_ROUTING_CONFIG.get(agent_name, {})
+
+            # Determine category
+            category = routing_config.get('category', 'general')
+
+            # Get description from routing config or agent class
+            description = routing_config.get('description', '')
+            if not description and hasattr(agent_class, 'system_prompt'):
+                # Extract first sentence from system prompt
+                prompt = getattr(agent_class, 'system_prompt', '') or ''
+                if prompt:
+                    first_sentence = prompt.split('.')[0] if '.' in prompt else prompt[:100]
+                    description = first_sentence.strip()[:200]
+
+            # Get keywords for search
+            keywords = routing_config.get('keywords', [])
+            examples = routing_config.get('examples', [])
+
+            # Determine if agent is routable (in routing config)
+            is_routable = agent_name in AGENT_ROUTING_CONFIG
+
+            agent_data = {
+                'name': agent_name,
+                'category': category,
+                'description': description,
+                'keywords': keywords[:5] if keywords else [],
+                'examples': examples[:3] if examples else [],
+                'is_routable': is_routable,
+                'is_active': True,
+                'priority': routing_config.get('priority', 50),
+            }
+
+            agents_data.append(agent_data)
+
+            # Group by category
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(agent_data)
+
+        # Sort agents by name
+        agents_data.sort(key=lambda x: x['name'])
+
+        # Sort categories and their agents
+        sorted_categories = {}
+        for cat in sorted(categories.keys()):
+            sorted_categories[cat] = sorted(categories[cat], key=lambda x: x['name'])
+
+        # Calculate stats
+        routable_count = sum(1 for a in agents_data if a['is_routable'])
+
+        return Response({
+            'success': True,
+            'data': {
+                'agents': agents_data,
+                'categories': sorted_categories,
+                'stats': {
+                    'total': len(agents_data),
+                    'routable': routable_count,
+                    'categories_count': len(categories),
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error in comprehensive_agents_list: {e}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_agents_by_specialization(request):
