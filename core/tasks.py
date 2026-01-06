@@ -21498,6 +21498,155 @@ def _send_pilot_evaluation_discord(results: dict, top_pilots: list):
 
 
 # =============================================================================
+# SESSION 690: IMPLEMENTATION PIPELINE - EXECUTE PILOT RECOMMENDATIONS
+# =============================================================================
+
+@shared_task(name='core.tasks.execute_pilot_implementations')
+def execute_pilot_implementations(batch_size: int = 10):
+    """
+    Session 690: Execute implementations from completed successful pilots.
+
+    This task closes the loop between governance and execution:
+    1. Finds completed successful pilots without implementations
+    2. Creates implementation records
+    3. Executes implementations via appropriate handlers
+    4. Records actions and artifacts
+
+    Args:
+        batch_size: Number of implementations to process per run (default 10)
+    """
+    from django.utils import timezone
+    from core.models_pilot_readiness import PilotExecution
+    from core.models_implementation_pipeline import PilotImplementation
+    from core.services.implementation_executor import ImplementationExecutor
+
+    logger.info(f"🔧 [SESSION 690] Starting implementation pipeline (batch_size={batch_size})")
+
+    results = {
+        'processed': 0,
+        'created': 0,
+        'executed': 0,
+        'success': 0,
+        'failed': 0,
+        'requires_human': 0,
+        'implementations': []
+    }
+
+    try:
+        # Find completed successful pilots without implementations
+        pilots_needing_implementation = PilotExecution.objects.filter(
+            status='completed',
+            outcome='success'
+        ).exclude(
+            id__in=PilotImplementation.objects.values_list('pilot_id', flat=True)
+        ).select_related('gate', 'gate__decision')[:batch_size]
+
+        logger.info(f"🔧 [SESSION 690] Found {pilots_needing_implementation.count()} pilots needing implementation")
+
+        executor = ImplementationExecutor()
+
+        for pilot in pilots_needing_implementation:
+            results['processed'] += 1
+
+            try:
+                # Skip if no decision linked
+                if not pilot.gate or not pilot.gate.decision:
+                    logger.warning(f"🔧 [SESSION 690] Pilot {pilot.id} has no linked decision, skipping")
+                    continue
+
+                # Create implementation record
+                implementation = PilotImplementation.create_from_pilot(pilot)
+                results['created'] += 1
+
+                logger.info(
+                    f"🔧 [SESSION 690] Created implementation for: {pilot.name[:50]}... "
+                    f"(type={implementation.implementation_type})"
+                )
+
+                # Execute the implementation
+                exec_result = executor.execute(implementation)
+                results['executed'] += 1
+
+                if exec_result.get('success'):
+                    results['success'] += 1
+                    results['implementations'].append({
+                        'pilot_id': str(pilot.id),
+                        'pilot_name': pilot.name[:50],
+                        'type': implementation.implementation_type,
+                        'status': 'completed',
+                        'summary': exec_result.get('summary', 'Completed')
+                    })
+
+                elif exec_result.get('requires_human'):
+                    results['requires_human'] += 1
+                    results['implementations'].append({
+                        'pilot_id': str(pilot.id),
+                        'pilot_name': pilot.name[:50],
+                        'type': implementation.implementation_type,
+                        'status': 'requires_human',
+                        'reason': exec_result.get('reason', 'Human action needed')
+                    })
+
+                else:
+                    results['failed'] += 1
+                    results['implementations'].append({
+                        'pilot_id': str(pilot.id),
+                        'pilot_name': pilot.name[:50],
+                        'type': implementation.implementation_type,
+                        'status': 'failed',
+                        'error': exec_result.get('error', 'Unknown error')
+                    })
+
+            except Exception as e:
+                logger.error(f"🔧 [SESSION 690] Error processing pilot {pilot.id}: {e}", exc_info=True)
+                results['failed'] += 1
+
+        # Send Discord notification if any implementations were processed
+        if results['processed'] > 0:
+            _send_implementation_discord(results)
+
+        logger.info(
+            f"🔧 [SESSION 690] Implementation pipeline complete: "
+            f"{results['processed']} processed, {results['success']} success, "
+            f"{results['requires_human']} need human, {results['failed']} failed"
+        )
+
+        return {
+            'success': True,
+            **results
+        }
+
+    except Exception as e:
+        logger.error(f"🔧 [SESSION 690] Implementation pipeline failed: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+def _send_implementation_discord(results: dict):
+    """Session 690: Send Discord notification about implementations."""
+    try:
+        from core.services.discord_notifications import DiscordNotificationService
+
+        discord = DiscordNotificationService()
+
+        message = "**🔧 Implementation Pipeline Complete**\n\n"
+        message += f"**Processed:** {results['processed']} pilots\n"
+        message += f"✅ Implemented: {results['success']}\n"
+        message += f"👤 Need Human: {results['requires_human']}\n"
+        message += f"❌ Failed: {results['failed']}\n\n"
+
+        if results.get('implementations'):
+            message += "**Recent Implementations:**\n"
+            for impl in results['implementations'][:3]:
+                emoji = '✅' if impl['status'] == 'completed' else '👤' if impl['status'] == 'requires_human' else '❌'
+                message += f"{emoji} {impl['pilot_name']} ({impl['type']})\n"
+
+        discord.send_to_channel('system-status', message)
+
+    except Exception as e:
+        logger.debug(f"🔧 [SESSION 690] Discord notification failed: {e}")
+
+
+# =============================================================================
 # SESSION 619: AUTOMATIC GATE PROCESSING AND PILOT DEPLOYMENT
 # =============================================================================
 

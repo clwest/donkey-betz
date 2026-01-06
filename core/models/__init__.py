@@ -50,6 +50,12 @@ from ..models_bankroll import *
 # Import document registry (Session 622)
 from ..models_document_registry import *
 
+# Import pilot readiness models (Session 590)
+from ..models_pilot_readiness import *
+
+# Import implementation pipeline models (Session 690)
+from ..models_implementation_pipeline import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
