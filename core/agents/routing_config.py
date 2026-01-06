@@ -557,6 +557,40 @@ AGENT_ROUTING_CONFIG: Dict[str, Dict[str, Any]] = {
     },
 
     # =========================================================================
+    # SYSTEM INTELLIGENCE AGENTS (Session 663)
+    # =========================================================================
+    "SystemIntelligenceAgent": {
+        "description": "Check platform health, system status, pending reviews, what needs attention, execution gaps, and attention items. Queries real system data from SystemStateAggregator.",
+        "examples": [
+            "what needs my attention",
+            "what is the system status",
+            "tell me about pending review",
+            "what's the pending review status",
+            "check system health",
+            "what needs attention in the platform",
+            "show me attention items",
+            "what's happening with the system",
+            "platform status",
+            "catch me up on system state",
+        ],
+        "keywords": [
+            # Status queries
+            "system status", "platform status", "system health", "health check",
+            "what needs attention", "needs attention", "attention items",
+            # Pending review
+            "pending review", "review status", "pending", "backlog",
+            # Execution/gaps
+            "execution gap", "execution status", "draft decisions",
+            # Catch up queries
+            "catch me up", "what's happening", "system state", "platform state",
+            # Specific metrics
+            "agent suggestions", "promotable", "stale suggestions",
+        ],
+        "category": "system",
+        "priority": 30,  # High priority - system queries should route here
+    },
+
+    # =========================================================================
     # ORCHESTRATION AGENTS
     # =========================================================================
     "WorkflowAgent": {
@@ -673,4 +707,5 @@ AGENT_CATEGORIES = [
     "security",     # Session 461: Content audit, memory isolation
     "audit",        # Session 461: Stock and blockchain auditing
     "orchestration",
+    "system",       # Session 663: System intelligence and platform health
 ]
