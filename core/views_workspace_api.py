@@ -1,0 +1,965 @@
+"""
+SKIN Layer API - Workspace Management REST Endpoints
+Session 695-696: Expose workspace functionality for UI
+
+This provides REST API access to the WorkspaceManager service,
+enabling proper workspace management UI in the React frontend.
+"""
+
+import logging
+from typing import Optional
+from uuid import UUID
+
+from django.shortcuts import get_object_or_404
+from django.db.models import Count, Q
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+
+from core.models_skin_layer import (
+    ProjectWorkspace,
+    WorkspaceOperation,
+    WorkspaceContext,
+)
+from core.services.workspace_manager import get_workspace_manager
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Serializers
+# =============================================================================
+
+from rest_framework import serializers
+
+
+class WorkspaceContextSerializer(serializers.ModelSerializer):
+    """Serializer for cached workspace context/structure"""
+
+    class Meta:
+        model = WorkspaceContext
+        fields = [
+            'total_files',
+            'total_directories',
+            'total_lines_of_code',
+            'file_type_counts',
+            'file_tree',
+            'key_files',
+            'coding_patterns',
+            'dependencies',
+            'import_aliases',
+            'directory_purposes',
+            'last_scanned_at',
+            'scan_duration_ms',
+        ]
+        read_only_fields = fields
+
+
+class ProjectWorkspaceListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for workspace list views"""
+
+    context_summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectWorkspace
+        fields = [
+            'id',
+            'name',
+            'description',
+            'workspace_type',
+            'root_path',
+            'is_active',
+            'tech_stack',
+            'current_branch',
+            'total_operations',
+            'total_files_written',
+            'total_commits',
+            'last_operation_at',
+            'created_at',
+            'updated_at',
+            'context_summary',
+        ]
+        read_only_fields = fields
+
+    def get_context_summary(self, obj):
+        """Get summary of workspace context if available"""
+        try:
+            ctx = obj.context
+            return {
+                'total_files': ctx.total_files,
+                'total_directories': ctx.total_directories,
+                'total_lines_of_code': ctx.total_lines_of_code,
+                'last_scanned_at': ctx.last_scanned_at,
+            }
+        except WorkspaceContext.DoesNotExist:
+            return None
+
+
+class ProjectWorkspaceDetailSerializer(serializers.ModelSerializer):
+    """Full serializer for workspace detail views"""
+
+    context = WorkspaceContextSerializer(read_only=True)
+    recent_operations_count = serializers.SerializerMethodField()
+    pending_reviews_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectWorkspace
+        fields = [
+            'id',
+            'name',
+            'description',
+            'workspace_type',
+            'root_path',
+            'git_remote_url',
+            'tech_stack',
+            'entry_points',
+            'allow_file_write',
+            'allow_file_delete',
+            'allow_command_execution',
+            'allow_git_operations',
+            'protected_paths',
+            'require_human_review',
+            'is_active',
+            'current_branch',
+            'total_operations',
+            'total_files_written',
+            'total_commits',
+            'last_operation_at',
+            'created_at',
+            'updated_at',
+            'context',
+            'recent_operations_count',
+            'pending_reviews_count',
+        ]
+        read_only_fields = [
+            'id', 'total_operations', 'total_files_written',
+            'total_commits', 'last_operation_at', 'created_at', 'updated_at',
+            'context', 'recent_operations_count', 'pending_reviews_count',
+        ]
+
+    def get_recent_operations_count(self, obj):
+        """Count operations in last 24 hours"""
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(hours=24)
+        return obj.operations.filter(created_at__gte=cutoff).count()
+
+    def get_pending_reviews_count(self, obj):
+        """Count operations pending review"""
+        return obj.operations.filter(
+            requires_review=True,
+            reviewed_by_human=False
+        ).count()
+
+
+class WorkspaceOperationListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for operation list views"""
+
+    workspace_name = serializers.CharField(source='workspace.name', read_only=True)
+
+    class Meta:
+        model = WorkspaceOperation
+        fields = [
+            'id',
+            'workspace',
+            'workspace_name',
+            'agent_name',
+            'operation_type',
+            'file_path',
+            'success',
+            'error_message',
+            'execution_time_ms',
+            'requires_review',
+            'reviewed_by_human',
+            'human_approved',
+            'can_rollback',
+            'rolled_back',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+class WorkspaceOperationDetailSerializer(serializers.ModelSerializer):
+    """Full serializer for operation detail with diff support"""
+
+    workspace_name = serializers.CharField(source='workspace.name', read_only=True)
+    diff = serializers.SerializerMethodField()
+    lines_changed = serializers.SerializerMethodField()
+    is_file_operation = serializers.SerializerMethodField()
+    is_git_operation = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkspaceOperation
+        fields = [
+            'id',
+            'workspace',
+            'workspace_name',
+            'user',
+            'agent_name',
+            'agent_task',
+            'operation_type',
+            'file_path',
+            'file_content_before',
+            'file_content_after',
+            'file_size_before',
+            'file_size_after',
+            'command',
+            'command_output',
+            'command_error',
+            'exit_code',
+            'success',
+            'error_message',
+            'execution_time_ms',
+            'requires_review',
+            'reviewed_by_human',
+            'human_approved',
+            'human_feedback',
+            'reviewed_at',
+            'can_rollback',
+            'rolled_back',
+            'rollback_operation',
+            'created_at',
+            'diff',
+            'lines_changed',
+            'is_file_operation',
+            'is_git_operation',
+        ]
+        read_only_fields = fields
+
+    def get_diff(self, obj):
+        """Get unified diff for file operations"""
+        if obj.is_file_operation:
+            return obj.get_diff()
+        return None
+
+    def get_lines_changed(self, obj):
+        """Get lines changed count"""
+        return obj.lines_changed
+
+    def get_is_file_operation(self, obj):
+        return obj.is_file_operation
+
+    def get_is_git_operation(self, obj):
+        return obj.is_git_operation
+
+
+class WorkspaceRegisterSerializer(serializers.Serializer):
+    """Serializer for registering new workspace"""
+
+    path = serializers.CharField(max_length=500, help_text="Absolute path to project root")
+    name = serializers.CharField(max_length=200, required=False, help_text="Display name (auto-detected if not provided)")
+    set_active = serializers.BooleanField(default=True, help_text="Set as active workspace")
+
+
+class WorkspaceUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating workspace settings"""
+
+    class Meta:
+        model = ProjectWorkspace
+        fields = [
+            'name',
+            'description',
+            'allow_file_write',
+            'allow_file_delete',
+            'allow_command_execution',
+            'allow_git_operations',
+            'protected_paths',
+            'require_human_review',
+        ]
+
+
+class FileWriteSerializer(serializers.Serializer):
+    """Serializer for writing a file"""
+
+    path = serializers.CharField(max_length=500, help_text="Relative path from workspace root")
+    content = serializers.CharField(help_text="File content to write")
+    agent_name = serializers.CharField(max_length=100, default="WebUI", help_text="Name of agent/source")
+
+
+class GitCommitSerializer(serializers.Serializer):
+    """Serializer for git commit"""
+
+    message = serializers.CharField(max_length=500, help_text="Commit message")
+    agent_name = serializers.CharField(max_length=100, default="WebUI", help_text="Name of agent for attribution")
+
+
+class GitBranchSerializer(serializers.Serializer):
+    """Serializer for creating git branch"""
+
+    branch_name = serializers.CharField(max_length=200, help_text="Name for new branch")
+
+
+class OperationReviewSerializer(serializers.Serializer):
+    """Serializer for reviewing an operation"""
+
+    approved = serializers.BooleanField(help_text="Whether to approve the operation")
+    feedback = serializers.CharField(required=False, default="", help_text="Optional feedback")
+
+
+# =============================================================================
+# Pagination
+# =============================================================================
+
+class OperationPagination(PageNumberPagination):
+    """Pagination for operations list"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+# =============================================================================
+# ViewSets
+# =============================================================================
+
+class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
+    """
+    API ViewSet for managing project workspaces.
+
+    Endpoints:
+    - GET /api/workspaces/ - List all workspaces
+    - POST /api/workspaces/ - Register new workspace
+    - GET /api/workspaces/{id}/ - Get workspace details
+    - PATCH /api/workspaces/{id}/ - Update workspace settings
+    - DELETE /api/workspaces/{id}/ - Delete workspace
+    - POST /api/workspaces/{id}/activate/ - Set as active
+    - POST /api/workspaces/{id}/scan/ - Rescan workspace
+    - GET /api/workspaces/{id}/files/ - Browse files
+    - GET /api/workspaces/{id}/file/ - Read file content
+    - POST /api/workspaces/{id}/write/ - Write file
+    - GET /api/workspaces/{id}/git-status/ - Get git status
+    - POST /api/workspaces/{id}/git-commit/ - Create commit
+    - POST /api/workspaces/{id}/git-branch/ - Create branch
+    - GET /api/workspaces/{id}/operations/ - List operations
+    - GET /api/workspaces/{id}/stats/ - Get statistics
+    - GET /api/workspaces/active/ - Get active workspace
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter to user's workspaces only"""
+        return ProjectWorkspace.objects.filter(
+            user=self.request.user
+        ).select_related('context').order_by('-updated_at')
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectWorkspaceListSerializer
+        elif self.action == 'create':
+            return WorkspaceRegisterSerializer
+        elif self.action in ['update', 'partial_update']:
+            return WorkspaceUpdateSerializer
+        return ProjectWorkspaceDetailSerializer
+
+    def create(self, request):
+        """Register a new workspace"""
+        serializer = WorkspaceRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            workspace = manager.register_workspace(
+                root_path=serializer.validated_data['path'],
+                name=serializer.validated_data.get('name'),
+                set_active=serializer.validated_data.get('set_active', True),
+            )
+
+            return Response(
+                ProjectWorkspaceDetailSerializer(workspace).data,
+                status=status.HTTP_201_CREATED
+            )
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.exception(f"Error registering workspace: {e}")
+            return Response(
+                {'error': f'Failed to register workspace: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Get the currently active workspace"""
+        manager = get_workspace_manager(request.user)
+        workspace = manager.get_active_workspace()
+
+        if not workspace:
+            return Response(
+                {'error': 'No active workspace', 'detail': 'Register a workspace first'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(ProjectWorkspaceDetailSerializer(workspace).data)
+
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        """Set workspace as active"""
+        workspace = self.get_object()
+        manager = get_workspace_manager(request.user)
+
+        try:
+            workspace = manager.set_active_workspace(workspace.id)
+            return Response(ProjectWorkspaceDetailSerializer(workspace).data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def scan(self, request, pk=None):
+        """Rescan workspace to update context"""
+        workspace = self.get_object()
+        manager = get_workspace_manager(request.user)
+
+        try:
+            context = manager.rescan_workspace(workspace)
+            return Response({
+                'success': True,
+                'message': f'Scanned {context.total_files} files in {context.total_directories} directories',
+                'context': WorkspaceContextSerializer(context).data
+            })
+        except Exception as e:
+            logger.exception(f"Error scanning workspace: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def files(self, request, pk=None):
+        """Browse workspace files"""
+        workspace = self.get_object()
+        manager = get_workspace_manager(request.user)
+
+        pattern = request.query_params.get('pattern', '**/*')
+        limit = int(request.query_params.get('limit', 100))
+
+        try:
+            files = manager.list_files(workspace, pattern=pattern)[:limit]
+            return Response({
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'pattern': pattern,
+                'total_matches': len(files),
+                'files': files
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def file(self, request, pk=None):
+        """Read a file from workspace"""
+        workspace = self.get_object()
+        manager = get_workspace_manager(request.user)
+
+        path = request.query_params.get('path')
+        if not path:
+            return Response(
+                {'error': 'path query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            content = manager.read_file(workspace, path)
+            if content is None:
+                return Response(
+                    {'error': f'File not found: {path}'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Truncate very large files
+            max_size = 100000  # 100KB
+            truncated = len(content) > max_size
+
+            return Response({
+                'workspace_id': str(workspace.id),
+                'path': path,
+                'content': content[:max_size] if truncated else content,
+                'size': len(content),
+                'truncated': truncated,
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def write(self, request, pk=None):
+        """Write a file to workspace"""
+        workspace = self.get_object()
+
+        if not workspace.allow_file_write:
+            return Response(
+                {'error': 'File writing is disabled for this workspace'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = FileWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            operation = manager.write_file(
+                workspace=workspace,
+                file_path=serializer.validated_data['path'],
+                content=serializer.validated_data['content'],
+                agent_name=serializer.validated_data.get('agent_name', 'WebUI'),
+            )
+
+            return Response({
+                'success': operation.success,
+                'operation_id': str(operation.id),
+                'file_path': operation.file_path,
+                'operation_type': operation.operation_type,
+                'error_message': operation.error_message if not operation.success else None,
+            })
+        except Exception as e:
+            logger.exception(f"Error writing file: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='git-status')
+    def git_status(self, request, pk=None):
+        """Get git status for workspace"""
+        workspace = self.get_object()
+        manager = get_workspace_manager(request.user)
+
+        try:
+            git_status = manager.git_status(workspace)
+            return Response({
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                **git_status
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='git-commit')
+    def git_commit(self, request, pk=None):
+        """Create a git commit"""
+        workspace = self.get_object()
+
+        if not workspace.allow_git_operations:
+            return Response(
+                {'error': 'Git operations are disabled for this workspace'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = GitCommitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            operation = manager.git_commit(
+                workspace=workspace,
+                message=serializer.validated_data['message'],
+                agent_name=serializer.validated_data.get('agent_name', 'WebUI'),
+            )
+
+            return Response({
+                'success': operation.success,
+                'operation_id': str(operation.id),
+                'operation_type': operation.operation_type,
+                'error_message': operation.error_message if not operation.success else None,
+            })
+        except Exception as e:
+            logger.exception(f"Error creating commit: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='git-branch')
+    def git_branch(self, request, pk=None):
+        """Create a new git branch"""
+        workspace = self.get_object()
+
+        if not workspace.allow_git_operations:
+            return Response(
+                {'error': 'Git operations are disabled for this workspace'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = GitBranchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            operation = manager.git_create_branch(
+                workspace=workspace,
+                branch_name=serializer.validated_data['branch_name'],
+            )
+
+            return Response({
+                'success': operation.success,
+                'operation_id': str(operation.id),
+                'branch_name': serializer.validated_data['branch_name'],
+                'error_message': operation.error_message if not operation.success else None,
+            })
+        except Exception as e:
+            logger.exception(f"Error creating branch: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def operations(self, request, pk=None):
+        """List operations for this workspace"""
+        workspace = self.get_object()
+
+        # Filtering
+        queryset = workspace.operations.all()
+
+        operation_type = request.query_params.get('type')
+        if operation_type:
+            queryset = queryset.filter(operation_type=operation_type)
+
+        agent_name = request.query_params.get('agent')
+        if agent_name:
+            queryset = queryset.filter(agent_name__icontains=agent_name)
+
+        success = request.query_params.get('success')
+        if success is not None:
+            queryset = queryset.filter(success=success.lower() == 'true')
+
+        pending_review = request.query_params.get('pending_review')
+        if pending_review is not None and pending_review.lower() == 'true':
+            queryset = queryset.filter(requires_review=True, reviewed_by_human=False)
+
+        queryset = queryset.order_by('-created_at')
+
+        # Pagination
+        paginator = OperationPagination()
+        page = paginator.paginate_queryset(queryset, request)
+
+        if page is not None:
+            serializer = WorkspaceOperationListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = WorkspaceOperationListSerializer(queryset[:50], many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """Get workspace statistics"""
+        workspace = self.get_object()
+
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        last_24h = now - timedelta(hours=24)
+        last_7d = now - timedelta(days=7)
+
+        ops = workspace.operations
+
+        stats = {
+            'workspace_id': str(workspace.id),
+            'workspace_name': workspace.name,
+            'totals': {
+                'operations': workspace.total_operations,
+                'files_written': workspace.total_files_written,
+                'commits': workspace.total_commits,
+            },
+            'last_24h': {
+                'operations': ops.filter(created_at__gte=last_24h).count(),
+                'successful': ops.filter(created_at__gte=last_24h, success=True).count(),
+                'failed': ops.filter(created_at__gte=last_24h, success=False).count(),
+            },
+            'last_7d': {
+                'operations': ops.filter(created_at__gte=last_7d).count(),
+                'by_type': dict(
+                    ops.filter(created_at__gte=last_7d)
+                    .values_list('operation_type')
+                    .annotate(count=Count('id'))
+                ),
+                'by_agent': dict(
+                    ops.filter(created_at__gte=last_7d)
+                    .values_list('agent_name')
+                    .annotate(count=Count('id'))
+                ),
+            },
+            'pending_reviews': ops.filter(
+                requires_review=True,
+                reviewed_by_human=False
+            ).count(),
+            'rollback_available': ops.filter(
+                can_rollback=True,
+                rolled_back=False
+            ).count(),
+        }
+
+        # Add context stats if available
+        try:
+            ctx = workspace.context
+            stats['project'] = {
+                'total_files': ctx.total_files,
+                'total_directories': ctx.total_directories,
+                'total_lines_of_code': ctx.total_lines_of_code,
+                'file_types': ctx.file_type_counts,
+                'last_scanned': ctx.last_scanned_at,
+            }
+        except WorkspaceContext.DoesNotExist:
+            stats['project'] = None
+
+        return Response(stats)
+
+
+class WorkspaceOperationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API ViewSet for workspace operations (audit trail).
+
+    Endpoints:
+    - GET /api/workspace-operations/ - List all operations (with filtering)
+    - GET /api/workspace-operations/{id}/ - Get operation details with diff
+    - POST /api/workspace-operations/{id}/rollback/ - Rollback operation
+    - POST /api/workspace-operations/{id}/review/ - Approve/reject operation
+    """
+
+    permission_classes = [IsAuthenticated]
+    pagination_class = OperationPagination
+
+    def get_queryset(self):
+        """Filter to user's operations only"""
+        queryset = WorkspaceOperation.objects.filter(
+            user=self.request.user
+        ).select_related('workspace').order_by('-created_at')
+
+        # Filtering
+        workspace_id = self.request.query_params.get('workspace')
+        if workspace_id:
+            queryset = queryset.filter(workspace_id=workspace_id)
+
+        operation_type = self.request.query_params.get('type')
+        if operation_type:
+            queryset = queryset.filter(operation_type=operation_type)
+
+        agent_name = self.request.query_params.get('agent')
+        if agent_name:
+            queryset = queryset.filter(agent_name__icontains=agent_name)
+
+        success = self.request.query_params.get('success')
+        if success is not None:
+            queryset = queryset.filter(success=success.lower() == 'true')
+
+        pending_review = self.request.query_params.get('pending_review')
+        if pending_review is not None and pending_review.lower() == 'true':
+            queryset = queryset.filter(requires_review=True, reviewed_by_human=False)
+
+        file_path = self.request.query_params.get('file_path')
+        if file_path:
+            queryset = queryset.filter(file_path__icontains=file_path)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return WorkspaceOperationListSerializer
+        return WorkspaceOperationDetailSerializer
+
+    @action(detail=True, methods=['post'])
+    def rollback(self, request, pk=None):
+        """Rollback an operation"""
+        operation = self.get_object()
+
+        if not operation.can_rollback:
+            return Response(
+                {'error': 'This operation cannot be rolled back'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if operation.rolled_back:
+            return Response(
+                {'error': 'This operation has already been rolled back'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            rollback_op = manager.file_writer.rollback_operation(operation)
+            return Response({
+                'success': rollback_op.success,
+                'original_operation_id': str(operation.id),
+                'rollback_operation_id': str(rollback_op.id),
+                'message': f'Rolled back {operation.operation_type} on {operation.file_path}',
+            })
+        except Exception as e:
+            logger.exception(f"Error rolling back operation: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def review(self, request, pk=None):
+        """Approve or reject an operation pending review"""
+        operation = self.get_object()
+
+        if not operation.requires_review:
+            return Response(
+                {'error': 'This operation does not require review'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if operation.reviewed_by_human:
+            return Response(
+                {'error': 'This operation has already been reviewed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = OperationReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        manager = get_workspace_manager(request.user)
+
+        try:
+            if serializer.validated_data['approved']:
+                result = manager.approve_operation(
+                    operation,
+                    feedback=serializer.validated_data.get('feedback', '')
+                )
+                return Response({
+                    'success': True,
+                    'approved': True,
+                    'operation_id': str(operation.id),
+                    'message': 'Operation approved and applied',
+                })
+            else:
+                result = manager.reject_operation(
+                    operation,
+                    feedback=serializer.validated_data.get('feedback', '')
+                )
+                return Response({
+                    'success': True,
+                    'approved': False,
+                    'operation_id': str(operation.id),
+                    'message': 'Operation rejected',
+                })
+        except Exception as e:
+            logger.exception(f"Error reviewing operation: {e}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# =============================================================================
+# Standalone API Views
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def workspace_dashboard(request):
+    """
+    Dashboard overview of all workspaces and recent activity.
+
+    GET /api/workspaces/dashboard/
+    """
+    user = request.user
+
+    workspaces = ProjectWorkspace.objects.filter(user=user)
+    active_workspace = workspaces.filter(is_active=True).first()
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    last_24h = timezone.now() - timedelta(hours=24)
+
+    recent_ops = WorkspaceOperation.objects.filter(
+        user=user,
+        created_at__gte=last_24h
+    ).order_by('-created_at')[:10]
+
+    pending_reviews = WorkspaceOperation.objects.filter(
+        user=user,
+        requires_review=True,
+        reviewed_by_human=False
+    ).count()
+
+    return Response({
+        'workspaces': {
+            'total': workspaces.count(),
+            'active': ProjectWorkspaceListSerializer(active_workspace).data if active_workspace else None,
+            'list': ProjectWorkspaceListSerializer(workspaces[:5], many=True).data,
+        },
+        'activity': {
+            'operations_24h': recent_ops.count(),
+            'recent_operations': WorkspaceOperationListSerializer(recent_ops, many=True).data,
+            'pending_reviews': pending_reviews,
+        },
+        'totals': {
+            'total_operations': sum(w.total_operations for w in workspaces),
+            'total_files_written': sum(w.total_files_written for w in workspaces),
+            'total_commits': sum(w.total_commits for w in workspaces),
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def file_history(request, workspace_id):
+    """
+    Get operation history for a specific file.
+
+    GET /api/workspaces/{workspace_id}/file-history/?path=src/App.tsx
+    """
+    workspace = get_object_or_404(
+        ProjectWorkspace,
+        id=workspace_id,
+        user=request.user
+    )
+
+    file_path = request.query_params.get('path')
+    if not file_path:
+        return Response(
+            {'error': 'path query parameter is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    manager = get_workspace_manager(request.user)
+    operations = manager.get_file_history(workspace, file_path)
+
+    return Response({
+        'workspace_id': str(workspace.id),
+        'file_path': file_path,
+        'total_operations': len(operations),
+        'operations': WorkspaceOperationListSerializer(operations, many=True).data,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pending_reviews(request):
+    """
+    Get all operations pending human review.
+
+    GET /api/workspace-operations/pending-reviews/
+    """
+    manager = get_workspace_manager(request.user)
+    operations = manager.get_pending_reviews()
+
+    return Response({
+        'total': len(operations),
+        'operations': WorkspaceOperationDetailSerializer(operations, many=True).data,
+    })
