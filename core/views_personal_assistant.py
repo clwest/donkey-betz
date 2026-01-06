@@ -40,14 +40,8 @@ def chat_with_assistant(request):
         if not message:
             return Response({'error': 'Message is required'}, status=400)
 
-        # Get or create assistant for user
-        cache_key = f'assistant_{request.user.id}'
-        assistant = cache.get(cache_key)
-
-        if not assistant:
-            assistant = PersonalAIAssistant(request.user)
-            # Cache assistant for 30 minutes
-            cache.set(cache_key, assistant, 1800)
+        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        assistant = PersonalAIAssistant(request.user)
 
         # Process message
         response_data = assistant.process_message(message, context)
@@ -72,13 +66,8 @@ def chat_with_assistant(request):
 def get_assistant_context(request):
     """Get the current personalized context for the user."""
     try:
-        # Get or create assistant
-        cache_key = f'assistant_{request.user.id}'
-        assistant = cache.get(cache_key)
-
-        if not assistant:
-            assistant = PersonalAIAssistant(request.user)
-            cache.set(cache_key, assistant, 1800)
+        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        assistant = PersonalAIAssistant(request.user)
 
         # Get personalized context
         context = assistant.get_personalized_context()
@@ -101,13 +90,8 @@ def get_assistant_context(request):
 def get_learning_summary(request):
     """Get summary of what the assistant has learned about the user."""
     try:
-        # Get or create assistant
-        cache_key = f'assistant_{request.user.id}'
-        assistant = cache.get(cache_key)
-
-        if not assistant:
-            assistant = PersonalAIAssistant(request.user)
-            cache.set(cache_key, assistant, 1800)
+        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        assistant = PersonalAIAssistant(request.user)
 
         # Get learning summary
         summary = assistant.get_learning_summary()
@@ -145,13 +129,8 @@ def provide_feedback(request):
         if feedback not in ['positive', 'negative']:
             return Response({'error': 'Invalid feedback type'}, status=400)
 
-        # Get assistant
-        cache_key = f'assistant_{request.user.id}'
-        assistant = cache.get(cache_key)
-
-        if not assistant:
-            assistant = PersonalAIAssistant(request.user)
-            cache.set(cache_key, assistant, 1800)
+        # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+        assistant = PersonalAIAssistant(request.user)
 
         # Process feedback (enhance learning)
         if assistant.learning_history:
@@ -293,14 +272,8 @@ def voice_to_assistant(request):
         # Step 3: Send transcribed text to Personal Assistant
         # (Reusing logic from chat_with_assistant)
         try:
-            # Get or create assistant for user
-            cache_key = f'assistant_{request.user.id}'
-            assistant = cache.get(cache_key)
-
-            if not assistant:
-                assistant = PersonalAIAssistant(request.user)
-                # Cache assistant for 30 minutes
-                cache.set(cache_key, assistant, 1800)
+            # Create assistant fresh each time (contains unpickleable objects like OpenAI client)
+            assistant = PersonalAIAssistant(request.user)
 
             # Process message with optional context
             context = request.data.get('context', {})
