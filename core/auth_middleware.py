@@ -176,6 +176,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 688: Podcast Page APIs (read-only for React frontend)
         '/api/podcasts/',  # Podcast endpoints
+
+        # Session 688: Portfolio Page APIs (read-only for React frontend)
+        '/api/distribution/',  # Distribution endpoints (stats, platforms, accounts, content)
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
