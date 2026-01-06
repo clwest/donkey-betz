@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, agentsApi, opportunitiesApi } from '@/lib/api'
+// Session 693: Removed agentsApi - agents tab removed (redundant with main Agents page)
+import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, opportunitiesApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, ChevronRight, Loader2, Activity,
@@ -10,7 +11,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'gates' | 'pilots' | 'experiments' | 'learning' | 'activity' | 'spiders' | 'predictions' | 'agents'
+// Session 693: Removed 'agents' tab - redundant with main Agents page
+type TabType = 'gates' | 'pilots' | 'experiments' | 'learning' | 'activity' | 'spiders' | 'predictions'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -197,13 +199,7 @@ interface Prediction {
   views: number
 }
 
-interface Agent {
-  name: string
-  display_name: string
-  status: 'healthy' | 'degraded' | 'offline'
-  executions_today: number
-  last_execution: string
-}
+// Session 693: Removed Agent interface - agents tab removed (redundant with main Agents page)
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
   return (
@@ -316,13 +312,6 @@ export default function IntelligencePage() {
     enabled: activeTab === 'predictions',
   })
 
-  // Session 688: Use agents list endpoint instead of health (which returns system stats, not agent array)
-  const { data: agentsListData, isLoading: loadingAgents } = useQuery({
-    queryKey: ['agents-list'],
-    queryFn: () => agentsApi.list(),
-    enabled: activeTab === 'agents',
-  })
-
   // Mutations
   const approveGateMutation = useMutation({
     mutationFn: (gateId: string) => pilotsApi.updateGateStatus(gateId, 'approve', 'Approved via UI'),
@@ -430,15 +419,6 @@ export default function IntelligencePage() {
   }))
   const spiders: Spider[] = spidersData?.data?.spiders || []
   const predictions: Prediction[] = predictionsData?.data?.predictions || []
-  // Session 688: Use list API and map to expected format
-  const agentsRaw = agentsListData?.data?.agents || []
-  const agents: Agent[] = agentsRaw.map((a: { name: string; isActive: boolean; totalExecutions: number; lastActive: string }) => ({
-    name: a.name,
-    display_name: a.name.replace(/Agent$/, '').replace(/([A-Z])/g, ' $1').trim(),
-    status: a.isActive ? 'healthy' : 'offline',
-    executions_today: a.totalExecutions,
-    last_execution: a.lastActive,
-  }))
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -456,13 +436,13 @@ export default function IntelligencePage() {
     )
   }
 
+  // Session 693: Removed 'agents' tab - redundant with main Agents page (7 tabs now)
   const tabs: { key: TabType; label: string; icon: React.ElementType; count?: number }[] = [
     { key: 'gates', label: 'Gates', icon: Target, count: gates.filter(g => ['not_started', 'in_progress', 'ready'].includes(g.status)).length },
     { key: 'pilots', label: 'Pilots', icon: Play, count: pilots.filter(p => p.status === 'running').length },
     { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'running').length },
     { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
     { key: 'predictions', label: 'Predictions', icon: Sparkles },
-    { key: 'agents', label: 'Agents', icon: Bot },
     { key: 'learning', label: 'Learning', icon: BookOpen },
     { key: 'activity', label: 'Activity', icon: Activity },
   ]
@@ -1361,99 +1341,7 @@ export default function IntelligencePage() {
         </div>
       )}
 
-      {/* Agents Tab */}
-      {activeTab === 'agents' && (
-        <div className="space-y-6">
-          {/* Agent Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <Bot className="text-accent-green" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Healthy</p>
-                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'healthy').length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="text-accent-amber" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Degraded</p>
-                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'degraded').length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <XCircle className="text-accent-red" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Offline</p>
-                  <p className="text-2xl font-bold">{agents.filter(a => a.status === 'offline').length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="flex items-center gap-3">
-                <Activity className="text-primary-400" size={24} />
-                <div>
-                  <p className="text-sm text-gray-400">Executions Today</p>
-                  <p className="text-2xl font-bold">{agents.reduce((acc, a) => acc + (a.executions_today || 0), 0)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Agent Grid */}
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4">Agent Fleet</h3>
-            {loadingAgents ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="animate-spin" size={24} />
-              </div>
-            ) : agents.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {agents.map((agent, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'h-8 w-8 rounded-full flex items-center justify-center',
-                        agent.status === 'healthy' ? 'bg-accent-green/20' :
-                        agent.status === 'degraded' ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                      )}>
-                        <Bot size={14} className={
-                          agent.status === 'healthy' ? 'text-accent-green' :
-                          agent.status === 'degraded' ? 'text-accent-amber' : 'text-accent-red'
-                        } />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{agent.display_name || agent.name}</p>
-                        <p className="text-xs text-gray-500">{agent.executions_today || 0} runs today</p>
-                      </div>
-                    </div>
-                    <span className={cn(
-                      'text-xs px-2 py-1 rounded',
-                      agent.status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
-                      agent.status === 'degraded' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                    )}>
-                      {agent.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-400">
-                <Bot className="mx-auto mb-2" size={32} />
-                <p>No agent data available</p>
-                <p className="text-sm text-gray-500 mt-1">Agent health will appear here</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Session 693: Removed Agents Tab - redundant with main Agents page */}
 
       {/* Opportunities Section (always visible at bottom) */}
       {opportunities.length > 0 && (
