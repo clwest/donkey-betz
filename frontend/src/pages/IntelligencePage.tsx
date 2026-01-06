@@ -223,6 +223,8 @@ export default function IntelligencePage() {
     queryKey: ['pilots-dashboard'],
     queryFn: () => pilotsApi.dashboard(),
     enabled: activeTab === 'pilots',
+    staleTime: 0,  // Session 692: Always fetch fresh data
+    refetchOnMount: 'always',  // Session 692: Refetch when tab becomes active
   })
 
   // Session 689: Fetch gate detail for pilot modal (to get rich decision context)
