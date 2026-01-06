@@ -31,6 +31,7 @@
 188aa7d2 Return full decision_topic and extracted_metrics
 9b10a80a Add success_metrics to all risk levels
 38e190ff Fix Agents tab in Intelligence Command Center
+747191a4 Remove redundant Agents sub-tab from Intelligence
 ```
 
 ### Handoff Doc
@@ -69,8 +70,8 @@ make start && make celery
 open http://localhost:3000/
 
 # Test Intelligence Command Center
-# All 8 sub-tabs now working:
-# - Gates, Pilots, Experiments, Learning, Activity, Spiders, Predictions, Agents
+# All 7 sub-tabs now working (removed redundant Agents tab):
+# - Gates, Pilots, Experiments, Spiders, Predictions, Learning, Activity
 
 # Check agent count
 curl -s http://localhost:8000/api/v1/agents/list/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Agents: {len(d.get(\"agents\", []))}')"

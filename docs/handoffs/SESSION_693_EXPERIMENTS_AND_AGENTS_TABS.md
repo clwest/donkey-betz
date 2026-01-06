@@ -152,6 +152,13 @@ Now returns:
 - `188aa7d2` - fix(Session 693): Return full decision_topic and extracted_metrics
 - `9b10a80a` - feat(Session 693): Add success_metrics to all risk levels
 - `38e190ff` - fix(Session 693): Fix Agents tab in Intelligence Command Center
+- `747191a4` - refactor(Session 693): Remove redundant Agents sub-tab from Intelligence
+
+### Post-Session Cleanup
+
+Removed the Agents sub-tab from Intelligence Command Center as it was redundant
+with the main Agents page. Intelligence now has 7 focused sub-tabs:
+Gates, Pilots, Experiments, Spiders, Predictions, Learning, Activity
 
 ---
 
