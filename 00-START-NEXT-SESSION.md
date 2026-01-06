@@ -9,7 +9,7 @@
 
 ---
 
-## Session 689 Summary: Intelligence Command Center Complete
+## Session 689 Summary: Intelligence Command Center COMPLETE
 
 ### What Was Built
 
@@ -23,11 +23,27 @@
 - Checklist progress
 - Action buttons: Start Gate, Mark Ready, Approve & Start Pilot, Decline
 
-**3. Decline Functionality** - NEW:
+**3. Decline Functionality**:
 - Red trash icon button in gate modal
 - Permanently dismisses unwanted pilot gates
 - Sets gate.status='declined' and decision.status='rejected'
-- Declined gates hidden from default list (can query with ?status=declined)
+- Declined gates hidden from default list
+
+**4. Gates/Pilots Tab Separation**:
+- **Gates tab**: Shows actionable items (not_started, in_progress, ready, blocked)
+- **Pilots tab**: Shows running/completed pilots (from approved/waived gates)
+- Approved gates automatically move to Pilots tab
+
+**5. Pilots Tab Complete Overhaul**:
+- Stats Cards: Running count, Completed count, Success rate, Avg duration
+- Running Pilots: Type badge, risk level, kill switch warning, progress bar
+- Completed Pilots: Outcome badge, confidence score, duration
+
+**6. Pilot Detail Modal** - Click any pilot:
+- Running: Progress status, time remaining, kill switch warning
+- Completed: Outcome with confidence, duration
+- AI Evaluation & Learnings with color-coded confidence bar
+- Decision Context fetched from Gate API (recommended_stance, rationale, key_insights, suggested_feature, participants)
 
 ### Test Data Cleanup
 - Deleted 2 "Onion Bar" test gates
@@ -36,11 +52,15 @@
 
 ### Commits (Session 689)
 ```
+cb7c521c feat(Session 689): Add rich decision context to Pilot modal
+3c73efdd feat(Session 689): Add Pilot Detail Modal with outcomes and learnings
+4e96d77c feat(Session 689): Comprehensive Pilots tab UI overhaul
+f16e5840 feat(Session 689): Move approved gates to Pilots tab
+785941ae fix(Session 689): Fix gate detail API serialization error
+e9e98792 docs(Session 689): Update handoff with gate modal and decline features
 464f61b8 feat(Session 689): Add decline functionality for pilot gates
-00935a38 feat(Session 689): Add comprehensive pilot gate detail modal
+00935a38 feat(Session 689): Add pilot gate detail modal with decision context
 78fa595c docs(Session 689): Add handoff doc and update session start
-963b49b7 fix(Session 688): Improve opportunity modal score display and button labels
-8979c2e3 feat(Session 688): Add opportunity detail modal with action buttons
 ```
 
 ### Handoff Doc
@@ -101,7 +121,9 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -c "import sys,json; d=
 |-----------|-------|-------|
 | Agents | 72 | All synced |
 | Spiders | 77 | 72 working |
-| Pilot Gates | 28 | 2 deleted + 1 declined |
+| Pilot Gates | 21 | Actionable (28 total - 7 approved/waived) |
+| Running Pilots | 7 | Visible in Pilots tab |
+| Completed Pilots | 12 | With learnings/outcomes |
 | Opportunities | 153 | 150 scored |
 | React Pages Audited | 10/12 | Assistant, Settings remaining |
 
@@ -109,11 +131,16 @@ curl -s http://localhost:8000/api/pilot-gates/ | python3 -c "import sys,json; d=
 
 ## Files Modified (Session 689)
 
+### Frontend
 | File | Changes |
 |------|---------|
-| `frontend/src/pages/IntelligencePage.tsx` | Opportunity modal, gate detail modal, decline button |
+| `frontend/src/pages/IntelligencePage.tsx` | Opportunity modal, gate modal, pilots tab overhaul, pilot detail modal |
 | `frontend/src/lib/api.ts` | opportunitiesApi endpoints |
-| `core/views_agent_learning.py` | Gate detail fields, decline action, filter declined gates |
+
+### Backend
+| File | Changes |
+|------|---------|
+| `core/views_agent_learning.py` | Gate detail fields, decline action, exclude declined/approved from list, fixed serialization |
 | `core/views_opportunity.py` | opportunity_dismiss endpoint |
 | `core/urls.py` | dismiss URL route |
 | `core/auth_middleware.py` | /api/opportunities/ whitelist |
