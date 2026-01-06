@@ -4,11 +4,12 @@ import { contentApi } from '@/lib/api'
 import {
   Image, Video, Music, Box, Plus, Calendar, Wand2, Heart,
   Loader2, CheckCircle, XCircle, Sparkles, FileText, Send,
-  Play, X, ChevronRight
+  Play, X, Grid, FolderKanban, Layout, Clock
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 type ContentType = 'images' | 'video' | 'audio' | '3d'
+type TabType = 'gallery' | 'calendar' | 'projects' | 'templates'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -23,6 +24,33 @@ interface GalleryItem {
   prompt?: string
   created_at: string
   is_favorite?: boolean
+}
+
+interface CalendarEvent {
+  id: string
+  title: string
+  scheduled_for: string
+  channel: string
+  status: 'scheduled' | 'published' | 'draft'
+  type: string
+}
+
+interface Project {
+  id: string
+  name: string
+  description: string
+  status: 'active' | 'completed' | 'archived'
+  items_count: number
+  created_at: string
+  updated_at: string
+}
+
+interface Template {
+  id: string
+  name: string
+  category: string
+  description: string
+  uses: number
 }
 
 interface GenerateModalProps {
@@ -142,7 +170,15 @@ function GenerateModal({ type, onClose, onGenerate, isLoading }: GenerateModalPr
   )
 }
 
+const tabs = [
+  { id: 'gallery' as TabType, label: 'Gallery', icon: Grid },
+  { id: 'calendar' as TabType, label: 'Calendar', icon: Calendar },
+  { id: 'projects' as TabType, label: 'Projects', icon: FolderKanban },
+  { id: 'templates' as TabType, label: 'Templates', icon: Layout },
+]
+
 export default function ContentPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('gallery')
   const [activeType, setActiveType] = useState<ContentType | null>(null)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [generateType, setGenerateType] = useState<ContentType>('images')
@@ -156,9 +192,24 @@ export default function ContentPage() {
   })
 
   // Fetch content calendar
-  const { data: calendarData } = useQuery({
+  const { data: calendarData, isLoading: loadingCalendar } = useQuery({
     queryKey: ['content-calendar'],
-    queryFn: () => contentApi.calendarUpcoming(),
+    queryFn: () => contentApi.calendar(),
+    enabled: activeTab === 'calendar',
+  })
+
+  // Fetch projects
+  const { data: projectsData, isLoading: loadingProjects } = useQuery({
+    queryKey: ['creative-projects'],
+    queryFn: () => contentApi.projects(),
+    enabled: activeTab === 'projects',
+  })
+
+  // Fetch templates
+  const { data: templatesData, isLoading: loadingTemplates } = useQuery({
+    queryKey: ['content-templates'],
+    queryFn: () => contentApi.templates(),
+    enabled: activeTab === 'templates',
   })
 
   // Generate image mutation
@@ -207,7 +258,9 @@ export default function ContentPage() {
   })
 
   const galleryItems: GalleryItem[] = galleryData?.data?.items || galleryData?.data || []
-  const upcomingContent = calendarData?.data?.upcoming || []
+  const calendarEvents: CalendarEvent[] = calendarData?.data?.events || calendarData?.data?.upcoming || []
+  const projects: Project[] = projectsData?.data?.projects || projectsData?.data || []
+  const templates: Template[] = templatesData?.data?.templates || templatesData?.data || []
 
   // Filter gallery by active type
   const filteredGallery = activeType
@@ -243,8 +296,45 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6">
-      {/* Content Type Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Content Studio</h1>
+          <p className="text-gray-400">Create and manage all your content</p>
+        </div>
+        <button
+          className="btn btn-primary flex items-center gap-2"
+          onClick={() => openGenerateModal('images')}
+        >
+          <Plus size={16} />
+          New Content
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-dark-border pb-2 overflow-x-auto">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
+              activeTab === id
+                ? 'bg-primary-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-dark-bg'
+            )}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Gallery Tab */}
+      {activeTab === 'gallery' && (
+        <>
+          {/* Content Type Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {contentTypes.map(({ id, title, description, icon: Icon, color, actions }) => (
           <div
             key={id}
@@ -428,33 +518,212 @@ export default function ContentPage() {
         </div>
       </div>
 
-      {/* Upcoming Content */}
-      {upcomingContent.length > 0 && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">Upcoming Scheduled Content</h3>
-          <div className="space-y-3">
-            {upcomingContent.slice(0, 5).map((item: { id: string; title: string; scheduled_for: string; channel: string }) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                onClick={() => setActionResult({ type: 'success', message: `Viewing: ${item.title}` })}
-              >
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-primary-400" />
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-gray-400">{item.channel}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">
-                    {new Date(item.scheduled_for).toLocaleDateString()}
-                  </span>
-                  <ChevronRight size={16} className="text-gray-500" />
+        </>
+      )}
+
+      {/* Calendar Tab */}
+      {activeTab === 'calendar' && (
+        <div className="space-y-6">
+          {/* Calendar Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Calendar className="text-primary-400" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Scheduled</p>
+                  <p className="text-2xl font-bold">{calendarEvents.filter(e => e.status === 'scheduled').length}</p>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="text-accent-green" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Published</p>
+                  <p className="text-2xl font-bold">{calendarEvents.filter(e => e.status === 'published').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <FileText className="text-accent-amber" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Drafts</p>
+                  <p className="text-2xl font-bold">{calendarEvents.filter(e => e.status === 'draft').length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Clock className="text-accent-cyan" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">This Week</p>
+                  <p className="text-2xl font-bold">{calendarEvents.length}</p>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Calendar Events List */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">Content Calendar</h3>
+            {loadingCalendar ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin" size={32} />
+              </div>
+            ) : calendarEvents.length > 0 ? (
+              <div className="space-y-3">
+                {calendarEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
+                    onClick={() => setActionResult({ type: 'success', message: `Viewing: ${event.title}` })}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        'h-10 w-10 rounded-lg flex items-center justify-center',
+                        event.status === 'published' ? 'bg-accent-green/20' :
+                        event.status === 'scheduled' ? 'bg-primary-500/20' : 'bg-accent-amber/20'
+                      )}>
+                        {event.status === 'published' ? <CheckCircle size={20} className="text-accent-green" /> :
+                         event.status === 'scheduled' ? <Calendar size={20} className="text-primary-400" /> :
+                         <FileText size={20} className="text-accent-amber" />}
+                      </div>
+                      <div>
+                        <p className="font-medium">{event.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{event.channel}</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{event.type}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{new Date(event.scheduled_for).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500">{new Date(event.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      <span className={cn(
+                        'text-xs px-2 py-1 rounded',
+                        event.status === 'published' ? 'bg-accent-green/20 text-accent-green' :
+                        event.status === 'scheduled' ? 'bg-primary-500/20 text-primary-400' : 'bg-accent-amber/20 text-accent-amber'
+                      )}>
+                        {event.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                <Calendar className="mx-auto mb-2" size={48} />
+                <p>No scheduled content</p>
+                <p className="text-sm text-gray-500 mt-1">Schedule content to see it here</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Projects Tab */}
+      {activeTab === 'projects' && (
+        <div className="space-y-6">
+          {/* Projects Grid */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Creative Projects</h3>
+              <button
+                className="btn btn-primary text-sm flex items-center gap-2"
+                onClick={() => setActionResult({ type: 'success', message: 'Create project coming soon!' })}
+              >
+                <Plus size={14} />
+                New Project
+              </button>
+            </div>
+            {loadingProjects ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin" size={32} />
+              </div>
+            ) : projects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {projects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
+                    onClick={() => setActionResult({ type: 'success', message: `Opening: ${project.name}` })}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={cn(
+                        'h-10 w-10 rounded-lg flex items-center justify-center',
+                        project.status === 'active' ? 'bg-accent-green/20' :
+                        project.status === 'completed' ? 'bg-accent-cyan/20' : 'bg-gray-500/20'
+                      )}>
+                        <FolderKanban size={20} className={
+                          project.status === 'active' ? 'text-accent-green' :
+                          project.status === 'completed' ? 'text-accent-cyan' : 'text-gray-400'
+                        } />
+                      </div>
+                      <span className={cn(
+                        'text-xs px-2 py-1 rounded',
+                        project.status === 'active' ? 'bg-accent-green/20 text-accent-green' :
+                        project.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-gray-500/20 text-gray-400'
+                      )}>
+                        {project.status}
+                      </span>
+                    </div>
+                    <h4 className="font-medium mb-1">{project.name}</h4>
+                    <p className="text-sm text-gray-400 mb-3 line-clamp-2">{project.description}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{project.items_count} items</span>
+                      <span>Updated {new Date(project.updated_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                <FolderKanban className="mx-auto mb-2" size={48} />
+                <p>No projects yet</p>
+                <p className="text-sm text-gray-500 mt-1">Create a project to organize your content</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Templates Tab */}
+      {activeTab === 'templates' && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">Content Templates</h3>
+          {loadingTemplates ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : templates.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
+                  onClick={() => setActionResult({ type: 'success', message: `Using template: ${template.name}` })}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                      {template.category}
+                    </span>
+                    <span className="text-xs text-gray-500">{template.uses} uses</span>
+                  </div>
+                  <h4 className="font-medium mb-1">{template.name}</h4>
+                  <p className="text-sm text-gray-400">{template.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-400">
+              <Layout className="mx-auto mb-2" size={48} />
+              <p>No templates available</p>
+              <p className="text-sm text-gray-500 mt-1">Templates will appear here</p>
+            </div>
+          )}
         </div>
       )}
 
