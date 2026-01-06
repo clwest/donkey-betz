@@ -1,7 +1,7 @@
 # Session 668: ML Scoring Engine Assessment & Improvement Roadmap
 
 **Date:** January 5, 2026
-**Status:** Assessment Complete - Ready for Implementation
+**Status:** Phase 1 & 2 COMPLETE | Model v7.1 Active
 **Priority:** High (affects opportunity scoring accuracy)
 **Location:** `core/services/ml_scoring_engine.py`
 
@@ -9,9 +9,31 @@
 
 ## Executive Summary
 
-The ML Scoring Engine (v4.0) has solid architecture but suffers from **47% dead features** and relies on hardcoded defaults instead of actual historical data. This document provides a phased implementation plan to bring the engine to production quality.
+The ML Scoring Engine has been significantly improved through Phase 1 (dead feature fixes) and Phase 2 (feature engineering + model optimization).
 
-**Current Score: 6/10** → **Target Score: 9/10**
+**Progress: 6/10 → 9/10 ACHIEVED**
+
+### Completed Phases
+
+| Phase | Session | Status | Key Changes |
+|-------|---------|--------|-------------|
+| **Phase 1** | 669 | ✅ COMPLETE | Fixed dead features, expanded keywords, v5.0 |
+| **Phase 2A** | 670 | ✅ COMPLETE | 24 features (embedding, temporal, text quality), v6.0 |
+| **Phase 2B** | 670 | ✅ COMPLETE | LightGBM + Optuna hyperparameter tuning, v7.1 |
+
+### Model Performance Progression
+
+| Version | Model | Test R² | Improvement |
+|---------|-------|---------|-------------|
+| v4.0 | XGBoost | - | 47% dead features |
+| v5.0 | XGBoost | - | Fixed keyword extraction |
+| v6.0 | XGBoost | 0.3158 | +9 features |
+| v7.0 | XGBoost + Optuna | 0.5383 | +70% |
+| **v7.1** | **LightGBM + Optuna** | **0.6276** | **+99%** ✅ |
+
+---
+
+## Original Assessment (Historical)
 
 ---
 
@@ -240,9 +262,9 @@ def score_opportunity(self, spider_data) -> MLScoringResult:
 
 ---
 
-## Phase 1: Quick Wins (1-2 hours)
+## Phase 1: Quick Wins (1-2 hours) ✅ COMPLETE
 
-**Session Target:** 669 or 670
+**Completed in:** Session 669
 
 ### Task 1.1: Fix Historical Success Rate Query
 
@@ -296,9 +318,9 @@ for name, val in zip(engine.FEATURE_NAMES, features[0]):
 
 ---
 
-## Phase 2: Feature Engineering (Half-day)
+## Phase 2: Feature Engineering (Half-day) ✅ COMPLETE
 
-**Session Target:** 670 or 671
+**Completed in:** Session 670
 
 ### Task 2.1: Add Embedding Similarity Feature
 
@@ -416,11 +438,34 @@ FEATURE_NAMES = [
 
 ---
 
-## Phase 3: Model Improvements (1 day)
+## Phase 2B: LightGBM + Optuna Optimization ✅ COMPLETE
 
-**Session Target:** 672 or 673
+**Completed in:** Session 670
 
-### Task 3.1: Implement K-Fold Cross-Validation
+Added as part of Phase 2, implementing Tasks 3.1 and 3.2 early:
+
+### Implementation
+
+- **LightGBM**: Added as alternative model backend (now default)
+- **Optuna**: Bayesian hyperparameter search (50 trials, 5-fold CV)
+- **New methods**:
+  - `optimize_hyperparameters()` - Optuna-powered tuning
+  - `train_model_with_optimization()` - Full pipeline with auto-tuning
+  - `_create_model()` - Factory for XGBoost/LightGBM
+
+### Results
+
+v7.1 (LightGBM + Optuna) achieved **Test R² = 0.6276** (+99% vs baseline)
+
+---
+
+## Phase 3: Model Improvements (Remaining Tasks)
+
+**Session Target:** 671+
+
+### Task 3.1: Implement K-Fold Cross-Validation ✅ COMPLETE
+
+*(Implemented via Optuna's cross_val_score in Phase 2B)*
 
 ```python
 def train_model_with_cv(
@@ -463,7 +508,9 @@ def train_model_with_cv(
     }
 ```
 
-### Task 3.2: Add Hyperparameter Tuning (Optuna)
+### Task 3.2: Add Hyperparameter Tuning (Optuna) ✅ COMPLETE
+
+*(Implemented in Phase 2B - see `optimize_hyperparameters()` method)*
 
 ```python
 def tune_hyperparameters(

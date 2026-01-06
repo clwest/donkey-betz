@@ -225,7 +225,7 @@ ai_core/spiders/specialized/          - 77 spider implementations
 
 | Session | Focus |
 |---------|-------|
-| **670** | **ML Scoring Engine Phase 2** - 24 features, v6.0 model |
+| **670** | **ML Scoring Engine Phase 2** - LightGBM + Optuna, v7.1 model (+99% R²) |
 | **669** | **ML Scoring Engine Phase 1** - Fixed dead features, v5.0 model |
 | **668** | **ML Assessment** - Found 47% dead features, created roadmap |
 | **666** | **System Integration Guide** - Deep system review documentation |

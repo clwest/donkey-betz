@@ -3,55 +3,41 @@
 **Previous Session:** 670 (ML Scoring Engine Phase 2 - COMPLETE)
 **Date:** January 5, 2026
 **Focus:** Continue ML Improvements or New Priorities
-**Status:** 100% Reality Score | ML Engine v6.0 with 24 Features
+**Status:** 100% Reality Score | ML Engine v7.1 (LightGBM) with 24 Features
 
 ---
 
-## Session 670 Summary: ML Phase 2 - Feature Engineering COMPLETE
+## Session 670 Summary: ML Phase 2 - COMPLETE
 
-**All tasks completed successfully!**
-
-### New Features Added (9 total)
+### Part 1: Feature Engineering (24 Features)
 
 1. **Embedding Similarity Feature** - `_get_embedding_similarity()`
    - Compares spider content to historically successful opportunities
    - Uses cosine similarity with 2-hour cache
-   - Returns 0-1 score (0.5 = neutral when no data)
 
-2. **Temporal Features (4)**
-   - `hour_of_day` (0-23)
-   - `day_of_week` (0-6, Monday=0)
-   - `is_weekend` (boolean)
-   - `is_business_hours` (boolean, 9-17 weekday)
+2. **Temporal Features (4)** - hour_of_day, day_of_week, is_weekend, is_business_hours
 
-3. **Text Quality Features (4)**
-   - `description_length` (character count)
-   - `title_word_count` (word count)
-   - `has_numbers` (boolean)
-   - `has_question` (boolean, detects questions)
+3. **Text Quality Features (4)** - description_length, title_word_count, has_numbers, has_question
 
-### Model v6.0 Results
+### Part 2: LightGBM + Optuna Optimization
 
-| Feature | Importance |
-|---------|-----------|
-| keyword_ai | **70.12%** |
-| keyword_trending | **6.93%** |
-| has_numbers | **3.28%** |
-| has_url | **2.42%** |
-| data_freshness_hours | **2.16%** |
-| has_question | **2.10%** |
-| category_financial | **1.78%** |
-| description_length | **1.72%** |
-| title_length | **1.72%** |
-| keyword_opportunity | **1.56%** |
+Added alternative model backend and automatic hyperparameter tuning:
 
-**Metrics:**
-- Train MSE: 0.0010
-- Test MSE: 0.0150
-- Train R2: 0.9573
-- Test R2: 0.3158
+**New Capabilities:**
+- `MODEL_TYPE_LIGHTGBM` and `MODEL_TYPE_XGBOOST` constants
+- `optimize_hyperparameters()` - Bayesian search with Optuna (50 trials, 5-fold CV)
+- `train_model_with_optimization()` - Full pipeline with auto-tuning
+- LightGBM is now the default model backend
 
-**Note:** Test R2 of 0.32 is expected with synthetic training data. As real OpportunityOutcome data accumulates, the model will improve.
+**Model Performance Comparison:**
+
+| Version | Model | Test R² | Improvement |
+|---------|-------|---------|-------------|
+| v6.0 | XGBoost (default params) | 0.3158 | Baseline |
+| v7.0 | XGBoost + Optuna | 0.5383 | +70% |
+| **v7.1** | **LightGBM + Optuna** | **0.6276** | **+99%** ✓ |
+
+**v7.1 is now the active model.**
 
 ---
 
@@ -62,7 +48,7 @@
 | **Agents** | 72 | 69 routable + 3 entry/special |
 | **Spiders** | 77 | 72 working, 5 need API keys |
 | **Services** | 93 | All healthy |
-| **ML Model** | v6.0 | 24 features (was 15) |
+| **ML Model** | v7.1 | LightGBM + Optuna, 24 features |
 
 ---
 
@@ -113,11 +99,12 @@ Check if there are other system priorities that take precedence over ML improvem
 make start
 make celery
 
-# 2. Verify ML engine v6.0
+# 2. Verify ML engine v7.1 (LightGBM)
 .venv/bin/python manage.py shell -c "
 from core.services.ml_scoring_engine import MLScoringEngine, FEATURE_NAMES
 engine = MLScoringEngine()
 print(f'ML Model: {engine.model_version}')
+print(f'Model Type: {engine.model_type}')
 print(f'Features: {len(FEATURE_NAMES)}')
 "
 
@@ -133,24 +120,40 @@ print(f'Hybrid Score: {result.hybrid_score:.1f}')
 print(f'Confidence: {result.confidence:.1f}')
 print(f'Top factors: {[f[\"feature\"] for f in result.shap_explanation.get_top_features(3)]}')
 "
+
+# 4. Train new model with Optuna optimization (optional)
+.venv/bin/python manage.py shell -c "
+from core.services.ml_scoring_engine import MLScoringEngine, MODEL_TYPE_LIGHTGBM
+engine = MLScoringEngine(model_type=MODEL_TYPE_LIGHTGBM)
+result = engine.train_model_with_optimization(
+    training_data,  # Your training data
+    version='v8.0',
+    n_trials=50,
+    cv_folds=5
+)
+print(f'Best CV Score: {result[\"optimization\"][\"best_cv_score\"]:.4f}')
+"
 ```
 
 ---
 
 ## ML Feature Progression
 
-| Version | Features | Top Predictor | Notes |
-|---------|----------|---------------|-------|
-| v4.0 | 15 | - | 47% dead features |
-| v5.0 | 15 | keyword_ai (40.95%) | Fixed text extraction |
-| v6.0 | 24 | keyword_ai (70.12%) | +embedding, temporal, text quality |
+| Version | Features | Model | Test R² | Notes |
+|---------|----------|-------|---------|-------|
+| v4.0 | 15 | XGBoost | - | 47% dead features |
+| v5.0 | 15 | XGBoost | - | Fixed text extraction |
+| v6.0 | 24 | XGBoost | 0.3158 | +embedding, temporal, text quality |
+| v7.0 | 24 | XGBoost + Optuna | 0.5383 | +70% improvement |
+| **v7.1** | 24 | **LightGBM + Optuna** | **0.6276** | **+99% improvement** |
 
 ---
 
 ## Commits from Session 670
 
 ```
-[pending] feat(Session 670): ML Scoring Engine Phase 2 - 24 features + v6.0 model
+b6ce58c4 feat(Session 670): Add LightGBM + Optuna hyperparameter optimization
+bd4b6bba feat(Session 670): ML Scoring Engine Phase 2 - 24 features + v6.0 model
 ```
 
 ---
