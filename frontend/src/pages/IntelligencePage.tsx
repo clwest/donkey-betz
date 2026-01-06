@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { intelligenceApi, pilotsApi, experimentsApi, learningApi, spidersApi, agentsApi, opportunitiesApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
-  Play, Pause, RefreshCw, Eye, ChevronRight, Loader2, Activity,
+  Play, Pause, RefreshCw, ChevronRight, Loader2, Activity,
   BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
   Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag,
   Trash2
@@ -39,6 +39,7 @@ interface Gate {
 
 interface Pilot {
   id: string
+  gate_id: string
   decision_topic: string
   decision_type: string
   status: string  // running, completed, failed, etc.
@@ -48,6 +49,28 @@ interface Pilot {
   outcome?: string
   started_at?: string
   completed_at?: string
+  duration_hours?: number
+  kill_switch_triggered?: boolean
+  thinking_agent_evaluation?: string | null
+  learnings?: Array<{
+    type: string
+    outcome: string
+    confidence: number
+    impact_area: string
+    decision_type: string
+    hours_running: number
+  }>
+}
+
+interface PilotMetrics {
+  total_pilots: number
+  running_count: number
+  completed_count: number
+  success_count: number
+  failure_count: number
+  partial_count: number
+  success_rate: number
+  avg_duration_hours: number
 }
 
 interface Experiment {
@@ -265,10 +288,15 @@ export default function IntelligencePage() {
   const status = statusData?.data || {}
   const opportunities = opportunitiesData?.data?.opportunities || []
   const gates: Gate[] = gatesData?.data?.gates || []
-  // Pilots API returns running_pilots and completed_pilots separately
-  const runningPilots = pilotsData?.data?.running_pilots || []
-  const completedPilots = pilotsData?.data?.completed_pilots || []
+  // Pilots API returns running_pilots, completed_pilots, and metrics separately
+  const runningPilots: Pilot[] = (pilotsData?.data?.running_pilots || []).map((p: Pilot) => ({ ...p, status: 'running' }))
+  const completedPilots: Pilot[] = (pilotsData?.data?.completed_pilots || []).map((p: Pilot) => ({ ...p, status: 'completed' }))
   const pilots: Pilot[] = [...runningPilots, ...completedPilots]
+  const pilotMetrics: PilotMetrics = pilotsData?.data?.metrics || {
+    total_pilots: 0, running_count: 0, completed_count: 0,
+    success_count: 0, failure_count: 0, partial_count: 0,
+    success_rate: 0, avg_duration_hours: 0
+  }
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
   // Session 688: API returns feed_items with different field names - map them
   const rawLearningEvents = learningData?.data?.feed_items || learningData?.data?.events || []
@@ -553,71 +581,194 @@ export default function IntelligencePage() {
       )}
 
       {activeTab === 'pilots' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">Running Pilots</h3>
-          {loadingPilots ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="animate-spin" size={24} />
-            </div>
-          ) : pilots.length > 0 ? (
-            <div className="space-y-3">
-              {pilots.map((pilot) => (
-                <div
-                  key={pilot.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      'h-10 w-10 rounded-lg flex items-center justify-center',
-                      pilot.status === 'running' ? 'bg-accent-green/20' :
-                      pilot.status === 'completed' ? 'bg-accent-cyan/20' : 'bg-accent-red/20'
-                    )}>
-                      {pilot.status === 'running' ? (
-                        <Play size={20} className="text-accent-green" />
-                      ) : pilot.status === 'completed' ? (
-                        <CheckCircle size={20} className="text-accent-cyan" />
-                      ) : (
-                        <XCircle size={20} className="text-accent-red" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{pilot.decision_topic}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{pilot.decision_type}</span>
-                        {pilot.hours_running !== undefined && (
-                          <span className="text-xs text-gray-500">{pilot.hours_running}h running</span>
-                        )}
-                        {pilot.outcome && (
-                          <span className={cn(
-                            'text-xs px-2 py-0.5 rounded',
-                            pilot.outcome === 'success' ? 'bg-accent-green/20 text-accent-green' :
-                            pilot.outcome === 'failure' ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
-                          )}>{pilot.outcome}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      'px-2 py-1 text-xs rounded',
-                      pilot.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
-                      pilot.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-accent-red/20 text-accent-red'
-                    )}>
-                      {pilot.status}
-                    </span>
-                    <button className="btn btn-secondary text-sm">
-                      <Eye size={14} />
-                    </button>
-                  </div>
+        <div className="space-y-6">
+          {/* Pilots Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Play className="text-accent-green" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Running</p>
+                  <p className="text-2xl font-bold">{pilotMetrics.running_count}</p>
                 </div>
-              ))}
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="text-accent-cyan" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Completed</p>
+                  <p className="text-2xl font-bold">{pilotMetrics.completed_count}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="text-accent-green" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Success Rate</p>
+                  <p className="text-2xl font-bold">{pilotMetrics.success_rate.toFixed(0)}%</p>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <div className="flex items-center gap-3">
+                <Clock className="text-primary-400" size={24} />
+                <div>
+                  <p className="text-sm text-gray-400">Avg Duration</p>
+                  <p className="text-2xl font-bold">{pilotMetrics.avg_duration_hours.toFixed(1)}h</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {loadingPilots ? (
+            <div className="card">
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
-              <Play className="mx-auto mb-2" size={32} />
-              <p>No running pilots</p>
-              <p className="text-sm text-gray-500 mt-1">Start a pilot from the Gates tab</p>
-            </div>
+            <>
+              {/* Running Pilots Section */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Play size={20} className="text-accent-green" />
+                  Running Pilots ({runningPilots.length})
+                </h3>
+                {runningPilots.length > 0 ? (
+                  <div className="space-y-3">
+                    {runningPilots.map((pilot) => {
+                      const progressPercent = pilot.auto_complete_in_hours && pilot.hours_running !== undefined
+                        ? Math.min(100, (pilot.hours_running / (pilot.hours_running + pilot.auto_complete_in_hours)) * 100)
+                        : 0
+                      return (
+                        <div
+                          key={pilot.id}
+                          className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <p className="font-medium">{pilot.decision_topic}</p>
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                                  {pilot.decision_type}
+                                </span>
+                                <span className={cn(
+                                  'text-xs px-2 py-0.5 rounded',
+                                  pilot.risk_level === 'high' || pilot.risk_level === 'critical'
+                                    ? 'bg-accent-red/20 text-accent-red'
+                                    : pilot.risk_level === 'medium'
+                                    ? 'bg-accent-amber/20 text-accent-amber'
+                                    : 'bg-accent-green/20 text-accent-green'
+                                )}>
+                                  {pilot.risk_level} risk
+                                </span>
+                                {pilot.kill_switch_triggered && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-accent-red/20 text-accent-red flex items-center gap-1">
+                                    <AlertTriangle size={12} /> Kill Switch
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-accent-green">
+                                {pilot.hours_running?.toFixed(1)}h running
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {pilot.auto_complete_in_hours?.toFixed(1)}h remaining
+                              </p>
+                            </div>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                              <span>Started {pilot.started_at ? new Date(pilot.started_at).toLocaleString() : 'Unknown'}</span>
+                              <span>{progressPercent.toFixed(0)}% complete</span>
+                            </div>
+                            <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-accent-green rounded-full transition-all"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-400">
+                    <Play className="mx-auto mb-2" size={24} />
+                    <p>No running pilots</p>
+                    <p className="text-sm text-gray-500 mt-1">Start a pilot from the Gates tab</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Completed Pilots Section */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CheckCircle size={20} className="text-accent-cyan" />
+                  Completed Pilots ({completedPilots.length})
+                </h3>
+                {completedPilots.length > 0 ? (
+                  <div className="space-y-3">
+                    {completedPilots.slice(0, 10).map((pilot) => {
+                      const confidence = pilot.learnings?.[0]?.confidence
+                      return (
+                        <div
+                          key={pilot.id}
+                          className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium">{pilot.decision_topic}</p>
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                <span className="text-xs px-2 py-0.5 rounded bg-primary-500/20 text-primary-400">
+                                  {pilot.decision_type}
+                                </span>
+                                <span className={cn(
+                                  'text-xs px-2 py-0.5 rounded',
+                                  pilot.outcome === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                                  pilot.outcome === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                                  'bg-accent-amber/20 text-accent-amber'
+                                )}>
+                                  {pilot.outcome}
+                                </span>
+                                {confidence !== undefined && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
+                                    {(confidence * 100).toFixed(0)}% confidence
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-400">
+                                {pilot.duration_hours?.toFixed(1)}h duration
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {pilot.completed_at ? new Date(pilot.completed_at).toLocaleDateString() : ''}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {completedPilots.length > 10 && (
+                      <p className="text-sm text-gray-500 text-center">
+                        + {completedPilots.length - 10} more completed pilots
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-400">
+                    <CheckCircle className="mx-auto mb-2" size={24} />
+                    <p>No completed pilots yet</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
