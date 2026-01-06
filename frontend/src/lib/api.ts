@@ -156,8 +156,8 @@ export const contentApi = {
 export const settingsApi = {
   // Profile
   getProfile: () => api.get('/v1/profile/'),
-  updateProfile: (data: { username?: string; email?: string; bio?: string }) =>
-    api.post('/v1/profile/update/', data),
+  updateProfile: (data: { username?: string; email?: string; bio?: string; dark_mode?: boolean }) =>
+    api.put('/v1/profile/update/', data),
   getProfileStats: () => api.get('/v1/profile/stats/'),
   uploadAvatar: (formData: FormData) =>
     api.post('/v1/profile/avatar/', formData, {
@@ -178,7 +178,7 @@ export const settingsApi = {
   markAllRead: () => api.post('/proactive/notifications/read-all/'),
   getNotificationPreferences: () => api.get('/proactive/notifications/preferences/'),
   updateNotificationPreferences: (prefs: Record<string, boolean>) =>
-    api.post('/proactive/notifications/preferences/', prefs),
+    api.put('/proactive/notifications/preferences/', prefs),
 
   // Security
   changePassword: (oldPassword: string, newPassword: string) =>
