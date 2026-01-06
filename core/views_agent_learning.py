@@ -2849,9 +2849,11 @@ def get_pilot_readiness_gates(request):
 
         queryset = PilotReadinessGate.objects.select_related('decision').order_by('-created_at')
 
-        # Session 689: Exclude declined gates by default (unless specifically requested)
-        if status != 'declined':
-            queryset = queryset.exclude(status='declined')
+        # Session 689: Exclude declined and approved/waived gates by default
+        # Declined = user rejected, Approved/Waived = pilot started (shows in Pilots tab)
+        if not status:
+            # Default view: show gates needing action (not_started, in_progress, ready, blocked)
+            queryset = queryset.exclude(status__in=['declined', 'approved', 'waived'])
 
         if status:
             queryset = queryset.filter(status=status)
