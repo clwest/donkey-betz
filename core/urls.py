@@ -3429,6 +3429,12 @@ urlpatterns += [
     path('api/monitoring/ml-scoring/opportunity/<uuid:opportunity_id>/explanation/', lambda r, opportunity_id: __import__('core.views_autonomous_monitoring', fromlist=['api_ml_scoring_explanation']).api_ml_scoring_explanation(r, opportunity_id), name='monitoring-ml-scoring-explanation'),
 ]
 
+# =========================================================================
+# Session 686: Human Interface Layer API
+# =========================================================================
+from core.views_human_interface import get_human_interface_urls
+urlpatterns += get_human_interface_urls()
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

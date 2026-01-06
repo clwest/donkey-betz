@@ -366,6 +366,41 @@ export const portfolioApi = {
   integrations: () => api.get('/distribution/integrations/'),
 }
 
+// Human Interface Layer (Session 686)
+export const humanApi = {
+  // Attention Stream
+  attention: (params?: { limit?: number; urgency?: string[]; status?: string[] }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    if (params?.urgency) params.urgency.forEach(u => searchParams.append('urgency', u))
+    if (params?.status) params.status.forEach(s => searchParams.append('status', s))
+    return api.get(`/api/human/attention/?${searchParams.toString()}`)
+  },
+  attentionStats: () => api.get('/api/human/attention/stats/'),
+  decide: (itemId: string, decision: string, feedback?: string, confidence?: number) =>
+    api.post(`/api/human/attention/${itemId}/decide/`, { decision, feedback, confidence }),
+  defer: (itemId: string, remindAt: string) =>
+    api.post(`/api/human/attention/${itemId}/defer/`, { remind_at: remindAt }),
+
+  // Control Panel
+  control: () => api.get('/api/human/control/'),
+  pauseAgent: (agentName: string, reason?: string) =>
+    api.post('/api/human/control/pause/', { agent: agentName, reason }),
+  resumeAgent: (agentName: string, reason?: string) =>
+    api.post('/api/human/control/resume/', { agent: agentName, reason }),
+  setQuietMode: (enabled: boolean, durationMinutes?: number) =>
+    api.post('/api/human/control/quiet/', { enabled, duration_minutes: durationMinutes }),
+  setReviewMode: (enabled: boolean) =>
+    api.post('/api/human/control/review/', { enabled }),
+  adjustThreshold: (threshold: number) =>
+    api.post('/api/human/control/threshold/', { threshold }),
+
+  // Preferences
+  preferences: () => api.get('/api/human/preferences/'),
+  updatePreferences: (data: Record<string, unknown>) =>
+    api.put('/api/human/preferences/', data),
+}
+
 export const adminApi = {
   // System Health
   health: () => api.get('/v1/health/'),
