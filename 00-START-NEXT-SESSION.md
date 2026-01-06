@@ -1,93 +1,60 @@
-# Session 664 - Start Here
+# Session 667 - Start Here
 
-**Previous Session:** 663
+**Previous Sessions:** 663 (SystemIntelligenceAgent) + 666 (Deep System Review)
 **Date:** January 5, 2026
-**Focus:** SystemIntelligenceAgent Complete - Platform Health Architecture
-**Health Score:** 90.5% Canonical Decisions | All Services Healthy
+**Focus:** Continue Platform Development
+**Status:** 100% Reality Score | All Integrations Verified
 
 ---
 
-## Session 663 Accomplishments
+## Sessions 663 + 666 Summary
 
-### 1. Created SystemIntelligenceAgent
+### Session 663: SystemIntelligenceAgent
+- Created new agent for platform health monitoring (408 lines)
+- Added to routing config with keywords: "system status", "pending review", etc.
+- Enhanced AttentionItem with severity, explanation, recommended_action
+- Integrated all learning hooks
 
-**New Agent:** `core/agents/system_intelligence_agent.py` (~408 lines)
-
-Purpose: Dedicated agent for platform health and attention monitoring. When users ask PA about "system status", "pending review", or "what needs attention", the PA now routes to this agent which queries real system data.
-
-**Architecture:**
-```
-User → PA → AgentRouter → SystemIntelligenceAgent → SystemStateAggregator
-                                     ↓
-                        Rich context + recommendations
-```
-
-### 2. Enhanced AttentionItem Dataclass
-
-Added new fields to `core/services/system_state_aggregator.py`:
-
-| Field | Purpose |
-|-------|---------|
-| `severity` | 'info', 'warning', 'critical' |
-| `explanation` | What the metric means in plain English |
-| `recommended_action` | What the user can do about it |
-| `location` | UI location (e.g., "Intelligence > Decisions") |
-
-### 3. Added Routing Configuration
-
-**File:** `core/agents/routing_config.py`
-
-Added SystemIntelligenceAgent with:
-- Keywords: "system status", "pending review", "what needs attention", etc.
-- Priority: 30 (high - system queries route here)
-- Examples: "what needs my attention", "check system health"
-
-### 4. UI Integration
-
-- Backend API returns enhanced fields (severity, explanation, recommended_action, location)
-- Frontend shows severity-based colors with pulse animation for critical items
-
-### 5. Learning Hooks Integration
-
-Added all required hooks per `docs/current/LEARNING_SYSTEM.md`:
-- `_record_learning_outcome()` - XP and pattern detection
-- `_create_execution_memory()` - Memory of executions
-- `_share_knowledge()` - Knowledge sharing for critical alerts
+### Session 666: Deep System Review
+- Created comprehensive `SYSTEM_INTEGRATION_GUIDE.md` (798 lines)
+- Updated `LEARNING_SYSTEM.md` to 1,211 lines
+- Verified all major integrations working:
+  - User → PA → Agent Router → Agent flow
+  - Spider → Embeddings → Agent Knowledge pipeline
+  - Learning hooks (230 occurrences across 68 agents)
+  - Sci-Fi features injection
+  - 49+ Celery scheduled tasks
+  - Discord 112 commands integration
 
 ---
 
-## Session 663 Commits (6 total)
+## Commits Summary (Sessions 663 + 666)
 
 ```
-8075264f fix(Session 663): Add required execute() parameters to SystemIntelligenceAgent
+f4777a6b docs: Update INDEX.md with Session 663 & 666 changes
+e56c20ac docs(Session 666): Add comprehensive System Integration Guide
+bed57514 docs(Session 663): Complete handoff and start docs
+8075264f fix(Session 663): Add execute() parameters to SystemIntelligenceAgent
 f246bec0 fix(Session 663): Add SystemIntelligenceAgent to routing config
-62ef3d58 feat(Session 663): Connect Needs Attention UI to enhanced attention items
-41a060a0 fix(Session 663): Fix AgentResult constructor in SystemIntelligenceAgent
-ef0c6294 fix(Session 663): Add learning hooks to SystemIntelligenceAgent
-a9c77ded feat(Session 663): Add SystemIntelligenceAgent for platform health monitoring
+62ef3d58 feat(Session 663): Connect UI to enhanced attention items
+41a060a0 fix(Session 663): Fix AgentResult constructor
+ef0c6294 fix(Session 663): Add learning hooks
+a9c77ded feat(Session 663): Create SystemIntelligenceAgent
 ```
 
 ---
 
-## Bugs Fixed in Session 663
-
-| Bug | Fix |
-|-----|-----|
-| `AgentResult.__init__() got unexpected argument 'result'` | Use `message=` and `data=` |
-| `execute() got unexpected argument 'scifi_context'` | Added all 4 required params |
-| PA gave hypothetical responses | Added agent to routing_config.py |
-
----
-
-## System Stats (After Session 663)
+## System Stats (Current)
 
 | Component | Count | Status |
 |-----------|-------|--------|
-| **Agents** | 72 | 69 routable (+1 SystemIntelligenceAgent) |
-| **Spiders** | 77 | All registered |
+| **Agents** | 72 | 69 routable + 3 entry/special |
+| **Spiders** | 77 | 72 working, 5 need API keys |
 | **Services** | 93 | All healthy |
-| **Scheduled Tasks** | 158 | Celery Beat |
-| **Canonical Rate** | 90.5% | Stable |
+| **PA Tools** | 77 | 5.73% endpoint coverage |
+| **Celery Tasks** | 127 | 49+ scheduled |
+| **Discord Commands** | 112 | 29 cogs |
+| **Learning Hooks** | 230 | Across 68 agent files |
 
 ---
 
@@ -101,32 +68,55 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Test SystemIntelligenceAgent
-# In PA chat, ask: "What needs my attention?"
-# Should return real system data with severity levels
-
-# 4. Check APIs
+# 3. Verify health
 curl http://localhost:8000/health/ping/
+
+# 4. Test SystemIntelligenceAgent
+# In PA chat, ask: "What needs my attention?"
 ```
 
 ---
 
-## Session 664 Priorities
+## Key Documentation
 
-### P0 - Verify Session 663 Changes
-1. Test PA routing: Ask "what's the pending review status?" - should get real data
-2. Verify UI shows severity colors in Needs Attention panel
-3. Check no regressions in other PA functionality
+| Document | Lines | Purpose |
+|----------|-------|---------|
+| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | 798 | Complete integration guide |
+| `docs/current/LEARNING_SYSTEM.md` | 1,211 | Learning hooks documentation |
+| `docs/current/INDEX.md` | 287 | All 18 documentation files |
+| `docs/handoffs/SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` | 369 | SystemIntelligenceAgent handoff |
 
-### P1 - From Previous Sessions
-1. Continue service tests from plan (`tests/services/` - ~143 tests planned)
-2. Review UI audit recommendations (Session 659)
-3. Consider adding more attention item types with rich explanations
+---
+
+## What Both Claude Codes Should Know
+
+1. **Agent Count:** 72 agents (69 routable) - includes SystemIntelligenceAgent
+2. **Routing Config:** All agents must be in `core/agents/routing_config.py`
+3. **Learning Hooks:** All agents must call:
+   - `_record_learning_outcome()` - XP and patterns
+   - `_create_execution_memory()` - Persistent memory
+   - `_share_knowledge()` - Cross-agent knowledge
+4. **Execute Signature:** Must accept `task, context, scifi_context, spider_context`
+5. **AgentResult:** Uses `message` and `data` fields (NOT `result`/`metadata`)
+
+---
+
+## Session 667 Priorities
+
+### P0 - System Verification
+1. Run quick health check: `curl http://localhost:8000/health/ping/`
+2. Test PA routing with system queries
+3. Verify Celery tasks are running
+
+### P1 - Continue Development
+1. Review Integration Guide for gaps
+2. Continue service tests from plan
+3. Check Learning System for improvements
 
 ### P2 - Enhancements
-1. Add Discord integration for system health notifications
-2. Add more AttentionItem categories to SystemStateAggregator
-3. Consider caching for SystemIntelligenceAgent responses
+1. Discord notifications for system health
+2. More AttentionItem categories
+3. Agent performance dashboard improvements
 
 ---
 
@@ -134,22 +124,34 @@ curl http://localhost:8000/health/ping/
 
 | File | Purpose |
 |------|---------|
-| `docs/handoffs/SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` | Complete handoff with architecture |
-| `core/agents/system_intelligence_agent.py` | New agent for system health |
-| `core/agents/routing_config.py` | Agent routing configuration |
-| `core/services/system_state_aggregator.py` | AttentionItem with enhanced fields |
-| `docs/current/LEARNING_SYSTEM.md` | Learning hooks documentation |
+| `core/agents/system_intelligence_agent.py` | Platform health agent |
+| `core/agents/routing_config.py` | Agent routing keywords |
+| `core/agent_router.py` | Main routing logic (72 agents) |
+| `core/services/system_state_aggregator.py` | System state with attention items |
+| `core/personal_ai_assistant_enhanced.py` | Main assistant entry point |
 
 ---
 
-## Key Learnings from Session 663
+## Integration Flow (Verified in Session 666)
 
-1. **Always add to routing_config.py** - Without this, agents aren't discoverable
-2. **Match execute() signature** - Must accept `task, context, scifi_context, spider_context`
-3. **Use correct AgentResult fields** - `message` and `data`, NOT `result` and `metadata`
-4. **Add learning hooks** - Required for collective intelligence integration
-5. **Test full flow** - PA → Router → Agent → Result
+```
+User Request
+    ↓
+EnhancedPersonalAIAssistant.process_message()
+    ↓
+QueryClassifier → ContextAggregator
+    ↓
+GPT-5.1 Function Calling (21 tools)
+    ↓
+AgentRouter.route(agent_name, task, context)
+    ↓
+Agent.execute() with scifi + spider context
+    ↓
+Learning hooks → XP → Memory → Knowledge Sharing
+    ↓
+Response to User
+```
 
 ---
 
-*Ready for Session 664!*
+*Ready for Session 667!*
