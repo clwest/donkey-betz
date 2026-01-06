@@ -173,6 +173,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/legal/case-files/',  # Legal documents
         '/api/legal/cases/',  # Legal cases
         '/api/legal/active-case/',  # Active case
+
+        # Session 688: Podcast Page APIs (read-only for React frontend)
+        '/api/podcasts/',  # Podcast endpoints
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

@@ -67,9 +67,9 @@ def _channel_episode_to_dict(ep):
     }
 
 
-@login_required
 @require_http_methods(["GET"])
 def podcast_list(request):
+    # Session 688: Removed @login_required for React frontend access
     """
     List all podcast episodes for the current user.
     Combines PodcastEpisode + ChannelEpisode (Autonomous Content Studio).
@@ -82,6 +82,10 @@ def podcast_list(request):
         - limit: Number of results (default 20)
         - offset: Pagination offset (default 0)
     """
+    # Session 688: Return empty for anonymous users
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': True, 'episodes': [], 'total': 0, 'limit': 20, 'offset': 0})
+
     from core.models import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
 
@@ -425,15 +429,28 @@ def podcast_delete(request, episode_id):
         }, status=500)
 
 
-@login_required
 @require_http_methods(["GET"])
 def podcast_stats(request):
+    # Session 688: Removed @login_required for React frontend access
     """
     Get podcast statistics for the current user.
     Combines PodcastEpisode + ChannelEpisode stats.
 
     GET /api/podcasts/stats/
     """
+    # Session 688: Return empty stats for anonymous users
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'success': True,
+            'total_episodes': 0,
+            'complete': 0,
+            'in_progress': 0,
+            'failed': 0,
+            'with_scripts': 0,
+            'with_audio': 0,
+            'processing': 0,
+        })
+
     from core.models import PodcastEpisode
     from core.models_autonomous_studio import ChannelEpisode
     from django.db.models import Sum
