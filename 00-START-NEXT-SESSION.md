@@ -2,8 +2,10 @@
 
 **Previous Session:** 686 (Human Interface Layer)
 **Date:** January 5, 2026
-**Focus:** Choose Next Priority
+**Focus:** UI Data Display Audit - Show ALL the data!
 **Status:** 100% Reality Score | Human-in-the-Loop Complete | **Full Architecture Connected**
+
+> **PRIORITY:** The backend is working great - now ensure ALL data displays correctly on the React UI!
 
 ---
 
@@ -97,37 +99,67 @@ Uses command GROUP (counts as 1 command toward 100 limit):
 
 ---
 
-## Session 687 Options
+## Session 687 Priority: UI Data Display Audit
 
-### Option A: Populate Attention Items
-- Connect existing systems to create HumanAttentionItems
-- ThinkingAgent decisions → attention items
-- Pilot gates → attention items
-- Agent errors/anomalies → attention items
+**Goal:** Ensure ALL backend data displays correctly on the React frontend!
 
-### Option B: ML Feedback Loop
-- Feed human decisions back to ML
-- Track when humans override ML recommendations
-- Adjust MODEL_TASK_SCORES based on outcomes
+### Pages to Audit
 
-### Option C: Proactive Notifications
-- Send Discord DMs for critical items
-- Email notifications for high urgency
-- Push notifications to web dashboard
+| Page | Route | What to Check |
+|------|-------|---------------|
+| **Dashboard** | `/dashboard` | Ecosystem stats, health status, real-time updates |
+| **Human** | `/human` | Attention items, control state, preferences |
+| **Agents** | `/agents` | Agent list, categories, activity, learning events |
+| **Intelligence** | `/intelligence` | Pilots, gates, experiments, opportunities |
+| **Betting** | `/betting` | Odds, wagers, arbitrage, bankroll |
+| **Content** | `/content` | Gallery, calendar, projects |
+| **Legal** | `/legal` | Cases, documents, litigation |
+| **Podcast** | `/podcast` | Episodes, scripts, stats |
+| **Portfolio** | `/portfolio` | Platforms, revenue, distributions |
+| **Admin** | `/admin` | System health, Celery status, spiders |
+| **Assistant** | `/assistant` | Chat, context, preferences |
+| **Settings** | `/settings` | Profile, notifications, preferences |
 
-### Option D: Learning from Patterns
-- Analyze human decision patterns
-- Auto-approve items matching past approvals
-- Surface items similar to past rejections
+### Checklist for Each Page
 
-### Option E: Control Panel Enhancements
-- Bulk approve/reject in attention stream
-- Scheduled quiet hours auto-enable
-- Agent performance metrics
+1. **API Connections** - Are all endpoints being called?
+2. **Data Mapping** - Is response data correctly mapped to UI components?
+3. **Loading States** - Do spinners show while fetching?
+4. **Error States** - Are errors handled gracefully?
+5. **Empty States** - What shows when no data exists?
+6. **Real-time Updates** - Are WebSockets connected and working?
+7. **Refresh Actions** - Can users manually refresh data?
 
-### Option F: Different Project
-- Human Interface Layer is complete!
-- Work on something else entirely
+### Quick Start Commands
+
+```bash
+# Start everything
+make start && make celery
+
+# Open React app
+open http://localhost:5173/  # Vite dev server
+
+# Check API health
+curl -s http://localhost:8000/health/ping/
+
+# Check what APIs exist
+grep -r "api\." frontend/src/lib/api.ts | head -30
+```
+
+### Known Issues to Check
+
+- [ ] Dashboard real-time updates via WebSocket
+- [ ] Human page attention items (needs data populated)
+- [ ] Agents page learning feed
+- [ ] Intelligence page pilot gates
+- [ ] Admin page Celery worker status
+
+### After Audit Complete
+
+Once all pages display data correctly:
+- Option A: Populate Human attention items from existing systems
+- Option B: Add ML feedback loop
+- Option C: Proactive notifications
 
 ---
 
