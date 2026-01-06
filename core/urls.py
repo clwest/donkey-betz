@@ -307,6 +307,9 @@ from core.views_agent_learning import (
     approve_all_checklist_items,
     # Session 595: Pilot Dashboard
     get_pilot_executions_dashboard,
+    # Session 690: Implementation Pipeline
+    get_pilot_implementation,
+    trigger_pilot_implementation,
     # Session 596: Experiment Tracking
     get_experiments,
     update_experiment_kpi,
@@ -2848,6 +2851,9 @@ urlpatterns = [
     path('api/pilot-gates/<uuid:gate_id>/approve-all/', approve_all_checklist_items, name='approve-all-checklist-items'),
     # Session 595: Pilot Executions Dashboard
     path('api/pilots/dashboard/', get_pilot_executions_dashboard, name='pilot-executions-dashboard'),
+    # Session 690: Implementation Pipeline
+    path('api/pilots/<uuid:pilot_id>/implementation/', get_pilot_implementation, name='pilot-implementation'),
+    path('api/pilots/<uuid:pilot_id>/implement/', trigger_pilot_implementation, name='trigger-pilot-implementation'),
     # Session 596: Experiment Tracking Registry
     path('api/experiments/', get_experiments, name='get-experiments'),
     path('api/experiments/portfolio/', get_experiment_portfolio, name='experiment-portfolio'),

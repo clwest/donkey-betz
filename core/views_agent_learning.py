@@ -3499,6 +3499,8 @@ def get_pilot_executions_dashboard(request):
             })
 
         # 2. Completed pilots (last 20)
+        # Session 690: Include implementation status
+        from core.models_implementation_pipeline import PilotImplementation
         completed = PilotExecution.objects.filter(status='completed').select_related('gate', 'gate__decision').order_by('-completed_at')[:20]
         completed_pilots = []
         for p in completed:
@@ -3509,6 +3511,20 @@ def get_pilot_executions_dashboard(request):
             thinking_eval = None
             if p.metrics and 'thinking_agent_evaluation' in p.metrics:
                 thinking_eval = p.metrics['thinking_agent_evaluation']
+
+            # Session 690: Get implementation status
+            impl_status = None
+            try:
+                impl = PilotImplementation.objects.get(pilot_id=p.id)
+                impl_status = {
+                    'id': str(impl.id),
+                    'status': impl.status,
+                    'type': impl.implementation_type,
+                    'executed_by': impl.executed_by,
+                    'completed_at': impl.completed_at.isoformat() if impl.completed_at else None,
+                }
+            except PilotImplementation.DoesNotExist:
+                pass
 
             completed_pilots.append({
                 'id': str(p.id),
@@ -3522,6 +3538,7 @@ def get_pilot_executions_dashboard(request):
                 'duration_hours': round(duration_hours, 1) if duration_hours else None,
                 'learnings': p.learnings,
                 'thinking_agent_evaluation': thinking_eval,
+                'implementation': impl_status,  # Session 690
             })
 
         # 3. Metrics
@@ -3566,6 +3583,148 @@ def get_pilot_executions_dashboard(request):
 
     except Exception as e:
         logger.error(f"Error getting pilot executions dashboard: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =============================================================================
+# SESSION 690: IMPLEMENTATION PIPELINE ENDPOINTS
+# =============================================================================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_pilot_implementation(request, pilot_id):
+    """
+    Session 690: Get implementation details for a specific pilot.
+
+    GET /api/pilots/<pilot_id>/implementation/
+    """
+    try:
+        from core.models_implementation_pipeline import PilotImplementation, ImplementationAction
+
+        impl = PilotImplementation.objects.get(pilot_id=pilot_id)
+
+        # Get all actions
+        actions = []
+        for action in impl.actions.all().order_by('created_at'):
+            actions.append({
+                'id': str(action.id),
+                'type': action.action_type,
+                'description': action.description,
+                'performed_by': action.performed_by,
+                'success': action.success,
+                'result': action.result_data,
+                'error': action.error_message,
+                'files_created': action.files_created,
+                'files_modified': action.files_modified,
+                'created_at': action.created_at.isoformat(),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'implementation': {
+                'id': str(impl.id),
+                'pilot_id': str(impl.pilot_id),
+                'type': impl.implementation_type,
+                'status': impl.status,
+                'target_description': impl.target_description,
+                'plan': impl.implementation_plan,
+                'executed_by': impl.executed_by,
+                'result': impl.execution_result,
+                'artifacts': impl.artifacts,
+                'error': impl.error_message,
+                'retry_count': impl.retry_count,
+                'actions': actions,
+                'created_at': impl.created_at.isoformat(),
+                'started_at': impl.started_at.isoformat() if impl.started_at else None,
+                'completed_at': impl.completed_at.isoformat() if impl.completed_at else None,
+            }
+        })
+
+    except PilotImplementation.DoesNotExist:
+        return JsonResponse({
+            'success': True,
+            'implementation': None,
+            'message': 'No implementation exists for this pilot yet'
+        })
+    except Exception as e:
+        logger.error(f"Error getting pilot implementation: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def trigger_pilot_implementation(request, pilot_id):
+    """
+    Session 690: Manually trigger implementation for a completed pilot.
+
+    POST /api/pilots/<pilot_id>/implement/
+
+    This creates an implementation record and executes it immediately.
+    """
+    try:
+        from core.models_pilot_readiness import PilotExecution
+        from core.models_implementation_pipeline import PilotImplementation
+        from core.services.implementation_executor import ImplementationExecutor
+
+        # Get the pilot
+        pilot = PilotExecution.objects.select_related('gate', 'gate__decision').get(id=pilot_id)
+
+        # Validate pilot state
+        if pilot.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': f'Pilot must be completed to implement. Current status: {pilot.status}'
+            }, status=400)
+
+        if pilot.outcome != 'success':
+            return JsonResponse({
+                'success': False,
+                'error': f'Pilot must have succeeded to implement. Current outcome: {pilot.outcome}'
+            }, status=400)
+
+        if not pilot.gate or not pilot.gate.decision:
+            return JsonResponse({
+                'success': False,
+                'error': 'Pilot has no linked decision'
+            }, status=400)
+
+        # Check if implementation already exists
+        existing = PilotImplementation.objects.filter(pilot_id=pilot_id).first()
+        if existing:
+            return JsonResponse({
+                'success': False,
+                'error': f'Implementation already exists with status: {existing.status}',
+                'implementation_id': str(existing.id)
+            }, status=400)
+
+        # Create implementation
+        implementation = PilotImplementation.create_from_pilot(pilot)
+
+        # Execute immediately
+        executor = ImplementationExecutor()
+        result = executor.execute(implementation)
+
+        # Refresh from DB
+        implementation.refresh_from_db()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Implementation executed with status: {implementation.status}',
+            'implementation': {
+                'id': str(implementation.id),
+                'type': implementation.implementation_type,
+                'status': implementation.status,
+                'executed_by': implementation.executed_by,
+                'result': implementation.execution_result,
+                'artifacts': implementation.artifacts,
+            },
+            'execution_result': result
+        })
+
+    except PilotExecution.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Pilot not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error triggering implementation: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
