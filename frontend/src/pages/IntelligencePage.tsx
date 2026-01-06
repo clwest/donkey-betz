@@ -5,7 +5,7 @@ import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, Eye, ChevronRight, Loader2, Activity,
   BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
-  Rocket, Ban, DollarSign, Clock, Users, Wrench
+  Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -133,6 +133,13 @@ export default function IntelligencePage() {
     queryKey: ['opportunity-detail', selectedOpportunityId],
     queryFn: () => opportunitiesApi.detail(selectedOpportunityId!),
     enabled: !!selectedOpportunityId,
+  })
+
+  // Session 689: Fetch gate detail when selected (for modal)
+  const { data: gateDetailData, isLoading: loadingGateDetail } = useQuery({
+    queryKey: ['gate-detail', selectedGate],
+    queryFn: () => pilotsApi.gateDetail(selectedGate!),
+    enabled: !!selectedGate,
   })
 
   // Tab-specific queries
@@ -1010,6 +1017,244 @@ export default function IntelligencePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Session 689: Gate Detail Modal */}
+      {selectedGate && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-card rounded-lg border border-dark-border max-w-3xl w-full max-h-[90vh] overflow-auto">
+            {(() => {
+              const gate = gateDetailData?.data?.gate
+
+              if (loadingGateDetail) {
+                return (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="animate-spin" size={32} />
+                  </div>
+                )
+              }
+
+              if (!gate) {
+                return (
+                  <div className="p-6 text-center text-gray-400">
+                    <AlertTriangle className="mx-auto mb-2" size={32} />
+                    <p>Failed to load gate details</p>
+                    <button
+                      onClick={() => setSelectedGate(null)}
+                      className="btn btn-secondary mt-4"
+                    >
+                      Close
+                    </button>
+                  </div>
+                )
+              }
+
+              const decision = gate.decision || {}
+
+              return (
+                <>
+                  {/* Modal Header */}
+                  <div className="flex items-start justify-between p-6 border-b border-dark-border">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <h3 className="text-xl font-bold">{decision.topic || gate.summary}</h3>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className={cn(
+                          'text-xs px-2 py-1 rounded',
+                          gate.status === 'approved' || gate.status === 'waived' ? 'bg-accent-green/20 text-accent-green' :
+                          gate.status === 'blocked' ? 'bg-accent-red/20 text-accent-red' :
+                          gate.status === 'in_progress' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                          gate.status === 'ready' ? 'bg-accent-amber/20 text-accent-amber' :
+                          'bg-gray-500/20 text-gray-400'
+                        )}>
+                          {gate.status.replace('_', ' ')}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                          {decision.decision_type || 'general'}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">
+                          {decision.impact_area || 'product'}
+                        </span>
+                        <span className={cn(
+                          'text-xs px-2 py-1 rounded',
+                          gate.risk_level === 'high' ? 'bg-accent-red/20 text-accent-red' :
+                          gate.risk_level === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                          'bg-accent-green/20 text-accent-green'
+                        )}>
+                          {gate.risk_level} risk
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedGate(null)}
+                      className="p-2 hover:bg-dark-bg rounded-lg transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 space-y-6">
+                    {/* Recommended Stance */}
+                    {decision.recommended_stance && (
+                      <div className="bg-primary-600/10 border border-primary-600/30 rounded-lg p-4">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary-400">
+                          <Flag size={18} />
+                          Recommended Action
+                        </h4>
+                        <p className="text-gray-300">{decision.recommended_stance}</p>
+                      </div>
+                    )}
+
+                    {/* Rationale */}
+                    {decision.rationale && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <FileText size={18} className="text-accent-cyan" />
+                          Rationale
+                        </h4>
+                        <p className="text-gray-300 text-sm">{decision.rationale}</p>
+                      </div>
+                    )}
+
+                    {/* Key Insights */}
+                    {decision.key_insights && decision.key_insights.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <Lightbulb size={18} className="text-accent-amber" />
+                          Key Insights
+                        </h4>
+                        <div className="space-y-2">
+                          {decision.key_insights.map((insight: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-3 bg-dark-bg rounded-lg p-3">
+                              <span className="text-accent-amber font-bold">{idx + 1}.</span>
+                              <p className="text-gray-300 text-sm">{insight}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Suggested Feature */}
+                    {decision.suggested_feature && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Rocket size={18} className="text-accent-green" />
+                          Suggested Feature
+                        </h4>
+                        <p className="text-gray-300 text-sm bg-dark-bg rounded-lg p-3">{decision.suggested_feature}</p>
+                      </div>
+                    )}
+
+                    {/* Participants */}
+                    {decision.participants && decision.participants.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <Users size={18} className="text-primary-400" />
+                          Participants
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {decision.participants.map((agent: string, idx: number) => (
+                            <span key={idx} className="text-xs px-2 py-1 rounded-full bg-dark-bg text-gray-400 border border-dark-border">
+                              {agent}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Checklist Progress */}
+                    {gate.checklist && (
+                      <div className="bg-dark-bg rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <Target size={18} className="text-primary-400" />
+                          Checklist Progress
+                        </h4>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary-500 rounded-full"
+                                style={{ width: `${gate.checklist.percentage || 0}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium">
+                            {gate.checklist.completed}/{gate.checklist.total} complete
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Created timestamp */}
+                    <div className="text-sm text-gray-500">
+                      Created: {new Date(gate.created_at).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Modal Footer - Action Buttons */}
+                  <div className="flex items-center justify-between p-6 border-t border-dark-border bg-dark-bg/50">
+                    <button
+                      onClick={() => setSelectedGate(null)}
+                      className="btn btn-secondary"
+                    >
+                      Close
+                    </button>
+                    <div className="flex items-center gap-3">
+                      {gate.status === 'not_started' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await pilotsApi.updateGateStatus(gate.id, 'start')
+                              setActionResult({ type: 'success', message: 'Gate started!' })
+                              await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                              await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                            } catch {
+                              setActionResult({ type: 'error', message: 'Failed to start gate' })
+                            }
+                          }}
+                          className="btn btn-primary flex items-center gap-2"
+                        >
+                          <Play size={16} />
+                          Start Gate
+                        </button>
+                      )}
+                      {gate.status === 'in_progress' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await pilotsApi.updateGateStatus(gate.id, 'ready')
+                              setActionResult({ type: 'success', message: 'Gate marked ready!' })
+                              await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                              await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                            } catch {
+                              setActionResult({ type: 'error', message: 'Failed to mark ready' })
+                            }
+                          }}
+                          className="btn btn-primary flex items-center gap-2"
+                        >
+                          <CheckCircle size={16} />
+                          Mark Ready
+                        </button>
+                      )}
+                      {gate.status === 'ready' && (
+                        <button
+                          onClick={async () => {
+                            approveGateMutation.mutate(gate.id)
+                            await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                          }}
+                          className="btn btn-primary flex items-center gap-2"
+                        >
+                          <CheckCircle size={16} />
+                          Approve & Start Pilot
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
