@@ -5,7 +5,8 @@ import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, Eye, ChevronRight, Loader2, Activity,
   BookOpen, Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
-  Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag
+  Rocket, Ban, DollarSign, Clock, Users, Wrench, Lightbulb, FileText, Flag,
+  Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -1195,12 +1196,36 @@ export default function IntelligencePage() {
 
                   {/* Modal Footer - Action Buttons */}
                   <div className="flex items-center justify-between p-6 border-t border-dark-border bg-dark-bg/50">
-                    <button
-                      onClick={() => setSelectedGate(null)}
-                      className="btn btn-secondary"
-                    >
-                      Close
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedGate(null)}
+                        className="btn btn-secondary"
+                      >
+                        Close
+                      </button>
+                      {/* Session 689: Decline button to permanently dismiss unwanted gates */}
+                      {!['approved', 'declined', 'waived'].includes(gate.status) && (
+                        <button
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to decline this pilot? This cannot be undone.')) {
+                              try {
+                                await pilotsApi.updateGateStatus(gate.id, 'decline', 'Declined by user')
+                                setActionResult({ type: 'success', message: 'Pilot declined and removed!' })
+                                setSelectedGate(null)
+                                await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                              } catch {
+                                setActionResult({ type: 'error', message: 'Failed to decline gate' })
+                              }
+                            }
+                          }}
+                          className="btn btn-secondary text-accent-red hover:bg-accent-red/20 flex items-center gap-2"
+                          title="Permanently decline this pilot"
+                        >
+                          <Trash2 size={16} />
+                          Decline
+                        </button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3">
                       {gate.status === 'not_started' && (
                         <button
