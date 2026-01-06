@@ -108,7 +108,8 @@ export const pilotsApi = {
 }
 
 export const experimentsApi = {
-  list: () => api.get('/experiments/'),
+  // Session 692: Use /pilot-experiments/ to get pilot experiments (not A/B experiments)
+  list: () => api.get('/pilot-experiments/'),
   portfolio: () => api.get('/experiments/portfolio/'),
   updateKpi: (experimentId: string, kpiValue: number) =>
     api.post(`/experiments/${experimentId}/update-kpi/`, { kpi_value: kpiValue }),

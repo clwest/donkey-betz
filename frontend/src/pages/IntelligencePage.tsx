@@ -115,13 +115,22 @@ interface PilotMetrics {
   avg_duration_hours: number
 }
 
+// Session 692: Updated to match actual API response from /api/pilot-experiments/
 interface Experiment {
   id: string
   name: string
-  status: 'active' | 'completed' | 'halted'
-  kpi_current: number
-  kpi_target: number
-  pilot_name: string
+  hypothesis: string
+  status: 'running' | 'success' | 'failure' | 'inconclusive'
+  kpi_owner: string
+  primary_kpi: string
+  target_value: string
+  current_value: string
+  pilot_id: string | null
+  decision_topic: string
+  decision_id: string | null
+  risk_level: string
+  is_halted: boolean
+  outcome_classification: string
 }
 
 interface LearningEvent {
@@ -436,7 +445,7 @@ export default function IntelligencePage() {
   const tabs: { key: TabType; label: string; icon: React.ElementType; count?: number }[] = [
     { key: 'gates', label: 'Gates', icon: Target, count: gates.filter(g => ['not_started', 'in_progress', 'ready'].includes(g.status)).length },
     { key: 'pilots', label: 'Pilots', icon: Play, count: pilots.filter(p => p.status === 'running').length },
-    { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'active').length },
+    { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'running').length },
     { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
     { key: 'predictions', label: 'Predictions', icon: Sparkles },
     { key: 'agents', label: 'Agents', icon: Bot },
@@ -530,8 +539,8 @@ export default function IntelligencePage() {
           <div className="flex items-center gap-3">
             <BarChart3 className="text-primary-400" size={24} />
             <div>
-              <p className="text-sm text-gray-400">Active Experiments</p>
-              <p className="text-2xl font-bold">{experiments.filter(e => e.status === 'active').length || 0}</p>
+              <p className="text-sm text-gray-400">Running Experiments</p>
+              <p className="text-2xl font-bold">{experiments.filter(e => e.status === 'running').length || 0}</p>
             </div>
           </div>
         </div>
@@ -960,6 +969,7 @@ export default function IntelligencePage() {
             </div>
           ) : experiments.length > 0 ? (
             <div className="space-y-3">
+              {/* Session 692: Map API fields (current_value, target_value, running) to display */}
               {experiments.map((experiment) => (
                 <div
                   key={experiment.id}
@@ -968,43 +978,36 @@ export default function IntelligencePage() {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       'h-10 w-10 rounded-lg flex items-center justify-center',
-                      experiment.status === 'active' ? 'bg-primary-500/20' :
-                      experiment.status === 'completed' ? 'bg-accent-green/20' : 'bg-accent-red/20'
+                      experiment.status === 'running' ? 'bg-primary-500/20' :
+                      experiment.status === 'success' ? 'bg-accent-green/20' : 'bg-accent-red/20'
                     )}>
                       <BarChart3 size={20} className={
-                        experiment.status === 'active' ? 'text-primary-400' :
-                        experiment.status === 'completed' ? 'text-accent-green' : 'text-accent-red'
+                        experiment.status === 'running' ? 'text-primary-400' :
+                        experiment.status === 'success' ? 'text-accent-green' : 'text-accent-red'
                       } />
                     </div>
                     <div>
-                      <p className="font-medium">{experiment.name || experiment.pilot_name}</p>
+                      <p className="font-medium">{experiment.name || experiment.decision_topic}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-sm text-gray-400">
-                          KPI: <span className={experiment.kpi_current >= experiment.kpi_target ? 'text-accent-green' : 'text-accent-amber'}>
-                            {experiment.kpi_current || 0}
-                          </span> / {experiment.kpi_target || 100}
+                          {experiment.primary_kpi}: <span className="text-accent-cyan">
+                            {experiment.current_value || '0'}
+                          </span> / {experiment.target_value || '100'}
                         </span>
-                        <div className="w-20 h-1.5 bg-dark-bg rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full',
-                              experiment.kpi_current >= experiment.kpi_target ? 'bg-accent-green' : 'bg-primary-500'
-                            )}
-                            style={{ width: `${Math.min((experiment.kpi_current / experiment.kpi_target) * 100, 100) || 0}%` }}
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={cn(
                       'px-2 py-1 text-xs rounded',
-                      experiment.status === 'active' ? 'bg-primary-500/20 text-primary-400' :
-                      experiment.status === 'completed' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
+                      experiment.status === 'running' ? 'bg-primary-500/20 text-primary-400' :
+                      experiment.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                      experiment.status === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                      'bg-accent-amber/20 text-accent-amber'
                     )}>
                       {experiment.status}
                     </span>
-                    {experiment.status === 'active' && (
+                    {experiment.status === 'running' && (
                       <button
                         className="btn btn-secondary text-sm text-accent-red flex items-center gap-1"
                         onClick={() => haltExperimentMutation.mutate(experiment.id)}
@@ -1021,8 +1024,8 @@ export default function IntelligencePage() {
           ) : (
             <div className="text-center py-8 text-gray-400">
               <BarChart3 className="mx-auto mb-2" size={32} />
-              <p>No active experiments</p>
-              <p className="text-sm text-gray-500 mt-1">Experiments are created when pilots complete successfully</p>
+              <p>No experiments yet</p>
+              <p className="text-sm text-gray-500 mt-1">Experiments are created when pilots are started</p>
             </div>
           )}
         </div>

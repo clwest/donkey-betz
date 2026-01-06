@@ -21,6 +21,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 from core.services.agent_learning_service import (
     get_learning_service,
@@ -3895,7 +3897,7 @@ def get_experiments(request):
     """
     Session 596: Get all experiments with KPI tracking.
 
-    GET /api/experiments/
+    GET /api/experiments/  or  /api/pilot-experiments/
 
     Query params:
     - status: Filter by status (running, success, failure, inconclusive)
