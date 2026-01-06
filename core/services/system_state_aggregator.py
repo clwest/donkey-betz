@@ -33,7 +33,12 @@ SYSTEM_STATE_CACHE_TTL = 60  # 60 seconds
 
 @dataclass
 class AttentionItem:
-    """A single item that needs user attention."""
+    """
+    A single item that needs user attention.
+
+    Session 663: Enhanced with explanation, recommended_action, severity
+    to support SystemIntelligenceAgent providing rich context to users.
+    """
     id: str
     section: str        # 'command_center', 'autonomous', 'research'
     category: str       # 'alert', 'health', 'overdue', 'stale', etc.
@@ -41,9 +46,28 @@ class AttentionItem:
     title: str
     summary: str
     action_url: str = ''
+    # Session 663: New fields for SystemIntelligenceAgent
+    explanation: str = ''           # What this metric means in plain English
+    recommended_action: str = ''    # What the user can do about it
+    severity: str = 'info'          # 'info', 'warning', 'critical'
+    location: str = ''              # UI location: "Intelligence > Decisions"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+    def to_rich_context(self) -> str:
+        """Format as rich context string for agent consumption."""
+        parts = [f"**{self.title}**"]
+        if self.location:
+            parts.append(f"Location: {self.location}")
+        parts.append(f"Summary: {self.summary}")
+        if self.explanation:
+            parts.append(f"Context: {self.explanation}")
+        if self.recommended_action:
+            parts.append(f"Recommended: {self.recommended_action}")
+        if self.action_url:
+            parts.append(f"Action URL: {self.action_url}")
+        return "\n".join(parts)
 
 
 # Priority base scores by category
@@ -223,7 +247,13 @@ class SystemStateAggregator:
                     priority=PRIORITY_SCORES['execution_failure'],
                     title=f"Thinking Cycle Failed",
                     summary=f"Cycle from {cycle.started_at.strftime('%H:%M')} failed: {(cycle.observations or '')[:80]}",
-                    action_url='/ai-studio/?tab=autonomous'
+                    action_url='/ai-studio/?tab=autonomous',
+                    explanation="A scheduled thinking cycle encountered an error. Thinking cycles are "
+                               "autonomous processes where agents analyze data, generate insights, and learn.",
+                    recommended_action="Check the Autonomous tab for error details. The system will "
+                                      "retry automatically, but persistent failures may need investigation.",
+                    severity='warning',
+                    location='Command Center > Autonomous'
                 ))
 
             # 2. Recurring concerns (came back after being resolved)
@@ -239,7 +269,13 @@ class SystemStateAggregator:
                     priority=PRIORITY_SCORES['recurring_concern'],
                     title=f"Recurring: {concern.concern_text[:40]}...",
                     summary=f"Detected {concern.times_detected}x in {concern.category}",
-                    action_url='/ai-studio/?tab=autonomous&subtab=thinking'
+                    action_url='/ai-studio/?tab=autonomous&subtab=thinking',
+                    explanation="This concern was previously resolved but has reappeared. Recurring "
+                               "issues often indicate a root cause that wasn't fully addressed.",
+                    recommended_action="Investigate the underlying cause. Consider creating a permanent "
+                                      "fix or policy to prevent recurrence.",
+                    severity='warning',
+                    location='Command Center > Thinking'
                 ))
 
             # 3. Stale concerns (active > 7 days)
@@ -257,7 +293,13 @@ class SystemStateAggregator:
                     priority=PRIORITY_SCORES['stale_concern'],
                     title=f"Stale: {concern.concern_text[:40]}...",
                     summary=f"Active for {concern.days_active} days, no resolution",
-                    action_url='/ai-studio/?tab=autonomous&subtab=thinking'
+                    action_url='/ai-studio/?tab=autonomous&subtab=thinking',
+                    explanation="This concern has been open for over a week without resolution. "
+                               "Long-standing issues may indicate complexity or deprioritization.",
+                    recommended_action="Either resolve the concern, mark it as won't-fix with a reason, "
+                                      "or escalate if it requires additional resources.",
+                    severity='info',
+                    location='Command Center > Thinking'
                 ))
 
         except ImportError as e:
@@ -531,8 +573,16 @@ class SystemStateAggregator:
                     category='pending_review',
                     priority=PRIORITY_SCORES['pending_review'],
                     title=f"Pending Review: {review_pct:.0f}%",
-                    summary=f"Intelligence > Decisions: {review.get('draft_count', 0)} agent suggestions in draft, {review.get('canonical_count', 0)} promoted. High % is normal - only important ones need promotion.",
-                    action_url='/ai-studio/?tab=decisions&subtab=pending'
+                    summary=f"{review.get('draft_count', 0)} agent suggestions in draft, {review.get('canonical_count', 0)} promoted to canonical.",
+                    action_url='/ai-studio/?tab=decisions&subtab=pending',
+                    explanation="This metric shows agent-generated suggestions awaiting human review. "
+                               "Agents continuously generate ideas, insights, and recommendations. "
+                               "High percentages are normal and expected - only the most valuable "
+                               "suggestions should be promoted to 'canonical' status.",
+                    recommended_action="Review high-value suggestions in the Decisions tab, or run "
+                                      "auto-promotion to clear low-risk guidelines automatically.",
+                    severity='info',
+                    location='Intelligence > Decisions'
                 ))
 
             # Alert if many stale decisions
@@ -543,8 +593,14 @@ class SystemStateAggregator:
                     category='stale_concern',
                     priority=PRIORITY_SCORES['stale_concern'] + 5,  # Boost slightly
                     title=f"Stale Suggestions: {stale_count}",
-                    summary=f"Agent suggestions over 7 days old - consider archiving",
-                    action_url='/ai-studio/?tab=decisions&subtab=pending'
+                    summary=f"{stale_count} agent suggestions are over 7 days old.",
+                    action_url='/ai-studio/?tab=decisions&subtab=pending',
+                    explanation="These suggestions have been waiting for review for over a week. "
+                               "Old suggestions may no longer be relevant as the system has evolved.",
+                    recommended_action="Archive or reject outdated suggestions, or batch-review "
+                                      "to clear the backlog. Consider enabling auto-archival for old drafts.",
+                    severity='warning',
+                    location='Intelligence > Decisions'
                 ))
 
             # Opportunity: auto-promotable decisions available
@@ -555,8 +611,15 @@ class SystemStateAggregator:
                     category='opportunity',
                     priority=PRIORITY_SCORES['opportunity'] + 15,  # Higher priority opportunity
                     title=f"Auto-Promotable: {promotable_count}",
-                    summary=f"Low-risk guidelines ready for auto-promotion",
-                    action_url='/ai-studio/?tab=decisions&subtab=auto-promote'
+                    summary=f"{promotable_count} low-risk guidelines are ready for automatic promotion.",
+                    action_url='/ai-studio/?tab=decisions&subtab=auto-promote',
+                    explanation="These are low-risk guideline suggestions that meet the criteria "
+                               "for automatic promotion (aged 24+ hours, low-impact areas like "
+                               "prompting, product, or workflow improvements).",
+                    recommended_action="Run the auto-promotion process to clear these automatically, "
+                                      "or review them manually if you prefer hands-on approval.",
+                    severity='info',
+                    location='Intelligence > Decisions > Auto-Promote'
                 ))
 
         except ImportError as e:

@@ -219,6 +219,9 @@ from core.agents.workflow_orchestration_agent import WorkflowOrchestrationAgent
 from core.agents.thinking_agent import ThinkingAgent
 from core.agents.technical_document_agent import TechnicalDocumentAgent
 
+# Session 663: System Intelligence Agent
+from core.agents.system_intelligence_agent import SystemIntelligenceAgent
+
 logger = logging.getLogger(__name__)
 
 # Session 488: Semantic routing confidence threshold
@@ -367,6 +370,9 @@ class AgentRouter:
         "WorkflowOrchestrationAgent": WorkflowOrchestrationAgent,
         "ThinkingAgent": ThinkingAgent,
         "TechnicalDocumentAgent": TechnicalDocumentAgent,
+
+        # Session 663: System Intelligence Agent
+        "SystemIntelligenceAgent": SystemIntelligenceAgent,
 
         # Entry Point Agent
         "PersonalAssistantAgent": PersonalAssistantAgent,

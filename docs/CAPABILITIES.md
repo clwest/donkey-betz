@@ -1,6 +1,6 @@
 # Platform Capabilities
 
-**Last Updated:** Session 652 (December 31, 2025) - Podcast Studio & Campaign Orchestrator Activated
+**Last Updated:** Session 663 (January 5, 2026) - Added SystemIntelligenceAgent for platform health monitoring
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Total Agents** | **71** | 47 routable, 24 sub-agents (5 coordinator teams) |
+| **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
 | **PA Tools** | **77** | 5.73% endpoint coverage (Session 586) |
 | **Database Models** | **324+** | 37 categories |
@@ -34,7 +34,7 @@
 | Character Training | 3 | Production |
 | Workflows | 6 | Production |
 | **Spiders** | **77** | **Active (72 working)** |
-| **Agents** | **71** | **47 routable, 24 sub-agents** |
+| **Agents** | **72** | **48 routable, 24 sub-agents** |
 | Advisors | 25 | Production |
 | Sci-Fi Features | 14 | All Active |
 | Style Presets | 80+ | Built-in |
@@ -76,6 +76,7 @@
 | **Celery Beat Schedules** | **53 Automated Tasks** | **Production (Session 567)** |
 | **Betting Dashboard** | **8 Sub-tabs + Push Notifications** | **Production (Session 562)** |
 | **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
+| **System Intelligence Agent** | **Platform Health & Attention Monitoring** | **Production (Session 663)** |
 | **PA Tools** | **77 Tools (5.73% coverage)** | **Production (Session 586)** |
 | **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
 | **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
