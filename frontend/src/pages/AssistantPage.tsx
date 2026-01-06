@@ -27,8 +27,13 @@ interface ActionResult {
 interface AttentionItem {
   id: string
   title: string
-  priority: 'high' | 'medium' | 'low'
-  type: string
+  summary?: string
+  priority: number
+  severity: 'critical' | 'warning' | 'info'
+  explanation?: string
+  recommended_action?: string
+  location?: string
+  suggested_action?: string
 }
 
 interface UserPreference {
@@ -570,18 +575,24 @@ export default function AssistantPage() {
                       {attentionItems.slice(0, 5).map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-dark-bg hover:bg-dark-border cursor-pointer transition-colors"
-                          onClick={() => sendMessage(`Tell me about: ${item.title}`)}
+                          className="flex items-center justify-between p-2 rounded-lg bg-dark-bg hover:bg-dark-border cursor-pointer transition-colors group"
+                          onClick={() => sendMessage(item.suggested_action || `Tell me about: ${item.title}`)}
+                          title={item.explanation || item.summary || ''}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <span className={cn(
                               'h-2 w-2 rounded-full flex-shrink-0',
-                              item.priority === 'high' ? 'bg-accent-red' :
-                              item.priority === 'medium' ? 'bg-accent-amber' : 'bg-accent-green'
+                              item.severity === 'critical' ? 'bg-accent-red animate-pulse' :
+                              item.severity === 'warning' ? 'bg-accent-amber' : 'bg-accent-green'
                             )} />
-                            <span className="text-sm truncate">{item.title}</span>
+                            <div className="min-w-0">
+                              <span className="text-sm truncate block">{item.title}</span>
+                              {item.location && (
+                                <span className="text-xs text-gray-500 truncate block">{item.location}</span>
+                              )}
+                            </div>
                           </div>
-                          <ChevronRight size={14} className="text-gray-500 flex-shrink-0" />
+                          <ChevronRight size={14} className="text-gray-500 flex-shrink-0 group-hover:text-primary-400" />
                         </div>
                       ))}
                     </div>
