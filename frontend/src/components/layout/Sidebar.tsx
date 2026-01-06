@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import {
   LayoutDashboard,
@@ -8,6 +8,7 @@ import {
   Palette,
   Settings,
   LogOut,
+  User,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -17,11 +18,13 @@ const navItems = [
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/content', label: 'Content', icon: Palette },
+  { path: '/profile', label: 'Profile', icon: User },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const { logout, user } = useAuthStore()
+  const navigate = useNavigate()
 
   return (
     <aside className="flex w-64 flex-col border-r border-dark-border bg-dark-card">
@@ -49,12 +52,16 @@ export default function Sidebar() {
       {/* User Section */}
       <div className="border-t border-dark-border p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            title="View Profile"
+          >
             <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium">
               {user?.username?.charAt(0).toUpperCase() || 'U'}
             </div>
             <span className="text-sm text-gray-300">{user?.username}</span>
-          </div>
+          </button>
           <button
             onClick={() => logout()}
             className="text-gray-400 hover:text-white transition-colors"
