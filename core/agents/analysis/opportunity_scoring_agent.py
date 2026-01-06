@@ -924,6 +924,17 @@ You score and analyze - you do NOT create content or execute workflows."""
                 priority = 'medium'
                 days_until_due = 7
 
+            # Build research context for better agent execution
+            research_context = OpportunityTask._build_research_context(opportunity)
+            task_metadata = {
+                'research_query': research_context['research_query'],
+                'research_topic': research_context['research_topic'],
+                'keywords': research_context['keywords'],
+                'category': research_context['category'],
+                'source': research_context['source'],
+                'clean_title': research_context['clean_title'],
+            }
+
             task = OpportunityTask.objects.create(
                 opportunity=opportunity,
                 title=f"Act on: {opportunity.title[:100]}",
@@ -931,9 +942,10 @@ You score and analyze - you do NOT create content or execute workflows."""
                 priority=priority,
                 status='pending',
                 due_date=timezone.now() + timedelta(days=days_until_due),
+                metadata=task_metadata,
             )
 
-            # Assign agent
+            # Assign agent (ForeignKey expects Agent object)
             relevant_agents = opportunity.get_relevant_agents()
             if relevant_agents:
                 task.primary_agent = relevant_agents[0]
