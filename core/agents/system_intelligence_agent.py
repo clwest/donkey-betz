@@ -24,8 +24,32 @@ import logging
 from typing import Dict, Any, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_system_health_with_ml(health_data: dict) -> dict:
+    """Analyze system health data using ML models (ANOMALY for detecting issues)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=health_data,
+            task_hint=TaskType.ANOMALY,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'anomaly'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'health_analysis': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML system health analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class SystemIntelligenceAgent(BaseAgent):

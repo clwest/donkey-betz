@@ -29,8 +29,32 @@ import time
 from typing import Dict, Any
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_operations_with_ml(ops_data: dict) -> dict:
+    """Analyze operations data using ML models (Text)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=ops_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'ops_analysis': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML operations analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class COOAgent(BaseAgent):

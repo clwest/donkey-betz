@@ -27,8 +27,32 @@ from datetime import datetime, timedelta, date
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.models_unified_system import MarketIntelligenceBrief
 from content.elevenlabs_provider import elevenlabs_provider
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_market_intel_with_ml(market_data: dict) -> dict:
+    """Analyze market intelligence using ML models (GNN for relationships)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=market_data,
+            task_hint=TaskType.GRAPH,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'graph'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'market_relationships': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML market intel analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class MarketIntelligenceCoordinator(BaseAgent):

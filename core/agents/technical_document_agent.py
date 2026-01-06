@@ -43,8 +43,32 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_document_with_ml(document_data: dict) -> dict:
+    """Analyze technical document data using ML models (Text)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=document_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'document_analysis': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML document analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 # Document stage definitions - the product development lifecycle

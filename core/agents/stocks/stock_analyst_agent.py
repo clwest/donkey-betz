@@ -20,8 +20,32 @@ from typing import Dict, Any
 from datetime import datetime, timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_stock_with_ml(stock_data: dict) -> dict:
+    """Analyze stock data using ML models (LSTM for time series)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=stock_data,
+            task_hint=TaskType.TIME_SERIES,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'time_series'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'price_prediction': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML stock analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class StockAnalystAgent(BaseAgent):

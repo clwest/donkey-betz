@@ -29,8 +29,32 @@ from typing import Dict, Any, Optional, Tuple
 
 from core.agents.base_agent import BaseAgent, AgentResult, KnowledgeAttribution
 from core.agents.routing_config import get_intent_keywords, AGENT_ROUTING_CONFIG
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_assistant_request_with_ml(request_data: dict) -> dict:
+    """Analyze assistant request data using ML models (Text for intent classification)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=request_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'intent_classification': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML assistant request analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 # Session 454: Import keywords from unified routing config
 INTENT_KEYWORDS = get_intent_keywords()
