@@ -577,23 +577,33 @@ export default function IntelligencePage() {
                       </button>
                     )}
                     {/* in_progress → Mark Ready */}
+                    {/* Session 692: Show Mark Ready only when checklist is reasonably complete */}
                     {gate.status === 'in_progress' && (
                       <button
-                        className="btn btn-secondary text-sm flex items-center gap-1"
+                        className={cn(
+                          "btn text-sm flex items-center gap-1",
+                          gate.checklist_percentage >= 50 ? "btn-secondary" : "btn-secondary opacity-50"
+                        )}
                         onClick={async (e) => {
                           e.stopPropagation()
                           try {
-                            await pilotsApi.updateGateStatus(gate.id, 'ready')
-                            setActionResult({ type: 'success', message: 'Gate marked ready!' })
-                            await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                            const response = await pilotsApi.updateGateStatus(gate.id, 'ready')
+                            // Session 692: Check response.data.success since API returns 200 even on failure
+                            if (response.data?.success === false) {
+                              setActionResult({ type: 'error', message: response.data?.message || 'Checklist incomplete' })
+                            } else {
+                              setActionResult({ type: 'success', message: 'Gate marked ready!' })
+                              await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                            }
                           } catch {
                             setActionResult({ type: 'error', message: 'Failed to mark ready' })
                           }
                         }}
                         disabled={isLoading}
+                        title={gate.checklist_percentage < 50 ? `Checklist ${gate.checklist_percentage}% complete - needs more items` : 'Mark gate as ready for approval'}
                       >
                         <CheckCircle size={14} />
-                        Mark Ready
+                        Mark Ready {gate.checklist_percentage < 100 && `(${Math.round(gate.checklist_percentage)}%)`}
                       </button>
                     )}
                     {/* ready → Approve */}
@@ -1497,22 +1507,31 @@ export default function IntelligencePage() {
                           Start Gate
                         </button>
                       )}
+                      {/* Session 692: Check response.success and show checklist % */}
                       {gate.status === 'in_progress' && (
                         <button
                           onClick={async () => {
                             try {
-                              await pilotsApi.updateGateStatus(gate.id, 'ready')
-                              setActionResult({ type: 'success', message: 'Gate marked ready!' })
-                              await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
-                              await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                              const response = await pilotsApi.updateGateStatus(gate.id, 'ready')
+                              if (response.data?.success === false) {
+                                setActionResult({ type: 'error', message: response.data?.message || 'Checklist incomplete' })
+                              } else {
+                                setActionResult({ type: 'success', message: 'Gate marked ready!' })
+                                await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                                await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                              }
                             } catch {
                               setActionResult({ type: 'error', message: 'Failed to mark ready' })
                             }
                           }}
-                          className="btn btn-primary flex items-center gap-2"
+                          className={cn(
+                            "btn flex items-center gap-2",
+                            gate.checklist_percentage >= 50 ? "btn-primary" : "btn-primary opacity-50"
+                          )}
+                          title={gate.checklist_percentage < 50 ? `Checklist ${gate.checklist_percentage}% complete` : ''}
                         >
                           <CheckCircle size={16} />
-                          Mark Ready
+                          Mark Ready {gate.checklist_percentage < 100 && `(${Math.round(gate.checklist_percentage)}%)`}
                         </button>
                       )}
                       {gate.status === 'ready' && (
