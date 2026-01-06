@@ -60,6 +60,48 @@ interface Pilot {
     decision_type: string
     hours_running: number
   }>
+  // Session 690: Implementation status
+  implementation?: {
+    id: string
+    status: string  // pending, in_progress, completed, failed, requires_human
+    type: string    // agent_update, code_generation, workflow_update, etc.
+    executed_by?: string
+    completed_at?: string
+  } | null
+}
+
+// Session 691: Full implementation details for review modal
+interface ImplementationDetail {
+  id: string
+  pilot_id: string
+  type: string
+  status: string
+  target_description: string
+  plan: {
+    steps?: string[]
+    rationale?: string
+    impact_area?: string
+    key_insights?: string[]
+    decision_type?: string
+    suggested_feature?: string
+    recommended_action?: string
+  }
+  executed_by: string
+  result: {
+    requires_human_reason?: string
+    success?: boolean
+    summary?: string
+    actions?: Array<{
+      type: string
+      description: string
+      success: boolean
+    }>
+  }
+  artifacts: string[]
+  error: string
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
 }
 
 interface PilotMetrics {
@@ -141,6 +183,8 @@ export default function IntelligencePage() {
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null)
   // Session 689: Pilot detail modal state
   const [selectedPilotId, setSelectedPilotId] = useState<string | null>(null)
+  // Session 691: Implementation review modal state
+  const [selectedImplementationId, setSelectedImplementationId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Core queries
@@ -188,6 +232,14 @@ export default function IntelligencePage() {
     queryFn: () => pilotsApi.gateDetail(selectedPilot!.gate_id),
     enabled: !!selectedPilot?.gate_id,
   })
+
+  // Session 691: Fetch implementation details for review modal
+  const { data: implementationDetailData, isLoading: loadingImplementation } = useQuery({
+    queryKey: ['implementation-detail', selectedImplementationId],
+    queryFn: () => pilotsApi.implementationDetail(selectedImplementationId!),
+    enabled: !!selectedImplementationId,
+  })
+  const implementationDetail: ImplementationDetail | null = implementationDetailData?.data?.implementation || null
 
   const { data: experimentsData, isLoading: loadingExperiments } = useQuery({
     queryKey: ['experiments-list'],
@@ -729,6 +781,7 @@ export default function IntelligencePage() {
                   <div className="space-y-3">
                     {completedPilots.slice(0, 10).map((pilot) => {
                       const confidence = pilot.learnings?.[0]?.confidence
+                      const impl = pilot.implementation
                       return (
                         <div
                           key={pilot.id}
@@ -755,6 +808,38 @@ export default function IntelligencePage() {
                                     {(confidence * 100).toFixed(0)}% confidence
                                   </span>
                                 )}
+                                {/* Session 690/691: Implementation status badge - clickable for review */}
+                                {impl ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (impl.status === 'requires_human' || impl.status === 'completed' || impl.status === 'failed') {
+                                        setSelectedImplementationId(pilot.id)
+                                      }
+                                    }}
+                                    className={cn(
+                                      'text-xs px-2 py-0.5 rounded flex items-center gap-1 transition-colors',
+                                      impl.status === 'completed' ? 'bg-accent-green/20 text-accent-green hover:bg-accent-green/30' :
+                                      impl.status === 'requires_human' ? 'bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30 cursor-pointer' :
+                                      impl.status === 'failed' ? 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30' :
+                                      impl.status === 'in_progress' ? 'bg-primary-500/20 text-primary-400' :
+                                      'bg-gray-500/20 text-gray-400'
+                                    )}
+                                    title={impl.status === 'requires_human' ? 'Click to review implementation details' : undefined}
+                                  >
+                                    <Wrench size={10} />
+                                    {impl.status === 'completed' ? 'Implemented' :
+                                     impl.status === 'requires_human' ? 'Needs Review' :
+                                     impl.status === 'failed' ? 'Failed' :
+                                     impl.status === 'in_progress' ? 'Implementing...' :
+                                     'Pending'}
+                                  </button>
+                                ) : pilot.outcome === 'success' ? (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 flex items-center gap-1">
+                                    <Wrench size={10} />
+                                    Not Implemented
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                             <div className="text-right">
@@ -1891,6 +1976,77 @@ export default function IntelligencePage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Session 690/691: Implementation Status with Review Button */}
+                  {selectedPilot.outcome === 'success' && (
+                    <div className="bg-dark-bg border border-dark-border rounded-lg p-4">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Wrench size={18} className="text-primary-400" />
+                        Implementation Status
+                      </h4>
+                      {selectedPilot.implementation ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className={cn(
+                              'text-sm px-3 py-1 rounded-full font-medium',
+                              selectedPilot.implementation.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                              selectedPilot.implementation.status === 'requires_human' ? 'bg-accent-amber/20 text-accent-amber' :
+                              selectedPilot.implementation.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                              selectedPilot.implementation.status === 'in_progress' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                              'bg-gray-600/20 text-gray-400'
+                            )}>
+                              {selectedPilot.implementation.status === 'completed' ? '✓ Implemented' :
+                               selectedPilot.implementation.status === 'requires_human' ? '⚠ Needs Review' :
+                               selectedPilot.implementation.status === 'failed' ? '✗ Failed' :
+                               selectedPilot.implementation.status === 'in_progress' ? '⟳ In Progress' :
+                               '○ Pending'}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                              {selectedPilot.implementation.type.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          {selectedPilot.implementation.executed_by && (
+                            <div className="text-sm">
+                              <span className="text-gray-400">Executed by:</span>{' '}
+                              <span className="text-gray-200">{selectedPilot.implementation.executed_by}</span>
+                            </div>
+                          )}
+                          {selectedPilot.implementation.completed_at && (
+                            <div className="text-sm">
+                              <span className="text-gray-400">Completed:</span>{' '}
+                              <span className="text-gray-200">
+                                {new Date(selectedPilot.implementation.completed_at).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {/* Session 691: View Details button for review */}
+                          {(selectedPilot.implementation.status === 'requires_human' ||
+                            selectedPilot.implementation.status === 'completed' ||
+                            selectedPilot.implementation.status === 'failed') && (
+                            <button
+                              onClick={() => setSelectedImplementationId(selectedPilot.id)}
+                              className={cn(
+                                'w-full mt-2 px-4 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors',
+                                selectedPilot.implementation.status === 'requires_human'
+                                  ? 'bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30 border border-accent-amber/30'
+                                  : 'bg-dark-card text-gray-300 hover:bg-dark-border border border-dark-border'
+                              )}
+                            >
+                              <FileText size={16} />
+                              {selectedPilot.implementation.status === 'requires_human'
+                                ? 'Review Implementation Plan'
+                                : 'View Implementation Details'}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <Clock size={16} />
+                          <span className="text-sm">No implementation yet - awaiting pipeline execution</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2003,6 +2159,217 @@ export default function IntelligencePage() {
             <div className="flex items-center justify-end p-6 border-t border-dark-border bg-dark-bg/50">
               <button
                 onClick={() => setSelectedPilotId(null)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 691: Implementation Review Modal */}
+      {selectedImplementationId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-dark-card border border-dark-border rounded-xl max-w-3xl w-full max-h-[90vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Wrench size={20} className="text-primary-400" />
+                  Implementation Review
+                </h3>
+                {implementationDetail && (
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className={cn(
+                      'text-xs px-2 py-1 rounded',
+                      implementationDetail.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                      implementationDetail.status === 'requires_human' ? 'bg-accent-amber/20 text-accent-amber' :
+                      implementationDetail.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                      'bg-gray-500/20 text-gray-400'
+                    )}>
+                      {implementationDetail.status === 'completed' ? '✓ Completed' :
+                       implementationDetail.status === 'requires_human' ? '⚠ Needs Human Review' :
+                       implementationDetail.status === 'failed' ? '✗ Failed' :
+                       implementationDetail.status}
+                    </span>
+                    <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                      {implementationDetail.type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedImplementationId(null)}
+                className="p-2 hover:bg-dark-bg rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {loadingImplementation ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin" size={24} />
+                  <span className="ml-2 text-gray-400">Loading implementation details...</span>
+                </div>
+              ) : implementationDetail ? (
+                <>
+                  {/* Why it needs review */}
+                  {implementationDetail.result?.requires_human_reason && (
+                    <div className="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-accent-amber">
+                        <AlertTriangle size={18} />
+                        Why This Needs Review
+                      </h4>
+                      <p className="text-gray-300 text-sm">{implementationDetail.result.requires_human_reason}</p>
+                    </div>
+                  )}
+
+                  {/* Target Description */}
+                  {implementationDetail.target_description && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <Target size={18} className="text-accent-cyan" />
+                        What Needs to Be Built
+                      </h4>
+                      <p className="text-gray-300 text-sm bg-dark-bg p-4 rounded-lg border border-dark-border">
+                        {implementationDetail.target_description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Recommended Action */}
+                  {implementationDetail.plan?.recommended_action && (
+                    <div className="bg-primary-600/10 border border-primary-600/30 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-primary-400">
+                        <Flag size={18} />
+                        Recommended Action
+                      </h4>
+                      <p className="text-gray-300 text-sm">{implementationDetail.plan.recommended_action}</p>
+                    </div>
+                  )}
+
+                  {/* Key Insights */}
+                  {implementationDetail.plan?.key_insights && implementationDetail.plan.key_insights.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Lightbulb size={18} className="text-accent-amber" />
+                        Key Insights ({implementationDetail.plan.key_insights.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {implementationDetail.plan.key_insights.map((insight, idx) => (
+                          <div key={idx} className="flex items-start gap-3 bg-dark-bg rounded-lg p-3 border border-dark-border">
+                            <span className="text-accent-amber font-bold text-sm">{idx + 1}.</span>
+                            <p className="text-gray-300 text-sm">{insight}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Implementation Steps */}
+                  {implementationDetail.plan?.steps && implementationDetail.plan.steps.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <CheckCircle size={18} className="text-accent-green" />
+                        Implementation Steps
+                      </h4>
+                      <div className="space-y-2">
+                        {implementationDetail.plan.steps.map((step, idx) => (
+                          <div key={idx} className="flex items-center gap-3 text-sm">
+                            <span className="w-6 h-6 rounded-full bg-dark-border flex items-center justify-center text-xs text-gray-400">
+                              {idx + 1}
+                            </span>
+                            <span className="text-gray-300">{step}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rationale */}
+                  {implementationDetail.plan?.rationale && (
+                    <div>
+                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                        <FileText size={18} className="text-gray-400" />
+                        Rationale
+                      </h4>
+                      <p className="text-gray-400 text-sm">{implementationDetail.plan.rationale}</p>
+                    </div>
+                  )}
+
+                  {/* Execution Result (for completed/failed) */}
+                  {implementationDetail.result?.success !== undefined && (
+                    <div className={cn(
+                      'rounded-lg p-4 border',
+                      implementationDetail.result.success
+                        ? 'bg-accent-green/10 border-accent-green/30'
+                        : 'bg-accent-red/10 border-accent-red/30'
+                    )}>
+                      <h4 className={cn(
+                        'font-semibold mb-2 flex items-center gap-2',
+                        implementationDetail.result.success ? 'text-accent-green' : 'text-accent-red'
+                      )}>
+                        {implementationDetail.result.success ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                        Execution Result
+                      </h4>
+                      {implementationDetail.result.summary && (
+                        <p className="text-gray-300 text-sm mb-2">{implementationDetail.result.summary}</p>
+                      )}
+                      {implementationDetail.result.actions && implementationDetail.result.actions.length > 0 && (
+                        <div className="space-y-1 mt-3">
+                          {implementationDetail.result.actions.map((action, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-sm">
+                              {action.success ? (
+                                <CheckCircle size={14} className="text-accent-green" />
+                              ) : (
+                                <XCircle size={14} className="text-accent-red" />
+                              )}
+                              <span className="text-gray-300">{action.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Error (if failed) */}
+                  {implementationDetail.error && (
+                    <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4">
+                      <h4 className="font-semibold mb-2 flex items-center gap-2 text-accent-red">
+                        <XCircle size={18} />
+                        Error
+                      </h4>
+                      <p className="text-gray-300 text-sm font-mono">{implementationDetail.error}</p>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="text-xs text-gray-500 pt-4 border-t border-dark-border">
+                    <p>Created: {new Date(implementationDetail.created_at).toLocaleString()}</p>
+                    {implementationDetail.started_at && (
+                      <p>Started: {new Date(implementationDetail.started_at).toLocaleString()}</p>
+                    )}
+                    {implementationDetail.completed_at && (
+                      <p>Completed: {new Date(implementationDetail.completed_at).toLocaleString()}</p>
+                    )}
+                    <p className="mt-2">Implementation ID: {implementationDetail.id}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <AlertTriangle size={32} className="mx-auto mb-2" />
+                  <p>No implementation details found</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-dark-border bg-dark-bg/50">
+              <button
+                onClick={() => setSelectedImplementationId(null)}
                 className="btn btn-secondary"
               >
                 Close
