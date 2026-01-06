@@ -212,19 +212,17 @@ and only important ones should be promoted. Don't treat this as a crisis."""
 
                 result = AgentResult(
                     success=True,
-                    result=result_text,
-                    message=f"System status: {critical_count} critical, {warning_count} warnings",
-                    agent_name=self.name,
-                    execution_time_ms=execution_time_ms,
-                    decisions_made=self._tt_decision_count,
-                    metadata={
-                        'agent': self.name,
+                    message=result_text,
+                    data={
                         'items_count': len(items),
                         'critical_count': critical_count,
                         'warning_count': warning_count,
                         'info_count': info_count,
                         'execution_time': execution_time_ms / 1000
-                    }
+                    },
+                    agent_name=self.name,
+                    execution_time_ms=execution_time_ms,
+                    decisions_made=self._tt_decision_count
                 )
 
                 # === Session 663: Learning Infrastructure Integration ===
@@ -268,11 +266,10 @@ and only important ones should be promoted. Don't treat this as a crisis."""
 
                 result = AgentResult(
                     success=False,
-                    result=f"Error checking system status: {str(e)}",
+                    message=f"Error checking system status: {str(e)}",
                     error=str(e),
                     agent_name=self.name,
-                    execution_time_ms=execution_time_ms,
-                    metadata={'agent': self.name}
+                    execution_time_ms=execution_time_ms
                 )
 
                 # Record failure for learning
