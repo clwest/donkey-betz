@@ -1,46 +1,45 @@
-# Session 667 - Start Here
+# Session 669 - Start Here
 
-**Previous Sessions:** 663 (SystemIntelligenceAgent) + 666 (Deep System Review)
+**Previous Sessions:** 667 (Docs Review) + 668 (ML Scoring Engine Assessment)
 **Date:** January 5, 2026
-**Focus:** Continue Platform Development
-**Status:** 100% Reality Score | All Integrations Verified
+**Focus:** ML Scoring Engine Improvements - Phase 1
+**Status:** 100% Reality Score | ML Engine needs optimization
 
 ---
 
-## Sessions 663 + 666 Summary
+## Session 668 Summary: ML Scoring Engine Assessment
 
-### Session 663: SystemIntelligenceAgent
-- Created new agent for platform health monitoring (408 lines)
-- Added to routing config with keywords: "system status", "pending review", etc.
-- Enhanced AttentionItem with severity, explanation, recommended_action
-- Integrated all learning hooks
+**Key Finding:** 47% of ML features are DEAD (0% importance)
 
-### Session 666: Deep System Review
-- Created comprehensive `SYSTEM_INTEGRATION_GUIDE.md` (798 lines)
-- Updated `LEARNING_SYSTEM.md` to 1,211 lines
-- Verified all major integrations working:
-  - User → PA → Agent Router → Agent flow
-  - Spider → Embeddings → Agent Knowledge pipeline
-  - Learning hooks (230 occurrences across 68 agents)
-  - Sci-Fi features injection
-  - 49+ Celery scheduled tasks
-  - Discord 112 commands integration
+### Critical Issues Identified
 
----
+1. **7 Dead Features** - Contributing nothing to predictions:
+   - `relevance_score`, `title_length`, `has_url`
+   - `keyword_ai`, `keyword_trending`, `keyword_urgent`, `keyword_opportunity`
 
-## Commits Summary (Sessions 663 + 666)
+2. **Hardcoded Success Rates** - `historical_success_rate` (22% importance) uses static values instead of actual outcome data
 
-```
-f4777a6b docs: Update INDEX.md with Session 663 & 666 changes
-e56c20ac docs(Session 666): Add comprehensive System Integration Guide
-bed57514 docs(Session 663): Complete handoff and start docs
-8075264f fix(Session 663): Add execute() parameters to SystemIntelligenceAgent
-f246bec0 fix(Session 663): Add SystemIntelligenceAgent to routing config
-62ef3d58 feat(Session 663): Connect UI to enhanced attention items
-41a060a0 fix(Session 663): Fix AgentResult constructor
-ef0c6294 fix(Session 663): Add learning hooks
-a9c77ded feat(Session 663): Create SystemIntelligenceAgent
-```
+3. **Sparse Training Data** - Only 150 samples (need 500+)
+
+### ML Engine Stats
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Model Version | v4.0 | v7.0 (after Phase 3) |
+| Working Features | 8/15 (53%) | 24/24 (100%) |
+| Training Samples | 150 | 500+ |
+| Dead Features | 7 | 0 |
+
+### Improvement Roadmap Created
+
+Full details: `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md`
+
+| Phase | Focus | Sessions |
+|-------|-------|----------|
+| **1 - Quick Wins** | Fix hardcoded rates, dead features | 669-670 |
+| **2 - Features** | Add 9 new features (embeddings, temporal) | 670-671 |
+| **3 - Model** | K-fold CV, hyperparameter tuning | 672-673 |
+| **4 - Advanced** | Ensemble, online learning, A/B testing | 674+ |
 
 ---
 
@@ -54,7 +53,7 @@ a9c77ded feat(Session 663): Create SystemIntelligenceAgent
 | **PA Tools** | 77 | 5.73% endpoint coverage |
 | **Celery Tasks** | 127 | 49+ scheduled |
 | **Discord Commands** | 112 | 29 cogs |
-| **Learning Hooks** | 230 | Across 68 agent files |
+| **ML Model** | v4.0 | 53% feature efficiency |
 
 ---
 
@@ -68,90 +67,137 @@ make celery
 # 2. Access AI Studio
 open http://localhost:8000/ai-studio/
 
-# 3. Verify health
-curl http://localhost:8000/health/ping/
+# 3. Verify ML engine status
+.venv/bin/python manage.py shell -c "
+from core.services.ml_scoring_engine import get_ml_scoring_engine
+engine = get_ml_scoring_engine()
+print(f'ML Model: v{engine.model_version}')
+print(f'Trained: {engine._is_trained}')
+"
+```
 
-# 4. Test SystemIntelligenceAgent
-# In PA chat, ask: "What needs my attention?"
+---
+
+## Session 669 Priorities: ML Phase 1 - Quick Wins
+
+### P0 - Fix Historical Success Rate (HIGH IMPACT)
+
+**File:** `core/services/ml_scoring_engine.py` lines 339-352
+
+**Task:** Replace hardcoded `_get_historical_success_rate()` with actual DB query
+
+```python
+# Current (WRONG): Returns static 0.55 for hackernews
+# Fixed: Query OpportunityOutcome for actual success rate
+```
+
+**Test after:**
+```bash
+.venv/bin/python manage.py shell -c "
+from core.services.ml_scoring_engine import get_ml_scoring_engine
+engine = get_ml_scoring_engine()
+for spider in ['hackernews', 'remoteok', 'techcrunch']:
+    rate = engine._get_historical_success_rate(spider)
+    print(f'{spider}: {rate:.2f}')
+"
+```
+
+### P1 - Diagnose Dead Keyword Features
+
+**Run diagnosis:**
+```bash
+.venv/bin/python manage.py shell << 'EOF'
+from core.models_unified_system import SpiderData
+from django.utils import timezone
+from datetime import timedelta
+
+AI_KEYWORDS = {'ai', 'ml', 'machine learning', 'deep learning', 'gpt', 'llm', 'neural', 'automation'}
+TRENDING_KEYWORDS = {'viral', 'trending', 'hot', 'breaking', 'surge', 'boom', 'skyrocket'}
+
+cutoff = timezone.now() - timedelta(days=90)
+recent = SpiderData.objects.filter(created_at__gte=cutoff)[:1000]
+
+ai_count = sum(1 for sd in recent if any(kw in (sd.raw_data or {}).get('title', '').lower() for kw in AI_KEYWORDS))
+trending_count = sum(1 for sd in recent if any(kw in (sd.raw_data or {}).get('title', '').lower() for kw in TRENDING_KEYWORDS))
+
+print(f"AI keyword prevalence: {ai_count}/1000 = {ai_count/10:.1f}%")
+print(f"Trending keyword prevalence: {trending_count}/1000 = {trending_count/10:.1f}%")
+EOF
+```
+
+**If prevalence is low:** Expand keyword sets (see handoff doc for expanded sets)
+
+### P2 - Add Validation Logging
+
+Add debug logging to `score_opportunity()` to track feature extraction quality.
+
+### P3 - Retrain Model v5.0
+
+After fixes, retrain:
+```bash
+.venv/bin/python manage.py shell -c "
+from core.tasks import train_ml_scoring_model
+train_ml_scoring_model.delay(force_retrain=True)
+"
 ```
 
 ---
 
 ## Key Documentation
 
-| Document | Lines | Purpose |
-|----------|-------|---------|
-| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | 798 | Complete integration guide |
-| `docs/current/LEARNING_SYSTEM.md` | 1,211 | Learning hooks documentation |
-| `docs/current/INDEX.md` | 287 | All 18 documentation files |
-| `docs/handoffs/SESSION_663_SYSTEM_INTELLIGENCE_AGENT.md` | 369 | SystemIntelligenceAgent handoff |
+| Document | Purpose |
+|----------|---------|
+| `docs/handoffs/SESSION_668_ML_SCORING_ENGINE_IMPROVEMENTS.md` | **NEW** Full roadmap |
+| `docs/current/SYSTEM_INTEGRATION_GUIDE.md` | Complete integration guide |
+| `docs/current/LEARNING_SYSTEM.md` | Learning hooks documentation |
 
 ---
 
-## What Both Claude Codes Should Know
-
-1. **Agent Count:** 72 agents (69 routable) - includes SystemIntelligenceAgent
-2. **Routing Config:** All agents must be in `core/agents/routing_config.py`
-3. **Learning Hooks:** All agents must call:
-   - `_record_learning_outcome()` - XP and patterns
-   - `_create_execution_memory()` - Persistent memory
-   - `_share_knowledge()` - Cross-agent knowledge
-4. **Execute Signature:** Must accept `task, context, scifi_context, spider_context`
-5. **AgentResult:** Uses `message` and `data` fields (NOT `result`/`metadata`)
-
----
-
-## Session 667 Priorities
-
-### P0 - System Verification
-1. Run quick health check: `curl http://localhost:8000/health/ping/`
-2. Test PA routing with system queries
-3. Verify Celery tasks are running
-
-### P1 - Continue Development
-1. Review Integration Guide for gaps
-2. Continue service tests from plan
-3. Check Learning System for improvements
-
-### P2 - Enhancements
-1. Discord notifications for system health
-2. More AttentionItem categories
-3. Agent performance dashboard improvements
-
----
-
-## Key Files
+## Key Files for ML Work
 
 | File | Purpose |
 |------|---------|
-| `core/agents/system_intelligence_agent.py` | Platform health agent |
-| `core/agents/routing_config.py` | Agent routing keywords |
-| `core/agent_router.py` | Main routing logic (72 agents) |
-| `core/services/system_state_aggregator.py` | System state with attention items |
-| `core/personal_ai_assistant_enhanced.py` | Main assistant entry point |
+| `core/services/ml_scoring_engine.py` | **MODIFY** Main ML engine |
+| `core/tasks.py` | Training task (`train_ml_scoring_model`) |
+| `core/models_unified_system.py` | `OpportunityOutcome`, `MLModelVersion` |
+| `core/ml_models/` | Saved model files (v2.0, v3.0, v4.0) |
+| `core/services/scoring_dispatcher.py` | Uses ML engine |
 
 ---
 
-## Integration Flow (Verified in Session 666)
+## Feature Importance Reference (v4.0)
 
 ```
-User Request
-    ↓
-EnhancedPersonalAIAssistant.process_message()
-    ↓
-QueryClassifier → ContextAggregator
-    ↓
-GPT-5.1 Function Calling (21 tools)
-    ↓
-AgentRouter.route(agent_name, task, context)
-    ↓
-Agent.execute() with scifi + spider context
-    ↓
-Learning hooks → XP → Memory → Knowledge Sharing
-    ↓
-Response to User
+WORKING (53%):
+  historical_success_rate   22.18%  <- USES HARDCODED VALUES!
+  category_creative         17.21%
+  category_financial        15.69%
+  category_news             12.16%
+  data_freshness_hours      11.65%
+  category_tech              9.73%
+  source_authority           6.48%
+  category_jobs              4.91%
+
+DEAD (47%):
+  relevance_score            0.00%  <- Should be useful!
+  title_length               0.00%
+  has_url                    0.00%
+  keyword_ai                 0.00%  <- Keywords not matching
+  keyword_trending           0.00%
+  keyword_urgent             0.00%
+  keyword_opportunity        0.00%
 ```
 
 ---
 
-*Ready for Session 667!*
+## Success Criteria for Session 669
+
+- [ ] `_get_historical_success_rate()` queries actual OpportunityOutcome data
+- [ ] Keyword prevalence diagnosed and sets expanded if needed
+- [ ] Validation logging added
+- [ ] Model v5.0 trained with fixes
+- [ ] At least 10/15 features have non-zero importance
+
+---
+
+*Ready for Session 669 - ML Quick Wins!*
