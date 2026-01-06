@@ -139,6 +139,8 @@ export default function IntelligencePage() {
   const [selectedGate, setSelectedGate] = useState<string | null>(null)
   // Session 688: Opportunity modal state
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null)
+  // Session 689: Pilot detail modal state
+  const [selectedPilotId, setSelectedPilotId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Core queries
@@ -297,6 +299,8 @@ export default function IntelligencePage() {
     success_count: 0, failure_count: 0, partial_count: 0,
     success_rate: 0, avg_duration_hours: 0
   }
+  // Session 689: Find selected pilot for modal
+  const selectedPilot = selectedPilotId ? pilots.find(p => p.id === selectedPilotId) : null
   const experiments: Experiment[] = experimentsData?.data?.experiments || []
   // Session 688: API returns feed_items with different field names - map them
   const rawLearningEvents = learningData?.data?.feed_items || learningData?.data?.events || []
@@ -645,7 +649,8 @@ export default function IntelligencePage() {
                       return (
                         <div
                           key={pilot.id}
-                          className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                          className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
+                          onClick={() => setSelectedPilotId(pilot.id)}
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
@@ -719,7 +724,8 @@ export default function IntelligencePage() {
                       return (
                         <div
                           key={pilot.id}
-                          className="p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                          className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors cursor-pointer"
+                          onClick={() => setSelectedPilotId(pilot.id)}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -1695,6 +1701,227 @@ export default function IntelligencePage() {
               </>
               )
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Session 689: Pilot Detail Modal */}
+      {selectedPilot && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-card border border-dark-border rounded-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">{selectedPilot.decision_topic}</h3>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className={cn(
+                    'text-xs px-2 py-1 rounded',
+                    selectedPilot.status === 'running' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedPilot.outcome === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedPilot.outcome === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                    'bg-accent-amber/20 text-accent-amber'
+                  )}>
+                    {selectedPilot.status === 'running' ? 'Running' : selectedPilot.outcome || 'Completed'}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded bg-primary-600/20 text-primary-400">
+                    {selectedPilot.decision_type}
+                  </span>
+                  <span className={cn(
+                    'text-xs px-2 py-1 rounded',
+                    selectedPilot.risk_level === 'high' || selectedPilot.risk_level === 'critical'
+                      ? 'bg-accent-red/20 text-accent-red'
+                      : selectedPilot.risk_level === 'medium'
+                      ? 'bg-accent-amber/20 text-accent-amber'
+                      : 'bg-accent-green/20 text-accent-green'
+                  )}>
+                    {selectedPilot.risk_level} risk
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPilotId(null)}
+                className="p-2 hover:bg-dark-bg rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Status Section - Different for Running vs Completed */}
+              {selectedPilot.status === 'running' ? (
+                <>
+                  {/* Running Pilot: Progress */}
+                  <div className="bg-accent-green/10 border border-accent-green/30 rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2 text-accent-green">
+                      <Play size={18} />
+                      Pilot In Progress
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-400">Time Running</p>
+                        <p className="text-xl font-bold text-accent-green">{selectedPilot.hours_running?.toFixed(1)}h</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Time Remaining</p>
+                        <p className="text-xl font-bold">{selectedPilot.auto_complete_in_hours?.toFixed(1)}h</p>
+                      </div>
+                    </div>
+                    {/* Progress Bar */}
+                    {selectedPilot.auto_complete_in_hours !== undefined && selectedPilot.hours_running !== undefined && (
+                      <div className="mt-4">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Progress</span>
+                          <span>
+                            {((selectedPilot.hours_running / (selectedPilot.hours_running + selectedPilot.auto_complete_in_hours)) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent-green rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, (selectedPilot.hours_running / (selectedPilot.hours_running + selectedPilot.auto_complete_in_hours)) * 100)}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {selectedPilot.kill_switch_triggered && (
+                      <div className="mt-4 flex items-center gap-2 text-accent-red">
+                        <AlertTriangle size={16} />
+                        <span className="font-semibold">Kill Switch Triggered!</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Completed Pilot: Outcome */}
+                  <div className={cn(
+                    'rounded-lg p-4 border',
+                    selectedPilot.outcome === 'success' ? 'bg-accent-green/10 border-accent-green/30' :
+                    selectedPilot.outcome === 'failure' ? 'bg-accent-red/10 border-accent-red/30' :
+                    'bg-accent-amber/10 border-accent-amber/30'
+                  )}>
+                    <h4 className={cn(
+                      'font-semibold mb-3 flex items-center gap-2',
+                      selectedPilot.outcome === 'success' ? 'text-accent-green' :
+                      selectedPilot.outcome === 'failure' ? 'text-accent-red' :
+                      'text-accent-amber'
+                    )}>
+                      {selectedPilot.outcome === 'success' ? <CheckCircle size={18} /> :
+                       selectedPilot.outcome === 'failure' ? <XCircle size={18} /> :
+                       <AlertTriangle size={18} />}
+                      Pilot {selectedPilot.outcome === 'success' ? 'Succeeded' :
+                             selectedPilot.outcome === 'failure' ? 'Failed' : 'Partially Completed'}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-400">Duration</p>
+                        <p className="text-xl font-bold">{selectedPilot.duration_hours?.toFixed(1)}h</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Completed</p>
+                        <p className="text-lg">{selectedPilot.completed_at ? new Date(selectedPilot.completed_at).toLocaleDateString() : 'Unknown'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Learnings Section */}
+                  {selectedPilot.learnings && selectedPilot.learnings.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Lightbulb size={18} className="text-accent-amber" />
+                        AI Evaluation & Learnings
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedPilot.learnings.map((learning, idx) => (
+                          <div key={idx} className="bg-dark-bg rounded-lg p-4 border border-dark-border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={cn(
+                                'text-xs px-2 py-1 rounded font-medium',
+                                learning.outcome === 'success' ? 'bg-accent-green/20 text-accent-green' :
+                                learning.outcome === 'failure' ? 'bg-accent-red/20 text-accent-red' :
+                                'bg-accent-amber/20 text-accent-amber'
+                              )}>
+                                {learning.outcome}
+                              </span>
+                              <span className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan">
+                                {(learning.confidence * 100).toFixed(0)}% confidence
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-gray-400">Impact Area:</span>{' '}
+                                <span className="text-gray-200">{learning.impact_area}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Type:</span>{' '}
+                                <span className="text-gray-200">{learning.decision_type}</span>
+                              </div>
+                            </div>
+                            {/* Confidence Bar */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Confidence Score</span>
+                                <span>{(learning.confidence * 100).toFixed(0)}%</span>
+                              </div>
+                              <div className="h-2 bg-dark-border rounded-full overflow-hidden">
+                                <div
+                                  className={cn(
+                                    'h-full rounded-full transition-all',
+                                    learning.confidence >= 0.8 ? 'bg-accent-green' :
+                                    learning.confidence >= 0.6 ? 'bg-accent-amber' :
+                                    'bg-accent-red'
+                                  )}
+                                  style={{ width: `${learning.confidence * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Timeline */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Clock size={18} className="text-primary-400" />
+                  Timeline
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Started</span>
+                    <span>{selectedPilot.started_at ? new Date(selectedPilot.started_at).toLocaleString() : 'Unknown'}</span>
+                  </div>
+                  {selectedPilot.completed_at && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Completed</span>
+                      <span>{new Date(selectedPilot.completed_at).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* IDs for Debug/Reference */}
+              <div className="text-xs text-gray-500 pt-4 border-t border-dark-border">
+                <p>Pilot ID: {selectedPilot.id}</p>
+                <p>Gate ID: {selectedPilot.gate_id}</p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end p-6 border-t border-dark-border bg-dark-bg/50">
+              <button
+                onClick={() => setSelectedPilotId(null)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
