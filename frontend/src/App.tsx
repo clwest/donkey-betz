@@ -14,6 +14,7 @@ import LegalPage from '@/pages/LegalPage'
 import PodcastPage from '@/pages/PodcastPage'
 import PortfolioPage from '@/pages/PortfolioPage'
 import AdminPage from '@/pages/AdminPage'
+import HumanPage from '@/pages/HumanPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -51,6 +52,7 @@ function App() {
         <Route path="podcast" element={<PodcastPage />} />
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="human" element={<HumanPage />} />
       </Route>
     </Routes>
   )

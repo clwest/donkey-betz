@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/authStore'
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
+  { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
@@ -28,7 +29,6 @@ const navItems = [
   { path: '/podcast', label: 'Podcast', icon: Radio },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
   { path: '/admin', label: 'Admin', icon: Shield },
-  { path: '/profile', label: 'Profile', icon: User },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 

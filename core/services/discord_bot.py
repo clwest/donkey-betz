@@ -511,6 +511,7 @@ class DonkeyBetzBot(commands.Bot):
         await self.add_cog(DeveloperCommands(self))  # Session 497: Code Generation/Review
         await self.add_cog(MLScoringCommands(self))  # Session 497: ML Scoring Status
         await self.add_cog(ReviewCommands(self))  # Session 556: Chief of Staff Review Documents
+        await self.add_cog(HumanInterfaceCommands(self))  # Session 686: Human Interface Layer
 
         # Sync slash commands with Discord
         try:
@@ -13963,6 +13964,487 @@ class ReviewCommands(commands.Cog):
             'defer': '⏸️',
         }
         return emojis.get(lean, '📋')
+
+
+class HumanInterfaceCommands(commands.Cog):
+    """
+    Session 686: Human Interface Layer Discord Commands.
+
+    Uses a command GROUP so all subcommands count as 1 command toward the 100 limit.
+    - /human attention - View attention stream requiring your review
+    - /human control - View and manage system control state
+    - /human decide - Make a decision on an attention item
+    - /human pause - Pause an agent
+    - /human resume - Resume a paused agent
+    - /human quiet - Toggle quiet mode
+    """
+
+    def __init__(self, client):
+        self.client = client
+
+    # Create a command group - all subcommands count as 1 command!
+    human_group = app_commands.Group(name="human", description="Human Interface Layer - control your AI ecosystem")
+
+    @human_group.command(name="attention", description="View items requiring your attention")
+    @app_commands.describe(urgency="Filter by urgency level")
+    @app_commands.choices(urgency=[
+        app_commands.Choice(name="All", value="all"),
+        app_commands.Choice(name="Critical", value="critical"),
+        app_commands.Choice(name="High", value="high"),
+        app_commands.Choice(name="Medium", value="medium"),
+        app_commands.Choice(name="Low", value="low"),
+    ])
+    async def attention(
+        self,
+        interaction: discord.Interaction,
+        urgency: str = "all"
+    ):
+        """View attention stream items."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_attention_items():
+                from core.models_human_interface import HumanAttentionItem
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                # Try to find linked user
+                user = User.objects.filter(
+                    discord_id=str(interaction.user.id)
+                ).first() or User.objects.first()
+
+                if not user:
+                    return []
+
+                queryset = HumanAttentionItem.objects.filter(
+                    user=user,
+                    status__in=['pending', 'viewed']
+                )
+
+                if urgency != "all":
+                    queryset = queryset.filter(urgency=urgency)
+
+                return list(queryset.order_by('-priority_score', '-created_at')[:10])
+
+            items = await get_attention_items()
+
+            if not items:
+                embed = discord.Embed(
+                    title="✅ All Clear!",
+                    description="No items requiring your attention.",
+                    color=discord.Color.green()
+                )
+                await interaction.followup.send(embed=embed)
+                return
+
+            embed = discord.Embed(
+                title="👤 Human Attention Stream",
+                description=f"Found {len(items)} item(s) requiring your attention",
+                color=discord.Color.blue()
+            )
+
+            urgency_emojis = {
+                'critical': '🔴',
+                'high': '🟠',
+                'medium': '🟡',
+                'low': '⚪'
+            }
+
+            for item in items:
+                emoji = urgency_emojis.get(item.urgency, '📋')
+                ml_text = f" (ML: {item.ml_confidence:.0%})" if item.ml_confidence else ""
+                embed.add_field(
+                    name=f"{emoji} {item.title[:50]}",
+                    value=f"Source: {item.source_agent or item.source_type}\n"
+                          f"Type: {item.item_type}{ml_text}\n"
+                          f"ID: `{str(item.id)[:8]}...`",
+                    inline=True
+                )
+
+            embed.set_footer(text="Use /human decide <id> <decision> to act on an item")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human attention error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @human_group.command(name="control", description="View system control state")
+    async def control(self, interaction: discord.Interaction):
+        """View current system control state."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def get_system_state():
+                from core.models_human_interface import HumanSystemState
+                return HumanSystemState.get_state()
+
+            state = await get_system_state()
+
+            embed = discord.Embed(
+                title="🎛️ Human Control Panel",
+                color=discord.Color.blue()
+            )
+
+            # System status
+            status_lines = []
+            if state.system_paused:
+                status_lines.append("⏸️ **System Paused**")
+            if state.review_mode:
+                status_lines.append("👁️ **Review Mode Active**")
+            if state.quiet_mode:
+                until_text = f" (until {state.quiet_mode_until.strftime('%H:%M')})" if state.quiet_mode_until else ""
+                status_lines.append(f"🌙 **Quiet Mode{until_text}**")
+
+            if not status_lines:
+                status_lines.append("✅ System Operating Normally")
+
+            embed.add_field(
+                name="System Status",
+                value="\n".join(status_lines),
+                inline=False
+            )
+
+            # ML Thresholds
+            embed.add_field(
+                name="ML Thresholds",
+                value=f"Confidence: {state.ml_confidence_threshold:.0%}\n"
+                      f"Auto-Approve: {state.auto_approve_threshold:.0%}",
+                inline=True
+            )
+
+            # Paused agents
+            if state.paused_agents:
+                agents_text = "\n".join(f"• {a}" for a in state.paused_agents[:5])
+                if len(state.paused_agents) > 5:
+                    agents_text += f"\n... and {len(state.paused_agents) - 5} more"
+            else:
+                agents_text = "None"
+
+            embed.add_field(
+                name="Paused Agents",
+                value=agents_text,
+                inline=True
+            )
+
+            embed.set_footer(text="Use /human pause, /human resume, /human quiet to control")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human control error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @human_group.command(name="decide", description="Make a decision on an attention item")
+    @app_commands.describe(
+        item_id="The attention item ID (first 8 characters are enough)",
+        decision="Your decision",
+        feedback="Optional feedback or notes"
+    )
+    @app_commands.choices(decision=[
+        app_commands.Choice(name="Approve", value="approve"),
+        app_commands.Choice(name="Reject", value="reject"),
+        app_commands.Choice(name="Modify", value="modify"),
+        app_commands.Choice(name="Defer", value="defer"),
+        app_commands.Choice(name="Ignore", value="ignore"),
+        app_commands.Choice(name="Escalate", value="escalate"),
+    ])
+    async def decide(
+        self,
+        interaction: discord.Interaction,
+        item_id: str,
+        decision: str,
+        feedback: str = ""
+    ):
+        """Make a decision on an attention item."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def make_decision():
+                from core.models_human_interface import HumanAttentionItem
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                # Try to find linked user
+                user = User.objects.filter(
+                    discord_id=str(interaction.user.id)
+                ).first() or User.objects.first()
+
+                if not user:
+                    return None, "User not found"
+
+                # Find item by partial ID
+                items = HumanAttentionItem.objects.filter(
+                    user=user,
+                    id__startswith=item_id
+                )
+
+                if not items.exists():
+                    # Try string matching
+                    items = HumanAttentionItem.objects.filter(user=user)
+                    items = [i for i in items if str(i.id).startswith(item_id)]
+                    if not items:
+                        return None, "Item not found"
+                    item = items[0]
+                else:
+                    item = items.first()
+
+                item.record_decision(decision, feedback)
+                return item, None
+
+            item, error = await make_decision()
+
+            if error:
+                await interaction.followup.send(f"❌ {error}")
+                return
+
+            decision_emojis = {
+                'approve': '✅',
+                'reject': '❌',
+                'modify': '✏️',
+                'defer': '⏸️',
+                'ignore': '🙈',
+                'escalate': '⚠️',
+            }
+
+            embed = discord.Embed(
+                title=f"{decision_emojis.get(decision, '📋')} Decision Recorded",
+                description=f"**{item.title}**\n\nDecision: **{decision.title()}**",
+                color=discord.Color.green() if decision == 'approve' else discord.Color.orange()
+            )
+
+            if feedback:
+                embed.add_field(name="Your Notes", value=feedback[:500], inline=False)
+
+            if item.human_overrode_ml:
+                embed.add_field(
+                    name="⚠️ ML Override",
+                    value=f"You overrode the ML recommendation ({item.ml_recommendation})",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human decide error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @human_group.command(name="pause", description="Pause an agent")
+    @app_commands.describe(
+        agent_name="Name of the agent to pause",
+        reason="Reason for pausing"
+    )
+    async def pause(
+        self,
+        interaction: discord.Interaction,
+        agent_name: str,
+        reason: str = ""
+    ):
+        """Pause an agent."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def pause_agent():
+                from core.models_human_interface import HumanSystemState, HumanControlAction
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                user = User.objects.filter(
+                    discord_id=str(interaction.user.id)
+                ).first() or User.objects.first()
+
+                if not user:
+                    return False, "User not found"
+
+                state = HumanSystemState.get_state()
+
+                if agent_name in state.paused_agents:
+                    return False, f"{agent_name} is already paused"
+
+                state.pause_agent(agent_name)
+
+                # Log the action
+                HumanControlAction.objects.create(
+                    user=user,
+                    action_type='pause_agent',
+                    target_type='agent',
+                    target_id=agent_name,
+                    reason=reason
+                )
+
+                return True, None
+
+            success, error = await pause_agent()
+
+            if not success:
+                await interaction.followup.send(f"❌ {error}")
+                return
+
+            embed = discord.Embed(
+                title="⏸️ Agent Paused",
+                description=f"**{agent_name}** has been paused.",
+                color=discord.Color.orange()
+            )
+
+            if reason:
+                embed.add_field(name="Reason", value=reason, inline=False)
+
+            embed.set_footer(text="Use /human resume to resume this agent")
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human pause error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @human_group.command(name="resume", description="Resume a paused agent")
+    @app_commands.describe(
+        agent_name="Name of the agent to resume",
+        reason="Reason for resuming"
+    )
+    async def resume(
+        self,
+        interaction: discord.Interaction,
+        agent_name: str,
+        reason: str = ""
+    ):
+        """Resume a paused agent."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def resume_agent():
+                from core.models_human_interface import HumanSystemState, HumanControlAction
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+
+                user = User.objects.filter(
+                    discord_id=str(interaction.user.id)
+                ).first() or User.objects.first()
+
+                if not user:
+                    return False, "User not found"
+
+                state = HumanSystemState.get_state()
+
+                if agent_name not in state.paused_agents:
+                    return False, f"{agent_name} is not paused"
+
+                state.resume_agent(agent_name)
+
+                # Log the action
+                HumanControlAction.objects.create(
+                    user=user,
+                    action_type='resume_agent',
+                    target_type='agent',
+                    target_id=agent_name,
+                    reason=reason
+                )
+
+                return True, None
+
+            success, error = await resume_agent()
+
+            if not success:
+                await interaction.followup.send(f"❌ {error}")
+                return
+
+            embed = discord.Embed(
+                title="▶️ Agent Resumed",
+                description=f"**{agent_name}** has been resumed.",
+                color=discord.Color.green()
+            )
+
+            if reason:
+                embed.add_field(name="Reason", value=reason, inline=False)
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human resume error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
+
+    @human_group.command(name="quiet", description="Toggle quiet mode")
+    @app_commands.describe(
+        enabled="Enable or disable quiet mode",
+        duration="Duration in minutes (optional)"
+    )
+    async def quiet(
+        self,
+        interaction: discord.Interaction,
+        enabled: bool = True,
+        duration: int = None
+    ):
+        """Toggle quiet mode."""
+        await interaction.response.defer()
+
+        try:
+            @sync_to_async
+            def set_quiet_mode():
+                from core.models_human_interface import HumanSystemState, HumanControlAction
+                from django.contrib.auth import get_user_model
+                from django.utils import timezone
+                from datetime import timedelta
+                User = get_user_model()
+
+                user = User.objects.filter(
+                    discord_id=str(interaction.user.id)
+                ).first() or User.objects.first()
+
+                if not user:
+                    return None, "User not found"
+
+                state = HumanSystemState.get_state()
+                state.quiet_mode = enabled
+
+                if enabled and duration:
+                    state.quiet_mode_until = timezone.now() + timedelta(minutes=duration)
+                elif not enabled:
+                    state.quiet_mode_until = None
+
+                state.updated_by = user
+                state.save()
+
+                # Log the action
+                HumanControlAction.objects.create(
+                    user=user,
+                    action_type='quiet_mode',
+                    target_type='system',
+                    target_id='system',
+                    new_value={'enabled': enabled, 'duration': duration}
+                )
+
+                return state, None
+
+            state, error = await set_quiet_mode()
+
+            if error:
+                await interaction.followup.send(f"❌ {error}")
+                return
+
+            if enabled:
+                description = "Quiet mode **enabled**. Non-critical notifications suppressed."
+                if state.quiet_mode_until:
+                    description += f"\n\nWill auto-disable at {state.quiet_mode_until.strftime('%H:%M')}"
+                color = discord.Color.purple()
+                emoji = "🌙"
+            else:
+                description = "Quiet mode **disabled**. All notifications active."
+                color = discord.Color.green()
+                emoji = "☀️"
+
+            embed = discord.Embed(
+                title=f"{emoji} Quiet Mode",
+                description=description,
+                color=color
+            )
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Human quiet error: {e}", exc_info=True)
+            await interaction.followup.send(f"❌ Error: {str(e)[:200]}")
 
 
 # Bot instance (created when module loads)

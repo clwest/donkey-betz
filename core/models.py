@@ -44,6 +44,9 @@ from .models_betting import *
 # Import pilot readiness models (Session 590 - Gate between decision and action)
 from .models_pilot_readiness import *
 
+# Import human interface layer models (Session 686 - Human-in-the-loop)
+from .models_human_interface import *
+
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
