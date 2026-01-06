@@ -2626,6 +2626,19 @@ class OpportunityTask(models.Model):
         # Find relevant agents
         relevant_agents = cls._find_relevant_agents(opportunity)
 
+        # Build research context for better agent execution
+        research_context = cls._build_research_context(opportunity)
+
+        # Store research context in metadata for agent use
+        task_metadata = {
+            'research_query': research_context['research_query'],
+            'research_topic': research_context['research_topic'],
+            'keywords': research_context['keywords'],
+            'category': research_context['category'],
+            'source': research_context['source'],
+            'clean_title': research_context['clean_title'],
+        }
+
         task = cls.objects.create(
             opportunity=opportunity,
             user=opportunity.user,
@@ -2636,6 +2649,8 @@ class OpportunityTask(models.Model):
             score_breakdown=score_data or {},
             due_date=due_date,
             action_items=action_items,
+            metadata=task_metadata,
+            # ForeignKey expects Agent object
             primary_agent=relevant_agents[0] if relevant_agents else None,
         )
 
@@ -2678,6 +2693,70 @@ class OpportunityTask(models.Model):
             ])
 
         return base_items
+
+    @staticmethod
+    def _build_research_context(opportunity):
+        """
+        Build research-friendly context from an opportunity.
+        Extracts keywords and builds a clean research query.
+        """
+        import re
+
+        # Extract category and source
+        category = getattr(opportunity, 'category', '') or ''
+        source = getattr(opportunity, 'source', '') or ''
+
+        # Get title and clean it
+        title = opportunity.title or ''
+        # Remove common prefixes like "Review:", "Act on:", numbers at start
+        clean_title = re.sub(r'^(Review:|Act on:|Pursue:|\d+\.?\s*)', '', title).strip()
+
+        # Extract keywords from title (remove stopwords, keep meaningful words)
+        stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+                     'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+                     'would', 'could', 'should', 'may', 'might', 'must', 'shall',
+                     'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in',
+                     'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into',
+                     'through', 'during', 'before', 'after', 'above', 'below',
+                     'between', 'under', 'again', 'further', 'then', 'once',
+                     'here', 'there', 'when', 'where', 'why', 'how', 'all',
+                     'each', 'few', 'more', 'most', 'other', 'some', 'such',
+                     'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than',
+                     'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because',
+                     'until', 'while', 'these', 'those', 'this', 'that', 'which',
+                     'who', 'whom', 'what', 'its', 'it', 'they', 'them', 'their',
+                     'he', 'she', 'his', 'her', 'him', 'my', 'your', 'our', 'we',
+                     'you', 'i', 'me', 'us', 'hand', 'picked', 'staff', 'says'}
+
+        # Extract words from title
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', clean_title.lower())
+        keywords = [w for w in words if w not in stopwords][:8]  # Keep top 8 meaningful words
+
+        # Also check opportunity's own keywords field
+        opp_keywords = getattr(opportunity, 'keywords', []) or []
+        if opp_keywords:
+            keywords = list(set(keywords + opp_keywords[:5]))[:10]
+
+        # Build research query
+        if category and category not in keywords:
+            keywords.insert(0, category)
+
+        research_query = ' '.join(keywords[:6]) if keywords else clean_title[:100]
+
+        # Build research topic (more descriptive)
+        if category:
+            research_topic = f"{category}: {clean_title[:80]}"
+        else:
+            research_topic = clean_title[:100]
+
+        return {
+            'research_query': research_query,
+            'research_topic': research_topic,
+            'keywords': keywords,
+            'category': category,
+            'source': source,
+            'clean_title': clean_title[:150],
+        }
 
     @staticmethod
     def _find_relevant_agents(opportunity):

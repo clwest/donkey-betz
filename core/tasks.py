@@ -2373,6 +2373,8 @@ def execute_pending_opportunity_tasks(limit: int = 20):
 
                 # Build execution context from opportunity
                 opportunity = task.opportunity
+                task_metadata = task.metadata or {}
+
                 context = {
                     'task_id': str(task.id),
                     'task_title': task.title,
@@ -2386,6 +2388,11 @@ def execute_pending_opportunity_tasks(limit: int = 20):
                     'priority': task.priority,
                     'user_id': task.user_id,
                     'auto_execution': True,
+                    # Include research context from metadata
+                    'research_query': task_metadata.get('research_query'),
+                    'research_topic': task_metadata.get('research_topic'),
+                    'keywords': task_metadata.get('keywords', []),
+                    'category': task_metadata.get('category'),
                 }
 
                 # Mark task as in_progress
@@ -2394,10 +2401,27 @@ def execute_pending_opportunity_tasks(limit: int = 20):
 
                 logger.info(f"🤖 [AGENT EXECUTOR] Executing {agent_name} for task: {task.title[:50]}...")
 
+                # Build agent-specific task prompts for better results
+                if agent_name == 'ResearchAgent':
+                    # Use research-optimized query from metadata
+                    research_query = task_metadata.get('research_query') or task_metadata.get('clean_title') or task.title
+                    research_topic = task_metadata.get('research_topic') or task.title
+                    task_prompt = f"Research topic: {research_topic}\n\nSearch query: {research_query}"
+                    if task.description:
+                        task_prompt += f"\n\nContext: {task.description[:300]}"
+                elif agent_name in ['ContentStrategyAgent', 'SEOOptimizerAgent', 'SocialMediaAgent']:
+                    # Content agents need topic and category
+                    category = task_metadata.get('category', 'general')
+                    clean_title = task_metadata.get('clean_title') or task.title
+                    task_prompt = f"Create content strategy for: {clean_title}\n\nCategory: {category}\n\nDescription: {task.description[:300] if task.description else 'N/A'}"
+                else:
+                    # Default prompt for other agents
+                    task_prompt = f"Execute opportunity task: {task.title}\n\nDescription: {task.description}"
+
                 # Execute agent via router (router gathers scifi_context and spider_context internally)
                 result = router.route(
                     agent_name=agent_name,
-                    task=f"Execute opportunity task: {task.title}\n\nDescription: {task.description}",
+                    task=task_prompt,
                     context=context
                 )
 
