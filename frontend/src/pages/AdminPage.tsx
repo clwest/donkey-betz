@@ -51,12 +51,6 @@ export default function AdminPage() {
     queryFn: () => adminApi.systemHealth(),
   })
 
-  // Fetch dashboard health
-  const { data: dashboardHealthData } = useQuery({
-    queryKey: ['dashboard-health'],
-    queryFn: () => adminApi.dashboardHealth(),
-  })
-
   // Fetch celery status
   const { data: celeryStatusData, isLoading: loadingCelery } = useQuery({
     queryKey: ['celery-status'],
@@ -104,8 +98,8 @@ export default function AdminPage() {
   })
 
   const health = healthData?.data || {}
+  const healthServices = health.services || {}
   const systemHealth = systemHealthData?.data || {}
-  const dashboardHealth = dashboardHealthData?.data || {}
   const celeryStatus = celeryStatusData?.data || {}
   const celeryStats = celeryStatsData?.data || {}
   const spiderHealth = spiderHealthData?.data || {}
@@ -227,7 +221,7 @@ export default function AdminPage() {
                     <Clock className="text-primary-400" size={24} />
                     <div>
                       <p className="text-sm text-gray-400">Celery Workers</p>
-                      <p className="text-2xl font-bold">{celeryStatus.workers || celeryStats.workers || 0}</p>
+                      <p className="text-2xl font-bold">{Array.isArray(celeryStatus.workers) ? celeryStatus.workers.length : (celeryStats.workers || 0)}</p>
                     </div>
                   </div>
                 </div>
@@ -256,32 +250,36 @@ export default function AdminPage() {
                 <h3 className="text-lg font-semibold mb-4">Service Status</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
-                    { name: 'Django API', status: health.status || 'ok' },
-                    { name: 'Redis', status: dashboardHealth.redis || 'ok' },
-                    { name: 'PostgreSQL', status: dashboardHealth.database || 'ok' },
-                    { name: 'Celery Workers', status: celeryStatus.status || 'ok' },
+                    { name: 'Django API', status: healthServices.api || health.status || 'ok' },
+                    { name: 'Redis', status: healthServices.redis || 'ok' },
+                    { name: 'PostgreSQL', status: healthServices.database || 'ok' },
+                    { name: 'WebSocket', status: healthServices.websocket || 'ok' },
+                    { name: 'Celery Workers', status: celeryStatus.overall_status || 'ok' },
                     { name: 'Celery Beat', status: celeryStatus.beat_status || 'ok' },
-                    { name: 'Daphne', status: 'ok' },
-                  ].map((service) => (
-                    <div
-                      key={service.name}
-                      className="flex items-center justify-between p-4 rounded-lg border border-dark-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', getStatusBg(service.status))}>
-                          {service.status === 'ok' || service.status === 'healthy' ? (
-                            <CheckCircle size={16} className="text-accent-green" />
-                          ) : (
-                            <XCircle size={16} className="text-accent-red" />
-                          )}
+                  ].map((service) => {
+                    const statusStr = typeof service.status === 'object' ? (service.status as { status?: string })?.status || 'unknown' : String(service.status || 'ok')
+                    const isHealthy = ['ok', 'healthy', 'running', 'connected', 'active'].includes(statusStr.toLowerCase())
+                    return (
+                      <div
+                        key={service.name}
+                        className="flex items-center justify-between p-4 rounded-lg border border-dark-border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', isHealthy ? 'bg-accent-green/20' : 'bg-accent-red/20')}>
+                            {isHealthy ? (
+                              <CheckCircle size={16} className="text-accent-green" />
+                            ) : (
+                              <XCircle size={16} className="text-accent-red" />
+                            )}
+                          </div>
+                          <p className="font-medium">{service.name}</p>
                         </div>
-                        <p className="font-medium">{service.name}</p>
+                        <span className={cn('text-xs px-2 py-1 rounded capitalize', isHealthy ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red')}>
+                          {statusStr}
+                        </span>
                       </div>
-                      <span className={cn('text-xs px-2 py-1 rounded capitalize', getStatusBg(service.status), getStatusColor(service.status))}>
-                        {service.status}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </>
@@ -302,47 +300,55 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="card">
                   <p className="text-sm text-gray-400 mb-1">Workers</p>
-                  <p className="text-2xl font-bold">{celeryStatus.workers || celeryStats.workers || 0}</p>
+                  <p className="text-2xl font-bold">{celeryStatus.stats?.total_workers || (Array.isArray(celeryStatus.workers) ? celeryStatus.workers.length : 0)}</p>
                 </div>
                 <div className="card">
                   <p className="text-sm text-gray-400 mb-1">Active Tasks</p>
-                  <p className="text-2xl font-bold">{celeryStats.active_tasks || celeryStatus.active || 0}</p>
+                  <p className="text-2xl font-bold text-accent-green">{celeryStatus.stats?.total_active || (Array.isArray(celeryStatus.active_tasks) ? celeryStatus.active_tasks.length : 0)}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Queued</p>
-                  <p className="text-2xl font-bold text-accent-amber">{celeryStats.queued || 0}</p>
+                  <p className="text-sm text-gray-400 mb-1">Scheduled Tasks</p>
+                  <p className="text-2xl font-bold text-accent-cyan">{celeryStatus.stats?.total_scheduled || (Array.isArray(celeryStatus.scheduled_tasks) ? celeryStatus.scheduled_tasks.length : 0)}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Status</p>
-                  <p className={cn('text-2xl font-bold capitalize', getStatusColor(celeryStatus.status || 'ok'))}>
-                    {celeryStatus.status || 'Running'}
-                  </p>
+                  <p className="text-sm text-gray-400 mb-1">Queues</p>
+                  <p className="text-2xl font-bold text-accent-amber">{celeryStatus.stats?.total_queues || (Array.isArray(celeryStatus.queues) ? celeryStatus.queues.length : 0)}</p>
                 </div>
               </div>
 
               {/* Worker Details */}
               <div className="card">
                 <h3 className="text-lg font-semibold mb-4">Worker Status</h3>
-                {celeryStatus.worker_details || celeryStats.worker_details ? (
+                {Array.isArray(celeryStatus.workers) && celeryStatus.workers.length > 0 ? (
                   <div className="space-y-3">
-                    {Object.entries(celeryStatus.worker_details || celeryStats.worker_details || {}).map(([name, details]) => (
+                    {celeryStatus.workers.map((worker: { name: string; status: string; response?: { ok?: string } }) => (
                       <div
-                        key={name}
+                        key={worker.name}
                         className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
-                            <CheckCircle size={14} className="text-accent-green" />
+                          <div className={cn(
+                            'h-8 w-8 rounded-full flex items-center justify-center',
+                            worker.status === 'online' ? 'bg-accent-green/20' : 'bg-accent-red/20'
+                          )}>
+                            {worker.status === 'online' ? (
+                              <CheckCircle size={14} className="text-accent-green" />
+                            ) : (
+                              <XCircle size={14} className="text-accent-red" />
+                            )}
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{name}</p>
+                            <p className="font-medium text-sm">{worker.name}</p>
                             <p className="text-xs text-gray-500">
-                              {typeof details === 'object' ? JSON.stringify(details) : String(details)}
+                              {worker.response?.ok || worker.status}
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">
-                          Active
+                        <span className={cn(
+                          'text-xs px-2 py-1 rounded',
+                          worker.status === 'online' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
+                        )}>
+                          {worker.status}
                         </span>
                       </div>
                     ))}
@@ -352,6 +358,133 @@ export default function AdminPage() {
                     <Clock className="mx-auto mb-2" size={32} />
                     <p>No worker details available</p>
                     <p className="text-sm text-gray-500 mt-1">Workers are running but detailed info is not exposed</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Tasks */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Active Tasks</h3>
+                {Array.isArray(celeryStatus.active_tasks) && celeryStatus.active_tasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {celeryStatus.active_tasks.map((task: { task_id: string; task_name: string; worker: string; started: number }) => (
+                      <div
+                        key={task.task_id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-accent-green/20 flex items-center justify-center">
+                            <Play size={14} className="text-accent-green" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{task.task_name.split('.').pop()}</p>
+                            <p className="text-xs text-gray-500">{task.worker.split('@')[0]}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs px-2 py-1 rounded bg-accent-green/20 text-accent-green">Running</span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {task.started ? `${Math.round((Date.now() / 1000 - task.started) / 60)}m ago` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Play className="mx-auto mb-2" size={32} />
+                    <p>No active tasks</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Task Schedule Status - Similar to Service Status */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Task Schedule Status</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  {celeryStatus.stats?.total_scheduled || 0} scheduled tasks configured
+                </p>
+                {Array.isArray(celeryStatus.scheduled_tasks) && celeryStatus.scheduled_tasks.length > 0 ? (
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                    {celeryStatus.scheduled_tasks.map((task: { name: string; task: string; schedule: string }) => {
+                      // Check if this task is currently running
+                      const isRunning = Array.isArray(celeryStatus.active_tasks) &&
+                        celeryStatus.active_tasks.some((active: { task_name: string }) => active.task_name === task.task)
+
+                      // Parse schedule to show human-readable format
+                      const getScheduleDisplay = (schedule: string) => {
+                        if (schedule.startsWith('Cron:')) {
+                          // Clean up cron format: "Cron: {0} {18} * * *" -> "0 18 * * *"
+                          const cronPart = schedule.replace('Cron: ', '').replace(/\{|\}/g, '')
+                          // Try to make it more readable
+                          const parts = cronPart.split(' ')
+                          if (parts.length >= 5) {
+                            const [min, hour] = parts
+                            if (hour !== '*' && min !== '*') {
+                              // Format like "Daily 6:00" or "Daily 18:00"
+                              const hours = hour.split(',').map(h => h.trim())
+                              if (hours.length === 1) {
+                                return `Daily ${hours[0].padStart(2, '0')}:${min.padStart(2, '0')}`
+                              } else if (hours.length <= 3) {
+                                return `${hours.length}x daily`
+                              } else {
+                                return `${hours.length}x daily`
+                              }
+                            }
+                          }
+                          return cronPart
+                        }
+                        const seconds = parseFloat(schedule)
+                        if (!isNaN(seconds)) {
+                          if (seconds < 60) return `Every ${seconds}s`
+                          if (seconds < 3600) return `Every ${Math.round(seconds / 60)}m`
+                          return `Every ${Math.round(seconds / 3600)}h`
+                        }
+                        return schedule
+                      }
+
+                      return (
+                        <div
+                          key={task.name}
+                          className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={cn(
+                              'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+                              isRunning ? 'bg-accent-green/20' : 'bg-accent-cyan/20'
+                            )}>
+                              {isRunning ? (
+                                <Play size={14} className="text-accent-green" />
+                              ) : (
+                                <Clock size={14} className="text-accent-cyan" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{task.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{task.task}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            <span className="text-xs text-accent-cyan whitespace-nowrap">
+                              {getScheduleDisplay(task.schedule)}
+                            </span>
+                            <span className={cn(
+                              'text-xs px-2 py-1 rounded whitespace-nowrap',
+                              isRunning
+                                ? 'bg-accent-green/20 text-accent-green'
+                                : 'bg-gray-500/20 text-gray-400'
+                            )}>
+                              {isRunning ? 'Running' : 'Scheduled'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Clock className="mx-auto mb-2" size={32} />
+                    <p>No scheduled tasks</p>
                   </div>
                 )}
               </div>
