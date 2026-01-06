@@ -151,59 +151,148 @@ and only important ones should be promoted. Don't treat this as a crisis."""
         Returns:
             AgentResult with system status information
         """
-        start_time = __import__('time').time()
+        import time
+        start_time = time.time()
         context = context or {}
 
-        try:
-            # Get attention items
-            from core.services.system_state_aggregator import get_system_state_aggregator
+        # Session 663: Use time travel session for decision tracking
+        with self.time_travel_session("system_intelligence", task, input_data=context):
+            try:
+                self.record_decision(
+                    decision_type="task_analysis",
+                    action="Analyzing system status request",
+                    reasoning=f"Received system query: {task[:100]}",
+                    confidence=0.9
+                )
 
-            aggregator = get_system_state_aggregator()
-            items = aggregator.get_attention_items(max_per_section=10, force_refresh=True)
+                # Get attention items
+                from core.services.system_state_aggregator import get_system_state_aggregator
 
-            # Build rich context for LLM
-            items_context = self._format_items_for_llm(items)
+                aggregator = get_system_state_aggregator()
+                items = aggregator.get_attention_items(max_per_section=10, force_refresh=True)
 
-            # Build messages for GPT
-            messages = [
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": f"User question: {task}\n\nCurrent system attention items:\n{items_context}"}
-            ]
+                self.record_decision(
+                    decision_type="data_retrieval",
+                    action=f"Retrieved {len(items)} attention items",
+                    reasoning="Queried SystemStateAggregator for platform health data",
+                    confidence=0.95
+                )
 
-            # Call GPT to interpret and respond
-            from openai import OpenAI
-            client = OpenAI()
+                # Build rich context for LLM
+                items_context = self._format_items_for_llm(items)
 
-            response = client.chat.completions.create(
-                model="gpt-5-mini",
-                messages=messages,
-                max_completion_tokens=2000
-            )
+                # Build messages for GPT
+                messages = [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": f"User question: {task}\n\nCurrent system attention items:\n{items_context}"}
+                ]
 
-            result_text = response.choices[0].message.content
+                # Call GPT to interpret and respond
+                from openai import OpenAI
+                client = OpenAI()
 
-            execution_time = __import__('time').time() - start_time
+                response = client.chat.completions.create(
+                    model="gpt-5-mini",
+                    messages=messages,
+                    max_completion_tokens=2000
+                )
 
-            return AgentResult(
-                success=True,
-                result=result_text,
-                metadata={
-                    'agent': self.name,
-                    'items_count': len(items),
-                    'critical_count': len([i for i in items if i.severity == 'critical']),
-                    'warning_count': len([i for i in items if i.severity == 'warning']),
-                    'execution_time': execution_time
-                }
-            )
+                result_text = response.choices[0].message.content
+                execution_time_ms = int((time.time() - start_time) * 1000)
 
-        except Exception as e:
-            logger.error(f"SystemIntelligenceAgent error: {e}", exc_info=True)
-            return AgentResult(
-                success=False,
-                result=f"Error checking system status: {str(e)}",
-                error=str(e),
-                metadata={'agent': self.name}
-            )
+                # Count by severity for metadata
+                critical_count = len([i for i in items if i.severity == 'critical'])
+                warning_count = len([i for i in items if i.severity == 'warning'])
+                info_count = len([i for i in items if i.severity == 'info'])
+
+                self.mark_decision_outcome(
+                    success=True,
+                    result_summary=f"Reported {critical_count} critical, {warning_count} warnings, {info_count} info items"
+                )
+
+                result = AgentResult(
+                    success=True,
+                    result=result_text,
+                    message=f"System status: {critical_count} critical, {warning_count} warnings",
+                    agent_name=self.name,
+                    execution_time_ms=execution_time_ms,
+                    decisions_made=self._tt_decision_count,
+                    metadata={
+                        'agent': self.name,
+                        'items_count': len(items),
+                        'critical_count': critical_count,
+                        'warning_count': warning_count,
+                        'info_count': info_count,
+                        'execution_time': execution_time_ms / 1000
+                    }
+                )
+
+                # === Session 663: Learning Infrastructure Integration ===
+                # Record learning outcome for XP and pattern detection
+                self._record_learning_outcome(
+                    result=result,
+                    task=task,
+                    context=context,
+                    spider_data_used=False,  # Uses SystemStateAggregator, not spiders
+                    scifi_context_used=False
+                )
+
+                # Create memory of successful system check
+                self._create_execution_memory(
+                    result=result,
+                    task=task,
+                    memory_type="success",
+                    importance=0.5  # System checks are routine
+                )
+
+                # Share knowledge if there are critical issues (valuable insight)
+                if critical_count > 0:
+                    self._share_knowledge(
+                        knowledge_type='observation',
+                        title=f"System Alert: {critical_count} critical items",
+                        knowledge_value={
+                            'query': task,
+                            'critical_count': critical_count,
+                            'warning_count': warning_count,
+                            'critical_items': [i.title for i in items if i.severity == 'critical'][:5],
+                            'timestamp': time.time()
+                        },
+                        confidence=0.9
+                    )
+
+                return result
+
+            except Exception as e:
+                logger.error(f"SystemIntelligenceAgent error: {e}", exc_info=True)
+                execution_time_ms = int((time.time() - start_time) * 1000)
+
+                result = AgentResult(
+                    success=False,
+                    result=f"Error checking system status: {str(e)}",
+                    error=str(e),
+                    agent_name=self.name,
+                    execution_time_ms=execution_time_ms,
+                    metadata={'agent': self.name}
+                )
+
+                # Record failure for learning
+                self._record_learning_outcome(
+                    result=result,
+                    task=task,
+                    context=context,
+                    spider_data_used=False,
+                    scifi_context_used=False
+                )
+
+                # Create failure memory for pattern detection
+                self._create_execution_memory(
+                    result=result,
+                    task=task,
+                    memory_type="failure",
+                    importance=0.7  # Failures are important to remember
+                )
+
+                return result
 
     def _format_items_for_llm(self, items: List) -> str:
         """Format attention items as rich context for the LLM."""
