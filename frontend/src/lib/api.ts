@@ -57,6 +57,14 @@ export const activityApi = {
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
 }
 
+// Session 695: Dreams API for Dream Gallery Modal
+export const dreamsApi = {
+  list: (limit = 20) => api.get(`/agent-dreams/?limit=${limit}`),
+  detail: (dreamId: string) => api.get(`/agent-dreams/${dreamId}/`),
+  react: (dreamId: string, reaction: string) => api.post(`/agent-dreams/${dreamId}/react/`, { reaction }),
+  markShown: (dreamIds: string[]) => api.post('/agent-dreams/mark-shown/', { dream_ids: dreamIds }),
+}
+
 export const intelligenceApi = {
   status: () => api.get('/v1/intelligence/skynet/status/'),
   opportunities: () => api.get('/v1/intelligence/opportunities/'),

@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { agentsApi, activityApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 // Session 688: Safe date formatter to handle invalid/missing timestamps
@@ -80,6 +80,23 @@ interface RecentActivity {
   data?: Record<string, unknown>
 }
 
+// Session 695: Dream interface for Dream Gallery Modal
+interface Dream {
+  id: string
+  agent_id: string
+  agent_name: string
+  title: string
+  content: string
+  dream_type: 'observation' | 'prediction' | 'insight' | 'reflection'
+  inspiration: string
+  related_topics: string[]
+  vividness: number
+  creativity: number
+  shown_to_user: boolean
+  user_reaction: string
+  dreamed_at: string
+}
+
 interface Agent {
   name: string
   category: string
@@ -130,6 +147,8 @@ export default function AgentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  // Session 695: Dream Gallery Modal state
+  const [selectedDream, setSelectedDream] = useState<Dream | null>(null)
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({
@@ -150,6 +169,18 @@ export default function AgentsPage() {
     queryFn: () => activityApi.learning(30),
     refetchInterval: 30000,
   })
+
+  // Session 695: Dreams for Dream Gallery Modal
+  const { data: dreamsResponse } = useQuery({
+    queryKey: ['agent-dreams'],
+    queryFn: () => dreamsApi.list(50),
+    refetchInterval: 60000, // Refresh every minute
+  })
+  const dreams: Dream[] = dreamsResponse?.data?.dreams || []
+  const dreamStats = {
+    todayCount: dreamsResponse?.data?.today_count || 0,
+    unreadCount: dreamsResponse?.data?.unread_count || 0,
+  }
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
@@ -531,8 +562,8 @@ export default function AgentsPage() {
               </button>
             </div>
 
-            {/* Activity Type Legend */}
-            <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b border-dark-border">
+            {/* Activity Type Legend + Dream Stats */}
+            <div className="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-dark-border">
               {[
                 { type: 'dream', label: 'Dreams', icon: <Brain size={14} /> },
                 { type: 'conversation', label: 'Conversations', icon: <MessageSquare size={14} /> },
@@ -545,14 +576,38 @@ export default function AgentsPage() {
                   {label}
                 </div>
               ))}
+              {/* Session 695: Dream stats */}
+              {dreamStats.todayCount > 0 && (
+                <div className="ml-auto flex items-center gap-2 text-xs">
+                  <span className="text-accent-purple font-medium">{dreamStats.todayCount} dreams today</span>
+                  {dreamStats.unreadCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-accent-purple/20 text-accent-purple">
+                      {dreamStats.unreadCount} unread
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {recentActivities.length > 0 ? (
               <div className="space-y-3 max-h-[500px] overflow-auto">
-                {recentActivities.map((activity, idx) => (
+                {recentActivities.map((activity, idx) => {
+                  // Session 695: Find matching dream for click handler
+                  const matchingDream = activity.type === 'dream' && activity.id
+                    ? dreams.find(d => d.id === activity.id)
+                    : null
+                  const isClickable = activity.type === 'dream' && matchingDream
+
+                  return (
                   <div
                     key={`activity-${activity.id || activity.timestamp}-${idx}`}
-                    className="flex items-start gap-3 p-4 rounded-lg border border-dark-border hover:border-primary-500/50 transition-colors"
+                    onClick={isClickable ? () => setSelectedDream(matchingDream) : undefined}
+                    className={cn(
+                      "flex items-start gap-3 p-4 rounded-lg border border-dark-border transition-colors",
+                      isClickable
+                        ? "hover:border-accent-purple/50 cursor-pointer hover:bg-accent-purple/5"
+                        : "hover:border-primary-500/50"
+                    )}
                   >
                     {/* Session 694: Show emoji icon if available, otherwise use icon component */}
                     <div className={cn(
@@ -573,6 +628,13 @@ export default function AgentsPage() {
                         )}>
                           {activity.type}
                         </span>
+                        {/* Session 695: Show "Click to view" hint for dreams */}
+                        {isClickable && (
+                          <span className="text-xs text-accent-purple/60 flex items-center gap-1">
+                            <Eye size={10} />
+                            Click to view
+                          </span>
+                        )}
                         {/* Session 694: Show friendly timestamp */}
                         {activity.timestamp_display && (
                           <span className="text-xs text-gray-500">{activity.timestamp_display}</span>
@@ -605,7 +667,8 @@ export default function AgentsPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-400">
@@ -878,6 +941,161 @@ export default function AgentsPage() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Session 695: Dream Gallery Modal */}
+      {selectedDream && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-purple/10 to-accent-pink/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">💭</span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedDream.dream_type === 'prediction' ? 'bg-accent-amber/20 text-accent-amber' :
+                    selectedDream.dream_type === 'observation' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    selectedDream.dream_type === 'insight' ? 'bg-accent-green/20 text-accent-green' :
+                    'bg-accent-purple/20 text-accent-purple'
+                  )}>
+                    {selectedDream.dream_type}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedDream.title}</h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Bot size={14} />
+                  <span>{selectedDream.agent_name}</span>
+                  <span className="text-gray-600">•</span>
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedDream.dreamed_at, 'full')}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDream(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+              {/* Dream Content */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <MessageSquare size={14} />
+                  Dream Content
+                </h3>
+                <div className="bg-dark-hover rounded-lg p-4 text-gray-200 leading-relaxed whitespace-pre-wrap">
+                  {selectedDream.content}
+                </div>
+              </div>
+
+              {/* Inspiration */}
+              {selectedDream.inspiration && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Lightbulb size={14} />
+                    Inspiration
+                  </h3>
+                  <div className="bg-accent-amber/5 border border-accent-amber/20 rounded-lg p-4 text-gray-300 text-sm">
+                    {selectedDream.inspiration}
+                  </div>
+                </div>
+              )}
+
+              {/* Creativity Metrics */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-dark-hover rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400 flex items-center gap-2">
+                      <Eye size={14} />
+                      Vividness
+                    </span>
+                    <span className="text-sm font-medium text-accent-purple">
+                      {Math.round(selectedDream.vividness * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-dark-card rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-accent-purple to-accent-pink transition-all"
+                      style={{ width: `${selectedDream.vividness * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="bg-dark-hover rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400 flex items-center gap-2">
+                      <Sparkles size={14} />
+                      Creativity
+                    </span>
+                    <span className="text-sm font-medium text-accent-cyan">
+                      {Math.round(selectedDream.creativity * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-dark-card rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-accent-cyan to-accent-green transition-all"
+                      style={{ width: `${selectedDream.creativity * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Related Topics */}
+              {selectedDream.related_topics && selectedDream.related_topics.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Layers size={14} />
+                    Related Topics
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDream.related_topics.map((topic, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-3 py-1.5 rounded-full bg-dark-hover text-gray-300 border border-dark-border"
+                      >
+                        {typeof topic === 'string' ? topic.slice(0, 50) : 'Topic'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Dream ID: {selectedDream.id.slice(0, 8)}...</span>
+                {selectedDream.shown_to_user && (
+                  <span className="flex items-center gap-1 text-accent-green">
+                    <CheckCircle size={12} />
+                    Viewed
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Reaction buttons */}
+                {['✨', '🔥', '💡', '🤔'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      // TODO: Call dreamsApi.react when implemented
+                      console.log('React to dream:', selectedDream.id, emoji)
+                    }}
+                    className={cn(
+                      'text-xl p-2 rounded-lg transition-all hover:bg-dark-card hover:scale-110',
+                      selectedDream.user_reaction === emoji && 'bg-accent-purple/20 ring-2 ring-accent-purple'
+                    )}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
