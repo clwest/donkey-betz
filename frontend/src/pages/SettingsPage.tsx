@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { settingsApi } from '@/lib/api'
@@ -6,7 +6,7 @@ import {
   User, Bell, Shield, Palette, Database, Key, ChevronRight,
   CheckCircle, XCircle, Loader2, X, Save, Download, Trash2,
   Moon, Sun, Mail, MessageSquare, Zap, Eye, EyeOff, LogOut,
-  RefreshCw, Sparkles
+  RefreshCw, Sparkles, Copy, Check
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -28,6 +28,16 @@ interface ChangePasswordModalProps {
   onClose: () => void
   onSave: (oldPassword: string, newPassword: string) => void
   isLoading: boolean
+}
+
+interface NotificationPreferences {
+  email_enabled: boolean
+  push_enabled: boolean
+  alert_notifications: boolean
+  suggestion_notifications: boolean
+  insight_notifications: boolean
+  celebration_notifications: boolean
+  warning_notifications: boolean
 }
 
 const settingsSections = [
@@ -214,18 +224,14 @@ function ChangePasswordModal({ onClose, onSave, isLoading }: ChangePasswordModal
 }
 
 export default function SettingsPage() {
-  const { user, logout } = useAuthStore()
+  const { user, token, logout } = useAuthStore()
   const [activeSection, setActiveSection] = useState<SettingsSection | null>(null)
   const [showEditProfile, setShowEditProfile] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
+  const [tokenCopied, setTokenCopied] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const queryClient = useQueryClient()
-
-  // Preferences state
-  const [darkMode, setDarkMode] = useState(true)
-  const [emailNotifications, setEmailNotifications] = useState(false)
-  const [pushNotifications, setPushNotifications] = useState(true)
-  const [agentAlerts, setAgentAlerts] = useState(true)
 
   // Fetch profile data
   const { data: profileData } = useQuery({
@@ -245,9 +251,30 @@ export default function SettingsPage() {
     queryFn: () => settingsApi.getNotifications(),
   })
 
+  // Fetch notification preferences
+  const { data: notifPrefsData } = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: () => settingsApi.getNotificationPreferences(),
+  })
+
+  // Extract notification preferences from API response
+  const notifPrefs: NotificationPreferences = notifPrefsData?.data?.preferences || {
+    email_enabled: false,
+    push_enabled: true,
+    alert_notifications: true,
+    suggestion_notifications: true,
+    insight_notifications: true,
+    celebration_notifications: true,
+    warning_notifications: true,
+  }
+
+  // Extract dark_mode from profile
+  const profile = profileData?.data || {}
+  const darkMode = profile.dark_mode ?? true
+
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { username: string; email: string }) => settingsApi.updateProfile(data),
+    mutationFn: (data: { username?: string; email?: string; dark_mode?: boolean }) => settingsApi.updateProfile(data),
     onSuccess: () => {
       setActionResult({ type: 'success', message: 'Profile updated successfully!' })
       setShowEditProfile(false)
@@ -255,6 +282,17 @@ export default function SettingsPage() {
     },
     onError: () => {
       setActionResult({ type: 'error', message: 'Failed to update profile' })
+    },
+  })
+
+  // Update notification preferences mutation
+  const updateNotifPrefsMutation = useMutation({
+    mutationFn: (prefs: Record<string, boolean>) => settingsApi.updateNotificationPreferences(prefs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] })
+    },
+    onError: () => {
+      setActionResult({ type: 'error', message: 'Failed to update notification preferences' })
     },
   })
 
@@ -306,15 +344,71 @@ export default function SettingsPage() {
     },
   })
 
-  const profile = profileData?.data || {}
   const stats = statsData?.data || {}
   const notifications = notificationsData?.data?.notifications || []
   const unreadCount = notifications.filter((n: { is_read: boolean }) => !n.is_read).length
 
-  // Clear toast after 3 seconds
-  if (actionResult) {
-    setTimeout(() => setActionResult(null), 3000)
+  // Handle notification preference toggle
+  const handleNotifPrefToggle = (key: keyof NotificationPreferences) => {
+    const newValue = !notifPrefs[key]
+    updateNotifPrefsMutation.mutate({ [key]: newValue })
+    setActionResult({ type: 'success', message: `${key.replace(/_/g, ' ')} ${newValue ? 'enabled' : 'disabled'}` })
   }
+
+  // Handle dark mode toggle
+  const handleDarkModeToggle = () => {
+    updateProfileMutation.mutate({ dark_mode: !darkMode })
+    setActionResult({ type: 'success', message: `${!darkMode ? 'Dark' : 'Light'} mode enabled` })
+  }
+
+  // Copy API token to clipboard
+  const handleCopyToken = async () => {
+    if (token) {
+      await navigator.clipboard.writeText(token)
+      setTokenCopied(true)
+      setActionResult({ type: 'success', message: 'API token copied to clipboard!' })
+      setTimeout(() => setTokenCopied(false), 2000)
+    }
+  }
+
+  // Handle data export
+  const handleExportData = async (format: 'json' | 'csv') => {
+    setIsExporting(true)
+    try {
+      const response = await settingsApi.exportData(format)
+      const data = response.data
+
+      // Create a blob and download
+      const blob = new Blob([format === 'json' ? JSON.stringify(data, null, 2) : data], {
+        type: format === 'json' ? 'application/json' : 'text/csv'
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `donkey-betz-export-${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      setActionResult({ type: 'success', message: `Data exported as ${format.toUpperCase()}!` })
+    } catch {
+      setActionResult({ type: 'error', message: `Failed to export data as ${format.toUpperCase()}` })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Mask token for display
+  const maskedToken = token ? `${token.slice(0, 8)}${'•'.repeat(24)}${token.slice(-8)}` : '••••••••••••••••••••••••••••••••'
+
+  // Clear toast after 3 seconds
+  useEffect(() => {
+    if (actionResult) {
+      const timer = setTimeout(() => setActionResult(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [actionResult])
 
   const handleLogout = () => {
     logout()
@@ -328,8 +422,8 @@ export default function SettingsPage() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="h-16 w-16 rounded-full bg-primary-600 flex items-center justify-center text-2xl font-bold overflow-hidden">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 user?.username?.charAt(0).toUpperCase() || 'U'
               )}
@@ -347,7 +441,7 @@ export default function SettingsPage() {
             </button>
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold">{profile.username || user?.username}</h2>
+            <h2 className="text-xl font-bold">{profile.display_name || profile.username || user?.username}</h2>
             <p className="text-gray-400">{profile.email || user?.email}</p>
             {stats.total_creations && (
               <p className="text-sm text-primary-400 mt-1">{stats.total_creations} creations</p>
@@ -428,10 +522,11 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-400">Receive updates via email</p>
                 </div>
               </div>
-              <Toggle enabled={emailNotifications} onChange={() => {
-                setEmailNotifications(!emailNotifications)
-                setActionResult({ type: 'success', message: `Email notifications ${!emailNotifications ? 'enabled' : 'disabled'}` })
-              }} />
+              <Toggle
+                enabled={notifPrefs.email_enabled}
+                onChange={() => handleNotifPrefToggle('email_enabled')}
+                disabled={updateNotifPrefsMutation.isPending}
+              />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
               <div className="flex items-center gap-3">
@@ -441,10 +536,11 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-400">Browser push notifications</p>
                 </div>
               </div>
-              <Toggle enabled={pushNotifications} onChange={() => {
-                setPushNotifications(!pushNotifications)
-                setActionResult({ type: 'success', message: `Push notifications ${!pushNotifications ? 'enabled' : 'disabled'}` })
-              }} />
+              <Toggle
+                enabled={notifPrefs.push_enabled}
+                onChange={() => handleNotifPrefToggle('push_enabled')}
+                disabled={updateNotifPrefsMutation.isPending}
+              />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
               <div className="flex items-center gap-3">
@@ -454,10 +550,11 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-400">Notifications from AI agents</p>
                 </div>
               </div>
-              <Toggle enabled={agentAlerts} onChange={() => {
-                setAgentAlerts(!agentAlerts)
-                setActionResult({ type: 'success', message: `Agent alerts ${!agentAlerts ? 'enabled' : 'disabled'}` })
-              }} />
+              <Toggle
+                enabled={notifPrefs.alert_notifications}
+                onChange={() => handleNotifPrefToggle('alert_notifications')}
+                disabled={updateNotifPrefsMutation.isPending}
+              />
             </div>
           </div>
         </div>
@@ -519,10 +616,11 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-400">Use dark theme throughout the app</p>
                 </div>
               </div>
-              <Toggle enabled={darkMode} onChange={() => {
-                setDarkMode(!darkMode)
-                setActionResult({ type: 'success', message: `${!darkMode ? 'Dark' : 'Light'} mode enabled` })
-              }} />
+              <Toggle
+                enabled={darkMode}
+                onChange={handleDarkModeToggle}
+                disabled={updateProfileMutation.isPending}
+              />
             </div>
             <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
               <div>
@@ -551,28 +649,24 @@ export default function SettingsPage() {
             <div className="p-3 rounded-lg bg-dark-bg">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium">Personal API Token</p>
-                <button
-                  className="btn btn-secondary text-sm flex items-center gap-1"
-                  onClick={() => setActionResult({ type: 'success', message: 'API token regenerated!' })}
-                >
-                  <RefreshCw size={14} />
-                  Regenerate
-                </button>
+                <p className="text-xs text-gray-500">Used for API authentication</p>
               </div>
               <div className="flex items-center gap-2">
-                <code className="flex-1 bg-dark-border rounded px-3 py-2 text-sm text-gray-400 font-mono">
-                  ••••••••••••••••••••••••••••••••
+                <code className="flex-1 bg-dark-border rounded px-3 py-2 text-sm text-gray-400 font-mono overflow-hidden text-ellipsis">
+                  {maskedToken}
                 </code>
                 <button
-                  className="btn btn-secondary text-sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText('your-api-token-here')
-                    setActionResult({ type: 'success', message: 'API token copied!' })
-                  }}
+                  className="btn btn-secondary text-sm flex items-center gap-1"
+                  onClick={handleCopyToken}
+                  disabled={!token}
                 >
-                  Copy
+                  {tokenCopied ? <Check size={14} className="text-accent-green" /> : <Copy size={14} />}
+                  {tokenCopied ? 'Copied' : 'Copy'}
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                This is your authentication token. Keep it secure and never share it publicly.
+              </p>
             </div>
             <div className="p-3 rounded-lg border border-dashed border-dark-border text-center">
               <p className="text-gray-400 mb-2">Connect external services</p>
@@ -599,16 +693,18 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <button
                   className="btn btn-secondary text-sm flex items-center gap-1"
-                  onClick={() => setActionResult({ type: 'success', message: 'Preparing JSON export...' })}
+                  onClick={() => handleExportData('json')}
+                  disabled={isExporting}
                 >
-                  <Download size={14} />
+                  {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   JSON
                 </button>
                 <button
                   className="btn btn-secondary text-sm flex items-center gap-1"
-                  onClick={() => setActionResult({ type: 'success', message: 'Preparing CSV export...' })}
+                  onClick={() => handleExportData('csv')}
+                  disabled={isExporting}
                 >
-                  <Download size={14} />
+                  {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   CSV
                 </button>
               </div>
@@ -654,20 +750,22 @@ export default function SettingsPage() {
                 <p className="font-medium">Dark Mode</p>
                 <p className="text-sm text-gray-400">Use dark theme</p>
               </div>
-              <Toggle enabled={darkMode} onChange={() => {
-                setDarkMode(!darkMode)
-                setActionResult({ type: 'success', message: `${!darkMode ? 'Dark' : 'Light'} mode enabled` })
-              }} />
+              <Toggle
+                enabled={darkMode}
+                onChange={handleDarkModeToggle}
+                disabled={updateProfileMutation.isPending}
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Email Notifications</p>
                 <p className="text-sm text-gray-400">Receive email updates</p>
               </div>
-              <Toggle enabled={emailNotifications} onChange={() => {
-                setEmailNotifications(!emailNotifications)
-                setActionResult({ type: 'success', message: `Email notifications ${!emailNotifications ? 'enabled' : 'disabled'}` })
-              }} />
+              <Toggle
+                enabled={notifPrefs.email_enabled}
+                onChange={() => handleNotifPrefToggle('email_enabled')}
+                disabled={updateNotifPrefsMutation.isPending}
+              />
             </div>
           </div>
         </div>
