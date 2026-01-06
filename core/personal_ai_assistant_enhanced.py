@@ -1377,6 +1377,15 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 result = self._handle_content_executor_agent(arguments)
             elif function_name == 'ai_project_builder_agent':
                 result = self._handle_ai_project_builder_agent(arguments)
+            # Session 672: ML Pipeline Management Tools
+            elif function_name == 'opportunity_manager_tool':
+                result = self._handle_opportunity_manager_tool(arguments)
+            elif function_name == 'task_manager_tool':
+                result = self._handle_task_manager_tool(arguments)
+            elif function_name == 'pipeline_orchestrator_tool':
+                result = self._handle_pipeline_orchestrator_tool(arguments)
+            elif function_name == 'revenue_tracker_tool':
+                result = self._handle_revenue_tracker_tool(arguments)
             else:
                 result = {
                     'success': False,
@@ -10330,3 +10339,682 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
         except Exception as e:
             logger.error(f"Error extracting task from message: {e}")
             return message.strip()
+
+    # =========================================================================
+    # SESSION 672: ML Pipeline Management Tool Handlers
+    # =========================================================================
+
+    def _handle_opportunity_manager_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle opportunity queries and management."""
+        from core.models_unified_system import Opportunity
+        from django.db.models import Avg, Count
+
+        action = arguments.get('action', 'list')
+
+        try:
+            if action == 'list':
+                # Build query with filters
+                queryset = Opportunity.objects.filter(user=self.user)
+
+                if arguments.get('status'):
+                    queryset = queryset.filter(status=arguments['status'])
+                if arguments.get('category'):
+                    queryset = queryset.filter(opportunity_type=arguments['category'])
+                if arguments.get('min_score'):
+                    queryset = queryset.filter(match_score__gte=arguments['min_score'])
+
+                limit = arguments.get('limit', 10)
+                opportunities = queryset.order_by('-match_score', '-created_at')[:limit]
+
+                return {
+                    'success': True,
+                    'action': 'list',
+                    'count': queryset.count(),
+                    'showing': len(opportunities),
+                    'opportunities': [
+                        {
+                            'id': str(opp.id),
+                            'title': opp.title,
+                            'type': opp.opportunity_type,
+                            'source': opp.source,
+                            'potential_revenue': float(opp.potential_revenue),
+                            'match_score': opp.match_score,
+                            'status': opp.status,
+                            'created_at': opp.created_at.isoformat() if opp.created_at else None,
+                            'has_task': hasattr(opp, 'task')
+                        }
+                        for opp in opportunities
+                    ]
+                }
+
+            elif action == 'get':
+                opp_id = arguments.get('opportunity_id')
+                if not opp_id:
+                    return {'success': False, 'error': 'opportunity_id required'}
+
+                try:
+                    opp = Opportunity.objects.get(id=opp_id, user=self.user)
+                except Opportunity.DoesNotExist:
+                    return {'success': False, 'error': f'Opportunity {opp_id} not found'}
+
+                # Get related task if exists
+                task_info = None
+                if hasattr(opp, 'task'):
+                    task = opp.task
+                    task_info = {
+                        'id': str(task.id),
+                        'status': task.status,
+                        'priority': task.priority,
+                        'primary_agent': task.primary_agent.name if task.primary_agent else None
+                    }
+
+                return {
+                    'success': True,
+                    'action': 'get',
+                    'opportunity': {
+                        'id': str(opp.id),
+                        'title': opp.title,
+                        'type': opp.opportunity_type,
+                        'source': opp.source,
+                        'potential_revenue': float(opp.potential_revenue),
+                        'hourly_rate': float(opp.hourly_rate) if opp.hourly_rate else None,
+                        'match_score': opp.match_score,
+                        'status': opp.status,
+                        'recommended_by': opp.recommended_by.name if opp.recommended_by else None,
+                        'created_at': opp.created_at.isoformat() if opp.created_at else None,
+                        'task': task_info
+                    }
+                }
+
+            elif action == 'stats':
+                queryset = Opportunity.objects.filter(user=self.user)
+
+                stats = queryset.aggregate(
+                    total_count=Count('id'),
+                    avg_score=Avg('match_score'),
+                    avg_revenue=Avg('potential_revenue')
+                )
+
+                # Count by status
+                status_counts = {}
+                for status, _ in Opportunity._meta.get_field('status').choices:
+                    status_counts[status] = queryset.filter(status=status).count()
+
+                return {
+                    'success': True,
+                    'action': 'stats',
+                    'stats': {
+                        'total_opportunities': stats['total_count'],
+                        'average_match_score': round(stats['avg_score'] or 0, 1),
+                        'average_potential_revenue': round(float(stats['avg_revenue'] or 0), 2),
+                        'by_status': status_counts
+                    }
+                }
+
+            elif action == 'search':
+                query = arguments.get('query', '')
+                if not query:
+                    return {'success': False, 'error': 'query required for search'}
+
+                opportunities = Opportunity.objects.filter(
+                    user=self.user,
+                    title__icontains=query
+                )[:10]
+
+                return {
+                    'success': True,
+                    'action': 'search',
+                    'query': query,
+                    'results': [
+                        {
+                            'id': str(opp.id),
+                            'title': opp.title,
+                            'match_score': opp.match_score,
+                            'status': opp.status
+                        }
+                        for opp in opportunities
+                    ]
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in opportunity_manager_tool: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _handle_task_manager_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle OpportunityTask management."""
+        from core.models_unified_system import OpportunityTask
+        from django.utils import timezone
+
+        action = arguments.get('action', 'list')
+
+        try:
+            if action == 'list':
+                queryset = OpportunityTask.objects.filter(user=self.user)
+
+                if arguments.get('status'):
+                    queryset = queryset.filter(status=arguments['status'])
+                if arguments.get('priority'):
+                    queryset = queryset.filter(priority=arguments['priority'])
+
+                limit = arguments.get('limit', 10)
+                tasks = queryset.order_by('-opportunity_score', '-created_at')[:limit]
+
+                return {
+                    'success': True,
+                    'action': 'list',
+                    'count': queryset.count(),
+                    'tasks': [
+                        {
+                            'id': str(task.id),
+                            'title': task.title,
+                            'status': task.status,
+                            'priority': task.priority,
+                            'opportunity_score': task.opportunity_score,
+                            'opportunity_id': str(task.opportunity_id),
+                            'primary_agent': task.primary_agent.name if task.primary_agent else None,
+                            'due_date': task.due_date.isoformat() if task.due_date else None
+                        }
+                        for task in tasks
+                    ]
+                }
+
+            elif action == 'get':
+                task_id = arguments.get('task_id')
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.select_related('opportunity', 'primary_agent').get(
+                        id=task_id, user=self.user
+                    )
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                return {
+                    'success': True,
+                    'action': 'get',
+                    'task': {
+                        'id': str(task.id),
+                        'title': task.title,
+                        'description': task.description,
+                        'status': task.status,
+                        'priority': task.priority,
+                        'opportunity_score': task.opportunity_score,
+                        'score_breakdown': task.score_breakdown,
+                        'action_items': task.action_items,
+                        'user_notes': task.user_notes,
+                        'opportunity': {
+                            'id': str(task.opportunity.id),
+                            'title': task.opportunity.title,
+                            'potential_revenue': float(task.opportunity.potential_revenue)
+                        },
+                        'primary_agent': task.primary_agent.name if task.primary_agent else None,
+                        'assigned_agents': [a.name for a in task.assigned_agents.all()],
+                        'created_at': task.created_at.isoformat(),
+                        'accepted_at': task.accepted_at.isoformat() if task.accepted_at else None,
+                        'applied_at': task.applied_at.isoformat() if task.applied_at else None
+                    }
+                }
+
+            elif action == 'accept':
+                task_id = arguments.get('task_id')
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.get(id=task_id, user=self.user)
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                task.status = 'accepted'
+                task.accepted_at = timezone.now()
+                task.save()
+
+                return {
+                    'success': True,
+                    'action': 'accept',
+                    'message': f'Task "{task.title}" accepted',
+                    'task_id': str(task.id)
+                }
+
+            elif action == 'start':
+                task_id = arguments.get('task_id')
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.get(id=task_id, user=self.user)
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                task.status = 'in_progress'
+                task.save()
+
+                return {
+                    'success': True,
+                    'action': 'start',
+                    'message': f'Task "{task.title}" started',
+                    'task_id': str(task.id)
+                }
+
+            elif action == 'apply':
+                task_id = arguments.get('task_id')
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.get(id=task_id, user=self.user)
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                task.status = 'applied'
+                task.applied_at = timezone.now()
+                task.save()
+
+                # Update opportunity status too
+                task.opportunity.status = 'applied'
+                task.opportunity.save()
+
+                return {
+                    'success': True,
+                    'action': 'apply',
+                    'message': f'Marked as applied: "{task.title}"',
+                    'task_id': str(task.id)
+                }
+
+            elif action == 'complete':
+                task_id = arguments.get('task_id')
+                outcome = arguments.get('outcome', 'won')  # 'won' or 'lost'
+
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.get(id=task_id, user=self.user)
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                task.status = outcome
+                task.completed_at = timezone.now()
+                task.save()
+
+                # Update opportunity status
+                task.opportunity.status = 'accepted' if outcome == 'won' else 'rejected'
+                task.opportunity.save()
+
+                return {
+                    'success': True,
+                    'action': 'complete',
+                    'outcome': outcome,
+                    'message': f'Task "{task.title}" marked as {outcome}',
+                    'task_id': str(task.id)
+                }
+
+            elif action == 'add_note':
+                task_id = arguments.get('task_id')
+                note = arguments.get('note', '')
+
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+                if not note:
+                    return {'success': False, 'error': 'note required'}
+
+                try:
+                    task = OpportunityTask.objects.get(id=task_id, user=self.user)
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                # Append note with timestamp
+                timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
+                if task.user_notes:
+                    task.user_notes += f"\n\n[{timestamp}] {note}"
+                else:
+                    task.user_notes = f"[{timestamp}] {note}"
+                task.save()
+
+                return {
+                    'success': True,
+                    'action': 'add_note',
+                    'message': 'Note added to task',
+                    'task_id': str(task.id)
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in task_manager_tool: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _handle_pipeline_orchestrator_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle manual pipeline execution and status checks."""
+        from core.models_unified_system import OpportunityTask
+        from core.agent_router import AgentRouter
+        from django.utils import timezone
+        from datetime import timedelta
+
+        action = arguments.get('action', 'status')
+
+        try:
+            if action == 'execute_task':
+                task_id = arguments.get('task_id')
+                if not task_id:
+                    return {'success': False, 'error': 'task_id required'}
+
+                try:
+                    task = OpportunityTask.objects.select_related('opportunity', 'primary_agent').get(
+                        id=task_id, user=self.user
+                    )
+                except OpportunityTask.DoesNotExist:
+                    return {'success': False, 'error': f'Task {task_id} not found'}
+
+                if not task.primary_agent:
+                    return {'success': False, 'error': 'No agent assigned to this task'}
+
+                # Execute via AgentRouter
+                router = AgentRouter()
+                result = router.execute_agent(
+                    agent_name=task.primary_agent.name,
+                    task=f"Help with opportunity: {task.opportunity.title}. Details: {task.description}",
+                    context={
+                        'opportunity_id': str(task.opportunity.id),
+                        'task_id': str(task.id),
+                        'potential_revenue': float(task.opportunity.potential_revenue),
+                        'user_id': str(self.user.id)
+                    }
+                )
+
+                # Update task status
+                task.status = 'in_progress'
+                task.metadata['last_agent_execution'] = {
+                    'agent': task.primary_agent.name,
+                    'timestamp': timezone.now().isoformat(),
+                    'result_preview': str(result)[:500] if result else None
+                }
+                task.save()
+
+                return {
+                    'success': True,
+                    'action': 'execute_task',
+                    'task_id': str(task.id),
+                    'agent_executed': task.primary_agent.name,
+                    'result': result
+                }
+
+            elif action == 'execute_opportunity':
+                opp_id = arguments.get('opportunity_id')
+                if not opp_id:
+                    return {'success': False, 'error': 'opportunity_id required'}
+
+                from core.models_unified_system import Opportunity
+                try:
+                    opp = Opportunity.objects.get(id=opp_id, user=self.user)
+                except Opportunity.DoesNotExist:
+                    return {'success': False, 'error': f'Opportunity {opp_id} not found'}
+
+                # Check if task exists
+                if not hasattr(opp, 'task'):
+                    return {
+                        'success': False,
+                        'error': 'No task exists for this opportunity. Tasks are created for opportunities with score >= 70.'
+                    }
+
+                # Redirect to execute_task
+                return self._handle_pipeline_orchestrator_tool({
+                    'action': 'execute_task',
+                    'task_id': str(opp.task.id)
+                })
+
+            elif action == 'status':
+                # Get pipeline status overview
+                pending_tasks = OpportunityTask.objects.filter(
+                    user=self.user,
+                    status='pending'
+                ).count()
+
+                in_progress = OpportunityTask.objects.filter(
+                    user=self.user,
+                    status='in_progress'
+                ).count()
+
+                recently_completed = OpportunityTask.objects.filter(
+                    user=self.user,
+                    status__in=['won', 'lost'],
+                    completed_at__gte=timezone.now() - timedelta(days=7)
+                ).count()
+
+                return {
+                    'success': True,
+                    'action': 'status',
+                    'pipeline_status': {
+                        'pending_tasks': pending_tasks,
+                        'in_progress': in_progress,
+                        'completed_last_7_days': recently_completed,
+                        'automated_execution': 'Every 30 minutes at :15 and :45'
+                    }
+                }
+
+            elif action == 'queue':
+                # Show next tasks to be executed
+                tasks = OpportunityTask.objects.filter(
+                    user=self.user,
+                    status__in=['pending', 'accepted']
+                ).select_related('opportunity', 'primary_agent').order_by(
+                    '-opportunity_score'
+                )[:5]
+
+                return {
+                    'success': True,
+                    'action': 'queue',
+                    'next_in_queue': [
+                        {
+                            'task_id': str(t.id),
+                            'title': t.title,
+                            'score': t.opportunity_score,
+                            'status': t.status,
+                            'agent': t.primary_agent.name if t.primary_agent else 'Unassigned'
+                        }
+                        for t in tasks
+                    ]
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in pipeline_orchestrator_tool: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def _handle_revenue_tracker_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle revenue logging and ML feedback loop."""
+        from core.models_unified_system import OpportunityRevenue, Opportunity
+        from django.db.models import Sum, Avg, Count
+        from django.utils import timezone
+        from decimal import Decimal
+
+        action = arguments.get('action', 'stats')
+
+        try:
+            if action == 'log_revenue':
+                opp_id = arguments.get('opportunity_id')
+                amount = arguments.get('amount')
+
+                if not opp_id:
+                    return {'success': False, 'error': 'opportunity_id required'}
+                if not amount:
+                    return {'success': False, 'error': 'amount required'}
+
+                try:
+                    opp = Opportunity.objects.get(id=opp_id, user=self.user)
+                except Opportunity.DoesNotExist:
+                    return {'success': False, 'error': f'Opportunity {opp_id} not found'}
+
+                # Calculate fees and net
+                platform_fee = arguments.get('platform_fee', 0)
+                net_amount = Decimal(str(amount)) - Decimal(str(platform_fee))
+
+                # Create revenue record
+                revenue = OpportunityRevenue.objects.create(
+                    opportunity=opp,
+                    user=self.user,
+                    amount=Decimal(str(amount)),
+                    currency=arguments.get('currency', 'USD'),
+                    platform_fee=Decimal(str(platform_fee)),
+                    net_amount=net_amount,
+                    platform=arguments.get('platform', 'direct'),
+                    content_type=arguments.get('content_type', 'service'),
+                    notes=arguments.get('notes', '')
+                )
+
+                # Update opportunity status
+                opp.status = 'accepted'
+                opp.save()
+
+                # Update task if exists
+                if hasattr(opp, 'task'):
+                    opp.task.status = 'won'
+                    opp.task.completed_at = timezone.now()
+                    opp.task.save()
+
+                return {
+                    'success': True,
+                    'action': 'log_revenue',
+                    'revenue_id': str(revenue.id),
+                    'amount': float(amount),
+                    'net_amount': float(net_amount),
+                    'message': f'Revenue of ${amount} logged for "{opp.title}"'
+                }
+
+            elif action == 'list_revenue':
+                limit = arguments.get('limit', 10)
+                revenues = OpportunityRevenue.objects.filter(
+                    user=self.user
+                ).select_related('opportunity').order_by('-created_at')[:limit]
+
+                return {
+                    'success': True,
+                    'action': 'list_revenue',
+                    'revenues': [
+                        {
+                            'id': str(r.id),
+                            'opportunity_title': r.opportunity.title,
+                            'amount': float(r.amount),
+                            'net_amount': float(r.net_amount),
+                            'platform': r.platform,
+                            'status': r.status,
+                            'created_at': r.created_at.isoformat()
+                        }
+                        for r in revenues
+                    ]
+                }
+
+            elif action == 'stats':
+                revenues = OpportunityRevenue.objects.filter(user=self.user)
+
+                stats = revenues.aggregate(
+                    total_gross=Sum('amount'),
+                    total_net=Sum('net_amount'),
+                    total_fees=Sum('platform_fee'),
+                    count=Count('id'),
+                    avg_amount=Avg('amount')
+                )
+
+                # Calculate this month
+                from datetime import datetime
+                month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                month_stats = revenues.filter(created_at__gte=month_start).aggregate(
+                    month_gross=Sum('amount'),
+                    month_net=Sum('net_amount'),
+                    month_count=Count('id')
+                )
+
+                return {
+                    'success': True,
+                    'action': 'stats',
+                    'revenue_stats': {
+                        'total_gross': float(stats['total_gross'] or 0),
+                        'total_net': float(stats['total_net'] or 0),
+                        'total_fees': float(stats['total_fees'] or 0),
+                        'transaction_count': stats['count'],
+                        'average_transaction': float(stats['avg_amount'] or 0),
+                        'this_month': {
+                            'gross': float(month_stats['month_gross'] or 0),
+                            'net': float(month_stats['month_net'] or 0),
+                            'transactions': month_stats['month_count']
+                        }
+                    }
+                }
+
+            elif action == 'accuracy':
+                # Calculate ML prediction accuracy
+                from core.models_unified_system import OpportunityTask
+
+                # Get completed tasks with outcomes
+                completed = OpportunityTask.objects.filter(
+                    user=self.user,
+                    status__in=['won', 'lost']
+                ).values('status', 'opportunity_score')
+
+                if not completed:
+                    return {
+                        'success': True,
+                        'action': 'accuracy',
+                        'message': 'Not enough data yet for accuracy calculation',
+                        'accuracy': None
+                    }
+
+                # Calculate accuracy by comparing scores with outcomes
+                won_scores = [t['opportunity_score'] for t in completed if t['status'] == 'won']
+                lost_scores = [t['opportunity_score'] for t in completed if t['status'] == 'lost']
+
+                avg_won_score = sum(won_scores) / len(won_scores) if won_scores else 0
+                avg_lost_score = sum(lost_scores) / len(lost_scores) if lost_scores else 0
+
+                return {
+                    'success': True,
+                    'action': 'accuracy',
+                    'accuracy': {
+                        'total_outcomes': len(list(completed)),
+                        'wins': len(won_scores),
+                        'losses': len(lost_scores),
+                        'win_rate': len(won_scores) / len(list(completed)) * 100 if completed else 0,
+                        'avg_winning_score': round(avg_won_score, 1),
+                        'avg_losing_score': round(avg_lost_score, 1),
+                        'score_differential': round(avg_won_score - avg_lost_score, 1),
+                        'interpretation': 'Higher score differential = better ML prediction accuracy'
+                    }
+                }
+
+            elif action == 'link_content':
+                revenue_id = arguments.get('revenue_id')
+                content_id = arguments.get('content_id')
+
+                if not revenue_id or not content_id:
+                    return {'success': False, 'error': 'revenue_id and content_id required'}
+
+                try:
+                    revenue = OpportunityRevenue.objects.get(id=revenue_id, user=self.user)
+                except OpportunityRevenue.DoesNotExist:
+                    return {'success': False, 'error': f'Revenue {revenue_id} not found'}
+
+                # Update metadata with content link
+                if not revenue.metadata:
+                    revenue.metadata = {}
+                revenue.metadata['linked_content_id'] = str(content_id)
+                revenue.save()
+
+                return {
+                    'success': True,
+                    'action': 'link_content',
+                    'message': f'Content {content_id} linked to revenue record'
+                }
+
+            else:
+                return {'success': False, 'error': f'Unknown action: {action}'}
+
+        except Exception as e:
+            logger.error(f"Error in revenue_tracker_tool: {e}")
+            return {'success': False, 'error': str(e)}
