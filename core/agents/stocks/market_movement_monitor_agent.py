@@ -17,8 +17,32 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_movement_with_ml(movement_data: dict) -> dict:
+    """Analyze market movements using ML models (LSTM + Anomaly)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=movement_data,
+            task_hint=TaskType.ANOMALY,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'anomaly'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'movement_anomalies': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML movement analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class MarketMovementMonitorAgent(BaseAgent):

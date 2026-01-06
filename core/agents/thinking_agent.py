@@ -16,8 +16,32 @@ from django.utils import timezone
 from django.db.models import Count
 
 from .base_agent import BaseAgent
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_thinking_context_with_ml(context_data: dict) -> dict:
+    """Analyze thinking context data using ML models (ANOMALY for pattern detection)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=context_data,
+            task_hint=TaskType.ANOMALY,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'anomaly'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'pattern_detection': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML thinking context analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class ThinkingAgent(BaseAgent):

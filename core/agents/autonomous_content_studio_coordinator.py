@@ -37,8 +37,32 @@ from datetime import timedelta
 
 from core.agents.base_agent import BaseAgent, AgentResult
 from core.services.memory_context_service import get_memory_context_service
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_content_studio_with_ml(channel_data: dict) -> dict:
+    """Analyze content studio channel data using ML models (Text)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+        result = router.auto_route(
+            data=channel_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'content_recommendations': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML content studio analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class AutonomousContentStudioCoordinator(BaseAgent):
