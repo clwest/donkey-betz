@@ -9,6 +9,11 @@ import {
   Settings,
   LogOut,
   User,
+  TrendingUp,
+  Scale,
+  Radio,
+  DollarSign,
+  Shield,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -17,7 +22,12 @@ const navItems = [
   { path: '/assistant', label: 'AI Assistant', icon: MessageSquare },
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
+  { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
+  { path: '/legal', label: 'Legal', icon: Scale },
+  { path: '/podcast', label: 'Podcast', icon: Radio },
+  { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
+  { path: '/admin', label: 'Admin', icon: Shield },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]

@@ -283,3 +283,107 @@ export const userLearningApi = {
   getInsights: () => api.get('/learning/insights/'),
   generateInsights: () => api.post('/learning/insights/generate/'),
 }
+
+export const legalApi = {
+  // Documents
+  documents: () => api.get('/legal/documents/'),
+  documentDetail: (docId: string) => api.get(`/legal/documents/${docId}/`),
+  uploadDocument: (formData: FormData) =>
+    api.post('/legal/documents/upload/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  analyzeDocument: (docId: string) => api.post(`/legal/documents/${docId}/analyze/`),
+
+  // Cases
+  cases: () => api.get('/legal/cases/'),
+  caseDetail: (caseId: string) => api.get(`/legal/cases/${caseId}/`),
+  createCase: (data: { title: string; description: string; case_type: string }) =>
+    api.post('/legal/cases/', data),
+
+  // Research
+  research: (query: string) => api.post('/legal/research/', { query }),
+  researchHistory: () => api.get('/legal/research/history/'),
+
+  // Templates
+  templates: () => api.get('/legal/templates/'),
+  generateDocument: (templateId: string, data: Record<string, unknown>) =>
+    api.post(`/legal/templates/${templateId}/generate/`, data),
+
+  // Stats
+  stats: () => api.get('/legal/stats/'),
+}
+
+export const podcastApi = {
+  // Shows
+  shows: () => api.get('/podcast/shows/'),
+  showDetail: (showId: string) => api.get(`/podcast/shows/${showId}/`),
+  createShow: (data: { name: string; description: string }) =>
+    api.post('/podcast/shows/', data),
+
+  // Episodes
+  episodes: (showId?: string) => api.get(showId ? `/podcast/shows/${showId}/episodes/` : '/podcast/episodes/'),
+  episodeDetail: (episodeId: string) => api.get(`/podcast/episodes/${episodeId}/`),
+  createEpisode: (showId: string, data: { title: string; description: string }) =>
+    api.post(`/podcast/shows/${showId}/episodes/`, data),
+
+  // Generation
+  generateScript: (topic: string, style?: string) =>
+    api.post('/podcast/generate/script/', { topic, style }),
+  generateAudio: (episodeId: string) => api.post(`/podcast/episodes/${episodeId}/generate-audio/`),
+
+  // Debates
+  debates: () => api.get('/podcast/debates/'),
+  createDebate: (topic: string) => api.post('/podcast/debates/', { topic }),
+
+  // Stats
+  stats: () => api.get('/podcast/stats/'),
+}
+
+export const portfolioApi = {
+  // Overview
+  overview: () => api.get('/distribution/overview/'),
+  revenue: () => api.get('/distribution/revenue/'),
+  revenueByChannel: () => api.get('/distribution/revenue/by-channel/'),
+
+  // Channels
+  channels: () => api.get('/distribution/channels/'),
+  channelDetail: (channelId: string) => api.get(`/distribution/channels/${channelId}/`),
+
+  // Content Performance
+  performance: () => api.get('/distribution/performance/'),
+  topContent: () => api.get('/distribution/top-content/'),
+
+  // Analytics
+  analytics: () => api.get('/distribution/analytics/'),
+  trends: () => api.get('/distribution/trends/'),
+
+  // Export
+  exportRevenue: (format: 'json' | 'csv') =>
+    api.get(`/distribution/revenue/export/?format=${format}`),
+}
+
+export const adminApi = {
+  // System Health
+  systemHealth: () => api.get('/v1/health/'),
+  services: () => api.get('/v1/admin/services/'),
+
+  // Celery
+  celeryStats: () => api.get('/v1/admin/celery/stats/'),
+  celeryTasks: () => api.get('/v1/admin/celery/tasks/'),
+  purgeQueue: (queue: string) => api.post('/v1/admin/celery/purge/', { queue }),
+
+  // Database
+  dbStats: () => api.get('/v1/admin/db/stats/'),
+
+  // Logs
+  logs: (level?: string, limit?: number) =>
+    api.get(`/v1/admin/logs/?level=${level || 'all'}&limit=${limit || 100}`),
+
+  // Cache
+  cacheStats: () => api.get('/v1/admin/cache/stats/'),
+  clearCache: () => api.post('/v1/admin/cache/clear/'),
+
+  // Users
+  users: () => api.get('/v1/admin/users/'),
+  userDetail: (userId: string) => api.get(`/v1/admin/users/${userId}/`),
+}
