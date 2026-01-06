@@ -16,12 +16,11 @@ from core.models.agents_registry import UnifiedAgentTemplate
 User = get_user_model()
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Session 693: Allow public access for Intelligence Command Center
 def list_agents(request):
     """
     List all available AI agent templates from the database
     """
-    user = request.user
     page = int(request.GET.get('page', 1))
     page_size = int(request.GET.get('page_size', 100))  # Increased default to 100
     specialization = request.GET.get('specialization', None)
@@ -40,9 +39,29 @@ def list_agents(request):
     paginator = Paginator(queryset, page_size)
     page_obj = paginator.get_page(page)
     
+    # Session 693: Get execution stats for agents
+    from core.models_unified_system import Agent as UnifiedAgent
+    from django.utils import timezone
+    from datetime import timedelta
+
+    today = timezone.now().date()
+
+    # Build a map of agent execution stats
+    agent_stats = {}
+    try:
+        unified_agents = UnifiedAgent.objects.filter(is_active=True)
+        for ua in unified_agents:
+            agent_stats[ua.name] = {
+                'total_executions': ua.total_executions or 0,
+                'last_active': ua.last_active.isoformat() if ua.last_active else None,
+            }
+    except Exception:
+        pass  # If model doesn't exist, skip
+
     # Serialize the agents
     agents_data = []
     for agent in page_obj:
+        stats = agent_stats.get(agent.name, {})
         agent_dict = {
             'id': str(agent.id),
             'name': agent.name,
@@ -55,28 +74,20 @@ def list_agents(request):
             'created_at': agent.created_at.isoformat() if agent.created_at else datetime.now().isoformat(),
             'system_prompt': agent.system_prompt or '',
             'required_tools': agent.required_tools or [],
-            'is_active': agent.is_active
+            'is_active': agent.is_active,
+            # Session 693: Fields for Intelligence Command Center
+            'isActive': agent.is_active,
+            'totalExecutions': stats.get('total_executions', 0),
+            'lastActive': stats.get('last_active', None),
         }
         agents_data.append(agent_dict)
-    
-    # Build next/previous URLs
-    next_url = None
-    if page_obj.has_next():
-        next_url = f'/api/v1/agents/list/?page={page_obj.next_page_number()}&page_size={page_size}'
-        if specialization:
-            next_url += f'&specialization={specialization}'
-    
-    previous_url = None
-    if page_obj.has_previous():
-        previous_url = f'/api/v1/agents/list/?page={page_obj.previous_page_number()}&page_size={page_size}'
-        if specialization:
-            previous_url += f'&specialization={specialization}'
-    
+
+    # Session 693: Return both 'agents' (for frontend) and 'results' (for compatibility)
     return Response({
         'count': paginator.count,
-        'next': next_url,
-        'previous': previous_url,
-        'results': agents_data
+        'agents': agents_data,
+        'results': agents_data,
+        'total': paginator.count
     })
 
 
