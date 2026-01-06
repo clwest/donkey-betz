@@ -576,6 +576,32 @@ export default function IntelligencePage() {
                         Start Gate
                       </button>
                     )}
+                    {/* in_progress with incomplete checklist → Approve All Items */}
+                    {/* Session 692: Add button to approve all checklist items at once */}
+                    {gate.status === 'in_progress' && gate.checklist_completed < gate.checklist_total && (
+                      <button
+                        className="btn btn-secondary text-sm flex items-center gap-1"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            const response = await pilotsApi.approveAllItems(gate.id)
+                            if (response.data?.success) {
+                              setActionResult({ type: 'success', message: `Approved ${response.data.items_approved} checklist items` })
+                              await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                            } else {
+                              setActionResult({ type: 'error', message: response.data?.message || 'Failed to approve items' })
+                            }
+                          } catch {
+                            setActionResult({ type: 'error', message: 'Failed to approve checklist items' })
+                          }
+                        }}
+                        disabled={isLoading}
+                        title={`Approve all ${gate.checklist_total - gate.checklist_completed} pending checklist items`}
+                      >
+                        <CheckCircle size={14} />
+                        Approve All ({gate.checklist_total - gate.checklist_completed})
+                      </button>
+                    )}
                     {/* in_progress → Mark Ready */}
                     {/* Session 692: Show Mark Ready only when checklist is reasonably complete */}
                     {gate.status === 'in_progress' && (
@@ -1505,6 +1531,29 @@ export default function IntelligencePage() {
                         >
                           <Play size={16} />
                           Start Gate
+                        </button>
+                      )}
+                      {/* Session 692: Add Approve All Items button for incomplete checklists */}
+                      {gate.status === 'in_progress' && gate.checklist_completed < gate.checklist_total && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await pilotsApi.approveAllItems(gate.id)
+                              if (response.data?.success) {
+                                setActionResult({ type: 'success', message: `Approved ${response.data.items_approved} checklist items` })
+                                await queryClient.refetchQueries({ queryKey: ['pilot-gates'] })
+                                await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                              } else {
+                                setActionResult({ type: 'error', message: response.data?.message || 'Failed to approve items' })
+                              }
+                            } catch {
+                              setActionResult({ type: 'error', message: 'Failed to approve checklist items' })
+                            }
+                          }}
+                          className="btn btn-secondary flex items-center gap-2"
+                        >
+                          <CheckCircle size={16} />
+                          Approve All Items ({gate.checklist_total - gate.checklist_completed})
                         </button>
                       )}
                       {/* Session 692: Check response.success and show checklist % */}
