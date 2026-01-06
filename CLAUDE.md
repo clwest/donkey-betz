@@ -8,7 +8,7 @@
 |-----------|-------|---------|
 | **Agents** | 72 | 69 routable (Session 663: +SystemIntelligenceAgent) |
 | **Spiders** | 77 | 72 working, 5 need API keys |
-| **PA Tools** | 81 | +4 ML Pipeline tools (Session 673) |
+| **PA Tools** | 82 | +universal_agent_tool connects ALL 69 agents (Session 674) |
 | **Database Models** | 324+ | 37 categories |
 | **Celery Tasks** | 127 | 14 added in Session 648 |
 | **Services** | 93 | Business logic layer |
@@ -169,6 +169,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **674** | **Universal Agent Tool** - 1 tool connects PA to ALL 69 agents (42 newly accessible) | `SESSION_674_UNIVERSAL_AGENT_TOOL.md` |
 | **673** | **Brain-Nervous System Connection** - 4 PA tools to manage ML Pipeline | `SESSION_673_BRAIN_NERVOUS_SYSTEM.md` |
 | **672** | **Agent Execution Automation** - Celery task to execute agents from OpportunityTasks | `SESSION_672_AGENT_EXECUTION_AUTOMATION.md` |
 | **669** | **ML Scoring Engine Phase 1** - Fixed dead features (0%→64% keyword_ai), trained v5.0 | `00-START-NEXT-SESSION.md` |

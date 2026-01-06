@@ -620,6 +620,66 @@ DO NOT USE FOR:
 - Viewing opportunities -> use opportunity_manager_tool
 - Managing tasks -> use task_manager_tool""",
 
+
+    # -------------------------------------------------------------------------
+    # SESSION 674: UNIVERSAL AGENT TOOL
+    # -------------------------------------------------------------------------
+
+    "universal_agent_tool": """Invoke ANY specialized agent by name for tasks not covered by dedicated tools.
+
+USE THIS WHEN user requests:
+- BLOCKCHAIN: "Audit this smart contract", "Watch whale wallets", "Check for exploits"
+  -> agent: BlockchainAuditCoordinator, SmartContractAuditorAgent, WhaleWatcherAgent, ExploitDetectorAgent
+
+- STOCK ANALYSIS: "Analyze NVDA stock", "Watch market movements", "Check institutional activity"
+  -> agent: StockAuditCoordinator, StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent
+
+- DEVELOPMENT: "Generate code for X", "Review this code", "Help with DevOps"
+  -> agent: CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent
+
+- PODCAST: "Create a podcast debate about X", "Have agents discuss Y"
+  -> agent: PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent
+
+- MARKETS: "Analyze prediction markets", "Check sports odds", "Find arbitrage opportunities"
+  -> agent: PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+
+- NARRATIVE: "Track narrative drift", "Analyze cultural trends", "Find trend breaks"
+  -> agent: NarrativeDriftCoordinator, NarrativeHistorianAgent, CulturalImpactAgent
+
+- CONTENT STUDIO: "Autonomous content generation", "Topic mining", "Performance analysis"
+  -> agent: AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent
+
+- RENDERING: "Render video in DaVinci Resolve"
+  -> agent: ResolveAgent
+
+- SYSTEM: "Check system health", "Platform diagnostics"
+  -> agent: SystemIntelligenceAgent, ThinkingAgent
+
+- CAMPAIGNS: "Orchestrate marketing campaign", "Run AI series workflow"
+  -> agent: CampaignOrchestratorAgent, AISeriesWorkflowAgent
+
+Available agent categories and their agents:
+1. Blockchain (5): BlockchainAuditCoordinator, SmartContractAuditorAgent, TransactionMonitorAgent, WhaleWatcherAgent, ExploitDetectorAgent
+2. Stocks (9): StockAuditCoordinator, StockAnalystAgent, MarketMovementMonitorAgent, InstitutionalWatcherAgent, MarketAnomalyDetectorAgent, BullCaseAgent, BearCaseAgent, SignalScannerAgent, MarketIntelligenceCoordinator
+3. Development (4): CodeGeneratorAgent, FullStackDeveloperAgent, CodeReviewAgent, DevOpsAgent
+4. Podcast (4): PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent
+5. Markets (3): PredictionMarketAnalyst, SportsOddsAnalyst, ArbitrageDetector
+6. Narrative (4): NarrativeDriftCoordinator, NarrativeHistorianAgent, TrendBreakDetectorAgent, CulturalImpactAgent
+7. Content Studio (4): AutonomousContentStudioCoordinator, TopicMinerAgent, ContrarianAgent, PerformanceAnalystAgent
+8. Rendering (1): ResolveAgent
+9. System (2): SystemIntelligenceAgent, ThinkingAgent
+10. Campaign (2): CampaignOrchestratorAgent, AISeriesWorkflowAgent
+11. Security (2): MemoryIsolationAgent, ContentAuditAgent
+12. Legal (1): LegalDocDrafterAgent
+13. Market Intelligence (1): MarketIntelligenceAgent
+
+DO NOT USE FOR:
+- Image creation -> use image_generation_agent
+- Video creation -> use video_generation_agent
+- Research -> use web_search
+- Strategy -> use strategy agents (brand_strategy_agent, etc.)
+- Executive decisions -> use cto_agent, coo_agent, etc.""",
+
 }
 
 

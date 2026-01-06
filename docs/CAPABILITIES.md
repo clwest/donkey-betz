@@ -10,7 +10,7 @@
 |-----------|-------|---------|
 | **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
-| **PA Tools** | **77** | 5.73% endpoint coverage (Session 586) |
+| **PA Tools** | **81** | +4 ML Pipeline tools (Session 673) |
 | **Database Models** | **324+** | 37 categories |
 | **Celery Tasks** | **226** | 53 scheduled via Beat |
 | **Services** | **93** | Business logic layer |
@@ -77,7 +77,7 @@
 | **Betting Dashboard** | **8 Sub-tabs + Push Notifications** | **Production (Session 562)** |
 | **Chief of Staff Layer** | **Pro/Con Review Documents** | **Production (Session 555)** |
 | **System Intelligence Agent** | **Platform Health & Attention Monitoring** | **Production (Session 663)** |
-| **PA Tools** | **77 Tools (5.73% coverage)** | **Production (Session 586)** |
+| **PA Tools** | **82 Tools (+universal_agent_tool)** | **Production (Session 674)** |
 | **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
 | **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
 

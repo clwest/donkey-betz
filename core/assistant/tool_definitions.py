@@ -66,6 +66,8 @@ def get_tool_definitions() -> List[Dict]:
         _get_task_manager_tool_definition(),          # Manage OpportunityTasks
         _get_pipeline_orchestrator_tool_definition(), # Manual pipeline execution
         _get_revenue_tracker_tool_definition(),       # Track revenue/outcomes
+        # Session 674: Universal Agent Tool - connects PA to ALL 42 previously unreachable agents
+        _get_universal_agent_tool_definition(),       # Invoke ANY agent by name
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1087,5 +1089,83 @@ def _get_revenue_tracker_tool_definition() -> Dict:
                 }
             },
             "required": ["action"]
+        }
+    }
+
+
+def _get_universal_agent_tool_definition() -> Dict:
+    """
+    Session 674: Universal Agent Tool - invoke ANY agent by name.
+
+    This single tool provides access to all 69 routable agents, connecting
+    the PA (brain) to all agents (organs) without needing individual handlers.
+    """
+    return {
+        "type": "function",
+        "name": "universal_agent_tool",
+        "description": get_tool_description("universal_agent_tool"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "agent_name": {
+                    "type": "string",
+                    "description": "Name of the agent to invoke (e.g., 'BlockchainAuditCoordinator', 'StockAnalystAgent', 'CodeGeneratorAgent')",
+                    "enum": [
+                        # Blockchain (5)
+                        "BlockchainAuditCoordinator", "SmartContractAuditorAgent",
+                        "TransactionMonitorAgent", "WhaleWatcherAgent", "ExploitDetectorAgent",
+                        # Stocks (9)
+                        "StockAuditCoordinator", "StockAnalystAgent", "MarketMovementMonitorAgent",
+                        "InstitutionalWatcherAgent", "MarketAnomalyDetectorAgent", "BullCaseAgent",
+                        "BearCaseAgent", "SignalScannerAgent", "MarketIntelligenceCoordinator",
+                        # Development (4)
+                        "CodeGeneratorAgent", "FullStackDeveloperAgent", "CodeReviewAgent", "DevOpsAgent",
+                        # Podcast (4)
+                        "PodcastCoordinatorAgent", "DebateAdvocateAgent", "DebateSkepticAgent", "ModeratorAgent",
+                        # Markets (3)
+                        "PredictionMarketAnalyst", "SportsOddsAnalyst", "ArbitrageDetector",
+                        # Narrative (4)
+                        "NarrativeDriftCoordinator", "NarrativeHistorianAgent",
+                        "TrendBreakDetectorAgent", "CulturalImpactAgent",
+                        # Content Studio (4)
+                        "AutonomousContentStudioCoordinator", "TopicMinerAgent",
+                        "ContrarianAgent", "PerformanceAnalystAgent",
+                        # Rendering (1)
+                        "ResolveAgent",
+                        # System (2)
+                        "SystemIntelligenceAgent", "ThinkingAgent",
+                        # Campaign (2)
+                        "CampaignOrchestratorAgent", "AISeriesWorkflowAgent",
+                        # Security (2)
+                        "MemoryIsolationAgent", "ContentAuditAgent",
+                        # Legal (1)
+                        "LegalDocDrafterAgent",
+                        # Market Intelligence (1)
+                        "MarketIntelligenceAgent",
+                        # Orchestration (3)
+                        "OpportunityPipelineAgent", "ContentExecutorAgent", "WorkflowAgent",
+                        # Technical (1)
+                        "TechnicalDocumentAgent"
+                    ]
+                },
+                "task": {
+                    "type": "string",
+                    "description": "The task for the agent to perform in natural language"
+                },
+                "context": {
+                    "type": "object",
+                    "description": "Optional additional context (symbol for stocks, contract_address for blockchain, etc.)",
+                    "properties": {
+                        "symbol": {"type": "string", "description": "Stock ticker symbol (e.g., 'NVDA', 'AAPL')"},
+                        "contract_address": {"type": "string", "description": "Smart contract address for blockchain analysis"},
+                        "topic": {"type": "string", "description": "Topic for debates/discussions"},
+                        "code": {"type": "string", "description": "Code snippet for code review"},
+                        "language": {"type": "string", "description": "Programming language"},
+                        "timeframe": {"type": "string", "description": "Time period for analysis"},
+                        "market": {"type": "string", "description": "Market name (e.g., 'kalshi', 'polymarket')"}
+                    }
+                }
+            },
+            "required": ["agent_name", "task"]
         }
     }
