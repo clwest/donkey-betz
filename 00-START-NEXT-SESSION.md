@@ -1,67 +1,51 @@
-# Session 691 - Start Here
+# Session 692 - Start Here
 
-**Previous Session:** 690 (Implementation Pipeline)
+**Previous Session:** 691 (Implementation Review UI)
 **Date:** January 6, 2026
-**Focus:** Continue Frontend Audit
+**Focus:** Bug Fixes + Remaining Pages
 **Status:** 100% Reality Score | Implementation Pipeline Active
 
-> **PRIORITY:** Audit remaining pages (Assistant, Settings)
+> **PRIORITY:** Fix remaining bugs, audit Assistant & Settings pages
 
 ---
 
-## Session 690 Summary: Implementation Pipeline COMPLETE
+## Session 691 Summary: Implementation Review UI
 
 ### What Was Built
 
-Built a complete implementation pipeline that turns completed pilots into actual system changes. **The governance system is no longer advisory-only!**
+1. **Implementation Review Modal** - Full modal showing:
+   - Why implementation needs review
+   - What needs to be built
+   - Recommended action
+   - Key insights
+   - Implementation steps
+   - Execution results
 
-**Before Session 690:**
-- Pilot completes → "Success" text stored → Nothing happens
-- Recommendations sit unused in database
+2. **Clickable Implementation Badges** - Click "Needs Review" to open modal
 
-**After Session 690:**
-- Pilot completes → Implementation created → Handler executes → Real changes!
+3. **FullStackDeveloperAgent Bug Fix** - Fixed parameter mismatch:
+   ```python
+   # Fixed: task= instead of prompt=
+   agent.execute(task=prompt, context={...}, scifi_context={}, spider_context={})
+   ```
 
-### Components
-
-1. **Models** (`core/models_implementation_pipeline.py`):
-   - PilotImplementation: Tracks implementation status
-   - ImplementationAction: Audit trail
-
-2. **Service** (`core/services/implementation_executor.py`):
-   - AgentUpdateHandler: Creates LearningInsights (auto)
-   - CodeGenerationHandler: Routes to FullStackDeveloperAgent
-   - WorkflowUpdateHandler: Creates workflow templates
-   - TaskCreationHandler: Creates human tasks
-
-3. **Celery Task** (`core/tasks.py`):
-   - `execute_pilot_implementations`: Runs every 2 hours at :30
-
-4. **API Endpoints**:
-   - GET `/api/pilots/<id>/implementation/` - Implementation details
-   - POST `/api/pilots/<id>/implement/` - Trigger implementation
-
-### Test Results
-
-| Result | Count | Type |
-|--------|-------|------|
-| Completed automatically | 2 | agent_update |
-| Requires human action | 8 | code_generation, workflow_update |
-
-### Commits (Session 690)
+### Commits (Session 691)
 ```
-ad3ab221 feat(Session 690): Implementation Pipeline - Execute pilot recommendations
-3078f35c docs(Session 689): Final handoff - Intelligence Command Center complete
+[pending commit]
 ```
 
 ### Handoff Doc
-`docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md`
+`docs/handoffs/SESSION_691_IMPLEMENTATION_REVIEW_UI.md`
 
 ---
 
-## Session 691 Priority: Remaining Pages
+## Session 692 Priority: Bug Fixes
 
-### Pages Audited (10/12)
+### Known Bugs to Address
+1. User-reported bugs (ask user)
+2. Remaining code_generation implementation issues
+
+### Pages Still Needing Audit (2/12)
 
 | Page | Status | Session |
 |------|--------|---------|
@@ -73,16 +57,10 @@ ad3ab221 feat(Session 690): Implementation Pipeline - Execute pilot recommendati
 | Analysis | Working | 687 |
 | Betting | Working | 687-688 |
 | Discord | Working | 688 |
-| Intelligence | COMPLETE | 688-690 |
+| Intelligence | COMPLETE | 688-691 |
 | Research | Working | 688 |
 | **Assistant** | NOT AUDITED | - |
 | **Settings** | NOT AUDITED | - |
-
-### Remaining Work
-
-1. **Assistant Page** - Full audit needed
-2. **Settings Page** - Full audit needed
-3. Expand auto-implementable types in implementation pipeline
 
 ---
 
@@ -93,24 +71,22 @@ ad3ab221 feat(Session 690): Implementation Pipeline - Execute pilot recommendati
 make start && make celery
 
 # Access React frontend
-open http://localhost:3003/
+open http://localhost:3000/
 
-# Test Implementation Pipeline APIs
-curl -s http://localhost:8000/api/pilots/dashboard/ | python3 -m json.tool
+# Test Implementation Review Modal
+# 1. Go to Intelligence > Pilots
+# 2. Click a "Needs Review" badge
 
-# Manually trigger implementation for a pilot
+# Check implementation details via API
+curl -s http://localhost:8000/api/pilots/<pilot_id>/implementation/ | python3 -m json.tool
+
+# Manually trigger implementation
 curl -s -X POST http://localhost:8000/api/pilots/<pilot_id>/implement/
-
-# Check implementation details
-curl -s http://localhost:8000/api/pilots/<pilot_id>/implementation/
-
-# Run implementation task manually
-.venv/bin/python manage.py shell -c "from core.tasks import execute_pilot_implementations; print(execute_pilot_implementations())"
 ```
 
 ---
 
-## System Stats (Session 690)
+## System Stats (Session 691)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
@@ -119,27 +95,22 @@ curl -s http://localhost:8000/api/pilots/<pilot_id>/implementation/
 | Pilot Gates | 21 | Actionable |
 | Running Pilots | 7 | In Pilots tab |
 | Completed Pilots | 12 | With implementations |
-| Implementations | 10 | 2 auto, 8 human |
-| Learning Insights | 1+ | From pilot implementations |
+| Implementations | 10 | Now viewable in UI |
 | React Pages Audited | 10/12 | Assistant, Settings remaining |
 
 ---
 
-## Files Modified (Session 690)
+## Files Modified (Session 691)
 
 ### New Files
 | File | Purpose |
 |------|---------|
-| `core/models_implementation_pipeline.py` | Implementation models |
-| `core/services/implementation_executor.py` | Executor service |
-| `core/migrations/0144_session_690_implementation_pipeline.py` | DB tables |
+| `docs/handoffs/SESSION_691_IMPLEMENTATION_REVIEW_UI.md` | Session handoff |
 
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `core/tasks.py` | Celery task |
-| `core/celery.py` | Beat schedule |
-| `core/views_agent_learning.py` | API endpoints |
-| `core/urls.py` | URL routes |
-| `core/auth_middleware.py` | Whitelist |
-| `core/models/__init__.py` | Imports |
+| `frontend/src/pages/IntelligencePage.tsx` | Implementation review modal |
+| `frontend/src/lib/api.ts` | implementationDetail() API |
+| `core/services/implementation_executor.py` | Fixed agent call |
+| `docs/handoffs/SESSION_690_IMPLEMENTATION_PIPELINE.md` | Added UI section |

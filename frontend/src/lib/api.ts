@@ -102,6 +102,9 @@ export const pilotsApi = {
     api.post(`/pilot-gates/${gateId}/approve-all/`),
   startPilot: (gateId: string) =>
     api.post(`/pilot-gates/${gateId}/pilot/`),
+  // Session 691: Implementation review
+  implementationDetail: (pilotId: string) =>
+    api.get(`/pilots/${pilotId}/implementation/`),
 }
 
 export const experimentsApi = {

@@ -176,6 +176,28 @@ Result:
 | `core/urls.py` | +4 lines - URL routes |
 | `core/auth_middleware.py` | +1 line - Whitelist |
 | `core/models/__init__.py` | +3 lines - Imports |
+| `frontend/src/pages/IntelligencePage.tsx` | +60 lines - Implementation status UI |
+
+---
+
+## Frontend UI Updates (Session 691)
+
+Implementation status is now visible in the React frontend:
+
+### Completed Pilots List
+Each completed pilot shows an implementation badge:
+- ✓ **Implemented** (green) - Auto-executed by handler
+- ⚠ **Needs Review** (amber) - Requires human action
+- ✗ **Failed** (red) - Execution failed
+- ○ **Pending** (gray) - Awaiting pipeline execution
+- **Not Implemented** (gray) - No implementation record yet
+
+### Pilot Detail Modal
+For successful pilots, shows dedicated "Implementation Status" section:
+- Status badge with color coding
+- Implementation type (agent_update, code_generation, etc.)
+- Handler that executed it (for completed)
+- Completion timestamp
 
 ---
 
