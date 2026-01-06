@@ -2855,6 +2855,8 @@ urlpatterns = [
     path('api/pilots/<uuid:pilot_id>/implementation/', get_pilot_implementation, name='pilot-implementation'),
     path('api/pilots/<uuid:pilot_id>/implement/', trigger_pilot_implementation, name='trigger-pilot-implementation'),
     # Session 596: Experiment Tracking Registry
+    # Session 692: Added /pilot-experiments/ to avoid conflict with A/B experiments at /experiments/
+    path('api/pilot-experiments/', get_experiments, name='pilot-experiments-list'),
     path('api/experiments/', get_experiments, name='get-experiments'),
     path('api/experiments/portfolio/', get_experiment_portfolio, name='experiment-portfolio'),
     path('api/experiments/<uuid:experiment_id>/update-kpi/', update_experiment_kpi, name='update-experiment-kpi'),

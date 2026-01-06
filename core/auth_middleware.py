@@ -66,6 +66,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/boardroom/',  # Session 564: Boardroom sub-tab
         '/api/pilot-gates/',  # Session 590: Pilot Readiness Gates
         '/api/pilots/',  # Session 690: Pilot Implementation Pipeline
+        '/api/pilot-experiments/',  # Session 692: Pilot Experiments for Command Center
         '/api/celery/',  # Session 660: Celery Task Monitor
         '/api/icc/',  # Session 660: ICC Health Dashboard
         '/api/artifacts/',  # Session 564: Artifacts sub-tab
