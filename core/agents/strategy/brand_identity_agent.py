@@ -34,8 +34,35 @@ import time
 from typing import Dict, Any, Optional
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_brand_with_ml(brand_data: dict) -> dict:
+    """Analyze brand data using ML models (Text + Clustering)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        # Use TEXT task type for brand sentiment/style analysis
+        result = router.auto_route(
+            data=brand_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'brand_analysis': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML brand analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class BrandIdentityAgent(BaseAgent):

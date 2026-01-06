@@ -10,8 +10,35 @@ from typing import Dict, Any, List
 from django.utils import timezone
 
 from core.agents.base_agent import BaseAgent, AgentResult
+from ml.auto_selection import TaskType
 
 logger = logging.getLogger(__name__)
+
+
+def analyze_cultural_impact_with_ml(impact_data: dict) -> dict:
+    """Analyze cultural impact using ML models (Text)."""
+    try:
+        from core.services.agent_model_router import get_agent_model_router
+        router = get_agent_model_router()
+
+        # Use TEXT task type for impact text analysis
+        result = router.auto_route(
+            data=impact_data,
+            task_hint=TaskType.TEXT,
+            max_models=2
+        )
+
+        return {
+            'ml_used': True,
+            'task_type': result.auto_selection.get('task_type', 'text'),
+            'models_used': result.models_used,
+            'confidence': round(result.confidence, 2),
+            'ml_insights': result.explanation,
+            'impact_analysis': result.prediction if hasattr(result, 'prediction') else None,
+        }
+    except Exception as e:
+        logger.warning(f"ML cultural impact analysis failed: {e}")
+        return {'ml_used': False, 'reason': f'ML error: {str(e)}'}
 
 
 class CulturalImpactAgent(BaseAgent):
