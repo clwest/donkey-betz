@@ -161,20 +161,54 @@ def live_predictions(request):
         if not predictions.exists():
             predictions = AgentPrediction.objects.select_related('agent').order_by('-created_at')[:20]
 
+        # Session 692: Return rich prediction data
+        predictions_data = []
+        for pred in predictions:
+            # Calculate days until deadline
+            days_remaining = None
+            if pred.deadline:
+                delta = pred.deadline - timezone.now()
+                days_remaining = max(0, delta.days)
+
+            predictions_data.append({
+                'id': str(pred.id),
+                'title': pred.title[:100] if pred.title else 'Prediction',
+                'prediction': pred.prediction[:500] if pred.prediction else '',  # Full prediction text
+                'probability': int((pred.confidence or 0.5) * 100),
+                'category': pred.category or 'general',
+
+                # Agent info
+                'agent_name': pred.agent.name if pred.agent else 'AI Agent',
+                'agent_type': pred.agent.agent_type if pred.agent else None,
+
+                # Source info
+                'source_type': pred.source or 'analysis',  # dream, analysis, pattern, etc.
+                'source_reference': pred.source_reference or {},
+
+                # Tags
+                'tags': pred.tags[:5] if pred.tags else [],  # Limit to 5 tags
+
+                # Timing
+                'timeframe': pred.timeframe or 'quarter',
+                'deadline': pred.deadline.isoformat() if pred.deadline else None,
+                'days_remaining': days_remaining,
+                'created_at': pred.created_at.isoformat() if pred.created_at else None,
+
+                # Status & Verification
+                'status': pred.status or 'pending',
+                'is_featured': pred.is_featured,
+                'verified_at': pred.verified_at.isoformat() if pred.verified_at else None,
+                'accuracy_score': pred.accuracy_score,
+
+                # Engagement
+                'upvotes': pred.upvotes or 0,
+                'views': pred.views or 0,
+            })
+
         return Response({
             'success': True,
-            'predictions': [
-                {
-                    'id': str(pred.id),
-                    'title': pred.title[:100] if pred.title else (pred.prediction[:100] if pred.prediction else 'Prediction'),
-                    'probability': int((pred.confidence or 0.5) * 100),
-                    'category': pred.category or 'general',
-                    'source': pred.agent.name if pred.agent else 'AI Agent',
-                    'created_at': pred.created_at.isoformat() if pred.created_at else None,
-                }
-                for pred in predictions
-            ],
-            'count': predictions.count()
+            'predictions': predictions_data,
+            'count': len(predictions_data)
         })
     except Exception as e:
         return Response({
