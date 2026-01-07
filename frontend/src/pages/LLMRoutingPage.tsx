@@ -23,7 +23,7 @@ interface Provider {
 interface Model {
   model_id: string
   display_name: string
-  provider: string
+  provider: string | { name: string; display_name: string }
   cost_per_1m_input: number
   cost_per_1m_output: number
   max_context: number
@@ -182,8 +182,8 @@ function ModelRow({ model }: { model: Model }) {
             <div>
               <p className="text-gray-400">Capabilities</p>
               <div className="flex flex-wrap gap-1 mt-1">
-                {model.capabilities?.map(cap => (
-                  <span key={cap} className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">
+                {model.capabilities?.map((cap, index) => (
+                  <span key={cap || `cap-${index}`} className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded">
                     {cap}
                   </span>
                 ))}
@@ -441,8 +441,8 @@ export default function LLMRoutingPage() {
                     Provider Status
                   </h3>
                   <div className="space-y-2">
-                    {providers.slice(0, 6).map((provider: Provider) => (
-                      <div key={provider.name} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
+                    {providers.slice(0, 6).map((provider: Provider, index: number) => (
+                      <div key={provider.name || `provider-${index}`} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
                         <div className="flex items-center gap-2">
                           {provider.has_api_key ? (
                             <CheckCircle size={14} className="text-accent-green" />
@@ -508,8 +508,8 @@ export default function LLMRoutingPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {providers.map((provider: Provider) => (
-                <ProviderCard key={provider.name} provider={provider} />
+              {providers.map((provider: Provider, index: number) => (
+                <ProviderCard key={provider.name || `provider-${index}`} provider={provider} />
               ))}
             </div>
           )}
@@ -529,8 +529,8 @@ export default function LLMRoutingPage() {
                 className="w-full pl-10 pr-4 py-2 bg-dark-card border border-dark-border rounded-lg text-sm focus:border-primary-500 focus:outline-none"
               >
                 <option value="">All Providers</option>
-                {providers.map(p => (
-                  <option key={p.name} value={p.name}>{p.display_name}</option>
+                {providers.map((p, index) => (
+                  <option key={p.name || `provider-opt-${index}`} value={p.name}>{p.display_name}</option>
                 ))}
               </select>
             </div>
@@ -542,8 +542,8 @@ export default function LLMRoutingPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {models.map((model: Model) => (
-                <ModelRow key={model.model_id} model={model} />
+              {models.map((model: Model, index: number) => (
+                <ModelRow key={model.model_id || `model-${index}`} model={model} />
               ))}
               {models.length === 0 && (
                 <p className="text-center text-gray-400 py-8">No models found</p>
@@ -585,8 +585,8 @@ export default function LLMRoutingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {agentConfigs.map((config: AgentConfig) => (
-                    <AgentConfigRow key={config.agent_name} config={config} />
+                  {agentConfigs.map((config: AgentConfig, index: number) => (
+                    <AgentConfigRow key={config.agent_name || `config-${index}`} config={config} />
                   ))}
                 </tbody>
               </table>
@@ -619,8 +619,8 @@ export default function LLMRoutingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log: CallLog) => (
-                    <LogRow key={log.id} log={log} />
+                  {logs.map((log: CallLog, index: number) => (
+                    <LogRow key={log.id || `log-${index}`} log={log} />
                   ))}
                 </tbody>
               </table>
@@ -682,8 +682,8 @@ export default function LLMRoutingPage() {
                 <div className="card">
                   <h3 className="text-lg font-medium mb-4">Cost by Provider (7 days)</h3>
                   <div className="space-y-3">
-                    {analytics.by_provider.map((item: any) => (
-                      <div key={item.provider} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
+                    {analytics.by_provider.map((item: any, index: number) => (
+                      <div key={item.provider || `by-provider-${index}`} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
                         <div>
                           <span className="font-medium">{item.provider}</span>
                           <span className="text-sm text-gray-400 ml-2">({item.calls} calls)</span>
@@ -708,8 +708,8 @@ export default function LLMRoutingPage() {
                 <div className="card">
                   <h3 className="text-lg font-medium mb-4">Top Agents by Cost (7 days)</h3>
                   <div className="space-y-3">
-                    {analytics.by_agent.slice(0, 10).map((item: any) => (
-                      <div key={item.agent} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
+                    {analytics.by_agent.slice(0, 10).map((item: any, index: number) => (
+                      <div key={item.agent || `by-agent-${index}`} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
                         <div>
                           <span className="font-medium">{item.agent}</span>
                           <span className="text-sm text-gray-400 ml-2">({item.calls} calls)</span>
