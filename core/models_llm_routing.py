@@ -765,4 +765,27 @@ DEFAULT_AGENT_LLM_CONFIGS = [
 
     # Security Agent → GPT-5.1 (careful analysis)
     {'agent_name': 'MemoryIsolationAgent', 'agent_category': 'security', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
+
+    # ============================================================================
+    # SESSION 699: Additional Agent Configs (11 more agents - completing 64→75)
+    # ============================================================================
+
+    # Coordinator Agents → GPT-5-mini (fast routing for orchestration)
+    {'agent_name': 'AutonomousContentStudioCoordinator', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'BlockchainAuditCoordinator', 'agent_category': 'blockchain', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'MarketIntelligenceCoordinator', 'agent_category': 'markets', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'NarrativeDriftCoordinator', 'agent_category': 'narrative', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
+    {'agent_name': 'StockAuditCoordinator', 'agent_category': 'markets', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+
+    # Sports/Betting Agents → GPT-5.1 (financial analysis)
+    {'agent_name': 'ArbitrageDetector', 'agent_category': 'betting', 'primary': 'openai:gpt-5.1', 'fallback': 'openai:gpt-5-mini'},
+    {'agent_name': 'BookmakerAgent', 'agent_category': 'betting', 'primary': 'openai:gpt-5.1', 'fallback': 'openai:gpt-5-mini'},
+    {'agent_name': 'PredictionMarketAnalyst', 'agent_category': 'betting', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
+    {'agent_name': 'SportsOddsAnalyst', 'agent_category': 'betting', 'primary': 'openai:gpt-5.1', 'fallback': 'openai:gpt-5-mini'},
+
+    # Business/Strategy Agents → Claude (nuanced strategy)
+    {'agent_name': 'BusinessContentStrategyAgent', 'agent_category': 'business', 'primary': 'anthropic:claude-sonnet-4-20250514', 'fallback': 'openai:gpt-5.1'},
+
+    # Technical Agents → Claude (careful prompt engineering)
+    {'agent_name': 'PromptEngineeringAgent', 'agent_category': 'technical', 'primary': 'anthropic:claude-sonnet-4-20250514', 'fallback': 'openai:gpt-5.1'},
 ]
