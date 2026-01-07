@@ -90,11 +90,13 @@ Verified ALL 27 sidebar pages and their sub-tabs for proper API connectivity:
 - Added `system_health` from consciousness_api.get_system_health()
 - Changed Active Agents source from `AgentContribution` → `AgentExecution` (10 agents in 24h)
 - Changed Total Agents source from `UnifiedAgentTemplate` (28) → `Agent` model (72)
+- Aligned Agent Network card to use 24h data (was showing 1h "Active Now" = 0)
 
 **Commits:**
 - `ee748c64 fix(Session 719): Neural Orchestra header stats`
 - `6e963be2 fix(Session 719): Neural Orchestra Active Agents - use AgentExecution data`
 - `928f1c05 fix(Session 719): Neural Orchestra Total Agents - use Agent model (72 not 28)`
+- `6b1c5e7d fix(Session 719): Neural Orchestra - align Agent Network card with header`
 
 ---
 
@@ -201,7 +203,8 @@ curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 - `frontend/src/pages/BodyHealthPage.tsx` - Fixed Heart Details data path + icons
 - `frontend/src/pages/EvolutionPage.tsx` - Fixed Abilities interface + key mapping
 - `core/views_advisor_api.py` - Removed @login_required from GET endpoints
-- `ai_core/consciousness/neural_orchestra_reality_bridge.py` - Added missing system_status fields
+- `ai_core/consciousness/neural_orchestra_reality_bridge.py` - Fixed all Neural Orchestra data sources
+- `frontend/src/pages/NeuralOrchestraPage.tsx` - Aligned Agent Network card with header (24h)
 
 ---
 
@@ -212,4 +215,4 @@ curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 
 ---
 
-**Session 719 Complete** - Full connectivity audit passed, 4 UI bugs fixed (6 commits)
+**Session 719 Complete** - Full connectivity audit passed, 4 UI bugs fixed (7 commits)
