@@ -39,6 +39,8 @@ Implemented Phase 3 of the Unified Human System integration - Event Broadcasting
 | `frontend/src/pages/IntelligencePage.tsx` | Added `useSystemEvents` for pilot and execution events |
 | `frontend/src/pages/AgentsPage.tsx` | Added `useSystemEvents` for dream, level_up, and execution events |
 | `frontend/src/pages/WorkspacePage.tsx` | Added `useSystemEvents` for file modification events |
+| `frontend/src/pages/DashboardPage.tsx` | Added `useSystemEvents` for execution, body status, and dream events |
+| `frontend/src/pages/HumanPage.tsx` | Added `useSystemEvents` for gate critical, body status, and pilot events |
 
 ---
 
@@ -46,15 +48,15 @@ Implemented Phase 3 of the Unified Human System integration - Event Broadcasting
 
 | Event Type | Emitted When | Pages Listening |
 |------------|--------------|-----------------|
-| `agent_execution_complete` | Agent task completed | Intelligence, Agents |
-| `agent_execution_failed` | Agent task failed | Intelligence, Agents |
-| `pilot_started` | New pilot deployed | Intelligence |
-| `pilot_completed` | Pilot auto-completed | Intelligence |
-| `dream_generated` | Agent dream created | Agents |
+| `agent_execution_complete` | Agent task completed | Intelligence, Agents, Dashboard |
+| `agent_execution_failed` | Agent task failed | Intelligence, Agents, Dashboard |
+| `pilot_started` | New pilot deployed | Intelligence, Human |
+| `pilot_completed` | Pilot auto-completed | Intelligence, Human |
+| `dream_generated` | Agent dream created | Agents, Dashboard |
 | `level_up` | Agent leveled up | Agents |
 | `hive_mind_started` | Hive mind session began | (ready for HiveMindPage) |
-| `gate_became_critical` | Gate needs attention | (ready for HumanPage) |
-| `body_status_changed` | Body health changed | (ready for all pages) |
+| `gate_became_critical` | Gate needs attention | Human |
+| `body_status_changed` | Body health changed | Dashboard, Human |
 | `file_modified` | Workspace file changed | Workspace |
 
 ---
@@ -194,9 +196,9 @@ generate_agent_dreams.delay()
 | Add handlers to IntelligencePage | COMPLETE |
 | Add handlers to AgentsPage | COMPLETE |
 | Add handlers to WorkspacePage | COMPLETE |
-| Add handlers to DashboardPage | PENDING |
-| Add handlers to HumanPage | PENDING |
-| Add body_status_changed emitter | PENDING |
+| Add handlers to DashboardPage | COMPLETE |
+| Add handlers to HumanPage | COMPLETE |
+| Add body_status_changed emitter | PENDING (can be added when body services emit events) |
 
 ---
 

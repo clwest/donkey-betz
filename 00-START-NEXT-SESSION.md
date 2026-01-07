@@ -23,7 +23,7 @@ This document contains:
 
 ## Session 714 Accomplishments
 
-### Phase 3: Event Broadcasting - MOSTLY COMPLETE
+### Phase 3: Event Broadcasting - COMPLETE
 
 | File Created/Modified | Purpose |
 |----------------------|---------|
@@ -35,16 +35,15 @@ This document contains:
 | `frontend/src/pages/IntelligencePage.tsx` | Event handlers for pilots, executions |
 | `frontend/src/pages/AgentsPage.tsx` | Event handlers for dreams, level up, executions |
 | `frontend/src/pages/WorkspacePage.tsx` | Event handlers for file modifications |
+| `frontend/src/pages/DashboardPage.tsx` | Event handlers for executions, body, dreams |
+| `frontend/src/pages/HumanPage.tsx` | Event handlers for gates, body, pilots |
 
 **Features:**
 - 10 system event types: agent_execution_complete/failed, pilot_started/completed, dream_generated, level_up, hive_mind_started, gate_became_critical, body_status_changed, file_modified
 - Real-time query invalidation when events occur
 - Automatic page refresh without polling
 - Event routing via WebSocket channel groups
-
-**Remaining for Phase 3:**
-- Add event handlers to DashboardPage and HumanPage
-- Add body_status_changed emitter to body system services
+- All 5 main pages now subscribe to relevant events
 
 ---
 
@@ -83,8 +82,8 @@ This document contains:
 |-------|--------|---------|
 | **1** | COMPLETE | Body governance, alerts, operation blocking |
 | **2** | COMPLETE | EntityLink, Breadcrumb, navigation context |
-| **3** | MOSTLY COMPLETE | Event broadcasting via WebSocket (3 pages) |
-| **4** | IN PROGRESS | Shared state store unification |
+| **3** | COMPLETE | Event broadcasting via WebSocket (5 pages) |
+| **4** | Pending | Shared state store unification |
 | **5** | Pending | Sci-Fi features UI (13 pages) |
 
 ### Metrics After Phase 3
@@ -93,7 +92,8 @@ This document contains:
 |--------|-------|
 | Shared Zustand Stores | 3 (body, navigation, + existing) |
 | Cross-Page Links | 10+ via EntityLink |
-| Event Types Broadcast | **10** (new) |
+| Event Types Broadcast | **10** |
+| Pages with Real-Time Events | **5** (Dashboard, Intelligence, Agents, Workspace, Human) |
 | Backend API Utilization | ~8% |
 
 ---
