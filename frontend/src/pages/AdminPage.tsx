@@ -87,18 +87,20 @@ export default function AdminPage() {
   })
 
   // CIRCULATORY Service queries (Session 703)
+  // Use /circulate/ endpoint which returns full data with correct field names
   const { data: circulatoryStatusData, isLoading: loadingCirculatory, refetch: refetchCirculatory } = useQuery({
-    queryKey: ['circulatory-status'],
-    queryFn: () => circulatoryApi.status(),
+    queryKey: ['circulatory-circulate'],
+    queryFn: () => circulatoryApi.circulate(),
     refetchInterval: 30000,
     enabled: activeTab === 'circulatory',
   })
 
-  const { data: circulatoryRoutesData } = useQuery({
-    queryKey: ['circulatory-routes'],
-    queryFn: () => circulatoryApi.routes(),
-    enabled: activeTab === 'circulatory',
-  })
+  // Routes are now fetched from /circulate/ endpoint, not needed separately
+  // const { data: circulatoryRoutesData } = useQuery({
+  //   queryKey: ['circulatory-routes'],
+  //   queryFn: () => circulatoryApi.routes(),
+  //   enabled: activeTab === 'circulatory',
+  // })
 
   const { data: circulatoryBottlenecksData } = useQuery({
     queryKey: ['circulatory-bottlenecks'],
@@ -191,8 +193,31 @@ export default function AdminPage() {
 
   // CIRCULATORY data (Session 703)
   const circulatoryStatus = circulatoryStatusData?.data || {}
-  const circulatoryRoutes = circulatoryRoutesData?.data?.routes || []
-  const circulatoryBottlenecks = circulatoryBottlenecksData?.data?.bottlenecks || []
+  // Convert routes object to array format from /circulate/ endpoint
+  const circulatoryRoutesObj = circulatoryStatus.routes || {}
+  interface CirculatoryRoute {
+    id: string
+    name: string
+    display_name?: string
+    status: string
+    is_healthy: boolean
+    health_score: number
+    current_depth?: number
+    throughput?: number
+    latency_ms?: number
+    active_workers?: number
+    active_tasks?: number
+    bottleneck?: boolean
+  }
+  const circulatoryRoutes: CirculatoryRoute[] = Object.entries(circulatoryRoutesObj).map(([name, data]) => ({
+    id: name,
+    name,
+    status: 'unknown',
+    is_healthy: false,
+    health_score: 0,
+    ...(data as Partial<CirculatoryRoute>),
+  }))
+  const circulatoryBottlenecks = circulatoryStatus.bottlenecks || circulatoryBottlenecksData?.data?.bottlenecks || []
   const circulatoryHistory = circulatoryHistoryData?.data?.history || []
 
   const health = healthData?.data || {}
@@ -860,8 +885,8 @@ export default function AdminPage() {
                     <div>
                       <p className="text-sm text-gray-400">Routes</p>
                       <p className="text-2xl font-bold">
-                        {circulatoryRoutes.filter((r: { current_status?: { is_healthy?: boolean } }) => r.current_status?.is_healthy).length}/
-                        {circulatoryRoutes.length}
+                        {circulatoryStatus.routes_healthy ?? circulatoryRoutes.filter((r: { is_healthy?: boolean }) => r.is_healthy).length}/
+                        {circulatoryStatus.routes_checked ?? circulatoryRoutes.length}
                       </p>
                     </div>
                   </div>
@@ -869,15 +894,15 @@ export default function AdminPage() {
                 <div className="card">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className={cn(
-                      circulatoryBottlenecks.length > 0 ? 'text-accent-amber' : 'text-gray-500'
+                      (circulatoryStatus.bottleneck_count || circulatoryBottlenecks.length) > 0 ? 'text-accent-amber' : 'text-gray-500'
                     )} size={24} />
                     <div>
                       <p className="text-sm text-gray-400">Bottlenecks</p>
                       <p className={cn(
                         'text-2xl font-bold',
-                        circulatoryBottlenecks.length > 0 ? 'text-accent-amber' : 'text-accent-green'
+                        (circulatoryStatus.bottleneck_count || circulatoryBottlenecks.length) > 0 ? 'text-accent-amber' : 'text-accent-green'
                       )}>
-                        {circulatoryBottlenecks.length}
+                        {circulatoryStatus.bottleneck_count ?? circulatoryBottlenecks.length}
                       </p>
                     </div>
                   </div>
@@ -901,21 +926,23 @@ export default function AdminPage() {
                     id: string
                     name: string
                     display_name?: string
-                    route_type: string
-                    is_critical?: boolean
-                    current_status?: {
-                      status: string
-                      is_healthy: boolean
-                      health_score: number
-                      current_depth?: number
-                      current_throughput?: number
-                      current_latency_ms?: number
-                      last_activity?: string
-                    }
+                    status: string
+                    is_healthy: boolean
+                    health_score: number
+                    current_depth?: number
+                    throughput?: number
+                    latency_ms?: number
+                    active_workers?: number
+                    active_tasks?: number
+                    bottleneck?: boolean
                   }) => {
-                    const status = route.current_status
-                    const isHealthy = status?.is_healthy
-                    const statusStr = status?.status || 'unknown'
+                    // Data is flat from /circulate/ endpoint, not nested in current_status
+                    const isHealthy = route.is_healthy
+                    const statusStr = route.status || 'unknown'
+                    const healthScore = route.health_score || 0
+
+                    // Format route name for display
+                    const displayName = route.display_name || route.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
                     return (
                       <div
@@ -928,9 +955,9 @@ export default function AdminPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <p className="font-semibold">{route.display_name || route.name}</p>
-                            {route.is_critical && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-red/20 text-accent-red">Critical</span>
+                            <p className="font-semibold">{displayName}</p>
+                            {route.bottleneck && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber">Bottleneck</span>
                             )}
                           </div>
                           <span className={cn(
@@ -941,31 +968,31 @@ export default function AdminPage() {
                             {statusStr}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mb-3 capitalize">{route.route_type.replace('_', ' ')}</p>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div>
                             <p className="text-gray-500">Health</p>
                             <p className={cn(
                               'font-bold',
-                              (status?.health_score || 0) >= 80 ? 'text-accent-green' :
-                              (status?.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                              healthScore >= 80 ? 'text-accent-green' :
+                              healthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
                             )}>
-                              {(status?.health_score || 0).toFixed(0)}%
+                              {healthScore.toFixed(0)}%
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-500">Depth</p>
-                            <p className="font-medium">{status?.current_depth ?? '-'}</p>
+                            <p className="font-medium">{route.current_depth ?? '-'}</p>
                           </div>
                           <div>
                             <p className="text-gray-500">Latency</p>
-                            <p className="font-medium">{status?.current_latency_ms ? `${status.current_latency_ms}ms` : '-'}</p>
+                            <p className="font-medium">{route.latency_ms ? `${route.latency_ms.toFixed(1)}ms` : '-'}</p>
                           </div>
                         </div>
-                        {status?.last_activity && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Last: {new Date(status.last_activity).toLocaleTimeString()}
-                          </p>
+                        {(route.active_workers !== undefined || route.active_tasks !== undefined) && (
+                          <div className="flex gap-4 text-xs text-gray-500 mt-2">
+                            {route.active_workers !== undefined && <span>Workers: {route.active_workers}</span>}
+                            {route.active_tasks !== undefined && <span>Tasks: {route.active_tasks}</span>}
+                          </div>
                         )}
                       </div>
                     )
