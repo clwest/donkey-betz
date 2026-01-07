@@ -157,12 +157,21 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=3),  # 3 AM daily
         'args': (30,)  # Days before expiring
     },
-    # Session 6: Automated Spider Data Processing
+    # Session 6: Automated Spider Data Processing (legacy persistence.models.SpiderData)
     'process-spider-data-automatic': {
         'task': 'core.tasks.process_spider_data_automatic',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
         'options': {
             'expires': 300,  # Expire after 5 minutes if not executed
+        }
+    },
+    # Session 707: Core Spider Data Processing (core.models_unified_system.SpiderData)
+    # Processes the unified system SpiderData table monitored by DIGESTIVE system
+    'process-core-spider-data': {
+        'task': 'core.tasks.process_core_spider_data',
+        'schedule': crontab(minute='*/2'),  # Every 2 minutes (faster to catch up backlog)
+        'options': {
+            'expires': 120,  # Expire after 2 minutes if not executed
         }
     },
     # Session 139: Background 3D Model Status Polling
