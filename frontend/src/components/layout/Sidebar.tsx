@@ -25,6 +25,8 @@ import {
   Gift,
   History,
   Cloud,
+  Crown,
+  Heart,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -48,6 +50,8 @@ const navItems = [
   { path: '/time-capsules', label: 'Capsules', icon: Gift },
   { path: '/time-travel', label: 'Time Travel', icon: History },
   { path: '/agent-social', label: 'Social', icon: Cloud },
+  { path: '/advisors', label: 'Advisors', icon: Crown },
+  { path: '/relationships', label: 'Bonds', icon: Heart },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },

@@ -292,6 +292,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Time Travel APIs (decision tracking and session replay for React frontend)
         '/api/time-travel/',  # Sessions, decisions, bookmarks, annotations, search
+
+        # Session 716: Advisors APIs (famous figure consultations for React frontend)
+        '/api/v1/advisors/',  # Advisor list, detail, consult
+        '/api/v1/ecosystem/advisors/',  # Advisor network
+        '/api/dashboard/advisors/',  # Dashboard insights from advisors
+
+        # Session 716: Agent Relationships APIs (rivalries, alliances, bonds for React frontend)
+        '/api/agent-relationships/',  # Relationships overview, agent relationships, alliances
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

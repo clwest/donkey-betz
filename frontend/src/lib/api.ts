@@ -1052,3 +1052,61 @@ export const muscularApi = {
   // Quick health check - are agents executing successfully?
   isStrong: () => api.get('/muscular/is-strong/'),
 }
+
+// Session 716: Advisors API - Famous figure consultations
+export const advisorsApi = {
+  // List all active advisors
+  list: () => api.get('/v1/advisors/list/'),
+
+  // Get advisor details
+  detail: (advisorId: string) => api.get(`/v1/advisors/${advisorId}/`),
+
+  // Consult an advisor
+  consult: (data: { advisor_id: string; question: string; context?: string }) =>
+    api.post('/v1/advisors/consult/', data),
+
+  // Get advisor network (ecosystem view)
+  network: () => api.get('/v1/ecosystem/advisors/'),
+
+  // Dashboard insights from advisors
+  insights: () => api.get('/dashboard/advisors/'),
+}
+
+// Session 716: Agent Relationships API - Rivalries, Alliances, Bonds
+export const relationshipsApi = {
+  // Overview of all relationships
+  overview: () => api.get('/agent-relationships/'),
+
+  // Get relationships for specific agent
+  agentRelationships: (agentId: string) => api.get(`/agent-relationships/agent/${agentId}/`),
+
+  // Create a new relationship
+  create: (data: {
+    agent1_id: string
+    agent2_id: string
+    relationship_type: string
+    initial_strength?: number
+  }) => api.post('/agent-relationships/create/', data),
+
+  // Record interaction between agents
+  recordInteraction: (relationshipId: string, data: {
+    interaction_type: string
+    outcome?: string
+    strength_change?: number
+  }) => api.post(`/agent-relationships/relationship/${relationshipId}/interact/`, data),
+
+  // Get relationship events history
+  events: (relationshipId: string) => api.get(`/agent-relationships/relationship/${relationshipId}/events/`),
+
+  // Auto-generate relationships based on agent activity
+  autoGenerate: () => api.post('/agent-relationships/auto-generate/'),
+
+  // Alliance endpoints
+  allianceDetail: (allianceId: string) => api.get(`/agent-relationships/alliances/${allianceId}/`),
+  createAlliance: (data: { name: string; agent_ids: string[]; purpose?: string }) =>
+    api.post('/agent-relationships/alliances/create/', data),
+  addToAlliance: (allianceId: string, agentId: string) =>
+    api.post(`/agent-relationships/alliances/${allianceId}/add/`, { agent_id: agentId }),
+  disbandAlliance: (allianceId: string) =>
+    api.post(`/agent-relationships/alliances/${allianceId}/disband/`),
+}
