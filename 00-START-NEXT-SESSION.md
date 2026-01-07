@@ -1,42 +1,48 @@
-# Session 699 - Start Here
+# Session 700 - Start Here
 
-**Previous Session:** 698 (LLM Routing Claude 4 Fix)
+**Previous Session:** 699 (LLM Routing API Endpoints)
 **Date:** January 6, 2026
-**Status:** 100% Reality Score | LLM Routing COMPLETE
+**Status:** 100% Reality Score | LLM Routing APIs COMPLETE
 
-> **NEXT STEPS:** Build LLM Routing UI, Cost Dashboard, or continue Frontend Data Audit
+> **NEXT STEPS:** Build LLM Routing UI in React, or continue Frontend Data Audit
 
 ---
 
-## Session 698 Summary: Claude 4 Model Updates
+## Session 699 Summary: LLM Routing API Endpoints
 
-### What Was Fixed
+### What Was Built
 
-Claude 3.5 models are no longer available on the Anthropic API. Updated to Claude 4:
+Created 7 new API endpoints for frontend access to the LLM routing system:
 
-| Old Model | New Model | Status |
-|-----------|-----------|--------|
-| `claude-3.5-sonnet` | `claude-sonnet-4-20250514` | ✅ Working |
-| `claude-3.5-opus` | `claude-opus-4-20250514` | ✅ Working |
-| `claude-3.5-haiku` | Removed (not available yet) | ❌ N/A |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/llm-routing/status/` | GET | Overall system status |
+| `/api/v1/llm-routing/providers/` | GET | List 6 LLM providers |
+| `/api/v1/llm-routing/models/` | GET | List 16 models with costs |
+| `/api/v1/llm-routing/agent-configs/` | GET | 64 agent-model mappings |
+| `/api/v1/llm-routing/logs/` | GET | Call logs with filtering |
+| `/api/v1/llm-routing/cost-analytics/` | GET | Cost analytics dashboard |
+| `/api/v1/llm-routing/agent-configs/<agent>/` | POST | Update agent config |
 
-**Agent Config Updates:**
-- 19 agents now route to Claude Sonnet 4
-- ThinkingAgent routes to Claude Opus 4
-- Fast fallback agents use GPT-5-mini instead of Haiku
+### New File
+
+- `core/views_llm_routing.py` (~450 lines) - Real database-backed API views
 
 ### Test Results
 
-| Agent | Model | Result | Cost |
-|-------|-------|--------|------|
-| ContentWriterAgent | claude-sonnet-4-20250514 | ✅ Pass | $0.000324 |
-| ThinkingAgent | claude-opus-4-20250514 | ✅ Pass | $0.000237 |
-| CodeGeneratorAgent | Together AI Llama 70B | ✅ Pass | $0.000092 |
-| ResearchAgent | GPT-5.1 | ✅ Pass | $0.000704 |
+All endpoints verified working:
+
+```bash
+curl http://localhost:8000/api/v1/llm-routing/status/
+# Returns: 6 providers, 16 models, 64 agent configs, 10 call logs
+
+curl http://localhost:8000/api/v1/llm-routing/cost-analytics/
+# Returns: $0.003493 total cost, 80% success rate, breakdown by provider/model/agent
+```
 
 ---
 
-## System Stats (Session 698)
+## System Stats (Session 699)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
@@ -44,8 +50,9 @@ Claude 3.5 models are no longer available on the Anthropic API. Updated to Claud
 | Spiders | 77 | 72 working |
 | PA Tools | 83 | +workspace_tool |
 | LLM Providers | 6 | OpenAI, Anthropic, DeepSeek, Together AI, Gemini, Ollama |
-| LLM Models | 17 | GPT-5 family, Claude 4, Llama, DeepSeek |
-| Agent LLM Configs | 64 | +42 configs (was 22) |
+| LLM Models | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
+| Agent LLM Configs | 64 | All major agents configured |
+| LLM API Endpoints | 7 | NEW - Full frontend access |
 | Database Models | 336+ | +4 LLM routing |
 | Services | 97 | +llm_provider_registry, agent_llm_router |
 
@@ -55,25 +62,26 @@ Claude 3.5 models are no longer available on the Anthropic API. Updated to Claud
 
 ```
 Providers: 6
-  ✅ openai: has key
-  ✅ anthropic: has key
+  ✅ openai: has key (4 calls, $0.001581)
+  ✅ anthropic: has key (4 calls, $0.000561)
   ⚠️ deepseek: no key (using Together AI instead)
-  ✅ gemini: has key
-  ✅ ollama: has key
-  ✅ together: has key
+  ✅ gemini: has key (working with google-genai SDK)
+  ✅ ollama: local (no key needed)
+  ✅ together: has key (2 calls, $0.001351)
 
-Models: 17
+Models: 16 (11 tested working)
   openai: gpt-5-mini, gpt-5.1, gpt-5.2
   anthropic: claude-sonnet-4-20250514, claude-opus-4-20250514
-  together: Llama 3.1 70B/8B, Mixtral, Qwen Coder
+  together: Llama 3.1 70B/8B, Mixtral, DeepSeek V3
+  gemini: gemini-2.5-flash, gemini-3-flash-preview
 
 Agent Configs: 64
-  meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo: 6 agents
   gpt-5.1: 22 agents
-  gpt-5-mini: 15 agents
   claude-sonnet-4-20250514: 19 agents
-  claude-opus-4-20250514: 1 agent
-  gemini-2.0-pro: 1 agent
+  gpt-5-mini: 15 agents
+  meta-llama/Llama-3.1-70B: 6 agents
+  claude-opus-4-20250514: 1 agent (ThinkingAgent)
+  gemini-2.5-flash: 1 agent
 ```
 
 ---
@@ -82,6 +90,7 @@ Agent Configs: 64
 
 | File | Purpose |
 |------|---------|
+| `core/views_llm_routing.py` | 7 API endpoints for frontend (NEW) |
 | `core/models_llm_routing.py` | 4 LLM routing models + 64 agent configs |
 | `core/services/llm_provider_registry.py` | 6 provider implementations |
 | `core/services/agent_llm_router.py` | Routing service |
@@ -95,26 +104,30 @@ Agent Configs: 64
 # Start services
 make start && make celery
 
-# Check LLM routing status
+# Test LLM routing APIs
+curl http://localhost:8000/api/v1/llm-routing/status/
+curl http://localhost:8000/api/v1/llm-routing/providers/
+curl http://localhost:8000/api/v1/llm-routing/models/
+curl http://localhost:8000/api/v1/llm-routing/agent-configs/
+curl http://localhost:8000/api/v1/llm-routing/logs/
+curl http://localhost:8000/api/v1/llm-routing/cost-analytics/
+
+# Check LLM routing status (management command)
 python manage.py setup_llm_routing --check
 
-# Reload LLM routing config
-python manage.py setup_llm_routing --clear
-
-# Test LLM routing
+# Test agent routing
 python manage.py shell
 >>> from core.services.agent_llm_router import route_agent_completion
 >>> response = route_agent_completion('ContentWriterAgent', 'Write a tagline')
 >>> print(f'{response.provider}:{response.model} - ${response.cost:.6f}')
-anthropic:claude-sonnet-4-20250514 - $0.000324
 ```
 
 ---
 
-## Session 699 Recommendations
+## Session 700 Recommendations
 
-1. **LLM Routing UI** - Admin panel to configure agent-model mappings
-2. **Cost Dashboard** - Show LLM costs per agent from LLMCallLog
+1. **LLM Routing UI** - React component to view/edit agent-model mappings
+2. **Cost Dashboard Widget** - Show LLM costs in Admin or Dashboard page
 3. **Enable routed calls** - Update agents to use `_call_llm_routed()`
 4. **Add remaining 8 agents** - Complete agent config coverage (64 → 72)
 5. **Frontend Data Audit** - Continue enhancing Betting, Content, Human pages
@@ -124,13 +137,13 @@ anthropic:claude-sonnet-4-20250514 - $0.000324
 ## Recent Commits
 
 ```
+15b3ce11 feat(Session 699): Add LLM Routing API endpoints for frontend
+87dbdac4 fix(Session 698): Add missing key props in FileTree component
+a9bb634c fix(Session 698): Fix workspace dashboard and pending-reviews URL routing
+1567b476 feat(Session 698): Add Gemini support with google-genai SDK
 6f519c79 fix(Session 698): Update LLM routing to Claude 4 models
-ce783b1e docs(Session 694): Add handoff and Session 695 prep
-0f04249f refactor(Session 694): Remove Learning/Activity tabs from Intelligence
-eb316f94 docs(Session 693): Update docs - Intelligence now has 7 sub-tabs
-747191a4 refactor(Session 693): Remove redundant Agents sub-tab from Intelligence
 ```
 
 ---
 
-**Ready for Session 699**
+**Ready for Session 700** 🎉
