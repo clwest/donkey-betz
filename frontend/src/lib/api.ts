@@ -1110,3 +1110,30 @@ export const relationshipsApi = {
   disbandAlliance: (allianceId: string) =>
     api.post(`/agent-relationships/alliances/${allianceId}/disband/`),
 }
+
+// Session 716: Neural Orchestra API - AI consciousness visualization
+export const neuralOrchestraApi = {
+  // Get real-time ecosystem live feed (consciousness insights, system activity)
+  ecosystemFeed: () => api.get('/neural-orchestra/ecosystem/live-feed/'),
+
+  // Get agent statistics (total, active, collaborations, top performers)
+  agentStats: () => api.get('/neural-orchestra/agents/stats/'),
+
+  // Get learning status (models active, feedback processed, insights)
+  learningStatus: () => api.get('/neural-orchestra/learning/status/'),
+
+  // Get learning feed (real-time learning insights)
+  learningFeed: () => api.get('/neural-orchestra/learning/feed/'),
+
+  // Health check
+  health: () => api.get('/neural-orchestra/health/'),
+
+  // WebSocket configuration
+  websocketConfig: () => api.get('/neural-orchestra/websocket-config/'),
+
+  // Debug info
+  debug: () => api.get('/neural-orchestra/debug/'),
+
+  // Trigger reality check (force refresh)
+  triggerRealityCheck: () => api.post('/neural-orchestra/reality-check/'),
+}
