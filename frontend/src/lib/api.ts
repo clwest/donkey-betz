@@ -154,6 +154,43 @@ export const memoryPalaceApi = {
     }),
 }
 
+// Session 718: Memory Clusters API - Semantic memory grouping via embedding-based clustering
+export const memoryClustersApi = {
+  // Overview of all clusters across agents
+  overview: () => api.get('/memory-clusters/'),
+
+  // Agent-specific clusters
+  agentClusters: (agentId: string) => api.get(`/memory-clusters/agent/${agentId}/`),
+  generateClusters: (agentId: string, data?: { n_clusters?: number; method?: string; min_memories?: number }) =>
+    api.post(`/memory-clusters/agent/${agentId}/`, data || {}),
+
+  // Cluster detail
+  detail: (clusterId: string) => api.get(`/memory-clusters/cluster/${clusterId}/`),
+
+  // Visualization data for D3.js force-directed graph
+  visualization: (agentId?: string) =>
+    agentId
+      ? api.get(`/memory-clusters/visualization/${agentId}/`)
+      : api.get('/memory-clusters/visualization/'),
+
+  // Generate clusters for all agents
+  generateAll: (data?: { min_memories?: number; method?: string }) =>
+    api.post('/memory-clusters/generate-all/', data || {}),
+
+  // Manage cluster memberships
+  addMemory: (clusterId: string, memoryId: string) =>
+    api.post(`/memory-clusters/cluster/${clusterId}/add-memory/`, { memory_id: memoryId }),
+  removeMemory: (clusterId: string, memoryId: string) =>
+    api.delete(`/memory-clusters/cluster/${clusterId}/memory/${memoryId}/`),
+
+  // Evolution history
+  evolution: (agentId: string) => api.get(`/memory-clusters/evolution/${agentId}/`),
+
+  // Find similar clusters
+  findSimilar: (data: { query?: string; memory_id?: string; limit?: number }) =>
+    api.post('/memory-clusters/find-similar/', data),
+}
+
 // Session 716: Agent Evolution API - XP, Levels, Abilities, Prestige
 export const evolutionApi = {
   // Overview of entire evolution system
@@ -354,6 +391,52 @@ export const dashboardApi = {
 export const spidersApi = {
   status: () => api.get('/v1/intelligence/spider-status/'),
   report: () => api.get('/spider-intelligence/report/'),
+}
+
+// Session 718: Spider Integration API - Comprehensive spider network management
+export const spiderIntegrationApi = {
+  // Dashboard & Overview
+  network: () => api.get('/spider-dashboard/network/'),
+  dashboardStats: () => api.get('/spider-intelligence/dashboard-stats/'),
+  registry: () => api.get('/spider-intelligence/registry/'),
+
+  // Health Monitoring
+  healthSummary: () => api.get('/spider-health/summary/'),
+  executionLogs: (params?: { hours?: number; spider_name?: string; status?: string; limit?: number }) =>
+    api.get('/spider-health/executions/', { params }),
+  embeddingCoverage: () => api.get('/spider-health/embedding-coverage/'),
+
+  // Data Feed
+  dataFeed: (params?: { category?: string; source?: string; limit?: number; offset?: number; sort?: string }) =>
+    api.get('/spider-intelligence/feed/', { params }),
+  timeline: (range?: '24h' | '7d' | '30d') =>
+    api.get('/spider-intelligence/timeline/', { params: { range } }),
+  knowledge: (params?: { type?: string; limit?: number }) =>
+    api.get('/spider-intelligence/knowledge/', { params }),
+
+  // Spider Details
+  detail: (spiderName: string, params?: { hours?: number; limit?: number }) =>
+    api.get(`/spider-intelligence/detail/${spiderName}/`, { params }),
+
+  // Actions
+  runSpider: (spiderName: string) => api.post(`/spider-health/run/${spiderName}/`),
+  runAllSpiders: () => api.post('/spider-intelligence/run-all/'),
+
+  // Activity
+  activityFeed: () => api.get('/spider-dashboard/activity/'),
+
+  // Intelligence Endpoints
+  trends: (params?: { category?: string; hours?: number; limit?: number }) =>
+    api.get('/spider-intelligence/trends/', { params }),
+  marketInsights: () => api.get('/spider-intelligence/market/'),
+  techTrends: (params?: { hours?: number; limit?: number }) =>
+    api.get('/spider-intelligence/tech/', { params }),
+  jobs: (params?: { hours?: number; limit?: number }) =>
+    api.get('/spider-intelligence/jobs/', { params }),
+
+  // Search
+  search: (params: { q: string; category?: string; hours?: number; limit?: number }) =>
+    api.get('/spider-intelligence/search/', { params }),
 }
 
 export const pilotsApi = {

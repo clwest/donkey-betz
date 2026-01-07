@@ -29,6 +29,7 @@ import {
   Heart,
   Sparkles,
   FileCheck,
+  Bug,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -56,6 +57,7 @@ const navItems = [
   { path: '/relationships', label: 'Bonds', icon: Heart },
   { path: '/neural-orchestra', label: 'Orchestra', icon: Sparkles },
   { path: '/conversation-contract', label: 'Contract', icon: FileCheck },
+  { path: '/spiders', label: 'Spiders', icon: Bug },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },

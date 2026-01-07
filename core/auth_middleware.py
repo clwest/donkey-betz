@@ -304,6 +304,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Neural Orchestra APIs (AI consciousness visualization for React frontend)
         '/api/neural-orchestra/',  # Health, ecosystem feed, agent stats, learning status/feed, debug
+
+        # Session 718: Spider Integration Page APIs (spider network management for React frontend)
+        '/api/spider-dashboard/',  # Spider network data, activity feed
+        '/api/spider-intelligence/',  # Spider registry, feed, trends, knowledge, timeline, detail
+
+        # Session 718: Memory Clusters APIs (semantic memory grouping for Memory Palace)
+        '/api/memory-clusters/',  # Overview, agent clusters, visualization, evolution, find-similar
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
