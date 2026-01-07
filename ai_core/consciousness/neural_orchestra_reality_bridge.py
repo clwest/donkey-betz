@@ -98,8 +98,9 @@ class NeuralOrchestraRealityBridge:
         last_24h = now - timedelta(hours=24)
         last_hour = now - timedelta(hours=1)
 
-        # Total agents in system
-        total_agents = UnifiedAgentTemplate.objects.filter(is_active=True).count()
+        # Total agents in system - Session 719: Use Agent model (72) not UnifiedAgentTemplate (28)
+        from core.models_unified_system import Agent
+        total_agents = Agent.objects.filter(is_active=True).count()
 
         # Agents active in last 24 hours
         active_agents_24h = AgentContribution.objects.filter(
