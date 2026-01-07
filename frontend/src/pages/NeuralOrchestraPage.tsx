@@ -69,6 +69,7 @@ interface TopPerformer {
 interface AgentStats {
   total_agents: number
   active_now: number
+  active_24h: number
   collaborations: number
   orchestrations_active: number
   performance: {
@@ -322,9 +323,9 @@ export default function NeuralOrchestraPage() {
                   </div>
                   <div className="bg-dark-bg rounded-lg p-4">
                     <div className="text-3xl font-bold text-green-400">
-                      {agentStats?.active_now ?? 0}
+                      {agentStats?.active_24h ?? 0}
                     </div>
-                    <div className="text-sm text-gray-400">Active Now</div>
+                    <div className="text-sm text-gray-400">Active (24h)</div>
                   </div>
                   <div className="bg-dark-bg rounded-lg p-4">
                     <div className="text-3xl font-bold text-purple-400">

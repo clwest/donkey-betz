@@ -99,16 +99,17 @@ class NeuralOrchestraRealityBridge:
         last_hour = now - timedelta(hours=1)
 
         # Total agents in system - Session 719: Use Agent model (72) not UnifiedAgentTemplate (28)
-        from core.models_unified_system import Agent
+        from core.models_unified_system import Agent, AgentExecution
         total_agents = Agent.objects.filter(is_active=True).count()
 
-        # Agents active in last 24 hours
-        active_agents_24h = AgentContribution.objects.filter(
+        # Session 719: Use AgentExecution for active counts (has recent data)
+        # AgentContribution has no recent data, AgentExecution has 30 executions in 24h
+        active_agents_24h = AgentExecution.objects.filter(
             created_at__gte=last_24h
         ).values('agent').distinct().count()
 
         # Agents active in last hour
-        active_agents_1h = AgentContribution.objects.filter(
+        active_agents_1h = AgentExecution.objects.filter(
             created_at__gte=last_hour
         ).values('agent').distinct().count()
 
@@ -516,19 +517,6 @@ class NeuralOrchestraRealityBridge:
             active_spiders = len(spider_registry.get_all_spiders()) if hasattr(spider_registry, 'get_all_spiders') else 77
         except Exception:
             active_spiders = 77  # Fallback to known spider count
-
-        # Session 719: Get active agents from AgentExecution (more accurate than AgentContribution)
-        try:
-            from core.models_unified_system import AgentExecution
-            last_24h = timezone.now() - timedelta(hours=24)
-            active_agents_from_exec = AgentExecution.objects.filter(
-                created_at__gte=last_24h
-            ).values('agent').distinct().count()
-            # Use AgentExecution count if available, otherwise fall back to stats
-            if active_agents_from_exec > 0:
-                stats['active_agents_24h'] = active_agents_from_exec
-        except Exception:
-            pass  # Keep original stats value
 
         return {
             'feed': feed_items,
