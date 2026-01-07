@@ -104,8 +104,8 @@ export default function Sidebar() {
         <h1 className="text-xl font-bold text-primary-400">Donkey Betz</h1>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      {/* Navigation - scrollable area */}
+      <nav className="flex-1 overflow-y-auto space-y-1 p-4">
         {navItems.map(({ path, label, icon: Icon }) => {
           const badge = getBadgeCount(path)
           return (
