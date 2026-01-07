@@ -1523,6 +1523,16 @@ app.conf.beat_schedule = {
             'queue': 'default',
         }
     },
+    # Session 703: CIRCULATORY SYSTEM - Data Flow Monitoring
+    # The blood flow of the AI body - monitors Redis queues, Celery tasks, WebSocket channels
+    'circulatory-system-pulse': {
+        'task': 'core.tasks.check_circulation',
+        'schedule': 30.0,  # Every 30 seconds
+        'options': {
+            'expires': 25,  # Expire before next check
+            'queue': 'broadcast',  # High-frequency status task
+        }
+    },
 }
 
 # Task routing configuration
