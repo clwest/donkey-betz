@@ -3629,6 +3629,31 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 706: DIGESTIVE System API (Data Ingestion & Processing)
+# =========================================================================
+from core.views_digestive import (
+    digestive_digest_view,
+    digestive_status_view,
+    digestive_routes_list_view,
+    digestive_route_detail_view,
+    digestive_bottlenecks_view,
+    digestive_metabolism_view,
+    digestive_history_view,
+    digestive_is_digesting_view,
+)
+
+urlpatterns += [
+    path('api/digestive/digest/', digestive_digest_view, name='digestive-digest'),
+    path('api/digestive/status/', digestive_status_view, name='digestive-status'),
+    path('api/digestive/routes/', digestive_routes_list_view, name='digestive-routes'),
+    path('api/digestive/routes/<uuid:route_id>/', digestive_route_detail_view, name='digestive-route-detail'),
+    path('api/digestive/bottlenecks/', digestive_bottlenecks_view, name='digestive-bottlenecks'),
+    path('api/digestive/metabolism/', digestive_metabolism_view, name='digestive-metabolism'),
+    path('api/digestive/history/', digestive_history_view, name='digestive-history'),
+    path('api/digestive/is-digesting/', digestive_is_digesting_view, name='digestive-is-digesting'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

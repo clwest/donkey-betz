@@ -1553,6 +1553,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # Session 706: DIGESTIVE SYSTEM - Data Ingestion & Processing
+    # Monitors how raw spider data is transformed into actionable intelligence
+    'digestive-system-check': {
+        'task': 'core.tasks.check_digestion',
+        'schedule': 60.0,  # Every 60 seconds
+        'options': {
+            'expires': 55,  # Expire before next check
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
 }
 
 # Task routing configuration

@@ -22686,3 +22686,116 @@ def immune_scan():
             'error': str(e),
             'is_healthy': False,
         }
+
+
+# =============================================================================
+# Session 706: DIGESTIVE SYSTEM - Data Ingestion & Processing
+# =============================================================================
+
+@shared_task(name='core.tasks.check_digestion')
+def check_digestion():
+    """
+    Session 706: DIGESTIVE SYSTEM - Check data ingestion health
+
+    The DIGESTIVE SYSTEM monitors how raw spider data is transformed into
+    actionable intelligence through the 4-stage pipeline.
+
+    Monitors:
+    - INTAKE: Spider data collection (SpiderData, SpiderExecutionLog)
+    - PROCESSING: Normalization, deduplication
+    - ENRICHMENT: Embedding generation, relevance scoring
+    - ROUTING: Data delivery to agents and services
+
+    Human body metaphor:
+    - Food = Raw spider data (RSS, API responses, scraped content)
+    - Mouth/Intake = Spider execution -> SpiderData creation
+    - Stomach = Processing queue
+    - Enzymes = Transformation functions (embedding, scoring)
+    - Intestines = Routing pipeline
+    - Nutrients = Actionable intelligence
+    - Metabolism Rate = Processing throughput
+
+    Schedule: Every 60 seconds (via Celery Beat)
+    """
+    from core.services.digestive import get_digestive_system
+    import redis
+    import json
+
+    logger.info("🍽️ [DIGESTIVE] Running digestion check...")
+
+    try:
+        digestive = get_digestive_system()
+        status = digestive.digest()
+
+        # Log the result
+        logger.info(
+            f"🍽️ [DIGESTIVE] Check complete: {status['overall_status'].upper()} "
+            f"(Score: {status['digestion_score']:.1f}%)"
+        )
+
+        # Log stage statuses
+        stages = status.get('stages', {})
+        for stage_name, stage_data in stages.items():
+            stage_status = stage_data.get('status', 'unknown')
+            if stage_status not in ('healthy',):
+                logger.warning(
+                    f"🍽️ [DIGESTIVE] Stage {stage_name}: {stage_status.upper()}"
+                )
+
+        # Log bottlenecks
+        bottlenecks = status.get('bottlenecks', [])
+        if bottlenecks:
+            for bn in bottlenecks:
+                severity = bn.get('severity', 'info')
+                if severity == 'critical':
+                    logger.error(
+                        f"🍽️ [DIGESTIVE] BOTTLENECK ({bn['stage']}): {bn['issue']}"
+                    )
+                elif severity == 'warning':
+                    logger.warning(
+                        f"🍽️ [DIGESTIVE] Bottleneck ({bn['stage']}): {bn['issue']}"
+                    )
+
+        # Log metabolism
+        metabolism = status.get('metabolism', {})
+        logger.info(
+            f"🍽️ [DIGESTIVE] Metabolism: "
+            f"intake={metabolism.get('intake_rate', 0):.2f}/min, "
+            f"processing={metabolism.get('processing_rate', 0):.2f}/min, "
+            f"output={metabolism.get('output_rate', 0):.2f}/min"
+        )
+
+        # Alert on critical status
+        if status['overall_status'] in ('blocked', 'starving'):
+            logger.error(
+                f"🍽️ [DIGESTIVE] CRITICAL: System status is {status['overall_status'].upper()}!"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('digestive:status', json.dumps({
+                'digestion_score': status['digestion_score'],
+                'overall_status': status['overall_status'],
+                'is_digesting': status.get('is_digesting', True),
+                'stages': {
+                    stage: data.get('status', 'unknown')
+                    for stage, data in stages.items()
+                },
+                'metabolism': metabolism,
+                'bottlenecks_count': len(bottlenecks),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🍽️ [DIGESTIVE] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🍽️ [DIGESTIVE] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🍽️ [DIGESTIVE] Digestion check failed: {e}")
+        return {
+            'status': 'blocked',
+            'error': str(e),
+            'is_digesting': False,
+        }
