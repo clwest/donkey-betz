@@ -390,14 +390,16 @@ function HeartDetailView() {
     <div className="space-y-4">
       {/* Components Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {status?.components && Object.entries(status.components).map(([name, comp]: [string, any]) => (
+        {status?.components?.components && Object.entries(status.components.components).map(([name, comp]: [string, any]) => (
           <div key={name} className="bg-zinc-800/50 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              {name === 'redis' && <Database className="w-4 h-4 text-red-400" />}
-              {name === 'database' && <Server className="w-4 h-4 text-blue-400" />}
-              {name === 'celery' && <Cpu className="w-4 h-4 text-green-400" />}
-              {name === 'django' && <Zap className="w-4 h-4 text-yellow-400" />}
-              {!['redis', 'database', 'celery', 'django'].includes(name) && <Activity className="w-4 h-4 text-zinc-400" />}
+              {name === 'brain' && <Cpu className="w-4 h-4 text-purple-400" />}
+              {name === 'memory' && <Database className="w-4 h-4 text-blue-400" />}
+              {name === 'nervous_system' && <Zap className="w-4 h-4 text-yellow-400" />}
+              {name === 'organs' && <Users className="w-4 h-4 text-green-400" />}
+              {name === 'sensory' && <Activity className="w-4 h-4 text-pink-400" />}
+              {name === 'skin' && <Server className="w-4 h-4 text-cyan-400" />}
+              {!['brain', 'memory', 'nervous_system', 'organs', 'sensory', 'skin'].includes(name) && <Activity className="w-4 h-4 text-zinc-400" />}
               <span className="text-sm font-medium text-zinc-300 capitalize">{name.replace('_', ' ')}</span>
             </div>
             <div className="flex items-center justify-between">
@@ -408,8 +410,8 @@ function HeartDetailView() {
               )}>
                 {comp?.status || 'unknown'}
               </span>
-              {comp?.latency_ms !== undefined && (
-                <span className="text-xs text-zinc-500">{comp.latency_ms}ms</span>
+              {(comp?.response_time_ms !== undefined || comp?.latency_ms !== undefined) && (
+                <span className="text-xs text-zinc-500">{comp.response_time_ms ?? comp.latency_ms}ms</span>
               )}
             </div>
           </div>

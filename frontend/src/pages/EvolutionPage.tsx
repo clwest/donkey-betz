@@ -42,12 +42,15 @@ interface XpGain {
 }
 
 interface Ability {
-  id: string
-  name: string
+  id?: string
+  ability_code?: string
+  name?: string
+  ability_name?: string
   description: string
-  level_required: number
-  xp_cost: number
-  ability_type: string
+  level_required?: number
+  unlock_level?: number
+  xp_cost?: number
+  ability_type?: string
 }
 
 // Level tier colors and names
@@ -358,23 +361,25 @@ export default function EvolutionPage() {
                 ) : abilities.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">No abilities defined yet</div>
                 ) : (
-                  abilities.map((ability) => (
-                    <div key={ability.id} className="p-4 hover:bg-dark-bg">
+                  abilities.map((ability, index) => (
+                    <div key={ability.id || ability.ability_code || index} className="p-4 hover:bg-dark-bg">
                       <div className="flex items-start gap-3">
                         <div className="p-2 bg-purple-500/20 rounded-lg">
                           <Sparkles className="w-4 h-4 text-purple-400" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-white">{ability.name}</span>
-                            <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                              {ability.ability_type}
-                            </span>
+                            <span className="font-medium text-white">{ability.name || ability.ability_name}</span>
+                            {ability.ability_type && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                                {ability.ability_type}
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-gray-400 mt-1">{ability.description}</p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span>Level {ability.level_required} required</span>
-                            <span>{ability.xp_cost} XP cost</span>
+                            <span>Level {ability.level_required || ability.unlock_level} required</span>
+                            {ability.xp_cost && <span>{ability.xp_cost} XP cost</span>}
                           </div>
                         </div>
                       </div>
