@@ -651,14 +651,30 @@ class SpineRouterService:
             from core.services.heart import get_heart_monitor
             heart = get_heart_monitor()
             vitals = heart.get_vitals()
+            # vitals is a dict keyed by component name, calculate overall status
+            if not vitals:
+                return {'status': 'unknown', 'health_score': 0, 'is_healthy': False}
+
+            healthy_count = sum(1 for c in vitals.values() if c.get('is_healthy', False))
+            total_count = len(vitals)
+            health_score = (healthy_count / total_count * 100) if total_count > 0 else 0
+
+            # Determine overall status
+            if healthy_count == total_count:
+                status = 'healthy'
+            elif healthy_count > total_count / 2:
+                status = 'degraded'
+            else:
+                status = 'critical'
+
             return {
-                'status': vitals.get('status', 'unknown'),
-                'health_score': vitals.get('health_score', 0),
-                'is_healthy': vitals.get('is_healthy', False),
+                'status': status,
+                'health_score': round(health_score),
+                'is_healthy': healthy_count == total_count,
             }
         except Exception as e:
             logger.warning(f"Failed to check HEART status: {e}")
-            return {'status': 'unknown', 'error': str(e)}
+            return {'status': 'unknown', 'health_score': 0, 'is_healthy': False, 'error': str(e)}
 
     def _check_lungs_status(self) -> dict:
         """Check LUNGS service status."""
@@ -666,14 +682,17 @@ class SpineRouterService:
             from core.services.lungs import get_lungs_monitor
             lungs = get_lungs_monitor()
             vitals = lungs.get_vitals()
+            # vitals has system_status, system_oxygen, providers
+            status = vitals.get('system_status', 'unknown')
+            oxygen = vitals.get('system_oxygen', 0)
             return {
-                'status': vitals.get('status', 'unknown'),
-                'capacity_score': vitals.get('capacity_score', 0),
-                'is_healthy': vitals.get('status') in ('full_capacity', 'normal'),
+                'status': status,
+                'capacity_score': round(oxygen),  # oxygen is 0-100%
+                'is_healthy': status in ('full_capacity', 'normal') and oxygen >= 80,
             }
         except Exception as e:
             logger.warning(f"Failed to check LUNGS status: {e}")
-            return {'status': 'unknown', 'error': str(e)}
+            return {'status': 'unknown', 'capacity_score': 0, 'is_healthy': False, 'error': str(e)}
 
     def _check_circulatory_status(self) -> dict:
         """Check CIRCULATORY service status."""
@@ -681,14 +700,31 @@ class SpineRouterService:
             from core.services.circulatory import get_circulatory_system
             circulatory = get_circulatory_system()
             vitals = circulatory.get_vitals()
+            # vitals has routes dict, calculate overall status from routes
+            routes = vitals.get('routes', {})
+            if not routes:
+                return {'status': 'unknown', 'flow_score': 0, 'is_flowing': False}
+
+            healthy_routes = sum(1 for r in routes.values() if r.get('is_healthy', False))
+            total_routes = len(routes)
+            flow_score = (healthy_routes / total_routes * 100) if total_routes > 0 else 0
+
+            # Determine overall status
+            if healthy_routes == total_routes:
+                status = 'flowing'
+            elif healthy_routes > total_routes / 2:
+                status = 'reduced'
+            else:
+                status = 'blocked'
+
             return {
-                'status': vitals.get('overall_status', 'unknown'),
-                'flow_score': vitals.get('flow_score', 0),
-                'is_flowing': vitals.get('is_flowing', False),
+                'status': status,
+                'flow_score': round(flow_score),
+                'is_flowing': healthy_routes > 0,
             }
         except Exception as e:
             logger.warning(f"Failed to check CIRCULATORY status: {e}")
-            return {'status': 'unknown', 'error': str(e)}
+            return {'status': 'unknown', 'flow_score': 0, 'is_flowing': False, 'error': str(e)}
 
     def _calculate_health_score(self, healthy: int, degraded: int, failed: int,
                                 total: int, heart: dict, lungs: dict,
