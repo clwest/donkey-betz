@@ -1,6 +1,6 @@
-# Session 719 - Start Here
+# Session 720 - Start Here
 
-**Previous Session:** 718 (Spider Integration Page + Memory Clusters Tab)
+**Previous Session:** 719 (Frontend-Backend Connectivity Audit + Bug Fixes)
 **Date:** January 7, 2026
 **Status:** 100% Reality Score | ALL SCI-FI FEATURES COMPLETE | 14/14 (100%)
 
@@ -21,50 +21,50 @@ This document contains:
 
 ---
 
-## Session 717-718 Accomplishments
+## Session 719 Accomplishments
 
-### Session 717: Conversation Contract Page
+### Comprehensive Frontend-Backend Connectivity Audit
 
-| Component | Details |
-|-----------|---------|
-| **Page Created** | `ConversationContractPage.tsx` (~500 lines) |
-| **Route** | `/conversation-contract` |
-| **Icon** | FileCheck |
-| **Backend APIs** | 2 new endpoints in `views_agent_learning.py` |
+Verified ALL 27 sidebar pages and their sub-tabs for proper API connectivity:
 
-**Features:**
-- Quality analytics dashboard for agent conversations
-- Contract requirements visualization (Tension, Grounding, Decision Summary)
-- Compliance rates and quality scores
-- Expandable conversation list with contract indicators
-- Decision summary extraction and display
+| Category | Count | Status |
+|----------|-------|--------|
+| **Public APIs (200)** | 12 pages | All working |
+| **Auth Required (401)** | 15 pages | Correct behavior |
+| **Broken** | 0 pages | None found |
 
-**Commit:** `083874d1 feat(Session 717): Conversation Contract Page`
+**Public Pages Verified:**
+- Agents, Memory Palace, Evolution, Mood, Capsules, Time Travel
+- Hive Mind, Bonds, Orchestra, Contract, Spiders, Dashboard
 
-### Session 718: Spider Integration + Memory Clusters
+**Auth-Required Pages (Correct):**
+- AI Assistant, Human, Intelligence, Body Health, Social, Advisors
+- Workspace, Betting, Content, Legal, Podcast, Portfolio
+- Admin, LLM Routing, Settings
 
-| Component | Details |
-|-----------|---------|
-| **Spider Page** | `SpiderIntegrationPage.tsx` (~450 lines) |
-| **Route** | `/spiders` |
-| **Icon** | Bug |
-| **Memory Clusters** | Added Clusters tab to `MemoryPalacePage.tsx` (~380 lines) |
+### Bug Fixes
 
-**Spider Integration Features:**
-- Overview stats: 77 spiders, 71 active, 10,648 data collected
-- Health monitoring: 24h executions, errors, success rate
-- Activity feed with real-time status indicators
-- Searchable/filterable spider registry by category and status
-- Run spider action button
+#### 1. Body Health - Heart Details (BodyHealthPage.tsx)
+**Issue:** Heart Details panel showed "Unknown" for all components
 
-**Memory Clusters Features:**
-- Tab toggle between Palace and Clusters views
-- Cluster overview with color-coded agent indicators
-- Cluster detail view with all memories
-- Coherence scores, keywords, and similarity metrics
-- Generate clusters action for agents needing clustering
+**Cause:** API returns nested `components.components` but frontend accessed `components`
 
-**Commit:** `c9bdda12 feat(Session 718): Spider Integration Page + Memory Clusters Tab`
+**Fix:**
+- Changed data path: `status?.components` → `status?.components?.components`
+- Updated icons to match actual component names (brain, memory, nervous_system, organs, sensory, skin)
+- Added support for `response_time_ms` field
+
+#### 2. Evolution Page - Abilities Tab (EvolutionPage.tsx)
+**Issue:** React warning "Each child in a list should have a unique key prop"
+
+**Cause:** API returns `ability_code` but frontend used `ability.id` as key (undefined)
+
+**Fix:**
+- Updated `Ability` interface to support both API field naming conventions
+- Fixed key: `ability.id || ability.ability_code || index`
+- Fixed display: `ability.name || ability.ability_name`
+
+**Commit:** `2e0d48c8 fix(Session 719): Body Health Heart Details + Evolution Abilities key warning`
 
 ---
 
@@ -103,9 +103,9 @@ This document contains:
 
 ---
 
-## Session 719 - What's Next?
+## Session 720 - What's Next?
 
-With all 14 Sci-Fi Features complete, potential areas to explore:
+With all 14 Sci-Fi Features complete and connectivity verified, potential areas to explore:
 
 ### 1. Polish & UX Improvements
 - Add loading skeletons to all pages
@@ -149,33 +149,27 @@ make start && make celery
 # Access React frontend (Vite dev)
 open http://localhost:3000
 
-# Test new APIs
-curl http://localhost:8000/api/spider-dashboard/network/
-curl http://localhost:8000/api/memory-clusters/
-curl http://localhost:8000/api/conversation-contract/overview/
+# Test body health APIs
+curl http://localhost:8000/api/heart/status/
+curl http://localhost:8000/api/body-health/vitals/
 
-# Verify spider stats
-curl -s http://localhost:8000/api/spider-dashboard/network/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Spiders: {d[\"totalSpiders\"]}, Active: {d[\"activeSpiders\"]}')"
+# Test evolution APIs
+curl http://localhost:8000/api/agent-evolution/
+curl http://localhost:8000/api/agent-evolution/abilities/
 
-# Verify memory clusters
-curl -s http://localhost:8000/api/memory-clusters/ | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Clusters: {d[\"stats\"][\"total_clusters\"]}')"
+# Verify all pages load
+curl -s http://localhost:8000/api/agents/ | head -c 100
+curl -s http://localhost:8000/api/memory-palace/ | head -c 100
+curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 ```
 
 ---
 
-## Files Created/Modified in Sessions 717-718
+## Files Modified in Session 719
 
-**New Pages:**
-- `frontend/src/pages/ConversationContractPage.tsx` (Session 717)
-- `frontend/src/pages/SpiderIntegrationPage.tsx` (Session 718)
-
-**Modified:**
-- `frontend/src/lib/api.ts` - Added `conversationContractApi`, `spiderIntegrationApi`, `memoryClustersApi`
-- `frontend/src/pages/MemoryPalacePage.tsx` - Added Clusters tab
-- `frontend/src/App.tsx` - Added routes
-- `frontend/src/components/layout/Sidebar.tsx` - Added nav items
-- `core/auth_middleware.py` - Added PUBLIC_PATHS
-- `core/views_agent_learning.py` - Added conversation contract endpoints
+**Bug Fixes:**
+- `frontend/src/pages/BodyHealthPage.tsx` - Fixed Heart Details data path + icons
+- `frontend/src/pages/EvolutionPage.tsx` - Fixed Abilities interface + key mapping
 
 ---
 
@@ -183,8 +177,7 @@ curl -s http://localhost:8000/api/memory-clusters/ | python3 -c "import sys,json
 
 - `docs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md` - Master roadmap
 - `docs/handoffs/SESSION_716_SCIFI_PAGES.md` - Phase 5 work
-- `docs/handoffs/SESSION_717_CONVERSATION_CONTRACT.md` - (if created)
 
 ---
 
-**Sessions 717-718 Complete** - All 14 Sci-Fi Features Now Have Frontend UI (100%)
+**Session 719 Complete** - Full connectivity audit passed, 2 UI bugs fixed
