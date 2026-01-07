@@ -702,3 +702,58 @@ export const llmRoutingApi = {
   costAnalytics: (hours?: number) =>
     api.get('/v1/llm-routing/cost-analytics/', { params: { hours } }),
 }
+
+// Session 705: IMMUNE System API - Security & Threat Detection
+export const immuneApi = {
+  // Run full immune scan
+  scan: (force = false) => api.get('/immune/scan/', { params: { force } }),
+
+  // Get cached immune status (fast)
+  status: () => api.get('/immune/status/'),
+
+  // List threat patterns
+  patterns: (params?: { category?: string; active?: boolean }) =>
+    api.get('/immune/patterns/', { params }),
+
+  // Get specific pattern details
+  patternDetail: (patternId: string) => api.get(`/immune/patterns/${patternId}/`),
+
+  // Get recent threat events
+  threats: (params?: {
+    hours?: number
+    limit?: number
+    severity?: string
+    category?: string
+  }) => api.get('/immune/threats/', { params }),
+
+  // Get quarantine list
+  quarantine: (params?: { entity_type?: string; active?: boolean }) =>
+    api.get('/immune/quarantine/', { params }),
+
+  // Add to quarantine
+  addToQuarantine: (data: {
+    entity_type: 'ip' | 'user' | 'user_agent'
+    entity_value: string
+    reason?: string
+    duration_minutes?: number
+    notes?: string
+  }) => api.post('/immune/quarantine/', data),
+
+  // Release from quarantine
+  releaseFromQuarantine: (entityType: string, entityValue: string) =>
+    api.delete(`/immune/quarantine/${entityType}/${entityValue}/`),
+
+  // Quick health check
+  isHealthy: () => api.get('/immune/is-healthy/'),
+
+  // Check if request is allowed
+  checkRequest: (data: {
+    ip?: string
+    user_id?: number
+    user_agent?: string
+    path?: string
+  }) => api.post('/immune/check-request/', data),
+
+  // Get threat categories breakdown
+  categories: () => api.get('/immune/categories/'),
+}

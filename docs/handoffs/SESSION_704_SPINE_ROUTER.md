@@ -418,4 +418,31 @@ python manage.py spine_check --can-route /api/foo
 
 ---
 
+---
+
+## Session 704 Updates (Integration Fix)
+
+**Issue Found:** SPINE showed 3 blocked routes and 0% for all integrations (HEART/LUNGS/CIRCULATORY).
+
+**Root Cause:** The `_check_*_status()` methods in `spine.py` were looking for field names that didn't exist in each service's `get_vitals()` response:
+
+| Service | Expected Fields | Actual Fields |
+|---------|----------------|---------------|
+| HEART | `status`, `health_score`, `is_healthy` | Dict of components with individual statuses |
+| LUNGS | `status`, `capacity_score` | `system_status`, `system_oxygen` |
+| CIRCULATORY | `overall_status`, `flow_score`, `is_flowing` | `routes` dict with route statuses |
+
+**Fix Applied:** Updated all three integration methods in `core/services/spine.py:648-727`:
+1. **HEART**: Calculate overall health from component statuses
+2. **LUNGS**: Map `system_status` → `status`, `system_oxygen` → `capacity_score`
+3. **CIRCULATORY**: Calculate overall status from routes dict
+
+**Results After Fix:**
+- Routes blocked: 3 → **0**
+- Overall status: "strained" → **"aligned"**
+- Health score: 73.3% → **100%**
+- All 11 route categories now show 100% health
+
+---
+
 **Session 704 Complete** - SPINE (19 Route Patterns, 12 Categories, Integrated with HEART/LUNGS/CIRCULATORY)
