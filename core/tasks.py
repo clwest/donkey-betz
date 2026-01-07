@@ -22216,3 +22216,70 @@ def generate_human_attention_items():
             'status': 'failed',
             'error': str(e)
         }
+
+
+# =============================================================================
+# Session 701: HEART Service - System Health Monitoring
+# =============================================================================
+
+@shared_task(name='core.tasks.run_heartbeat')
+def run_heartbeat():
+    """
+    Session 701: HEART Service Periodic Heartbeat
+
+    The pulse of the AI body - checks all vital systems every 60 seconds.
+
+    Components checked:
+    - Brain (ThinkingAgent) - Reasoning system
+    - Nervous System (LLM/ML Routers) - Signal routing
+    - Organs (72 Agents) - Work execution
+    - Sensory (77 Spiders) - Data gathering
+    - Skin (Workspace Manager) - Reality interface
+    - Memory (Database & Redis) - Persistence
+
+    Schedule: Every 60 seconds (via Celery Beat)
+    """
+    from core.services.heart import get_heart_monitor
+    import redis
+    import json
+
+    logger.info("💓 [HEART] Running system heartbeat...")
+
+    try:
+        heart = get_heart_monitor()
+
+        # Run the pulse check
+        pulse = heart.pulse()
+
+        # Record to database
+        heartbeat = heart.record_heartbeat(pulse)
+
+        # Alert if critical
+        alert_sent = heart.alert_if_critical(pulse)
+        if alert_sent:
+            # Update heartbeat record
+            heartbeat.alerts_sent = True
+            heartbeat.save()
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('heart:status', json.dumps(pulse))
+            logger.debug("💓 [HEART] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"💓 [HEART] Redis publish failed: {redis_error}")
+
+        logger.info(
+            f"💓 [HEART] Heartbeat complete: {pulse['overall_status'].upper()} "
+            f"({pulse['health_score']:.1f}%) - {pulse['components_healthy']}/{pulse['components_checked']} healthy"
+        )
+
+        return pulse
+
+    except Exception as e:
+        logger.error(f"💔 [HEART] Heartbeat task failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e),
+            'is_alive': False,
+        }

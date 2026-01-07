@@ -3502,6 +3502,25 @@ if settings.DEBUG:
 urlpatterns.append(path('health/', include('backend.auto_endpoints.urls')))  # public health
 
 # =========================================================================
+# Session 701: HEART Service API (System Health Monitoring)
+# =========================================================================
+from core.views_heart import (
+    heart_pulse,
+    heart_status,
+    heart_history,
+    heart_component,
+    heart_is_alive,
+)
+
+urlpatterns += [
+    path('api/heart/pulse/', heart_pulse, name='heart-pulse'),
+    path('api/heart/status/', heart_status, name='heart-status'),
+    path('api/heart/history/', heart_history, name='heart-history'),
+    path('api/heart/component/<str:component_name>/', heart_component, name='heart-component'),
+    path('api/heart/alive/', heart_is_alive, name='heart-alive'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
