@@ -103,9 +103,28 @@ export default function TimeCapsulePage() {
     },
   })
 
-  // Parse data
-  const allCapsules: TimeCapsule[] = overviewData?.capsules || overviewData || []
-  const readyCapsules: TimeCapsule[] = readyData?.capsules || readyData || []
+  // Parse data - API returns recent_revealed, coming_soon, and featured arrays
+  const recentRevealed: TimeCapsule[] = Array.isArray(overviewData?.recent_revealed)
+    ? overviewData.recent_revealed.map((c: Record<string, unknown>) => ({
+        ...c,
+        status: 'opened' as const,
+        open_date: c.revealed_at || c.reveal_at,
+        opened_at: c.revealed_at,
+      }))
+    : []
+  const comingSoon: TimeCapsule[] = Array.isArray(overviewData?.coming_soon)
+    ? overviewData.coming_soon.map((c: Record<string, unknown>) => ({
+        ...c,
+        status: 'sealed' as const,
+        open_date: c.reveal_at,
+      }))
+    : []
+  const allCapsules: TimeCapsule[] = [...comingSoon, ...recentRevealed]
+  const readyCapsules: TimeCapsule[] = Array.isArray(readyData?.capsules)
+    ? readyData.capsules
+    : Array.isArray(readyData)
+      ? readyData
+      : []
 
   // Filter and sort capsules
   const getFilteredCapsules = () => {
@@ -131,10 +150,11 @@ export default function TimeCapsulePage() {
 
   const filteredCapsules = getFilteredCapsules()
 
-  // Calculate stats
-  const sealedCount = allCapsules.filter(c => c.status === 'sealed').length
-  const readyCount = allCapsules.filter(c => c.status === 'ready').length
-  const openedCount = allCapsules.filter(c => c.status === 'opened').length
+  // Use API-provided stats (or calculate from arrays as fallback)
+  const stats = overviewData?.stats || {}
+  const sealedCount = stats.sealed ?? comingSoon.length
+  const readyCount = stats.ready_to_reveal ?? 0
+  const openedCount = stats.revealed ?? recentRevealed.length
 
   // Select first capsule on load
   useEffect(() => {
