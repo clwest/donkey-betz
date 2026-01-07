@@ -790,6 +790,78 @@ def process_spider_data_automatic():
     return results
 
 
+@shared_task
+def process_core_spider_data():
+    """
+    Session 707: Process unprocessed spider data from core.models_unified_system.SpiderData
+
+    This task processes the CORE SpiderData table which is used by the unified system,
+    as opposed to the legacy persistence.models.SpiderData table.
+
+    The DIGESTIVE system monitors this table for queue depth.
+
+    Runs every 2 minutes with 500 items per batch to catch up with backlog.
+    """
+    from core.models_unified_system import SpiderData
+    from intelligence.spider_agent_connector import SpiderAgentConnector
+
+    logger.info("🍽️ [DIGESTIVE] Starting core spider data processing...")
+
+    connector = SpiderAgentConnector()
+
+    # Get unprocessed spider data (500 per run to catch up with backlog)
+    unprocessed = SpiderData.objects.filter(is_processed=False).order_by('created_at')[:500]
+    total_unprocessed = SpiderData.objects.filter(is_processed=False).count()
+
+    results = {
+        'processed': 0,
+        'solutions_created': 0,
+        'learning_records': 0,
+        'errors': 0,
+        'agents_matched': 0,
+        'remaining': total_unprocessed
+    }
+
+    if not unprocessed:
+        logger.info("🍽️ [DIGESTIVE] No unprocessed spider data found")
+        return results
+
+    logger.info(f"🍽️ [DIGESTIVE] Processing {len(unprocessed)} of {total_unprocessed} unprocessed items...")
+
+    for spider_data in unprocessed:
+        try:
+            # Route spider data to agents
+            result = connector.route_spider_data(spider_data)
+
+            # Mark as processed
+            spider_data.is_processed = True
+            spider_data.save(update_fields=['is_processed'])
+
+            results['processed'] += 1
+            results['solutions_created'] += len(result.get('solutions_created', []))
+            results['learning_records'] += len(result.get('learning_records', []))
+            results['agents_matched'] += len(result.get('matched_agents', []))
+
+        except Exception as e:
+            results['errors'] += 1
+            logger.error(f"Error processing core spider data {spider_data.id}: {e}")
+            # Still mark as processed to avoid infinite retry on bad data
+            try:
+                spider_data.is_processed = True
+                spider_data.save(update_fields=['is_processed'])
+            except Exception:
+                pass
+
+    results['remaining'] = total_unprocessed - results['processed']
+
+    logger.info(f"✅ [DIGESTIVE] Core processing complete: {results['processed']} items processed")
+    logger.info(f"   Solutions: {results['solutions_created']}, Learning: {results['learning_records']}")
+    logger.info(f"   Agents matched: {results['agents_matched']}, Errors: {results['errors']}")
+    logger.info(f"   Remaining in queue: {results['remaining']}")
+
+    return results
+
+
 @shared_task(bind=True)
 def run_spider_network(self):
     """
