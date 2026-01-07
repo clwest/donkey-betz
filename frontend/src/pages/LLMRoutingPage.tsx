@@ -112,27 +112,27 @@ function ProviderCard({ provider }: { provider: Provider }) {
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
           <p className="text-gray-400">Models</p>
-          <p className="font-medium">{provider.model_count}</p>
+          <p className="font-medium">{provider.model_count ?? 0}</p>
         </div>
         <div>
           <p className="text-gray-400">Calls (24h)</p>
-          <p className="font-medium">{provider.calls_24h}</p>
+          <p className="font-medium">{provider.calls_24h ?? 0}</p>
         </div>
         <div>
           <p className="text-gray-400">Cost (24h)</p>
-          <p className="font-medium">${provider.cost_24h.toFixed(4)}</p>
+          <p className="font-medium">${(provider.cost_24h ?? 0).toFixed(4)}</p>
         </div>
       </div>
-      {provider.calls_24h > 0 && (
+      {(provider.calls_24h ?? 0) > 0 && (
         <div className="mt-3 pt-3 border-t border-dark-border">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">Success Rate</span>
             <span className={cn(
               'font-medium',
-              provider.success_rate_24h >= 90 ? 'text-accent-green' :
-              provider.success_rate_24h >= 70 ? 'text-accent-amber' : 'text-accent-red'
+              (provider.success_rate_24h ?? 0) >= 90 ? 'text-accent-green' :
+              (provider.success_rate_24h ?? 0) >= 70 ? 'text-accent-amber' : 'text-accent-red'
             )}>
-              {provider.success_rate_24h.toFixed(1)}%
+              {(provider.success_rate_24h ?? 0).toFixed(1)}%
             </span>
           </div>
         </div>
@@ -159,10 +159,10 @@ function ModelRow({ model }: { model: Model }) {
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span className="text-gray-400">
-            ${model.cost_per_1m_input.toFixed(2)}/1M in
+            ${(model.cost_per_1m_input ?? 0).toFixed(2)}/1M in
           </span>
           <span className="text-gray-400">
-            ${model.cost_per_1m_output.toFixed(2)}/1M out
+            ${(model.cost_per_1m_output ?? 0).toFixed(2)}/1M out
           </span>
           <span className={cn(
             'px-2 py-1 rounded text-xs',
@@ -237,13 +237,13 @@ function LogRow({ log }: { log: CallLog }) {
         <p className="text-xs text-gray-500">{log.model_id}</p>
       </td>
       <td className="px-4 py-3 text-sm text-gray-400">
-        {log.input_tokens + log.output_tokens} tokens
+        {(log.input_tokens ?? 0) + (log.output_tokens ?? 0)} tokens
       </td>
       <td className="px-4 py-3 text-sm">
-        <span className="text-accent-amber">${log.cost.toFixed(6)}</span>
+        <span className="text-accent-amber">${(log.cost ?? 0).toFixed(6)}</span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-400">
-        {log.latency_ms}ms
+        {log.latency_ms ?? 0}ms
       </td>
       <td className="px-4 py-3 text-xs text-gray-500">
         {new Date(log.created_at).toLocaleString()}
