@@ -289,6 +289,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Time Capsules APIs (agent messages to the future for React frontend)
         '/api/time-capsules/',  # Capsules overview, agent capsules, reveal, react
+
+        # Session 716: Time Travel APIs (decision tracking and session replay for React frontend)
+        '/api/time-travel/',  # Sessions, decisions, bookmarks, annotations, search
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
