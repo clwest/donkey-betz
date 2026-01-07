@@ -22518,3 +22518,76 @@ def check_circulation():
             'error': str(e),
             'is_flowing': False,
         }
+
+
+# =============================================================================
+# SESSION 704: SPINE - CENTRAL API ROUTER
+# =============================================================================
+
+@shared_task(name='core.tasks.check_spine_alignment')
+def check_spine_alignment():
+    """
+    Session 704: SPINE - Check central API router health
+
+    The SPINE is the backbone of the AI body - central request routing.
+    Monitors all API route patterns for healthy alignment:
+    - Route pattern health and error rates
+    - Latency metrics per route category
+    - Integration with HEART/LUNGS/CIRCULATORY
+    - Request tracing and correlation
+
+    Categories monitored:
+    - agents, spiders, content, business, creative
+    - scifi, monitoring, llm, admin, websocket, auth
+
+    Schedule: Every 60 seconds (via Celery Beat)
+    """
+    from core.services.spine import get_spine_router
+    import redis
+    import json
+
+    logger.info("🦴 [SPINE] Running alignment check...")
+
+    try:
+        spine = get_spine_router()
+        status = spine.align()
+
+        # Log the result
+        logger.info(
+            f"🦴 [SPINE] Alignment check complete: {status['overall_status'].upper()} "
+            f"(Health: {status['health_score']:.1f}%) - "
+            f"{status['healthy_patterns']}/{status['total_patterns']} healthy patterns"
+        )
+
+        # Log any critical issues
+        if status['failed_patterns'] > 0:
+            logger.warning(f"🦴 [SPINE] {status['failed_patterns']} patterns failing!")
+
+        if status['routing']['routes_blocked'] > 0:
+            logger.warning(f"🦴 [SPINE] {status['routing']['routes_blocked']} routes blocked")
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('spine:status', json.dumps({
+                'health_score': status['health_score'],
+                'overall_status': status['overall_status'],
+                'is_aligned': status['is_aligned'],
+                'healthy_patterns': status['healthy_patterns'],
+                'total_patterns': status['total_patterns'],
+                'routes_blocked': status['routing']['routes_blocked'],
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🦴 [SPINE] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🦴 [SPINE] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🦴 [SPINE] Alignment check failed: {e}")
+        return {
+            'status': 'injured',
+            'error': str(e),
+            'is_aligned': False,
+        }

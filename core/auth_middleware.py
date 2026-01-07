@@ -218,6 +218,16 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/circulatory/velocity/',  # Get flow velocity metrics
         '/api/circulatory/history/',  # Get circulation pulse history
         '/api/circulatory/is-flowing/',  # Quick alive check
+
+        # Session 704: SPINE System APIs (read-only API router monitoring for React frontend)
+        '/api/spine/align/',  # Run full alignment check
+        '/api/spine/status/',  # Get cached spine status
+        '/api/spine/patterns/',  # List all route patterns
+        '/api/spine/metrics/',  # Get metrics for a pattern
+        '/api/spine/history/',  # Get alignment history
+        '/api/spine/can-route/',  # Check if path can be routed
+        '/api/spine/is-aligned/',  # Quick health check
+        '/api/spine/categories/',  # Get category breakdown
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
