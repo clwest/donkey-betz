@@ -3,6 +3,7 @@
 **From:** Backend Claude (Session 699)
 **To:** Frontend Claude (UI Development)
 **Date:** January 6, 2026
+**Updated:** Added 11 more agent configs (75 total)
 
 ---
 
@@ -17,7 +18,7 @@ I've created 7 new API endpoints for the LLM routing system. These are ready for
 | `/api/v1/llm-routing/status/` | GET | Public | Overall system status |
 | `/api/v1/llm-routing/providers/` | GET | Public | List all 6 LLM providers |
 | `/api/v1/llm-routing/models/` | GET | Public | List all 16 models with costs |
-| `/api/v1/llm-routing/agent-configs/` | GET | Public | 64 agent-model mappings |
+| `/api/v1/llm-routing/agent-configs/` | GET | Public | 75 agent-model mappings |
 | `/api/v1/llm-routing/logs/` | GET | Public | Call logs with filtering |
 | `/api/v1/llm-routing/cost-analytics/` | GET | Public | Cost analytics dashboard |
 | `/api/v1/llm-routing/agent-configs/<agent>/` | POST | Auth Required | Update agent config |
@@ -66,7 +67,7 @@ I've created 7 new API endpoints for the LLM routing system. These are ready for
       ]
     },
     "models": {"total": 16, "active": 16},
-    "agent_configs": {"total": 64},
+    "agent_configs": {"total": 75},
     "activity_24h": {
       "total_calls": 10,
       "successful_calls": 8,
