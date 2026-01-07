@@ -23164,6 +23164,128 @@ def check_brain():
 
 
 # =============================================================================
+# Session 723: SKIN SYSTEM - Project Workspace Health Monitoring
+# =============================================================================
+
+@shared_task(name='core.tasks.check_skin')
+def check_skin():
+    """
+    Session 723: SKIN SYSTEM - Check project workspace health
+
+    The SKIN SYSTEM monitors the boundary layer where AI interfaces with
+    actual project workspaces - file operations, command execution, and rollback.
+
+    Monitors:
+    - Workspace health and activity
+    - File operation success rates
+    - Agent file activity
+    - Rollback availability
+    - Permission errors
+
+    Status Levels:
+    - healthy: 80%+ health (good workspace operations)
+    - active: High activity with good health
+    - sweating: Very high throughput
+    - irritated: Some errors/failures
+    - damaged: High error rate
+    - healing: Rollbacks in progress
+    - dormant: No recent activity
+
+    Run frequency: Every 90 seconds
+    """
+    import redis
+    import json
+    from core.services.skin import get_skin_service
+
+    logger.info("🧴 [SKIN] Running skin check...")
+
+    try:
+        skin = get_skin_service()
+        status = skin.feel()
+
+        # Log the result
+        logger.info(
+            f"🧴 [SKIN] Check complete: {status['status'].upper()} "
+            f"(Health: {status['health_score']:.1f}%)"
+        )
+
+        # Log workspace summary
+        workspaces = status.get('workspaces', {})
+        logger.info(
+            f"🧴 [SKIN] Workspaces: {workspaces.get('total', 0)} total, "
+            f"{workspaces.get('active', 0)} active"
+        )
+
+        # Log operations
+        ops = status.get('operations_24h', {})
+        logger.info(
+            f"🧴 [SKIN] Operations (24h): {ops.get('total', 0)} total, "
+            f"{ops.get('success_rate', 100):.1f}% success rate"
+        )
+
+        # Log file activity
+        files = status.get('file_activity_24h', {})
+        logger.info(
+            f"🧴 [SKIN] Files (24h): {files.get('created', 0)} created, "
+            f"{files.get('modified', 0)} modified, "
+            f"{files.get('deleted', 0)} deleted"
+        )
+
+        # Log healing status
+        healing = status.get('healing', {})
+        if healing.get('rollbacks_available', 0) > 0 or healing.get('pending_reviews', 0) > 0:
+            logger.info(
+                f"🧴 [SKIN] Healing: {healing.get('rollbacks_available', 0)} rollbacks available, "
+                f"{healing.get('pending_reviews', 0)} pending reviews"
+            )
+
+        # Log issues
+        issues = status.get('issues', {})
+        if issues.get('permission_denials', 0) > 0:
+            logger.warning(f"🧴 [SKIN] Permission denials: {issues.get('permission_denials', 0)}")
+
+        recent_errors = issues.get('recent_errors', [])
+        if recent_errors:
+            for error in recent_errors[:3]:
+                logger.warning(
+                    f"🧴 [SKIN] Error: {error.get('operation_type')} - {error.get('error_message', '')[:100]}"
+                )
+
+        # Alert on critical status
+        if status['status'] in ('damaged', 'irritated'):
+            logger.error(
+                f"🧴 [SKIN] WARNING: System status is {status['status'].upper()}!"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('body_systems', json.dumps({
+                'type': 'skin_status',
+                'system': 'skin',
+                'status': status['status'],
+                'health_score': status['health_score'],
+                'is_healthy': status['is_healthy'],
+                'operations_24h': ops.get('total', 0),
+                'success_rate_24h': ops.get('success_rate', 100),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🧴 [SKIN] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🧴 [SKIN] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🧴 [SKIN] Skin check failed: {e}")
+        return {
+            'status': 'damaged',
+            'error': str(e),
+            'is_healthy': False,
+        }
+
+
+# =============================================================================
 # Session 711: BODY COORDINATOR - Autonomic Nervous System
 # =============================================================================
 

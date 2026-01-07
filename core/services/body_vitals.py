@@ -46,7 +46,7 @@ class BodyVitalsService:
 
     This is the bridge between the Brain (PA) and the Body Systems.
     Provides:
-    - get_all_vitals(): Query all 8 systems at once
+    - get_all_vitals(): Query all 9 systems at once
     - check_budget(): Check LUNGS before expensive operations
     - get_alerts(): Get critical alerts from all systems
     """
@@ -60,6 +60,7 @@ class BodyVitalsService:
         'digestive': '_get_digestive_vitals',
         'muscular': '_get_muscular_vitals',
         'brain': '_get_brain_vitals',
+        'skin': '_get_skin_vitals',
     }
 
     # Weights for calculating overall health score
@@ -73,6 +74,7 @@ class BodyVitalsService:
         'digestive': 1.0,
         'muscular': 1.0,
         'brain': 1.4,       # Important - cognitive processing
+        'skin': 1.1,        # Important - workspace operations
     }
 
     # Status emoji mappings per system
@@ -109,11 +111,15 @@ class BodyVitalsService:
             'focused': '🧠', 'thinking': '💭', 'overloaded': '🤯', 'foggy': '🌫️', 'resting': '😴', 'offline': '💀',
             'unknown': '❓', 'error': '❓'
         },
+        'skin': {
+            'healthy': '🧴', 'active': '✋', 'sweating': '💦', 'irritated': '🔴', 'damaged': '🩹', 'healing': '💊', 'dormant': '😴',
+            'unknown': '❓', 'error': '❓'
+        },
     }
 
     def get_all_vitals(self, include_details: bool = False) -> Dict[str, Any]:
         """
-        Get health status from all 8 body systems.
+        Get health status from all 9 body systems.
 
         Args:
             include_details: Include detailed metrics per system
@@ -678,6 +684,55 @@ class BodyVitalsService:
             return result
         except Exception as e:
             logger.error(f"BRAIN vitals error: {e}")
+            return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
+
+    def _get_skin_vitals(self, include_details: bool = False) -> Dict[str, Any]:
+        """Get SKIN system vitals - project workspace health."""
+        try:
+            from core.services.skin import get_skin_service
+            skin = get_skin_service()
+            vitals = skin.get_vitals()
+
+            status = vitals.get('status', 'unknown')
+            score = vitals.get('health_score', 0)
+
+            result = {
+                'status': status,
+                'score': score,
+                'emoji': self._get_emoji('skin', status),
+                'alerts': []
+            }
+
+            # Generate alerts based on skin status
+            if status in ['damaged', 'irritated']:
+                result['alerts'].append({
+                    'system': 'skin',
+                    'message': f"Workspace health: {status}",
+                    'severity': 'critical' if status == 'damaged' else 'warning',
+                    'severity_score': 3 if status == 'damaged' else 2
+                })
+            elif status == 'healing':
+                result['alerts'].append({
+                    'system': 'skin',
+                    'message': "Rollback operations in progress",
+                    'severity': 'info',
+                    'severity_score': 1
+                })
+
+            if include_details:
+                result['details'] = {
+                    'total_workspaces': vitals.get('total_workspaces', 0),
+                    'active_workspaces': vitals.get('active_workspaces', 0),
+                    'operations_24h': vitals.get('operations_24h', 0),
+                    'success_rate_24h': vitals.get('success_rate_24h', 100),
+                    'activity_level': vitals.get('activity_level', 'unknown'),
+                    'ops_per_hour': vitals.get('ops_per_hour', 0),
+                    'last_operation': vitals.get('last_operation')
+                }
+
+            return result
+        except Exception as e:
+            logger.error(f"SKIN vitals error: {e}")
             return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
 
     # ========== Helper Methods ==========

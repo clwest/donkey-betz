@@ -264,6 +264,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/brain/history/',  # Get brain pulse history
         '/api/brain/is-thinking/',  # Quick alive check
 
+        # Session 723: SKIN System APIs (project workspace health for React frontend)
+        '/api/skin/status/',  # Get cached skin status
+        '/api/skin/feel/',  # Run skin check
+        '/api/skin/vitals/',  # Get skin vitals
+        '/api/skin/history/',  # Get skin pulse history
+        '/api/skin/is-healthy/',  # Quick alive check
+        '/api/skin/workspaces/',  # Get workspace summaries
+
         # Session 710: BODY UNIFIED - Body Health Dashboard API
         '/api/body/vitals/',  # All systems health
         '/api/body/alerts/',  # Active alerts

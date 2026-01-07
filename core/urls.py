@@ -3707,6 +3707,28 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 723: SKIN SYSTEM - Project Workspace Health Monitoring
+# =========================================================================
+# Monitors workspace health, file operations, agent activity, and rollback capability
+from core.views_skin import (
+    SkinStatusView,
+    SkinFeelView,
+    SkinVitalsView,
+    SkinHistoryView,
+    SkinIsHealthyView,
+    SkinWorkspacesView,
+)
+
+urlpatterns += [
+    path('api/skin/status/', SkinStatusView.as_view(), name='skin-status'),
+    path('api/skin/feel/', SkinFeelView.as_view(), name='skin-feel'),
+    path('api/skin/vitals/', SkinVitalsView.as_view(), name='skin-vitals'),
+    path('api/skin/history/', SkinHistoryView.as_view(), name='skin-history'),
+    path('api/skin/is-healthy/', SkinIsHealthyView.as_view(), name='skin-is-healthy'),
+    path('api/skin/workspaces/', SkinWorkspacesView.as_view(), name='skin-workspaces'),
+]
+
+# =========================================================================
 # Session 710: BODY UNIFIED - Body Health Dashboard API
 # =========================================================================
 from core.views_body import (

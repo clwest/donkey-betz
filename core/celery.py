@@ -1592,6 +1592,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # Session 723: SKIN SYSTEM - Project Workspace Health
+    # Monitors workspace health, file operations, agent activity, and rollback
+    'skin-system-check': {
+        'task': 'core.tasks.check_skin',
+        'schedule': 90.0,  # Every 90 seconds
+        'options': {
+            'expires': 85,  # Expire before next check
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
     # Session 711: BODY COORDINATOR - Autonomic Nervous System
     # Coordinates responses across all body systems
     'body-coordinator-check': {
