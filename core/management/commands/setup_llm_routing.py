@@ -209,6 +209,7 @@ class Command(BaseCommand):
             ('OPENAI_API_KEY', 'OpenAI'),
             ('ANTHROPIC_API_KEY', 'Anthropic'),
             ('DEEPSEEK_API_KEY', 'DeepSeek'),
+            ('TOGETHER_AI_API_KEY', 'Together AI'),  # Session 697: Hosts DeepSeek, Llama, Mixtral
             ('GEMINI_API_KEY', 'Gemini'),
         ]
 
