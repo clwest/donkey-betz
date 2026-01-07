@@ -597,19 +597,19 @@ DEFAULT_MODELS = [
         'is_recommended': False,
     },
 
-    # Together AI Models (hosts open-source models)
+    # Together AI Models (serverless only - Session 698)
     {
         'provider': 'together',
-        'model_id': 'deepseek-ai/deepseek-coder-33b-instruct',
-        'display_name': 'DeepSeek Coder 33B (Together)',
+        'model_id': 'deepseek-ai/DeepSeek-V3',
+        'display_name': 'DeepSeek V3 (Together)',
         'category': 'coding',
-        'context_window': 16000,
-        'max_output_tokens': 4096,
+        'context_window': 64000,
+        'max_output_tokens': 8192,
         'speed_rating': 8,
         'quality_rating': 9,
-        'cost_per_1m_input': 0.80,
-        'cost_per_1m_output': 0.80,
-        'specializations': ['coding', 'code_review', 'devops'],
+        'cost_per_1m_input': 0.50,
+        'cost_per_1m_output': 0.50,
+        'specializations': ['coding', 'code_review', 'analysis', 'reasoning'],
         'is_recommended': True,
     },
     {
@@ -652,20 +652,6 @@ DEFAULT_MODELS = [
         'cost_per_1m_input': 0.60,
         'cost_per_1m_output': 0.60,
         'specializations': ['general', 'coding', 'analysis'],
-        'is_recommended': False,
-    },
-    {
-        'provider': 'together',
-        'model_id': 'Qwen/Qwen2.5-Coder-32B-Instruct',
-        'display_name': 'Qwen 2.5 Coder 32B (Together)',
-        'category': 'coding',
-        'context_window': 32768,
-        'max_output_tokens': 4096,
-        'speed_rating': 8,
-        'quality_rating': 9,
-        'cost_per_1m_input': 0.80,
-        'cost_per_1m_output': 0.80,
-        'specializations': ['coding', 'code_review', 'devops'],
         'is_recommended': True,
     },
 ]
