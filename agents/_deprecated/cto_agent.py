@@ -53,6 +53,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from openai import OpenAI
 
 from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution, AgentSpecialization
@@ -484,6 +485,7 @@ Be specific, technical, and actionable. Reference actual file paths and line num
                 user=self.user,
                 task_description=f"[PLAN ONLY] {description}",
                 status='running',
+                started_at=timezone.now(),
                 input_data={
                     'description': description,
                     'approach': approach,
@@ -573,6 +575,7 @@ The plan should be detailed enough that a developer can execute it safely.
 
             # Update execution record
             execution.status = 'completed'
+            execution.completed_at = timezone.now()
             execution.result_data = {
                 'plan': implementation_plan,
                 'status': 'plan_created',
@@ -597,6 +600,7 @@ The plan should be detailed enough that a developer can execute it safely.
             if 'execution' in locals():
                 execution.status = 'failed'
                 execution.error_message = str(e)
+                execution.completed_at = timezone.now()
                 execution.save()
 
             return {
