@@ -23,6 +23,7 @@ import MemoryPalacePage from '@/pages/MemoryPalacePage'
 import EvolutionPage from '@/pages/EvolutionPage'
 import AgentMoodPage from '@/pages/AgentMoodPage'
 import TimeCapsulePage from '@/pages/TimeCapsulePage'
+import TimeTravelPage from '@/pages/TimeTravelPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -69,6 +70,7 @@ function App() {
         <Route path="evolution" element={<EvolutionPage />} />
         <Route path="agent-mood" element={<AgentMoodPage />} />
         <Route path="time-capsules" element={<TimeCapsulePage />} />
+        <Route path="time-travel" element={<TimeTravelPage />} />
       </Route>
     </Routes>
   )

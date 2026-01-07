@@ -203,6 +203,54 @@ export const moodApi = {
     api.post('/agent-mood/trigger-from-memory/', data),
 }
 
+// Session 716: Time Travel API - Decision tracking and session replay
+export const timeTravelApi = {
+  // Overview
+  overview: () => api.get('/time-travel/'),
+
+  // Sessions
+  sessionDetail: (sessionId: string) => api.get(`/time-travel/session/${sessionId}/`),
+  startSession: (data: { agent_id: string; context?: string }) =>
+    api.post('/time-travel/session/start/', data),
+  endSession: (sessionId: string) => api.post(`/time-travel/session/${sessionId}/end/`),
+  toggleBookmarkSession: (sessionId: string) =>
+    api.post(`/time-travel/session/${sessionId}/bookmark/`),
+
+  // Decisions
+  recordDecision: (data: {
+    session_id: string
+    decision_type: string
+    description: string
+    options_considered?: string[]
+    chosen_option?: string
+    reasoning?: string
+  }) => api.post('/time-travel/decision/', data),
+  updateOutcome: (decisionId: string, data: { outcome: string; success?: boolean }) =>
+    api.post(`/time-travel/decision/${decisionId}/outcome/`, data),
+  flagDecision: (decisionId: string, data: { reason: string }) =>
+    api.post(`/time-travel/decision/${decisionId}/flag/`, data),
+
+  // Bookmarks & Annotations
+  createBookmark: (data: { session_id: string; label: string; notes?: string }) =>
+    api.post('/time-travel/bookmark/', data),
+  deleteBookmark: (bookmarkId: string) => api.delete(`/time-travel/bookmark/${bookmarkId}/`),
+  addAnnotation: (data: { decision_id: string; text: string }) =>
+    api.post('/time-travel/annotation/', data),
+  deleteAnnotation: (annotationId: string) =>
+    api.delete(`/time-travel/annotation/${annotationId}/`),
+
+  // Search & Filters
+  searchSessions: (data: { query?: string; agent_id?: string; date_from?: string; date_to?: string }) =>
+    api.post('/time-travel/search/', data),
+  flaggedDecisions: (limit = 50) => api.get(`/time-travel/flagged/?limit=${limit}`),
+
+  // Agent-specific
+  agentSessions: (agentId: string, limit = 20) =>
+    api.get(`/time-travel/agent/${agentId}/sessions/?limit=${limit}`),
+  simulateSession: (agentId: string, data: { scenario: string }) =>
+    api.post(`/time-travel/agent/${agentId}/simulate/`, data),
+}
+
 // Session 716: Time Capsules API - Agent messages to the future
 export const timeCapsuleApi = {
   // Overview of all time capsules

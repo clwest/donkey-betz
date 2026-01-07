@@ -23,6 +23,7 @@ import {
   Trophy,
   Smile,
   Gift,
+  History,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -44,6 +45,7 @@ const navItems = [
   { path: '/evolution', label: 'Evolution', icon: Trophy },
   { path: '/agent-mood', label: 'Mood', icon: Smile },
   { path: '/time-capsules', label: 'Capsules', icon: Gift },
+  { path: '/time-travel', label: 'Time Travel', icon: History },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
