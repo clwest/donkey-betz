@@ -436,19 +436,22 @@ export default function WorkspacePage() {
   const queryClient = useQueryClient()
 
   // Queries
-  const { data: workspacesData, isLoading: loadingWorkspaces } = useQuery({
+  const { data: workspacesData, isLoading: loadingWorkspaces, error: workspacesError } = useQuery({
     queryKey: ['workspaces'],
     queryFn: () => workspaceApi.list(),
+    retry: false, // Don't retry on auth errors
   })
 
   const { data: activeWorkspaceData } = useQuery({
     queryKey: ['workspace-active'],
     queryFn: () => workspaceApi.getActive(),
+    retry: false,
   })
 
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['workspace-dashboard'],
     queryFn: () => workspaceApi.dashboard(),
+    retry: false,
   })
 
   const activeWorkspace = activeWorkspaceData?.data as Workspace | undefined
@@ -494,6 +497,7 @@ export default function WorkspacePage() {
     queryKey: ['workspace-pending-reviews'],
     queryFn: () => workspaceOperationsApi.pendingReviews(),
     enabled: activeTab === 'reviews',
+    retry: false,
   })
 
   // Mutations
@@ -600,6 +604,32 @@ export default function WorkspacePage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  // Handle authentication/authorization errors
+  if (workspacesError) {
+    const isAuthError = (workspacesError as { response?: { status?: number } })?.response?.status === 401 ||
+                        (workspacesError as { response?: { status?: number } })?.response?.status === 403
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="h-16 w-16 rounded-full bg-accent-red/20 flex items-center justify-center">
+          <XCircle size={32} className="text-accent-red" />
+        </div>
+        <h2 className="text-xl font-semibold">
+          {isAuthError ? 'Authentication Required' : 'Failed to Load Workspaces'}
+        </h2>
+        <p className="text-gray-400 text-center max-w-md">
+          {isAuthError
+            ? 'Please log in to access the Workspace Manager. The SKIN Layer API requires authentication.'
+            : 'Unable to connect to the Workspace API. Please check that the backend is running.'}
+        </p>
+        {isAuthError && (
+          <a href="/login" className="btn btn-primary">
+            Go to Login
+          </a>
+        )}
       </div>
     )
   }
