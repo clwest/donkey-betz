@@ -465,6 +465,9 @@ export const adminApi = {
 
   // Agent Health
   agentHealth: () => api.get('/v1/agents/health/'),
+
+  // Agent Stats (detailed - includes categories, executions, activity)
+  agentStats: () => api.get('/agents/stats/'),
 }
 
 // Session 696: SKIN Layer - Workspace Management API
