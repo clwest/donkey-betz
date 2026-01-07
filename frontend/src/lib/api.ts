@@ -80,6 +80,26 @@ export const decisionsApi = {
   promote: (decisionId: string) => api.post(`/boardroom/decisions/${decisionId}/promote/`),
 }
 
+// Session 710: Body Health Dashboard API
+export const bodyApi = {
+  vitals: (includeDetails = false) => api.get(`/body/vitals/?include_details=${includeDetails}`),
+  alerts: (severity = 'info', limit = 50) => api.get(`/body/alerts/?severity=${severity}&limit=${limit}`),
+  history: (hours = 24, system?: string) => {
+    const params = new URLSearchParams({ hours: String(hours) })
+    if (system) params.append('system', system)
+    return api.get(`/body/history/?${params}`)
+  },
+  summary: () => api.get('/body/summary/'),
+  system: (systemName: string) => api.get(`/body/${systemName}/`),
+  // Session 711: Body Coordination API
+  coordination: {
+    status: () => api.get('/body/coordination/status/'),
+    run: () => api.get('/body/coordination/run/'),
+    log: (limit = 20) => api.get(`/body/coordination/log/?limit=${limit}`),
+  },
+  throttle: () => api.get('/body/throttle/'),
+}
+
 export const intelligenceApi = {
   status: () => api.get('/v1/intelligence/skynet/status/'),
   opportunities: () => api.get('/v1/intelligence/opportunities/'),
@@ -786,4 +806,35 @@ export const digestiveApi = {
 
   // Quick alive check
   isDigesting: () => api.get('/digestive/is-digesting/'),
+}
+
+// Session 707: MUSCULAR System API - Agent Work Execution Monitoring
+export const muscularApi = {
+  // Run full muscle check (analyze agent execution health)
+  flex: (force = false) => api.get('/muscular/flex/', { params: { force } }),
+
+  // Get cached muscle status (fast)
+  status: () => api.get('/muscular/status/'),
+
+  // List all muscle groups (agent categories)
+  groups: (params?: { category?: string; critical_only?: boolean }) =>
+    api.get('/muscular/groups/', { params }),
+
+  // Get specific muscle group details
+  groupDetail: (groupId: string) => api.get(`/muscular/groups/${groupId}/`),
+
+  // Get weak agents (low success rate)
+  weak: (params?: { threshold?: number; limit?: number }) =>
+    api.get('/muscular/weak/', { params }),
+
+  // Get overworked agents (high execution count)
+  overworked: (params?: { threshold?: number; limit?: number }) =>
+    api.get('/muscular/overworked/', { params }),
+
+  // Get muscular pulse history
+  history: (hours = 24, limit = 100) =>
+    api.get('/muscular/history/', { params: { hours, limit } }),
+
+  // Quick health check - are agents executing successfully?
+  isStrong: () => api.get('/muscular/is-strong/'),
 }

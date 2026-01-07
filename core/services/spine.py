@@ -266,6 +266,10 @@ class SpineRouterService:
             'category_health': status.category_health,
         }
 
+    def get_status(self) -> dict:
+        """Get current status for body coordinator integration."""
+        return self.get_vitals()
+
     def can_route(self, path: str, method: str = 'GET') -> Tuple[bool, str]:
         """
         Check if a request can be routed to the given path.

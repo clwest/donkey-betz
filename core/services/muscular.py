@@ -331,6 +331,10 @@ class MuscularSystemService:
             'overworked_muscles': pulse.overworked_muscles[:5],
         }
 
+    def get_status(self) -> dict:
+        """Get current status for body coordinator integration."""
+        return self.get_vitals()
+
     def get_history(self, hours: int = 24, limit: int = 100) -> List[dict]:
         """Get muscular pulse history."""
         from core.models_muscular import MuscularPulse

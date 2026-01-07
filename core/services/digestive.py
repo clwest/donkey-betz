@@ -315,6 +315,10 @@ class DigestiveSystemService:
             'bottlenecks': pulse.bottlenecks,
         }
 
+    def get_status(self) -> dict:
+        """Get current status for body coordinator integration."""
+        return self.get_vitals()
+
     def get_history(self, hours: int = 24, limit: int = 100) -> List[dict]:
         """Get digestion pulse history."""
         from core.models_digestive import DigestivePulse

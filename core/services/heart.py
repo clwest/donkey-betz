@@ -494,7 +494,28 @@ class HeartMonitorService:
         """Get current component statuses from cache (fast)."""
         from core.models_heart import ComponentStatus
 
-        return ComponentStatus.get_all_vitals()
+        components = ComponentStatus.get_all_vitals()
+
+        # Calculate overall status from component health
+        total = len(components)
+        healthy = sum(1 for c in components.values() if c.get('is_healthy', False))
+        health_score = (healthy / total * 100) if total > 0 else 0
+
+        # Determine overall status
+        if health_score >= 80:
+            overall_status = 'healthy'
+        elif health_score >= 50:
+            overall_status = 'degraded'
+        else:
+            overall_status = 'critical'
+
+        return {
+            'overall_status': overall_status,
+            'health_score': health_score,
+            'components_healthy': healthy,
+            'components_checked': total,
+            'components': components,
+        }
 
     def record_heartbeat(self, pulse_result: Dict) -> 'HeartBeat':
         """Save heartbeat to database."""

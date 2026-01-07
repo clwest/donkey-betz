@@ -667,6 +667,17 @@ class CirculatorySystemService:
             vitals['overall_score'] = 100.0
             vitals['is_flowing'] = True
 
+        # Session 712: Add overall_status for body_vitals compatibility
+        vitals['overall_status'] = 'flowing' if vitals['is_flowing'] else 'blocked'
+        vitals['flow_score'] = vitals['overall_score']
+
+        return vitals
+
+    def get_status(self) -> Dict:
+        """Get current status for body coordinator integration."""
+        vitals = self.get_vitals()
+        # Convert is_flowing to overall_status string
+        vitals['overall_status'] = 'flowing' if vitals.get('is_flowing', True) else 'blocked'
         return vitals
 
     def get_history(self, hours: int = 24, limit: int = 100) -> List[Dict]:
