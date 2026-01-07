@@ -1,23 +1,24 @@
 # Platform Capabilities
 
-**Last Updated:** Session 701 (January 6, 2026) - Added HEART Service for system health monitoring
+**Last Updated:** Session 702 (January 6, 2026) - Added LUNGS Service for resource & capacity management
 
 ---
 
-## System Overview (Session 701)
+## System Overview (Session 702)
 
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) - ALL have workspace integration |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
 | **PA Tools** | **83** | +workspace_tool (Session 695) |
-| **Database Models** | **338+** | 37 categories (+2 HEART models) |
-| **Celery Tasks** | **129** | +run_heartbeat (every 60s) |
-| **Services** | **98** | Business logic layer (+heart.py) |
+| **Database Models** | **341+** | 37 categories (+3 LUNGS models) |
+| **Celery Tasks** | **132** | +3 LUNGS tasks (breathing, forecast, reset) |
+| **Services** | **99** | Business logic layer (+lungs.py) |
 | **Discord Commands** | **112** | 29 Cog categories |
 | **Advisors** | **25** | Famous figures + domain experts |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
 | **HEART Service** | **2 models** | HeartBeat, ComponentStatus - monitors 6 body parts |
+| **LUNGS Service** | **3 models** | Budget, BreathCycle, RespiratoryStatus - 6 default budgets |
 | **SKIN Layer** | **3 models** | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
 | **WORKSPACE_AWARE_AGENTS** | **22** | Development, Content, Strategy, Research, Analysis, Legal |
 
@@ -85,6 +86,7 @@
 | **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
 | **SKIN Layer** | **Workspace Management + File Writing + Git** | **Production (Session 695)** |
 | **HEART Service** | **System Health Monitoring (6 body parts)** | **Production (Session 701)** |
+| **LUNGS Service** | **Resource & Capacity Management (6 budgets)** | **Production (Session 702)** |
 
 ---
 
@@ -243,6 +245,82 @@ GET /api/heart/alive/                     # Quick alive check
 | `core/services/heart.py` | ~500 | HeartMonitorService |
 | `core/views_heart.py` | ~180 | 5 API endpoints |
 | `core/management/commands/heart_check.py` | ~240 | CLI command |
+
+---
+
+## LUNGS Service - Resource & Capacity Management (Session 702)
+
+The **LUNGS** (Limits, Usage, Notifications, Governance, Spending) service manages "breathing" - token consumption across all LLM providers. It tracks usage against budgets, sends alerts when thresholds are crossed, and provides spending forecasts.
+
+### Human Body Metaphor
+
+| Breathing Concept | Technical Equivalent |
+|-------------------|---------------------|
+| **Inhale** | Budget allocation (credits available) |
+| **Exhale** | Token consumption (usage) |
+| **Oxygen Level** | Remaining budget % |
+| **Hyperventilation** | Overspending alert |
+| **Respiratory Rate** | Calls per minute |
+
+### Default Budgets (6)
+
+| Budget | Scope | Period | Cost Limit |
+|--------|-------|--------|------------|
+| System Daily | system | daily | $50.00 |
+| System Monthly | system | monthly | $500.00 |
+| OpenAI Daily | provider/openai | daily | $30.00 |
+| Anthropic Daily | provider/anthropic | daily | $20.00 |
+| Together AI Daily | provider/together_ai | daily | $10.00 |
+| DeepSeek Daily | provider/deepseek | daily | $10.00 |
+
+### Status Levels
+
+| Oxygen Level | Status | Visual |
+|--------------|--------|--------|
+| 80-100% | `normal` | Green |
+| 50-79% | `elevated` | Yellow |
+| 20-49% | `hyperventilating` | Red |
+| 0-19% | `holding` | Critical alert |
+
+### Usage
+
+```bash
+# CLI Commands
+python manage.py lungs_check              # Full breathing check
+python manage.py lungs_check --oxygen     # Just oxygen levels
+python manage.py lungs_check --forecast   # Spending forecast
+python manage.py lungs_check --velocity   # Spending velocity
+python manage.py lungs_check --budgets    # List all budgets
+python manage.py lungs_check --watch      # Continuous monitoring (15m)
+python manage.py lungs_check --json       # JSON output
+
+# API Endpoints
+GET /api/lungs/breathe/                   # Run full check
+GET /api/lungs/status/                    # Cached respiratory status
+GET /api/lungs/oxygen/                    # Remaining budget %
+GET /api/lungs/budgets/                   # List all budgets
+GET /api/lungs/forecast/                  # Spending forecast
+GET /api/lungs/history/                   # Breath cycle history
+GET /api/lungs/can-breathe/               # Check if call allowed
+GET /api/lungs/alive/                     # Quick alive check
+```
+
+### Database Models
+
+| Model | Fields | Purpose |
+|-------|--------|---------|
+| **Budget** | 12 | Budget configurations per scope/period |
+| **BreathCycle** | 18 | Time-series consumption records |
+| **RespiratoryStatus** | 12 | Current breathing status cache |
+
+### Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/models_lungs.py` | ~250 | Database models |
+| `core/services/lungs.py` | ~450 | LungsCapacityService |
+| `core/views_lungs.py` | ~350 | 9 API endpoints |
+| `core/management/commands/lungs_check.py` | ~443 | CLI command |
 
 ---
 

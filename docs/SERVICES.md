@@ -1,8 +1,8 @@
 # Services Reference
 
-**Last Updated:** Session 701 (January 6, 2026)
+**Last Updated:** Session 702 (January 6, 2026)
 **Location:** `core/services/`
-**Total Services:** 98 service classes across 82 files
+**Total Services:** 99 service classes across 83 files
 
 ---
 
@@ -29,7 +29,7 @@ The services layer contains business logic separated from views and models. Serv
 | Memory & Learning | 5 | Embeddings, implicit learning |
 | Event System | 3 | Event bus, handlers |
 | Chief of Staff | 5 | Reviews, decisions, concerns |
-| **System Health** | **1** | **HEART service - health monitoring (Session 701)** |
+| **System Health** | **2** | **HEART + LUNGS services (Sessions 701-702)** |
 | Utility Services | 16 | Various specialized services |
 
 ---
@@ -487,7 +487,7 @@ review = service.generate_review(
 
 ---
 
-## System Health (1 Service)
+## System Health (2 Services)
 
 ### HeartMonitorService
 **File:** `heart.py`
@@ -518,9 +518,40 @@ is_alive = heart.is_alive()
 
 # Get cached vitals
 vitals = heart.get_vitals()
+```
 
-# Get heartbeat history
-history = heart.get_history(hours=24, limit=100)
+### LungsCapacityService
+**File:** `lungs.py`
+**Purpose:** Resource and capacity management - the "breathing" of the AI body (Session 702)
+
+Manages token/cost budgets across all LLM providers:
+- **Breathing Check** - Aggregates consumption, updates cycles
+- **Oxygen Levels** - Remaining budget percentages
+- **Forecasting** - Projects end-of-period usage
+- **Alerts** - Discord notifications at 80%/95% thresholds
+
+Default Budgets: System ($50/day, $500/month), OpenAI ($30/day), Anthropic ($20/day), Together AI ($10/day), DeepSeek ($10/day)
+
+```python
+from core.services.lungs import get_lungs_monitor
+
+lungs = get_lungs_monitor()
+
+# Run full breathing check
+result = lungs.breathe()
+print(f"O2 Level: {result['oxygen_level']}%")
+
+# Check if call allowed within budget
+can_call, reason = lungs.can_breathe(provider='openai', estimated_tokens=1000)
+
+# Record consumption after call
+lungs.record_breath(provider='openai', agent='ResearchAgent', tokens=500, cost=0.01)
+
+# Get spending forecast
+forecast = lungs.forecast_end_of_period(budget)
+
+# Get spending velocity
+velocity = lungs.get_spending_velocity(hours=24)
 ```
 
 **Features:**

@@ -533,3 +533,126 @@ class ComponentStatusAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# =============================================================================
+# SESSION 702: LUNGS SERVICE ADMIN (Resource & Capacity Management)
+# =============================================================================
+
+from core.models_lungs import Budget, BreathCycle, RespiratoryStatus
+
+
+@admin.register(Budget)
+class BudgetAdmin(admin.ModelAdmin):
+    """Admin interface for budget configuration."""
+
+    list_display = (
+        'name', 'scope', 'scope_identifier', 'period',
+        'cost_limit', 'token_limit', 'warning_threshold',
+        'is_active', 'enforce_hard_limit', 'updated_at'
+    )
+    list_filter = ('scope', 'period', 'is_active', 'enforce_hard_limit')
+    search_fields = ('name', 'scope_identifier')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+    ordering = ('scope', 'name')
+
+    fieldsets = (
+        ('Budget Info', {
+            'fields': ('name', 'scope', 'scope_identifier', 'period')
+        }),
+        ('Limits', {
+            'fields': ('cost_limit', 'token_limit')
+        }),
+        ('Thresholds', {
+            'fields': ('warning_threshold', 'critical_threshold')
+        }),
+        ('Settings', {
+            'fields': ('is_active', 'enforce_hard_limit')
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(BreathCycle)
+class BreathCycleAdmin(admin.ModelAdmin):
+    """Admin interface for breath cycle records."""
+
+    list_display = (
+        'budget', 'period_start', 'tokens_used', 'cost_incurred',
+        'call_count', 'utilization_percent', 'warning_sent',
+        'critical_sent', 'recorded_at'
+    )
+    list_filter = (
+        'budget__scope', 'warning_sent', 'critical_sent',
+        'on_pace_to_exceed', 'period_start'
+    )
+    search_fields = ('budget__name',)
+    readonly_fields = (
+        'id', 'budget', 'period_start', 'period_end', 'tokens_used',
+        'cost_incurred', 'call_count', 'tokens_remaining', 'cost_remaining',
+        'utilization_percent', 'projected_end_usage', 'on_pace_to_exceed',
+        'warning_sent', 'critical_sent', 'recorded_at'
+    )
+    date_hierarchy = 'period_start'
+    ordering = ('-period_start',)
+
+    fieldsets = (
+        ('Period', {
+            'fields': ('budget', 'period_start', 'period_end')
+        }),
+        ('Consumption', {
+            'fields': ('tokens_used', 'cost_incurred', 'call_count')
+        }),
+        ('Remaining', {
+            'fields': ('tokens_remaining', 'cost_remaining', 'utilization_percent')
+        }),
+        ('Forecast', {
+            'fields': ('projected_end_usage', 'on_pace_to_exceed')
+        }),
+        ('Alerts', {
+            'fields': ('warning_sent', 'critical_sent')
+        }),
+        ('System Info', {
+            'fields': ('id', 'recorded_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(RespiratoryStatus)
+class RespiratoryStatusAdmin(admin.ModelAdmin):
+    """Admin interface for respiratory status cache."""
+
+    list_display = (
+        'component', 'display_name', 'status', 'oxygen_level',
+        'cost_today', 'calls_today', 'daily_cost_limit', 'last_check'
+    )
+    list_filter = ('status',)
+    search_fields = ('component', 'display_name')
+    readonly_fields = (
+        'component', 'tokens_used_today', 'cost_today', 'calls_today',
+        'last_breath', 'last_check'
+    )
+    ordering = ('component',)
+
+    fieldsets = (
+        ('Component Info', {
+            'fields': ('component', 'display_name')
+        }),
+        ('Current Status', {
+            'fields': ('status', 'oxygen_level', 'respiratory_rate')
+        }),
+        ('Today\'s Usage', {
+            'fields': ('tokens_used_today', 'cost_today', 'calls_today')
+        }),
+        ('Limits', {
+            'fields': ('daily_token_limit', 'daily_cost_limit')
+        }),
+        ('Timestamps', {
+            'fields': ('last_breath', 'last_check'),
+            'classes': ('collapse',)
+        }),
+    )
