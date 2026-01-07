@@ -633,6 +633,41 @@ export const circulatoryApi = {
   isFlowing: () => api.get('/circulatory/is-flowing/'),
 }
 
+// Session 704: SPINE Service API - Central API Router
+export const spineApi = {
+  // Run full alignment check
+  align: (force = false) => api.get('/spine/align/', { params: { force } }),
+
+  // Get cached spine status (fast)
+  status: () => api.get('/spine/status/'),
+
+  // List all route patterns
+  patterns: (category?: string, activeOnly = true) =>
+    api.get('/spine/patterns/', { params: { category, active: activeOnly } }),
+
+  // Get specific pattern details
+  patternDetail: (patternId: string, hours = 24) =>
+    api.get(`/spine/patterns/${patternId}/`, { params: { hours } }),
+
+  // Get metrics for a specific route path
+  metrics: (path: string, hours = 24) =>
+    api.get('/spine/metrics/', { params: { path, hours } }),
+
+  // Get alignment history
+  history: (hours = 24, limit = 100) =>
+    api.get('/spine/history/', { params: { hours, limit } }),
+
+  // Check if a path can be routed
+  canRoute: (path: string, method = 'GET') =>
+    api.get('/spine/can-route/', { params: { path, method } }),
+
+  // Quick health check
+  isAligned: () => api.get('/spine/is-aligned/'),
+
+  // Get category breakdown
+  categories: () => api.get('/spine/categories/'),
+}
+
 // Session 700: LLM Routing API (from Backend Claude Session 699)
 export const llmRoutingApi = {
   // System status overview
