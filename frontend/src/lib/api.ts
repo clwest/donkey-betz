@@ -80,6 +80,14 @@ export const conversationsApi = {
   trigger: () => api.post('/agent-conversations/trigger/'),
 }
 
+// Session 717: Conversation Contract API - Quality analytics for agent conversations
+export const conversationContractApi = {
+  // Get overview with compliance stats and recent conversations
+  overview: (days = 30) => api.get(`/conversation-contract/overview/?days=${days}`),
+  // Get detailed contract analysis for a specific conversation
+  detail: (conversationId: string) => api.get(`/conversation-contract/${conversationId}/`),
+}
+
 // Session 715: Hive Mind API - Multi-agent collaborative sessions
 export const hiveMindApi = {
   // List recent sessions

@@ -4977,6 +4977,440 @@ def get_experiment_recommendations(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# =============================================================================
+# Session 717: Conversation Contract Analytics
+# =============================================================================
+
+@require_http_methods(["GET"])
+def get_conversation_contract_overview(request):
+    """
+    Session 717: Get conversation contract analytics overview.
+
+    GET /api/conversation-contract/overview/
+
+    Returns analytics on how well conversations follow the contract:
+    - Tension requirement compliance
+    - Grounding requirement compliance
+    - Decision summary quality
+    - Overall contract health
+
+    Query params:
+        - days: How many days back to analyze (default 30)
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import AgentConversation
+        from core.models_unified_system import HiveMindSession
+        from core.conversation_roles import (
+            has_tension,
+            has_grounding,
+            has_empty_agreement,
+            extract_decision_summary,
+            validate_decision_summary,
+            CONVERSATION_CONTRACT
+        )
+
+        days = int(request.GET.get('days', 30))
+        since = timezone.now() - timedelta(days=days)
+
+        # Get conversations from HiveMindSession (preferred)
+        hivemind_conversations = HiveMindSession.objects.filter(
+            session_mode='conversation',
+            created_at__gte=since
+        ).order_by('-created_at')[:100]
+
+        # Also get from legacy AgentConversation
+        legacy_conversations = AgentConversation.objects.filter(
+            started_at__gte=since
+        ).order_by('-started_at')[:100]
+
+        # Analyze contract compliance
+        total_analyzed = 0
+        tension_compliant = 0
+        grounding_compliant = 0
+        has_summary = 0
+        valid_summaries = 0
+        empty_agreements = 0
+        total_quality_score = 0.0
+
+        conversations_data = []
+
+        # Analyze HiveMind conversations
+        for session in hivemind_conversations:
+            if not session.synthesis:
+                continue
+
+            total_analyzed += 1
+            content = session.synthesis
+
+            # Check contract requirements
+            msg_tension = has_tension(content)
+            msg_grounding = has_grounding(content)
+            msg_empty = has_empty_agreement(content)
+            summary = extract_decision_summary(content)
+            summary_valid = validate_decision_summary(summary)
+
+            if msg_tension:
+                tension_compliant += 1
+            if msg_grounding:
+                grounding_compliant += 1
+            if msg_empty:
+                empty_agreements += 1
+            if summary:
+                has_summary += 1
+                if summary_valid.get('is_valid'):
+                    valid_summaries += 1
+
+            # Calculate quality score (0-100)
+            quality_score = 0
+            if msg_tension:
+                quality_score += 30
+            if msg_grounding:
+                quality_score += 30
+            if summary_valid.get('has_insights'):
+                quality_score += 15
+            if summary_valid.get('has_feature'):
+                quality_score += 15
+            if summary_valid.get('has_next_steps'):
+                quality_score += 10
+            if msg_empty:
+                quality_score -= 10
+            quality_score = max(0, min(100, quality_score))
+            total_quality_score += quality_score
+
+            conversations_data.append({
+                'id': str(session.id),
+                'topic': session.conversation_topic or session.question[:100],
+                'type': 'hivemind',
+                'status': session.status,
+                'created_at': session.created_at.isoformat(),
+                'participant_count': len(session.participant_ids) if session.participant_ids else 0,
+                'contract': {
+                    'has_tension': msg_tension,
+                    'has_grounding': msg_grounding,
+                    'has_empty_agreement': msg_empty,
+                    'has_summary': summary is not None,
+                    'summary_valid': summary_valid.get('is_valid', False),
+                    'insights_count': summary_valid.get('insights_count', 0) if summary else 0,
+                    'quality_score': quality_score,
+                },
+                'decision_summary': summary if summary else None,
+            })
+
+        # Analyze legacy conversations
+        for conv in legacy_conversations:
+            total_analyzed += 1
+
+            # Get all messages for analysis
+            messages = conv.messages.all()
+            combined_content = ' '.join([m.content for m in messages if m.content])
+
+            if not combined_content:
+                continue
+
+            # Check contract requirements
+            msg_tension = has_tension(combined_content)
+            msg_grounding = has_grounding(combined_content)
+            msg_empty = has_empty_agreement(combined_content)
+
+            # Check final message for summary
+            final_message = messages.order_by('-created_at').first()
+            summary = extract_decision_summary(final_message.content if final_message else '')
+            summary_valid = validate_decision_summary(summary)
+
+            if msg_tension:
+                tension_compliant += 1
+            if msg_grounding:
+                grounding_compliant += 1
+            if msg_empty:
+                empty_agreements += 1
+            if summary:
+                has_summary += 1
+                if summary_valid.get('is_valid'):
+                    valid_summaries += 1
+
+            # Use stored quality score if available, else calculate
+            if conv.quality_score:
+                quality_score = int(conv.quality_score * 100)
+            else:
+                quality_score = 0
+                if msg_tension:
+                    quality_score += 30
+                if msg_grounding:
+                    quality_score += 30
+                if summary_valid.get('has_insights'):
+                    quality_score += 15
+                if summary_valid.get('has_feature'):
+                    quality_score += 15
+                if summary_valid.get('has_next_steps'):
+                    quality_score += 10
+                if msg_empty:
+                    quality_score -= 10
+                quality_score = max(0, min(100, quality_score))
+
+            total_quality_score += quality_score
+
+            conversations_data.append({
+                'id': str(conv.id),
+                'topic': conv.topic,
+                'type': 'legacy',
+                'status': conv.status,
+                'created_at': conv.started_at.isoformat() if conv.started_at else None,
+                'participant_count': conv.participants.count(),
+                'contract': {
+                    'has_tension': msg_tension,
+                    'has_grounding': msg_grounding,
+                    'has_empty_agreement': msg_empty,
+                    'has_summary': summary is not None,
+                    'summary_valid': summary_valid.get('is_valid', False),
+                    'insights_count': summary_valid.get('insights_count', 0) if summary else 0,
+                    'quality_score': quality_score,
+                },
+                'decision_summary': summary if summary else None,
+            })
+
+        # Sort by created_at descending
+        conversations_data.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+
+        # Calculate percentages
+        avg_quality = total_quality_score / total_analyzed if total_analyzed > 0 else 0
+        tension_rate = (tension_compliant / total_analyzed * 100) if total_analyzed > 0 else 0
+        grounding_rate = (grounding_compliant / total_analyzed * 100) if total_analyzed > 0 else 0
+        summary_rate = (has_summary / total_analyzed * 100) if total_analyzed > 0 else 0
+        valid_summary_rate = (valid_summaries / has_summary * 100) if has_summary > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'overview': {
+                'total_conversations': total_analyzed,
+                'avg_quality_score': round(avg_quality, 1),
+                'tension_compliance_rate': round(tension_rate, 1),
+                'grounding_compliance_rate': round(grounding_rate, 1),
+                'summary_rate': round(summary_rate, 1),
+                'valid_summary_rate': round(valid_summary_rate, 1),
+                'empty_agreement_count': empty_agreements,
+            },
+            'contract_requirements': {
+                'tension': {
+                    'description': 'Constructive disagreement every 2-3 turns',
+                    'indicators': ['however', 'but', 'concern', 'trade-off', 'alternative', 'challenge'],
+                },
+                'grounding': {
+                    'description': 'Reference platform metrics and systems',
+                    'metrics': ['engagement', 'conversion', 'retention', 'quality score'],
+                    'systems': ['embeddings', 'RAG', 'spiders', 'workflows', 'A/B testing'],
+                },
+                'decision_summary': {
+                    'description': 'Structured output with insights, feature proposal, next steps',
+                    'required_sections': ['Insights (3+)', 'Proposed Feature', 'Next Steps (2+)'],
+                },
+            },
+            'conversations': conversations_data[:50],  # Limit to 50 for response size
+            'period_days': days,
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting conversation contract overview: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_conversation_contract_detail(request, conversation_id):
+    """
+    Session 717: Get detailed contract analysis for a specific conversation.
+
+    GET /api/conversation-contract/{conversation_id}/
+
+    Returns:
+        - Full contract validation breakdown
+        - Message-by-message tension/grounding analysis
+        - Decision summary extraction
+        - Quality score calculation
+    """
+    try:
+        from core.models import AgentConversation
+        from core.models_unified_system import HiveMindSession, Agent
+        from core.conversation_roles import (
+            has_tension,
+            has_grounding,
+            has_empty_agreement,
+            get_grounding_refs,
+            extract_decision_summary,
+            validate_decision_summary,
+        )
+
+        # Try HiveMindSession first
+        try:
+            session = HiveMindSession.objects.get(id=conversation_id)
+
+            # Parse synthesis into messages
+            messages_data = []
+            if session.synthesis:
+                import re
+                paragraphs = re.split(r'\n\n|\n(?=[A-Z][a-zA-Z]+Agent:)', session.synthesis)
+                seq = 0
+                for para in paragraphs:
+                    para = para.strip()
+                    if not para:
+                        continue
+                    match = re.match(r'^([A-Z][a-zA-Z]+(?:Agent)?):?\s*(.+)', para, re.DOTALL)
+                    if match:
+                        agent_name = match.group(1)
+                        content = match.group(2).strip()
+                        seq += 1
+
+                        # Analyze this message
+                        msg_tension = has_tension(content)
+                        msg_grounding = has_grounding(content)
+                        msg_empty = has_empty_agreement(content)
+                        grounding_refs = get_grounding_refs(content)
+
+                        messages_data.append({
+                            'sequence': seq,
+                            'agent_name': agent_name,
+                            'content': content,
+                            'analysis': {
+                                'has_tension': msg_tension,
+                                'has_grounding': msg_grounding,
+                                'has_empty_agreement': msg_empty,
+                                'grounding_refs': grounding_refs,
+                            }
+                        })
+
+            # Extract decision summary from full synthesis
+            summary = extract_decision_summary(session.synthesis or '')
+            summary_valid = validate_decision_summary(summary)
+
+            # Calculate overall metrics
+            tension_count = sum(1 for m in messages_data if m['analysis']['has_tension'])
+            grounding_count = sum(1 for m in messages_data if m['analysis']['has_grounding'])
+            empty_count = sum(1 for m in messages_data if m['analysis']['has_empty_agreement'])
+
+            # Get participant names
+            participants = []
+            if session.participant_ids:
+                agents = Agent.objects.filter(id__in=session.participant_ids)
+                participants = [{'id': str(a.id), 'name': a.name} for a in agents]
+
+            return JsonResponse({
+                'success': True,
+                'conversation': {
+                    'id': str(session.id),
+                    'topic': session.conversation_topic or session.question[:100],
+                    'type': 'hivemind',
+                    'status': session.status,
+                    'created_at': session.created_at.isoformat(),
+                    'participants': participants,
+                },
+                'contract_analysis': {
+                    'tension_count': tension_count,
+                    'tension_required': 2,
+                    'tension_met': tension_count >= 2,
+                    'grounding_count': grounding_count,
+                    'grounding_required': 2,
+                    'grounding_met': grounding_count >= 2,
+                    'empty_agreement_count': empty_count,
+                    'has_decision_summary': summary is not None,
+                    'summary_validation': summary_valid,
+                    'is_contract_valid': (
+                        tension_count >= 2 and
+                        grounding_count >= 2 and
+                        summary_valid.get('is_valid', False)
+                    ),
+                },
+                'decision_summary': summary,
+                'messages': messages_data,
+                'message_count': len(messages_data),
+            })
+
+        except HiveMindSession.DoesNotExist:
+            pass
+
+        # Try legacy AgentConversation
+        try:
+            conv = AgentConversation.objects.get(id=conversation_id)
+
+            # Get all messages
+            messages = conv.messages.all().order_by('created_at')
+            messages_data = []
+
+            for msg in messages:
+                msg_tension = has_tension(msg.content or '')
+                msg_grounding = has_grounding(msg.content or '')
+                msg_empty = has_empty_agreement(msg.content or '')
+                grounding_refs = get_grounding_refs(msg.content or '')
+
+                messages_data.append({
+                    'sequence': len(messages_data) + 1,
+                    'agent_name': msg.agent.name if msg.agent else 'Unknown',
+                    'content': msg.content,
+                    'analysis': {
+                        'has_tension': msg_tension,
+                        'has_grounding': msg_grounding,
+                        'has_empty_agreement': msg_empty,
+                        'grounding_refs': grounding_refs,
+                    }
+                })
+
+            # Extract decision summary from final message
+            final_msg = messages.last()
+            summary = extract_decision_summary(final_msg.content if final_msg else '')
+            summary_valid = validate_decision_summary(summary)
+
+            tension_count = sum(1 for m in messages_data if m['analysis']['has_tension'])
+            grounding_count = sum(1 for m in messages_data if m['analysis']['has_grounding'])
+            empty_count = sum(1 for m in messages_data if m['analysis']['has_empty_agreement'])
+
+            return JsonResponse({
+                'success': True,
+                'conversation': {
+                    'id': str(conv.id),
+                    'topic': conv.topic,
+                    'type': 'legacy',
+                    'status': conv.status,
+                    'created_at': conv.started_at.isoformat() if conv.started_at else None,
+                    'participants': [
+                        {'id': str(p.id), 'name': p.name}
+                        for p in conv.participants.all()
+                    ],
+                },
+                'contract_analysis': {
+                    'tension_count': tension_count,
+                    'tension_required': 2,
+                    'tension_met': tension_count >= 2,
+                    'grounding_count': grounding_count,
+                    'grounding_required': 2,
+                    'grounding_met': grounding_count >= 2,
+                    'empty_agreement_count': empty_count,
+                    'has_decision_summary': summary is not None,
+                    'summary_validation': summary_valid,
+                    'is_contract_valid': (
+                        tension_count >= 2 and
+                        grounding_count >= 2 and
+                        summary_valid.get('is_valid', False)
+                    ),
+                },
+                'decision_summary': summary,
+                'messages': messages_data,
+                'message_count': len(messages_data),
+            })
+
+        except AgentConversation.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Conversation not found'
+            }, status=404)
+
+    except Exception as e:
+        logger.error(f"Error getting conversation contract detail: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 # URL patterns to add to core/urls.py:
 """
 from core.views_agent_learning import (

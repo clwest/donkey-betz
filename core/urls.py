@@ -350,6 +350,9 @@ from core.views_agent_learning import (
     # Session 604: Decision Prioritization
     get_prioritized_decisions,
     get_decision_priority,
+    # Session 717: Conversation Contract Analytics
+    get_conversation_contract_overview,
+    get_conversation_contract_detail,
 )
 
 # Session 628 + 631 + 632: Content Calendar
@@ -2820,6 +2823,10 @@ urlpatterns = [
     # Session 244: Agent Conversations API
     path('api/agent-conversations/', get_agent_conversations, name='agent-conversations'),
     path('api/agent-conversations/trigger/', trigger_agent_conversation, name='trigger-agent-conversation'),
+
+    # Session 717: Conversation Contract Analytics API
+    path('api/conversation-contract/overview/', get_conversation_contract_overview, name='conversation-contract-overview'),
+    path('api/conversation-contract/<uuid:conversation_id>/', get_conversation_contract_detail, name='conversation-contract-detail'),
 
     # Session 247: Agent Dreams API
     path('api/agent-dreams/', get_agent_dreams, name='agent-dreams'),
