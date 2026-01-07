@@ -602,6 +602,37 @@ export const lungsApi = {
   alive: () => api.get('/lungs/alive/'),
 }
 
+// Session 703: CIRCULATORY Service API - Data Flow Monitoring
+export const circulatoryApi = {
+  // Run full circulation check (monitor all data flows)
+  circulate: () => api.get('/circulatory/circulate/'),
+
+  // Get cached flow status (fast)
+  status: () => api.get('/circulatory/status/'),
+
+  // List all monitored flow routes
+  routes: (params?: { type?: string; active?: boolean; critical?: boolean }) =>
+    api.get('/circulatory/routes/', { params }),
+
+  // Get specific route details
+  routeDetail: (routeId: string) => api.get(`/circulatory/routes/${routeId}/`),
+
+  // Get current bottlenecks in data flow
+  bottlenecks: (severity?: 'critical' | 'warning' | 'info') =>
+    api.get('/circulatory/bottlenecks/', { params: { severity } }),
+
+  // Get flow velocity metrics
+  velocity: (hours = 1) =>
+    api.get('/circulatory/velocity/', { params: { hours } }),
+
+  // Get circulation pulse history
+  history: (hours = 24, limit = 100, status?: string) =>
+    api.get('/circulatory/history/', { params: { hours, limit, status } }),
+
+  // Quick alive check - is data flowing normally?
+  isFlowing: () => api.get('/circulatory/is-flowing/'),
+}
+
 // Session 700: LLM Routing API (from Backend Claude Session 699)
 export const llmRoutingApi = {
   // System status overview

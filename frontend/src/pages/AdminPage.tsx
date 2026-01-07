@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi, lungsApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp
+  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'lungs' | 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'lungs' | 'circulatory' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -18,6 +18,7 @@ interface ActionResult {
 const tabs = [
   { id: 'heart' as TabType, label: 'HEART', icon: Heart },
   { id: 'lungs' as TabType, label: 'LUNGS', icon: Wind },
+  { id: 'circulatory' as TabType, label: 'CIRCULATORY', icon: GitBranch },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
@@ -83,6 +84,32 @@ export default function AdminPage() {
     queryKey: ['lungs-forecast'],
     queryFn: () => lungsApi.forecast(),
     enabled: activeTab === 'lungs',
+  })
+
+  // CIRCULATORY Service queries (Session 703)
+  const { data: circulatoryStatusData, isLoading: loadingCirculatory, refetch: refetchCirculatory } = useQuery({
+    queryKey: ['circulatory-status'],
+    queryFn: () => circulatoryApi.status(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'circulatory',
+  })
+
+  const { data: circulatoryRoutesData } = useQuery({
+    queryKey: ['circulatory-routes'],
+    queryFn: () => circulatoryApi.routes(),
+    enabled: activeTab === 'circulatory',
+  })
+
+  const { data: circulatoryBottlenecksData } = useQuery({
+    queryKey: ['circulatory-bottlenecks'],
+    queryFn: () => circulatoryApi.bottlenecks(),
+    enabled: activeTab === 'circulatory',
+  })
+
+  const { data: circulatoryHistoryData } = useQuery({
+    queryKey: ['circulatory-history'],
+    queryFn: () => circulatoryApi.history(24, 50),
+    enabled: activeTab === 'circulatory',
   })
 
   // Fetch v1 health
@@ -161,6 +188,12 @@ export default function AdminPage() {
   const lungsBudgets = lungsBudgetsData?.data?.budgets || []
   const lungsForecasts = lungsForecastData?.data?.forecasts || []
   const lungsProviders = lungsStatus.providers || {}
+
+  // CIRCULATORY data (Session 703)
+  const circulatoryStatus = circulatoryStatusData?.data || {}
+  const circulatoryRoutes = circulatoryRoutesData?.data?.routes || []
+  const circulatoryBottlenecks = circulatoryBottlenecksData?.data?.bottlenecks || []
+  const circulatoryHistory = circulatoryHistoryData?.data?.history || []
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -762,6 +795,320 @@ export default function AdminPage() {
                   <div className="p-3 rounded-lg bg-dark-bg">
                     <p className="font-medium text-accent-green mb-1">Budget Periods</p>
                     <p className="text-xs text-gray-400">Daily and Monthly limits per provider and system-wide</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* CIRCULATORY Tab - Session 703 */}
+      {activeTab === 'circulatory' && (
+        <div className="space-y-6">
+          {loadingCirculatory ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Flow Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'h-12 w-12 rounded-lg flex items-center justify-center',
+                      (circulatoryStatus.flow_score || 0) >= 80 ? 'bg-accent-green/20' :
+                      (circulatoryStatus.flow_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <GitBranch size={24} className={cn(
+                        (circulatoryStatus.flow_score || 0) >= 80 ? 'text-accent-green' :
+                        (circulatoryStatus.flow_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Flow Score</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (circulatoryStatus.flow_score || 0) >= 80 ? 'text-accent-green' :
+                        (circulatoryStatus.flow_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(circulatoryStatus.flow_score || 0).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Activity className="text-accent-cyan" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Overall Status</p>
+                      <p className={cn(
+                        'text-lg font-bold capitalize',
+                        circulatoryStatus.overall_status === 'flowing' ? 'text-accent-green' :
+                        circulatoryStatus.overall_status === 'slow' ? 'text-accent-amber' :
+                        circulatoryStatus.overall_status === 'congested' ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {circulatoryStatus.overall_status || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-accent-green" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Routes</p>
+                      <p className="text-2xl font-bold">
+                        {circulatoryRoutes.filter((r: { current_status?: { is_healthy?: boolean } }) => r.current_status?.is_healthy).length}/
+                        {circulatoryRoutes.length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className={cn(
+                      circulatoryBottlenecks.length > 0 ? 'text-accent-amber' : 'text-gray-500'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Bottlenecks</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        circulatoryBottlenecks.length > 0 ? 'text-accent-amber' : 'text-accent-green'
+                      )}>
+                        {circulatoryBottlenecks.length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Flow Routes */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Flow Routes</h3>
+                  <button
+                    onClick={() => refetchCirculatory()}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {circulatoryRoutes.map((route: {
+                    id: string
+                    name: string
+                    display_name?: string
+                    route_type: string
+                    is_critical?: boolean
+                    current_status?: {
+                      status: string
+                      is_healthy: boolean
+                      health_score: number
+                      current_depth?: number
+                      current_throughput?: number
+                      current_latency_ms?: number
+                      last_activity?: string
+                    }
+                  }) => {
+                    const status = route.current_status
+                    const isHealthy = status?.is_healthy
+                    const statusStr = status?.status || 'unknown'
+
+                    return (
+                      <div
+                        key={route.id}
+                        className={cn(
+                          'p-4 rounded-lg border transition-colors',
+                          isHealthy ? 'bg-accent-green/10 border-accent-green/30' :
+                          statusStr === 'slow' || statusStr === 'congested' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold">{route.display_name || route.name}</p>
+                            {route.is_critical && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-red/20 text-accent-red">Critical</span>
+                            )}
+                          </div>
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            isHealthy ? 'bg-accent-green/20 text-accent-green' :
+                            statusStr === 'slow' || statusStr === 'congested' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {statusStr}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-3 capitalize">{route.route_type.replace('_', ' ')}</p>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <p className="text-gray-500">Health</p>
+                            <p className={cn(
+                              'font-bold',
+                              (status?.health_score || 0) >= 80 ? 'text-accent-green' :
+                              (status?.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                            )}>
+                              {(status?.health_score || 0).toFixed(0)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Depth</p>
+                            <p className="font-medium">{status?.current_depth ?? '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Latency</p>
+                            <p className="font-medium">{status?.current_latency_ms ? `${status.current_latency_ms}ms` : '-'}</p>
+                          </div>
+                        </div>
+                        {status?.last_activity && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Last: {new Date(status.last_activity).toLocaleTimeString()}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {circulatoryRoutes.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <GitBranch className="mx-auto mb-2" size={32} />
+                    <p>No flow routes configured</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottlenecks */}
+              {circulatoryBottlenecks.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <AlertTriangle className="text-accent-amber" size={20} />
+                    Active Bottlenecks
+                  </h3>
+                  <div className="space-y-3">
+                    {circulatoryBottlenecks.map((bottleneck: {
+                      route_name: string
+                      severity: string
+                      issue: string
+                      metric?: string
+                      current_value?: number
+                      threshold?: number
+                    }, idx: number) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          'p-4 rounded-lg border',
+                          bottleneck.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
+                          bottleneck.severity === 'warning' ? 'bg-accent-amber/10 border-accent-amber/30' : 'border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium">{bottleneck.route_name}</p>
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            bottleneck.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                            bottleneck.severity === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
+                          )}>
+                            {bottleneck.severity}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-300">{bottleneck.issue}</p>
+                        {bottleneck.metric && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            {bottleneck.metric}: {bottleneck.current_value} (threshold: {bottleneck.threshold})
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Circulation History */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Circulation Pulse History (24h)</h3>
+                {circulatoryHistory.length > 0 ? (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {circulatoryHistory.slice(0, 20).map((pulse: {
+                      id: string
+                      flow_score: number
+                      overall_status: string
+                      recorded_at: string
+                      check_duration_ms?: number
+                      routes_healthy: number
+                      routes_checked: number
+                    }, idx: number) => (
+                      <div
+                        key={pulse.id || idx}
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            'h-8 w-8 rounded-full flex items-center justify-center',
+                            pulse.overall_status === 'flowing' ? 'bg-accent-green/20' :
+                            pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                          )}>
+                            <GitBranch size={14} className={cn(
+                              pulse.overall_status === 'flowing' ? 'text-accent-green' :
+                              pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'text-accent-amber' : 'text-accent-red'
+                            )} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {pulse.flow_score.toFixed(0)}% - {pulse.routes_healthy}/{pulse.routes_checked} healthy
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(pulse.recorded_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {pulse.check_duration_ms && (
+                            <span className="text-xs text-gray-400">{pulse.check_duration_ms}ms</span>
+                          )}
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            pulse.overall_status === 'flowing' ? 'bg-accent-green/20 text-accent-green' :
+                            pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {pulse.overall_status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <GitBranch className="mx-auto mb-2" size={32} />
+                    <p>No circulation history yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Run a circulation check to see data flow status</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Circulatory Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Circulatory System Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The CIRCULATORY system monitors data flow health across all queues, channels, and streams - the blood circulation of the AI body.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-red mb-1">Blood = Data</p>
+                    <p className="text-xs text-gray-400">Messages, tasks, events flowing through the system</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-cyan mb-1">Arteries = Outbound</p>
+                    <p className="text-xs text-gray-400">WebSocket broadcasts, API responses, notifications</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-primary-400 mb-1">Veins = Inbound</p>
+                    <p className="text-xs text-gray-400">Spider data, user inputs, external webhooks</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-amber mb-1">Blood Pressure = Queue Depth</p>
+                    <p className="text-xs text-gray-400">High pressure indicates congestion, low indicates idle</p>
                   </div>
                 </div>
               </div>
