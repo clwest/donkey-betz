@@ -267,6 +267,19 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/body/coordination/run/',  # Trigger coordination
         '/api/body/coordination/log/',  # Coordination log
         '/api/body/throttle/',  # Throttle status
+
+        # Session 716: Memory Palace APIs (agent memory visualization for React frontend)
+        '/api/memory-palace/',  # Memory palace overview
+        '/api/memory-palace/agent/',  # Agent memories, rooms, summary
+        '/api/memory-palace/memory/',  # Memory detail, connections
+        '/api/memory-palace/room/',  # Room memories
+        '/api/memory-palace/search/',  # Search memories
+        '/api/memory-palace/create/',  # Create memory
+        '/api/memory-palace/assign/',  # Assign to room
+        '/api/memory-palace/connect/',  # Connect memories
+
+        # Session 715: Hive Mind APIs (multi-agent collaboration for React frontend)
+        '/api/hive-mind/',  # Hive mind sessions and operations
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

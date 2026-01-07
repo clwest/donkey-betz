@@ -19,6 +19,7 @@ import WorkspacePage from '@/pages/WorkspacePage'
 import LLMRoutingPage from '@/pages/LLMRoutingPage'
 import BodyHealthPage from '@/pages/BodyHealthPage'
 import HiveMindPage from '@/pages/HiveMindPage'
+import MemoryPalacePage from '@/pages/MemoryPalacePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -61,6 +62,7 @@ function App() {
         <Route path="workspace" element={<WorkspacePage />} />
         <Route path="body-health" element={<BodyHealthPage />} />
         <Route path="hive-mind" element={<HiveMindPage />} />
+        <Route path="memory-palace" element={<MemoryPalacePage />} />
       </Route>
     </Routes>
   )

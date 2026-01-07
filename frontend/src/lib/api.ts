@@ -91,6 +91,52 @@ export const hiveMindApi = {
   agents: () => api.get('/hive-mind/agents/'),
 }
 
+// Session 716: Memory Palace API - Agent memory visualization
+export const memoryPalaceApi = {
+  // Overview of all agents' memory palaces
+  overview: () => api.get('/memory-palace/'),
+
+  // Agent-specific endpoints
+  agentMemories: (agentId: string, params?: { type?: string; valence?: string; limit?: number }) =>
+    api.get(`/memory-palace/agent/${agentId}/memories/`, { params }),
+  agentRooms: (agentId: string) => api.get(`/memory-palace/agent/${agentId}/rooms/`),
+  agentSummary: (agentId: string, limit = 10) =>
+    api.get(`/memory-palace/agent/${agentId}/summary/?limit=${limit}`),
+
+  // Memory-specific endpoints
+  memoryDetail: (memoryId: string) => api.get(`/memory-palace/memory/${memoryId}/`),
+  memoryConnections: (memoryId: string) => api.get(`/memory-palace/memory/${memoryId}/connections/`),
+  deleteMemory: (memoryId: string) => api.delete(`/memory-palace/memory/${memoryId}/delete/`),
+
+  // Room memories
+  roomMemories: (roomId: string) => api.get(`/memory-palace/room/${roomId}/memories/`),
+
+  // Actions
+  createMemory: (data: {
+    agent_id: string
+    title: string
+    content: string
+    memory_type?: string
+    valence?: string
+    importance?: number
+    context?: string
+  }) => api.post('/memory-palace/create/', data),
+
+  searchMemories: (data: { agent_id: string; query: string; memory_types?: string[]; limit?: number }) =>
+    api.post('/memory-palace/search/', data),
+
+  assignToRoom: (memoryId: string, roomId: string) =>
+    api.post('/memory-palace/assign/', { memory_id: memoryId, room_id: roomId }),
+
+  connectMemories: (sourceId: string, targetId: string, connectionType = 'similar', strength = 0.5) =>
+    api.post('/memory-palace/connect/', {
+      source_id: sourceId,
+      target_id: targetId,
+      connection_type: connectionType,
+      strength,
+    }),
+}
+
 // Session 696: Decisions API for Decision Insights Panel
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),
