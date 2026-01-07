@@ -1923,6 +1923,38 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+                {/* Check Duration & Integrations */}
+                <div className="card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="text-sm">
+                        <span className="text-gray-400">Check Duration: </span>
+                        <span className="font-medium">{(digestiveStatus.check_duration_ms || 0).toFixed(0)}ms</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-400">Timestamp: </span>
+                        <span className="font-medium">
+                          {digestiveStatus.timestamp ? new Date(digestiveStatus.timestamp).toLocaleTimeString() : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-gray-400">Integrations:</span>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded flex items-center gap-1',
+                        digestiveStatus.integrations?.heart ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                      )}>
+                        ❤️ HEART {digestiveStatus.integrations?.heart ? '✓' : '✗'}
+                      </span>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded flex items-center gap-1',
+                        digestiveStatus.integrations?.circulatory ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                      )}>
+                        🩸 CIRC {digestiveStatus.integrations?.circulatory ? '✓' : '✗'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Stage Status Cards */}
@@ -1949,11 +1981,11 @@ export default function AdminPage() {
                           <>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Items (24h)</span>
-                              <span>{stageData.items_24h || 0}</span>
+                              <span>{stageData.items_24h?.toLocaleString() || 0}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Spiders</span>
-                              <span>{stageData.total_spiders || 0}</span>
+                              <span className="text-gray-400">Spiders Executed</span>
+                              <span>{stageData.spiders_executed?.toLocaleString() || 0}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Success Rate</span>
@@ -1962,6 +1994,15 @@ export default function AdminPage() {
                                 (stageData.success_rate || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
                               )}>
                                 {(stageData.success_rate || 0).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Score</span>
+                              <span className={cn(
+                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
+                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {stageData.score || 0}%
                               </span>
                             </div>
                           </>
@@ -1981,29 +2022,70 @@ export default function AdminPage() {
                               <span className="text-gray-400">Throughput</span>
                               <span>{(stageData.throughput || 0).toFixed(2)}/min</span>
                             </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Avg Latency</span>
+                              <span className={cn(
+                                (stageData.avg_latency_ms || 0) > 60000 ? 'text-accent-red' :
+                                (stageData.avg_latency_ms || 0) > 10000 ? 'text-accent-amber' : ''
+                              )}>
+                                {stageData.avg_latency_ms ? `${(stageData.avg_latency_ms / 1000).toFixed(1)}s` : '0ms'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Score</span>
+                              <span className={cn(
+                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
+                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {stageData.score || 0}%
+                              </span>
+                            </div>
                           </>
                         )}
                         {stage === 'enrichment' && (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Embeddings</span>
-                              <span>{stageData.embeddings_24h || 0}</span>
+                              <span className="text-gray-400">Embeddings (24h)</span>
+                              <span>{(stageData.embeddings_24h || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Quality Score</span>
-                              <span>{(stageData.avg_quality || 0).toFixed(1)}</span>
+                              <span className="text-gray-400">Coverage</span>
+                              <span className={cn(
+                                (stageData.coverage || 0) >= 80 ? 'text-accent-green' :
+                                (stageData.coverage || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {(stageData.coverage || 0).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Score</span>
+                              <span className={cn(
+                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
+                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {stageData.score || 0}%
+                              </span>
                             </div>
                           </>
                         )}
                         {stage === 'routing' && (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Routed (24h)</span>
-                              <span>{stageData.routed_24h || 0}</span>
+                              <span className="text-gray-400">Items Routed</span>
+                              <span>{(stageData.items_routed || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Avg Latency</span>
-                              <span>{(stageData.avg_latency_ms || 0).toFixed(0)}ms</span>
+                              <span className="text-gray-400">Items Filtered</span>
+                              <span>{(stageData.items_filtered || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Score</span>
+                              <span className={cn(
+                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
+                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {stageData.score || 0}%
+                              </span>
                             </div>
                           </>
                         )}
@@ -2091,11 +2173,8 @@ export default function AdminPage() {
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {digestiveBottlenecks.map((bottleneck: {
                         stage?: string
-                        type?: string
+                        issue?: string
                         severity?: string
-                        message?: string
-                        value?: number
-                        threshold?: number
                       }, idx: number) => (
                         <div
                           key={idx}
@@ -2117,7 +2196,7 @@ export default function AdminPage() {
                               <span className="text-sm font-medium capitalize">{bottleneck.stage || 'System'}</span>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-400 mt-1">{bottleneck.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{bottleneck.issue}</p>
                         </div>
                       ))}
                     </div>
@@ -2142,9 +2221,12 @@ export default function AdminPage() {
                     display_name?: string
                     route_type?: string
                     stage?: string
+                    identifier?: string
                     is_critical?: boolean
                     is_active?: boolean
-                    status?: string
+                    max_queue_depth?: number
+                    target_throughput?: number
+                    total_items_processed?: number
                   }) => (
                     <div
                       key={route.id || route.name}
@@ -2163,10 +2245,24 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                         <span className="capitalize">{route.route_type}</span>
                         <span>•</span>
                         <span className="capitalize">{route.stage}</span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between text-gray-400">
+                          <span>Max Queue</span>
+                          <span>{route.max_queue_depth?.toLocaleString() || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-400">
+                          <span>Target</span>
+                          <span>{route.target_throughput || 0}/min</span>
+                        </div>
+                        <div className="flex justify-between text-gray-400">
+                          <span>Processed</span>
+                          <span>{route.total_items_processed?.toLocaleString() || 0}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2183,45 +2279,94 @@ export default function AdminPage() {
               {digestiveHistory.length > 0 && (
                 <div className="card">
                   <h3 className="text-lg font-semibold mb-4">Recent Digestion Pulses ({digestiveHistory.length})</h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {digestiveHistory.slice(0, 10).map((pulse: {
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {digestiveHistory.slice(0, 15).map((pulse: {
                       id?: string
-                      recorded_at?: string
-                      overall_status?: string
-                      digestion_score?: number
-                      intake_items?: number
-                      processed_items?: number
-                      output_items?: number
+                      timestamp?: string
+                      status?: string
+                      score?: number
+                      is_digesting?: boolean
+                      intake_status?: string
+                      processing_status?: string
+                      enrichment_status?: string
+                      routing_status?: string
+                      items_pending?: number
+                      check_duration_ms?: number
                     }, idx: number) => (
                       <div
                         key={pulse.id || idx}
                         className={cn(
-                          'p-3 rounded-lg border flex items-center justify-between',
-                          pulse.overall_status === 'healthy' ? 'bg-accent-green/5 border-accent-green/20' :
-                          pulse.overall_status === 'sluggish' ? 'bg-accent-cyan/5 border-accent-cyan/20' :
-                          pulse.overall_status === 'bloated' ? 'bg-accent-amber/5 border-accent-amber/20' : 'bg-dark-bg border-dark-border'
+                          'p-3 rounded-lg border',
+                          pulse.status === 'healthy' ? 'bg-accent-green/5 border-accent-green/20' :
+                          pulse.status === 'sluggish' ? 'bg-accent-cyan/5 border-accent-cyan/20' :
+                          pulse.status === 'bloated' ? 'bg-accent-amber/5 border-accent-amber/20' : 'bg-dark-bg border-dark-border'
                         )}
                       >
-                        <div className="flex items-center gap-4">
-                          <span className={cn(
-                            'text-xs px-2 py-0.5 rounded uppercase',
-                            pulse.overall_status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
-                            pulse.overall_status === 'sluggish' ? 'bg-accent-cyan/20 text-accent-cyan' :
-                            pulse.overall_status === 'bloated' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                          )}>
-                            {pulse.overall_status || 'unknown'}
-                          </span>
-                          <span className="text-sm font-medium">
-                            {(pulse.digestion_score || 0).toFixed(1)}%
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded uppercase',
+                              pulse.status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
+                              pulse.status === 'sluggish' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                              pulse.status === 'bloated' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                            )}>
+                              {pulse.status || 'unknown'}
+                            </span>
+                            <span className="text-sm font-medium">
+                              {(pulse.score || 0).toFixed(1)}%
+                            </span>
+                            <span className={cn(
+                              'text-xs',
+                              pulse.is_digesting ? 'text-accent-green' : 'text-accent-red'
+                            )}>
+                              {pulse.is_digesting ? '● Active' : '○ Inactive'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {pulse.timestamp ? new Date(pulse.timestamp).toLocaleTimeString() : ''}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                          <span>In: {pulse.intake_items || 0}</span>
-                          <span>Proc: {pulse.processed_items || 0}</span>
-                          <span>Out: {pulse.output_items || 0}</span>
-                          <span>
-                            {pulse.recorded_at ? new Date(pulse.recorded_at).toLocaleTimeString() : ''}
-                          </span>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-3">
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded',
+                              pulse.intake_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
+                              pulse.intake_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
+                            )}>
+                              In: {pulse.intake_status}
+                            </span>
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded',
+                              pulse.processing_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
+                              pulse.processing_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' :
+                              pulse.processing_status === 'bloated' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-gray-500/10 text-gray-400'
+                            )}>
+                              Proc: {pulse.processing_status}
+                            </span>
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded',
+                              pulse.enrichment_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
+                              pulse.enrichment_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
+                            )}>
+                              Enrich: {pulse.enrichment_status}
+                            </span>
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded',
+                              pulse.routing_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
+                              pulse.routing_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
+                            )}>
+                              Route: {pulse.routing_status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-gray-400">
+                            <span className={cn(
+                              (pulse.items_pending || 0) > 5000 ? 'text-accent-red' :
+                              (pulse.items_pending || 0) > 1000 ? 'text-accent-amber' : ''
+                            )}>
+                              Pending: {(pulse.items_pending || 0).toLocaleString()}
+                            </span>
+                            <span>{pulse.check_duration_ms || 0}ms</span>
+                          </div>
                         </div>
                       </div>
                     ))}
