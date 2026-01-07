@@ -1,5 +1,6 @@
 """
 Session 709: Body Vitals Service - Unified Query for All Body Systems
+Session 722: Added BRAIN system - cognitive processing monitoring
 
 This service bridges the BRAIN (Personal Assistant) to all BODY SYSTEMS,
 enabling the PA to query health status and make informed decisions.
@@ -12,6 +13,7 @@ The body systems are:
 - IMMUNE: Security/threat detection (attacks, quarantine)
 - DIGESTIVE: Data ingestion pipeline (spiders, processing)
 - MUSCULAR: Agent work execution (success rates, fatigue)
+- BRAIN: Cognitive processing (LLM calls, conversations, reasoning)
 
 Usage:
     from core.services.body_vitals import get_body_vitals_service
@@ -44,7 +46,7 @@ class BodyVitalsService:
 
     This is the bridge between the Brain (PA) and the Body Systems.
     Provides:
-    - get_all_vitals(): Query all 7 systems at once
+    - get_all_vitals(): Query all 8 systems at once
     - check_budget(): Check LUNGS before expensive operations
     - get_alerts(): Get critical alerts from all systems
     """
@@ -57,6 +59,7 @@ class BodyVitalsService:
         'immune': '_get_immune_vitals',
         'digestive': '_get_digestive_vitals',
         'muscular': '_get_muscular_vitals',
+        'brain': '_get_brain_vitals',
     }
 
     # Weights for calculating overall health score
@@ -69,6 +72,7 @@ class BodyVitalsService:
         'immune': 1.2,      # Important - security
         'digestive': 1.0,
         'muscular': 1.0,
+        'brain': 1.4,       # Important - cognitive processing
     }
 
     # Status emoji mappings per system
@@ -101,11 +105,15 @@ class BodyVitalsService:
             'strong': '💪', 'fit': '🏃', 'fatigued': '😓', 'strained': '🥵', 'paralyzed': '🦽',
             'unknown': '❓', 'error': '❓'
         },
+        'brain': {
+            'focused': '🧠', 'thinking': '💭', 'overloaded': '🤯', 'foggy': '🌫️', 'resting': '😴', 'offline': '💀',
+            'unknown': '❓', 'error': '❓'
+        },
     }
 
     def get_all_vitals(self, include_details: bool = False) -> Dict[str, Any]:
         """
-        Get health status from all 7 body systems.
+        Get health status from all 8 body systems.
 
         Args:
             include_details: Include detailed metrics per system
@@ -622,6 +630,56 @@ class BodyVitalsService:
             logger.error(f"MUSCULAR vitals error: {e}")
             return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
 
+    def _get_brain_vitals(self, include_details: bool = False) -> Dict[str, Any]:
+        """Get BRAIN system vitals."""
+        try:
+            from core.services.brain import get_brain_service
+            brain = get_brain_service()
+            vitals = brain.get_vitals()
+
+            # get_vitals() returns 'status', not 'overall_status'
+            status = vitals.get('status', 'unknown')
+            score = vitals.get('cognitive_score', 0)
+
+            result = {
+                'status': status,
+                'score': score,
+                'emoji': self._get_emoji('brain', status),
+                'alerts': []
+            }
+
+            # Generate alerts based on cognitive status
+            if status in ['overloaded', 'offline']:
+                result['alerts'].append({
+                    'system': 'brain',
+                    'message': f"Cognitive processing: {status}",
+                    'severity': 'critical',
+                    'severity_score': 3
+                })
+            elif status == 'foggy':
+                result['alerts'].append({
+                    'system': 'brain',
+                    'message': f"Cognitive clarity degraded ({score}%)",
+                    'severity': 'warning',
+                    'severity_score': 2
+                })
+
+            if include_details:
+                result['details'] = {
+                    'llm_calls_24h': vitals.get('llm_calls_24h', 0),
+                    'tokens_total_24h': vitals.get('tokens_total_24h', 0),
+                    'active_conversations': vitals.get('active_conversations', 0),
+                    'agent_executions_24h': vitals.get('agent_executions_24h', 0),
+                    'avg_response_time_ms': vitals.get('avg_response_time_ms', 0),
+                    'cognitive_channels': vitals.get('cognitive_channels', {}),
+                    'is_thinking': vitals.get('is_thinking', False)
+                }
+
+            return result
+        except Exception as e:
+            logger.error(f"BRAIN vitals error: {e}")
+            return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
+
     # ========== Helper Methods ==========
 
     def _get_emoji(self, system: str, status: str) -> str:
@@ -656,6 +714,8 @@ class BodyVitalsService:
             return f"{len(alerts)} alerts detected - review body health dashboard"
 
         # Prioritized recommendations
+        if 'brain' in critical_systems:
+            return "Cognitive processing overloaded - reduce LLM calls or check conversation queue"
         if 'lungs' in critical_systems:
             return "Budget is critically low - reduce LLM usage or increase budget limits"
         if 'immune' in critical_systems:

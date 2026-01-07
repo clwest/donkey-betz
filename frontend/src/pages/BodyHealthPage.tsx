@@ -1,7 +1,8 @@
 /**
  * Session 710: Body Health Dashboard
+ * Session 722: Added BRAIN system
  *
- * Unified view of all 7 body systems health status.
+ * Unified view of all 8 body systems health status.
  * Provides real-time monitoring of the AI body's health.
  */
 
@@ -9,13 +10,13 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   bodyApi, heartApi, lungsApi, circulatoryApi, spineApi,
-  immuneApi, digestiveApi, muscularApi
+  immuneApi, digestiveApi, muscularApi, brainApi
 } from '@/lib/api'
 import {
-  Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell,
+  Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell, Brain,
   AlertTriangle, CheckCircle, XCircle, Activity, RefreshCw,
   Info, Clock, X, Zap, Server, Database, Cpu, DollarSign,
-  Users, GitBranch, Gauge, BarChart3
+  Users, GitBranch, Gauge, BarChart3, MessageSquare, Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -75,6 +76,13 @@ const SYSTEM_CONFIG: Record<string, {
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
     description: 'Agent work execution'
+  },
+  brain: {
+    icon: Brain,
+    label: 'BRAIN',
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10',
+    description: 'Cognitive processing'
   }
 }
 
@@ -113,6 +121,14 @@ const STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircle }>
   overwhelmed: { color: 'text-red-500', icon: XCircle },
   starving: { color: 'text-red-500', icon: XCircle },
   paralyzed: { color: 'text-red-500', icon: XCircle },
+  offline: { color: 'text-red-500', icon: XCircle },
+  overloaded: { color: 'text-red-500', icon: XCircle },
+
+  // Brain-specific states
+  focused: { color: 'text-green-500', icon: CheckCircle },
+  thinking: { color: 'text-green-500', icon: CheckCircle },
+  foggy: { color: 'text-yellow-500', icon: AlertTriangle },
+  resting: { color: 'text-blue-500', icon: Info },
 
   // Unknown
   unknown: { color: 'text-gray-500', icon: Info },
@@ -371,6 +387,7 @@ function SystemDetailPanel({ systemName, onClose }: SystemDetailPanelProps) {
       {systemName === 'immune' && <ImmuneDetailView />}
       {systemName === 'digestive' && <DigestiveDetailView />}
       {systemName === 'muscular' && <MuscularDetailView />}
+      {systemName === 'brain' && <BrainDetailView />}
     </div>
   )
 }
@@ -1386,6 +1403,168 @@ function MuscularDetailView() {
   )
 }
 
+// BRAIN Detail View - Session 722
+function BrainDetailView() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['brainStatus'],
+    queryFn: () => brainApi.status(),
+  })
+
+  const status = data?.data
+
+  if (isLoading) return <DetailLoading />
+
+  return (
+    <div className="space-y-4">
+      {/* Cognitive Summary */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold uppercase',
+              status?.overall_status === 'focused' ? 'text-green-400' :
+              status?.overall_status === 'thinking' ? 'text-cyan-400' :
+              status?.overall_status === 'resting' ? 'text-blue-400' :
+              status?.overall_status === 'foggy' ? 'text-yellow-400' :
+              status?.overall_status === 'overloaded' ? 'text-orange-400' : 'text-red-400'
+            )}>
+              {status?.overall_status || 'unknown'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.cognitive_score || 0) >= 80 ? 'text-green-400' :
+              (status?.cognitive_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.cognitive_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Cognitive Score</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_thinking ? 'text-cyan-400' : 'text-zinc-400'
+            )}>
+              {status?.is_thinking ? 'ACTIVE' : 'IDLE'}
+            </div>
+            <div className="text-xs text-zinc-500">Processing</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-400">
+              {status?.active_conversations || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Active Conversations</div>
+          </div>
+        </div>
+      </div>
+
+      {/* LLM Metrics */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-yellow-400" />
+          LLM Activity (24h)
+        </h3>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-blue-400">
+              {status?.llm_calls_24h?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">LLM Calls</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-cyan-400">
+              {status?.tokens_total_24h?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Tokens Used</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-green-400">
+              ${status?.cost_24h?.toFixed(2) || '0.00'}
+            </div>
+            <div className="text-xs text-zinc-500">Cost</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.avg_response_time_ms || 0) > 5000 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.avg_response_time_ms?.toLocaleString() || 0}ms
+            </div>
+            <div className="text-xs text-zinc-500">Avg Response</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Agent Processing */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-purple-400" />
+          Agent Activity
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-purple-400">
+              {status?.agent_executions_24h?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Agent Executions (24h)</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-orange-400">
+              {status?.rag_queries_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">RAG Queries</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-pink-400">
+              {status?.reasoning_chains_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Reasoning Chains</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cognitive Channels */}
+      {status?.cognitive_channels && Object.keys(status.cognitive_channels).length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <Brain className="w-4 h-4 text-cyan-400" />
+            Cognitive Channels
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {Object.entries(status.cognitive_channels).map(([name, channel]: [string, any]) => (
+              <div key={name} className="bg-zinc-900/50 rounded-lg p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400 capitalize">{name.replace('_', ' ')}</span>
+                  <span className={cn(
+                    'px-1.5 py-0.5 rounded text-xs',
+                    channel?.is_active ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'
+                  )}>
+                    {channel?.is_active ? 'Active' : 'Idle'}
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  {channel?.calls_24h || 0} calls • {channel?.tokens_24h?.toLocaleString() || 0} tokens
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Brain Status - All Good */}
+      {(status?.cognitive_score || 0) >= 70 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+          <p className="text-sm text-zinc-400">Brain processing normally</p>
+          <p className="text-xs text-zinc-500">Cognitive functions optimal</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Loading component for detail views
 function DetailLoading() {
   return (
@@ -1509,7 +1688,7 @@ export default function BodyHealthPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Body Health Dashboard</h1>
           <p className="text-sm text-zinc-500">
-            Real-time monitoring of all 7 body systems
+            Real-time monitoring of all 8 body systems
           </p>
         </div>
         <button

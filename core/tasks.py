@@ -23054,6 +23054,116 @@ def check_muscular():
 
 
 # =============================================================================
+# Session 721: BRAIN SYSTEM - Cognitive Processing & Reasoning
+# =============================================================================
+
+@shared_task(name='core.tasks.check_brain')
+def check_brain():
+    """
+    Session 721: BRAIN SYSTEM - Check cognitive processing health
+
+    The BRAIN SYSTEM monitors LLM calls, conversations, agent thinking,
+    and overall reasoning quality.
+
+    Monitors:
+    - LLM API call success rates and latency
+    - Active conversations
+    - Agent thinking/executions
+    - Token usage
+    - Model routing decisions
+
+    Status Levels:
+    - focused: 80%+ cognitive (excellent function)
+    - thinking: 60-79% cognitive (active processing)
+    - overloaded: 40-59% cognitive (high load)
+    - foggy: 20-39% cognitive (degraded responses)
+    - resting: Low/no activity
+    - offline: Not responding
+
+    Run frequency: Every 60 seconds
+    """
+    import redis
+    import json
+    from core.services.brain import get_brain_service
+
+    logger.info("🧠 [BRAIN] Running brain check...")
+
+    try:
+        brain = get_brain_service()
+        status = brain.think()
+
+        # Log the result
+        logger.info(
+            f"🧠 [BRAIN] Check complete: {status['overall_status'].upper()} "
+            f"(Cognitive: {status['cognitive_score']:.1f}%)"
+        )
+
+        # Log LLM summary
+        llm = status.get('llm', {})
+        logger.info(
+            f"🧠 [BRAIN] LLM (24h): {llm.get('calls_24h', 0)} calls, "
+            f"{llm.get('success_rate', 100):.1f}% success, "
+            f"{llm.get('avg_latency_ms', 0):.0f}ms avg latency"
+        )
+
+        # Log token usage
+        logger.info(
+            f"🧠 [BRAIN] Tokens (24h): {llm.get('tokens_total_24h', 0):,} total "
+            f"(in: {llm.get('tokens_input_24h', 0):,}, out: {llm.get('tokens_output_24h', 0):,})"
+        )
+
+        # Log conversations
+        convos = status.get('conversations', {})
+        logger.info(
+            f"🧠 [BRAIN] Conversations: {convos.get('active', 0)} active, "
+            f"{convos.get('total_24h', 0)} in 24h"
+        )
+
+        # Log cognitive issues
+        issues = status.get('cognitive_issues', [])
+        if issues:
+            for issue in issues[:3]:
+                severity = issue.get('severity', 'warning')
+                if severity == 'critical':
+                    logger.error(f"🧠 [BRAIN] {issue['message']}")
+                else:
+                    logger.warning(f"🧠 [BRAIN] {issue['message']}")
+
+        # Alert on critical status
+        if status['overall_status'] in ('foggy', 'offline'):
+            logger.error(
+                f"🧠 [BRAIN] CRITICAL: System status is {status['overall_status'].upper()}!"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('body_systems', json.dumps({
+                'type': 'brain_status',
+                'system': 'brain',
+                'status': status['overall_status'],
+                'cognitive_score': status['cognitive_score'],
+                'is_thinking': status['is_thinking'],
+                'llm_calls_24h': llm.get('calls_24h', 0),
+                'tokens_24h': llm.get('tokens_total_24h', 0),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🧠 [BRAIN] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🧠 [BRAIN] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🧠 [BRAIN] Brain check failed: {e}")
+        return {
+            'status': 'offline',
+            'error': str(e),
+            'is_thinking': False,
+        }
+
+
+# =============================================================================
 # Session 711: BODY COORDINATOR - Autonomic Nervous System
 # =============================================================================
 

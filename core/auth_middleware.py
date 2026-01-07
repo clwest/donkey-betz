@@ -257,6 +257,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/muscular/history/',  # Get muscular pulse history
         '/api/muscular/is-strong/',  # Quick alive check
 
+        # Session 721: BRAIN System APIs (cognitive processing for React frontend)
+        '/api/brain/status/',  # Get cached brain status
+        '/api/brain/think/',  # Run brain check
+        '/api/brain/vitals/',  # Get brain vitals
+        '/api/brain/history/',  # Get brain pulse history
+        '/api/brain/is-thinking/',  # Quick alive check
+
         # Session 710: BODY UNIFIED - Body Health Dashboard API
         '/api/body/vitals/',  # All systems health
         '/api/body/alerts/',  # Active alerts
