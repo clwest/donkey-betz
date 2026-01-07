@@ -80,14 +80,19 @@ Verified ALL 27 sidebar pages and their sub-tabs for proper API connectivity:
 #### 4. Neural Orchestra Header Stats (neural_orchestra_reality_bridge.py)
 **Issue:** Header showed 0 for Active Agents, Active Spiders, System Health, and 0.0% Consciousness Level
 
-**Cause:** API `system_status` response missing fields: `consciousness_level`, `active_spiders`, `system_health`
+**Cause:**
+- API `system_status` missing fields: `consciousness_level`, `active_spiders`, `system_health`
+- Active Agents used `AgentContribution` (no recent data) instead of `AgentExecution`
 
 **Fix:**
 - Added `consciousness_level` from consciousness_api._calculate_consciousness_level()
 - Added `active_spiders` from spider_registry count (77 spiders)
 - Added `system_health` from consciousness_api.get_system_health()
+- Changed Active Agents source from `AgentContribution` → `AgentExecution` (10 agents in 24h)
 
-**Commit:** `ee748c64 fix(Session 719): Neural Orchestra header stats`
+**Commits:**
+- `ee748c64 fix(Session 719): Neural Orchestra header stats`
+- `6e963be2 fix(Session 719): Neural Orchestra Active Agents - use AgentExecution data`
 
 ---
 
@@ -205,4 +210,4 @@ curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 
 ---
 
-**Session 719 Complete** - Full connectivity audit passed, 4 UI bugs fixed
+**Session 719 Complete** - Full connectivity audit passed, 4 UI bugs fixed (5 commits)
