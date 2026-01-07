@@ -538,6 +538,30 @@ You score and analyze - you do NOT create content or execute workflows."""
                 'error': str(e)
             }
 
+    def get_top_opportunities(
+        self,
+        limit: int = 10,
+        min_score: int = 50,
+        category: Optional[str] = None,
+        user=None
+    ) -> List[Dict[str, Any]]:
+        """
+        Public method to get highest-scored opportunities.
+
+        Args:
+            limit: Number of opportunities to return
+            min_score: Minimum score threshold
+            category: Optional category filter
+            user: Optional user for personalization (future use)
+
+        Returns:
+            List of opportunity dictionaries
+        """
+        result = self._get_top_opportunities(limit, min_score, category)
+        if result.get('success'):
+            return result.get('opportunities', [])
+        return []
+
     def _get_top_opportunities(
         self,
         limit: int,
