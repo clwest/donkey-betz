@@ -1395,6 +1395,13 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
             # Session 695: SKIN Layer - Workspace Tool for project execution
             elif function_name == 'workspace_tool':
                 result = self._handle_workspace_tool(arguments)
+            # Session 709: Body Vitals - Connect Brain to Body Systems
+            elif function_name == 'get_body_vitals':
+                result = self._handle_get_body_vitals(arguments)
+            elif function_name == 'check_resource_budget':
+                result = self._handle_check_resource_budget(arguments)
+            elif function_name == 'get_system_alerts':
+                result = self._handle_get_system_alerts(arguments)
             else:
                 result = {
                     'success': False,
@@ -11565,4 +11572,146 @@ class EnhancedPersonalAIAssistant(PersonalAIAssistant):
                 'success': False,
                 'error': str(e),
                 'action': action
+            }
+
+    # =========================================================================
+    # Session 709: Body Vitals Tools - Connect Brain to Body Systems
+    # =========================================================================
+
+    def _handle_get_body_vitals(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle get_body_vitals tool call.
+
+        Query health status of all 7 body systems or specific systems.
+
+        Args:
+            arguments: Dict with optional 'systems' (list) and 'include_details' (bool)
+
+        Returns:
+            Unified health report with overall status and per-system breakdown
+        """
+        try:
+            from core.services.body_vitals import get_body_vitals_service
+            service = get_body_vitals_service()
+
+            systems = arguments.get('systems', ['all'])
+            include_details = arguments.get('include_details', False)
+
+            # If 'all' or empty, get full vitals
+            if not systems or 'all' in systems:
+                vitals = service.get_all_vitals(include_details=include_details)
+                return {
+                    'success': True,
+                    'tool': 'get_body_vitals',
+                    **vitals
+                }
+
+            # Query specific systems
+            result = {
+                'success': True,
+                'tool': 'get_body_vitals',
+                'systems': {},
+                'alerts': []
+            }
+
+            for system in systems:
+                system_vitals = service.get_system_vitals(system, include_details=include_details)
+                result['systems'][system] = system_vitals
+                if system_vitals.get('alerts'):
+                    result['alerts'].extend(system_vitals['alerts'])
+
+            # Sort alerts by severity
+            result['alerts'] = sorted(
+                result['alerts'],
+                key=lambda x: x.get('severity_score', 0),
+                reverse=True
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in get_body_vitals: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'get_body_vitals'
+            }
+
+    def _handle_check_resource_budget(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle check_resource_budget tool call.
+
+        Check if budget allows for an operation before executing.
+
+        Args:
+            arguments: Dict with optional 'estimated_tokens' (int) and 'estimated_cost' (float)
+
+        Returns:
+            Budget check result with can_proceed flag and recommendation
+        """
+        try:
+            from core.services.body_vitals import get_body_vitals_service
+            service = get_body_vitals_service()
+
+            estimated_tokens = arguments.get('estimated_tokens', 0)
+            estimated_cost = arguments.get('estimated_cost', 0)
+
+            budget_check = service.check_budget(
+                estimated_tokens=estimated_tokens,
+                estimated_cost=estimated_cost
+            )
+
+            return {
+                'success': True,
+                'tool': 'check_resource_budget',
+                **budget_check
+            }
+
+        except Exception as e:
+            logger.error(f"Error in check_resource_budget: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'check_resource_budget',
+                # Default to allowing operation if check fails
+                'can_proceed': True,
+                'warning': f'Budget check failed: {str(e)}'
+            }
+
+    def _handle_get_system_alerts(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle get_system_alerts tool call.
+
+        Get active alerts from all body systems above severity threshold.
+
+        Args:
+            arguments: Dict with optional 'severity_threshold' ('info', 'warning', 'critical')
+
+        Returns:
+            List of alerts sorted by severity
+        """
+        try:
+            from core.services.body_vitals import get_body_vitals_service
+            service = get_body_vitals_service()
+
+            severity_threshold = arguments.get('severity_threshold', 'warning')
+
+            alerts = service.get_alerts(severity_threshold=severity_threshold)
+
+            return {
+                'success': True,
+                'tool': 'get_system_alerts',
+                'severity_threshold': severity_threshold,
+                'alert_count': len(alerts),
+                'alerts': alerts,
+                'message': f"{len(alerts)} alert(s) found at {severity_threshold} level or above" if alerts else "No alerts found"
+            }
+
+        except Exception as e:
+            logger.error(f"Error in get_system_alerts: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e),
+                'tool': 'get_system_alerts',
+                'alerts': []
             }

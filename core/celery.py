@@ -1582,6 +1582,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # Session 711: BODY COORDINATOR - Autonomic Nervous System
+    # Coordinates responses across all body systems
+    'body-coordinator-check': {
+        'task': 'core.tasks.coordinate_body',
+        'schedule': 60.0,  # Every 60 seconds
+        'options': {
+            'expires': 55,  # Expire before next check
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
 }
 
 # Task routing configuration

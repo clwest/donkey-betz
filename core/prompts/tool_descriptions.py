@@ -761,6 +761,89 @@ This enables:
 ⚠️ IMPORTANT: All file operations are logged and can be rolled back.
 Protected paths (like .env) cannot be modified by agents.""",
 
+    # =========================================================================
+    # Session 709: Body Vitals Tools - Connect Brain to Body Systems
+    # =========================================================================
+
+    "get_body_vitals": """Query the health status of body systems (HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR).
+
+Use this tool when:
+- User asks about system health, status, or "how am I doing?"
+- Before executing expensive operations (check LUNGS budget)
+- When troubleshooting issues (check relevant systems)
+- For proactive health awareness at session start
+- User asks "what needs attention?" (combines with alerts)
+
+The body systems are:
+- HEART: Core component health (brain, organs, sensory, memory) - Overall platform health
+- LUNGS: Budget/resource management - Token limits, API costs, rate limits
+- CIRCULATORY: Data flow health - Redis queues, Celery tasks, WebSockets
+- SPINE: API routing health - Latency, error rates, route patterns
+- IMMUNE: Security status - Threats detected, quarantined IPs, attack patterns
+- DIGESTIVE: Data pipeline - Spider ingestion, processing queue, throughput
+- MUSCULAR: Agent execution - Success rates, fatigue levels, active/idle agents
+
+Response includes:
+- overall_health: Status string (healthy/degraded/impaired/critical/failing)
+- health_score: 0-100% weighted score
+- systems: Per-system status with emoji indicators
+- alerts: Active alerts sorted by severity
+- recommendation: Actionable next step""",
+
+    "check_resource_budget": """Check if the current budget allows for an operation.
+
+ALWAYS use this tool BEFORE:
+- Large image generation requests (multiple images, high-res)
+- Video generation (expensive, ~$0.50-2.00 per video)
+- Complex multi-step workflows
+- Operations requiring expensive models (GPT-5, Claude Opus, video models)
+- Batch operations that could consume significant tokens
+
+The response tells you:
+- can_proceed: Whether to proceed (true/false)
+- oxygen_level: Current budget % remaining (0-100)
+- status: Current LUNGS status (normal/elevated/hyperventilating/holding)
+- warning: Warning message if budget is low
+- recommendation: Model selection advice based on budget
+
+Budget levels:
+- 80-100%: Healthy - proceed with any operations
+- 50-79%: Moderate - avoid very expensive operations
+- 20-49%: Low - use efficient models (GPT-4o-mini, Haiku)
+- 10-19%: Critical - only essential operations
+- 0-9%: Exhausted - operations should be blocked
+
+Example usage:
+1. User asks for video generation
+2. Call check_resource_budget(estimated_cost=1.50)
+3. If can_proceed=false, suggest alternatives or warn user""",
+
+    "get_system_alerts": """Get active alerts from all body systems.
+
+Use this tool when:
+- User asks "what needs attention?" or "any issues?"
+- Starting a new session (quick health check)
+- Something seems wrong with the system
+- Before important operations to ensure system is healthy
+- User reports errors or slow performance
+
+Returns alerts sorted by severity (critical first) with:
+- system: Which body system raised the alert (heart, lungs, immune, etc.)
+- message: What the issue is in plain language
+- severity: info, warning, or critical
+- severity_score: 1 (info), 2 (warning), 3 (critical)
+
+Severity threshold options:
+- 'critical': Only show critical issues (system down, budget exhausted, security threat)
+- 'warning': Show warnings and critical (default - recommended)
+- 'info': Show all alerts including informational
+
+Examples of alerts:
+- LUNGS: "Budget low (15% remaining)" - severity: warning
+- IMMUNE: "Threat level: high" - severity: critical
+- DIGESTIVE: "Queue backlog: 5000 items pending" - severity: warning
+- MUSCULAR: "Agent execution: paralyzed" - severity: warning""",
+
 }
 
 

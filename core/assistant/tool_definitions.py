@@ -72,6 +72,10 @@ def get_tool_definitions() -> List[Dict]:
         _get_universal_agent_tool_definition(),       # Invoke ANY agent by name
         # Session 695: SKIN Layer - Workspace Tool for project execution
         _get_workspace_tool_definition(),             # Manage workspaces where agents write code
+        # Session 709: Body Vitals - Connect Brain to Body Systems
+        _get_body_vitals_tool_definition(),           # Query all 7 body systems
+        _get_check_budget_tool_definition(),          # Check LUNGS before expensive ops
+        _get_system_alerts_tool_definition(),         # Get critical body alerts
         _get_workflow_orchestration_agent_definition(),  # LAST - only for explicit package requests
     ]
 
@@ -1281,5 +1285,88 @@ def _get_universal_agent_tool_definition() -> Dict:
                 }
             },
             "required": ["agent_name", "task"]
+        }
+    }
+
+
+# =============================================================================
+# Session 709: Body Vitals Tools - Connect Brain to Body Systems
+# =============================================================================
+
+def _get_body_vitals_tool_definition() -> Dict:
+    """
+    Tool for PA to query body system health.
+    Session 709: Brain ↔ Body connection.
+    """
+    return {
+        "type": "function",
+        "name": "get_body_vitals",
+        "description": get_tool_description("get_body_vitals"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "systems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["heart", "lungs", "circulatory", "spine", "immune", "digestive", "muscular", "all"]
+                    },
+                    "description": "Which body systems to query. Use 'all' or omit for complete health check."
+                },
+                "include_details": {
+                    "type": "boolean",
+                    "description": "Include detailed metrics per system (default: false)"
+                }
+            },
+            "required": []
+        }
+    }
+
+
+def _get_check_budget_tool_definition() -> Dict:
+    """
+    Tool for PA to check budget before expensive operations.
+    Session 709: Brain ↔ Body connection.
+    """
+    return {
+        "type": "function",
+        "name": "check_resource_budget",
+        "description": get_tool_description("check_resource_budget"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "estimated_tokens": {
+                    "type": "integer",
+                    "description": "Estimated token usage for the operation"
+                },
+                "estimated_cost": {
+                    "type": "number",
+                    "description": "Estimated cost in USD for the operation"
+                }
+            },
+            "required": []
+        }
+    }
+
+
+def _get_system_alerts_tool_definition() -> Dict:
+    """
+    Tool for PA to get critical system alerts.
+    Session 709: Brain ↔ Body connection.
+    """
+    return {
+        "type": "function",
+        "name": "get_system_alerts",
+        "description": get_tool_description("get_system_alerts"),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "severity_threshold": {
+                    "type": "string",
+                    "enum": ["info", "warning", "critical"],
+                    "description": "Minimum severity level to include (default: warning)"
+                }
+            },
+            "required": []
         }
     }
