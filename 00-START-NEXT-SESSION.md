@@ -1,8 +1,131 @@
-# Session 713 - Start Here
+# Session 714 - Start Here
 
-**Previous Session:** 712 (Body System UI Unification)
+**Previous Session:** 713 (Unified Human System Audit)
 **Date:** January 7, 2026
-**Status:** 100% Reality Score | 7 BODY SYSTEMS | UI UNIFIED
+**Status:** 100% Reality Score | 7 BODY SYSTEMS | FULL AUDIT COMPLETE
+
+---
+
+## CRITICAL: Read Before Starting
+
+**Master Roadmap Document:** `docs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md`
+
+This document contains:
+- Complete 5-phase integration roadmap
+- Detailed workflows for each integration
+- API inventory (45 used, 100+ to add)
+- Implementation checklists
+- All architecture diagrams
+
+**DO NOT LOSE THIS CONTEXT**
+
+---
+
+## Session 713 Summary
+
+### The Biggest System Audit
+
+We audited the ENTIRE system to answer: "How does it all work together?"
+
+### Key Findings
+
+| Metric | Value |
+|--------|-------|
+| Backend API Endpoints | 1,435 |
+| Frontend Uses | ~45 (3%) |
+| Hidden Potential | 97% |
+| Sci-Fi Features | 14 |
+| Sci-Fi in UI | 1 (Dreams only) |
+| Cross-Page Connections | 0 |
+
+### The Problem
+
+Pages work in ISOLATION. We built an incredible brain but forgot to connect the neurons.
+
+### 14 Sci-Fi Features Status
+
+| Feature | Backend | Frontend |
+|---------|---------|----------|
+| Agent Learning | Complete | Partial |
+| Agent Conversations | Complete | Partial |
+| Agent Dreams | Complete | Partial (Modal) |
+| Hive Mind | Complete | **NONE** |
+| Memory Palace | Complete | **NONE** |
+| Mood System | Complete | **NONE** |
+| Rivalries/Alliances | Complete | **NONE** |
+| Evolution System | Complete | **NONE** |
+| Time Travel | Complete | **NONE** |
+| Personality Profiles | Complete | **NONE** |
+| Memory Clusters | Complete | **NONE** |
+| Time Capsules | Complete | **NONE** |
+| Conversation Contract | Complete | **NONE** |
+| Spider Integration | Complete | Partial |
+
+### 5-Phase Integration Roadmap
+
+| Phase | Focus | Sessions |
+|-------|-------|----------|
+| **1** | Body Governance + Alerts | 1-2 |
+| **2** | Cross-Page Navigation | 1-2 |
+| **3** | Event Broadcasting | 1-2 |
+| **4** | Shared State Store | 1-2 |
+| **5** | Sci-Fi Features UI | 3-5 |
+
+---
+
+## Session 714 - Start Phase 1
+
+### Phase 1: Body Governance + Global Alerts
+
+**Goal:** Make body health ACTIONABLE, not just viewable
+
+### Files to Create
+
+```
+frontend/src/
+├── stores/bodyStore.ts          # Shared body state
+├── services/bodyGovernance.ts   # Operation blocking logic
+└── components/GlobalAlertBanner.tsx  # Alert header
+```
+
+### Tasks
+
+1. **Create Body Store (Zustand)**
+   - Shared body vitals state
+   - Alerts array
+   - `blocksOperations` flag
+
+2. **Create Body Governance Service**
+   - `canStartPilot()` - Check body health
+   - `canExecuteAgent()` - Check muscular status
+   - `canWriteFile()` - Check spine status
+
+3. **Create Global Alert Banner**
+   - Shows critical body alerts
+   - Dismissible
+   - Links to Body Health page
+
+4. **Update Intelligence Page**
+   - Disable "Start Pilot" when body critical
+   - Show warning message
+
+5. **Update Workspace Page**
+   - Warn before file writes when body degraded
+
+### Quick Commands
+
+```bash
+# Start services
+make start && make celery
+
+# Test body APIs
+curl http://localhost:8000/api/body/vitals/
+
+# Access pages
+open http://localhost:8080/body-health
+open http://localhost:8080/intelligence
+open http://localhost:8080/workspace
+```
 
 ---
 
