@@ -1163,6 +1163,28 @@ export const brainApi = {
   isThinking: () => api.get('/brain/is-thinking/'),
 }
 
+// Session 723: SKIN System API - Workspace Output Monitoring
+export const skinApi = {
+  // Run full skin check (analyze workspace operations)
+  feel: (force = false) => api.get('/skin/feel/', { params: { force } }),
+
+  // Get cached skin status (fast)
+  status: () => api.get('/skin/status/'),
+
+  // Get current vitals (health score, operations count, etc.)
+  vitals: () => api.get('/skin/vitals/'),
+
+  // Get skin pulse history
+  history: (hours = 24, limit = 100) =>
+    api.get('/skin/history/', { params: { hours, limit } }),
+
+  // Quick health check - is the skin healthy?
+  isHealthy: () => api.get('/skin/is-healthy/'),
+
+  // Get workspace summary
+  workspaces: () => api.get('/skin/workspaces/'),
+}
+
 // Session 716: Advisors API - Famous figure consultations
 export const advisorsApi = {
   // List all active advisors

@@ -1,8 +1,9 @@
 /**
  * Session 710: Body Health Dashboard
  * Session 722: Added BRAIN system
+ * Session 723: Added SKIN system
  *
- * Unified view of all 8 body systems health status.
+ * Unified view of all 9 body systems health status.
  * Provides real-time monitoring of the AI body's health.
  */
 
@@ -10,13 +11,13 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   bodyApi, heartApi, lungsApi, circulatoryApi, spineApi,
-  immuneApi, digestiveApi, muscularApi, brainApi
+  immuneApi, digestiveApi, muscularApi, brainApi, skinApi
 } from '@/lib/api'
 import {
-  Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell, Brain,
+  Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell, Brain, Layers,
   AlertTriangle, CheckCircle, XCircle, Activity, RefreshCw,
   Info, Clock, X, Zap, Server, Database, Cpu, DollarSign,
-  Users, GitBranch, Gauge, BarChart3, MessageSquare, Sparkles
+  Users, GitBranch, Gauge, BarChart3, MessageSquare, Sparkles, FileEdit, FolderOpen
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -83,6 +84,13 @@ const SYSTEM_CONFIG: Record<string, {
     color: 'text-cyan-500',
     bgColor: 'bg-cyan-500/10',
     description: 'Cognitive processing'
+  },
+  skin: {
+    icon: Layers,
+    label: 'SKIN',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10',
+    description: 'Workspace output monitoring'
   }
 }
 
@@ -129,6 +137,14 @@ const STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircle }>
   thinking: { color: 'text-green-500', icon: CheckCircle },
   foggy: { color: 'text-yellow-500', icon: AlertTriangle },
   resting: { color: 'text-blue-500', icon: Info },
+
+  // Skin-specific states
+  active: { color: 'text-green-500', icon: CheckCircle },
+  sweating: { color: 'text-yellow-500', icon: AlertTriangle },
+  irritated: { color: 'text-orange-500', icon: AlertTriangle },
+  damaged: { color: 'text-red-500', icon: XCircle },
+  healing: { color: 'text-blue-500', icon: Info },
+  dormant: { color: 'text-gray-500', icon: Info },
 
   // Unknown
   unknown: { color: 'text-gray-500', icon: Info },
@@ -388,6 +404,7 @@ function SystemDetailPanel({ systemName, onClose }: SystemDetailPanelProps) {
       {systemName === 'digestive' && <DigestiveDetailView />}
       {systemName === 'muscular' && <MuscularDetailView />}
       {systemName === 'brain' && <BrainDetailView />}
+      {systemName === 'skin' && <SkinDetailView />}
     </div>
   )
 }
@@ -1565,6 +1582,207 @@ function BrainDetailView() {
   )
 }
 
+// SKIN Detail View - Session 723
+function SkinDetailView() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['skinStatus'],
+    queryFn: () => skinApi.status(),
+  })
+
+  const { data: workspacesData } = useQuery({
+    queryKey: ['skinWorkspaces'],
+    queryFn: () => skinApi.workspaces(),
+  })
+
+  const status = data?.data
+  const workspaces = workspacesData?.data?.workspaces || []
+
+  if (isLoading) return <DetailLoading />
+
+  return (
+    <div className="space-y-4">
+      {/* Skin Health Summary */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold uppercase',
+              status?.overall_status === 'healthy' ? 'text-green-400' :
+              status?.overall_status === 'active' ? 'text-green-400' :
+              status?.overall_status === 'sweating' ? 'text-yellow-400' :
+              status?.overall_status === 'irritated' ? 'text-orange-400' :
+              status?.overall_status === 'healing' ? 'text-blue-400' :
+              status?.overall_status === 'dormant' ? 'text-gray-400' : 'text-red-400'
+            )}>
+              {status?.overall_status || 'unknown'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.health_score || 0) >= 80 ? 'text-green-400' :
+              (status?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.health_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Health Score</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_healthy ? 'text-green-400' : 'text-yellow-400'
+            )}>
+              {status?.is_healthy ? 'HEALTHY' : 'CHECK'}
+            </div>
+            <div className="text-xs text-zinc-500">Condition</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-amber-400">
+              {status?.active_workspaces || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Active Workspaces</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Operations (24h) */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <FileEdit className="w-4 h-4 text-amber-400" />
+          Operations (24h)
+        </h3>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-blue-400">
+              {status?.operations_24h?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Total Ops</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-green-400">
+              {status?.files_created_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Files Created</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-cyan-400">
+              {status?.files_modified_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Files Modified</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.success_rate_24h || 100) >= 90 ? 'text-green-400' :
+              (status?.success_rate_24h || 100) >= 70 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.success_rate_24h?.toFixed(1) || 100}%
+            </div>
+            <div className="text-xs text-zinc-500">Success Rate</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rollback Status */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <RefreshCw className="w-4 h-4 text-purple-400" />
+          Rollback & Recovery
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className="text-xl font-bold text-purple-400">
+              {status?.rollbacks_available || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Available Rollbacks</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.errors_24h || 0) > 0 ? 'text-red-400' : 'text-green-400'
+            )}>
+              {status?.errors_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Errors (24h)</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.pending_reviews || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.pending_reviews || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Pending Reviews</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Workspaces */}
+      {workspaces.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-amber-400" />
+            Active Workspaces ({workspaces.length})
+          </h3>
+          <div className="space-y-2">
+            {workspaces.slice(0, 5).map((workspace: any) => (
+              <div
+                key={workspace.id}
+                className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-zinc-300">
+                    {workspace.name || workspace.path?.split('/').pop() || 'Unnamed'}
+                  </span>
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    workspace.is_active ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'
+                  )}>
+                    {workspace.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-zinc-500">Files:</span>
+                    <span className="ml-1 text-zinc-300">{workspace.file_count || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500">Ops:</span>
+                    <span className="ml-1 text-zinc-300">{workspace.operations_count || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500">Last:</span>
+                    <span className="ml-1 text-zinc-300">
+                      {workspace.last_activity
+                        ? new Date(workspace.last_activity).toLocaleDateString()
+                        : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {workspaces.length > 5 && (
+              <p className="text-xs text-zinc-500 text-center">
+                +{workspaces.length - 5} more workspaces
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Skin Status - All Good */}
+      {(status?.health_score || 0) >= 70 && (status?.errors_24h || 0) === 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+          <p className="text-sm text-zinc-400">Skin functioning normally</p>
+          <p className="text-xs text-zinc-500">Workspace outputs healthy</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Loading component for detail views
 function DetailLoading() {
   return (
@@ -1688,7 +1906,7 @@ export default function BodyHealthPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Body Health Dashboard</h1>
           <p className="text-sm text-zinc-500">
-            Real-time monitoring of all 8 body systems
+            Real-time monitoring of all 9 body systems
           </p>
         </div>
         <button
@@ -1838,7 +2056,7 @@ export default function BodyHealthPage() {
       {/* Human Body Metaphor Legend */}
       <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
         <h2 className="text-lg font-medium text-zinc-300 mb-4">Human Body Metaphor</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
           <div>
             <span className="text-red-500 font-medium">HEART</span>
             <p className="text-zinc-500">Core platform health - Redis, DB, Celery, Django</p>
@@ -1869,7 +2087,11 @@ export default function BodyHealthPage() {
           </div>
           <div>
             <span className="text-cyan-500 font-medium">BRAIN</span>
-            <p className="text-zinc-500">Personal Assistant - The AI that talks to you</p>
+            <p className="text-zinc-500">Cognitive processing - LLM calls, reasoning</p>
+          </div>
+          <div>
+            <span className="text-amber-500 font-medium">SKIN</span>
+            <p className="text-zinc-500">Workspace outputs - File writes, project changes</p>
           </div>
         </div>
       </div>
