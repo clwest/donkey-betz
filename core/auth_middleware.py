@@ -283,6 +283,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Agent Evolution APIs (XP, Levels, Abilities for React frontend)
         '/api/agent-evolution/',  # Evolution overview, leaderboard, abilities, XP gains
+
+        # Session 716: Agent Mood APIs (emotional state and personality for React frontend)
+        '/api/agent-mood/',  # Mood overview, agent moods, rules, history
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

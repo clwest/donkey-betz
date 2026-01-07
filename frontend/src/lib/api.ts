@@ -173,6 +173,36 @@ export const evolutionApi = {
   initializeAll: () => api.post('/agent-evolution/initialize/'),
 }
 
+// Session 716: Agent Mood API - Emotional state and personality
+export const moodApi = {
+  // Overview of all agent moods
+  overview: () => api.get('/agent-mood/'),
+
+  // Agent-specific mood data
+  agentMood: (agentId: string) => api.get(`/agent-mood/agent/${agentId}/`),
+  setMood: (agentId: string, data: { mood: string; intensity?: number; reason?: string }) =>
+    api.post(`/agent-mood/agent/${agentId}/set/`, data),
+  moodHistory: (agentId: string, limit = 50) =>
+    api.get(`/agent-mood/agent/${agentId}/history/?limit=${limit}`),
+  promptContext: (agentId: string) =>
+    api.get(`/agent-mood/agent/${agentId}/prompt-context/`),
+
+  // Mood rules
+  rules: () => api.get('/agent-mood/rules/'),
+  createRule: (data: {
+    trigger_type: string
+    trigger_value: string
+    mood_change: string
+    intensity_change: number
+    description?: string
+  }) => api.post('/agent-mood/rules/create/', data),
+  deleteRule: (ruleId: string) => api.delete(`/agent-mood/rules/${ruleId}/delete/`),
+
+  // Trigger mood from memory
+  triggerFromMemory: (data: { agent_id: string; memory_id: string }) =>
+    api.post('/agent-mood/trigger-from-memory/', data),
+}
+
 // Session 696: Decisions API for Decision Insights Panel
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),
