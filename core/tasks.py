@@ -23286,6 +23286,121 @@ def check_skin():
 
 
 # =============================================================================
+# Session 724: NERVOUS SYSTEM - WebSocket Communication Monitoring
+# =============================================================================
+
+@shared_task(name='core.tasks.check_nervous')
+def check_nervous():
+    """
+    Session 724: NERVOUS SYSTEM - Check WebSocket communication health
+
+    The NERVOUS SYSTEM monitors real-time WebSocket communication - the nerves
+    that carry signals throughout the AI body.
+
+    Monitors:
+    - WebSocket connection health
+    - Message throughput
+    - Redis channel layer connectivity
+    - Consumer activity and errors
+
+    Status Levels:
+    - responsive: 80%+ health (good communication)
+    - active: High activity with good health
+    - sluggish: Slow responses
+    - numb: Low connectivity
+    - overloaded: Too many connections
+    - damaged: High error rate
+    - dormant: No activity
+
+    Run frequency: Every 60 seconds
+    """
+    import redis
+    import json
+    from core.services.nervous import get_nervous_service
+
+    logger.info("🧠 [NERVOUS] Running nervous system check...")
+
+    try:
+        nervous = get_nervous_service()
+        status = nervous.feel()
+
+        # Log the result
+        logger.info(
+            f"🧠 [NERVOUS] Check complete: {status['status'].upper()} "
+            f"(Health: {status['health_score']:.1f}%)"
+        )
+
+        # Log channel layer status
+        channel_layer = status.get('channel_layer', {})
+        if channel_layer.get('connected'):
+            logger.info(
+                f"🧠 [NERVOUS] Channel layer: Connected "
+                f"(Redis ping: {channel_layer.get('redis_ping_ms', 0):.1f}ms)"
+            )
+        else:
+            logger.warning(
+                f"🧠 [NERVOUS] Channel layer: DISCONNECTED - {channel_layer.get('error', 'Unknown error')}"
+            )
+
+        # Log consumer stats
+        consumers = status.get('consumers', {})
+        logger.info(
+            f"🧠 [NERVOUS] Consumers: {consumers.get('unique_consumers', 0)} types, "
+            f"{consumers.get('total_routes', 0)} routes"
+        )
+
+        # Log connection stats
+        connections = status.get('connections', {})
+        if connections.get('has_data'):
+            logger.info(
+                f"🧠 [NERVOUS] Connections (24h): {connections.get('connects_24h', 0)} connects, "
+                f"{connections.get('disconnects_24h', 0)} disconnects, "
+                f"{connections.get('errors_24h', 0)} errors"
+            )
+
+        # Log issues
+        issues = status.get('issues', [])
+        for issue in issues:
+            if issue.get('severity') == 'critical':
+                logger.error(f"🧠 [NERVOUS] CRITICAL: {issue.get('message')}")
+            else:
+                logger.warning(f"🧠 [NERVOUS] Warning: {issue.get('message')}")
+
+        # Alert on critical status
+        if status['status'] in ('damaged', 'numb', 'overloaded'):
+            logger.error(
+                f"🧠 [NERVOUS] WARNING: System status is {status['status'].upper()}!"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('body_systems', json.dumps({
+                'type': 'nervous_status',
+                'system': 'nervous',
+                'status': status['status'],
+                'health_score': status['health_score'],
+                'is_healthy': status['is_healthy'],
+                'channel_layer_connected': channel_layer.get('connected', False),
+                'unique_consumers': consumers.get('unique_consumers', 0),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🧠 [NERVOUS] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🧠 [NERVOUS] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🧠 [NERVOUS] Nervous system check failed: {e}")
+        return {
+            'status': 'damaged',
+            'error': str(e),
+            'is_healthy': False,
+        }
+
+
+# =============================================================================
 # Session 711: BODY COORDINATOR - Autonomic Nervous System
 # =============================================================================
 

@@ -272,6 +272,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/skin/is-healthy/',  # Quick alive check
         '/api/skin/workspaces/',  # Get workspace summaries
 
+        # Session 724: NERVOUS System APIs (WebSocket communication health)
+        '/api/nervous/status/',  # Get cached nervous status
+        '/api/nervous/feel/',  # Run nervous check
+        '/api/nervous/vitals/',  # Get nervous vitals
+        '/api/nervous/history/',  # Get nervous pulse history
+        '/api/nervous/is-responsive/',  # Quick alive check
+        '/api/nervous/consumers/',  # Get WebSocket consumers summary
+
         # Session 710: BODY UNIFIED - Body Health Dashboard API
         '/api/body/vitals/',  # All systems health
         '/api/body/alerts/',  # Active alerts

@@ -3729,6 +3729,27 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 724: NERVOUS SYSTEM - WebSocket Communication Monitoring
+# =========================================================================
+from core.views_nervous import (
+    NervousStatusView,
+    NervousFeelView,
+    NervousVitalsView,
+    NervousHistoryView,
+    NervousIsResponsiveView,
+    NervousConsumersView,
+)
+
+urlpatterns += [
+    path('api/nervous/status/', NervousStatusView.as_view(), name='nervous-status'),
+    path('api/nervous/feel/', NervousFeelView.as_view(), name='nervous-feel'),
+    path('api/nervous/vitals/', NervousVitalsView.as_view(), name='nervous-vitals'),
+    path('api/nervous/history/', NervousHistoryView.as_view(), name='nervous-history'),
+    path('api/nervous/is-responsive/', NervousIsResponsiveView.as_view(), name='nervous-is-responsive'),
+    path('api/nervous/consumers/', NervousConsumersView.as_view(), name='nervous-consumers'),
+]
+
+# =========================================================================
 # Session 710: BODY UNIFIED - Body Health Dashboard API
 # =========================================================================
 from core.views_body import (
