@@ -19,6 +19,7 @@ import {
   Cpu,
   Activity,
   Users,
+  Castle,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -36,6 +37,7 @@ const navItems = [
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/body-health', label: 'Body Health', icon: Activity },
   { path: '/hive-mind', label: 'Hive Mind', icon: Users },
+  { path: '/memory-palace', label: 'Memory Palace', icon: Castle },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
