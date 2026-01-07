@@ -1,6 +1,6 @@
-# Session 721 - Start Here
+# Session 722 - Start Here
 
-**Previous Session:** 720 (Digestive System Fix + LUNGS UI)
+**Previous Session:** 721 (Body Health Deep Dive - All Detail Views Enhanced)
 **Date:** January 7, 2026
 **Status:** 100% Reality Score | ALL SCI-FI FEATURES COMPLETE | 14/14 (100%)
 
@@ -21,60 +21,24 @@ This document contains:
 
 ---
 
-## Session 720 Accomplishments
+## Session 721 Accomplishments
 
-### 1. Digestive System "Starving" Fix
+### Body Health Deep Dive - All 6 Detail Views Enhanced
 
-**Issue:** Body Health Dashboard showed Digestive system as "starving" with 72.5% score
+Comprehensive audit and fix of all Body Health system detail views to display complete API data:
 
-**Root Cause:**
-- Celery worker and beat were not running
-- `/api/digestive/status/` returning stale cached data from 5+ hours ago
-- 233 SpiderData items pending processing (is_processed=False)
-- Embedding coverage at 38.9% (160/411 items in 24h)
+| System | New Data Now Displayed |
+|--------|------------------------|
+| **HEART** | `is_alive` status, `last_check` timestamp, `components_healthy/checked` count, `uptime_percent_24h` per component, component `details` object |
+| **CIRCULATORY** | All 9 routes (was truncated to 5), `current_depth`, `health_score`, `throughput` per route, congestion highlighting for unhealthy routes |
+| **SPINE** | `health_score`, `routes_blocked`, `routes_rate_limited`, `fallbacks_active`, all 11 `category_health` entries with pattern counts |
+| **IMMUNE** | `threats_detected_24h`, `patterns.active/triggered_24h`, `threats_by_category`, `threats_by_severity` breakdowns |
+| **DIGESTIVE** | `overall_status` text, `bottlenecks` array (when detected), improved grid layout for stages |
+| **MUSCULAR** | `overall_status` text, `weak_muscles` array, `overworked_muscles` array, "all good" message |
 
-**Fixes Applied:**
-1. Started Celery worker with all queues: `-Q celery,long_running,agents,content,ml,sports`
-2. Started Celery Beat scheduler
-3. Processed 233 pending SpiderData entries (set is_processed=True)
-4. Ran embedding backfill (3 batches, ~215 new embeddings)
+**Commit:** `2284f640 feat(Session 721): Body Health detail views - complete data display`
 
-**Results:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Overall Score | 72.5% sluggish | **86.5% healthy** |
-| Processing Queue | 233 items | **0 items** |
-| Embedding Coverage (24h) | 38.9% | **91.4%** |
-| Bottlenecks | 2 warnings | **None** |
-
-### 2. LUNGS Detail View Not Connected
-
-**Issue:** LUNGS details on Body Health page showed `$0.00 / $0.00` for all budgets
-
-**Root Cause:**
-- Frontend looked for `budget.limit` but API returns `budget.cost_limit`
-- Frontend looked for `budget.used` which doesn't exist in API response
-- No provider-level usage data displayed
-
-**Fix:** Updated `LungsDetailView` in `BodyHealthPage.tsx`:
-
-1. **Budget Status Summary** (new section):
-   - Oxygen Level %
-   - Total Cost Today
-   - Total API Calls
-   - Progress bar
-
-2. **Provider Usage (Today)** (new section):
-   - Shows all 6 providers (gemini, openai, anthropic, deepseek, ollama, together_ai)
-   - Cost today + calls today per provider
-   - Oxygen level with color coding
-
-3. **Budget Limits** (fixed):
-   - Now uses `cost_limit` from API (was looking for `limit`)
-   - Calculates usage by looking up provider's `cost_today` from status
-   - Shows proper usage progress bars
-
-**File Modified:** `frontend/src/pages/BodyHealthPage.tsx`
+**File Modified:** `frontend/src/pages/BodyHealthPage.tsx` (+647 lines, -186 lines)
 
 ---
 
@@ -101,17 +65,19 @@ This document contains:
 
 ---
 
-## Body Health Systems Status
+## Body Health Systems Status - ALL FULLY CONNECTED
 
 | System | API | Frontend | Status |
 |--------|-----|----------|--------|
-| HEART | `/api/heart/status/` | HeartDetailView | Working |
-| LUNGS | `/api/lungs/status/` | LungsDetailView | **Fixed (Session 720)** |
-| CIRCULATORY | `/api/circulatory/status/` | CirculatoryDetailView | Working |
-| SPINE | `/api/spine/status/` | SpineDetailView | Working |
-| IMMUNE | `/api/immune/status/` | ImmuneDetailView | Working |
-| DIGESTIVE | `/api/digestive/status/` | DigestiveDetailView | **Fixed (Session 720)** |
-| MUSCULAR | `/api/muscular/status/` | MuscularDetailView | Working |
+| HEART | `/api/heart/status/` | HeartDetailView | **Enhanced (Session 721)** |
+| LUNGS | `/api/lungs/status/` | LungsDetailView | Fixed (Session 720) |
+| CIRCULATORY | `/api/circulatory/status/` | CirculatoryDetailView | **Enhanced (Session 721)** |
+| SPINE | `/api/spine/status/` | SpineDetailView | **Enhanced (Session 721)** |
+| IMMUNE | `/api/immune/status/` | ImmuneDetailView | **Enhanced (Session 721)** |
+| DIGESTIVE | `/api/digestive/status/` | DigestiveDetailView | **Enhanced (Session 721)** |
+| MUSCULAR | `/api/muscular/status/` | MuscularDetailView | **Enhanced (Session 721)** |
+
+All 7 body systems now display complete API data with proper color-coding and conditional sections.
 
 ---
 
@@ -127,14 +93,14 @@ This document contains:
 
 ---
 
-## Session 721 - What's Next?
+## Session 722 - What's Next?
 
-With Body Health fully connected and all Sci-Fi features complete:
+With Body Health fully enhanced and all Sci-Fi features complete:
 
-### 1. Remaining Body Health Enhancements
+### 1. Body Health History & Trends
 - Add history charts for all body systems
-- Implement trend analysis
-- Add alert management UI
+- Implement trend analysis over time
+- Show historical health scores
 
 ### 2. Real-Time Updates
 - Connect WebSocket events to dashboards
@@ -152,6 +118,10 @@ With Body Health fully connected and all Sci-Fi features complete:
 - API response validation
 - Performance benchmarks
 
+### 5. LLM Routing UI (Session 700 work)
+- Complete the LLM Routing page implementation
+- Wire up agent LLM configuration UI
+
 ---
 
 ## Quick Commands
@@ -166,10 +136,11 @@ open http://localhost:3000
 # Test body health APIs
 curl http://localhost:8000/api/heart/status/
 curl http://localhost:8000/api/lungs/status/
+curl http://localhost:8000/api/circulatory/status/
+curl http://localhost:8000/api/spine/status/
+curl http://localhost:8000/api/immune/status/
 curl http://localhost:8000/api/digestive/status/
-
-# Check digestive health
-curl "http://localhost:8000/api/digestive/digest/?force=true" | python3 -m json.tool
+curl http://localhost:8000/api/muscular/status/
 
 # Verify Celery is running
 ps aux | grep celery
@@ -177,14 +148,13 @@ ps aux | grep celery
 
 ---
 
-## Files Modified in Session 720
+## Recent Commits
 
-- `frontend/src/pages/BodyHealthPage.tsx` - Fixed LUNGS detail view
-
-**Manual Actions (not committed):**
-- Processed 233 pending SpiderData entries
-- Ran embedding backfill (3 batches)
-- Started Celery worker + beat
+```
+2284f640 feat(Session 721): Body Health detail views - complete data display
+d94f9b1c fix(Session 720): LUNGS detail view + Digestive system documentation
+2836394c docs(Session 719): Final session doc update with all 7 commits
+```
 
 ---
 
@@ -195,4 +165,4 @@ ps aux | grep celery
 
 ---
 
-**Session 720 Complete** - Digestive system fixed (72.5% → 86.5%), LUNGS UI connected
+**Session 721 Complete** - Body Health deep dive: all 6 detail views now display complete API data
