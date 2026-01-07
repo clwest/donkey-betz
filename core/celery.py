@@ -1543,6 +1543,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # Session 705: IMMUNE SYSTEM - Security & Threat Detection
+    # The defense layer of the AI body - detects and responds to threats
+    'immune-system-scan': {
+        'task': 'core.tasks.immune_scan',
+        'schedule': 45.0,  # Every 45 seconds
+        'options': {
+            'expires': 40,  # Expire before next scan
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
 }
 
 # Task routing configuration

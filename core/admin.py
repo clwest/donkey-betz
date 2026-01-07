@@ -969,3 +969,216 @@ class RequestTraceAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# =============================================================================
+# SESSION 705: IMMUNE SYSTEM ADMIN (Security & Threat Detection)
+# =============================================================================
+
+from core.models_immune import ThreatPattern, ThreatEvent, ImmuneResponse, Quarantine, ImmuneStatus
+
+
+@admin.register(ThreatPattern)
+class ThreatPatternAdmin(admin.ModelAdmin):
+    """Admin interface for threat pattern configuration."""
+
+    list_display = (
+        'name', 'display_name', 'category', 'severity',
+        'detection_type', 'auto_respond', 'response_action',
+        'total_detections', 'is_active'
+    )
+    list_filter = ('category', 'severity', 'detection_type', 'auto_respond', 'is_active', 'is_builtin')
+    search_fields = ('name', 'display_name', 'description', 'pattern')
+    readonly_fields = ('id', 'total_detections', 'last_detection', 'created_at', 'updated_at')
+    ordering = ('severity', 'category', 'name')
+
+    fieldsets = (
+        ('Pattern Info', {
+            'fields': ('name', 'display_name', 'category', 'severity', 'detection_type', 'description')
+        }),
+        ('Detection Configuration', {
+            'fields': ('pattern', 'threshold_count', 'threshold_window_seconds')
+        }),
+        ('Response Configuration', {
+            'fields': ('auto_respond', 'response_action', 'block_duration_minutes')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_builtin')
+        }),
+        ('Statistics', {
+            'fields': ('total_detections', 'last_detection'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ThreatEvent)
+class ThreatEventAdmin(admin.ModelAdmin):
+    """Admin interface for threat events."""
+
+    list_display = (
+        'detected_at', 'category', 'severity', 'status',
+        'source_ip', 'source_user_id', 'confidence_score', 'response_taken'
+    )
+    list_filter = ('status', 'severity', 'category', 'detected_at')
+    search_fields = ('source_ip', 'source_path', 'source_user_agent', 'notes')
+    readonly_fields = (
+        'id', 'pattern', 'status', 'severity', 'category',
+        'source_ip', 'source_user_id', 'source_user_agent', 'source_path', 'source_method',
+        'detection_details', 'confidence_score', 'request_count', 'correlation_ids',
+        'response_taken', 'response_at', 'detected_at', 'resolved_at', 'notes'
+    )
+    date_hierarchy = 'detected_at'
+    ordering = ('-detected_at',)
+
+    fieldsets = (
+        ('Event Info', {
+            'fields': ('pattern', 'status', 'severity', 'category')
+        }),
+        ('Source', {
+            'fields': ('source_ip', 'source_user_id', 'source_user_agent', 'source_path', 'source_method')
+        }),
+        ('Detection', {
+            'fields': ('detection_details', 'confidence_score', 'request_count', 'correlation_ids')
+        }),
+        ('Response', {
+            'fields': ('response_taken', 'response_at')
+        }),
+        ('Timestamps', {
+            'fields': ('detected_at', 'resolved_at')
+        }),
+        ('Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ImmuneResponse)
+class ImmuneResponseAdmin(admin.ModelAdmin):
+    """Admin interface for immune responses."""
+
+    list_display = (
+        'responded_at', 'action', 'target_type', 'target_value',
+        'is_automatic', 'success', 'duration_minutes'
+    )
+    list_filter = ('action', 'target_type', 'is_automatic', 'success')
+    search_fields = ('target_value', 'responded_by')
+    readonly_fields = (
+        'id', 'event', 'action', 'is_automatic', 'success',
+        'target_type', 'target_value', 'duration_minutes', 'expires_at',
+        'details', 'responded_at', 'responded_by'
+    )
+    date_hierarchy = 'responded_at'
+    ordering = ('-responded_at',)
+
+    fieldsets = (
+        ('Response Info', {
+            'fields': ('event', 'action', 'is_automatic', 'success')
+        }),
+        ('Target', {
+            'fields': ('target_type', 'target_value')
+        }),
+        ('Duration', {
+            'fields': ('duration_minutes', 'expires_at')
+        }),
+        ('Metadata', {
+            'fields': ('details', 'responded_at', 'responded_by')
+        }),
+    )
+
+
+@admin.register(Quarantine)
+class QuarantineAdmin(admin.ModelAdmin):
+    """Admin interface for quarantine entries."""
+
+    list_display = (
+        'entity_type', 'entity_value', 'reason', 'is_permanent',
+        'is_active', 'blocked_requests', 'created_at', 'expires_at'
+    )
+    list_filter = ('entity_type', 'reason', 'is_permanent', 'is_active')
+    search_fields = ('entity_value', 'notes')
+    readonly_fields = (
+        'id', 'entity_type', 'entity_value', 'reason', 'is_permanent', 'expires_at',
+        'total_events', 'blocked_requests', 'last_blocked_at',
+        'created_at', 'created_by', 'updated_at'
+    )
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+
+    fieldsets = (
+        ('Entity', {
+            'fields': ('entity_type', 'entity_value')
+        }),
+        ('Block Details', {
+            'fields': ('reason', 'is_permanent', 'expires_at', 'is_active')
+        }),
+        ('Statistics', {
+            'fields': ('total_events', 'blocked_requests', 'last_blocked_at')
+        }),
+        ('Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'created_by', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ImmuneStatus)
+class ImmuneStatusAdmin(admin.ModelAdmin):
+    """Admin interface for immune status cache."""
+
+    list_display = (
+        'status', 'health_score', 'is_healthy', 'threat_level',
+        'active_threats', 'threats_detected_24h', 'total_quarantined', 'last_scan'
+    )
+    list_filter = ('status', 'is_healthy', 'threat_level')
+    readonly_fields = (
+        'id', 'status', 'is_healthy', 'health_score', 'threat_level',
+        'active_threats', 'threats_detected_24h', 'threats_blocked_24h', 'false_positives_24h',
+        'quarantined_ips', 'quarantined_users', 'total_quarantined',
+        'active_patterns', 'patterns_triggered_24h',
+        'auto_responses_24h', 'manual_responses_24h', 'avg_response_time_ms',
+        'threats_by_category', 'threats_by_severity',
+        'spine_connected', 'heart_connected',
+        'last_scan', 'last_threat', 'status_changed_at',
+        'alert_sent', 'last_alert_at'
+    )
+
+    fieldsets = (
+        ('Overall Status', {
+            'fields': ('status', 'is_healthy', 'health_score', 'threat_level')
+        }),
+        ('Threat Activity', {
+            'fields': ('active_threats', 'threats_detected_24h', 'threats_blocked_24h', 'false_positives_24h')
+        }),
+        ('Quarantine Status', {
+            'fields': ('quarantined_ips', 'quarantined_users', 'total_quarantined')
+        }),
+        ('Pattern Activity', {
+            'fields': ('active_patterns', 'patterns_triggered_24h')
+        }),
+        ('Response Metrics', {
+            'fields': ('auto_responses_24h', 'manual_responses_24h', 'avg_response_time_ms')
+        }),
+        ('Category Breakdown', {
+            'fields': ('threats_by_category', 'threats_by_severity'),
+            'classes': ('collapse',)
+        }),
+        ('Integration Status', {
+            'fields': ('spine_connected', 'heart_connected')
+        }),
+        ('Timestamps', {
+            'fields': ('last_scan', 'last_threat', 'status_changed_at')
+        }),
+        ('Alerts', {
+            'fields': ('alert_sent', 'last_alert_at')
+        }),
+    )

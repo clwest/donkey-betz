@@ -228,6 +228,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/spine/can-route/',  # Check if path can be routed
         '/api/spine/is-aligned/',  # Quick health check
         '/api/spine/categories/',  # Get category breakdown
+
+        # Session 705: IMMUNE System APIs (security monitoring for React frontend)
+        '/api/immune/scan/',  # Run full immune scan
+        '/api/immune/status/',  # Get cached immune status
+        '/api/immune/patterns/',  # List threat patterns
+        '/api/immune/threats/',  # Get recent threat events
+        '/api/immune/quarantine/',  # Get quarantine list
+        '/api/immune/is-healthy/',  # Quick health check
+        '/api/immune/categories/',  # Get category breakdown
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
