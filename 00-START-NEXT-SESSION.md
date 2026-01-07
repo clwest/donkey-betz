@@ -66,6 +66,29 @@ Verified ALL 27 sidebar pages and their sub-tabs for proper API connectivity:
 
 **Commit:** `2e0d48c8 fix(Session 719): Body Health Heart Details + Evolution Abilities key warning`
 
+#### 3. Advisors Page Not Loading (views_advisor_api.py)
+**Issue:** Advisors page returned 302 redirect to login instead of data
+
+**Cause:** `@login_required` decorator on GET endpoints conflicted with PUBLIC_PATHS
+
+**Fix:**
+- Removed `@login_required` from `advisor_list()` and `advisor_detail()` GET endpoints
+- Kept `@login_required` on `advisor_consult()` POST endpoint (requires auth)
+
+**Commit:** `bf873aa1 fix(Session 719): Make Advisors API endpoints public`
+
+#### 4. Neural Orchestra Header Stats (neural_orchestra_reality_bridge.py)
+**Issue:** Header showed 0 for Active Agents, Active Spiders, System Health, and 0.0% Consciousness Level
+
+**Cause:** API `system_status` response missing fields: `consciousness_level`, `active_spiders`, `system_health`
+
+**Fix:**
+- Added `consciousness_level` from consciousness_api._calculate_consciousness_level()
+- Added `active_spiders` from spider_registry count (77 spiders)
+- Added `system_health` from consciousness_api.get_system_health()
+
+**Commit:** `ee748c64 fix(Session 719): Neural Orchestra header stats`
+
 ---
 
 ## 14 Sci-Fi Features Status - ALL COMPLETE
@@ -170,6 +193,8 @@ curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 **Bug Fixes:**
 - `frontend/src/pages/BodyHealthPage.tsx` - Fixed Heart Details data path + icons
 - `frontend/src/pages/EvolutionPage.tsx` - Fixed Abilities interface + key mapping
+- `core/views_advisor_api.py` - Removed @login_required from GET endpoints
+- `ai_core/consciousness/neural_orchestra_reality_bridge.py` - Added missing system_status fields
 
 ---
 
@@ -180,4 +205,4 @@ curl -s http://localhost:8000/api/neural-orchestra/health/ | head -c 100
 
 ---
 
-**Session 719 Complete** - Full connectivity audit passed, 2 UI bugs fixed
+**Session 719 Complete** - Full connectivity audit passed, 4 UI bugs fixed
