@@ -137,6 +137,42 @@ export const memoryPalaceApi = {
     }),
 }
 
+// Session 716: Agent Evolution API - XP, Levels, Abilities, Prestige
+export const evolutionApi = {
+  // Overview of entire evolution system
+  overview: () => api.get('/agent-evolution/'),
+
+  // Agent-specific evolution data
+  agentDetail: (agentId: string) => api.get(`/agent-evolution/agent/${agentId}/`),
+
+  // XP & Progression
+  awardXp: (agentId: string, data: { xp_amount: number; reason: string }) =>
+    api.post(`/agent-evolution/agent/${agentId}/award-xp/`, data),
+  prestige: (agentId: string) =>
+    api.post(`/agent-evolution/agent/${agentId}/prestige/`),
+  recordTask: (agentId: string, data: { task_type: string; success: boolean; metrics?: Record<string, unknown> }) =>
+    api.post(`/agent-evolution/agent/${agentId}/task/`, data),
+
+  // Abilities
+  availableAbilities: () => api.get('/agent-evolution/abilities/'),
+  createAbility: (data: {
+    name: string
+    description: string
+    level_required: number
+    xp_cost: number
+    ability_type: string
+  }) => api.post('/agent-evolution/abilities/create/', data),
+  unlockAbility: (agentId: string, abilityId: string) =>
+    api.post(`/agent-evolution/agent/${agentId}/unlock/${abilityId}/`),
+
+  // Leaderboard & Stats
+  leaderboard: (limit = 20) => api.get(`/agent-evolution/leaderboard/?limit=${limit}`),
+  recentXpGains: (limit = 50) => api.get(`/agent-evolution/xp-gains/?limit=${limit}`),
+
+  // Admin
+  initializeAll: () => api.post('/agent-evolution/initialize/'),
+}
+
 // Session 696: Decisions API for Decision Insights Panel
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),

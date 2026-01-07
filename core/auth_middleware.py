@@ -280,6 +280,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 715: Hive Mind APIs (multi-agent collaboration for React frontend)
         '/api/hive-mind/',  # Hive mind sessions and operations
+
+        # Session 716: Agent Evolution APIs (XP, Levels, Abilities for React frontend)
+        '/api/agent-evolution/',  # Evolution overview, leaderboard, abilities, XP gains
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
