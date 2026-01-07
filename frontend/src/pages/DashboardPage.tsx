@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ecosystemApi, dashboardApi, spidersApi, activityApi } from '@/lib/api'
-import { useWebSocket, type WebSocketStatus } from '@/hooks/useWebSocket'
+import { useWebSocket, useSystemEvents, type WebSocketStatus } from '@/hooks/useWebSocket'
 import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import HeartWidget from '@/components/HeartWidget'
@@ -137,6 +137,28 @@ export default function DashboardPage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  // Session 714: Real-time event handlers - refresh data when events occur
+  const handleAgentExecution = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['recent-activity'] })
+    queryClient.invalidateQueries({ queryKey: ['ecosystem-stats'] })
+  }, [queryClient])
+
+  const handleBodyStatusChanged = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['health'] })
+  }, [queryClient])
+
+  const handleDreamGenerated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['recent-activity'] })
+  }, [queryClient])
+
+  // Session 714: Subscribe to system events
+  useSystemEvents({
+    onAgentExecutionComplete: handleAgentExecution,
+    onAgentExecutionFailed: handleAgentExecution,
+    onBodyStatusChanged: handleBodyStatusChanged,
+    onDreamGenerated: handleDreamGenerated,
+  })
 
   // REST API queries
   const { data: ecosystemStats, isLoading: loadingEcosystem } = useQuery({

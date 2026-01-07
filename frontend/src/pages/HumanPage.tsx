@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { humanApi, agentsApi, bodyApi } from '@/lib/api'
+// Session 714: Real-time system events
+import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
   User,
   Bell,
@@ -229,6 +231,30 @@ export default function HumanPage() {
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
   const [localPrefs, setLocalPrefs] = useState<Partial<Preferences>>({})
   const queryClient = useQueryClient()
+
+  // Session 714: Real-time event handlers - refresh data when events occur
+  const handleGateBecameCritical = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['human-attention'] })
+    queryClient.invalidateQueries({ queryKey: ['human-attention-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['human-control'] })
+  }, [queryClient])
+
+  const handleBodyStatusChanged = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['body-vitals'] })
+  }, [queryClient])
+
+  const handlePilotEvent = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['human-attention'] })
+    queryClient.invalidateQueries({ queryKey: ['human-attention-stats'] })
+  }, [queryClient])
+
+  // Session 714: Subscribe to system events
+  useSystemEvents({
+    onGateBecameCritical: handleGateBecameCritical,
+    onBodyStatusChanged: handleBodyStatusChanged,
+    onPilotStarted: handlePilotEvent,
+    onPilotCompleted: handlePilotEvent,
+  })
 
   // REST API queries
   const { data: attentionResponse, isLoading: loadingAttention, refetch: refetchAttention, error: attentionError } = useQuery({
