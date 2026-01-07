@@ -1316,3 +1316,147 @@ class DigestionStatusAdmin(admin.ModelAdmin):
             'fields': ('last_intake', 'last_output', 'last_check')
         }),
     )
+
+
+# =============================================================================
+# Session 707: MUSCULAR SYSTEM Admin
+# =============================================================================
+
+from core.models_muscular import MuscleGroup, MuscularPulse, MuscleStatus
+
+
+@admin.register(MuscleGroup)
+class MuscleGroupAdmin(admin.ModelAdmin):
+    """Admin interface for muscle group configuration."""
+
+    list_display = (
+        'name', 'display_name', 'category', 'is_active',
+        'is_critical', 'total_executions', 'total_successful', 'total_failed', 'last_execution'
+    )
+    list_filter = ('category', 'is_active', 'is_critical', 'is_builtin')
+    search_fields = ('name', 'display_name', 'description')
+    readonly_fields = (
+        'id', 'total_executions', 'total_successful', 'total_failed', 'last_execution',
+        'created_at', 'updated_at'
+    )
+    ordering = ('category', 'name')
+
+    fieldsets = (
+        ('Group Info', {
+            'fields': ('id', 'name', 'display_name', 'category', 'description')
+        }),
+        ('Agents', {
+            'fields': ('agent_names',)
+        }),
+        ('Thresholds', {
+            'fields': ('target_success_rate', 'max_avg_execution_time_ms', 'max_fatigue_level', 'max_daily_executions')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_critical', 'is_builtin')
+        }),
+        ('Statistics', {
+            'fields': ('total_executions', 'total_successful', 'total_failed', 'last_execution'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(MuscularPulse)
+class MuscularPulseAdmin(admin.ModelAdmin):
+    """Admin interface for muscular pulse history."""
+
+    list_display = (
+        'overall_status', 'strength_score', 'total_executions_24h',
+        'successful_executions_24h', 'success_rate_24h', 'active_agents',
+        'check_duration_ms', 'recorded_at'
+    )
+    list_filter = ('overall_status', 'recorded_at')
+    readonly_fields = (
+        'id', 'overall_status', 'strength_score',
+        'total_executions_24h', 'successful_executions_24h', 'failed_executions_24h',
+        'success_rate_24h', 'avg_execution_time_ms', 'total_tokens_used_24h',
+        'total_cost_24h', 'total_agents', 'active_agents', 'idle_agents',
+        'fatigued_agents', 'strained_agents', 'group_metrics', 'weak_muscles',
+        'overworked_muscles', 'groups_checked', 'groups_strong', 'groups_fit',
+        'groups_fatigued', 'groups_strained', 'groups_paralyzed',
+        'heart_connected', 'digestive_connected', 'check_duration_ms', 'recorded_at'
+    )
+    ordering = ('-recorded_at',)
+
+    fieldsets = (
+        ('Overall Status', {
+            'fields': ('id', 'overall_status', 'strength_score', 'is_strong')
+        }),
+        ('Execution Metrics (24h)', {
+            'fields': ('total_executions_24h', 'successful_executions_24h', 'failed_executions_24h', 'success_rate_24h')
+        }),
+        ('Performance Metrics', {
+            'fields': ('avg_execution_time_ms', 'min_execution_time_ms', 'max_execution_time_ms',
+                      'total_tokens_used_24h', 'total_cost_24h')
+        }),
+        ('Agent Metrics', {
+            'fields': ('total_agents', 'active_agents', 'idle_agents', 'fatigued_agents', 'strained_agents')
+        }),
+        ('Group Status', {
+            'fields': ('groups_checked', 'groups_strong', 'groups_fit', 'groups_fatigued',
+                      'groups_strained', 'groups_paralyzed'),
+            'classes': ('collapse',)
+        }),
+        ('Issues', {
+            'fields': ('weak_muscles', 'overworked_muscles'),
+            'classes': ('collapse',)
+        }),
+        ('Integrations', {
+            'fields': ('heart_connected', 'digestive_connected')
+        }),
+        ('Metadata', {
+            'fields': ('check_duration_ms', 'recorded_at')
+        }),
+    )
+
+
+@admin.register(MuscleStatus)
+class MuscleStatusAdmin(admin.ModelAdmin):
+    """Admin interface for per-group muscle status cache."""
+
+    list_display = (
+        'group', 'status', 'is_healthy', 'strength_score',
+        'fatigue_level', 'strain_level', 'success_rate_24h', 'last_check'
+    )
+    list_filter = ('status', 'is_healthy')
+    search_fields = ('group__name', 'group__display_name')
+    readonly_fields = (
+        'group', 'status', 'is_healthy', 'strength_score',
+        'fatigue_level', 'strain_level', 'executions_24h', 'successful_24h',
+        'failed_24h', 'success_rate_24h', 'avg_execution_time_ms',
+        'tokens_used_24h', 'cost_24h', 'total_agents', 'active_agents', 'idle_agents',
+        'top_performer', 'worst_performer',
+        'last_execution', 'last_success', 'last_failure', 'last_check'
+    )
+    ordering = ('group__category', 'group__name')
+
+    fieldsets = (
+        ('Group', {
+            'fields': ('group',)
+        }),
+        ('Current Status', {
+            'fields': ('status', 'is_healthy', 'strength_score', 'fatigue_level', 'strain_level')
+        }),
+        ('24h Metrics', {
+            'fields': ('executions_24h', 'successful_24h', 'failed_24h', 'success_rate_24h',
+                      'avg_execution_time_ms', 'tokens_used_24h', 'cost_24h')
+        }),
+        ('Agent Counts', {
+            'fields': ('total_agents', 'active_agents', 'idle_agents')
+        }),
+        ('Performers', {
+            'fields': ('top_performer', 'worst_performer')
+        }),
+        ('Timestamps', {
+            'fields': ('last_execution', 'last_success', 'last_failure', 'last_check')
+        }),
+    )

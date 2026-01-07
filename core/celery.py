@@ -1572,6 +1572,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # Status monitoring task
         }
     },
+    # Session 707: MUSCULAR SYSTEM - Agent Work Execution
+    # Monitors agent execution performance, strength, fatigue, and strain
+    'muscular-system-check': {
+        'task': 'core.tasks.check_muscular',
+        'schedule': 90.0,  # Every 90 seconds
+        'options': {
+            'expires': 85,  # Expire before next check
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
 }
 
 # Task routing configuration

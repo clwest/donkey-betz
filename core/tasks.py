@@ -22871,3 +22871,112 @@ def check_digestion():
             'error': str(e),
             'is_digesting': False,
         }
+
+
+# =============================================================================
+# Session 707: MUSCULAR SYSTEM - Agent Work Execution
+# =============================================================================
+
+@shared_task(name='core.tasks.check_muscular')
+def check_muscular():
+    """
+    Session 707: MUSCULAR SYSTEM - Check agent execution health
+
+    The MUSCULAR SYSTEM monitors agent work execution and performance,
+    tracking strength, fatigue, and strain across muscle groups.
+
+    Monitors:
+    - Agent execution success rates
+    - Execution time metrics
+    - Token usage and costs
+    - Fatigue and strain levels
+
+    Status Levels:
+    - strong: 80%+ strength (healthy agents)
+    - fit: 60-79% strength (good performance)
+    - fatigued: 40-59% strength (high load)
+    - strained: 20-39% strength (high errors)
+    - paralyzed: <20% strength (no activity/all failing)
+
+    Run frequency: Every 90 seconds
+    """
+    import redis
+    import json
+    from core.services.muscular import get_muscular_system
+
+    logger.info("💪 [MUSCULAR] Running muscular check...")
+
+    try:
+        muscular = get_muscular_system()
+        status = muscular.flex()
+
+        # Log the result
+        logger.info(
+            f"💪 [MUSCULAR] Check complete: {status['overall_status'].upper()} "
+            f"(Strength: {status['strength_score']:.1f}%)"
+        )
+
+        # Log execution summary
+        exec_summary = status.get('execution_summary', {})
+        logger.info(
+            f"💪 [MUSCULAR] Executions (24h): {exec_summary.get('total_24h', 0)} total, "
+            f"{exec_summary.get('successful_24h', 0)} successful, "
+            f"{exec_summary.get('failed_24h', 0)} failed"
+        )
+
+        # Log agent summary
+        agent_summary = status.get('agent_summary', {})
+        logger.info(
+            f"💪 [MUSCULAR] Agents: {agent_summary.get('active_agents', 0)}/{agent_summary.get('total_agents', 0)} active, "
+            f"{agent_summary.get('fatigued_agents', 0)} fatigued, "
+            f"{agent_summary.get('strained_agents', 0)} strained"
+        )
+
+        # Log weak muscles
+        weak = status.get('weak_muscles', [])
+        if weak:
+            for w in weak[:3]:
+                logger.warning(
+                    f"💪 [MUSCULAR] Weak muscle: {w['agent']} ({w['success_rate']:.1f}% success)"
+                )
+
+        # Log overworked muscles
+        overworked = status.get('overworked_muscles', [])
+        if overworked:
+            for o in overworked[:3]:
+                logger.warning(
+                    f"💪 [MUSCULAR] Overworked: {o['agent']} ({o['executions_24h']} executions)"
+                )
+
+        # Alert on critical status
+        if status['overall_status'] in ('strained', 'paralyzed'):
+            logger.error(
+                f"💪 [MUSCULAR] CRITICAL: System status is {status['overall_status'].upper()}!"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('body_systems', json.dumps({
+                'type': 'muscular_status',
+                'system': 'muscular',
+                'status': status['overall_status'],
+                'strength_score': status['strength_score'],
+                'is_strong': status['is_strong'],
+                'active_agents': agent_summary.get('active_agents', 0),
+                'total_agents': agent_summary.get('total_agents', 0),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("💪 [MUSCULAR] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"💪 [MUSCULAR] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"💪 [MUSCULAR] Muscular check failed: {e}")
+        return {
+            'status': 'paralyzed',
+            'error': str(e),
+            'is_strong': False,
+        }
