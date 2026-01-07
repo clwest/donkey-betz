@@ -112,6 +112,13 @@ export default function AdminPage() {
     enabled: activeTab === 'agents',
   })
 
+  // Fetch agent stats (detailed)
+  const { data: agentStatsData } = useQuery({
+    queryKey: ['agent-stats'],
+    queryFn: () => adminApi.agentStats(),
+    enabled: activeTab === 'agents',
+  })
+
   // Run agent cycle mutation
   const runAgentCycleMutation = useMutation({
     mutationFn: () => dashboardApi.runAgentCycle(),
@@ -134,8 +141,13 @@ export default function AdminPage() {
   const celeryStatus = celeryStatusData?.data || {}
   const celeryStats = celeryStatsData?.data || {}
   const spiderHealth = spiderHealthData?.data || {}
-  const spiderExecutions = spiderExecutionsData?.data?.executions || spiderExecutionsData?.data || []
+  const spiderExecutions = spiderExecutionsData?.data?.logs || spiderExecutionsData?.data?.executions || spiderExecutionsData?.data || []
+  const spiderStatusSummary = spiderExecutionsData?.data?.status_summary || {}
   const agentHealth = agentHealthData?.data || {}
+  const agentStats = agentStatsData?.data || {}
+  const coreAgents = agentStats.core_agents || []
+  const agentCategories = agentStats.by_category || {}
+  const recentAgentActivity = agentStats.recent_activity || []
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -747,51 +759,100 @@ export default function AdminPage() {
             </div>
           ) : (
             <>
-              {/* Spider Stats */}
+              {/* Spider Stats - Using real API data from /api/spider-health/summary/ */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Total Spiders</p>
-                  <p className="text-2xl font-bold">{spiderHealth.total || 77}</p>
+                  <p className="text-sm text-gray-400 mb-1">Executions (24h)</p>
+                  <p className="text-2xl font-bold">{spiderHealth.summary?.executions_24h || spiderHealth.executions_24h || 0}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Working</p>
-                  <p className="text-2xl font-bold text-accent-green">{spiderHealth.working || 72}</p>
+                  <p className="text-sm text-gray-400 mb-1">Success Rate</p>
+                  <p className="text-2xl font-bold text-accent-green">{(spiderHealth.summary?.success_rate_24h || spiderHealth.success_rate_24h || 0).toFixed(1)}%</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Need API Keys</p>
-                  <p className="text-2xl font-bold text-accent-amber">{spiderHealth.need_api_keys || 5}</p>
+                  <p className="text-sm text-gray-400 mb-1">Data Collected (24h)</p>
+                  <p className="text-2xl font-bold text-accent-cyan">{spiderHealth.summary?.data_collected_24h || spiderHealth.data_collected_24h || 0}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Recent Runs</p>
-                  <p className="text-2xl font-bold">{spiderHealth.recent_runs || spiderExecutions.length || 0}</p>
+                  <p className="text-sm text-gray-400 mb-1">Embedding Coverage</p>
+                  <p className="text-2xl font-bold text-accent-amber">{(spiderHealth.summary?.embedding_coverage || spiderHealth.embedding_coverage || 0).toFixed(1)}%</p>
                 </div>
               </div>
+
+              {/* Error Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Errors (24h)</p>
+                  <p className="text-2xl font-bold text-accent-red">{spiderHealth.summary?.errors_24h || spiderHealth.errors_24h || 0}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Data Collected (7d)</p>
+                  <p className="text-2xl font-bold">{spiderHealth.summary?.data_collected_7d || spiderHealth.data_collected_7d || 0}</p>
+                </div>
+                <div className="card">
+                  <p className="text-sm text-gray-400 mb-1">Total Spiders</p>
+                  <p className="text-2xl font-bold">77</p>
+                </div>
+              </div>
+
+              {/* Status Summary */}
+              {Object.keys(spiderStatusSummary).length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Execution Status (24h)</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {Object.entries(spiderStatusSummary).map(([status, count]) => (
+                      <div key={status} className={cn(
+                        'px-4 py-2 rounded-lg',
+                        status === 'success' ? 'bg-accent-green/20' :
+                        status === 'partial' ? 'bg-accent-amber/20' :
+                        status === 'failed' || status === 'error' ? 'bg-accent-red/20' : 'bg-gray-500/20'
+                      )}>
+                        <p className={cn(
+                          'text-xl font-bold',
+                          status === 'success' ? 'text-accent-green' :
+                          status === 'partial' ? 'text-accent-amber' :
+                          status === 'failed' || status === 'error' ? 'text-accent-red' : 'text-gray-400'
+                        )}>{count as number}</p>
+                        <p className="text-xs text-gray-400 capitalize">{status}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Recent Executions */}
               <div className="card">
                 <h3 className="text-lg font-semibold mb-4">Recent Executions</h3>
                 {spiderExecutions.length > 0 ? (
-                  <div className="space-y-3">
-                    {spiderExecutions.slice(0, 10).map((exec: { id: string; spider_name?: string; status?: string; created_at?: string; items_count?: number }) => (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {spiderExecutions.slice(0, 15).map((exec: { id: string; spider_name?: string; category?: string; status?: string; started_at?: string; completed_at?: string; items_collected?: number; duration_seconds?: number; triggered_by?: string }) => (
                       <div
                         key={exec.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border"
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          <Globe size={18} className="text-primary-400" />
-                          <div>
-                            <p className="font-medium text-sm">{exec.spider_name || 'Unknown Spider'}</p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Globe size={18} className="text-primary-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{exec.spider_name || 'Unknown Spider'}</p>
                             <p className="text-xs text-gray-500">
-                              {exec.created_at ? new Date(exec.created_at).toLocaleString() : ''}
+                              {exec.category && <span className="text-accent-cyan">{exec.category}</span>}
+                              {exec.category && exec.started_at && ' • '}
+                              {exec.started_at ? new Date(exec.started_at).toLocaleString() : ''}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-400">{exec.items_count || 0} items</span>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-medium">{exec.items_collected || 0} items</p>
+                            {exec.duration_seconds && (
+                              <p className="text-xs text-gray-500">{exec.duration_seconds.toFixed(1)}s</p>
+                            )}
+                          </div>
                           <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
+                            'text-xs px-2 py-1 rounded capitalize whitespace-nowrap',
                             exec.status === 'success' ? 'bg-accent-green/20 text-accent-green' :
-                            exec.status === 'failed' ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+                            exec.status === 'partial' ? 'bg-accent-amber/20 text-accent-amber' :
+                            exec.status === 'failed' || exec.status === 'error' ? 'bg-accent-red/20 text-accent-red' : 'bg-gray-500/20 text-gray-400'
                           )}>
                             {exec.status || 'unknown'}
                           </span>
@@ -824,47 +885,172 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="card">
                   <p className="text-sm text-gray-400 mb-1">Total Agents</p>
-                  <p className="text-2xl font-bold">{agentHealth.total || 71}</p>
+                  <p className="text-2xl font-bold">{agentStats.total_agents || 72}</p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Routable</p>
-                  <p className="text-2xl font-bold text-accent-green">{agentHealth.routable || 68}</p>
+                  <p className="text-sm text-gray-400 mb-1">Active</p>
+                  <p className="text-2xl font-bold text-accent-green">
+                    {coreAgents.filter((a: { is_active?: boolean }) => a.is_active).length || agentHealth.active_agents || 0}
+                  </p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Sub-Agents</p>
-                  <p className="text-2xl font-bold text-accent-amber">{agentHealth.sub_agents || 3}</p>
+                  <p className="text-sm text-gray-400 mb-1">Total Executions</p>
+                  <p className="text-2xl font-bold text-accent-cyan">
+                    {coreAgents.reduce((sum: number, a: { total_executions?: number }) => sum + (a.total_executions || 0), 0)}
+                  </p>
                 </div>
                 <div className="card">
-                  <p className="text-sm text-gray-400 mb-1">Recent Executions</p>
-                  <p className="text-2xl font-bold">{agentHealth.recent_executions || 0}</p>
+                  <p className="text-sm text-gray-400 mb-1">Avg Success Rate</p>
+                  <p className="text-2xl font-bold text-accent-amber">
+                    {coreAgents.length > 0
+                      ? (coreAgents.filter((a: { total_executions?: number }) => a.total_executions && a.total_executions > 0)
+                          .reduce((sum: number, a: { success_rate?: number }) => sum + (a.success_rate || 0), 0) /
+                        (coreAgents.filter((a: { total_executions?: number }) => a.total_executions && a.total_executions > 0).length || 1)).toFixed(0)
+                      : 0}%
+                  </p>
                 </div>
               </div>
 
-              {/* Agent Categories */}
+              {/* Agent Categories from API */}
               <div className="card">
                 <h3 className="text-lg font-semibold mb-4">Agent Categories</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {[
-                    { name: 'Creation', count: 4 },
-                    { name: 'Research', count: 1 },
-                    { name: 'Strategy', count: 4 },
-                    { name: 'Executive', count: 4 },
-                    { name: 'Development', count: 4 },
-                    { name: 'Blockchain', count: 5 },
-                    { name: 'Stocks', count: 9 },
-                    { name: 'Markets', count: 3 },
-                    { name: 'Podcast', count: 4 },
-                    { name: 'Narrative', count: 4 },
-                    { name: 'Content', count: 4 },
-                    { name: 'Other', count: 25 },
-                  ].map((category) => (
-                    <div key={category.name} className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-                      <span className="text-sm">{category.name}</span>
-                      <span className="font-medium">{category.count}</span>
-                    </div>
-                  ))}
-                </div>
+                {Object.keys(agentCategories).length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Object.entries(agentCategories)
+                      .sort((a, b) => (Array.isArray(b[1]) ? b[1].length : 0) - (Array.isArray(a[1]) ? a[1].length : 0))
+                      .map(([category, agents]) => (
+                        <div key={category} className="flex items-center justify-between p-3 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors">
+                          <span className="text-sm capitalize">{category || 'Other'}</span>
+                          <span className="font-medium text-primary-400">{Array.isArray(agents) ? agents.length : 0}</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(() => {
+                      // Group by type from coreAgents
+                      const typeGroups: Record<string, number> = {}
+                      coreAgents.forEach((a: { type?: string }) => {
+                        const type = a.type || 'other'
+                        typeGroups[type] = (typeGroups[type] || 0) + 1
+                      })
+                      return Object.entries(typeGroups)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([type, count]) => (
+                          <div key={type} className="flex items-center justify-between p-3 rounded-lg bg-dark-bg hover:bg-dark-border transition-colors">
+                            <span className="text-sm capitalize">{type || 'Other'}</span>
+                            <span className="font-medium text-primary-400">{count}</span>
+                          </div>
+                        ))
+                    })()}
+                  </div>
+                )}
               </div>
+
+              {/* Top Performing Agents */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Top Performing Agents</h3>
+                {coreAgents.length > 0 ? (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {coreAgents
+                      .filter((a: { total_executions?: number }) => a.total_executions && a.total_executions > 0)
+                      .sort((a: { effectiveness_score?: number }, b: { effectiveness_score?: number }) =>
+                        (b.effectiveness_score || 0) - (a.effectiveness_score || 0))
+                      .slice(0, 10)
+                      .map((agent: {
+                        id: string
+                        name: string
+                        type?: string
+                        effectiveness_score?: number
+                        total_executions?: number
+                        success_rate?: number
+                        knowledge_count?: number
+                      }) => (
+                        <div
+                          key={agent.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={cn(
+                              'h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                              (agent.effectiveness_score || 0) >= 80 ? 'bg-accent-green/20' :
+                              (agent.effectiveness_score || 0) >= 60 ? 'bg-accent-amber/20' : 'bg-gray-500/20'
+                            )}>
+                              <Bot size={18} className={cn(
+                                (agent.effectiveness_score || 0) >= 80 ? 'text-accent-green' :
+                                (agent.effectiveness_score || 0) >= 60 ? 'text-accent-amber' : 'text-gray-400'
+                              )} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{agent.name}</p>
+                              <p className="text-xs text-gray-500">
+                                <span className="text-accent-cyan capitalize">{agent.type || 'agent'}</span>
+                                {agent.knowledge_count ? ` • ${agent.knowledge_count} knowledge` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{agent.total_executions} runs</p>
+                              <p className="text-xs text-gray-500">{(agent.success_rate || 0).toFixed(0)}% success</p>
+                            </div>
+                            <div className={cn(
+                              'px-2 py-1 rounded text-sm font-bold',
+                              (agent.effectiveness_score || 0) >= 80 ? 'bg-accent-green/20 text-accent-green' :
+                              (agent.effectiveness_score || 0) >= 60 ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
+                            )}>
+                              {agent.effectiveness_score || 0}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Bot className="mx-auto mb-2" size={32} />
+                    <p>No agent execution data available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Agent Activity */}
+              {recentAgentActivity.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {recentAgentActivity.slice(0, 10).map((activity: {
+                      id: string
+                      agent_name?: string
+                      action?: string
+                      timestamp?: string
+                      success?: boolean
+                    }, idx: number) => (
+                      <div
+                        key={activity.id || idx}
+                        className="flex items-center justify-between p-2 rounded-lg bg-dark-bg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            'h-6 w-6 rounded-full flex items-center justify-center',
+                            activity.success !== false ? 'bg-accent-green/20' : 'bg-accent-red/20'
+                          )}>
+                            {activity.success !== false ? (
+                              <CheckCircle size={12} className="text-accent-green" />
+                            ) : (
+                              <XCircle size={12} className="text-accent-red" />
+                            )}
+                          </div>
+                          <span className="text-sm font-medium">{activity.agent_name || 'Unknown'}</span>
+                          <span className="text-xs text-gray-500">{activity.action || 'executed'}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {activity.timestamp ? new Date(activity.timestamp).toLocaleTimeString() : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
