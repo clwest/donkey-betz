@@ -464,28 +464,75 @@ function LungsDetailView() {
 
   return (
     <div className="space-y-4">
-      {/* Oxygen Levels */}
+      {/* Today's Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
           <Gauge className="w-4 h-4" />
-          Oxygen Level (Budget)
+          Budget Status
         </h3>
-        <div className="flex items-center gap-4">
-          <div className="text-3xl font-bold text-blue-400">
-            {status?.oxygen_level?.toFixed(1) || 0}%
-          </div>
-          <div className="flex-1">
-            <div className="h-3 bg-zinc-700 rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all',
-                  (status?.oxygen_level || 0) >= 50 ? 'bg-blue-500' :
-                  (status?.oxygen_level || 0) >= 20 ? 'bg-yellow-500' : 'bg-red-500'
-                )}
-                style={{ width: `${status?.oxygen_level || 0}%` }}
-              />
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <div className="text-2xl font-bold text-blue-400">
+              {status?.oxygen_level?.toFixed(1) || 100}%
             </div>
+            <div className="text-xs text-zinc-500">Oxygen Level</div>
           </div>
+          <div>
+            <div className="text-2xl font-bold text-green-400">
+              ${status?.total_cost_today?.toFixed(4) || '0.00'}
+            </div>
+            <div className="text-xs text-zinc-500">Cost Today</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-purple-400">
+              {status?.total_calls_today || 0}
+            </div>
+            <div className="text-xs text-zinc-500">API Calls</div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+            <div
+              className={cn(
+                'h-full rounded-full transition-all',
+                (status?.oxygen_level || 100) >= 50 ? 'bg-blue-500' :
+                (status?.oxygen_level || 100) >= 20 ? 'bg-yellow-500' : 'bg-red-500'
+              )}
+              style={{ width: `${status?.oxygen_level || 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Provider Status */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <Activity className="w-4 h-4" />
+          Provider Usage (Today)
+        </h3>
+        <div className="space-y-3">
+          {status?.providers && Object.entries(status.providers).map(([name, provider]: [string, any]) => (
+            <div key={name} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-zinc-300 capitalize">{name.replace('_', ' ')}</span>
+                <span className="text-xs text-zinc-500">
+                  ${provider.cost_today?.toFixed(4) || '0.00'} • {provider.calls_today || 0} calls
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  'text-xs font-medium',
+                  provider.oxygen_level >= 80 ? 'text-green-400' :
+                  provider.oxygen_level >= 50 ? 'text-yellow-400' : 'text-red-400'
+                )}>
+                  {provider.oxygen_level?.toFixed(1) || 100}%
+                </span>
+              </div>
+            </div>
+          ))}
+          {!status?.providers && (
+            <p className="text-sm text-zinc-500">No provider data available</p>
+          )}
         </div>
       </div>
 
@@ -493,29 +540,37 @@ function LungsDetailView() {
       <div className="bg-zinc-800/50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
           <DollarSign className="w-4 h-4" />
-          API Budgets
+          Budget Limits
         </h3>
         <div className="space-y-3">
-          {budgets.slice(0, 5).map((budget: any) => (
-            <div key={budget.id || budget.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-300">{budget.name || budget.provider}</span>
-                <span className="text-xs text-zinc-500">
-                  ${budget.used?.toFixed(2) || 0} / ${budget.limit?.toFixed(2) || budget.daily_limit?.toFixed(2) || 0}
-                </span>
+          {budgets.slice(0, 6).map((budget: any) => {
+            const limit = budget.cost_limit || budget.limit || budget.daily_limit || 0
+            const providerName = budget.scope_identifier || ''
+            const providerData = status?.providers?.[providerName]
+            const used = providerData?.cost_today || 0
+            const usagePercent = limit > 0 ? (used / limit) * 100 : 0
+
+            return (
+              <div key={budget.id || budget.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-300">{budget.name}</span>
+                  <span className="text-xs text-zinc-500">
+                    ${used.toFixed(2)} / ${limit.toFixed(2)}
+                  </span>
+                </div>
+                <div className="w-24 h-2 bg-zinc-700 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full',
+                      usagePercent < 50 ? 'bg-green-500' :
+                      usagePercent < 80 ? 'bg-yellow-500' : 'bg-red-500'
+                    )}
+                    style={{ width: `${Math.min(100, usagePercent)}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-24 h-2 bg-zinc-700 rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    'h-full rounded-full',
-                    ((budget.used || 0) / (budget.limit || budget.daily_limit || 1) * 100) < 50 ? 'bg-green-500' :
-                    ((budget.used || 0) / (budget.limit || budget.daily_limit || 1) * 100) < 80 ? 'bg-yellow-500' : 'bg-red-500'
-                  )}
-                  style={{ width: `${Math.min(100, (budget.used || 0) / (budget.limit || budget.daily_limit || 1) * 100)}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            )
+          })}
           {budgets.length === 0 && (
             <p className="text-sm text-zinc-500">No budgets configured</p>
           )}
