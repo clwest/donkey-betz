@@ -757,3 +757,33 @@ export const immuneApi = {
   // Get threat categories breakdown
   categories: () => api.get('/immune/categories/'),
 }
+
+// Session 706: DIGESTIVE System API - Data Ingestion & Processing
+export const digestiveApi = {
+  // Run full digestion check
+  digest: (force = false) => api.get('/digestive/digest/', { params: { force } }),
+
+  // Get cached digestion status (fast)
+  status: () => api.get('/digestive/status/'),
+
+  // List all ingestion routes
+  routes: (params?: { route_type?: string; stage?: string; active_only?: boolean }) =>
+    api.get('/digestive/routes/', { params }),
+
+  // Get specific route details
+  routeDetail: (routeId: string) => api.get(`/digestive/routes/${routeId}/`),
+
+  // Get current bottlenecks
+  bottlenecks: (severity?: string) =>
+    api.get('/digestive/bottlenecks/', { params: { severity } }),
+
+  // Get metabolism metrics (throughput rates)
+  metabolism: () => api.get('/digestive/metabolism/'),
+
+  // Get digestion pulse history
+  history: (hours = 24, limit = 100) =>
+    api.get('/digestive/history/', { params: { hours, limit } }),
+
+  // Quick alive check
+  isDigesting: () => api.get('/digestive/is-digesting/'),
+}

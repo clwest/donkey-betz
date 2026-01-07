@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi, immuneApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi, immuneApi, digestiveApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route, Shield, ShieldAlert, ShieldCheck, Ban
+  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route, Shield, ShieldAlert, ShieldCheck, Ban, Utensils, Gauge, AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'immune' | 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'immune' | 'digestive' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -21,6 +21,7 @@ const tabs = [
   { id: 'circulatory' as TabType, label: 'CIRCULATORY', icon: GitBranch },
   { id: 'spine' as TabType, label: 'SPINE', icon: Bone },
   { id: 'immune' as TabType, label: 'IMMUNE', icon: Shield },
+  { id: 'digestive' as TabType, label: 'DIGESTIVE', icon: Utensils },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
@@ -163,6 +164,38 @@ export default function AdminPage() {
     enabled: activeTab === 'immune',
   })
 
+  // DIGESTIVE System queries (Session 706)
+  const { data: digestiveDigestData, isLoading: loadingDigestive, refetch: refetchDigestive } = useQuery({
+    queryKey: ['digestive-digest'],
+    queryFn: () => digestiveApi.digest(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'digestive',
+  })
+
+  const { data: digestiveRoutesData } = useQuery({
+    queryKey: ['digestive-routes'],
+    queryFn: () => digestiveApi.routes(),
+    enabled: activeTab === 'digestive',
+  })
+
+  const { data: digestiveBottlenecksData } = useQuery({
+    queryKey: ['digestive-bottlenecks'],
+    queryFn: () => digestiveApi.bottlenecks(),
+    enabled: activeTab === 'digestive',
+  })
+
+  const { data: digestiveMetabolismData } = useQuery({
+    queryKey: ['digestive-metabolism'],
+    queryFn: () => digestiveApi.metabolism(),
+    enabled: activeTab === 'digestive',
+  })
+
+  const { data: digestiveHistoryData } = useQuery({
+    queryKey: ['digestive-history'],
+    queryFn: () => digestiveApi.history(24, 50),
+    enabled: activeTab === 'digestive',
+  })
+
   // Fetch v1 health
   const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
     queryKey: ['v1-health'],
@@ -288,6 +321,14 @@ export default function AdminPage() {
   // Available for future use:
   // const immuneThreatsByCategory = immuneStatus.threats_by_category || {}
   // const immuneThreatsBySeverity = immuneStatus.threats_by_severity || {}
+
+  // DIGESTIVE data (Session 706)
+  const digestiveStatus = digestiveDigestData?.data || {}
+  const digestiveRoutes = digestiveRoutesData?.data?.routes || []
+  const digestiveBottlenecks = digestiveBottlenecksData?.data?.bottlenecks || []
+  const digestiveMetabolism = digestiveMetabolismData?.data || {}
+  const digestiveHistory = digestiveHistoryData?.data?.history || []
+  const digestiveStages = digestiveStatus.stages || {}
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -1790,6 +1831,427 @@ export default function AdminPage() {
                   <div className="p-3 rounded-lg bg-dark-bg">
                     <p className="font-medium text-accent-red mb-1">Compromised = Critical</p>
                     <p className="text-xs text-gray-400">Severe threats, manual intervention required</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* DIGESTIVE Tab (Session 706) - Data Ingestion & Processing */}
+      {activeTab === 'digestive' && (
+        <div className="space-y-6">
+          {loadingDigestive ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Digestive Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'h-12 w-12 rounded-lg flex items-center justify-center',
+                      (digestiveStatus.digestion_score || 0) >= 80 ? 'bg-accent-green/20' :
+                      (digestiveStatus.digestion_score || 0) >= 60 ? 'bg-accent-cyan/20' :
+                      (digestiveStatus.digestion_score || 0) >= 40 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <Utensils size={24} className={cn(
+                        (digestiveStatus.digestion_score || 0) >= 80 ? 'text-accent-green' :
+                        (digestiveStatus.digestion_score || 0) >= 60 ? 'text-accent-cyan' :
+                        (digestiveStatus.digestion_score || 0) >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Digestion Score</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (digestiveStatus.digestion_score || 0) >= 80 ? 'text-accent-green' :
+                        (digestiveStatus.digestion_score || 0) >= 60 ? 'text-accent-cyan' :
+                        (digestiveStatus.digestion_score || 0) >= 40 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(digestiveStatus.digestion_score || 0).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Activity className={cn(
+                      digestiveStatus.is_digesting ? 'text-accent-green' : 'text-accent-red'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Status</p>
+                      <p className={cn(
+                        'text-lg font-bold uppercase',
+                        digestiveStatus.overall_status === 'healthy' ? 'text-accent-green' :
+                        digestiveStatus.overall_status === 'sluggish' ? 'text-accent-cyan' :
+                        digestiveStatus.overall_status === 'bloated' ? 'text-accent-amber' :
+                        digestiveStatus.overall_status === 'blocked' ? 'text-accent-red' : 'text-gray-500'
+                      )}>
+                        {digestiveStatus.overall_status || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Route className="text-primary-400" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Active Routes</p>
+                      <p className="text-2xl font-bold">
+                        {digestiveRoutes.length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className={cn(
+                      digestiveBottlenecks.length > 0 ? 'text-accent-red' : 'text-accent-green'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Bottlenecks</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        digestiveBottlenecks.length > 0 ? 'text-accent-red' : 'text-accent-green'
+                      )}>
+                        {digestiveBottlenecks.length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stage Status Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(['intake', 'processing', 'enrichment', 'routing'] as const).map((stage) => {
+                  const stageData = digestiveStages[stage] || {}
+                  const stageStatus = stageData.status || 'unknown'
+                  return (
+                    <div key={stage} className="card">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold capitalize">{stage}</h4>
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded uppercase',
+                          stageStatus === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
+                          stageStatus === 'active' ? 'bg-accent-green/20 text-accent-green' :
+                          stageStatus === 'sluggish' ? 'bg-accent-amber/20 text-accent-amber' :
+                          stageStatus === 'blocked' ? 'bg-accent-red/20 text-accent-red' : 'bg-gray-500/20 text-gray-400'
+                        )}>
+                          {stageStatus}
+                        </span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {stage === 'intake' && (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Items (24h)</span>
+                              <span>{stageData.items_24h || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Spiders</span>
+                              <span>{stageData.total_spiders || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Success Rate</span>
+                              <span className={cn(
+                                (stageData.success_rate || 0) >= 70 ? 'text-accent-green' :
+                                (stageData.success_rate || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                              )}>
+                                {(stageData.success_rate || 0).toFixed(1)}%
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {stage === 'processing' && (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Queue Depth</span>
+                              <span className={cn(
+                                (stageData.queue_depth || 0) > 5000 ? 'text-accent-red' :
+                                (stageData.queue_depth || 0) > 1000 ? 'text-accent-amber' : ''
+                              )}>
+                                {(stageData.queue_depth || 0).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Throughput</span>
+                              <span>{(stageData.throughput || 0).toFixed(2)}/min</span>
+                            </div>
+                          </>
+                        )}
+                        {stage === 'enrichment' && (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Embeddings</span>
+                              <span>{stageData.embeddings_24h || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Quality Score</span>
+                              <span>{(stageData.avg_quality || 0).toFixed(1)}</span>
+                            </div>
+                          </>
+                        )}
+                        {stage === 'routing' && (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Routed (24h)</span>
+                              <span>{stageData.routed_24h || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Avg Latency</span>
+                              <span>{(stageData.avg_latency_ms || 0).toFixed(0)}ms</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Metabolism Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Metabolism Rate</h3>
+                    <Gauge className="text-primary-400" size={20} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-dark-bg text-center">
+                      <p className="text-sm text-gray-400">Intake</p>
+                      <p className="text-xl font-bold text-accent-cyan">
+                        {digestiveMetabolism.rates?.intake_rate_per_hour?.toFixed(1) || '0'}/hr
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg text-center">
+                      <p className="text-sm text-gray-400">Processing</p>
+                      <p className="text-xl font-bold text-accent-amber">
+                        {digestiveMetabolism.rates?.processing_rate_per_hour?.toFixed(1) || '0'}/hr
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg text-center">
+                      <p className="text-sm text-gray-400">Output</p>
+                      <p className="text-xl font-bold text-accent-green">
+                        {digestiveMetabolism.rates?.output_rate_per_hour?.toFixed(1) || '0'}/hr
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 rounded-lg bg-dark-bg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Efficiency</span>
+                      <span className={cn(
+                        'font-bold',
+                        (digestiveMetabolism.efficiency_pct || 0) >= 80 ? 'text-accent-green' :
+                        (digestiveMetabolism.efficiency_pct || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(digestiveMetabolism.efficiency_pct || 0).toFixed(1)}%
+                      </span>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="mt-2 h-2 bg-dark-border rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all',
+                          (digestiveMetabolism.efficiency_pct || 0) >= 80 ? 'bg-accent-green' :
+                          (digestiveMetabolism.efficiency_pct || 0) >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                        )}
+                        style={{ width: `${Math.min(digestiveMetabolism.efficiency_pct || 0, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  {digestiveMetabolism.warnings?.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {digestiveMetabolism.warnings.map((warning: { type: string; message: string }, idx: number) => (
+                        <div key={idx} className="text-xs text-accent-amber flex items-center gap-2">
+                          <AlertTriangle size={12} />
+                          {warning.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottlenecks */}
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Bottlenecks ({digestiveBottlenecks.length})</h3>
+                    <button
+                      onClick={() => refetchDigestive()}
+                      className="btn btn-secondary btn-sm flex items-center gap-2"
+                    >
+                      <RefreshCw size={14} />
+                      Refresh
+                    </button>
+                  </div>
+                  {digestiveBottlenecks.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {digestiveBottlenecks.map((bottleneck: {
+                        stage?: string
+                        type?: string
+                        severity?: string
+                        message?: string
+                        value?: number
+                        threshold?: number
+                      }, idx: number) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            'p-3 rounded-lg border',
+                            bottleneck.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
+                            bottleneck.severity === 'warning' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-dark-bg border-dark-border'
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                'text-xs px-2 py-0.5 rounded uppercase',
+                                bottleneck.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                                bottleneck.severity === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
+                              )}>
+                                {bottleneck.severity || 'info'}
+                              </span>
+                              <span className="text-sm font-medium capitalize">{bottleneck.stage || 'System'}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">{bottleneck.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400">
+                      <CheckCircle className="mx-auto mb-2 text-accent-green" size={32} />
+                      <p>No bottlenecks detected</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Ingestion Routes */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Ingestion Routes ({digestiveRoutes.length})</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {digestiveRoutes.map((route: {
+                    id?: string
+                    name: string
+                    display_name?: string
+                    route_type?: string
+                    stage?: string
+                    is_critical?: boolean
+                    is_active?: boolean
+                    status?: string
+                  }) => (
+                    <div
+                      key={route.id || route.name}
+                      className={cn(
+                        'p-3 rounded-lg border transition-colors',
+                        route.is_active ? 'bg-accent-green/5 border-accent-green/30' : 'bg-gray-500/10 border-gray-500/30'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-sm truncate" title={route.name}>
+                          {route.display_name || route.name}
+                        </p>
+                        {route.is_critical && (
+                          <span className="text-xs px-1 py-0.5 rounded bg-accent-red/20 text-accent-red">
+                            Critical
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="capitalize">{route.route_type}</span>
+                        <span>•</span>
+                        <span className="capitalize">{route.stage}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {digestiveRoutes.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <Route className="mx-auto mb-2" size={32} />
+                    <p>No ingestion routes configured</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Digestion History */}
+              {digestiveHistory.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Recent Digestion Pulses ({digestiveHistory.length})</h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {digestiveHistory.slice(0, 10).map((pulse: {
+                      id?: string
+                      recorded_at?: string
+                      overall_status?: string
+                      digestion_score?: number
+                      intake_items?: number
+                      processed_items?: number
+                      output_items?: number
+                    }, idx: number) => (
+                      <div
+                        key={pulse.id || idx}
+                        className={cn(
+                          'p-3 rounded-lg border flex items-center justify-between',
+                          pulse.overall_status === 'healthy' ? 'bg-accent-green/5 border-accent-green/20' :
+                          pulse.overall_status === 'sluggish' ? 'bg-accent-cyan/5 border-accent-cyan/20' :
+                          pulse.overall_status === 'bloated' ? 'bg-accent-amber/5 border-accent-amber/20' : 'bg-dark-bg border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded uppercase',
+                            pulse.overall_status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
+                            pulse.overall_status === 'sluggish' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                            pulse.overall_status === 'bloated' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {pulse.overall_status || 'unknown'}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {(pulse.digestion_score || 0).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-400">
+                          <span>In: {pulse.intake_items || 0}</span>
+                          <span>Proc: {pulse.processed_items || 0}</span>
+                          <span>Out: {pulse.output_items || 0}</span>
+                          <span>
+                            {pulse.recorded_at ? new Date(pulse.recorded_at).toLocaleTimeString() : ''}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Digestive System Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Digestive System Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The DIGESTIVE system monitors how raw data from spiders is transformed into actionable intelligence.
+                  Like biological digestion, it tracks intake → processing → enrichment → routing stages.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-green mb-1">🟢 Healthy (80-100%)</p>
+                    <p className="text-xs text-gray-400">Normal data processing, all stages flowing</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-cyan mb-1">🟡 Sluggish (60-79%)</p>
+                    <p className="text-xs text-gray-400">Slow processing, minor delays</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-amber mb-1">🟠 Bloated (40-59%)</p>
+                    <p className="text-xs text-gray-400">High queue depth, backlog forming</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-red mb-1">🔴 Blocked (20-39%)</p>
+                    <p className="text-xs text-gray-400">Processing stuck, intervention needed</p>
                   </div>
                 </div>
               </div>
