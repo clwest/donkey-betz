@@ -4,11 +4,14 @@ import { workspaceApi, workspaceOperationsApi, bodyApi } from '@/lib/api'
 import {
   FolderOpen, FileCode, GitBranch, History, CheckSquare, Plus,
   RefreshCw, ChevronRight, ChevronDown, File, Folder, Code,
-  GitCommit, CheckCircle, XCircle,
-  Loader2, Search, RotateCcw, Eye, Clock, Bot, X,
+  GitCommit, CheckCircle, XCircle, AlertTriangle,
+  Loader2, Search, RotateCcw, Eye, Clock, X,
   FolderTree, Activity, Trash2, Heart, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useBodyGovernance } from '@/stores/bodyStore'
+import EntityLink from '@/components/EntityLink'
+import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
 type WorkspaceTab = 'overview' | 'files' | 'git' | 'operations' | 'reviews'
 
@@ -205,8 +208,14 @@ function OperationRow({ operation, onRollback, onReview }: {
           <div>
             <p className="text-sm font-medium">{operation.file_path}</p>
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Bot size={12} />
-              <span>{operation.agent_name}</span>
+              {/* Session 713: EntityLink for agent navigation */}
+              <EntityLink
+                type="agent"
+                id={operation.agent_name}
+                label={operation.agent_name}
+                iconSize={12}
+                className="text-xs"
+              />
               <span>•</span>
               <Clock size={12} />
               <span>{new Date(operation.created_at).toLocaleString()}</span>
@@ -403,18 +412,22 @@ function RegisterWorkspaceModal({ onClose, onSubmit, isLoading }: {
 }
 
 // Git Commit Modal
-function GitCommitModal({ onClose, onCommit, isLoading }: {
+function GitCommitModal({ onClose, onCommit, isLoading, bodyGovernance }: {
   onClose: () => void
   onCommit: (message: string) => void
   isLoading: boolean
+  bodyGovernance?: { allowed: boolean; reason?: string }
 }) {
   const [message, setMessage] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!message.trim()) return
+    if (bodyGovernance && !bodyGovernance.allowed) return
     onCommit(message)
   }
+
+  const isBlocked = bodyGovernance && !bodyGovernance.allowed
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -425,6 +438,27 @@ function GitCommitModal({ onClose, onCommit, isLoading }: {
             <X size={20} />
           </button>
         </div>
+
+        {/* Session 713: Body Governance Warning */}
+        {bodyGovernance?.reason && (
+          <div className={cn(
+            'flex items-start gap-3 p-3 rounded-lg mb-4',
+            isBlocked
+              ? 'bg-red-500/20 border border-red-500/30 text-red-200'
+              : 'bg-amber-500/20 border border-amber-500/30 text-amber-200'
+          )}>
+            {isBlocked ? (
+              <Heart size={18} className="text-red-400 animate-pulse flex-shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="text-sm">
+              <p className="font-medium">{isBlocked ? 'Operation Blocked' : 'Health Warning'}</p>
+              <p className="opacity-90 mt-0.5">{bodyGovernance.reason}</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Commit Message *</label>
@@ -435,16 +469,25 @@ function GitCommitModal({ onClose, onCommit, isLoading }: {
               rows={3}
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg focus:border-primary-500 focus:outline-none resize-none"
               required
+              disabled={isBlocked}
             />
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={isLoading || !message.trim()} className="btn btn-primary flex-1 flex items-center justify-center gap-2">
+            <button
+              type="submit"
+              disabled={isLoading || !message.trim() || isBlocked}
+              className={cn(
+                'btn flex-1 flex items-center justify-center gap-2',
+                isBlocked ? 'btn-secondary opacity-50 cursor-not-allowed' : 'btn-primary'
+              )}
+              title={isBlocked ? bodyGovernance?.reason : undefined}
+            >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
               <GitCommit size={16} />
-              Commit
+              {isBlocked ? 'Blocked' : 'Commit'}
             </button>
           </div>
         </form>
@@ -462,6 +505,9 @@ export default function WorkspacePage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [operationFilter, setOperationFilter] = useState<string>('')
   const queryClient = useQueryClient()
+
+  // Session 713: Body Governance - Check file write permissions
+  const { canWriteFile } = useBodyGovernance()
 
   // Queries
   const { data: workspacesData, isLoading: loadingWorkspaces, error: workspacesError } = useQuery({
@@ -676,6 +722,8 @@ export default function WorkspacePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
+          {/* Session 713: Breadcrumb navigation */}
+          <CompactBreadcrumb currentPage="Workspace" className="mb-2" />
           <h1 className="text-2xl font-bold">Workspace</h1>
           <p className="text-sm text-gray-400 mt-1">SKIN Layer - Agent Project Execution System</p>
         </div>
@@ -931,6 +979,28 @@ export default function WorkspacePage() {
           {/* Git Tab */}
           {activeTab === 'git' && (
             <div className="space-y-6">
+              {/* Session 713: Body Governance Warning for Git Operations */}
+              {canWriteFile.reason && (
+                <div className={cn(
+                  'flex items-center gap-3 p-3 rounded-lg',
+                  !canWriteFile.allowed
+                    ? 'bg-red-500/20 border border-red-500/30'
+                    : 'bg-amber-500/20 border border-amber-500/30'
+                )}>
+                  {!canWriteFile.allowed ? (
+                    <Heart size={18} className="text-red-400 animate-pulse" />
+                  ) : (
+                    <AlertTriangle size={18} className="text-amber-400" />
+                  )}
+                  <span className={cn(
+                    'text-sm',
+                    !canWriteFile.allowed ? 'text-red-200' : 'text-amber-200'
+                  )}>
+                    {canWriteFile.reason}
+                  </span>
+                </div>
+              )}
+
               {/* Git Actions */}
               <div className="flex items-center gap-3">
                 <button
@@ -942,10 +1012,18 @@ export default function WorkspacePage() {
                 </button>
                 <button
                   onClick={() => setShowCommitModal(true)}
-                  className="btn btn-primary flex items-center gap-2"
+                  disabled={!canWriteFile.allowed}
+                  className={cn(
+                    'btn flex items-center gap-2',
+                    canWriteFile.allowed ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'
+                  )}
+                  title={!canWriteFile.allowed ? canWriteFile.reason : undefined}
                 >
                   <GitCommit size={16} />
                   New Commit
+                  {!canWriteFile.allowed && (
+                    <Heart size={14} className="text-red-400 animate-pulse ml-1" />
+                  )}
                 </button>
               </div>
 
@@ -1087,6 +1165,7 @@ export default function WorkspacePage() {
           onClose={() => setShowCommitModal(false)}
           onCommit={(message) => commitMutation.mutate({ id: activeWorkspace.id, message })}
           isLoading={commitMutation.isPending}
+          bodyGovernance={canWriteFile}
         />
       )}
 

@@ -4,6 +4,8 @@ import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, expe
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
+// Session 713: Cross-page navigation
+import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
 // Session 688: Safe date formatter to handle invalid/missing timestamps
 const formatTimestamp = (timestamp: string | number | undefined | null, format: 'time' | 'full' = 'time'): string => {
@@ -405,6 +407,9 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Session 713: Breadcrumb navigation */}
+      <CompactBreadcrumb currentPage="Agents" />
+
       {/* Connection Status Banner */}
       <div className={cn(
         'flex items-center gap-2 px-4 py-2 rounded-lg text-sm',
