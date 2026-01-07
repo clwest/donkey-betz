@@ -154,7 +154,7 @@ function ModelRow({ model }: { model: Model }) {
           {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <div>
             <p className="font-medium">{model.display_name}</p>
-            <p className="text-xs text-gray-400">{model.provider} • {model.model_id}</p>
+            <p className="text-xs text-gray-400">{typeof model.provider === 'object' ? model.provider?.display_name || model.provider?.name : model.provider} • {model.model_id}</p>
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm">
@@ -177,7 +177,7 @@ function ModelRow({ model }: { model: Model }) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-400">Max Context</p>
-              <p className="font-medium">{model.max_context.toLocaleString()} tokens</p>
+              <p className="font-medium">{(model.max_context ?? 0).toLocaleString()} tokens</p>
             </div>
             <div>
               <p className="text-gray-400">Capabilities</p>
