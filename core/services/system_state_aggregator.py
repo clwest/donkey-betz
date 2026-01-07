@@ -148,6 +148,12 @@ class SystemStateAggregator:
         except Exception as e:
             self.logger.error(f"Error getting Pending Review items: {e}")
 
+        # Session 709: Add body system health monitoring
+        try:
+            items.extend(self._get_body_system_items())
+        except Exception as e:
+            self.logger.error(f"Error getting Body System items: {e}")
+
         # Deduplicate by hashing title+summary
         seen_hashes = set()
         unique_items = []
@@ -626,6 +632,259 @@ class SystemStateAggregator:
             self.logger.debug(f"Decision promotion rules not available: {e}")
         except Exception as e:
             self.logger.error(f"Error getting pending review metrics: {e}")
+
+        return items
+
+    def _get_body_system_items(self) -> List[AttentionItem]:
+        """
+        Session 709: Get attention items from body systems (HEART, LUNGS, IMMUNE, etc).
+
+        This monitors the 7 body systems and generates alerts for:
+        - Critical health issues (HEART critical/offline)
+        - Budget exhaustion (LUNGS < 20%)
+        - Security threats (IMMUNE high/severe threat level)
+        - Data pipeline issues (DIGESTIVE blocked/bloated)
+        - Agent execution problems (MUSCULAR strained/paralyzed)
+        """
+        items = []
+
+        try:
+            from core.services.body_vitals import get_body_vitals_service
+            vitals_service = get_body_vitals_service()
+            all_vitals = vitals_service.get_all_vitals()
+
+            systems = all_vitals.get('systems', {})
+
+            # ===== HEART - Core Component Health =====
+            heart = systems.get('heart', {})
+            heart_status = heart.get('status', 'unknown')
+            heart_score = heart.get('score', 100)
+
+            if heart_status in ['critical', 'offline']:
+                items.append(AttentionItem(
+                    id=f'body_heart_{heart_status}',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'],
+                    title=f"HEART: {heart_status.upper()}",
+                    summary=f"System health score: {heart_score}% - core components need attention",
+                    action_url='/ai-studio/',
+                    explanation="The HEART system monitors core platform components (brain, organs, "
+                               "sensory, memory). Critical status means multiple components are failing.",
+                    recommended_action="Check service status, restart failing services, "
+                                      "and review logs for errors.",
+                    severity='critical',
+                    location='Body Health Dashboard'
+                ))
+            elif heart_status == 'degraded' and heart_score < 70:
+                items.append(AttentionItem(
+                    id='body_heart_degraded',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'] - 10,
+                    title=f"HEART: Degraded ({heart_score}%)",
+                    summary=f"Some platform components are unhealthy",
+                    action_url='/ai-studio/',
+                    explanation="The HEART system shows degraded status. Some components "
+                               "may be experiencing issues.",
+                    recommended_action="Monitor system health and check component status.",
+                    severity='warning',
+                    location='Body Health Dashboard'
+                ))
+
+            # ===== LUNGS - Budget/Resource Management =====
+            lungs = systems.get('lungs', {})
+            oxygen_level = lungs.get('oxygen_level', 100)
+            lungs_status = lungs.get('status', 'normal')
+
+            if oxygen_level < 10:
+                items.append(AttentionItem(
+                    id='body_lungs_exhausted',
+                    section='body_systems',
+                    category='critical_alert',
+                    priority=PRIORITY_SCORES['critical_alert'],
+                    title=f"LUNGS: Budget Exhausted ({oxygen_level}%)",
+                    summary="API budget nearly depleted - operations may be blocked",
+                    action_url='/ai-studio/',
+                    explanation="The LUNGS system tracks API token and cost budgets. "
+                               "Below 10% means operations should be restricted.",
+                    recommended_action="Reduce LLM usage immediately, increase budget, "
+                                      "or wait for budget reset.",
+                    severity='critical',
+                    location='Body Health Dashboard > LUNGS'
+                ))
+            elif oxygen_level < 20:
+                items.append(AttentionItem(
+                    id='body_lungs_low',
+                    section='body_systems',
+                    category='critical_alert',
+                    priority=PRIORITY_SCORES['critical_alert'] - 5,
+                    title=f"LUNGS: Budget Low ({oxygen_level}%)",
+                    summary="API budget running low - consider reducing usage",
+                    action_url='/ai-studio/',
+                    explanation="Budget is below 20%. Expensive operations should be avoided.",
+                    recommended_action="Use efficient models (GPT-4o-mini, Haiku), "
+                                      "avoid video generation and batch operations.",
+                    severity='warning',
+                    location='Body Health Dashboard > LUNGS'
+                ))
+
+            # ===== IMMUNE - Security/Threat Detection =====
+            immune = systems.get('immune', {})
+            threat_level = immune.get('threat_level', 'none')
+            immune_score = immune.get('score', 100)
+
+            if threat_level in ['high', 'severe']:
+                items.append(AttentionItem(
+                    id=f'body_immune_{threat_level}',
+                    section='body_systems',
+                    category='security_alert',
+                    priority=PRIORITY_SCORES['security_alert'],
+                    title=f"IMMUNE: {threat_level.upper()} Threat Level",
+                    summary=f"Active security threats detected - review immediately",
+                    action_url='/ai-studio/',
+                    explanation="The IMMUNE system has detected active security threats. "
+                               "This may include rate abuse, authentication attacks, or injection attempts.",
+                    recommended_action="Review threat logs, check quarantine list, "
+                                      "and consider blocking suspicious IPs/users.",
+                    severity='critical',
+                    location='Body Health Dashboard > IMMUNE'
+                ))
+            elif threat_level == 'elevated':
+                items.append(AttentionItem(
+                    id='body_immune_elevated',
+                    section='body_systems',
+                    category='security_alert',
+                    priority=PRIORITY_SCORES['security_alert'] - 10,
+                    title="IMMUNE: Elevated Threat Level",
+                    summary="Security monitoring shows elevated activity",
+                    action_url='/ai-studio/',
+                    explanation="Some suspicious activity has been detected but not at critical levels.",
+                    recommended_action="Monitor threat logs for any escalation.",
+                    severity='warning',
+                    location='Body Health Dashboard > IMMUNE'
+                ))
+
+            # ===== DIGESTIVE - Data Pipeline =====
+            digestive = systems.get('digestive', {})
+            digestive_status = digestive.get('status', 'healthy')
+            digestive_score = digestive.get('score', 100)
+
+            if digestive_status in ['blocked', 'starving']:
+                items.append(AttentionItem(
+                    id=f'body_digestive_{digestive_status}',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'],
+                    title=f"DIGESTIVE: {digestive_status.upper()}",
+                    summary="Data ingestion pipeline has stopped",
+                    action_url='/ai-studio/',
+                    explanation="The DIGESTIVE system processes spider data. "
+                               "Blocked means the pipeline has stopped processing.",
+                    recommended_action="Check Celery workers, review spider execution logs, "
+                                      "clear any stuck queue items.",
+                    severity='critical',
+                    location='Body Health Dashboard > DIGESTIVE'
+                ))
+            elif digestive_status == 'bloated':
+                items.append(AttentionItem(
+                    id='body_digestive_bloated',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'] - 10,
+                    title="DIGESTIVE: Queue Backlog",
+                    summary=f"Data pipeline has significant backlog (score: {digestive_score}%)",
+                    action_url='/ai-studio/',
+                    explanation="The processing queue is backing up. "
+                               "Data may be arriving faster than it's being processed.",
+                    recommended_action="Check Celery worker capacity, consider scaling workers.",
+                    severity='warning',
+                    location='Body Health Dashboard > DIGESTIVE'
+                ))
+
+            # ===== MUSCULAR - Agent Execution =====
+            muscular = systems.get('muscular', {})
+            muscular_status = muscular.get('status', 'strong')
+            muscular_score = muscular.get('score', 100)
+
+            if muscular_status == 'paralyzed':
+                items.append(AttentionItem(
+                    id='body_muscular_paralyzed',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'] - 5,
+                    title="MUSCULAR: No Agent Activity",
+                    summary="Agents are not executing tasks",
+                    action_url='/ai-studio/',
+                    explanation="The MUSCULAR system tracks agent execution. "
+                               "Paralyzed status means no recent agent activity.",
+                    recommended_action="Run some agent tasks to warm up the system. "
+                                      "This may be normal during low-activity periods.",
+                    severity='warning',
+                    location='Body Health Dashboard > MUSCULAR'
+                ))
+            elif muscular_status == 'strained':
+                items.append(AttentionItem(
+                    id='body_muscular_strained',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'] - 15,
+                    title=f"MUSCULAR: Agent Strain ({muscular_score}%)",
+                    summary="Agent execution showing high error rates",
+                    action_url='/ai-studio/',
+                    explanation="Agents are experiencing more failures than normal.",
+                    recommended_action="Check agent logs for common errors, "
+                                      "review failed executions.",
+                    severity='warning',
+                    location='Body Health Dashboard > MUSCULAR'
+                ))
+
+            # ===== CIRCULATORY - Data Flow (only critical) =====
+            circulatory = systems.get('circulatory', {})
+            circ_status = circulatory.get('status', 'flowing')
+
+            if circ_status == 'blocked':
+                items.append(AttentionItem(
+                    id='body_circulatory_blocked',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'],
+                    title="CIRCULATORY: Data Flow Blocked",
+                    summary="Redis/Celery data flow has stopped",
+                    action_url='/ai-studio/',
+                    explanation="Data is not flowing through the system. "
+                               "This affects all real-time processing.",
+                    recommended_action="Check Redis server, restart Celery workers, "
+                                      "review queue depths.",
+                    severity='critical',
+                    location='Body Health Dashboard > CIRCULATORY'
+                ))
+
+            # ===== SPINE - API Routing (only critical) =====
+            spine = systems.get('spine', {})
+            spine_status = spine.get('status', 'aligned')
+
+            if spine_status == 'injured':
+                items.append(AttentionItem(
+                    id='body_spine_injured',
+                    section='body_systems',
+                    category='health_failure',
+                    priority=PRIORITY_SCORES['health_failure'],
+                    title="SPINE: API Routing Failure",
+                    summary="Multiple API routes are failing",
+                    action_url='/ai-studio/',
+                    explanation="The SPINE system shows API routing is severely degraded. "
+                               "This affects the ability to serve requests.",
+                    recommended_action="Check API error logs, review failing endpoints, "
+                                      "restart the Django server if needed.",
+                    severity='critical',
+                    location='Body Health Dashboard > SPINE'
+                ))
+
+        except ImportError as e:
+            self.logger.debug(f"Body vitals service not available: {e}")
+        except Exception as e:
+            self.logger.error(f"Error getting body system items: {e}")
 
         return items
 
