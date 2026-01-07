@@ -220,8 +220,14 @@ CELERY_BROADCAST_PIDFILE ?= .celery-broadcast.pid
 
 celery: ## Start Celery workers + beat (background) with multi-queue architecture
 	@echo "==> Starting Celery services (multi-queue architecture)..."
+	@# Kill any generic workers without proper queue assignment first
+	@if pgrep -f "celery.*worker" >/dev/null 2>&1 && ! pgrep -f "hostname=" >/dev/null 2>&1; then \
+		echo "-> Stopping generic Celery worker (no queue assignment)..."; \
+		pkill -f "celery.*worker" 2>/dev/null || true; \
+		sleep 1; \
+	fi
 	@# Start default queue worker (quick tasks)
-	@if pgrep -f "celery.*worker.*default" >/dev/null 2>&1; then \
+	@if pgrep -f "hostname=default" >/dev/null 2>&1; then \
 		echo "-> Celery default worker already running"; \
 	else \
 		echo "-> Starting Celery default worker (4 threads, default queue)..."; \
@@ -231,7 +237,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		sleep 1; \
 	fi
 	@# Start long_running queue worker (slow tasks)
-	@if pgrep -f "celery.*worker.*long_running" >/dev/null 2>&1; then \
+	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then \
 		echo "-> Celery long_running worker already running"; \
 	else \
 		echo "-> Starting Celery long_running worker (2 threads)..."; \
@@ -241,7 +247,7 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 		sleep 1; \
 	fi
 	@# Start broadcast queue worker (high-frequency status tasks)
-	@if pgrep -f "celery.*worker.*broadcast" >/dev/null 2>&1; then \
+	@if pgrep -f "hostname=broadcast" >/dev/null 2>&1; then \
 		echo "-> Celery broadcast worker already running"; \
 	else \
 		echo "-> Starting Celery broadcast worker (2 threads)..."; \
