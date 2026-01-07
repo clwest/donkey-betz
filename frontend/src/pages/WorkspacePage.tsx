@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi, bodyApi } from '@/lib/api'
+// Session 714: Real-time system events
+import { useSystemEvents } from '@/hooks/useWebSocket'
 import {
   FolderOpen, FileCode, GitBranch, History, CheckSquare, Plus,
   RefreshCw, ChevronRight, ChevronDown, File, Folder, Code,
@@ -505,6 +507,18 @@ export default function WorkspacePage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [operationFilter, setOperationFilter] = useState<string>('')
   const queryClient = useQueryClient()
+
+  // Session 714: Real-time event handlers - refresh data when file events occur
+  const handleFileModified = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['workspace-files'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-git-status'] })
+    queryClient.invalidateQueries({ queryKey: ['workspace-operations'] })
+  }, [queryClient])
+
+  // Session 714: Subscribe to system events
+  useSystemEvents({
+    onFileModified: handleFileModified,
+  })
 
   // Session 713: Body Governance - Check file write permissions
   const { canWriteFile } = useBodyGovernance()

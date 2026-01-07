@@ -950,13 +950,13 @@ mythologyApi.rejectQuarantine(id)
 - [x] Add breadcrumb component
 - [x] Test navigation flows
 
-### Phase 3 Checklist
-- [ ] Create `core/consumers/system_events_consumer.py`
-- [ ] Update `core/routing.py` with new consumer
-- [ ] Add event emission to `core/tasks.py`
-- [ ] Create `frontend/src/hooks/useSystemEvents.ts`
-- [ ] Add event handlers to each page
-- [ ] Test event broadcasting
+### Phase 3 Checklist (Session 714)
+- [x] Create `core/consumers/system_events_consumer.py`
+- [x] Update `core/routing.py` with new consumer
+- [x] Add event emission to `core/tasks.py`
+- [x] Create `useSystemEvents` hook in `frontend/src/hooks/useWebSocket.ts`
+- [x] Add event handlers to IntelligencePage, AgentsPage, WorkspacePage
+- [ ] Add event handlers to remaining pages (DashboardPage, HumanPage)
 
 ### Phase 4 Checklist
 - [ ] Create `frontend/src/stores/unifiedStore.ts`
@@ -996,17 +996,18 @@ mythologyApi.rejectQuarantine(id)
 
 ## Success Metrics
 
-| Metric | Start | Phase 1 ✅ | Phase 2 ✅ | Phase 3 | Phase 4 | Phase 5 |
+| Metric | Start | Phase 1 ✅ | Phase 2 ✅ | Phase 3 (🔄) | Phase 4 | Phase 5 |
 |--------|-------|-----------|-----------|---------|---------|---------|
-| Cross-page links | 0 | 0 | **10+** | 20+ | 20+ | 30+ |
-| Shared state stores | 0 | **2** | **3** | 3 | 4 | 4 |
-| Event types broadcast | 1 | 1 | 1 | 10+ | 10+ | 15+ |
-| Backend API utilization | 3% | **5%** | **7%** | 10% | 12% | 25% |
+| Cross-page links | 0 | 0 | **10+** | **10+** | 20+ | 30+ |
+| Shared state stores | 0 | **2** | **3** | **3** | 4 | 4 |
+| Event types broadcast | 1 | 1 | 1 | **10** | 10+ | 15+ |
+| Backend API utilization | 3% | **5%** | **7%** | **8%** | 12% | 25% |
 | Sci-Fi features in UI | 1 | 1 | 1 | 1 | 1 | 9 |
-| Body governance active | No | **Yes** | **Yes** | Yes | Yes | Yes |
+| Body governance active | No | **Yes** | **Yes** | **Yes** | Yes | Yes |
 
-**Current Status (After Phase 2):**
+**Current Status (After Phase 3):**
 - 3 shared Zustand stores: `bodyStore`, `navigationStore`, `unifiedStore` (partial)
+- 10 system event types: agent_execution, pilot lifecycle, dreams, hive mind, gates, body, files
 - 10+ cross-page navigation links via EntityLink component
 - Body governance blocking operations when critical
 - Breadcrumb navigation showing context

@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useMemo, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi } from '@/lib/api'
-import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
+import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
@@ -247,6 +247,32 @@ export default function AgentsPage() {
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   // Session 697: Knowledge Transfer Modal state
   const [selectedTransfer, setSelectedTransfer] = useState<LearningFeedItem | null>(null)
+
+  const queryClient = useQueryClient()
+
+  // Session 714: Real-time event handlers - refresh data when events occur
+  const handleDreamGenerated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['agent-dreams'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-activity'] })
+  }, [queryClient])
+
+  const handleLevelUp = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['agents-comprehensive'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-activity'] })
+  }, [queryClient])
+
+  const handleAgentExecution = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['recent-activity'] })
+    queryClient.invalidateQueries({ queryKey: ['learning-activity'] })
+  }, [queryClient])
+
+  // Session 714: Subscribe to system events
+  useSystemEvents({
+    onDreamGenerated: handleDreamGenerated,
+    onLevelUp: handleLevelUp,
+    onAgentExecutionComplete: handleAgentExecution,
+    onAgentExecutionFailed: handleAgentExecution,
+  })
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({

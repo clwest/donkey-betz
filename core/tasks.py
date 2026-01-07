@@ -7789,6 +7789,20 @@ Guidelines:
                     except Exception as discord_err:
                         logger.debug(f"Discord notification failed: {discord_err}")
 
+                    # Session 714: Emit system event for real-time updates
+                    try:
+                        from core.consumers.system_events_consumer import emit_system_event_sync
+                        emit_system_event_sync('dream_generated', {
+                            'dream_id': str(dream.id),
+                            'agent_id': str(agent.id),
+                            'agent_name': agent.name,
+                            'title': title,
+                            'dream_type': dream_type,
+                            'vividness_score': vividness
+                        })
+                    except Exception as event_err:
+                        logger.debug(f"System event emission failed: {event_err}")
+
                 except Exception as e:
                     logger.warning(f"💭 [DREAMS] Failed to generate dream for {agent.name}: {e}")
                     continue
@@ -9340,6 +9354,20 @@ def run_hive_mind_session(self, session_id: str):
             session.status = 'failed'
             session.save()
             return {'status': 'failed', 'error': 'No contributions found'}
+
+        # Session 714: Emit hive_mind_started event for real-time updates
+        try:
+            from core.consumers.system_events_consumer import emit_system_event_sync
+            participant_names = [c.agent.name for c in contributions]
+            emit_system_event_sync('hive_mind_started', {
+                'session_id': session_id,
+                'question': session.question[:100],
+                'mode': session.session_mode,
+                'participant_count': contributions.count(),
+                'participants': participant_names[:5]  # Limit for size
+            })
+        except Exception:
+            pass  # Non-critical
 
         client = OpenAI()
         total_thinking_time = 0
@@ -18526,6 +18554,20 @@ def execute_single_artifact(self, artifact_id: str):
 
         logger.info(f"⚡ [EXECUTION] Artifact {artifact_id} executed via {execution.agent_name}: {execution.status}")
 
+        # Session 714: Emit agent execution event for real-time updates
+        try:
+            from core.consumers.system_events_consumer import emit_system_event_sync
+            event_type = 'agent_execution_complete' if execution.status == 'completed' else 'agent_execution_failed'
+            emit_system_event_sync(event_type, {
+                'execution_id': str(execution.id),
+                'artifact_id': artifact_id,
+                'agent_name': execution.agent_name,
+                'status': execution.status,
+                'execution_time_ms': execution.execution_time_ms
+            })
+        except Exception:
+            pass  # Non-critical
+
         return {
             'success': execution.status == 'completed',
             'artifact_id': artifact_id,
@@ -20530,6 +20572,19 @@ def auto_complete_pilots():
                 discord.send_to_channel('system-status', message)
             except Exception as e:
                 logger.debug(f"🚀 [SESSION 594] Discord notification failed: {e}")
+
+            # Session 714: Emit pilot_completed events for real-time updates
+            try:
+                from core.consumers.system_events_consumer import emit_system_event_sync
+                for p in completed:
+                    emit_system_event_sync('pilot_completed', {
+                        'pilot_id': p['pilot_id'],
+                        'name': p['name'],
+                        'outcome': 'success',
+                        'hours_running': p['hours_running']
+                    })
+            except Exception:
+                pass  # Non-critical
         else:
             logger.info("🚀 [SESSION 594] No pilots eligible for auto-completion")
         
@@ -21864,6 +21919,19 @@ def _process_single_gate(gate) -> dict:
     )
     result['pilot_created'] = True
 
+    # Session 714: Emit pilot_started event for real-time updates
+    try:
+        from core.consumers.system_events_consumer import emit_system_event_sync
+        emit_system_event_sync('pilot_started', {
+            'pilot_id': str(pilot.id),
+            'name': pilot.name,
+            'gate_id': str(gate.id),
+            'decision_id': str(decision.id) if decision else None,
+            'status': 'running'
+        })
+    except Exception:
+        pass  # Non-critical
+
     # 5. Mark gate as pilot started
     gate.pilot_started_at = timezone.now()
     gate.save()
@@ -22982,4 +23050,89 @@ def check_muscular():
             'status': 'paralyzed',
             'error': str(e),
             'is_strong': False,
+        }
+
+
+# =============================================================================
+# Session 711: BODY COORDINATOR - Autonomic Nervous System
+# =============================================================================
+
+@shared_task(name='core.tasks.coordinate_body')
+def coordinate_body():
+    """
+    Session 711: BODY COORDINATOR - Coordinate responses across body systems
+
+    The BODY COORDINATOR is the autonomic nervous system - it monitors all body
+    systems and triggers automatic responses when issues are detected.
+
+    Monitors:
+    - LUNGS exhaustion -> throttle operations
+    - HEART critical -> alert + reduce load
+    - IMMUNE threats -> security responses
+    - DIGESTIVE blocked -> pause spider execution
+    - MUSCULAR strained -> reduce agent routing
+    - CIRCULATORY blocked -> data flow alerts
+    - SPINE injured -> routing alerts
+
+    Run frequency: Every 60 seconds
+    """
+    import redis
+    import json
+    from core.services.body_coordinator import get_body_coordinator
+
+    logger.info("🧠 [COORDINATOR] Running body coordination...")
+
+    try:
+        coordinator = get_body_coordinator()
+        result = coordinator.coordinate()
+
+        if result.get('skipped'):
+            logger.debug(f"🧠 [COORDINATOR] Skipped: {result.get('reason')}")
+            return result
+
+        # Log the result
+        events = result.get('events_detected', 0)
+        responses = result.get('responses_triggered', 0)
+        duration = result.get('duration_ms', 0)
+
+        logger.info(
+            f"🧠 [COORDINATOR] Complete: {events} events detected, "
+            f"{responses} responses triggered ({duration}ms)"
+        )
+
+        # Log individual events
+        for event in result.get('events', []):
+            level = logging.WARNING if event['severity'] == 'warning' else logging.ERROR
+            if event['severity'] == 'critical':
+                level = logging.CRITICAL
+            logger.log(
+                level,
+                f"🧠 [COORDINATOR] Event: {event['type']} from {event['source']} - {event['message']}"
+            )
+
+        # Log throttle status
+        if result.get('is_throttled'):
+            logger.warning("🧠 [COORDINATOR] System is in THROTTLE MODE")
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('body_systems', json.dumps({
+                'type': 'coordination_result',
+                'events_detected': events,
+                'responses_triggered': responses,
+                'is_throttled': result.get('is_throttled', False),
+                'timestamp': result.get('timestamp'),
+            }))
+            logger.debug("🧠 [COORDINATOR] Result published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🧠 [COORDINATOR] Redis publish failed: {redis_error}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"🧠 [COORDINATOR] Coordination failed: {e}")
+        return {
+            'success': False,
+            'error': str(e),
         }
