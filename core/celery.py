@@ -1486,6 +1486,17 @@ app.conf.beat_schedule = {
             'batch_size': 50,  # Process 50 decisions per run
         }
     },
+
+    # Session 701: HEART Service - System Health Monitoring
+    # The central heartbeat of the AI body - monitors all vital systems
+    'heart-service-heartbeat': {
+        'task': 'core.tasks.run_heartbeat',
+        'schedule': 60.0,  # Every 60 seconds
+        'options': {
+            'expires': 55,  # Expire before next run
+            'queue': 'broadcast',  # High-frequency status task
+        }
+    },
 }
 
 # Task routing configuration

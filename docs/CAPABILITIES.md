@@ -1,22 +1,23 @@
 # Platform Capabilities
 
-**Last Updated:** Session 695 (January 6, 2026) - Added SKIN Layer for workspace management
+**Last Updated:** Session 701 (January 6, 2026) - Added HEART Service for system health monitoring
 
 ---
 
-## System Overview (Session 695)
+## System Overview (Session 701)
 
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Total Agents** | **72** | 48 routable, 24 sub-agents (5 coordinator teams) - ALL have workspace integration |
 | **Total Spiders** | **77** | 72 working, 5 need API keys |
 | **PA Tools** | **83** | +workspace_tool (Session 695) |
-| **Database Models** | **332+** | 37 categories (+3 SKIN layer) |
-| **Celery Tasks** | **226** | 53 scheduled via Beat |
-| **Services** | **95** | Business logic layer (+workspace_manager.py) |
+| **Database Models** | **338+** | 37 categories (+2 HEART models) |
+| **Celery Tasks** | **129** | +run_heartbeat (every 60s) |
+| **Services** | **98** | Business logic layer (+heart.py) |
 | **Discord Commands** | **112** | 29 Cog categories |
 | **Advisors** | **25** | Famous figures + domain experts |
 | **Sci-Fi Features** | **14** | All active (Session 567 cleanup) |
+| **HEART Service** | **2 models** | HeartBeat, ComponentStatus - monitors 6 body parts |
 | **SKIN Layer** | **3 models** | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
 | **WORKSPACE_AWARE_AGENTS** | **22** | Development, Content, Strategy, Research, Analysis, Legal |
 
@@ -83,6 +84,7 @@
 | **Boardroom Noise Filter** | **-12% garbage decisions** | **Production (Session 586)** |
 | **Pilot Readiness Gate** | **7 APIs + Risk Checklists + Pilot Execution** | **Production (Session 592)** |
 | **SKIN Layer** | **Workspace Management + File Writing + Git** | **Production (Session 695)** |
+| **HEART Service** | **System Health Monitoring (6 body parts)** | **Production (Session 701)** |
 
 ---
 
@@ -97,6 +99,7 @@
 | **CONSCIOUSNESS** | Human Operator | The self, makes final decisions |
 | **EYES/EARS/HANDS** | Human Interface Layer | Attention items, feedback, preferences |
 | **BRAIN** | ThinkingAgent | Complex reasoning and evaluation |
+| **HEART** | HeartMonitorService | Central health monitoring (Session 701) |
 | **NERVOUS SYSTEM (LLM)** | AgentLLMRouter | Routes agents to optimal LLM providers |
 | **NERVOUS SYSTEM (ML)** | Agent-Model Router | Routes tasks to ML models |
 | **ORGANS** | 72 Specialized Agents | Each handles specific domain tasks |
@@ -181,6 +184,65 @@ result = agent.execute_with_workspace(
 | `core/models_skin_layer.py` | ~350 | 3 database models |
 | `core/services/workspace_manager.py` | ~850 | Core SKIN services |
 | `core/agents/base_agent.py` | +250 | Workspace methods for all agents |
+
+---
+
+## HEART Service - System Health Monitoring (Session 701)
+
+The **HEART** (Health, Events, Activity, Real-time Telemetry) service is the central heartbeat of the AI body. It continuously monitors all system components every 60 seconds and provides health status through CLI, API, and Celery Beat.
+
+### Components Monitored (6 Body Parts)
+
+| Component | What It Checks | Healthy Threshold |
+|-----------|----------------|-------------------|
+| **Brain** | ThinkingAgent availability | Can import & instantiate |
+| **Nervous System** | LLM Provider Registry | ≥1 provider active |
+| **Organs** | 72 Agents in database | ≥50 agents registered |
+| **Sensory** | 77 Spiders in registry | ≥50 spiders registered |
+| **Skin** | Workspace Manager | Module importable |
+| **Memory** | Database + Redis connectivity | Both respond to ping |
+
+### Health Status Levels
+
+| Status | Score Range | Meaning |
+|--------|-------------|---------|
+| **HEALTHY** | 80-100% | All systems operational |
+| **DEGRADED** | 50-79% | Some components have issues |
+| **CRITICAL** | 0-49% | Major systems failing (Discord alert sent) |
+
+### Usage
+
+```bash
+# CLI Commands
+python manage.py heart_check              # Full health check
+python manage.py heart_check brain        # Check specific component
+python manage.py heart_check --watch      # Continuous monitoring (60s)
+python manage.py heart_check --history    # Show heartbeat history
+python manage.py heart_check --json       # JSON output
+
+# API Endpoints
+GET /api/heart/pulse/                     # Run full check now
+GET /api/heart/status/                    # Get cached vitals
+GET /api/heart/history/                   # Get heartbeat history
+GET /api/heart/component/<name>/          # Component detail
+GET /api/heart/alive/                     # Quick alive check
+```
+
+### Database Models
+
+| Model | Fields | Purpose |
+|-------|--------|---------|
+| **HeartBeat** | 10 | Time-series health records |
+| **ComponentStatus** | 15 | Current status cache per component |
+
+### Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/models_heart.py` | ~200 | Database models |
+| `core/services/heart.py` | ~500 | HeartMonitorService |
+| `core/views_heart.py` | ~180 | 5 API endpoints |
+| `core/management/commands/heart_check.py` | ~240 | CLI command |
 
 ---
 

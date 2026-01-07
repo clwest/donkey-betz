@@ -1,8 +1,8 @@
 # Services Reference
 
-**Last Updated:** Session 567 (December 28, 2025)
+**Last Updated:** Session 701 (January 6, 2026)
 **Location:** `core/services/`
-**Total Services:** 93 service classes across 81 files
+**Total Services:** 98 service classes across 82 files
 
 ---
 
@@ -29,6 +29,7 @@ The services layer contains business logic separated from views and models. Serv
 | Memory & Learning | 5 | Embeddings, implicit learning |
 | Event System | 3 | Event bus, handlers |
 | Chief of Staff | 5 | Reviews, decisions, concerns |
+| **System Health** | **1** | **HEART service - health monitoring (Session 701)** |
 | Utility Services | 16 | Various specialized services |
 
 ---
@@ -483,6 +484,52 @@ review = service.generate_review(
 ### HumanActionService
 **File:** `human_action_service.py`
 **Purpose:** Surfaces items requiring human action
+
+---
+
+## System Health (1 Service)
+
+### HeartMonitorService
+**File:** `heart.py`
+**Purpose:** Central health monitoring system - the "heartbeat" of the AI body (Session 701)
+
+Monitors 6 system components every 60 seconds:
+- **Brain** - ThinkingAgent availability
+- **Nervous System** - LLM Provider Registry status
+- **Organs** - 72 Agents health
+- **Sensory** - 77 Spiders health
+- **Skin** - Workspace Manager availability
+- **Memory** - Database + Redis connectivity
+
+```python
+from core.services.heart import get_heart_monitor
+
+heart = get_heart_monitor()
+
+# Run full health check
+pulse = heart.pulse()
+print(f"Health: {pulse['overall_status']} ({pulse['health_score']}%)")
+
+# Check specific component
+brain_status = heart.check_brain()
+
+# Quick alive check
+is_alive = heart.is_alive()
+
+# Get cached vitals
+vitals = heart.get_vitals()
+
+# Get heartbeat history
+history = heart.get_history(hours=24, limit=100)
+```
+
+**Features:**
+- Singleton pattern for efficient reuse
+- 60-second Celery Beat schedule (`run_heartbeat` task)
+- Discord alerts on CRITICAL status
+- Time-series database storage (HeartBeat model)
+- Component status caching (ComponentStatus model)
+- CLI management command: `python manage.py heart_check`
 
 ---
 

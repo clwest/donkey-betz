@@ -1,68 +1,83 @@
-# Session 701 - Start Here
+# Session 702 - Start Here
 
-**Previous Session:** 700 (LLM Routing UI + Bug Fixes)
+**Previous Session:** 701 (HEART Service - System Health Monitoring)
 **Date:** January 6, 2026
-**Status:** 100% Reality Score | LLM Routing UI COMPLETE
+**Status:** 100% Reality Score | HEART Service COMPLETE
 
 ---
 
-## Session 700 Summary
+## Session 701 Summary
 
-### 1. Hierarchical File Tree (Completed)
+### HEART Service - The Central Heartbeat of the AI Body
 
-Fixed the Workspace Files tab to show proper directory structure:
+Implemented the **HEART** (Health, Events, Activity, Real-time Telemetry) service - the system health monitoring component that continuously checks all vital systems every 60 seconds.
 
-**Backend (`core/views_workspace_api.py`):**
-- Updated `/api/workspaces/{id}/files/` to return hierarchical tree
-- Uses cached `file_tree` from WorkspaceContext
-- Returns `{ tree: [...], total_files, total_directories }`
-- Added `?format=flat` for backwards compatibility
+**Human Body Architecture Now Complete:**
 
-**Frontend (`WorkspacePage.tsx`):**
-- Updated to consume new `tree` property
-- FileTree component shows folders with expand/collapse
+| Body Part | Technical Component | Purpose |
+|-----------|---------------------|---------|
+| **CONSCIOUSNESS** | Human Operator | Final decisions, approvals |
+| **EYES/EARS** | HumanInterfaceLayer | Attention aggregation |
+| **BRAIN** | ThinkingAgent | Autonomous reasoning |
+| **HEART** | HeartMonitorService | **Health monitoring (NEW)** |
+| **NERVOUS SYSTEM** | LLM/ML Routers | Signal routing |
+| **ORGANS** | 72 Specialized Agents | Work execution |
+| **SENSORY** | 77 Spiders | Data gathering |
+| **SKIN** | WorkspaceManager | Interface with reality |
+| **MEMORY** | Database & Redis | Persistence |
 
-**Result:** 71 root items, 2355 directories, 13376 files visible
+### Files Created (5)
 
-### 2. LLM Routing UI (Completed)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/models_heart.py` | ~200 | HeartBeat + ComponentStatus models |
+| `core/services/heart.py` | ~500 | HeartMonitorService class |
+| `core/views_heart.py` | ~180 | 5 API endpoints |
+| `core/management/commands/heart_check.py` | ~240 | CLI management command |
+| `core/migrations/0147_session_701_heart_service.py` | ~130 | Database migration |
 
-Built complete frontend for Backend Claude's Session 699 APIs:
+### Files Modified (4)
 
-**New Page (`LLMRoutingPage.tsx` ~730 lines):**
-- **Overview tab:** Stats cards, 24h activity, provider status, 7-day summary
-- **Providers tab:** 6 provider cards with status and costs
-- **Models tab:** 16 models with costs, capabilities, expandable details
-- **Agent Configs tab:** 75 agent-model mappings table with search
-- **Logs tab:** Call logs with success/failure, tokens, cost, latency
-- **Analytics tab:** 7-day stats, cost by provider, top agents by cost
+| File | Changes |
+|------|---------|
+| `core/urls.py` | Added 5 HEART API routes |
+| `core/tasks.py` | Added `run_heartbeat` Celery task |
+| `core/celery.py` | Added Beat schedule (every 60 seconds) |
+| `core/admin.py` | Registered HeartBeat + ComponentStatus models |
 
-**API Methods (`api.ts`):**
-```typescript
-llmRoutingApi.status()           // System status
-llmRoutingApi.providers()        // 6 LLM providers
-llmRoutingApi.models()           // 16 models with costs
-llmRoutingApi.agentConfigs()     // 75 agent-model mappings
-llmRoutingApi.updateAgentConfig() // Update config (auth)
-llmRoutingApi.logs()             // Call logs with filtering
-llmRoutingApi.costAnalytics()    // Cost analytics
+### Components Monitored (6 Body Parts)
+
+| Component | What It Checks | Healthy Threshold |
+|-----------|----------------|-------------------|
+| **Brain** | ThinkingAgent availability | Can import & instantiate |
+| **Nervous System** | LLM Provider Registry | ≥1 provider active |
+| **Organs** | 72 Agents in database | ≥50 agents registered |
+| **Sensory** | 77 Spiders in registry | ≥50 spiders registered |
+| **Skin** | Workspace Manager | Module importable |
+| **Memory** | Database + Redis connectivity | Both respond to ping |
+
+### Test Results
+
+```
+============================================================
+  HEART SERVICE - System Health Check
+============================================================
+  Overall Status: HEALTHY (100.0%)
+  Components: 6/6 healthy
+  Check Duration: 324ms
+
+  [OK] Brain (ThinkingAgent)        - claude-opus-4
+  [OK] Nervous System (LLM Routers) - 5 providers, 8 models
+  [OK] Organs (72 Agents)           - All active
+  [OK] Sensory (77 Spiders)         - 38 categories
+  [OK] Skin (Workspace Manager)     - 2 workspaces
+  [OK] Memory (Database & Redis)    - Connected
+============================================================
 ```
 
-**Navigation:**
-- Route: `/llm-routing`
-- Sidebar: "LLM Routing" with Cpu icon
-
-### 3. Bug Fixes (Completed)
-
-Fixed multiple issues discovered during testing:
-
-1. **Null Safety** - Added `?? 0` operators for undefined numeric values (cost_24h, success_rate_24h, etc.)
-2. **Provider Object Handling** - API returns provider as `{name, display_name}` object, not string
-3. **React Key Warning** - Added fallback keys with index to all 9 `.map()` calls
-4. **Agent Configs Structure** - Updated interface to match nested `primary_model` structure from API
-
 ---
 
-## System Stats (Session 700)
+## System Stats (Session 701)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
@@ -72,37 +87,9 @@ Fixed multiple issues discovered during testing:
 | LLM Providers | 6 | OpenAI, Anthropic, DeepSeek, Together AI, Gemini, Ollama |
 | LLM Models | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | Agent LLM Configs | 75 | All major agents configured |
-| LLM API Endpoints | 7 | Full frontend access |
-| Database Models | 336+ | +4 LLM routing |
-| Services | 97 | +llm_provider_registry, agent_llm_router |
-
----
-
-## Session 700 Commits (8 total)
-
-```
-36047707 fix(Session 700): Update Agent Configs tab to match API structure
-e8328577 fix(Session 700): Add fallback keys to all map() calls in LLM Routing page
-681683eb fix(Session 700): Handle provider as object in ModelRow
-a2ef5b6d fix(Session 700): Add null safety to LLM Routing page
-d86f1e0c docs(Session 700): Mark session complete with file tree and LLM routing UI
-5da0d14a feat(Session 700): Add LLM Routing UI page
-6ec9d7ea docs(Session 700): Update session doc with file tree completion and LLM routing plan
-8b2af36a feat(Session 700): Add hierarchical file tree to workspace API
-```
-
----
-
-## Key Files Modified/Created
-
-| File | Changes |
-|------|---------|
-| `frontend/src/pages/LLMRoutingPage.tsx` | NEW - 730 lines, 6 tabs, all bug fixes applied |
-| `frontend/src/lib/api.ts` | Added llmRoutingApi (7 methods) |
-| `frontend/src/App.tsx` | Added /llm-routing route |
-| `frontend/src/components/layout/Sidebar.tsx` | Added LLM Routing nav item |
-| `core/views_workspace_api.py` | Updated files endpoint for tree structure |
-| `frontend/src/pages/WorkspacePage.tsx` | Updated to use tree data |
+| Database Models | 338+ | +2 HEART models (HeartBeat, ComponentStatus) |
+| Services | 98 | +HeartMonitorService |
+| Celery Tasks | 129 | +run_heartbeat |
 
 ---
 
@@ -112,27 +99,74 @@ d86f1e0c docs(Session 700): Mark session complete with file tree and LLM routing
 # Start services
 make start && make celery
 
-# Test LLM routing APIs
-curl http://localhost:8000/api/v1/llm-routing/status/
-curl http://localhost:8000/api/v1/llm-routing/providers/
-curl http://localhost:8000/api/v1/llm-routing/models/
-curl http://localhost:8000/api/v1/llm-routing/agent-configs/
-curl http://localhost:8000/api/v1/llm-routing/cost-analytics/
+# Run HEART health check
+python manage.py heart_check              # Full check
+python manage.py heart_check --json       # JSON output
+python manage.py heart_check --watch      # Continuous monitoring (60s)
+python manage.py heart_check brain        # Check specific component
+python manage.py heart_check --history    # Show heartbeat history
 
-# Access LLM Routing UI
-open http://localhost:3000/llm-routing
+# HEART API endpoints
+curl http://localhost:8000/api/heart/pulse/                # Run full check
+curl http://localhost:8000/api/heart/status/               # Get cached vitals
+curl http://localhost:8000/api/heart/history/              # Get history
+curl http://localhost:8000/api/heart/component/brain/      # Component detail
+curl http://localhost:8000/api/heart/alive/                # Quick alive check
+
+# Access AI Studio
+open http://localhost:8000/ai-studio/
 ```
 
 ---
 
-## Session 701 Recommendations
+## Session 702 Recommendations - LUNGS Service
 
-1. **Enable routed calls** - Update agents to use `_call_llm_routed()` method
-2. **Add remaining 8 agents** - Complete agent config coverage (75 → 83)
-3. **Add model editing** - Allow changing agent-model assignments in UI
-4. **Cost alerts** - Set up notifications for high LLM costs
-5. **Continue Frontend Data Audit** - Enhance remaining pages
+The next body part to implement is **LUNGS** - Resource & Capacity Management:
+
+### What LUNGS Would Do
+
+1. **Token Budget Tracking**
+   - Track token usage across LLM providers
+   - Set daily/weekly/monthly budgets
+   - Alert when approaching limits
+
+2. **API Rate Limit Management**
+   - Monitor rate limits for each provider
+   - Queue requests when approaching limits
+   - Smart retry with exponential backoff
+
+3. **Cost Optimization**
+   - Route to cheaper models when appropriate
+   - Track cost per agent/task type
+   - Generate cost optimization recommendations
+
+4. **Capacity Planning**
+   - Project usage trends
+   - Alert on unusual consumption patterns
+   - Resource allocation optimization
+
+### Suggested Implementation
+
+```
+core/models_lungs.py          # TokenBudget, RateLimitStatus models
+core/services/lungs.py        # LungsCapacityService class
+core/views_lungs.py           # API endpoints
+core/management/commands/lungs_check.py  # CLI command
+```
+
+### Other Missing Body Parts
+
+After LUNGS, consider:
+- **CIRCULATORY SYSTEM** - Data flow infrastructure (Redis as bloodstream)
+- **SPINE** - Central API routing backbone
+- **IMMUNE SYSTEM** - Security and threat detection
 
 ---
 
-**Session 700 Complete** - File Tree + LLM Routing UI (All 6 tabs working)
+## Handoff Document
+
+See `docs/handoffs/SESSION_701_HEART_SERVICE.md` for complete implementation details.
+
+---
+
+**Session 701 Complete** - HEART Service (6/6 Components Healthy, 100% Health Score)

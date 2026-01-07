@@ -453,3 +453,83 @@ class WorkspaceContextAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# =============================================================================
+# Session 701: HEART Service (System Health Monitoring)
+# =============================================================================
+
+from core.models_heart import HeartBeat, ComponentStatus
+
+
+@admin.register(HeartBeat)
+class HeartBeatAdmin(admin.ModelAdmin):
+    """Admin interface for system heartbeat records."""
+
+    list_display = (
+        'recorded_at', 'overall_status', 'health_score',
+        'components_healthy', 'components_checked', 'check_duration_ms', 'alerts_sent'
+    )
+    list_filter = ('overall_status', 'is_alive', 'alerts_sent', 'recorded_at')
+    search_fields = ('id',)
+    readonly_fields = (
+        'id', 'recorded_at', 'health_score', 'overall_status', 'is_alive',
+        'components', 'check_duration_ms', 'components_checked',
+        'components_healthy', 'alerts_sent'
+    )
+    date_hierarchy = 'recorded_at'
+    ordering = ('-recorded_at',)
+
+    fieldsets = (
+        ('Health Status', {
+            'fields': ('overall_status', 'health_score', 'is_alive', 'alerts_sent')
+        }),
+        ('Component Summary', {
+            'fields': ('components_checked', 'components_healthy', 'check_duration_ms')
+        }),
+        ('Component Details', {
+            'fields': ('components',),
+            'classes': ('collapse',)
+        }),
+        ('System Info', {
+            'fields': ('id', 'recorded_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ComponentStatus)
+class ComponentStatusAdmin(admin.ModelAdmin):
+    """Admin interface for component status records."""
+
+    list_display = (
+        'component', 'display_name', 'status', 'is_healthy',
+        'response_time_ms', 'uptime_percent_24h', 'last_check'
+    )
+    list_filter = ('status', 'is_healthy')
+    search_fields = ('component', 'display_name')
+    readonly_fields = (
+        'component', 'last_check', 'last_healthy', 'check_count_24h',
+        'error_count_24h', 'created_at', 'updated_at'
+    )
+    ordering = ('component',)
+
+    fieldsets = (
+        ('Component Info', {
+            'fields': ('component', 'display_name', 'description')
+        }),
+        ('Current Status', {
+            'fields': ('status', 'is_healthy', 'response_time_ms', 'last_error')
+        }),
+        ('24-Hour Metrics', {
+            'fields': ('uptime_percent_24h', 'check_count_24h', 'error_count_24h')
+        }),
+        ('Details', {
+            'fields': ('details',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('last_check', 'last_healthy', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
