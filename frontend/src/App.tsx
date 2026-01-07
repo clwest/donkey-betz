@@ -17,6 +17,7 @@ import AdminPage from '@/pages/AdminPage'
 import HumanPage from '@/pages/HumanPage'
 import WorkspacePage from '@/pages/WorkspacePage'
 import LLMRoutingPage from '@/pages/LLMRoutingPage'
+import BodyHealthPage from '@/pages/BodyHealthPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -57,6 +58,7 @@ function App() {
         <Route path="llm-routing" element={<LLMRoutingPage />} />
         <Route path="human" element={<HumanPage />} />
         <Route path="workspace" element={<WorkspacePage />} />
+        <Route path="body-health" element={<BodyHealthPage />} />
       </Route>
     </Routes>
   )

@@ -3680,6 +3680,36 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 710: BODY UNIFIED - Body Health Dashboard API
+# =========================================================================
+from core.views_body import (
+    body_vitals_view,
+    body_alerts_view,
+    body_history_view,
+    body_system_detail_view,
+    body_summary_view,
+    # Session 711: Body Coordination
+    body_coordination_status_view,
+    body_coordination_run_view,
+    body_coordination_log_view,
+    body_throttle_status_view,
+)
+
+urlpatterns += [
+    path('api/body/vitals/', body_vitals_view, name='body-vitals'),
+    path('api/body/alerts/', body_alerts_view, name='body-alerts'),
+    path('api/body/history/', body_history_view, name='body-history'),
+    path('api/body/summary/', body_summary_view, name='body-summary'),
+    # Session 711: Body Coordination
+    path('api/body/coordination/status/', body_coordination_status_view, name='body-coordination-status'),
+    path('api/body/coordination/run/', body_coordination_run_view, name='body-coordination-run'),
+    path('api/body/coordination/log/', body_coordination_log_view, name='body-coordination-log'),
+    path('api/body/throttle/', body_throttle_status_view, name='body-throttle'),
+    # System detail must be last (catch-all pattern)
+    path('api/body/<str:system_name>/', body_system_detail_view, name='body-system-detail'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

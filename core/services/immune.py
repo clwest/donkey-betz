@@ -299,6 +299,10 @@ class ImmuneSystemService:
             'threats_by_severity': status.threats_by_severity,
         }
 
+    def get_status(self) -> dict:
+        """Get current status for body coordinator integration."""
+        return self.get_vitals()
+
     def check_request(self, ip: str = None, user_id: int = None,
                      path: str = None, user_agent: str = None) -> Tuple[bool, str]:
         """

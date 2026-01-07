@@ -255,6 +255,18 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/muscular/overworked/',  # Get overworked muscles
         '/api/muscular/history/',  # Get muscular pulse history
         '/api/muscular/is-strong/',  # Quick alive check
+
+        # Session 710: BODY UNIFIED - Body Health Dashboard API
+        '/api/body/vitals/',  # All systems health
+        '/api/body/alerts/',  # Active alerts
+        '/api/body/history/',  # Historical data
+        '/api/body/summary/',  # Compact summary
+
+        # Session 711: Body Coordination API
+        '/api/body/coordination/status/',  # Coordination status
+        '/api/body/coordination/run/',  # Trigger coordination
+        '/api/body/coordination/log/',  # Coordination log
+        '/api/body/throttle/',  # Throttle status
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

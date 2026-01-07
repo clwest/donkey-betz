@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { assistantApi, userLearningApi } from '@/lib/api'
+import { assistantApi, userLearningApi, bodyApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import {
   Send, Mic, MicOff, Loader2, Bot, User, Copy, RefreshCw,
   ThumbsUp, ThumbsDown, Trash2, Sparkles, AlertCircle,
   ChevronRight, CheckCircle, XCircle, Zap, MessageSquare,
-  Heart, TrendingUp, Lightbulb, Palette, Settings2
+  Heart, TrendingUp, Lightbulb, Palette, Settings2, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -139,6 +139,13 @@ export default function AssistantPage() {
     retry: false,
   })
 
+  // Session 712: Body Health integration - Assistant aware of body state
+  const { data: bodyVitalsResponse } = useQuery({
+    queryKey: ['body-vitals'],
+    queryFn: () => bodyApi.vitals(),
+    refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
   // Generate insights mutation
   const generateInsightsMutation = useMutation({
     mutationFn: () => userLearningApi.generateInsights(),
@@ -223,6 +230,11 @@ export default function AssistantPage() {
   const styleEvolution: StyleEvolution[] = styleEvolutionData?.data?.evolution || styleEvolutionData?.data || []
   const insights: LearningInsight[] = insightsData?.data?.insights || insightsData?.data || []
   const velocity = velocityData?.data || {}
+
+  // Session 712: Body health data
+  const bodyVitals = bodyVitalsResponse?.data || null
+  const bodyHealthScore = bodyVitals?.health_score || 0
+  const bodySystems = bodyVitals?.systems || {}
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -559,6 +571,65 @@ export default function AssistantPage() {
           <div className="flex-1 overflow-auto space-y-4">
             {sidebarTab === 'context' ? (
               <>
+                {/* Session 712: Body Health Card - Assistant aware of body state */}
+                {bodyVitals && (
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Heart
+                          size={18}
+                          className={cn(
+                            'animate-pulse',
+                            bodyHealthScore >= 80 ? 'text-accent-green' :
+                            bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                          )}
+                          fill="currentColor"
+                        />
+                        <h3 className="font-semibold">Body Health</h3>
+                      </div>
+                      <span className={cn(
+                        'text-sm font-bold',
+                        bodyHealthScore >= 80 ? 'text-accent-green' :
+                        bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {bodyHealthScore.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-sm" title="Body Systems">
+                        <span title={`Heart: ${bodySystems.heart?.status || 'unknown'}`}>
+                          {bodySystems.heart?.status === 'healthy' ? '❤️' : '🖤'}
+                        </span>
+                        <span title={`Lungs: ${bodySystems.lungs?.status || 'unknown'}`}>
+                          {bodySystems.lungs?.status === 'healthy' ? '🫁' : '💨'}
+                        </span>
+                        <span title={`Circulatory: ${bodySystems.circulatory?.status || 'unknown'}`}>
+                          {bodySystems.circulatory?.status === 'flowing' ? '🩸' : '🧊'}
+                        </span>
+                        <span title={`Spine: ${bodySystems.spine?.status || 'unknown'}`}>
+                          {bodySystems.spine?.status === 'aligned' ? '🦴' : '⚠️'}
+                        </span>
+                        <span title={`Immune: ${bodySystems.immune?.status || 'unknown'}`}>
+                          {bodySystems.immune?.status === 'protected' ? '🛡️' : '🦠'}
+                        </span>
+                        <span title={`Digestive: ${bodySystems.digestive?.status || 'unknown'}`}>
+                          {bodySystems.digestive?.status === 'healthy' ? '🍽️' : '🤢'}
+                        </span>
+                        <span title={`Muscular: ${bodySystems.muscular?.status || 'unknown'}`}>
+                          {bodySystems.muscular?.status === 'strong' || bodySystems.muscular?.status === 'fit' ? '💪' : '😓'}
+                        </span>
+                      </div>
+                      <a
+                        href="/body-health"
+                        className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                      >
+                        <span>Details</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Attention Items */}
                 <div className="card">
                   <div className="flex items-center gap-2 mb-3">

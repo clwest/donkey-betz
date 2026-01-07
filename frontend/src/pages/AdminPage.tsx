@@ -1,42 +1,61 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi, immuneApi, digestiveApi } from '@/lib/api'
+// Session 712: Removed unused body system APIs (lungsApi, circulatoryApi, spineApi, immuneApi, digestiveApi, muscularApi)
+import { adminApi, dashboardApi, heartApi, bodyApi } from '@/lib/api'
+// Session 712: Cleaned up unused icon imports after removing body system tabs
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route, Shield, ShieldAlert, ShieldCheck, Ban, Utensils, Gauge, AlertCircle
+  Heart, Wind, Bone, Shield, Utensils, Dumbbell, Droplets, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'immune' | 'digestive' | 'health' | 'celery' | 'spiders' | 'agents'
+// Session 712: Simplified tab types after removing redundant body system tabs
+type TabType = 'heart' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
   message: string
 }
 
+// Session 712: Removed redundant body system tabs (LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR)
+// These are now shown in the unified Body Systems Status on the HEART tab and the Body Health page
 const tabs = [
-  { id: 'heart' as TabType, label: 'HEART', icon: Heart },
-  { id: 'lungs' as TabType, label: 'LUNGS', icon: Wind },
-  { id: 'circulatory' as TabType, label: 'CIRCULATORY', icon: GitBranch },
-  { id: 'spine' as TabType, label: 'SPINE', icon: Bone },
-  { id: 'immune' as TabType, label: 'IMMUNE', icon: Shield },
-  { id: 'digestive' as TabType, label: 'DIGESTIVE', icon: Utensils },
+  { id: 'heart' as TabType, label: 'Body Health', icon: Heart },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
   { id: 'agents' as TabType, label: 'Agents', icon: Bot },
 ]
 
-// Body part icons for HEART service
-const BODY_PARTS = {
-  brain: { icon: Brain, label: 'Brain', description: 'ThinkingAgent - autonomous reasoning' },
-  nervous_system: { icon: Zap, label: 'Nervous System', description: 'LLM/ML Routers - signal routing' },
-  organs: { icon: Users, label: 'Organs', description: '72 Agents - work execution' },
-  sensory: { icon: Eye, label: 'Sensory', description: '77 Spiders - data gathering' },
-  skin: { icon: Hand, label: 'Skin', description: 'Workspace Manager - reality interface' },
-  memory: { icon: Database, label: 'Memory', description: 'Database & Redis - persistence' },
+// Session 712: Updated to actual 7 body systems
+const BODY_SYSTEMS = {
+  heart: { icon: Heart, label: 'HEART', description: 'Health monitoring & heartbeat', emoji: '❤️' },
+  lungs: { icon: Wind, label: 'LUNGS', description: 'Resource & budget management', emoji: '🫁' },
+  circulatory: { icon: Droplets, label: 'CIRCULATORY', description: 'Data flow & pipelines', emoji: '🩸' },
+  spine: { icon: Bone, label: 'SPINE', description: 'Central API routing', emoji: '🦴' },
+  immune: { icon: Shield, label: 'IMMUNE', description: 'Security & threat detection', emoji: '🛡️' },
+  digestive: { icon: Utensils, label: 'DIGESTIVE', description: 'Data ingestion & processing', emoji: '🍽️' },
+  muscular: { icon: Dumbbell, label: 'MUSCULAR', description: 'Agent work execution', emoji: '💪' },
 } as const
+
+// Session 712: Healthy status values for each system
+const HEALTHY_STATUSES: Record<string, string[]> = {
+  heart: ['healthy'],
+  lungs: ['healthy', 'normal', 'optimal'],
+  circulatory: ['flowing', 'healthy'],
+  spine: ['aligned', 'healthy'],
+  immune: ['healthy', 'protected'],
+  digestive: ['healthy', 'processing', 'digesting'],
+  muscular: ['strong', 'fit', 'healthy'],
+}
+
+// Helper to determine if a system is healthy
+function isSystemHealthy(system: string, status?: { status?: string; score?: number }): boolean {
+  if (!status) return false
+  const healthyStatuses = HEALTHY_STATUSES[system] || ['healthy']
+  return healthyStatuses.includes(status.status || '') || (status.score !== undefined && status.score >= 80)
+}
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
   return (
@@ -56,7 +75,7 @@ export default function AdminPage() {
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
 
   // HEART Service queries (Session 702)
-  const { data: heartStatusData, isLoading: loadingHeart, refetch: refetchHeart } = useQuery({
+  const { data: heartStatusData, isLoading: loadingHeart } = useQuery({
     queryKey: ['heart-status'],
     queryFn: () => heartApi.status(),
     refetchInterval: 30000,
@@ -69,132 +88,17 @@ export default function AdminPage() {
     enabled: activeTab === 'heart',
   })
 
-  // LUNGS Service queries (Session 703)
-  const { data: lungsStatusData, isLoading: loadingLungs, refetch: refetchLungs } = useQuery({
-    queryKey: ['lungs-status'],
-    queryFn: () => lungsApi.status(),
+  // Session 712: Body vitals query for unified body systems view
+  const { data: bodyVitalsData, refetch: refetchBodyVitals } = useQuery({
+    queryKey: ['body-vitals'],
+    queryFn: () => bodyApi.vitals(),
     refetchInterval: 30000,
-    enabled: activeTab === 'lungs',
+    enabled: activeTab === 'heart',
   })
 
-  const { data: lungsBudgetsData } = useQuery({
-    queryKey: ['lungs-budgets'],
-    queryFn: () => lungsApi.budgets(),
-    enabled: activeTab === 'lungs',
-  })
-
-  const { data: lungsForecastData } = useQuery({
-    queryKey: ['lungs-forecast'],
-    queryFn: () => lungsApi.forecast(),
-    enabled: activeTab === 'lungs',
-  })
-
-  // CIRCULATORY Service queries (Session 703)
-  // Use /circulate/ endpoint which returns full data with correct field names
-  const { data: circulatoryStatusData, isLoading: loadingCirculatory, refetch: refetchCirculatory } = useQuery({
-    queryKey: ['circulatory-circulate'],
-    queryFn: () => circulatoryApi.circulate(),
-    refetchInterval: 30000,
-    enabled: activeTab === 'circulatory',
-  })
-
-  // Routes are now fetched from /circulate/ endpoint, not needed separately
-  // const { data: circulatoryRoutesData } = useQuery({
-  //   queryKey: ['circulatory-routes'],
-  //   queryFn: () => circulatoryApi.routes(),
-  //   enabled: activeTab === 'circulatory',
-  // })
-
-  const { data: circulatoryBottlenecksData } = useQuery({
-    queryKey: ['circulatory-bottlenecks'],
-    queryFn: () => circulatoryApi.bottlenecks(),
-    enabled: activeTab === 'circulatory',
-  })
-
-  const { data: circulatoryHistoryData } = useQuery({
-    queryKey: ['circulatory-history'],
-    queryFn: () => circulatoryApi.history(24, 50),
-    enabled: activeTab === 'circulatory',
-  })
-
-  // SPINE Service queries (Session 704)
-  const { data: spineAlignData, isLoading: loadingSpine, refetch: refetchSpine } = useQuery({
-    queryKey: ['spine-align'],
-    queryFn: () => spineApi.align(),
-    refetchInterval: 30000,
-    enabled: activeTab === 'spine',
-  })
-
-  const { data: spineCategoriesData } = useQuery({
-    queryKey: ['spine-categories'],
-    queryFn: () => spineApi.categories(),
-    enabled: activeTab === 'spine',
-  })
-
-  // History query available for future use
-  // const { data: spineHistoryData } = useQuery({
-  //   queryKey: ['spine-history'],
-  //   queryFn: () => spineApi.history(24, 50),
-  //   enabled: activeTab === 'spine',
-  // })
-
-  // IMMUNE System queries (Session 705)
-  const { data: immuneScanData, isLoading: loadingImmune, refetch: refetchImmune } = useQuery({
-    queryKey: ['immune-scan'],
-    queryFn: () => immuneApi.scan(),
-    refetchInterval: 30000,
-    enabled: activeTab === 'immune',
-  })
-
-  const { data: immunePatternsData } = useQuery({
-    queryKey: ['immune-patterns'],
-    queryFn: () => immuneApi.patterns(),
-    enabled: activeTab === 'immune',
-  })
-
-  const { data: immuneThreatsData } = useQuery({
-    queryKey: ['immune-threats'],
-    queryFn: () => immuneApi.threats({ hours: 24, limit: 50 }),
-    enabled: activeTab === 'immune',
-  })
-
-  const { data: immuneQuarantineData } = useQuery({
-    queryKey: ['immune-quarantine'],
-    queryFn: () => immuneApi.quarantine(),
-    enabled: activeTab === 'immune',
-  })
-
-  // DIGESTIVE System queries (Session 706)
-  const { data: digestiveDigestData, isLoading: loadingDigestive, refetch: refetchDigestive } = useQuery({
-    queryKey: ['digestive-digest'],
-    queryFn: () => digestiveApi.digest(),
-    refetchInterval: 30000,
-    enabled: activeTab === 'digestive',
-  })
-
-  const { data: digestiveRoutesData } = useQuery({
-    queryKey: ['digestive-routes'],
-    queryFn: () => digestiveApi.routes(),
-    enabled: activeTab === 'digestive',
-  })
-
-  const { data: digestiveBottlenecksData } = useQuery({
-    queryKey: ['digestive-bottlenecks'],
-    queryFn: () => digestiveApi.bottlenecks(),
-    enabled: activeTab === 'digestive',
-  })
-
-  const { data: digestiveMetabolismData } = useQuery({
-    queryKey: ['digestive-metabolism'],
-    queryFn: () => digestiveApi.metabolism(),
-    enabled: activeTab === 'digestive',
-  })
-
-  const { data: digestiveHistoryData } = useQuery({
-    queryKey: ['digestive-history'],
-    queryFn: () => digestiveApi.history(24, 50),
-    enabled: activeTab === 'digestive',
-  })
+  // Session 712: Removed redundant body system queries (LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR)
+  // These are now handled by the unified bodyApi.vitals() query above
+  // Individual system details are available on the Body Health page (/body-health)
 
   // Fetch v1 health
   const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
@@ -267,68 +171,13 @@ export default function AdminPage() {
   const heartHistory = heartHistoryData?.data?.heartbeats || []
   const heartComponents = heartStatus.components || {}
 
-  // LUNGS data (Session 703)
-  const lungsStatus = lungsStatusData?.data || {}
-  const lungsBudgets = lungsBudgetsData?.data?.budgets || []
-  const lungsForecasts = lungsForecastData?.data?.forecasts || []
-  const lungsProviders = lungsStatus.providers || {}
+  // Session 712: Body vitals data for unified view
+  const bodyVitals = bodyVitalsData?.data || { systems: {}, health_score: 0, overall_health: 'unknown' }
+  const bodySystems = bodyVitals.systems || {}
 
-  // CIRCULATORY data (Session 703)
-  const circulatoryStatus = circulatoryStatusData?.data || {}
-  // Convert routes object to array format from /circulate/ endpoint
-  const circulatoryRoutesObj = circulatoryStatus.routes || {}
-  interface CirculatoryRoute {
-    id: string
-    name: string
-    display_name?: string
-    status: string
-    is_healthy: boolean
-    health_score: number
-    current_depth?: number
-    throughput?: number
-    latency_ms?: number
-    active_workers?: number
-    active_tasks?: number
-    bottleneck?: boolean
-  }
-  const circulatoryRoutes: CirculatoryRoute[] = Object.entries(circulatoryRoutesObj).map(([name, data]) => ({
-    id: name,
-    name,
-    status: 'unknown',
-    is_healthy: false,
-    health_score: 0,
-    ...(data as Partial<CirculatoryRoute>),
-  }))
-  const circulatoryBottlenecks = circulatoryStatus.bottlenecks || circulatoryBottlenecksData?.data?.bottlenecks || []
-  const circulatoryHistory = circulatoryHistoryData?.data?.history || []
-
-  // SPINE data (Session 704)
-  const spineStatus = spineAlignData?.data || {}
-  const spinePatterns = spineStatus.patterns || {}
-  const spinePatternsArray = Object.entries(spinePatterns).map(([pattern, data]) => ({
-    pattern,
-    ...(data as Record<string, unknown>),
-  }))
-  const spineCategories = spineCategoriesData?.data?.categories || {}
-  // const spineHistory = spineHistoryData?.data?.history || []  // Available for future use
-  const spineIntegrations = spineStatus.integrations || {}
-
-  // IMMUNE data (Session 705)
-  const immuneStatus = immuneScanData?.data || {}
-  const immunePatterns = immunePatternsData?.data?.patterns || []
-  const immuneThreats = immuneThreatsData?.data?.threats || []
-  const immuneQuarantine = immuneQuarantineData?.data?.quarantine || []
-  // Available for future use:
-  // const immuneThreatsByCategory = immuneStatus.threats_by_category || {}
-  // const immuneThreatsBySeverity = immuneStatus.threats_by_severity || {}
-
-  // DIGESTIVE data (Session 706)
-  const digestiveStatus = digestiveDigestData?.data || {}
-  const digestiveRoutes = digestiveRoutesData?.data?.routes || []
-  const digestiveBottlenecks = digestiveBottlenecksData?.data?.bottlenecks || []
-  const digestiveMetabolism = digestiveMetabolismData?.data || {}
-  const digestiveHistory = digestiveHistoryData?.data?.history || []
-  const digestiveStages = digestiveStatus.stages || {}
+  // Session 712: Removed data extraction for LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE
+  // These are now accessed via the unified bodyVitals query above
+  // Individual system details are available on the Body Health page (/body-health)
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -349,34 +198,22 @@ export default function AdminPage() {
     setTimeout(() => setActionResult(null), 3000)
   }
 
+  // Session 712: Updated to handle all body system status values
+  const HEALTHY_STATUS_VALUES = ['healthy', 'ok', 'running', 'active', 'normal', 'optimal', 'flowing', 'aligned', 'protected', 'strong', 'fit', 'processing', 'digesting']
+  const DEGRADED_STATUS_VALUES = ['degraded', 'warning', 'sluggish', 'slow', 'depleted', 'fatigued']
+
   const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'healthy':
-      case 'ok':
-      case 'running':
-      case 'active':
-        return 'text-accent-green'
-      case 'degraded':
-      case 'warning':
-        return 'text-accent-amber'
-      default:
-        return 'text-accent-red'
-    }
+    const s = status?.toLowerCase() || ''
+    if (HEALTHY_STATUS_VALUES.includes(s)) return 'text-accent-green'
+    if (DEGRADED_STATUS_VALUES.includes(s)) return 'text-accent-amber'
+    return 'text-accent-red'
   }
 
   const getStatusBg = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'healthy':
-      case 'ok':
-      case 'running':
-      case 'active':
-        return 'bg-accent-green/20'
-      case 'degraded':
-      case 'warning':
-        return 'bg-accent-amber/20'
-      default:
-        return 'bg-accent-red/20'
-    }
+    const s = status?.toLowerCase() || ''
+    if (HEALTHY_STATUS_VALUES.includes(s)) return 'bg-accent-green/20'
+    if (DEGRADED_STATUS_VALUES.includes(s)) return 'bg-accent-amber/20'
+    return 'bg-accent-red/20'
   }
 
   return (
@@ -490,63 +327,75 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Body Parts Grid */}
+              {/* Session 712: Body Systems Grid - Updated to use 7 real body systems */}
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Body Part Status</h3>
-                  <button
-                    onClick={() => refetchHeart()}
-                    className="btn btn-secondary btn-sm flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">Body Systems Status</h3>
+                    <span className={cn(
+                      'text-sm font-bold px-2 py-0.5 rounded',
+                      bodyVitals.health_score >= 80 ? 'bg-accent-green/20 text-accent-green' :
+                      bodyVitals.health_score >= 50 ? 'bg-accent-amber/20 text-accent-amber' :
+                      'bg-accent-red/20 text-accent-red'
+                    )}>
+                      {(bodyVitals.health_score || 0).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="/body-health"
+                      className="btn btn-secondary btn-sm flex items-center gap-2"
+                    >
+                      <ExternalLink size={14} />
+                      Full Details
+                    </a>
+                    <button
+                      onClick={() => refetchBodyVitals()}
+                      className="btn btn-secondary btn-sm flex items-center gap-2"
+                    >
+                      <RefreshCw size={14} />
+                      Refresh
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(Object.keys(BODY_PARTS) as Array<keyof typeof BODY_PARTS>).map((partKey) => {
-                    const part = BODY_PARTS[partKey]
-                    const status = heartComponents[partKey] || {}
-                    const Icon = part.icon
-                    const isHealthy = status.is_healthy
-                    const partStatus = status.status || 'unknown'
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(Object.keys(BODY_SYSTEMS) as Array<keyof typeof BODY_SYSTEMS>).map((systemKey) => {
+                    const system = BODY_SYSTEMS[systemKey]
+                    const status = bodySystems[systemKey] || {}
+                    const Icon = system.icon
+                    const isHealthy = isSystemHealthy(systemKey, status)
+                    const systemStatus = status.status || 'unknown'
+                    const score = status.score || 0
 
                     return (
                       <div
-                        key={partKey}
+                        key={systemKey}
                         className={cn(
                           'p-4 rounded-lg border transition-colors',
-                          getStatusBg(partStatus),
-                          isHealthy ? 'border-accent-green/30' : isHealthy === false ? 'border-accent-red/30' : 'border-dark-border'
+                          getStatusBg(systemStatus),
+                          isHealthy ? 'border-accent-green/30' : 'border-accent-red/30'
                         )}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0', getStatusBg(partStatus))}>
-                            <Icon size={24} className={getStatusColor(partStatus)} />
+                          <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0', getStatusBg(systemStatus))}>
+                            <Icon size={24} className={getStatusColor(systemStatus)} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-semibold">{part.label}</p>
-                              {isHealthy === true && <CheckCircle size={14} className="text-accent-green" />}
-                              {isHealthy === false && <XCircle size={14} className="text-accent-red" />}
+                              <span className="text-lg">{system.emoji}</span>
+                              <p className="font-semibold">{system.label}</p>
+                              {isHealthy && <CheckCircle size={14} className="text-accent-green" />}
+                              {!isHealthy && <XCircle size={14} className="text-accent-red" />}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">{part.description}</p>
-                            {status.response_time_ms && (
-                              <p className="text-xs text-gray-400 mt-1">Response: {status.response_time_ms}ms</p>
-                            )}
-                            {status.details && (
-                              <div className="mt-2 text-xs text-gray-400">
-                                {Object.entries(status.details).slice(0, 3).map(([key, value]) => (
-                                  <p key={key} className="truncate">
-                                    {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                            {status.last_error && (
-                              <p className="text-xs text-accent-red mt-2 truncate" title={status.last_error}>
-                                {status.last_error}
-                              </p>
-                            )}
+                            <p className="text-xs text-gray-500 mt-1">{system.description}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className={cn('text-sm font-medium capitalize', getStatusColor(systemStatus))}>
+                                {systemStatus}
+                              </span>
+                              <span className={cn('text-sm font-bold', getStatusColor(systemStatus))}>
+                                {score.toFixed(0)}%
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -596,37 +445,45 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Human Body Architecture */}
+              {/* Session 712: Human Body Architecture - Updated to 7 real systems */}
               <div className="card">
                 <h3 className="text-lg font-semibold mb-4">Human Body Architecture</h3>
                 <p className="text-sm text-gray-400 mb-4">
-                  The platform uses the human body as an architectural metaphor. Each body part has specific responsibilities:
+                  The platform uses the human body as an architectural metaphor. Each body system has specific responsibilities:
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-dark-border">
-                        <th className="text-left py-2 px-3 text-gray-400">Body Part</th>
-                        <th className="text-left py-2 px-3 text-gray-400">Component</th>
+                        <th className="text-left py-2 px-3 text-gray-400">System</th>
                         <th className="text-left py-2 px-3 text-gray-400">Purpose</th>
+                        <th className="text-center py-2 px-3 text-gray-400">Score</th>
                         <th className="text-center py-2 px-3 text-gray-400">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-dark-border/50">
-                        <td className="py-2 px-3 font-medium">Consciousness</td>
-                        <td className="py-2 px-3 text-gray-400">Human Operator</td>
-                        <td className="py-2 px-3 text-gray-400">Final decisions & approvals</td>
+                        <td className="py-2 px-3 font-medium">🧠 Consciousness</td>
+                        <td className="py-2 px-3 text-gray-400">Human Operator - Final decisions & approvals</td>
+                        <td className="py-2 px-3 text-center">—</td>
                         <td className="py-2 px-3 text-center"><span className="text-accent-green">Active</span></td>
                       </tr>
-                      {(Object.keys(BODY_PARTS) as Array<keyof typeof BODY_PARTS>).map((partKey) => {
-                        const part = BODY_PARTS[partKey]
-                        const status = heartComponents[partKey] || {}
+                      {(Object.keys(BODY_SYSTEMS) as Array<keyof typeof BODY_SYSTEMS>).map((systemKey) => {
+                        const system = BODY_SYSTEMS[systemKey]
+                        const status = bodySystems[systemKey] || {}
+                        const isHealthy = isSystemHealthy(systemKey, status)
                         return (
-                          <tr key={partKey} className="border-b border-dark-border/50">
-                            <td className="py-2 px-3 font-medium">{part.label}</td>
-                            <td className="py-2 px-3 text-gray-400">{status.display_name || partKey}</td>
-                            <td className="py-2 px-3 text-gray-400">{part.description}</td>
+                          <tr key={systemKey} className="border-b border-dark-border/50">
+                            <td className="py-2 px-3 font-medium">{system.emoji} {system.label}</td>
+                            <td className="py-2 px-3 text-gray-400">{system.description}</td>
+                            <td className="py-2 px-3 text-center">
+                              <span className={cn(
+                                'font-medium',
+                                isHealthy ? 'text-accent-green' : 'text-accent-amber'
+                              )}>
+                                {(status.score || 0).toFixed(0)}%
+                              </span>
+                            </td>
                             <td className="py-2 px-3 text-center">
                               <span className={cn('px-2 py-0.5 rounded text-xs capitalize', getStatusBg(status.status || 'unknown'), getStatusColor(status.status || 'unknown'))}>
                                 {status.status || 'unknown'}
@@ -644,1766 +501,9 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* LUNGS Tab - Session 703 */}
-      {activeTab === 'lungs' && (
-        <div className="space-y-6">
-          {loadingLungs ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              {/* Overall Oxygen Status */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'h-12 w-12 rounded-lg flex items-center justify-center',
-                      (lungsStatus.system_oxygen || 100) >= 80 ? 'bg-accent-green/20' :
-                      (lungsStatus.system_oxygen || 100) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <Wind size={24} className={cn(
-                        (lungsStatus.system_oxygen || 100) >= 80 ? 'text-accent-green' :
-                        (lungsStatus.system_oxygen || 100) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Oxygen Level</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (lungsStatus.system_oxygen || 100) >= 80 ? 'text-accent-green' :
-                        (lungsStatus.system_oxygen || 100) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(lungsStatus.system_oxygen || 100).toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="text-accent-cyan" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Cost Today</p>
-                      <p className="text-2xl font-bold">${(lungsStatus.total_cost_today || 0).toFixed(4)}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Activity className="text-primary-400" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">API Calls Today</p>
-                      <p className="text-2xl font-bold">{lungsStatus.total_calls_today || 0}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="text-accent-green" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Status</p>
-                      <p className={cn(
-                        'text-lg font-bold capitalize',
-                        lungsStatus.system_status === 'normal' ? 'text-accent-green' :
-                        lungsStatus.system_status === 'warning' ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {lungsStatus.system_status || 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Provider Oxygen Levels */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Provider Oxygen Levels</h3>
-                  <button
-                    onClick={() => refetchLungs()}
-                    className="btn btn-secondary btn-sm flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(lungsProviders).map(([provider, data]) => {
-                    const providerData = data as { oxygen_level: number; status: string; cost_today: number; calls_today: number }
-                    const oxygenLevel = providerData.oxygen_level || 100
-                    const status = providerData.status || 'normal'
-
-                    return (
-                      <div
-                        key={provider}
-                        className={cn(
-                          'p-4 rounded-lg border transition-colors',
-                          oxygenLevel >= 80 ? 'bg-accent-green/10 border-accent-green/30' :
-                          oxygenLevel >= 50 ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="font-semibold capitalize">{provider.replace('_', ' ')}</p>
-                          <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
-                            status === 'normal' ? 'bg-accent-green/20 text-accent-green' :
-                            status === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                          )}>
-                            {status}
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Oxygen</span>
-                            <span className={cn(
-                              'font-bold',
-                              oxygenLevel >= 80 ? 'text-accent-green' :
-                              oxygenLevel >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                            )}>
-                              {oxygenLevel.toFixed(1)}%
-                            </span>
-                          </div>
-                          <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full rounded-full transition-all',
-                                oxygenLevel >= 80 ? 'bg-accent-green' :
-                                oxygenLevel >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
-                              )}
-                              style={{ width: `${oxygenLevel}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-500 mt-2">
-                            <span>${(providerData.cost_today || 0).toFixed(4)}</span>
-                            <span>{providerData.calls_today || 0} calls</span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Budget Overview */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Budget Configuration</h3>
-                {lungsBudgets.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-dark-border">
-                          <th className="text-left py-2 px-3 text-gray-400">Budget Name</th>
-                          <th className="text-left py-2 px-3 text-gray-400">Scope</th>
-                          <th className="text-left py-2 px-3 text-gray-400">Period</th>
-                          <th className="text-right py-2 px-3 text-gray-400">Limit</th>
-                          <th className="text-center py-2 px-3 text-gray-400">Warning</th>
-                          <th className="text-center py-2 px-3 text-gray-400">Critical</th>
-                          <th className="text-center py-2 px-3 text-gray-400">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {lungsBudgets.map((budget: {
-                          id: string
-                          name: string
-                          scope: string
-                          scope_identifier: string
-                          period: string
-                          cost_limit: number
-                          warning_threshold: number
-                          critical_threshold: number
-                          is_active: boolean
-                        }) => (
-                          <tr key={budget.id} className="border-b border-dark-border/50 hover:bg-dark-bg/50">
-                            <td className="py-2 px-3 font-medium">{budget.name}</td>
-                            <td className="py-2 px-3 text-gray-400 capitalize">
-                              {budget.scope === 'provider' ? budget.scope_identifier.replace('_', ' ') : budget.scope}
-                            </td>
-                            <td className="py-2 px-3 text-gray-400 capitalize">{budget.period}</td>
-                            <td className="py-2 px-3 text-right font-mono">${budget.cost_limit?.toFixed(2) || '0.00'}</td>
-                            <td className="py-2 px-3 text-center text-accent-amber">{((budget.warning_threshold || 0.8) * 100).toFixed(0)}%</td>
-                            <td className="py-2 px-3 text-center text-accent-red">{((budget.critical_threshold || 0.95) * 100).toFixed(0)}%</td>
-                            <td className="py-2 px-3 text-center">
-                              <span className={cn(
-                                'text-xs px-2 py-1 rounded',
-                                budget.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
-                              )}>
-                                {budget.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <DollarSign className="mx-auto mb-2" size={32} />
-                    <p>No budgets configured</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Spending Forecast */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Spending Forecast</h3>
-                {lungsForecasts.length > 0 ? (
-                  <div className="space-y-3">
-                    {lungsForecasts.map((forecast: {
-                      budget_name: string
-                      scope: string
-                      period: string
-                      limit: number
-                      projected_cost: number
-                      on_pace_to_exceed: boolean
-                      confidence: number
-                      period_elapsed_percent: number
-                    }) => (
-                      <div
-                        key={forecast.budget_name}
-                        className={cn(
-                          'p-4 rounded-lg border transition-colors',
-                          forecast.on_pace_to_exceed ? 'bg-accent-red/10 border-accent-red/30' : 'border-dark-border'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-medium">{forecast.budget_name}</p>
-                            <p className="text-xs text-gray-500">{forecast.scope} • {forecast.period}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {forecast.on_pace_to_exceed && (
-                              <span className="text-xs px-2 py-1 rounded bg-accent-red/20 text-accent-red flex items-center gap-1">
-                                <TrendingUp size={12} />
-                                Exceeding
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-400">Limit</p>
-                            <p className="font-mono font-bold">${forecast.limit.toFixed(2)}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400">Projected</p>
-                            <p className={cn(
-                              'font-mono font-bold',
-                              forecast.on_pace_to_exceed ? 'text-accent-red' : 'text-accent-green'
-                            )}>
-                              ${forecast.projected_cost.toFixed(4)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400">Period Elapsed</p>
-                            <p className="font-mono">{forecast.period_elapsed_percent.toFixed(1)}%</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <TrendingUp className="mx-auto mb-2" size={32} />
-                    <p>No forecast data available</p>
-                  </div>
-                )}
-              </div>
-
-              {/* LUNGS Architecture */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">LUNGS Architecture</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  The LUNGS (Limits, Usage, Notifications, Governance, Spending) service manages resource consumption and budget enforcement across all AI providers.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-cyan mb-1">Oxygen = Budget Remaining</p>
-                    <p className="text-xs text-gray-400">100% = No spending, 0% = Budget exhausted</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-amber mb-1">Warning Threshold</p>
-                    <p className="text-xs text-gray-400">Default 80% - alerts when budget usage reaches this level</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-red mb-1">Critical Threshold</p>
-                    <p className="text-xs text-gray-400">Default 95% - urgent alerts, may block new calls</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-green mb-1">Budget Periods</p>
-                    <p className="text-xs text-gray-400">Daily and Monthly limits per provider and system-wide</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* CIRCULATORY Tab - Session 703 */}
-      {activeTab === 'circulatory' && (
-        <div className="space-y-6">
-          {loadingCirculatory ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              {/* Overall Flow Status */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'h-12 w-12 rounded-lg flex items-center justify-center',
-                      (circulatoryStatus.flow_score || 0) >= 80 ? 'bg-accent-green/20' :
-                      (circulatoryStatus.flow_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <GitBranch size={24} className={cn(
-                        (circulatoryStatus.flow_score || 0) >= 80 ? 'text-accent-green' :
-                        (circulatoryStatus.flow_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Flow Score</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (circulatoryStatus.flow_score || 0) >= 80 ? 'text-accent-green' :
-                        (circulatoryStatus.flow_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(circulatoryStatus.flow_score || 0).toFixed(0)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Activity className="text-accent-cyan" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Overall Status</p>
-                      <p className={cn(
-                        'text-lg font-bold capitalize',
-                        circulatoryStatus.overall_status === 'flowing' ? 'text-accent-green' :
-                        circulatoryStatus.overall_status === 'slow' ? 'text-accent-amber' :
-                        circulatoryStatus.overall_status === 'congested' ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {circulatoryStatus.overall_status || 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="text-accent-green" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Routes</p>
-                      <p className="text-2xl font-bold">
-                        {circulatoryStatus.routes_healthy ?? circulatoryRoutes.filter((r: { is_healthy?: boolean }) => r.is_healthy).length}/
-                        {circulatoryStatus.routes_checked ?? circulatoryRoutes.length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className={cn(
-                      (circulatoryStatus.bottleneck_count || circulatoryBottlenecks.length) > 0 ? 'text-accent-amber' : 'text-gray-500'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Bottlenecks</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (circulatoryStatus.bottleneck_count || circulatoryBottlenecks.length) > 0 ? 'text-accent-amber' : 'text-accent-green'
-                      )}>
-                        {circulatoryStatus.bottleneck_count ?? circulatoryBottlenecks.length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Flow Routes */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Flow Routes</h3>
-                  <button
-                    onClick={() => refetchCirculatory()}
-                    className="btn btn-secondary btn-sm flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {circulatoryRoutes.map((route: {
-                    id: string
-                    name: string
-                    display_name?: string
-                    status: string
-                    is_healthy: boolean
-                    health_score: number
-                    current_depth?: number
-                    throughput?: number
-                    latency_ms?: number
-                    active_workers?: number
-                    active_tasks?: number
-                    bottleneck?: boolean
-                  }) => {
-                    // Data is flat from /circulate/ endpoint, not nested in current_status
-                    const isHealthy = route.is_healthy
-                    const statusStr = route.status || 'unknown'
-                    const healthScore = route.health_score || 0
-
-                    // Format route name for display
-                    const displayName = route.display_name || route.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-
-                    return (
-                      <div
-                        key={route.id}
-                        className={cn(
-                          'p-4 rounded-lg border transition-colors',
-                          isHealthy ? 'bg-accent-green/10 border-accent-green/30' :
-                          statusStr === 'slow' || statusStr === 'congested' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold">{displayName}</p>
-                            {route.bottleneck && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber">Bottleneck</span>
-                            )}
-                          </div>
-                          <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
-                            isHealthy ? 'bg-accent-green/20 text-accent-green' :
-                            statusStr === 'slow' || statusStr === 'congested' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                          )}>
-                            {statusStr}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <p className="text-gray-500">Health</p>
-                            <p className={cn(
-                              'font-bold',
-                              healthScore >= 80 ? 'text-accent-green' :
-                              healthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                            )}>
-                              {healthScore.toFixed(0)}%
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Depth</p>
-                            <p className="font-medium">{route.current_depth ?? '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Latency</p>
-                            <p className="font-medium">{route.latency_ms ? `${route.latency_ms.toFixed(1)}ms` : '-'}</p>
-                          </div>
-                        </div>
-                        {(route.active_workers !== undefined || route.active_tasks !== undefined) && (
-                          <div className="flex gap-4 text-xs text-gray-500 mt-2">
-                            {route.active_workers !== undefined && <span>Workers: {route.active_workers}</span>}
-                            {route.active_tasks !== undefined && <span>Tasks: {route.active_tasks}</span>}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                {circulatoryRoutes.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <GitBranch className="mx-auto mb-2" size={32} />
-                    <p>No flow routes configured</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottlenecks */}
-              {circulatoryBottlenecks.length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <AlertTriangle className="text-accent-amber" size={20} />
-                    Active Bottlenecks
-                  </h3>
-                  <div className="space-y-3">
-                    {circulatoryBottlenecks.map((bottleneck: {
-                      route_name: string
-                      severity: string
-                      issue: string
-                      metric?: string
-                      current_value?: number
-                      threshold?: number
-                    }, idx: number) => (
-                      <div
-                        key={idx}
-                        className={cn(
-                          'p-4 rounded-lg border',
-                          bottleneck.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
-                          bottleneck.severity === 'warning' ? 'bg-accent-amber/10 border-accent-amber/30' : 'border-dark-border'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium">{bottleneck.route_name}</p>
-                          <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
-                            bottleneck.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
-                            bottleneck.severity === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
-                          )}>
-                            {bottleneck.severity}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-300">{bottleneck.issue}</p>
-                        {bottleneck.metric && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            {bottleneck.metric}: {bottleneck.current_value} (threshold: {bottleneck.threshold})
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Circulation History */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Circulation Pulse History (24h)</h3>
-                {circulatoryHistory.length > 0 ? (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {circulatoryHistory.slice(0, 20).map((pulse: {
-                      id: string
-                      flow_score: number
-                      overall_status: string
-                      recorded_at: string
-                      check_duration_ms?: number
-                      routes_healthy: number
-                      routes_checked: number
-                    }, idx: number) => (
-                      <div
-                        key={pulse.id || idx}
-                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'h-8 w-8 rounded-full flex items-center justify-center',
-                            pulse.overall_status === 'flowing' ? 'bg-accent-green/20' :
-                            pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                          )}>
-                            <GitBranch size={14} className={cn(
-                              pulse.overall_status === 'flowing' ? 'text-accent-green' :
-                              pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'text-accent-amber' : 'text-accent-red'
-                            )} />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {pulse.flow_score.toFixed(0)}% - {pulse.routes_healthy}/{pulse.routes_checked} healthy
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(pulse.recorded_at).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {pulse.check_duration_ms && (
-                            <span className="text-xs text-gray-400">{pulse.check_duration_ms}ms</span>
-                          )}
-                          <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
-                            pulse.overall_status === 'flowing' ? 'bg-accent-green/20 text-accent-green' :
-                            pulse.overall_status === 'slow' || pulse.overall_status === 'congested' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                          )}>
-                            {pulse.overall_status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <GitBranch className="mx-auto mb-2" size={32} />
-                    <p>No circulation history yet</p>
-                    <p className="text-sm text-gray-500 mt-1">Run a circulation check to see data flow status</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Circulatory Architecture */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Circulatory System Architecture</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  The CIRCULATORY system monitors data flow health across all queues, channels, and streams - the blood circulation of the AI body.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-red mb-1">Blood = Data</p>
-                    <p className="text-xs text-gray-400">Messages, tasks, events flowing through the system</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-cyan mb-1">Arteries = Outbound</p>
-                    <p className="text-xs text-gray-400">WebSocket broadcasts, API responses, notifications</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-primary-400 mb-1">Veins = Inbound</p>
-                    <p className="text-xs text-gray-400">Spider data, user inputs, external webhooks</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-amber mb-1">Blood Pressure = Queue Depth</p>
-                    <p className="text-xs text-gray-400">High pressure indicates congestion, low indicates idle</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* SPINE Tab - Session 704 */}
-      {activeTab === 'spine' && (
-        <div className="space-y-6">
-          {loadingSpine ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              {/* Overall Spine Status */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'h-12 w-12 rounded-lg flex items-center justify-center',
-                      (spineStatus.health_score || 0) >= 80 ? 'bg-accent-green/20' :
-                      (spineStatus.health_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <Bone size={24} className={cn(
-                        (spineStatus.health_score || 0) >= 80 ? 'text-accent-green' :
-                        (spineStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Health Score</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (spineStatus.health_score || 0) >= 80 ? 'text-accent-green' :
-                        (spineStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(spineStatus.health_score || 0).toFixed(0)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Activity className="text-accent-cyan" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Status</p>
-                      <p className={cn(
-                        'text-lg font-bold capitalize',
-                        spineStatus.overall_status === 'aligned' ? 'text-accent-green' :
-                        spineStatus.overall_status === 'strained' ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {spineStatus.overall_status || 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Route className="text-primary-400" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Patterns</p>
-                      <p className="text-2xl font-bold">
-                        {spineStatus.healthy_patterns || 0}/{spineStatus.total_patterns || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className={cn(
-                      (spineStatus.routing?.routes_blocked || 0) > 0 ? 'text-accent-red' : 'text-gray-500'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Blocked Routes</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (spineStatus.routing?.routes_blocked || 0) > 0 ? 'text-accent-red' : 'text-accent-green'
-                      )}>
-                        {spineStatus.routing?.routes_blocked || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Integration Status */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Integration Status</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['heart', 'lungs', 'circulatory'].map((system) => {
-                    const integration = spineIntegrations[system] || {}
-                    const isHealthy = integration.is_healthy || integration.is_flowing
-                    const score = integration.health_score || integration.capacity_score || integration.flow_score || 0
-
-                    return (
-                      <div
-                        key={system}
-                        className={cn(
-                          'p-4 rounded-lg border',
-                          isHealthy ? 'bg-accent-green/10 border-accent-green/30' : 'bg-accent-amber/10 border-accent-amber/30'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-semibold capitalize">{system}</p>
-                          <span className={cn(
-                            'text-xs px-2 py-1 rounded capitalize',
-                            isHealthy ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-amber/20 text-accent-amber'
-                          )}>
-                            {integration.status || 'unknown'}
-                          </span>
-                        </div>
-                        <p className={cn(
-                          'text-2xl font-bold',
-                          score >= 80 ? 'text-accent-green' : score >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                        )}>
-                          {score.toFixed(0)}%
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Route Patterns */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Route Patterns ({spinePatternsArray.length})</h3>
-                  <button
-                    onClick={() => refetchSpine()}
-                    className="btn btn-secondary btn-sm flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {spinePatternsArray.map((route: {
-                    pattern: string
-                    display_name?: string
-                    category?: string
-                    priority?: string
-                    is_healthy?: boolean
-                    health_score?: number
-                    can_route?: boolean
-                    route_reason?: string
-                    total_requests?: number
-                    avg_latency_ms?: number
-                  }) => (
-                    <div
-                      key={route.pattern}
-                      className={cn(
-                        'p-3 rounded-lg border transition-colors',
-                        route.is_healthy ? 'bg-accent-green/5 border-accent-green/30' :
-                        route.can_route === false ? 'bg-accent-red/10 border-accent-red/30' : 'bg-accent-amber/10 border-accent-amber/30'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm truncate" title={route.pattern}>
-                          {route.display_name || route.pattern}
-                        </p>
-                        {route.priority === 'critical' && (
-                          <span className="text-xs px-1 py-0.5 rounded bg-accent-red/20 text-accent-red">Critical</span>
-                        )}
-                        {route.priority === 'high' && (
-                          <span className="text-xs px-1 py-0.5 rounded bg-accent-amber/20 text-accent-amber">High</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mb-2 capitalize">{route.category || 'other'}</p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className={cn(
-                          route.can_route ? 'text-accent-green' : 'text-accent-red'
-                        )}>
-                          {route.can_route ? '✓ Routable' : '✗ Blocked'}
-                        </span>
-                        <span className={cn(
-                          'font-medium',
-                          (route.health_score || 0) >= 80 ? 'text-accent-green' :
-                          (route.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                        )}>
-                          {(route.health_score || 0).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {spinePatternsArray.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <Bone className="mx-auto mb-2" size={32} />
-                    <p>No route patterns configured</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Category Health */}
-              {Object.keys(spineCategories).length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Category Health</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {Object.entries(spineCategories).map(([category, data]: [string, unknown]) => {
-                      const catData = data as { health_score?: number; pattern_count?: number; healthy_count?: number }
-                      const score = catData.health_score || 0
-
-                      return (
-                        <div
-                          key={category}
-                          className={cn(
-                            'p-3 rounded-lg border',
-                            score >= 80 ? 'bg-accent-green/10 border-accent-green/30' :
-                            score >= 50 ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
-                          )}
-                        >
-                          <p className="text-sm font-medium capitalize mb-1">{category.replace('_', ' ')}</p>
-                          <div className="flex items-center justify-between">
-                            <span className={cn(
-                              'text-xl font-bold',
-                              score >= 80 ? 'text-accent-green' : score >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                            )}>
-                              {score.toFixed(0)}%
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {catData.healthy_count || 0}/{catData.pattern_count || 0}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Spine Architecture */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Spine Architecture</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  The SPINE is the backbone of the AI body - central API routing and coordination.
-                  It tracks route health, manages request flow, and coordinates with HEART, LUNGS, and CIRCULATORY.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-primary-400 mb-1">Aligned = Healthy</p>
-                    <p className="text-xs text-gray-400">All routes operational, no issues</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-amber mb-1">Strained = Degraded</p>
-                    <p className="text-xs text-gray-400">Some routes showing stress, monitoring closely</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-cyan mb-1">Compressed = High Load</p>
-                    <p className="text-xs text-gray-400">Heavy traffic, routing slowed to protect system</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-red mb-1">Injured = Critical</p>
-                    <p className="text-xs text-gray-400">Critical routes failing, immediate attention needed</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* IMMUNE Tab - Session 705 */}
-      {activeTab === 'immune' && (
-        <div className="space-y-6">
-          {loadingImmune ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              {/* Overall Immune Status */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'h-12 w-12 rounded-lg flex items-center justify-center',
-                      (immuneStatus.health_score || 0) >= 80 ? 'bg-accent-green/20' :
-                      (immuneStatus.health_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <Shield size={24} className={cn(
-                        (immuneStatus.health_score || 0) >= 80 ? 'text-accent-green' :
-                        (immuneStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Health Score</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (immuneStatus.health_score || 0) >= 80 ? 'text-accent-green' :
-                        (immuneStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(immuneStatus.health_score || 0).toFixed(0)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <ShieldAlert className={cn(
-                      immuneStatus.threat_level === 'none' ? 'text-accent-green' :
-                      immuneStatus.threat_level === 'low' ? 'text-accent-cyan' :
-                      immuneStatus.threat_level === 'medium' ? 'text-accent-amber' : 'text-accent-red'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Threat Level</p>
-                      <p className={cn(
-                        'text-lg font-bold capitalize',
-                        immuneStatus.threat_level === 'none' ? 'text-accent-green' :
-                        immuneStatus.threat_level === 'low' ? 'text-accent-cyan' :
-                        immuneStatus.threat_level === 'medium' ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {immuneStatus.threat_level || 'None'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="text-primary-400" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Active Patterns</p>
-                      <p className="text-2xl font-bold">
-                        {immuneStatus.patterns?.active || immunePatterns.length || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Ban className={cn(
-                      (immuneQuarantine.length || 0) > 0 ? 'text-accent-red' : 'text-gray-500'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Quarantined</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (immuneQuarantine.length || 0) > 0 ? 'text-accent-red' : 'text-accent-green'
-                      )}>
-                        {immuneQuarantine.length || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Threat Statistics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Threats (24h)</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Detected</p>
-                      <p className="text-xl font-bold text-accent-amber">
-                        {immuneStatus.threats?.detected_24h || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Blocked</p>
-                      <p className="text-xl font-bold text-accent-red">
-                        {immuneStatus.threats?.blocked_24h || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Active</p>
-                      <p className="text-xl font-bold text-accent-cyan">
-                        {immuneStatus.threats?.active || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">False Positives</p>
-                      <p className="text-xl font-bold text-gray-400">
-                        {immuneStatus.threats?.false_positives_24h || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Responses (24h)</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Auto Responses</p>
-                      <p className="text-xl font-bold text-accent-green">
-                        {immuneStatus.responses?.auto_24h || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Manual Reviews</p>
-                      <p className="text-xl font-bold text-primary-400">
-                        {immuneStatus.responses?.manual_24h || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Quarantined IPs</p>
-                      <p className="text-xl font-bold text-accent-red">
-                        {immuneStatus.quarantine?.ips || 0}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg">
-                      <p className="text-sm text-gray-400">Quarantined Users</p>
-                      <p className="text-xl font-bold text-accent-amber">
-                        {immuneStatus.quarantine?.users || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Threat Patterns */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Threat Patterns ({immunePatterns.length})</h3>
-                  <button
-                    onClick={() => refetchImmune()}
-                    className="btn btn-secondary btn-sm flex items-center gap-2"
-                  >
-                    <RefreshCw size={14} />
-                    Refresh
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {immunePatterns.map((pattern: {
-                    id: string
-                    name: string
-                    display_name?: string
-                    category?: string
-                    severity?: string
-                    detection_type?: string
-                    is_active?: boolean
-                    auto_respond?: boolean
-                    total_detections?: number
-                    last_detection?: string
-                  }) => (
-                    <div
-                      key={pattern.id || pattern.name}
-                      className={cn(
-                        'p-3 rounded-lg border transition-colors',
-                        pattern.is_active ? 'bg-accent-green/5 border-accent-green/30' : 'bg-gray-500/10 border-gray-500/30'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm truncate" title={pattern.name}>
-                          {pattern.display_name || pattern.name}
-                        </p>
-                        <span className={cn(
-                          'text-xs px-1 py-0.5 rounded capitalize',
-                          pattern.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
-                          pattern.severity === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
-                          pattern.severity === 'medium' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-gray-500/20 text-gray-400'
-                        )}>
-                          {pattern.severity || 'low'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mb-2 capitalize">{pattern.category?.replace('_', ' ') || 'other'}</p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className={cn(
-                          pattern.auto_respond ? 'text-accent-green' : 'text-gray-500'
-                        )}>
-                          {pattern.auto_respond ? '⚡ Auto-respond' : '👁 Monitor only'}
-                        </span>
-                        <span className="text-gray-400">
-                          {pattern.total_detections || 0} hits
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {immunePatterns.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <Shield className="mx-auto mb-2" size={32} />
-                    <p>No threat patterns configured</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Threats */}
-              {immuneThreats.length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Recent Threats ({immuneThreats.length})</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {immuneThreats.slice(0, 10).map((threat: {
-                      id: string
-                      severity?: string
-                      category?: string
-                      source_ip?: string
-                      source_path?: string
-                      status?: string
-                      detected_at?: string
-                    }, idx: number) => (
-                      <div
-                        key={threat.id || idx}
-                        className={cn(
-                          'p-3 rounded-lg border',
-                          threat.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
-                          threat.severity === 'high' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-dark-bg border-dark-border'
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-xs px-2 py-0.5 rounded capitalize',
-                              threat.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
-                              threat.severity === 'high' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
-                            )}>
-                              {threat.severity || 'low'}
-                            </span>
-                            <span className="text-sm font-medium capitalize">{threat.category?.replace('_', ' ') || 'Unknown'}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {threat.detected_at ? new Date(threat.detected_at).toLocaleString() : 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-400">
-                          {threat.source_ip && <span>IP: {threat.source_ip}</span>}
-                          {threat.source_path && <span className="ml-2">Path: {threat.source_path}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quarantine List */}
-              {immuneQuarantine.length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Quarantine ({immuneQuarantine.length})</h3>
-                  <div className="space-y-2">
-                    {immuneQuarantine.map((entry: {
-                      id: string
-                      entity_type?: string
-                      entity_value?: string
-                      reason?: string
-                      is_permanent?: boolean
-                      expires_at?: string
-                      created_at?: string
-                    }, idx: number) => (
-                      <div
-                        key={entry.id || idx}
-                        className="flex items-center justify-between p-3 rounded-lg bg-accent-red/10 border border-accent-red/30"
-                      >
-                        <div>
-                          <p className="font-medium text-sm">
-                            <span className="text-gray-400 capitalize">{entry.entity_type}: </span>
-                            {entry.entity_value}
-                          </p>
-                          <p className="text-xs text-gray-500">{entry.reason || 'No reason specified'}</p>
-                        </div>
-                        <span className={cn(
-                          'text-xs px-2 py-1 rounded',
-                          entry.is_permanent ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
-                        )}>
-                          {entry.is_permanent ? 'Permanent' : `Expires: ${entry.expires_at ? new Date(entry.expires_at).toLocaleString() : 'Unknown'}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Immune Architecture */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Immune System Architecture</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  The IMMUNE system is the defense layer of the AI body - detecting and responding to threats,
-                  suspicious patterns, and malicious activity. Like biological immunity, it learns from threats
-                  and adapts its responses.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-green mb-1">Healthy = No Threats</p>
-                    <p className="text-xs text-gray-400">System clear, all patterns monitoring normally</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-cyan mb-1">Alert = Low Activity</p>
-                    <p className="text-xs text-gray-400">Minor suspicious activity detected, monitoring</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-amber mb-1">Elevated = Active Threats</p>
-                    <p className="text-xs text-gray-400">Threats detected, auto-responses engaged</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-red mb-1">Compromised = Critical</p>
-                    <p className="text-xs text-gray-400">Severe threats, manual intervention required</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* DIGESTIVE Tab (Session 706) - Data Ingestion & Processing */}
-      {activeTab === 'digestive' && (
-        <div className="space-y-6">
-          {loadingDigestive ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="animate-spin" size={32} />
-            </div>
-          ) : (
-            <>
-              {/* Overall Digestive Status */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'h-12 w-12 rounded-lg flex items-center justify-center',
-                      (digestiveStatus.digestion_score || 0) >= 80 ? 'bg-accent-green/20' :
-                      (digestiveStatus.digestion_score || 0) >= 60 ? 'bg-accent-cyan/20' :
-                      (digestiveStatus.digestion_score || 0) >= 40 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
-                    )}>
-                      <Utensils size={24} className={cn(
-                        (digestiveStatus.digestion_score || 0) >= 80 ? 'text-accent-green' :
-                        (digestiveStatus.digestion_score || 0) >= 60 ? 'text-accent-cyan' :
-                        (digestiveStatus.digestion_score || 0) >= 40 ? 'text-accent-amber' : 'text-accent-red'
-                      )} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Digestion Score</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        (digestiveStatus.digestion_score || 0) >= 80 ? 'text-accent-green' :
-                        (digestiveStatus.digestion_score || 0) >= 60 ? 'text-accent-cyan' :
-                        (digestiveStatus.digestion_score || 0) >= 40 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(digestiveStatus.digestion_score || 0).toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Activity className={cn(
-                      digestiveStatus.is_digesting ? 'text-accent-green' : 'text-accent-red'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Status</p>
-                      <p className={cn(
-                        'text-lg font-bold uppercase',
-                        digestiveStatus.overall_status === 'healthy' ? 'text-accent-green' :
-                        digestiveStatus.overall_status === 'sluggish' ? 'text-accent-cyan' :
-                        digestiveStatus.overall_status === 'bloated' ? 'text-accent-amber' :
-                        digestiveStatus.overall_status === 'blocked' ? 'text-accent-red' : 'text-gray-500'
-                      )}>
-                        {digestiveStatus.overall_status || 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <Route className="text-primary-400" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Active Routes</p>
-                      <p className="text-2xl font-bold">
-                        {digestiveRoutes.length || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className={cn(
-                      digestiveBottlenecks.length > 0 ? 'text-accent-red' : 'text-accent-green'
-                    )} size={24} />
-                    <div>
-                      <p className="text-sm text-gray-400">Bottlenecks</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        digestiveBottlenecks.length > 0 ? 'text-accent-red' : 'text-accent-green'
-                      )}>
-                        {digestiveBottlenecks.length || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {/* Check Duration & Integrations */}
-                <div className="card">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm">
-                        <span className="text-gray-400">Check Duration: </span>
-                        <span className="font-medium">{(digestiveStatus.check_duration_ms || 0).toFixed(0)}ms</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-gray-400">Timestamp: </span>
-                        <span className="font-medium">
-                          {digestiveStatus.timestamp ? new Date(digestiveStatus.timestamp).toLocaleTimeString() : 'N/A'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-400">Integrations:</span>
-                      <span className={cn(
-                        'text-xs px-2 py-0.5 rounded flex items-center gap-1',
-                        digestiveStatus.integrations?.heart ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
-                      )}>
-                        ❤️ HEART {digestiveStatus.integrations?.heart ? '✓' : '✗'}
-                      </span>
-                      <span className={cn(
-                        'text-xs px-2 py-0.5 rounded flex items-center gap-1',
-                        digestiveStatus.integrations?.circulatory ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
-                      )}>
-                        🩸 CIRC {digestiveStatus.integrations?.circulatory ? '✓' : '✗'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stage Status Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(['intake', 'processing', 'enrichment', 'routing'] as const).map((stage) => {
-                  const stageData = digestiveStages[stage] || {}
-                  const stageStatus = stageData.status || 'unknown'
-                  return (
-                    <div key={stage} className="card">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold capitalize">{stage}</h4>
-                        <span className={cn(
-                          'text-xs px-2 py-0.5 rounded uppercase',
-                          stageStatus === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
-                          stageStatus === 'active' ? 'bg-accent-green/20 text-accent-green' :
-                          stageStatus === 'sluggish' ? 'bg-accent-amber/20 text-accent-amber' :
-                          stageStatus === 'blocked' ? 'bg-accent-red/20 text-accent-red' : 'bg-gray-500/20 text-gray-400'
-                        )}>
-                          {stageStatus}
-                        </span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        {stage === 'intake' && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Items (24h)</span>
-                              <span>{stageData.items_24h?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Spiders Executed</span>
-                              <span>{stageData.spiders_executed?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Success Rate</span>
-                              <span className={cn(
-                                (stageData.success_rate || 0) >= 70 ? 'text-accent-green' :
-                                (stageData.success_rate || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {(stageData.success_rate || 0).toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Score</span>
-                              <span className={cn(
-                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
-                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {stageData.score || 0}%
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {stage === 'processing' && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Queue Depth</span>
-                              <span className={cn(
-                                (stageData.queue_depth || 0) > 5000 ? 'text-accent-red' :
-                                (stageData.queue_depth || 0) > 1000 ? 'text-accent-amber' : ''
-                              )}>
-                                {(stageData.queue_depth || 0).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Throughput</span>
-                              <span>{(stageData.throughput || 0).toFixed(2)}/min</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Avg Latency</span>
-                              <span className={cn(
-                                (stageData.avg_latency_ms || 0) > 60000 ? 'text-accent-red' :
-                                (stageData.avg_latency_ms || 0) > 10000 ? 'text-accent-amber' : ''
-                              )}>
-                                {stageData.avg_latency_ms ? `${(stageData.avg_latency_ms / 1000).toFixed(1)}s` : '0ms'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Score</span>
-                              <span className={cn(
-                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
-                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {stageData.score || 0}%
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {stage === 'enrichment' && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Embeddings (24h)</span>
-                              <span>{(stageData.embeddings_24h || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Coverage</span>
-                              <span className={cn(
-                                (stageData.coverage || 0) >= 80 ? 'text-accent-green' :
-                                (stageData.coverage || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {(stageData.coverage || 0).toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Score</span>
-                              <span className={cn(
-                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
-                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {stageData.score || 0}%
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {stage === 'routing' && (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Items Routed</span>
-                              <span>{(stageData.items_routed || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Items Filtered</span>
-                              <span>{(stageData.items_filtered || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Score</span>
-                              <span className={cn(
-                                (stageData.score || 0) >= 80 ? 'text-accent-green' :
-                                (stageData.score || 0) >= 60 ? 'text-accent-amber' : 'text-accent-red'
-                              )}>
-                                {stageData.score || 0}%
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Metabolism Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="card">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Metabolism Rate</h3>
-                    <Gauge className="text-primary-400" size={20} />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-dark-bg text-center">
-                      <p className="text-sm text-gray-400">Intake</p>
-                      <p className="text-xl font-bold text-accent-cyan">
-                        {digestiveMetabolism.rates?.intake_rate_per_hour?.toFixed(1) || '0'}/hr
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg text-center">
-                      <p className="text-sm text-gray-400">Processing</p>
-                      <p className="text-xl font-bold text-accent-amber">
-                        {digestiveMetabolism.rates?.processing_rate_per_hour?.toFixed(1) || '0'}/hr
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-dark-bg text-center">
-                      <p className="text-sm text-gray-400">Output</p>
-                      <p className="text-xl font-bold text-accent-green">
-                        {digestiveMetabolism.rates?.output_rate_per_hour?.toFixed(1) || '0'}/hr
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 p-3 rounded-lg bg-dark-bg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Efficiency</span>
-                      <span className={cn(
-                        'font-bold',
-                        (digestiveMetabolism.efficiency_pct || 0) >= 80 ? 'text-accent-green' :
-                        (digestiveMetabolism.efficiency_pct || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
-                      )}>
-                        {(digestiveMetabolism.efficiency_pct || 0).toFixed(1)}%
-                      </span>
-                    </div>
-                    {/* Progress bar */}
-                    <div className="mt-2 h-2 bg-dark-border rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          'h-full rounded-full transition-all',
-                          (digestiveMetabolism.efficiency_pct || 0) >= 80 ? 'bg-accent-green' :
-                          (digestiveMetabolism.efficiency_pct || 0) >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
-                        )}
-                        style={{ width: `${Math.min(digestiveMetabolism.efficiency_pct || 0, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  {digestiveMetabolism.warnings?.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {digestiveMetabolism.warnings.map((warning: { type: string; message: string }, idx: number) => (
-                        <div key={idx} className="text-xs text-accent-amber flex items-center gap-2">
-                          <AlertTriangle size={12} />
-                          {warning.message}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottlenecks */}
-                <div className="card">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Bottlenecks ({digestiveBottlenecks.length})</h3>
-                    <button
-                      onClick={() => refetchDigestive()}
-                      className="btn btn-secondary btn-sm flex items-center gap-2"
-                    >
-                      <RefreshCw size={14} />
-                      Refresh
-                    </button>
-                  </div>
-                  {digestiveBottlenecks.length > 0 ? (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {digestiveBottlenecks.map((bottleneck: {
-                        stage?: string
-                        issue?: string
-                        severity?: string
-                      }, idx: number) => (
-                        <div
-                          key={idx}
-                          className={cn(
-                            'p-3 rounded-lg border',
-                            bottleneck.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
-                            bottleneck.severity === 'warning' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-dark-bg border-dark-border'
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={cn(
-                                'text-xs px-2 py-0.5 rounded uppercase',
-                                bottleneck.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
-                                bottleneck.severity === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
-                              )}>
-                                {bottleneck.severity || 'info'}
-                              </span>
-                              <span className="text-sm font-medium capitalize">{bottleneck.stage || 'System'}</span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1">{bottleneck.issue}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-400">
-                      <CheckCircle className="mx-auto mb-2 text-accent-green" size={32} />
-                      <p>No bottlenecks detected</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Ingestion Routes */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Ingestion Routes ({digestiveRoutes.length})</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {digestiveRoutes.map((route: {
-                    id?: string
-                    name: string
-                    display_name?: string
-                    route_type?: string
-                    stage?: string
-                    identifier?: string
-                    is_critical?: boolean
-                    is_active?: boolean
-                    max_queue_depth?: number
-                    target_throughput?: number
-                    total_items_processed?: number
-                  }) => (
-                    <div
-                      key={route.id || route.name}
-                      className={cn(
-                        'p-3 rounded-lg border transition-colors',
-                        route.is_active ? 'bg-accent-green/5 border-accent-green/30' : 'bg-gray-500/10 border-gray-500/30'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm truncate" title={route.name}>
-                          {route.display_name || route.name}
-                        </p>
-                        {route.is_critical && (
-                          <span className="text-xs px-1 py-0.5 rounded bg-accent-red/20 text-accent-red">
-                            Critical
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                        <span className="capitalize">{route.route_type}</span>
-                        <span>•</span>
-                        <span className="capitalize">{route.stage}</span>
-                      </div>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between text-gray-400">
-                          <span>Max Queue</span>
-                          <span>{route.max_queue_depth?.toLocaleString() || 0}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-400">
-                          <span>Target</span>
-                          <span>{route.target_throughput || 0}/min</span>
-                        </div>
-                        <div className="flex justify-between text-gray-400">
-                          <span>Processed</span>
-                          <span>{route.total_items_processed?.toLocaleString() || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {digestiveRoutes.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <Route className="mx-auto mb-2" size={32} />
-                    <p>No ingestion routes configured</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Digestion History */}
-              {digestiveHistory.length > 0 && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Recent Digestion Pulses ({digestiveHistory.length})</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {digestiveHistory.slice(0, 15).map((pulse: {
-                      id?: string
-                      timestamp?: string
-                      status?: string
-                      score?: number
-                      is_digesting?: boolean
-                      intake_status?: string
-                      processing_status?: string
-                      enrichment_status?: string
-                      routing_status?: string
-                      items_pending?: number
-                      check_duration_ms?: number
-                    }, idx: number) => (
-                      <div
-                        key={pulse.id || idx}
-                        className={cn(
-                          'p-3 rounded-lg border',
-                          pulse.status === 'healthy' ? 'bg-accent-green/5 border-accent-green/20' :
-                          pulse.status === 'sluggish' ? 'bg-accent-cyan/5 border-accent-cyan/20' :
-                          pulse.status === 'bloated' ? 'bg-accent-amber/5 border-accent-amber/20' : 'bg-dark-bg border-dark-border'
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <span className={cn(
-                              'text-xs px-2 py-0.5 rounded uppercase',
-                              pulse.status === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
-                              pulse.status === 'sluggish' ? 'bg-accent-cyan/20 text-accent-cyan' :
-                              pulse.status === 'bloated' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
-                            )}>
-                              {pulse.status || 'unknown'}
-                            </span>
-                            <span className="text-sm font-medium">
-                              {(pulse.score || 0).toFixed(1)}%
-                            </span>
-                            <span className={cn(
-                              'text-xs',
-                              pulse.is_digesting ? 'text-accent-green' : 'text-accent-red'
-                            )}>
-                              {pulse.is_digesting ? '● Active' : '○ Inactive'}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {pulse.timestamp ? new Date(pulse.timestamp).toLocaleTimeString() : ''}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-3">
-                            <span className={cn(
-                              'px-1.5 py-0.5 rounded',
-                              pulse.intake_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
-                              pulse.intake_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
-                            )}>
-                              In: {pulse.intake_status}
-                            </span>
-                            <span className={cn(
-                              'px-1.5 py-0.5 rounded',
-                              pulse.processing_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
-                              pulse.processing_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' :
-                              pulse.processing_status === 'bloated' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-gray-500/10 text-gray-400'
-                            )}>
-                              Proc: {pulse.processing_status}
-                            </span>
-                            <span className={cn(
-                              'px-1.5 py-0.5 rounded',
-                              pulse.enrichment_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
-                              pulse.enrichment_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
-                            )}>
-                              Enrich: {pulse.enrichment_status}
-                            </span>
-                            <span className={cn(
-                              'px-1.5 py-0.5 rounded',
-                              pulse.routing_status === 'healthy' ? 'bg-accent-green/10 text-accent-green' :
-                              pulse.routing_status === 'blocked' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-500/10 text-gray-400'
-                            )}>
-                              Route: {pulse.routing_status}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-gray-400">
-                            <span className={cn(
-                              (pulse.items_pending || 0) > 5000 ? 'text-accent-red' :
-                              (pulse.items_pending || 0) > 1000 ? 'text-accent-amber' : ''
-                            )}>
-                              Pending: {(pulse.items_pending || 0).toLocaleString()}
-                            </span>
-                            <span>{pulse.check_duration_ms || 0}ms</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Digestive System Architecture */}
-              <div className="card">
-                <h3 className="text-lg font-semibold mb-4">Digestive System Architecture</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  The DIGESTIVE system monitors how raw data from spiders is transformed into actionable intelligence.
-                  Like biological digestion, it tracks intake → processing → enrichment → routing stages.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-green mb-1">🟢 Healthy (80-100%)</p>
-                    <p className="text-xs text-gray-400">Normal data processing, all stages flowing</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-cyan mb-1">🟡 Sluggish (60-79%)</p>
-                    <p className="text-xs text-gray-400">Slow processing, minor delays</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-amber mb-1">🟠 Bloated (40-59%)</p>
-                    <p className="text-xs text-gray-400">High queue depth, backlog forming</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-dark-bg">
-                    <p className="font-medium text-accent-red mb-1">🔴 Blocked (20-39%)</p>
-                    <p className="text-xs text-gray-400">Processing stuck, intervention needed</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {/* Session 712: Removed redundant body system tabs (LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR)
+          These are now shown in the unified Body Systems Status on the HEART/Body Health tab above.
+          For detailed system views, use the Body Health page (/body-health) */}
 
       {/* Services Tab (was System Health Tab) */}
       {activeTab === 'health' && (

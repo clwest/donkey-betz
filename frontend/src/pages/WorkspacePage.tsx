@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi, bodyApi } from '@/lib/api'
 import {
   FolderOpen, FileCode, GitBranch, History, CheckSquare, Plus,
   RefreshCw, ChevronRight, ChevronDown, File, Folder, Code,
   GitCommit, CheckCircle, XCircle,
   Loader2, Search, RotateCcw, Eye, Clock, Bot, X,
-  FolderTree, Activity, Trash2
+  FolderTree, Activity, Trash2, Heart, ExternalLink
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -528,6 +528,13 @@ export default function WorkspacePage() {
     retry: false,
   })
 
+  // Session 712: Body Health integration - SKIN connected to Body
+  const { data: bodyVitalsResponse } = useQuery({
+    queryKey: ['body-vitals'],
+    queryFn: () => bodyApi.vitals(),
+    refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
   // Mutations
   const activateMutation = useMutation({
     mutationFn: (id: string) => workspaceApi.activate(id),
@@ -613,6 +620,12 @@ export default function WorkspacePage() {
   const operations = (operationsData?.data?.results || operationsData?.data || []) as WorkspaceOperation[]
   const pendingReviews = (pendingReviewsData?.data?.results || pendingReviewsData?.data || []) as WorkspaceOperation[]
   const dashboard = dashboardData?.data || {}
+
+  // Session 712: Body health data
+  const bodyVitals = bodyVitalsResponse?.data || null
+  const bodyHealthScore = bodyVitals?.health_score || 0
+  const bodyOverallStatus = bodyVitals?.overall_health || 'unknown'
+  const bodySystems = bodyVitals?.systems || {}
 
   // Use hierarchical tree from API (new format returns 'tree' with proper structure)
   const files: FileNode[] = filesData?.data?.tree || []
@@ -781,6 +794,83 @@ export default function WorkspacePage() {
                   color="#06b6d4"
                 />
               </div>
+
+              {/* Session 712: Body Health Card - SKIN connected to Body */}
+              {bodyVitals && (
+                <div className="card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Animated Heart */}
+                      <div className={cn(
+                        'h-14 w-14 rounded-xl flex items-center justify-center',
+                        bodyHealthScore >= 80 ? 'bg-accent-green/20' :
+                        bodyHealthScore >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                      )}>
+                        <Heart
+                          size={28}
+                          className={cn(
+                            'animate-pulse',
+                            bodyHealthScore >= 80 ? 'text-accent-green' :
+                            bodyHealthScore >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                          )}
+                          fill="currentColor"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Body Health</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-2xl font-bold">{bodyHealthScore.toFixed(0)}%</span>
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded capitalize',
+                            bodyOverallStatus === 'healthy' ? 'bg-accent-green/20 text-accent-green' :
+                            bodyOverallStatus === 'degraded' ? 'bg-accent-amber/20 text-accent-amber' :
+                            'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {bodyOverallStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Body Systems Status Strip */}
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-lg" title="Body Systems">
+                        <span title={`Heart: ${bodySystems.heart?.status || 'unknown'}`}>
+                          {bodySystems.heart?.status === 'healthy' ? '❤️' : bodySystems.heart?.status === 'degraded' ? '💛' : '🖤'}
+                        </span>
+                        <span title={`Lungs: ${bodySystems.lungs?.status || 'unknown'}`}>
+                          {bodySystems.lungs?.status === 'healthy' ? '🫁' : bodySystems.lungs?.status === 'depleted' ? '😤' : '💨'}
+                        </span>
+                        <span title={`Circulatory: ${bodySystems.circulatory?.status || 'unknown'}`}>
+                          {bodySystems.circulatory?.status === 'flowing' ? '🩸' : '🧊'}
+                        </span>
+                        <span title={`Spine: ${bodySystems.spine?.status || 'unknown'}`}>
+                          {bodySystems.spine?.status === 'aligned' ? '🦴' : '⚠️'}
+                        </span>
+                        <span title={`Immune: ${bodySystems.immune?.status || 'unknown'}`}>
+                          {bodySystems.immune?.status === 'protected' ? '🛡️' : '🦠'}
+                        </span>
+                        <span title={`Digestive: ${bodySystems.digestive?.status || 'unknown'}`}>
+                          {bodySystems.digestive?.status === 'healthy' ? '🍽️' : '🤢'}
+                        </span>
+                        <span title={`Muscular: ${bodySystems.muscular?.status || 'unknown'}`}>
+                          {bodySystems.muscular?.status === 'strong' || bodySystems.muscular?.status === 'fit' ? '💪' : '😓'}
+                        </span>
+                      </div>
+                      <a
+                        href="/body-health"
+                        className="flex items-center gap-1 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                      >
+                        <span>View Details</span>
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    🧬 SKIN Layer connected to AI Body — Workspace is how agents touch the real world
+                  </p>
+                </div>
+              )}
 
               {/* Recent Operations */}
               <div className="card">

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { humanApi, agentsApi } from '@/lib/api'
+import { humanApi, agentsApi, bodyApi } from '@/lib/api'
 import {
   User,
   Bell,
@@ -24,6 +24,8 @@ import {
   Activity,
   Loader2,
   RefreshCw,
+  Heart,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -262,6 +264,13 @@ export default function HumanPage() {
     queryFn: () => agentsApi.list(),
   })
 
+  // Session 712: Body Health integration - connect consciousness to body
+  const { data: bodyVitalsResponse } = useQuery({
+    queryKey: ['body-vitals'],
+    queryFn: () => bodyApi.vitals(),
+    refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
   // Mutations
   const decideMutation = useMutation({
     mutationFn: ({ itemId, decision, feedback, confidence }: { itemId: string; decision: string; feedback: string; confidence: number }) =>
@@ -320,6 +329,12 @@ export default function HumanPage() {
   const systemState: SystemState = controlResponse?.data?.state || {}
   const preferences: Preferences = preferencesResponse?.data?.preferences || {}
   const agentsList = agentsResponse?.data?.agents || []
+
+  // Session 712: Body health data
+  const bodyVitals = bodyVitalsResponse?.data || null
+  const bodyHealthScore = bodyVitals?.health_score || 0
+  const bodyOverallStatus = bodyVitals?.overall_health || 'unknown'
+  const bodySystems = bodyVitals?.systems || {}
 
   // Group items by urgency
   const groupedItems = useMemo(() => {
@@ -400,6 +415,57 @@ export default function HumanPage() {
           )}
         </div>
       </div>
+
+      {/* Session 712: Body Health Card - Consciousness connected to Body */}
+      {bodyVitals && (
+        <a
+          href="/body-health"
+          className="card hover:border-primary-500/50 transition-colors group cursor-pointer block"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                'h-12 w-12 rounded-full flex items-center justify-center',
+                bodyHealthScore >= 80 ? 'bg-accent-green/20' :
+                bodyHealthScore >= 60 ? 'bg-accent-amber/20' :
+                bodyHealthScore >= 40 ? 'bg-accent-orange/20' : 'bg-accent-red/20'
+              )}>
+                <Heart className={cn(
+                  'animate-pulse',
+                  bodyHealthScore >= 80 ? 'text-accent-green' :
+                  bodyHealthScore >= 60 ? 'text-accent-amber' :
+                  bodyHealthScore >= 40 ? 'text-accent-orange' : 'text-accent-red'
+                )} size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Body Health</p>
+                <p className="text-2xl font-bold">{Math.round(bodyHealthScore)}%</p>
+                <p className={cn(
+                  'text-sm capitalize',
+                  bodyOverallStatus === 'healthy' ? 'text-accent-green' :
+                  bodyOverallStatus === 'degraded' ? 'text-accent-amber' : 'text-accent-red'
+                )}>
+                  {bodyOverallStatus}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              {/* System emoji strip */}
+              <div className="flex gap-1 text-lg">
+                {Object.entries(bodySystems).map(([name, system]: [string, any]) => (
+                  <span key={name} title={`${name}: ${system.status}`}>
+                    {system.emoji || '❓'}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 text-sm text-gray-400 group-hover:text-primary-400">
+                <span>View Details</span>
+                <ExternalLink size={14} />
+              </div>
+            </div>
+          </div>
+        </a>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

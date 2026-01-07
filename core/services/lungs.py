@@ -496,6 +496,10 @@ class LungsCapacityService:
                     'calls_today': status.calls_today,
                 }
 
+        # Session 712: Add overall_status for body_vitals compatibility
+        vitals['overall_status'] = vitals['system_status']
+        vitals['oxygen_level'] = vitals['system_oxygen']
+
         return vitals
 
     def is_breathing(self) -> bool:
