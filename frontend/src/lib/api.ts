@@ -553,3 +553,38 @@ export const llmApi = {
     task_specific_models?: Record<string, string>
   }) => api.post('/v1/llm/preferences/', data),
 }
+
+// Session 700: LLM Routing API (from Backend Claude Session 699)
+export const llmRoutingApi = {
+  // System status overview
+  status: () => api.get('/v1/llm-routing/status/'),
+
+  // List all 6 LLM providers with health info
+  providers: () => api.get('/v1/llm-routing/providers/'),
+
+  // List all 16 models with costs
+  models: (params?: { provider?: string; capability?: string }) =>
+    api.get('/v1/llm-routing/models/', { params }),
+
+  // Get agent-model mappings (75 configs)
+  agentConfigs: (params?: { agent?: string; model?: string }) =>
+    api.get('/v1/llm-routing/agent-configs/', { params }),
+
+  // Update agent config (requires auth)
+  updateAgentConfig: (agentName: string, data: { model_id: string; reason?: string }) =>
+    api.post(`/v1/llm-routing/agent-configs/${agentName}/`, data),
+
+  // Call logs with filtering
+  logs: (params?: {
+    hours?: number
+    agent?: string
+    provider?: string
+    success?: boolean
+    limit?: number
+    offset?: number
+  }) => api.get('/v1/llm-routing/logs/', { params }),
+
+  // Cost analytics dashboard
+  costAnalytics: (hours?: number) =>
+    api.get('/v1/llm-routing/cost-analytics/', { params: { hours } }),
+}
