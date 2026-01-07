@@ -71,6 +71,15 @@ export const conversationsApi = {
   detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
 }
 
+// Session 696: Decisions API for Decision Insights Panel
+export const decisionsApi = {
+  list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),
+  detail: (decisionId: string) => api.get(`/boardroom/decisions/${decisionId}/`),
+  approve: (decisionId: string) => api.post(`/boardroom/decisions/${decisionId}/approve/`),
+  reject: (decisionId: string, reason?: string) => api.post(`/boardroom/decisions/${decisionId}/reject/`, { reason }),
+  promote: (decisionId: string) => api.post(`/boardroom/decisions/${decisionId}/promote/`),
+}
+
 export const intelligenceApi = {
   status: () => api.get('/v1/intelligence/skynet/status/'),
   opportunities: () => api.get('/v1/intelligence/opportunities/'),
