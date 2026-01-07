@@ -1533,6 +1533,16 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # High-frequency status task
         }
     },
+    # Session 704: SPINE - Central API Router
+    # The backbone of the AI body - monitors API route health and patterns
+    'spine-alignment-check': {
+        'task': 'core.tasks.check_spine_alignment',
+        'schedule': 60.0,  # Every 60 seconds
+        'options': {
+            'expires': 55,  # Expire before next check
+            'queue': 'broadcast',  # Status monitoring task
+        }
+    },
 }
 
 # Task routing configuration

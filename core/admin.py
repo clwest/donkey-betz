@@ -787,3 +787,185 @@ class FlowStatusAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# =============================================================================
+# SESSION 704: SPINE SYSTEM ADMIN (Central API Router)
+# =============================================================================
+
+from core.models_spine import RoutePattern, RouteMetrics, SpineStatus, RequestTrace
+
+
+@admin.register(RoutePattern)
+class RoutePatternAdmin(admin.ModelAdmin):
+    """Admin interface for route pattern configuration."""
+
+    list_display = (
+        'pattern', 'display_name', 'category', 'priority',
+        'max_latency_ms', 'max_error_rate', 'is_active', 'is_monitored'
+    )
+    list_filter = ('category', 'priority', 'is_active', 'is_monitored')
+    search_fields = ('pattern', 'display_name', 'description')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+    ordering = ('category', 'pattern')
+
+    fieldsets = (
+        ('Pattern Info', {
+            'fields': ('pattern', 'display_name', 'category', 'priority', 'description')
+        }),
+        ('Health Thresholds', {
+            'fields': ('max_latency_ms', 'max_error_rate', 'min_availability')
+        }),
+        ('Rate Limiting', {
+            'fields': ('rate_limit_per_minute', 'rate_limit_per_hour')
+        }),
+        ('Routing Configuration', {
+            'fields': ('requires_healthy_heart', 'requires_healthy_lungs', 'fallback_response')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_monitored')
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(RouteMetrics)
+class RouteMetricsAdmin(admin.ModelAdmin):
+    """Admin interface for route metrics records."""
+
+    list_display = (
+        'recorded_at', 'pattern', 'health_score', 'is_healthy',
+        'total_requests', 'error_rate', 'avg_latency_ms', 'p95_latency_ms'
+    )
+    list_filter = ('is_healthy', 'recorded_at', 'pattern__category')
+    search_fields = ('pattern__pattern', 'pattern__display_name')
+    readonly_fields = (
+        'id', 'pattern', 'total_requests', 'successful_requests', 'failed_requests',
+        'rate_limited_requests', 'status_2xx', 'status_3xx', 'status_4xx', 'status_5xx',
+        'avg_latency_ms', 'p50_latency_ms', 'p95_latency_ms', 'p99_latency_ms', 'max_latency_ms',
+        'success_rate', 'error_rate', 'throughput', 'is_healthy', 'health_score',
+        'period_start', 'period_end', 'period_duration_seconds', 'recorded_at'
+    )
+    date_hierarchy = 'recorded_at'
+    ordering = ('-recorded_at',)
+
+    fieldsets = (
+        ('Pattern', {
+            'fields': ('pattern',)
+        }),
+        ('Health', {
+            'fields': ('is_healthy', 'health_score')
+        }),
+        ('Request Counts', {
+            'fields': ('total_requests', 'successful_requests', 'failed_requests', 'rate_limited_requests')
+        }),
+        ('Status Codes', {
+            'fields': ('status_2xx', 'status_3xx', 'status_4xx', 'status_5xx')
+        }),
+        ('Latency', {
+            'fields': ('avg_latency_ms', 'p50_latency_ms', 'p95_latency_ms', 'p99_latency_ms', 'max_latency_ms')
+        }),
+        ('Derived Metrics', {
+            'fields': ('success_rate', 'error_rate', 'throughput')
+        }),
+        ('Period', {
+            'fields': ('period_start', 'period_end', 'period_duration_seconds', 'recorded_at')
+        }),
+    )
+
+
+@admin.register(SpineStatus)
+class SpineStatusAdmin(admin.ModelAdmin):
+    """Admin interface for spine status cache."""
+
+    list_display = (
+        'status', 'health_score', 'is_healthy',
+        'total_patterns', 'healthy_patterns', 'degraded_patterns', 'failed_patterns',
+        'routes_blocked', 'last_check'
+    )
+    list_filter = ('status', 'is_healthy')
+    readonly_fields = (
+        'id', 'status', 'is_healthy', 'health_score',
+        'total_patterns', 'healthy_patterns', 'degraded_patterns', 'failed_patterns',
+        'total_requests', 'requests_per_second', 'avg_latency_ms', 'error_rate',
+        'category_health', 'heart_status', 'lungs_status', 'circulatory_status',
+        'routes_blocked', 'routes_rate_limited', 'fallbacks_active',
+        'last_check', 'status_changed_at', 'alert_sent', 'last_alert_at'
+    )
+
+    fieldsets = (
+        ('Overall Status', {
+            'fields': ('status', 'is_healthy', 'health_score')
+        }),
+        ('Pattern Counts', {
+            'fields': ('total_patterns', 'healthy_patterns', 'degraded_patterns', 'failed_patterns')
+        }),
+        ('Request Metrics', {
+            'fields': ('total_requests', 'requests_per_second', 'avg_latency_ms', 'error_rate')
+        }),
+        ('Integration Status', {
+            'fields': ('heart_status', 'lungs_status', 'circulatory_status')
+        }),
+        ('Routing Status', {
+            'fields': ('routes_blocked', 'routes_rate_limited', 'fallbacks_active')
+        }),
+        ('Category Health', {
+            'fields': ('category_health',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('last_check', 'status_changed_at')
+        }),
+        ('Alerts', {
+            'fields': ('alert_sent', 'last_alert_at')
+        }),
+    )
+
+
+@admin.register(RequestTrace)
+class RequestTraceAdmin(admin.ModelAdmin):
+    """Admin interface for request traces."""
+
+    list_display = (
+        'correlation_id', 'method', 'path', 'status_code',
+        'duration_ms', 'is_authenticated', 'started_at'
+    )
+    list_filter = ('method', 'status_code', 'is_authenticated', 'was_rate_limited', 'used_fallback')
+    search_fields = ('correlation_id', 'path', 'routed_to_agent', 'error_type')
+    readonly_fields = (
+        'id', 'correlation_id', 'method', 'path', 'pattern',
+        'user_id', 'is_authenticated', 'client_ip',
+        'started_at', 'ended_at', 'duration_ms',
+        'status_code', 'response_size',
+        'was_rate_limited', 'used_fallback', 'health_check_result',
+        'routed_to_agent', 'llm_model_used',
+        'error_type', 'error_message'
+    )
+    date_hierarchy = 'started_at'
+    ordering = ('-started_at',)
+
+    fieldsets = (
+        ('Request', {
+            'fields': ('correlation_id', 'method', 'path', 'pattern')
+        }),
+        ('User', {
+            'fields': ('user_id', 'is_authenticated', 'client_ip')
+        }),
+        ('Timing', {
+            'fields': ('started_at', 'ended_at', 'duration_ms')
+        }),
+        ('Response', {
+            'fields': ('status_code', 'response_size')
+        }),
+        ('Routing', {
+            'fields': ('was_rate_limited', 'used_fallback', 'health_check_result',
+                       'routed_to_agent', 'llm_model_used')
+        }),
+        ('Errors', {
+            'fields': ('error_type', 'error_message'),
+            'classes': ('collapse',)
+        }),
+    )

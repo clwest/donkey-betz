@@ -3573,6 +3573,33 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 704: SPINE System API (Central API Router)
+# =========================================================================
+from core.views_spine import (
+    align_view,
+    spine_status_view,
+    patterns_list_view,
+    pattern_detail_view,
+    route_metrics_view,
+    history_view as spine_history_view,
+    can_route_view,
+    is_aligned_view,
+    categories_view,
+)
+
+urlpatterns += [
+    path('api/spine/align/', align_view, name='spine-align'),
+    path('api/spine/status/', spine_status_view, name='spine-status'),
+    path('api/spine/patterns/', patterns_list_view, name='spine-patterns'),
+    path('api/spine/patterns/<uuid:pattern_id>/', pattern_detail_view, name='spine-pattern-detail'),
+    path('api/spine/metrics/', route_metrics_view, name='spine-metrics'),
+    path('api/spine/history/', spine_history_view, name='spine-history'),
+    path('api/spine/can-route/', can_route_view, name='spine-can-route'),
+    path('api/spine/is-aligned/', is_aligned_view, name='spine-is-aligned'),
+    path('api/spine/categories/', categories_view, name='spine-categories'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
