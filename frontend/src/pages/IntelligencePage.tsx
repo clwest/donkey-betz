@@ -41,6 +41,18 @@ interface Gate {
   } | null
 }
 
+// Session 697: Checklist item interface for Gate detail modal
+interface GateChecklistItem {
+  id: string
+  item_type: string
+  title: string
+  description: string
+  status: 'pending' | 'completed'
+  is_required: boolean
+  generated_content: string | null
+  has_content: boolean
+}
+
 interface Pilot {
   id: string
   gate_id: string
@@ -209,6 +221,8 @@ export default function IntelligencePage() {
   const [activeTab, setActiveTab] = useState<TabType>('gates')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
   const [selectedGate, setSelectedGate] = useState<string | null>(null)
+  // Session 697: Expanded checklist items state
+  const [expandedChecklistItems, setExpandedChecklistItems] = useState<Set<string>>(new Set())
   // Session 688: Opportunity modal state
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null)
   // Session 689: Pilot detail modal state
@@ -1446,8 +1460,114 @@ export default function IntelligencePage() {
                       </div>
                     )}
 
-                    {/* Checklist Progress */}
-                    {gate.checklist && (
+                    {/* Session 697: Enhanced Checklist with AI-Generated Content */}
+                    {gate.checklist_items && gate.checklist_items.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Target size={18} className="text-primary-400" />
+                            Checklist Items ({gate.checklist_items.filter((item: GateChecklistItem) => item.status === 'completed').length}/{gate.checklist_items.length})
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 h-2 bg-dark-border rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary-500 rounded-full transition-all"
+                                style={{ width: `${(gate.checklist_items.filter((item: GateChecklistItem) => item.status === 'completed').length / gate.checklist_items.length) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {gate.checklist_items.map((item: GateChecklistItem) => {
+                            const isExpanded = expandedChecklistItems.has(item.id)
+                            return (
+                              <div
+                                key={item.id}
+                                className={cn(
+                                  'border rounded-lg overflow-hidden transition-colors',
+                                  item.status === 'completed' ? 'border-accent-green/30 bg-accent-green/5' : 'border-dark-border bg-dark-bg'
+                                )}
+                              >
+                                {/* Item Header */}
+                                <div
+                                  className={cn(
+                                    'flex items-center justify-between p-3 cursor-pointer hover:bg-dark-hover/50 transition-colors',
+                                    item.has_content && 'cursor-pointer'
+                                  )}
+                                  onClick={() => {
+                                    if (item.has_content) {
+                                      setExpandedChecklistItems(prev => {
+                                        const next = new Set(prev)
+                                        if (next.has(item.id)) {
+                                          next.delete(item.id)
+                                        } else {
+                                          next.add(item.id)
+                                        }
+                                        return next
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                      'h-6 w-6 rounded flex items-center justify-center flex-shrink-0',
+                                      item.status === 'completed' ? 'bg-accent-green/20' : 'bg-dark-card'
+                                    )}>
+                                      {item.status === 'completed' ? (
+                                        <CheckCircle size={14} className="text-accent-green" />
+                                      ) : (
+                                        <div className="h-3 w-3 rounded-full border-2 border-gray-500" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className={cn(
+                                        'font-medium text-sm',
+                                        item.status === 'completed' && 'text-accent-green'
+                                      )}>
+                                        {item.title}
+                                      </p>
+                                      <p className="text-xs text-gray-500">{item.description}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {item.is_required && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber">
+                                        Required
+                                      </span>
+                                    )}
+                                    {item.has_content && (
+                                      <ChevronRight
+                                        size={16}
+                                        className={cn(
+                                          'text-gray-500 transition-transform',
+                                          isExpanded && 'rotate-90'
+                                        )}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                                {/* AI-Generated Content (Expandable) */}
+                                {isExpanded && item.generated_content && (
+                                  <div className="border-t border-dark-border p-4 bg-dark-card/50">
+                                    <div className="flex items-center gap-2 mb-3 text-xs text-accent-purple">
+                                      <Sparkles size={12} />
+                                      <span>AI-Generated Content</span>
+                                    </div>
+                                    <div className="prose prose-invert prose-sm max-w-none">
+                                      <pre className="whitespace-pre-wrap text-sm text-gray-300 font-sans leading-relaxed bg-transparent p-0 m-0 overflow-x-auto">
+                                        {item.generated_content}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Fallback: Simple checklist progress if no items */}
+                    {gate.checklist && !gate.checklist_items && (
                       <div className="bg-dark-bg rounded-lg p-4">
                         <h4 className="font-semibold mb-3 flex items-center gap-2">
                           <Target size={18} className="text-primary-400" />
