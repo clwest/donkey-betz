@@ -15,6 +15,7 @@ import {
   DollarSign,
   Shield,
   FolderCog,
+  Cpu,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -31,6 +32,7 @@ const navItems = [
   { path: '/podcast', label: 'Podcast', icon: Radio },
   { path: '/portfolio', label: 'Portfolio', icon: DollarSign },
   { path: '/admin', label: 'Admin', icon: Shield },
+  { path: '/llm-routing', label: 'LLM Routing', icon: Cpu },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
