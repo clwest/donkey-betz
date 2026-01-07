@@ -1218,6 +1218,12 @@ from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
     model_performance_analytics as llm_analytics, set_model_preferences
 )
+# Session 699: LLM Routing API endpoints (real database-backed)
+from core.views_llm_routing import (
+    llm_routing_status, llm_providers_list, llm_models_list,
+    agent_llm_configs_list, llm_call_logs_list, llm_cost_analytics,
+    update_agent_llm_config
+)
 from core.views_advanced_workflows import (
     create_advanced_workflow, execute_advanced_workflow, get_workflow_execution_status,
     list_workflow_templates, create_workflow_from_template, workflow_analytics,
@@ -2589,13 +2595,22 @@ urlpatterns = [
     # Session 407: Document section export
     path('api/legal/export-section/', export_legal_section, name='legal-export-section'),
 
-    # Multi-LLM Provider Integration APIs
+    # Multi-LLM Provider Integration APIs (legacy - hardcoded data)
     path('api/v1/llm/providers/', available_llm_providers, name='llm-providers'),
     path('api/v1/llm/intelligent-selection/', intelligent_model_selection, name='intelligent-model-selection'),
     path('api/v1/llm/multi-model-compare/', multi_model_comparison, name='multi-model-compare'),
     path('api/v1/llm/analytics/', llm_analytics, name='llm-analytics'),
     path('api/v1/llm/preferences/', set_model_preferences, name='set-llm-preferences'),
-    
+
+    # Session 699: LLM Routing APIs (real database-backed)
+    path('api/v1/llm-routing/status/', llm_routing_status, name='llm-routing-status'),
+    path('api/v1/llm-routing/providers/', llm_providers_list, name='llm-routing-providers'),
+    path('api/v1/llm-routing/models/', llm_models_list, name='llm-routing-models'),
+    path('api/v1/llm-routing/agent-configs/', agent_llm_configs_list, name='llm-routing-agent-configs'),
+    path('api/v1/llm-routing/logs/', llm_call_logs_list, name='llm-routing-logs'),
+    path('api/v1/llm-routing/cost-analytics/', llm_cost_analytics, name='llm-routing-cost-analytics'),
+    path('api/v1/llm-routing/agent-configs/<str:agent_name>/', update_agent_llm_config, name='llm-routing-update-agent-config'),
+
     # App-specific APIs - Using standardized /api/v1/ pattern
     path('api/v1/workflows/', include('workflows.urls')),  # REAL workflows with actual agents
     path('api/v1/dashboard/', include('dashboard.urls')),  # Dashboard module

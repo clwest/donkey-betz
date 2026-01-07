@@ -185,6 +185,14 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 688: Admin Page APIs (read-only for React frontend)
         '/api/spider-health/',  # Spider health summary and executions
+
+        # Session 699: LLM Routing APIs (read-only for React frontend)
+        '/api/v1/llm-routing/status/',  # LLM routing system status
+        '/api/v1/llm-routing/providers/',  # LLM providers list
+        '/api/v1/llm-routing/models/',  # LLM models list
+        '/api/v1/llm-routing/agent-configs/',  # Agent-to-model mappings
+        '/api/v1/llm-routing/logs/',  # LLM call logs
+        '/api/v1/llm-routing/cost-analytics/',  # Cost analytics
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
