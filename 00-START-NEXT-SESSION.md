@@ -1,8 +1,8 @@
-# Session 714 - Start Here
+# Session 715 - Start Here
 
-**Previous Session:** 713 (Unified Human System - Phases 1 & 2)
+**Previous Session:** 714 (Unified Human System - Phase 3)
 **Date:** January 7, 2026
-**Status:** 100% Reality Score | PHASE 1 & 2 COMPLETE | Starting Phase 3
+**Status:** 100% Reality Score | PHASES 1-3 COMPLETE | Starting Phase 4
 
 ---
 
@@ -21,112 +21,59 @@ This document contains:
 
 ---
 
-## Session 713 Accomplishments
+## Session 714 Accomplishments
 
-### Phase 1: Body Governance + Alerts - COMPLETE
+### Phase 3: Event Broadcasting - MOSTLY COMPLETE
 
-| File Created | Purpose |
-|--------------|---------|
-| `frontend/src/stores/bodyStore.ts` | Central Zustand store for body health |
-| `frontend/src/services/bodyGovernance.ts` | Operation blocking utilities |
-| `frontend/src/components/GlobalAlertBanner.tsx` | Critical alerts + CompactHealthIndicator |
-
-**Features:**
-- Global alert banner shows when body degraded/critical
-- "Start Pilot" blocked when body critical
-- Git commits blocked when spine critical
-- Body health shared across all pages via Zustand
-
-### Phase 2: Cross-Page Navigation - COMPLETE
-
-| File Created | Purpose |
-|--------------|---------|
-| `frontend/src/components/EntityLink.tsx` | EntityLink, EntityBadge, EntityCard components |
-| `frontend/src/components/Breadcrumb.tsx` | Breadcrumb navigation components |
-| `frontend/src/stores/navigationStore.ts` | Navigation context & history |
+| File Created/Modified | Purpose |
+|----------------------|---------|
+| `core/consumers/system_events_consumer.py` | WebSocket consumer for system events |
+| `core/consumers/__init__.py` | Module exports |
+| `core/routing.py` | Added ws/system-events/ route |
+| `core/tasks.py` | Added event emitters to dream, pilot, agent execution tasks |
+| `frontend/src/hooks/useWebSocket.ts` | Added useSystemEvents hook + types |
+| `frontend/src/pages/IntelligencePage.tsx` | Event handlers for pilots, executions |
+| `frontend/src/pages/AgentsPage.tsx` | Event handlers for dreams, level up, executions |
+| `frontend/src/pages/WorkspacePage.tsx` | Event handlers for file modifications |
 
 **Features:**
-- 10 entity types with automatic routing (agent, opportunity, file, dream, etc.)
-- Cross-page links: Workspace → Agents, Intelligence → Agents
-- Breadcrumb navigation showing "Back to X" context
-- Navigation history tracked (last 10 entries)
-- Recently viewed entities persisted (last 20)
+- 10 system event types: agent_execution_complete/failed, pilot_started/completed, dream_generated, level_up, hive_mind_started, gate_became_critical, body_status_changed, file_modified
+- Real-time query invalidation when events occur
+- Automatic page refresh without polling
+- Event routing via WebSocket channel groups
+
+**Remaining for Phase 3:**
+- Add event handlers to DashboardPage and HumanPage
+- Add body_status_changed emitter to body system services
 
 ---
 
-## Session 714 - Continue Phase 3
+## Session 715 - Continue Phase 4
 
-### Phase 3: Event Broadcasting
+### Phase 4: Shared State Store Unification
 
-**Goal:** Real-time updates across all pages via WebSocket
-
-### Files to Create
-
-**Backend:**
-```
-core/
-├── consumers/system_events_consumer.py  # WebSocket consumer
-└── routing.py                           # Add ws route
-```
-
-**Frontend:**
-```
-frontend/src/
-└── hooks/useSystemEvents.ts  # WebSocket hook
-```
+**Goal:** Unify fragmented state into coherent stores
 
 ### Tasks
 
-1. **Create System Events Consumer (Backend)**
-   ```python
-   # core/consumers/system_events_consumer.py
-   class SystemEventsConsumer(AsyncWebsocketConsumer):
-       async def connect(self):
-           await self.channel_layer.group_add("system_events", self.channel_name)
-           await self.accept()
+1. **Create `frontend/src/stores/unifiedStore.ts`**
+   - Merge opportunity state from multiple pages
+   - Merge pilot/gate state
+   - Add pending decisions count
+   - Add active opportunity sidebar data
 
-       async def system_event(self, event):
-           await self.send(json.dumps(event))
-   ```
+2. **Implement Optimistic Updates**
+   - Mutation results update store immediately
+   - Background sync validates/corrects
 
-2. **Update Routing**
-   - Add `ws/system-events/` route
+3. **Add Global State Indicators**
+   - Pending decisions badge in header
+   - Active opportunities sidebar widget
+   - Critical gates notification
 
-3. **Add Event Emitters**
-   - Emit events in `core/tasks.py` after agent executions
-   - Emit events on body status changes
-   - Emit events on file modifications
-
-4. **Create Frontend Hook**
-   ```typescript
-   // frontend/src/hooks/useSystemEvents.ts
-   export function useSystemEvents(handler: (event: SystemEvent) => void)
-   ```
-
-5. **Subscribe Pages to Events**
-   | Page | Events |
-   |------|--------|
-   | All | body_status_changed |
-   | Intelligence | agent_execution_complete, pilot_started |
-   | Agents | agent_execution_complete, level_up, dream_generated |
-   | Workspace | file_modified |
-   | Human | gate_became_critical |
-
-### Event Types to Implement
-
-```typescript
-type SystemEventType =
-  | 'agent_execution_complete'
-  | 'agent_execution_failed'
-  | 'gate_became_critical'
-  | 'body_status_changed'
-  | 'file_modified'
-  | 'pilot_started'
-  | 'pilot_completed'
-  | 'dream_generated'
-  | 'level_up'
-  | 'hive_mind_started'
-```
+4. **Test Cache Invalidation**
+   - Verify queries update across pages
+   - Test state consistency
 
 ---
 
@@ -136,18 +83,18 @@ type SystemEventType =
 |-------|--------|---------|
 | **1** | COMPLETE | Body governance, alerts, operation blocking |
 | **2** | COMPLETE | EntityLink, Breadcrumb, navigation context |
-| **3** | IN PROGRESS | Event broadcasting via WebSocket |
-| **4** | Pending | Shared state store unification |
+| **3** | MOSTLY COMPLETE | Event broadcasting via WebSocket (3 pages) |
+| **4** | IN PROGRESS | Shared state store unification |
 | **5** | Pending | Sci-Fi features UI (13 pages) |
 
-### Metrics After Phase 2
+### Metrics After Phase 3
 
 | Metric | Value |
 |--------|-------|
 | Shared Zustand Stores | 3 (body, navigation, + existing) |
 | Cross-Page Links | 10+ via EntityLink |
-| Event Types Broadcast | 1 (existing) |
-| Backend API Utilization | ~7% |
+| Event Types Broadcast | **10** (new) |
+| Backend API Utilization | ~8% |
 
 ---
 
@@ -156,6 +103,9 @@ type SystemEventType =
 ```bash
 # Start services
 make start && make celery
+
+# Test system events WebSocket
+curl -i --include http://localhost:8000/ws/system-events/
 
 # Test body APIs
 curl http://localhost:8000/api/body/vitals/
@@ -194,7 +144,8 @@ open http://localhost:8080/agents
 
 - `docs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md` - Master roadmap (1,060 lines)
 - `docs/handoffs/SESSION_713_UNIFIED_SYSTEM_PHASES_1_2.md` - Phase 1 & 2 details
+- `docs/handoffs/SESSION_714_EVENT_BROADCASTING.md` - Phase 3 details
 
 ---
 
-**Session 713 Complete** - Phase 1 (Body Governance) + Phase 2 (Cross-Page Navigation)
+**Session 714 Complete** - Phase 3 (Event Broadcasting)

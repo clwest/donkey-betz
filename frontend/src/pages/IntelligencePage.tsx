@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+// Session 714: Real-time system events
+import { useSystemEvents } from '@/hooks/useWebSocket'
 // Session 693: Removed agentsApi - agents tab removed (redundant with main Agents page)
 // Session 694: Removed learningApi, activityApi - tabs removed (redundant with main Agents page)
 import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi } from '@/lib/api'
@@ -239,6 +241,30 @@ export default function IntelligencePage() {
   // Session 693: Experiment detail modal state
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   const queryClient = useQueryClient()
+
+  // Session 714: Real-time event handlers - refresh data when events occur
+  const handlePilotStarted = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['pilots'] })
+    queryClient.invalidateQueries({ queryKey: ['gates'] })
+  }, [queryClient])
+
+  const handlePilotCompleted = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['pilots'] })
+    queryClient.invalidateQueries({ queryKey: ['gates'] })
+    queryClient.invalidateQueries({ queryKey: ['experiments'] })
+  }, [queryClient])
+
+  const handleAgentExecution = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['intelligence-status'] })
+  }, [queryClient])
+
+  // Session 714: Subscribe to system events
+  useSystemEvents({
+    onPilotStarted: handlePilotStarted,
+    onPilotCompleted: handlePilotCompleted,
+    onAgentExecutionComplete: handleAgentExecution,
+    onAgentExecutionFailed: handleAgentExecution,
+  })
 
   // Session 713: Body governance check for starting pilots
   const { canStartPilot } = useBodyGovernance()

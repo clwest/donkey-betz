@@ -448,3 +448,13 @@ project_intelligence_patterns = [
 ]
 
 websocket_urlpatterns.extend(project_intelligence_patterns)
+
+# Session 714: System Events WebSocket - Real-time event broadcasting across all pages
+from .consumers.system_events_consumer import SystemEventsConsumer
+
+system_events_patterns = [
+    # System Events WebSocket - broadcast events to all connected clients
+    re_path(r'^ws/system-events/$', SystemEventsConsumer.as_asgi()),
+]
+
+websocket_urlpatterns.extend(system_events_patterns)

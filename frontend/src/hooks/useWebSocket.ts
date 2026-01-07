@@ -265,3 +265,152 @@ export interface HeartBeatUpdate {
     details?: Record<string, unknown>
   }>
 }
+
+// ============================================================================
+// Session 714: System Events - Real-time event broadcasting across all pages
+// ============================================================================
+
+export type SystemEventType =
+  | 'connection_established'
+  | 'agent_execution_complete'
+  | 'agent_execution_failed'
+  | 'gate_became_critical'
+  | 'body_status_changed'
+  | 'file_modified'
+  | 'pilot_started'
+  | 'pilot_completed'
+  | 'dream_generated'
+  | 'level_up'
+  | 'hive_mind_started'
+  | 'system_status'
+  | 'pong'
+  | 'error'
+
+export interface SystemEvent {
+  type: SystemEventType
+  data?: Record<string, unknown>
+  timestamp?: string
+  message?: string
+}
+
+export interface AgentExecutionEvent extends SystemEvent {
+  type: 'agent_execution_complete' | 'agent_execution_failed'
+  data: {
+    execution_id: string
+    agent_name: string
+    status: string
+    execution_time_ms?: number
+    artifact_id?: string
+  }
+}
+
+export interface PilotEvent extends SystemEvent {
+  type: 'pilot_started' | 'pilot_completed'
+  data: {
+    pilot_id: string
+    name: string
+    status?: string
+    outcome?: string
+    gate_id?: string
+    hours_running?: number
+  }
+}
+
+export interface DreamEvent extends SystemEvent {
+  type: 'dream_generated'
+  data: {
+    dream_id: string
+    agent_id: string
+    agent_name: string
+    title: string
+    dream_type: string
+    vividness_score: number
+  }
+}
+
+export interface HiveMindEvent extends SystemEvent {
+  type: 'hive_mind_started'
+  data: {
+    session_id: string
+    question: string
+    mode: string
+    participant_count: number
+    participants: string[]
+  }
+}
+
+export interface SystemEventHandlers {
+  onAgentExecutionComplete?: (event: AgentExecutionEvent) => void
+  onAgentExecutionFailed?: (event: AgentExecutionEvent) => void
+  onGateBecameCritical?: (event: SystemEvent) => void
+  onBodyStatusChanged?: (event: SystemEvent) => void
+  onFileModified?: (event: SystemEvent) => void
+  onPilotStarted?: (event: PilotEvent) => void
+  onPilotCompleted?: (event: PilotEvent) => void
+  onDreamGenerated?: (event: DreamEvent) => void
+  onLevelUp?: (event: SystemEvent) => void
+  onHiveMindStarted?: (event: HiveMindEvent) => void
+  onAnyEvent?: (event: SystemEvent) => void
+}
+
+/**
+ * Session 714: Hook for subscribing to system-wide events.
+ *
+ * All connected clients receive real-time notifications about:
+ * - Agent executions (complete/failed)
+ * - Pilot lifecycle (started/completed)
+ * - Dream generation
+ * - Hive mind sessions
+ * - Body status changes
+ * - File modifications
+ * - Gate criticality
+ *
+ * @param handlers - Object with callbacks for specific event types
+ * @returns WebSocket status and control functions
+ */
+export function useSystemEvents(handlers: SystemEventHandlers = {}) {
+  const handleMessage = useCallback((data: unknown) => {
+    const event = data as SystemEvent
+
+    // Always call onAnyEvent if provided
+    handlers.onAnyEvent?.(event)
+
+    // Route to specific handlers based on event type
+    switch (event.type) {
+      case 'agent_execution_complete':
+        handlers.onAgentExecutionComplete?.(event as AgentExecutionEvent)
+        break
+      case 'agent_execution_failed':
+        handlers.onAgentExecutionFailed?.(event as AgentExecutionEvent)
+        break
+      case 'gate_became_critical':
+        handlers.onGateBecameCritical?.(event)
+        break
+      case 'body_status_changed':
+        handlers.onBodyStatusChanged?.(event)
+        break
+      case 'file_modified':
+        handlers.onFileModified?.(event)
+        break
+      case 'pilot_started':
+        handlers.onPilotStarted?.(event as PilotEvent)
+        break
+      case 'pilot_completed':
+        handlers.onPilotCompleted?.(event as PilotEvent)
+        break
+      case 'dream_generated':
+        handlers.onDreamGenerated?.(event as DreamEvent)
+        break
+      case 'level_up':
+        handlers.onLevelUp?.(event)
+        break
+      case 'hive_mind_started':
+        handlers.onHiveMindStarted?.(event as HiveMindEvent)
+        break
+    }
+  }, [handlers])
+
+  return useWebSocket('/system-events', {
+    onMessage: handleMessage,
+  })
+}
