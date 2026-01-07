@@ -237,6 +237,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/immune/quarantine/',  # Get quarantine list
         '/api/immune/is-healthy/',  # Quick health check
         '/api/immune/categories/',  # Get category breakdown
+
+        # Session 706: DIGESTIVE System APIs (data ingestion monitoring for React frontend)
+        '/api/digestive/digest/',  # Run full digestion check
+        '/api/digestive/status/',  # Get cached digestion status
+        '/api/digestive/routes/',  # List ingestion routes
+        '/api/digestive/bottlenecks/',  # Get current bottlenecks
+        '/api/digestive/metabolism/',  # Get throughput metrics
+        '/api/digestive/history/',  # Get digestion pulse history
+        '/api/digestive/is-digesting/',  # Quick alive check
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

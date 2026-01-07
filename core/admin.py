@@ -1182,3 +1182,137 @@ class ImmuneStatusAdmin(admin.ModelAdmin):
             'fields': ('alert_sent', 'last_alert_at')
         }),
     )
+
+
+# =============================================================================
+# SESSION 706: DIGESTIVE SYSTEM ADMIN (Data Ingestion & Processing)
+# =============================================================================
+
+from core.models_digestive import IngestionRoute, DigestivePulse, DigestionStatus
+
+
+@admin.register(IngestionRoute)
+class IngestionRouteAdmin(admin.ModelAdmin):
+    """Admin interface for ingestion route configuration."""
+
+    list_display = (
+        'name', 'display_name', 'route_type', 'stage', 'is_active',
+        'is_critical', 'total_items_processed', 'total_errors', 'last_activity'
+    )
+    list_filter = ('route_type', 'stage', 'is_active', 'is_critical', 'is_builtin')
+    search_fields = ('name', 'display_name', 'identifier', 'description')
+    readonly_fields = (
+        'id', 'total_items_processed', 'total_errors', 'last_activity',
+        'created_at', 'updated_at'
+    )
+    date_hierarchy = 'created_at'
+    ordering = ('stage', 'name')
+
+    fieldsets = (
+        ('Identification', {
+            'fields': ('name', 'display_name', 'identifier', 'description')
+        }),
+        ('Route Type', {
+            'fields': ('route_type', 'stage')
+        }),
+        ('Thresholds', {
+            'fields': ('max_queue_depth', 'target_throughput', 'max_processing_time_ms')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_critical', 'is_builtin')
+        }),
+        ('Statistics', {
+            'fields': ('total_items_processed', 'total_errors', 'last_activity'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(DigestivePulse)
+class DigestivePulseAdmin(admin.ModelAdmin):
+    """Admin interface for digestive pulse history."""
+
+    list_display = (
+        'overall_status', 'digestion_score', 'items_ingested_24h',
+        'items_processed_24h', 'items_pending', 'processing_throughput',
+        'check_duration_ms', 'recorded_at'
+    )
+    list_filter = ('overall_status', 'recorded_at')
+    readonly_fields = (
+        'id', 'overall_status', 'digestion_score',
+        'items_ingested_24h', 'spiders_executed_24h', 'intake_errors_24h',
+        'items_processed_24h', 'items_pending', 'processing_throughput', 'avg_processing_time_ms',
+        'embeddings_generated_24h', 'embedding_coverage_pct',
+        'items_routed_24h', 'items_filtered_24h',
+        'bottlenecks', 'check_duration_ms', 'recorded_at'
+    )
+    date_hierarchy = 'recorded_at'
+    ordering = ('-recorded_at',)
+
+    fieldsets = (
+        ('Overall Status', {
+            'fields': ('overall_status', 'digestion_score')
+        }),
+        ('Intake Stage', {
+            'fields': ('items_ingested_24h', 'spiders_executed_24h', 'intake_errors_24h')
+        }),
+        ('Processing Stage', {
+            'fields': ('items_processed_24h', 'items_pending', 'processing_throughput', 'avg_processing_time_ms')
+        }),
+        ('Enrichment Stage', {
+            'fields': ('embeddings_generated_24h', 'embedding_coverage_pct')
+        }),
+        ('Routing Stage', {
+            'fields': ('items_routed_24h', 'items_filtered_24h')
+        }),
+        ('Bottlenecks', {
+            'fields': ('bottlenecks',),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'check_duration_ms', 'recorded_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(DigestionStatus)
+class DigestionStatusAdmin(admin.ModelAdmin):
+    """Admin interface for per-route digestion status cache."""
+
+    list_display = (
+        'route', 'status', 'is_healthy', 'current_queue_depth',
+        'current_throughput', 'success_rate_24h', 'last_check'
+    )
+    list_filter = ('status', 'is_healthy')
+    search_fields = ('route__name', 'route__display_name')
+    readonly_fields = (
+        'route', 'status', 'is_healthy',
+        'current_queue_depth', 'current_throughput', 'current_latency_ms',
+        'items_ingested_24h', 'items_processed_24h', 'items_output_24h',
+        'errors_24h', 'success_rate_24h',
+        'last_intake', 'last_output', 'last_check'
+    )
+    ordering = ('route__stage', 'route__name')
+
+    fieldsets = (
+        ('Route', {
+            'fields': ('route',)
+        }),
+        ('Current Status', {
+            'fields': ('status', 'is_healthy')
+        }),
+        ('Current Metrics', {
+            'fields': ('current_queue_depth', 'current_throughput', 'current_latency_ms')
+        }),
+        ('24h Metrics', {
+            'fields': ('items_ingested_24h', 'items_processed_24h', 'items_output_24h', 'errors_24h', 'success_rate_24h')
+        }),
+        ('Timestamps', {
+            'fields': ('last_intake', 'last_output', 'last_check')
+        }),
+    )

@@ -1,114 +1,106 @@
-# Session 706 - Start Here
+# Session 707 - Start Here
 
-**Previous Session:** 705 (IMMUNE SYSTEM - Security & Threat Detection)
+**Previous Session:** 706 (DIGESTIVE SYSTEM - Data Ingestion & Processing)
 **Date:** January 6, 2026
-**Status:** 100% Reality Score | HEART + LUNGS + CIRCULATORY + SPINE + IMMUNE Services COMPLETE
+**Status:** 100% Reality Score | ALL 6 BODY SYSTEMS COMPLETE
 
 ---
 
-## Session 705 Summary
+## Session 706 Summary
 
-### IMMUNE SYSTEM - Security & Threat Detection (Backend)
+### DIGESTIVE SYSTEM - Data Ingestion & Processing (Backend)
 
-Implemented the **IMMUNE SYSTEM** - the security and threat detection component that monitors for malicious activity, suspicious patterns, and responds to threats.
+Implemented the **DIGESTIVE SYSTEM** - monitors how raw data from spiders is transformed into actionable intelligence. This is the 6th body system component.
 
 ### Human Body Metaphor
 
-| Immune Concept | Technical Equivalent |
-|----------------|---------------------|
-| **Pathogens** | Malicious requests, suspicious patterns |
-| **Antibodies** | Detection rules and patterns (14 default patterns) |
-| **White Blood Cells** | Active monitoring and response |
-| **Fever** | Elevated alert state |
-| **Inflammation** | Rate limiting, blocking |
-| **Quarantine** | Blocked IPs/users/agents |
-| **Immune Memory** | Historical threat database |
+| Digestion Concept | Technical Equivalent |
+|-------------------|---------------------|
+| **Food** | Raw spider data (RSS, API responses, scraped content) |
+| **Mouth/Intake** | Spider execution → SpiderData creation |
+| **Stomach** | Processing queue - normalization, deduplication |
+| **Enzymes** | Transformation functions - embedding, scoring |
+| **Intestines** | Routing pipeline to agents/services |
+| **Nutrients** | Actionable intelligence (normalized, scored data) |
+| **Waste** | Filtered/irrelevant data (low scores, duplicates) |
+| **Metabolism Rate** | Processing throughput (items/minute) |
 
 ### Files Created (5)
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `core/models_immune.py` | ~430 | ThreatPattern, ThreatEvent, ImmuneResponse, Quarantine, ImmuneStatus models |
-| `core/services/immune.py` | ~650 | ImmuneSystemService singleton |
-| `core/views_immune.py` | ~458 | 10 API endpoints |
-| `core/management/commands/immune_check.py` | ~380 | CLI management command |
-| `core/migrations/0151_session_705_immune_system.py` | ~530 | Database migration with 14 default patterns |
+| `core/models_digestive.py` | ~280 | IngestionRoute, DigestivePulse, DigestionStatus models |
+| `core/services/digestive.py` | ~600 | DigestiveSystemService singleton |
+| `core/views_digestive.py` | ~380 | 8 API endpoints |
+| `core/management/commands/digestion_check.py` | ~420 | CLI management command |
+| `core/migrations/0152_session_706_digestive_system.py` | ~280 | Migration with 8 default routes |
 
 ### Files Modified (5)
 
 | File | Changes |
 |------|---------|
-| `core/urls.py` | Added 10 IMMUNE API routes |
-| `core/tasks.py` | Added `immune_scan` Celery task |
-| `core/celery.py` | Added Beat schedule (every 45 seconds) |
-| `core/admin.py` | Registered 5 IMMUNE models |
-| `core/auth_middleware.py` | Added 7 IMMUNE endpoints to PUBLIC_PATHS |
+| `core/urls.py` | Added 8 DIGESTIVE API routes |
+| `core/tasks.py` | Added `check_digestion` Celery task |
+| `core/celery.py` | Added Beat schedule (every 60 seconds) |
+| `core/admin.py` | Registered 3 DIGESTIVE admin classes |
+| `core/auth_middleware.py` | Added 7 DIGESTIVE endpoints to PUBLIC_PATHS |
 
-### Default Threat Patterns (14)
+### Default Ingestion Routes (8)
 
-| Category | Count | Patterns |
-|----------|-------|----------|
-| rate_abuse | 2 | Burst attack, sustained high rate |
-| auth_attack | 2 | Brute force login, credential stuffing |
-| injection | 3 | SQL injection, XSS, path traversal |
-| scraping | 1 | Aggressive web scraping |
-| bot | 1 | Known bad bot user agents |
-| dos | 2 | Connection flood, slow loris |
-| enumeration | 2 | User enumeration, API enumeration |
-| anomaly | 1 | Unusual activity hours |
+| Route Name | Type | Stage | Critical |
+|------------|------|-------|----------|
+| Spider News Intake | spider | intake | No |
+| Spider Financial Intake | spider | intake | Yes |
+| Spider Tech Intake | spider | intake | No |
+| Spider Legal Intake | spider | intake | Yes |
+| Spider Community Intake | spider | intake | No |
+| Data Processing Queue | stream | processing | Yes |
+| Embedding Pipeline | stream | enrichment | No |
+| Agent Data Routing | stream | routing | Yes |
 
 ### Status Levels
 
-| Health Score | Status | Meaning |
-|--------------|--------|---------|
-| 90-100% | `healthy` | No active threats |
-| 70-89% | `alert` | Elevated threat level |
-| 50-69% | `fighting` | Active threat response |
-| 20-49% | `overwhelmed` | Too many threats |
-| 0-19% | `compromised` | System may be breached |
+| Score | Status | Emoji | Meaning |
+|-------|--------|-------|---------|
+| 80-100% | healthy | 🟢 | Normal data processing |
+| 60-79% | sluggish | 🟡 | Slow processing, minor delays |
+| 40-59% | bloated | 🟠 | High queue depth, backlog |
+| 20-39% | blocked | 🔴 | Processing stuck |
+| 0-19% | starving | ⚪ | No data intake |
 
-### Threat Levels
-
-| Level | Meaning |
-|-------|---------|
-| `none` | No threats detected |
-| `low` | Minor concerns |
-| `elevated` | Increased activity |
-| `high` | Active threats |
-| `severe` | Critical situation |
-
-### Test Results
+### Test Results - REAL ISSUES DETECTED!
 
 ```
 ============================================================
-  IMMUNE SYSTEM - Security & Threat Detection
-  The Defense Layer of the AI Body
+  DIGESTIVE SYSTEM - Data Ingestion & Processing
+  The Data Processing Layer of the AI Body
 ============================================================
-  Overall Status: HEALTHY
-  Health Score: 100.0%
-  Threat Level: NONE
-  Is Healthy: Yes
+  Overall Status: BLOATED      🟠
+  Digestion Score: 51.5%
+  Is Digesting: No
 
-  Threat Statistics (24h):
+  INTAKE Stage (Spider Data):
   ----------------------------------------
-  Active Threats:    0
-  Detected (24h):    0
-  Blocked (24h):     0
-  False Positives:   0
+  Status:          BLOCKED
+  Items (24h):     1,923
+  Spiders:         5,929
+  Success Rate:    29.5%
 
-  Quarantine Status:
+  PROCESSING Stage (Queue & Transform):
   ----------------------------------------
-  Total Quarantined: 0
-  Quarantined IPs:   0
-  Quarantined Users: 0
+  Status:          BLOCKED
+  Queue Depth:     9,681 items (CRITICAL!)
+  Throughput:      0.00/min
 
-  Pattern Statistics:
+  BOTTLENECKS DETECTED:
   ----------------------------------------
-  Active Patterns:   14
+  [WARNING] intake: Low spider success rate (29.5%)
+  [CRITICAL] processing: High queue depth (9,681 items pending)
+  [WARNING] processing: Low processing throughput (0.0 items/min)
 ============================================================
 ```
 
-**Human Body Architecture Now Complete (5 Core Organs):**
+**Human Body Architecture Now Complete (6 Core Systems):**
 
 | Body Part | Technical Component | Purpose | Session |
 |-----------|---------------------|---------|------------|
@@ -119,7 +111,8 @@ Implemented the **IMMUNE SYSTEM** - the security and threat detection component 
 | **LUNGS** | LungsCapacityService | Resource & capacity management | 702 |
 | **CIRCULATORY** | CirculatorySystemService | Data flow monitoring | 703 |
 | **SPINE** | SpineRouterService | Central API routing | 704 |
-| **IMMUNE** | ImmuneSystemService | **Security & threat detection (NEW)** | **705** |
+| **IMMUNE** | ImmuneSystemService | Security & threat detection | 705 |
+| **DIGESTIVE** | DigestiveSystemService | **Data ingestion & processing (NEW)** | **706** |
 | **NERVOUS SYSTEM** | LLM/ML Routers | Signal routing | - |
 | **ORGANS** | 72 Specialized Agents | Work execution | - |
 | **SENSORY** | 77 Spiders | Data gathering | - |
@@ -128,7 +121,7 @@ Implemented the **IMMUNE SYSTEM** - the security and threat detection component 
 
 ---
 
-## System Stats (Session 705)
+## System Stats (Session 706)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
@@ -138,9 +131,10 @@ Implemented the **IMMUNE SYSTEM** - the security and threat detection component 
 | LLM Providers | 6 | OpenAI, Anthropic, DeepSeek, Together AI, Gemini, Ollama |
 | LLM Models | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | Agent LLM Configs | 75 | All major agents configured |
-| Database Models | 353+ | +5 IMMUNE models (ThreatPattern, ThreatEvent, ImmuneResponse, Quarantine, ImmuneStatus) |
-| Services | 102 | +ImmuneSystemService |
-| Celery Tasks | 135 | +immune_scan |
+| Database Models | 356+ | +3 DIGESTIVE models (IngestionRoute, DigestivePulse, DigestionStatus) |
+| Services | 103 | +DigestiveSystemService |
+| Celery Tasks | 136 | +check_digestion |
+| Body Systems | 6 | HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE |
 
 ---
 
@@ -150,29 +144,34 @@ Implemented the **IMMUNE SYSTEM** - the security and threat detection component 
 # Start services
 make start && make celery
 
+# Run DIGESTIVE data ingestion check
+python manage.py digestion_check              # Full check
+python manage.py digestion_check --json       # JSON output
+python manage.py digestion_check --routes     # List all ingestion routes
+python manage.py digestion_check --bottlenecks # Show current bottlenecks
+python manage.py digestion_check --metabolism # Show throughput metrics
+python manage.py digestion_check --watch      # Continuous monitoring (60s)
+python manage.py digestion_check --history    # Show digestion pulse history
+python manage.py digestion_check --stage intake # Check specific stage
+
 # Run IMMUNE security scan
-python manage.py immune_check              # Full scan
-python manage.py immune_check --json       # JSON output
-python manage.py immune_check --patterns   # List all threat patterns
-python manage.py immune_check --threats    # Show recent threats
-python manage.py immune_check --quarantine # Show quarantine list
-python manage.py immune_check --watch      # Continuous monitoring (45s)
-python manage.py immune_check --categories # Show category breakdown
+python manage.py immune_check                 # Full scan
+python manage.py immune_check --watch         # Continuous monitoring
 
 # Run other body checks
-python manage.py heart_check              # HEART health check
-python manage.py lungs_check              # LUNGS breathing check
-python manage.py circulation_check        # CIRCULATORY flow check
-python manage.py spine_check              # SPINE alignment check
+python manage.py heart_check                  # HEART health check
+python manage.py lungs_check                  # LUNGS breathing check
+python manage.py circulation_check            # CIRCULATORY flow check
+python manage.py spine_check                  # SPINE alignment check
 
-# IMMUNE API endpoints
-curl http://localhost:8000/api/immune/scan/        # Run full scan
-curl http://localhost:8000/api/immune/status/      # Cached status
-curl http://localhost:8000/api/immune/patterns/    # List threat patterns
-curl http://localhost:8000/api/immune/threats/     # Recent threats
-curl http://localhost:8000/api/immune/quarantine/  # Quarantine list
-curl http://localhost:8000/api/immune/is-healthy/  # Quick health check
-curl http://localhost:8000/api/immune/categories/  # Category breakdown
+# DIGESTIVE API endpoints
+curl http://localhost:8000/api/digestive/digest/       # Run full check
+curl http://localhost:8000/api/digestive/status/       # Cached status
+curl http://localhost:8000/api/digestive/routes/       # List ingestion routes
+curl http://localhost:8000/api/digestive/bottlenecks/  # Current bottlenecks
+curl http://localhost:8000/api/digestive/metabolism/   # Throughput metrics
+curl http://localhost:8000/api/digestive/history/      # Pulse history
+curl http://localhost:8000/api/digestive/is-digesting/ # Quick alive check
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
@@ -180,36 +179,49 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 706 Recommendations - Next Body Parts
+## Session 707 Recommendations - Immediate Issues
 
-With HEART, LUNGS, CIRCULATORY, SPINE, and IMMUNE complete, consider these remaining body parts:
+The DIGESTIVE system detected real problems that need investigation:
 
-### 1. DIGESTIVE SYSTEM - Data Ingestion Pipeline
-- **Purpose:** Process and transform incoming data
-- **Features:** Spider data parsing, normalization, enrichment
-- **Pattern:** Transform raw data into usable intelligence
+### 1. CRITICAL: Processing Queue Backlog (9,681 items)
+- **Problem:** Processing queue has 9,681 items waiting
+- **Investigation:**
+  - Are Celery workers running?
+  - Is there a processing task deadlock?
+  - Memory/resource constraints?
+- **Commands:**
+  ```bash
+  celery -A core inspect active
+  celery -A core inspect reserved
+  python manage.py shell -c "from core.models_unified_system import SpiderData; print(SpiderData.objects.filter(is_processed=False).count())"
+  ```
 
-### 2. MUSCULAR SYSTEM - Agent Work Execution
-- **Purpose:** Track and optimize agent work performance
-- **Features:** Task completion metrics, workload distribution
-- **Pattern:** Measure the strength of the AI body
+### 2. WARNING: Low Spider Success Rate (29.5%)
+- **Problem:** 70% of spider executions are failing
+- **Investigation:**
+  - Which spiders are failing most?
+  - API rate limits?
+  - Network issues?
+- **Commands:**
+  ```bash
+  python manage.py shell -c "from core.models_unified_system import SpiderExecutionLog; print(SpiderExecutionLog.objects.filter(status='error').values_list('spider_name', flat=True).distinct())"
+  ```
 
-### 3. Frontend Integration - Body System Dashboard
-- **Purpose:** Unified view of all body systems
-- **Features:** Real-time health widgets for HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE
-- **Pattern:** Visual monitoring of the AI body
+### 3. OPTIONAL: Frontend Body Dashboard
+- Build unified React dashboard showing all 6 body systems
+- Real-time health widgets
+- Bottleneck visualization
 
-### 4. NERVOUS SYSTEM Enhancement - LLM Response Optimization
-- **Purpose:** Optimize agent-to-model routing
-- **Features:** Response caching, model fallbacks, latency tracking
-- **Pattern:** Fast neural responses
+### 4. OPTIONAL: MUSCULAR SYSTEM
+- Track agent work execution performance
+- Measure "strength" of the AI body
 
 ---
 
 ## Handoff Document
 
-See `docs/handoffs/SESSION_705_IMMUNE_SYSTEM.md` for complete implementation details.
+See `docs/handoffs/SESSION_706_DIGESTIVE_SYSTEM.md` for complete implementation details.
 
 ---
 
-**Session 705 Complete** - IMMUNE SYSTEM (14 Threat Patterns, 10 API Endpoints, Full Body Integration)
+**Session 706 Complete** - DIGESTIVE SYSTEM (8 Routes, 8 API Endpoints, Real Bottleneck Detection)
