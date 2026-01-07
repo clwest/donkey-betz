@@ -1689,40 +1689,43 @@ function SkinDetailView() {
       <div className="bg-zinc-800/50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
           <FileEdit className="w-4 h-4 text-amber-400" />
-          File Operations (24h)
+          Workspace Operations (24h)
+          <span className="text-xs text-zinc-600 font-normal ml-2">
+            — file writes, shell commands, and git operations by agents
+          </span>
         </h3>
         <div className="grid grid-cols-6 gap-2">
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Total workspace operations in the last 24 hours">
             <div className="text-lg font-bold text-blue-400">
               {skin?.operations_24h?.total || 0}
             </div>
-            <div className="text-xs text-zinc-500">Total</div>
+            <div className="text-xs text-zinc-500">Total Ops</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="New files created by agents">
             <div className="text-lg font-bold text-green-400">
               {skin?.file_activity_24h?.created || 0}
             </div>
-            <div className="text-xs text-zinc-500">Created</div>
+            <div className="text-xs text-zinc-500">Files Created</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Existing files modified by agents">
             <div className="text-lg font-bold text-cyan-400">
               {skin?.file_activity_24h?.modified || 0}
             </div>
-            <div className="text-xs text-zinc-500">Modified</div>
+            <div className="text-xs text-zinc-500">Files Modified</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Files deleted by agents">
             <div className="text-lg font-bold text-red-400">
               {skin?.file_activity_24h?.deleted || 0}
             </div>
-            <div className="text-xs text-zinc-500">Deleted</div>
+            <div className="text-xs text-zinc-500">Files Deleted</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Shell commands executed by agents (npm, pip, etc.)">
             <div className="text-lg font-bold text-purple-400">
               {skin?.file_activity_24h?.commands || 0}
             </div>
-            <div className="text-xs text-zinc-500">Commands</div>
+            <div className="text-xs text-zinc-500">Shell Cmds</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Git operations (commit, push, pull, etc.)">
             <div className="text-lg font-bold text-orange-400">
               {skin?.file_activity_24h?.git_ops || 0}
             </div>
@@ -1731,7 +1734,7 @@ function SkinDetailView() {
         </div>
         {/* Metrics row */}
         <div className="grid grid-cols-4 gap-2 mt-2">
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Percentage of operations that completed successfully">
             <div className={cn(
               'text-lg font-bold',
               (skin?.operations_24h?.success_rate || 100) >= 90 ? 'text-green-400' :
@@ -1741,19 +1744,19 @@ function SkinDetailView() {
             </div>
             <div className="text-xs text-zinc-500">Success Rate</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Total lines of code added, removed, or modified">
             <div className="text-lg font-bold text-pink-400">
               {skin?.file_activity_24h?.lines_changed?.toLocaleString() || 0}
             </div>
             <div className="text-xs text-zinc-500">Lines Changed</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Total bytes written to files">
             <div className="text-lg font-bold text-teal-400">
               {formatBytes(skin?.file_activity_24h?.bytes_written || 0)}
             </div>
-            <div className="text-xs text-zinc-500">Bytes Written</div>
+            <div className="text-xs text-zinc-500">Data Written</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Average time to complete a workspace operation">
             <div className="text-lg font-bold text-indigo-400">
               {skin?.activity?.avg_op_time_ms || 0}ms
             </div>
@@ -1767,12 +1770,15 @@ function SkinDetailView() {
         <div className="bg-zinc-800/50 rounded-lg p-4">
           <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
             <Users className="w-4 h-4 text-purple-400" />
-            Agent Activity ({skin.agents.active_count} active)
+            Agent Workspace Operations ({skin.agents.active_count} agents active in 24h)
           </h3>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-zinc-500">Most Active:</span>
             <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
               {skin.agents.most_active || 'None'}
+            </span>
+            <span className="text-xs text-zinc-600">
+              (file writes, commands, git operations)
             </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1780,9 +1786,10 @@ function SkinDetailView() {
               <div
                 key={agent}
                 className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-2 flex items-center justify-between"
+                title={`${agent} performed ${count} workspace operations in the last 24 hours`}
               >
                 <span className="text-xs text-zinc-400 truncate flex-1">{agent}</span>
-                <span className="text-sm font-bold text-zinc-300 ml-2">{count as number}</span>
+                <span className="text-sm font-bold text-zinc-300 ml-2">{count as number} <span className="text-xs text-zinc-500 font-normal">ops</span></span>
               </div>
             ))}
           </div>
@@ -1796,38 +1803,38 @@ function SkinDetailView() {
           Healing & Recovery
         </h3>
         <div className="grid grid-cols-4 gap-3">
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="File snapshots that can be restored to previous state">
             <div className="text-lg font-bold text-purple-400">
               {skin?.healing?.rollbacks_available || 0}
             </div>
-            <div className="text-xs text-zinc-500">Available</div>
+            <div className="text-xs text-zinc-500">Snapshots Available</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Number of rollbacks performed in the last 24 hours">
             <div className={cn(
               'text-lg font-bold',
               (skin?.healing?.rollbacks_performed_24h || 0) > 0 ? 'text-blue-400' : 'text-zinc-500'
             )}>
               {skin?.healing?.rollbacks_performed_24h || 0}
             </div>
-            <div className="text-xs text-zinc-500">Performed</div>
+            <div className="text-xs text-zinc-500">Rollbacks (24h)</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Operations requiring human approval before execution">
             <div className={cn(
               'text-lg font-bold',
               (skin?.healing?.pending_reviews || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
             )}>
               {skin?.healing?.pending_reviews || 0}
             </div>
-            <div className="text-xs text-zinc-500">Pending Review</div>
+            <div className="text-xs text-zinc-500">Pending Reviews</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center" title="Operations blocked due to permission errors">
             <div className={cn(
               'text-lg font-bold',
               (skin?.issues?.permission_denials || 0) > 0 ? 'text-red-400' : 'text-green-400'
             )}>
               {skin?.issues?.permission_denials || 0}
             </div>
-            <div className="text-xs text-zinc-500">Denials</div>
+            <div className="text-xs text-zinc-500">Permission Denials</div>
           </div>
         </div>
       </div>
