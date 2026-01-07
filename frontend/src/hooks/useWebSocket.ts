@@ -214,6 +214,15 @@ export function useAgentConversations(onMessage?: (data: ConversationMessage) =>
   })
 }
 
+// Session 702: Specialized hook for HEART service updates
+export function useHeartUpdates(onUpdate?: (data: HeartBeatUpdate) => void) {
+  return useWebSocket('/heart', {
+    onMessage: (data) => {
+      onUpdate?.(data as HeartBeatUpdate)
+    },
+  })
+}
+
 // Types for WebSocket messages
 export interface AgentUpdate {
   type: 'agent_status' | 'agent_execution' | 'agent_completed' | 'agent_error'
@@ -240,4 +249,19 @@ export interface ConversationMessage {
   message: string
   timestamp: string
   conversation_id?: string
+}
+
+// Session 702: HEART service WebSocket update
+export interface HeartBeatUpdate {
+  type: 'heartbeat' | 'component_status' | 'health_alert'
+  health_score: number
+  overall_status: 'healthy' | 'degraded' | 'critical'
+  is_alive: boolean
+  timestamp: string
+  components?: Record<string, {
+    status: string
+    is_healthy: boolean
+    response_time_ms?: number
+    details?: Record<string, unknown>
+  }>
 }

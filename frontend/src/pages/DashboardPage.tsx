@@ -5,6 +5,7 @@ import { ecosystemApi, dashboardApi, spidersApi, activityApi } from '@/lib/api'
 import { useWebSocket, type WebSocketStatus } from '@/hooks/useWebSocket'
 import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import HeartWidget from '@/components/HeartWidget'
 
 interface StatCardProps {
   title: string
@@ -393,45 +394,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* System Notifications */}
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">System Status</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-accent-green" />
-                <span>Django Backend</span>
-              </div>
-              <span className="text-accent-green text-sm">Online</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-accent-green" />
-                <span>WebSocket Server</span>
-              </div>
-              <span className={cn(
-                'text-sm',
-                wsStatus === 'connected' ? 'text-accent-green' : 'text-accent-amber'
-              )}>
-                {wsStatus === 'connected' ? 'Connected' : 'Reconnecting...'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-accent-green" />
-                <span>Celery Workers</span>
-              </div>
-              <span className="text-accent-green text-sm">Running</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dark-bg">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-accent-green" />
-                <span>Redis</span>
-              </div>
-              <span className="text-accent-green text-sm">Connected</span>
-            </div>
-          </div>
-        </div>
+        {/* HEART Service - System Health (Session 702) */}
+        <HeartWidget />
       </div>
 
       {/* Toast notification */}

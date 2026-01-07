@@ -193,6 +193,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/llm-routing/agent-configs/',  # Agent-to-model mappings
         '/api/v1/llm-routing/logs/',  # LLM call logs
         '/api/v1/llm-routing/cost-analytics/',  # Cost analytics
+
+        # Session 702: HEART Service APIs (read-only health monitoring for React frontend)
+        '/api/heart/pulse/',  # Run full health check
+        '/api/heart/status/',  # Get cached system vitals
+        '/api/heart/history/',  # Heartbeat history
+        '/api/heart/component/',  # Component status detail
+        '/api/heart/alive/',  # Quick alive check
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
