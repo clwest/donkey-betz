@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ecosystemApi, dashboardApi, spidersApi, activityApi } from '@/lib/api'
 import { useWebSocket, type WebSocketStatus } from '@/hooks/useWebSocket'
-import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Bot, Brain, Zap, Activity, Wifi, WifiOff, Loader2, CheckCircle, XCircle, Users, TrendingUp, Gauge, Lightbulb, Link2, Rocket } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface StatCardProps {
@@ -47,6 +47,59 @@ function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
         >
           <Icon size={24} style={{ color }} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 697: Mini stat card for secondary metrics
+interface MiniStatProps {
+  title: string
+  value: string | number
+  icon: React.ElementType
+  color: string
+}
+
+function MiniStat({ title, value, icon: Icon, color }: MiniStatProps) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-dark-bg">
+      <div
+        className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${color}15` }}
+      >
+        <Icon size={18} style={{ color }} />
+      </div>
+      <div>
+        <p className="text-lg font-bold" style={{ color }}>{value}</p>
+        <p className="text-xs text-gray-500">{title}</p>
+      </div>
+    </div>
+  )
+}
+
+// Session 697: Progress gauge for percentage metrics
+interface GaugeStatProps {
+  title: string
+  value: number
+  icon: React.ElementType
+  color: string
+}
+
+function GaugeStat({ title, value, icon: Icon, color }: GaugeStatProps) {
+  return (
+    <div className="p-4 rounded-lg bg-dark-bg">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Icon size={16} style={{ color }} />
+          <span className="text-sm text-gray-400">{title}</span>
+        </div>
+        <span className="text-lg font-bold" style={{ color }}>{value.toFixed(1)}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-dark-card overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${Math.min(value, 100)}%`, backgroundColor: color }}
+        />
       </div>
     </div>
   )
@@ -212,6 +265,55 @@ export default function DashboardPage() {
           icon={Activity}
           color="#06b6d4"
         />
+      </div>
+
+      {/* Session 697: Intelligence Metrics - Previously Hidden Data */}
+      <div className="card">
+        <h3 className="text-lg font-semibold mb-4">Intelligence Metrics</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: Mini stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <MiniStat
+              title="Knowledge Transfers"
+              value={(stats.stats?.knowledge_transfers || 0).toLocaleString()}
+              icon={Lightbulb}
+              color="#a855f7"
+            />
+            <MiniStat
+              title="Collaborations"
+              value={(stats.stats?.collaborations || 0).toLocaleString()}
+              icon={Users}
+              color="#ec4899"
+            />
+            <MiniStat
+              title="Solutions Deployed"
+              value={(stats.stats?.solutions_deployed || 0).toLocaleString()}
+              icon={Rocket}
+              color="#22c55e"
+            />
+            <MiniStat
+              title="Active Connections"
+              value={(stats.stats?.active_connections || 0).toLocaleString()}
+              icon={Link2}
+              color="#06b6d4"
+            />
+          </div>
+          {/* Right: Gauges */}
+          <div className="space-y-3">
+            <GaugeStat
+              title="System Efficiency"
+              value={stats.stats?.system_efficiency || 0}
+              icon={Gauge}
+              color="#22c55e"
+            />
+            <GaugeStat
+              title="Learning Rate"
+              value={stats.stats?.learning_rate || 0}
+              icon={TrendingUp}
+              color="#8b5cf6"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
