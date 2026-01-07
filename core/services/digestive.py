@@ -352,7 +352,9 @@ class DigestiveSystemService:
         executions = SpiderExecutionLog.objects.filter(started_at__gte=cutoff_24h)
         spiders_executed = executions.count()
 
-        successful = executions.filter(status='success').count()
+        # Count both 'success' and 'partial' as successful executions
+        # 'partial' means spider ran but found no NEW items (deduplication working)
+        successful = executions.filter(status__in=['success', 'partial']).count()
         success_rate = (successful / spiders_executed * 100) if spiders_executed > 0 else 100.0
 
         errors = executions.filter(status__in=['error', 'timeout']).count()
