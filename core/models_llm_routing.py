@@ -29,6 +29,7 @@ class LLMProvider(models.Model):
         ('openai', 'OpenAI'),
         ('anthropic', 'Anthropic'),
         ('deepseek', 'DeepSeek'),
+        ('together', 'Together AI'),  # Session 697: Hosts DeepSeek, Llama, Mixtral
         ('gemini', 'Google Gemini'),
         ('ollama', 'Ollama (Local)'),
         ('replicate', 'Replicate'),
@@ -406,6 +407,15 @@ DEFAULT_PROVIDERS = [
         'supports_vision': False,
         'supports_streaming': True,
     },
+    {
+        'name': 'together',
+        'display_name': 'Together AI',
+        'api_key_env_var': 'TOGETHER_AI_API_KEY',
+        'base_url': 'https://api.together.xyz/v1',
+        'supports_tools': True,
+        'supports_vision': True,
+        'supports_streaming': True,
+    },
 ]
 
 DEFAULT_MODELS = [
@@ -600,15 +610,87 @@ DEFAULT_MODELS = [
         'specializations': ['quick_tasks', 'private', 'offline'],
         'is_recommended': False,
     },
+
+    # Together AI Models (hosts open-source models)
+    {
+        'provider': 'together',
+        'model_id': 'deepseek-ai/deepseek-coder-33b-instruct',
+        'display_name': 'DeepSeek Coder 33B (Together)',
+        'category': 'coding',
+        'context_window': 16000,
+        'max_output_tokens': 4096,
+        'speed_rating': 8,
+        'quality_rating': 9,
+        'cost_per_1m_input': 0.80,
+        'cost_per_1m_output': 0.80,
+        'specializations': ['coding', 'code_review', 'devops'],
+        'is_recommended': True,
+    },
+    {
+        'provider': 'together',
+        'model_id': 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+        'display_name': 'Llama 3.1 70B Turbo (Together)',
+        'category': 'general',
+        'context_window': 131072,
+        'max_output_tokens': 4096,
+        'speed_rating': 8,
+        'quality_rating': 8,
+        'cost_per_1m_input': 0.88,
+        'cost_per_1m_output': 0.88,
+        'specializations': ['general', 'analysis', 'coding'],
+        'is_recommended': True,
+    },
+    {
+        'provider': 'together',
+        'model_id': 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+        'display_name': 'Llama 3.1 8B Turbo (Together)',
+        'category': 'fast',
+        'context_window': 131072,
+        'max_output_tokens': 4096,
+        'speed_rating': 10,
+        'quality_rating': 7,
+        'cost_per_1m_input': 0.18,
+        'cost_per_1m_output': 0.18,
+        'specializations': ['quick_tasks', 'routing', 'simple_content'],
+        'is_recommended': True,
+    },
+    {
+        'provider': 'together',
+        'model_id': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
+        'display_name': 'Mixtral 8x7B (Together)',
+        'category': 'general',
+        'context_window': 32768,
+        'max_output_tokens': 4096,
+        'speed_rating': 8,
+        'quality_rating': 8,
+        'cost_per_1m_input': 0.60,
+        'cost_per_1m_output': 0.60,
+        'specializations': ['general', 'coding', 'analysis'],
+        'is_recommended': False,
+    },
+    {
+        'provider': 'together',
+        'model_id': 'Qwen/Qwen2.5-Coder-32B-Instruct',
+        'display_name': 'Qwen 2.5 Coder 32B (Together)',
+        'category': 'coding',
+        'context_window': 32768,
+        'max_output_tokens': 4096,
+        'speed_rating': 8,
+        'quality_rating': 9,
+        'cost_per_1m_input': 0.80,
+        'cost_per_1m_output': 0.80,
+        'specializations': ['coding', 'code_review', 'devops'],
+        'is_recommended': True,
+    },
 ]
 
 # Agent → Model Mappings (what model each agent type should use)
 DEFAULT_AGENT_LLM_CONFIGS = [
-    # Development Agents → DeepSeek Coder (excellent + cheap) or Claude (reliable)
-    {'agent_name': 'CodeGeneratorAgent', 'agent_category': 'development', 'primary': 'deepseek:deepseek-coder', 'fallback': 'anthropic:claude-3.5-sonnet'},
-    {'agent_name': 'FullStackDeveloperAgent', 'agent_category': 'development', 'primary': 'deepseek:deepseek-coder', 'fallback': 'anthropic:claude-3.5-sonnet'},
-    {'agent_name': 'CodeReviewAgent', 'agent_category': 'development', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'deepseek:deepseek-coder'},
-    {'agent_name': 'DevOpsAgent', 'agent_category': 'development', 'primary': 'deepseek:deepseek-coder', 'fallback': 'openai:gpt-5.1'},
+    # Development Agents → Together AI Llama 70B (serverless, good at coding) or Claude (reliable)
+    {'agent_name': 'CodeGeneratorAgent', 'agent_category': 'development', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'FullStackDeveloperAgent', 'agent_category': 'development', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'CodeReviewAgent', 'agent_category': 'development', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'},
+    {'agent_name': 'DevOpsAgent', 'agent_category': 'development', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'openai:gpt-5.1'},
 
     # Content/Creative Agents → Claude (excellent writing)
     {'agent_name': 'ContentWriterAgent', 'agent_category': 'content', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},

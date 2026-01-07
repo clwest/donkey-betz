@@ -566,6 +566,120 @@ class DeepSeekProvider(BaseLLMProvider):
 
 
 # =============================================================================
+# Together AI Provider (hosts DeepSeek, Llama, Mixtral, Qwen)
+# =============================================================================
+
+class TogetherProvider(BaseLLMProvider):
+    """Together AI provider - hosts many open-source models including DeepSeek"""
+
+    @property
+    def provider_name(self) -> str:
+        return 'together'
+
+    def _initialize(self):
+        try:
+            from openai import OpenAI  # Together uses OpenAI-compatible API
+            api_key = self.api_key or os.getenv('TOGETHER_AI_API_KEY')
+            base_url = self.base_url or 'https://api.together.xyz/v1'
+            if api_key and api_key not in ['', 'your-key-here']:
+                self.client = OpenAI(api_key=api_key, base_url=base_url)
+                logger.info("✅ Together AI provider initialized")
+            else:
+                logger.warning("⚠️ Together AI API key not configured")
+        except ImportError:
+            logger.error("❌ OpenAI library not installed (needed for Together)")
+
+    def is_available(self) -> bool:
+        return self.client is not None
+
+    def complete(self, request: LLMRequest, model_id: str) -> LLMResponse:
+        if not self.client:
+            return LLMResponse(
+                success=False,
+                content='',
+                provider=self.provider_name,
+                model=model_id,
+                error='Together AI client not initialized'
+            )
+
+        start_time = time.time()
+
+        try:
+            messages = request.messages or []
+            if not messages:
+                if request.system_prompt:
+                    messages.append({'role': 'system', 'content': request.system_prompt})
+                messages.append({'role': 'user', 'content': request.prompt})
+
+            params = {
+                'model': model_id,
+                'messages': messages,
+                'max_tokens': request.max_tokens,
+                'temperature': request.temperature,
+            }
+
+            if request.tools:
+                params['tools'] = request.tools
+            if request.tool_choice:
+                params['tool_choice'] = request.tool_choice
+
+            response = self.client.chat.completions.create(**params)
+
+            content = response.choices[0].message.content or ''
+            tool_calls = None
+            if response.choices[0].message.tool_calls:
+                tool_calls = [
+                    {
+                        'id': tc.id,
+                        'type': 'function',
+                        'function': {'name': tc.function.name, 'arguments': tc.function.arguments}
+                    } for tc in response.choices[0].message.tool_calls
+                ]
+
+            tokens_input = response.usage.prompt_tokens if response.usage else 0
+            tokens_output = response.usage.completion_tokens if response.usage else 0
+            cost = self._calculate_cost(model_id, tokens_input, tokens_output)
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            return LLMResponse(
+                success=True,
+                content=content,
+                provider=self.provider_name,
+                model=model_id,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                tokens_total=tokens_input + tokens_output,
+                cost=cost,
+                latency_ms=latency_ms,
+                tool_calls=tool_calls,
+                raw_response=response
+            )
+
+        except Exception as e:
+            logger.error(f"Together AI API error: {e}")
+            return LLMResponse(
+                success=False,
+                content='',
+                provider=self.provider_name,
+                model=model_id,
+                error=str(e),
+                latency_ms=int((time.time() - start_time) * 1000)
+            )
+
+    def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
+        # Together AI pricing per 1M tokens (approximate)
+        pricing = {
+            'deepseek-ai/deepseek-coder-33b-instruct': (0.80, 0.80),
+            'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo': (0.88, 0.88),
+            'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo': (0.18, 0.18),
+            'mistralai/Mixtral-8x7B-Instruct-v0.1': (0.60, 0.60),
+            'Qwen/Qwen2.5-Coder-32B-Instruct': (0.80, 0.80),
+        }
+        input_price, output_price = pricing.get(model_id, (0.80, 0.80))
+        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+
+
+# =============================================================================
 # Gemini Provider
 # =============================================================================
 
@@ -812,6 +926,7 @@ class LLMProviderRegistry:
             'openai': OpenAIProvider,
             'anthropic': AnthropicProvider,
             'deepseek': DeepSeekProvider,
+            'together': TogetherProvider,  # Session 697: Together AI hosts DeepSeek, Llama, etc.
             'gemini': GeminiProvider,
             'ollama': OllamaProvider,
         }

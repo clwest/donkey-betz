@@ -97,7 +97,8 @@
 | **CONSCIOUSNESS** | Human Operator | The self, makes final decisions |
 | **EYES/EARS/HANDS** | Human Interface Layer | Attention items, feedback, preferences |
 | **BRAIN** | ThinkingAgent | Complex reasoning and evaluation |
-| **NERVOUS SYSTEM** | Agent-Model Router | Routes tasks to appropriate agents |
+| **NERVOUS SYSTEM (LLM)** | AgentLLMRouter | Routes agents to optimal LLM providers |
+| **NERVOUS SYSTEM (ML)** | Agent-Model Router | Routes tasks to ML models |
 | **ORGANS** | 72 Specialized Agents | Each handles specific domain tasks |
 | **SENSORY INPUTS** | 77 Spiders | Gather real-world data |
 | **SKIN** | WorkspaceManager + workspace_tool | **Where AI touches reality** |
@@ -180,6 +181,69 @@ result = agent.execute_with_workspace(
 | `core/models_skin_layer.py` | ~350 | 3 database models |
 | `core/services/workspace_manager.py` | ~850 | Core SKIN services |
 | `core/agents/base_agent.py` | +250 | Workspace methods for all agents |
+
+---
+
+## Enhanced Nervous System - LLM Routing (Session 697)
+
+Multi-model LLM routing enables agents to use specialized LLMs for different tasks. Coding agents use Together AI (Llama 70B), creative agents use Claude, fast routing uses GPT-5-mini.
+
+### LLM Providers (6 Configured)
+
+| Provider | Models | Status | Use Case |
+|----------|--------|--------|----------|
+| **OpenAI** | GPT-5-mini, GPT-5.1, GPT-5.2 | ✅ Active | Reasoning, general tasks |
+| **Anthropic** | Claude 3.5 Sonnet/Haiku/Opus | ✅ Active | Creative writing, analysis |
+| **Together AI** | Llama 3.1 70B/8B, Mixtral | ✅ Active | Coding (cheap + fast) |
+| **Ollama** | Llama 3.1, CodeLlama, Mistral | ✅ Active | Local/private tasks |
+| **DeepSeek** | DeepSeek Coder, Chat | ⚠️ Needs key | Coding alternative |
+| **Gemini** | Gemini 2.0 Flash/Pro | ⚠️ Needs lib | Long context |
+
+### Agent → Model Routing (22 Configured)
+
+| Agent Category | Primary Model | Fallback | Cost/1M tokens |
+|----------------|---------------|----------|----------------|
+| **Development** (CodeGenerator, FullStack, DevOps) | Together AI Llama 70B | Claude 3.5 Sonnet | $0.88 |
+| **Content** (ContentWriter, Strategy, Brand) | Claude 3.5 Sonnet | GPT-5.1 | $3.00 |
+| **Research** (Research, TrendAnalysis, Market) | GPT-5.1 | Claude 3.5 Sonnet | $1.25 |
+| **Reasoning** (ThinkingAgent) | Claude 3.5 Opus | GPT-5.2 | $15.00 |
+| **Fast/Routing** (PersonalAssistant, Orchestration) | GPT-5-mini | GPT-5.1 | $0.15 |
+
+### Database Models (4)
+
+| Model | Purpose |
+|-------|---------|
+| `LLMProvider` | Provider configs (API keys, base URLs, capabilities) |
+| `LLMModel` | Individual models with cost, context window, specializations |
+| `AgentLLMConfig` | Maps agents to primary/fallback models |
+| `LLMCallLog` | Audit log for cost tracking, performance analysis |
+
+### Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/models_llm_routing.py` | ~750 | 4 database models + default configs |
+| `core/services/llm_provider_registry.py` | ~1050 | 6 provider implementations |
+| `core/services/agent_llm_router.py` | ~400 | Routing service |
+| `core/agents/base_agent.py` | +80 | `_call_llm_routed()` method |
+
+### Usage
+
+```python
+# Route through agent config
+from core.services.agent_llm_router import route_agent_completion
+
+response = route_agent_completion(
+    agent_name='CodeGeneratorAgent',  # Routes to Together AI Llama 70B
+    prompt='Write a Python function...',
+    system_prompt='You are a code generator.'
+)
+print(response.content)  # Generated code
+print(response.cost)     # $0.0001
+
+# Check routing status
+python manage.py setup_llm_routing --check
+```
 
 ---
 

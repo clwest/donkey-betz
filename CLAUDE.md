@@ -1,32 +1,33 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 6, 2026 - Session 695
-**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + Human Interface Layer + SKIN Layer
+**Last Updated:** January 6, 2026 - Session 697
+**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + Enhanced Nervous System
 
-## System Stats (Session 695)
+## System Stats (Session 697)
 | Component | Count | Details |
 |-----------|-------|---------|
-| **Agents** | 72 | All synced to database + workspace integration (Session 695) |
+| **Agents** | 72 | All synced to database + workspace integration |
 | **Spiders** | 77 | 72 working, 5 need API keys |
-| **PA Tools** | 83 | +workspace_tool for SKIN layer (Session 695) |
+| **PA Tools** | 83 | +workspace_tool for SKIN layer |
+| **LLM Providers** | 6 | OpenAI, Anthropic, Together AI, Ollama, DeepSeek, Gemini |
+| **LLM Models** | 18 | GPT-5 family, Claude, Llama, Mixtral, Qwen |
+| **Agent LLM Configs** | 22 | Configured for multi-model routing |
 | **ML Models** | 17 | 15 working (Sessions 677-685) |
-| **Human Models** | 5 | HumanAttentionItem, FeedbackRecord, Preference, etc. (Session 686) |
-| **SKIN Models** | 3 | ProjectWorkspace, WorkspaceOperation, WorkspaceContext (Session 695) |
-| **Database Models** | 332+ | 37 categories (+5 Human Interface, +3 SKIN Layer) |
-| **Celery Tasks** | 128 | +generate_human_attention_items (Session 687) |
-| **Services** | 95 | +workspace_manager.py (Session 695) |
+| **Database Models** | 336+ | +4 LLM routing models (Session 697) |
+| **Celery Tasks** | 128 | +generate_human_attention_items |
+| **Services** | 97 | +llm_provider_registry, agent_llm_router (Session 697) |
 | **Discord Commands** | 112 | 29 Cog categories |
 | **Advisors** | 25 | Famous figures + domain experts |
-| **Sci-Fi Features** | 14 | All active (Session 567 cleanup) |
+| **Sci-Fi Features** | 14 | All active |
 | **Running Pilots** | 18 | Auto-deployed via autonomous pipeline |
 | **OPEN Systems** | 7/7 | Full composability (Session 653) |
 
+**Enhanced Nervous System:** Multi-model LLM routing - coding agents use Together AI Llama 70B, creative use Claude (Session 697)
 **SKIN Layer:** All 72 agents can now write to real project workspaces with audit trail + rollback (Session 695)
 **Chief of Staff Layer:** Human-in-the-loop review system with Pro/Con interrogation + Noise Filter
 **Prediction Markets:** Kalshi integration with RSA-PSS authenticated trading
-**Betting Dashboard:** Web UI with 8 sub-tabs, Push Notifications for Arb Alerts
 **Autonomous Gate Approval:** Auto-waive low-risk gates → checklist → pilot → experiment (Session 654)
-**LLM Model:** GPT-5-mini (reasoning model - uses `max_completion_tokens`, no `temperature`)
+**LLM Routing:** GPT-5 models use Responses API (max_completion_tokens, no temperature)
 
 ---
 
@@ -175,6 +176,7 @@ curl http://localhost:8000/health/ping/
 | Session | Focus | Handoff |
 |---------|-------|---------|
 | **695** | **SKIN Layer** - All 72 agents can write to real project workspaces | `SESSION_695_SKIN_LAYER_COMPLETE.md` |
+| **697** | **Enhanced Nervous System** - Multi-model LLM routing + Together AI integration | `SESSION_697_ENHANCED_NERVOUS_SYSTEM.md` |
 | **692** | **Prediction Detail Modal** - Clickable predictions, full text, 3 bug fixes | `SESSION_692_PREDICTION_DETAIL_MODAL.md` |
 | **691** | **Implementation Review UI** - Modal for viewing/acting on pilot implementations | `SESSION_691_IMPLEMENTATION_REVIEW_UI.md` |
 | **690** | **Implementation Pipeline** - Auto-generate and execute implementations for pilots | `SESSION_690_IMPLEMENTATION_PIPELINE.md` |
