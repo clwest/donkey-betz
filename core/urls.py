@@ -3654,6 +3654,32 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 707: MUSCULAR SYSTEM API Routes
+# =========================================================================
+# Monitors agent work execution and performance
+from core.views_muscular import (
+    muscular_flex_view,
+    muscular_status_view,
+    muscular_groups_list_view,
+    muscular_group_detail_view,
+    muscular_weak_view,
+    muscular_overworked_view,
+    muscular_history_view,
+    muscular_is_strong_view,
+)
+
+urlpatterns += [
+    path('api/muscular/flex/', muscular_flex_view, name='muscular-flex'),
+    path('api/muscular/status/', muscular_status_view, name='muscular-status'),
+    path('api/muscular/groups/', muscular_groups_list_view, name='muscular-groups'),
+    path('api/muscular/groups/<uuid:group_id>/', muscular_group_detail_view, name='muscular-group-detail'),
+    path('api/muscular/weak/', muscular_weak_view, name='muscular-weak'),
+    path('api/muscular/overworked/', muscular_overworked_view, name='muscular-overworked'),
+    path('api/muscular/history/', muscular_history_view, name='muscular-history'),
+    path('api/muscular/is-strong/', muscular_is_strong_view, name='muscular-is-strong'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

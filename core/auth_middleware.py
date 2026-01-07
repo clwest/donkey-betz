@@ -246,6 +246,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/digestive/metabolism/',  # Get throughput metrics
         '/api/digestive/history/',  # Get digestion pulse history
         '/api/digestive/is-digesting/',  # Quick alive check
+
+        # Session 707: MUSCULAR System APIs (agent execution monitoring for React frontend)
+        '/api/muscular/flex/',  # Run full muscular check
+        '/api/muscular/status/',  # Get cached muscular status
+        '/api/muscular/groups/',  # List muscle groups
+        '/api/muscular/weak/',  # Get weak muscles
+        '/api/muscular/overworked/',  # Get overworked muscles
+        '/api/muscular/history/',  # Get muscular pulse history
+        '/api/muscular/is-strong/',  # Quick alive check
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
