@@ -61,6 +61,7 @@ class BodyVitalsService:
         'muscular': '_get_muscular_vitals',
         'brain': '_get_brain_vitals',
         'skin': '_get_skin_vitals',
+        'nervous': '_get_nervous_vitals',
     }
 
     # Weights for calculating overall health score
@@ -75,6 +76,7 @@ class BodyVitalsService:
         'muscular': 1.0,
         'brain': 1.4,       # Important - cognitive processing
         'skin': 1.1,        # Important - workspace operations
+        'nervous': 1.3,     # Important - real-time communication
     }
 
     # Status emoji mappings per system
@@ -115,11 +117,15 @@ class BodyVitalsService:
             'healthy': '🧴', 'active': '✋', 'sweating': '💦', 'irritated': '🔴', 'damaged': '🩹', 'healing': '💊', 'dormant': '😴',
             'unknown': '❓', 'error': '❓'
         },
+        'nervous': {
+            'responsive': '⚡', 'active': '🔌', 'sluggish': '🐌', 'numb': '😶', 'overloaded': '🔥', 'damaged': '💀', 'dormant': '😴',
+            'unknown': '❓', 'error': '❓'
+        },
     }
 
     def get_all_vitals(self, include_details: bool = False) -> Dict[str, Any]:
         """
-        Get health status from all 9 body systems.
+        Get health status from all 10 body systems.
 
         Args:
             include_details: Include detailed metrics per system
@@ -733,6 +739,60 @@ class BodyVitalsService:
             return result
         except Exception as e:
             logger.error(f"SKIN vitals error: {e}")
+            return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
+
+    def _get_nervous_vitals(self, include_details: bool = False) -> Dict[str, Any]:
+        """Get NERVOUS system vitals - WebSocket communication health."""
+        try:
+            from core.services.nervous import get_nervous_service
+            nervous = get_nervous_service()
+            vitals = nervous.get_vitals()
+
+            status = vitals.get('status', 'unknown')
+            score = vitals.get('health_score', 0)
+
+            result = {
+                'status': status,
+                'score': score,
+                'emoji': self._get_emoji('nervous', status),
+                'alerts': []
+            }
+
+            # Generate alerts based on nervous status
+            if status in ['damaged', 'numb', 'overloaded']:
+                result['alerts'].append({
+                    'system': 'nervous',
+                    'message': f"WebSocket communication: {status}",
+                    'severity': 'critical' if status == 'damaged' else 'warning',
+                    'severity_score': 3 if status == 'damaged' else 2
+                })
+            elif status == 'sluggish':
+                result['alerts'].append({
+                    'system': 'nervous',
+                    'message': "WebSocket communication is sluggish",
+                    'severity': 'warning',
+                    'severity_score': 2
+                })
+
+            # Alert if channel layer is disconnected
+            if not vitals.get('channel_layer_healthy', True):
+                result['alerts'].append({
+                    'system': 'nervous',
+                    'message': "Redis channel layer disconnected - WebSockets not working",
+                    'severity': 'critical',
+                    'severity_score': 3
+                })
+
+            if include_details:
+                result['details'] = {
+                    'active_connections': vitals.get('active_connections', 0),
+                    'messages_per_second': vitals.get('messages_per_second', 0),
+                    'channel_layer_healthy': vitals.get('channel_layer_healthy', False),
+                }
+
+            return result
+        except Exception as e:
+            logger.error(f"NERVOUS vitals error: {e}")
             return {'status': 'error', 'score': 0, 'emoji': '❓', 'error': str(e), 'alerts': []}
 
     # ========== Helper Methods ==========

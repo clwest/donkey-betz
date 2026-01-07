@@ -2,8 +2,9 @@
  * Session 710: Body Health Dashboard
  * Session 722: Added BRAIN system
  * Session 723: Added SKIN system
+ * Session 724: Added NERVOUS system
  *
- * Unified view of all 9 body systems health status.
+ * Unified view of all 10 body systems health status.
  * Provides real-time monitoring of the AI body's health.
  */
 
@@ -11,7 +12,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   bodyApi, heartApi, lungsApi, circulatoryApi, spineApi,
-  immuneApi, digestiveApi, muscularApi, brainApi, skinApi
+  immuneApi, digestiveApi, muscularApi, brainApi, skinApi, nervousApi
 } from '@/lib/api'
 import {
   Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell, Brain, Layers,
@@ -91,6 +92,13 @@ const SYSTEM_CONFIG: Record<string, {
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10',
     description: 'Workspace output monitoring'
+  },
+  nervous: {
+    icon: Zap,
+    label: 'NERVOUS',
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-400/10',
+    description: 'WebSocket communication monitoring'
   }
 }
 
@@ -145,6 +153,10 @@ const STATUS_CONFIG: Record<string, { color: string; icon: typeof CheckCircle }>
   damaged: { color: 'text-red-500', icon: XCircle },
   healing: { color: 'text-blue-500', icon: Info },
   dormant: { color: 'text-gray-500', icon: Info },
+
+  // Nervous-specific states
+  responsive: { color: 'text-green-500', icon: CheckCircle },
+  numb: { color: 'text-orange-500', icon: AlertTriangle },
 
   // Unknown
   unknown: { color: 'text-gray-500', icon: Info },
@@ -405,6 +417,7 @@ function SystemDetailPanel({ systemName, onClose }: SystemDetailPanelProps) {
       {systemName === 'muscular' && <MuscularDetailView />}
       {systemName === 'brain' && <BrainDetailView />}
       {systemName === 'skin' && <SkinDetailView />}
+      {systemName === 'nervous' && <NervousDetailView />}
     </div>
   )
 }
@@ -1991,6 +2004,248 @@ function SkinDetailView() {
           <p className="text-sm text-zinc-400">Skin functioning normally</p>
           <p className="text-xs text-zinc-500">
             {skin?.agents?.active_count || 0} agents working across {skin?.workspaces?.active || 0} workspaces
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// NERVOUS System Detail View - WebSocket Communication Monitoring
+// ============================================================================
+
+function NervousDetailView() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['nervousFeel'],
+    queryFn: () => nervousApi.feel(),
+    refetchInterval: 60000, // Refresh every 60 seconds
+  })
+
+  const nervous = data?.data
+
+  if (isLoading) return <DetailLoading />
+  if (error) {
+    return (
+      <div className="text-red-400 text-sm">
+        Failed to load nervous data: {String(error)}
+      </div>
+    )
+  }
+  if (!nervous) return null
+
+  const healthColor = (nervous.health_score || 0) >= 80 ? 'text-green-400' :
+                     (nervous.health_score || 0) >= 60 ? 'text-cyan-400' :
+                     (nervous.health_score || 0) >= 40 ? 'text-yellow-400' : 'text-red-400'
+
+  const statusEmojiMap: Record<string, string> = {
+    responsive: '⚡',
+    active: '🔌',
+    sluggish: '🐌',
+    numb: '❄️',
+    overloaded: '🔥',
+    damaged: '💔',
+    dormant: '💤',
+  }
+  const statusEmoji = statusEmojiMap[nervous.status as string] || '❓'
+
+  return (
+    <div className="space-y-4">
+      {/* Header with Health Score */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{statusEmoji}</span>
+          <div>
+            <div className={cn('text-2xl font-bold', healthColor)}>
+              {(nervous.health_score || 0).toFixed(1)}%
+            </div>
+            <div className="text-xs text-zinc-500 capitalize">{nervous.status || 'unknown'}</div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-zinc-500">Check Duration</div>
+          <div className="text-sm text-zinc-300">{nervous.check_duration_ms || 0}ms</div>
+        </div>
+      </div>
+
+      {/* Channel Layer (Redis) Status */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <Database className="w-4 h-4" />
+          Channel Layer (Redis)
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              nervous.channel_layer?.connected ? 'text-green-400' : 'text-red-400'
+            )}>
+              {nervous.channel_layer?.connected ? 'Connected' : 'Disconnected'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-cyan-400">
+              {(nervous.channel_layer?.redis_ping_ms || 0).toFixed(2)}ms
+            </div>
+            <div className="text-xs text-zinc-500">Ping Latency</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-zinc-300">
+              {nervous.channel_layer?.redis_clients || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Redis Clients</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-zinc-300">
+              {nervous.channel_layer?.host || 'localhost'}:{nervous.channel_layer?.port || 6379}
+            </div>
+            <div className="text-xs text-zinc-500">Host</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Consumer Statistics */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <Zap className="w-4 h-4" />
+          WebSocket Consumers
+        </h4>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="text-center bg-zinc-900/50 rounded p-3">
+            <div className="text-2xl font-bold text-yellow-400">
+              {nervous.consumers?.total_routes || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Total Routes</div>
+          </div>
+          <div className="text-center bg-zinc-900/50 rounded p-3">
+            <div className="text-2xl font-bold text-purple-400">
+              {nervous.consumers?.unique_consumers || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Unique Consumers</div>
+          </div>
+        </div>
+
+        {/* Consumer Categories */}
+        {nervous.consumers?.categories && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {Object.entries(nervous.consumers.categories).map(([category, consumers]) => {
+              const count = Array.isArray(consumers) ? consumers.length : 0
+              if (count === 0) return null
+              return (
+                <div key={category} className="bg-zinc-900/30 rounded p-2 text-center">
+                  <div className="text-lg font-bold text-zinc-300">{count}</div>
+                  <div className="text-xs text-zinc-500 capitalize">{category}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Connection & Message Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Connection Stats */}
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Connections
+          </h4>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Active</span>
+              <span className="text-green-400 font-medium">
+                {nervous.connections?.active || 0}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Total (24h)</span>
+              <span className="text-zinc-300">
+                {nervous.connections?.total_24h || 0}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Errors (24h)</span>
+              <span className={cn(
+                'font-medium',
+                (nervous.connections?.errors_24h || 0) > 0 ? 'text-red-400' : 'text-zinc-300'
+              )}>
+                {nervous.connections?.errors_24h || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Message Stats */}
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Messages
+          </h4>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Per Second</span>
+              <span className="text-cyan-400 font-medium">
+                {(nervous.messages?.per_second || 0).toFixed(2)}/s
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Total (24h)</span>
+              <span className="text-zinc-300">
+                {(nervous.messages?.total_24h || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">Avg Latency</span>
+              <span className="text-zinc-300">
+                {(nervous.messages?.avg_latency_ms || 0).toFixed(2)}ms
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Activity Level */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-zinc-500">Activity Level</span>
+          <span className={cn(
+            'px-3 py-1 rounded-full text-sm font-medium capitalize',
+            nervous.activity_level === 'high' ? 'bg-green-500/20 text-green-400' :
+            nervous.activity_level === 'medium' ? 'bg-cyan-500/20 text-cyan-400' :
+            nervous.activity_level === 'low' ? 'bg-yellow-500/20 text-yellow-400' :
+            'bg-zinc-500/20 text-zinc-400'
+          )}>
+            {nervous.activity_level || 'unknown'}
+          </span>
+        </div>
+      </div>
+
+      {/* Issues */}
+      {nervous.issues && nervous.issues.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Issues Detected ({nervous.issues.length})
+          </h4>
+          <div className="space-y-2">
+            {nervous.issues.map((issue: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-2 text-sm">
+                <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                <span className="text-red-300">{issue}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nervous Status - All Good */}
+      {(nervous.health_score || 0) >= 80 && (!nervous.issues || nervous.issues.length === 0) && (
+        <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+          <p className="text-sm text-zinc-400">Nervous system responsive</p>
+          <p className="text-xs text-zinc-500">
+            {nervous.consumers?.unique_consumers || 0} consumers across {nervous.consumers?.total_routes || 0} routes
           </p>
         </div>
       )}

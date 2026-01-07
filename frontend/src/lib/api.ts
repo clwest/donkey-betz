@@ -1185,6 +1185,28 @@ export const skinApi = {
   workspaces: () => api.get('/skin/workspaces/'),
 }
 
+// Session 724: NERVOUS System API - WebSocket Communication Monitoring
+export const nervousApi = {
+  // Run full nervous check (analyze WebSocket communication)
+  feel: (force = false) => api.get('/nervous/feel/', { params: { force } }),
+
+  // Get cached nervous status (fast)
+  status: () => api.get('/nervous/status/'),
+
+  // Get current vitals (health score, connections, etc.)
+  vitals: () => api.get('/nervous/vitals/'),
+
+  // Get nervous pulse history
+  history: (hours = 24, limit = 100) =>
+    api.get('/nervous/history/', { params: { hours, limit } }),
+
+  // Quick health check - is the nervous system responsive?
+  isResponsive: () => api.get('/nervous/is-responsive/'),
+
+  // Get WebSocket consumers summary
+  consumers: () => api.get('/nervous/consumers/'),
+}
+
 // Session 716: Advisors API - Famous figure consultations
 export const advisorsApi = {
   // List all active advisors
