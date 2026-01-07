@@ -32,14 +32,14 @@ Session 697 enhanced the nervous system to support multiple LLM providers. Previ
 | `AgentLLMConfig` | Maps agents to their optimal primary/fallback models |
 | `LLMCallLog` | Audit log for cost tracking, performance analysis |
 
-**22 Default Agent Configs:**
+**64 Agent Configs (Session 698: expanded from 22):**
 - CodeGeneratorAgent → Together AI Llama 70B Turbo
 - FullStackDeveloperAgent → Together AI Llama 70B Turbo
-- ContentWriterAgent → Claude 3.5 Sonnet
-- ThinkingAgent → Claude 3.5 Opus
+- ContentWriterAgent → Claude Sonnet 4 (Session 698: Updated)
+- ThinkingAgent → Claude Opus 4 (Session 698: Updated)
 - PersonalAssistantAgent → GPT-5-mini
 - ResearchAgent → GPT-5.1
-- (16 more...)
+- (58 more...)
 
 ### 2. Provider Registry (`core/services/llm_provider_registry.py` ~1050 lines)
 
@@ -48,7 +48,7 @@ Unified interface to 6 LLM providers:
 | Provider | Models | Status |
 |----------|--------|--------|
 | **OpenAI** | GPT-5-mini, GPT-5.1, GPT-5.2 | ✅ Active |
-| **Anthropic** | Claude 3.5 Sonnet/Haiku/Opus | ✅ Active |
+| **Anthropic** | Claude Sonnet 4, Claude Opus 4 | ✅ Active (Session 698: Updated to Claude 4) |
 | **Together AI** | Llama 3.1 70B/8B, Mixtral | ✅ Active + TESTED |
 | **Ollama** | Llama 3.1, CodeLlama, Mistral | ✅ Active (local) |
 | **DeepSeek** | DeepSeek Coder, DeepSeek Chat | ⚠️ Needs API key |
@@ -145,14 +145,14 @@ Like a biological nervous system:
 
 ## Database State
 
-After running `setup_llm_routing`:
+After running `setup_llm_routing` (Session 698 update):
 
 | Table | Count |
 |-------|-------|
 | `core_llm_providers` | 6 |
-| `core_llm_models` | 18 |
-| `core_agent_llm_configs` | 22 |
-| `core_llm_call_logs` | 4 (tested and verified) |
+| `core_llm_models` | 17 (Claude Haiku removed - not available in Claude 4) |
+| `core_agent_llm_configs` | 64 (Session 698: expanded from 22) |
+| `core_llm_call_logs` | 10+ (tested and verified) |
 
 ---
 
@@ -201,14 +201,28 @@ All providers and routing tested successfully:
 | GPT-5.1 (ResearchAgent) | gpt-5.1 | ✅ Pass | $0.00070 |
 | LLMCallLog tracking | - | ✅ 4 entries logged | - |
 
+**Session 698 Additional Tests (Claude 4):**
+
+| Test | Model | Result | Cost |
+|------|-------|--------|------|
+| ContentWriterAgent routing | claude-sonnet-4-20250514 | ✅ Pass | $0.000324 |
+| ThinkingAgent routing | claude-opus-4-20250514 | ✅ Pass | $0.000237 |
+| Total LLM calls logged | - | ✅ 10 entries | $0.003493 |
+
 ---
 
-## Session 698 Recommendations
+## Session 698 Accomplishments
 
-1. **Add more agent configs** - Only 22 of 72 agents have configs
-2. **LLM Routing UI** - Admin panel to configure agent-model mappings
-3. **Cost dashboard** - Show LLM costs per agent from LLMCallLog
-4. **Enable routed calls** - Update agents to use `_call_llm_routed`
+1. ✅ **Expanded agent configs** - Now 64 of 72 agents have configs (was 22)
+2. ✅ **Updated to Claude 4** - claude-sonnet-4-20250514 and claude-opus-4-20250514
+3. ✅ **Removed deprecated Haiku** - Claude 4 Haiku not available yet, using GPT-5-mini
+
+## Session 699 Recommendations
+
+1. **LLM Routing UI** - Admin panel to configure agent-model mappings
+2. **Cost dashboard** - Show LLM costs per agent from LLMCallLog
+3. **Enable routed calls** - Update agents to use `_call_llm_routed`
+4. **Add remaining 8 agents** - Complete agent config coverage
 
 ---
 
@@ -225,6 +239,16 @@ feat(Session 697): Enhanced Nervous System - Multi-Model LLM Routing + Together 
 - GPT-5 reasoning models handled correctly (Responses API)
 ```
 
+```
+fix(Session 698): Update LLM routing to Claude 4 models
+
+- claude-3.5-sonnet → claude-sonnet-4-20250514
+- claude-3.5-opus → claude-opus-4-20250514
+- claude-3.5-haiku removed (not available in Claude 4)
+- 64 agent configs (expanded from 22)
+- 10 LLM calls logged, total cost $0.003493
+```
+
 ---
 
-**Session 697 Status: COMPLETE + TESTED**
+**Session 697/698 Status: COMPLETE + TESTED**
