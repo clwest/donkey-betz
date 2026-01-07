@@ -2394,9 +2394,15 @@ export default function AdminPage() {
                             {activity.task || 'executed'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          {activity.duration && <span>{activity.duration.toFixed(1)}s</span>}
-                          {activity.completed && <span>{new Date(activity.completed).toLocaleTimeString()}</span>}
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={cn(
+                            'px-1.5 py-0.5 rounded',
+                            activity.success !== false ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {activity.success !== false ? 'Success' : 'Failed'}
+                          </span>
+                          {activity.duration && <span className="text-gray-500">{activity.duration.toFixed(1)}s</span>}
+                          {activity.completed && <span className="text-gray-500">{new Date(activity.completed).toLocaleTimeString()}</span>}
                         </div>
                       </div>
                     ))}
