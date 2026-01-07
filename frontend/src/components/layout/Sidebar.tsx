@@ -18,6 +18,7 @@ import {
   FolderCog,
   Cpu,
   Activity,
+  Users,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -34,6 +35,7 @@ const navItems = [
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/body-health', label: 'Body Health', icon: Activity },
+  { path: '/hive-mind', label: 'Hive Mind', icon: Users },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },

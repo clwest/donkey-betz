@@ -31,7 +31,25 @@ This document contains:
 | `frontend/src/components/layout/Sidebar.tsx` | Badge counts from unified store |
 | `frontend/src/components/layout/Layout.tsx` | System events wired to store updates |
 
-**Features:**
+### Phase 5: Hive Mind Page - COMPLETE
+
+| File Created/Modified | Purpose |
+|----------------------|---------|
+| `frontend/src/pages/HiveMindPage.tsx` | Multi-agent collaborative sessions UI (~650 lines) |
+| `frontend/src/lib/api.ts` | Added hiveMindApi with 5 endpoints |
+| `frontend/src/App.tsx` | Added /hive-mind route |
+| `frontend/src/components/layout/Sidebar.tsx` | Added Hive Mind nav link |
+
+**Hive Mind Features:**
+- Start new collaborative sessions with question/context
+- Preview which agents will participate before starting
+- View session list with status (initializing/gathering/synthesizing/completed)
+- Real-time progress tracking during session execution
+- Agent contribution cards with key points and confidence scores
+- Synthesized answer display when session completes
+- WebSocket integration for real-time updates
+
+**Phase 4 Features:**
 - Unified store tracking: pending decisions, top opportunities, running pilots, critical gates
 - Sidebar badges showing pending counts (Human page, Intelligence page)
 - Auto-refresh every 60 seconds + real-time via WebSocket events
@@ -155,7 +173,7 @@ open http://localhost:8080/intelligence
 | Agent Learning | Complete | Partial |
 | Agent Conversations | Complete | Partial |
 | Agent Dreams | Complete | Partial (Modal) |
-| Hive Mind | Complete | **NONE** |
+| Hive Mind | Complete | **COMPLETE** (Session 715) |
 | Memory Palace | Complete | **NONE** |
 | Mood System | Complete | **NONE** |
 | Rivalries/Alliances | Complete | **NONE** |

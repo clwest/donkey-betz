@@ -71,6 +71,26 @@ export const conversationsApi = {
   detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
 }
 
+// Session 715: Hive Mind API - Multi-agent collaborative sessions
+export const hiveMindApi = {
+  // List recent sessions
+  list: (limit = 20) => api.get(`/hive-mind/sessions/?limit=${limit}`),
+
+  // Get session details and contributions
+  detail: (sessionId: string) => api.get(`/hive-mind/session/${sessionId}/`),
+
+  // Start a new hive mind session
+  start: (data: { question: string; context?: string; max_agents?: number }) =>
+    api.post('/hive-mind/start/', data),
+
+  // Preview which agents would be selected for a question
+  preview: (data: { question: string; max_agents?: number }) =>
+    api.post('/hive-mind/preview/', data),
+
+  // Get list of available agents for hive mind
+  agents: () => api.get('/hive-mind/agents/'),
+}
+
 // Session 696: Decisions API for Decision Insights Panel
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),
