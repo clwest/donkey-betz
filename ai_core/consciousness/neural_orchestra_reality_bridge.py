@@ -516,6 +516,19 @@ class NeuralOrchestraRealityBridge:
         except Exception:
             active_spiders = 77  # Fallback to known spider count
 
+        # Session 719: Get active agents from AgentExecution (more accurate than AgentContribution)
+        try:
+            from core.models_unified_system import AgentExecution
+            last_24h = timezone.now() - timedelta(hours=24)
+            active_agents_from_exec = AgentExecution.objects.filter(
+                created_at__gte=last_24h
+            ).values('agent').distinct().count()
+            # Use AgentExecution count if available, otherwise fall back to stats
+            if active_agents_from_exec > 0:
+                stats['active_agents_24h'] = active_agents_from_exec
+        except Exception:
+            pass  # Keep original stats value
+
         return {
             'feed': feed_items,
             'system_status': {
