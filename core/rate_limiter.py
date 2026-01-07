@@ -242,23 +242,29 @@ class RateLimitMiddleware:
     """
     Global rate limiting middleware
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
+        from django.conf import settings
+
+        # Skip rate limiting in DEBUG mode
+        if settings.DEBUG:
+            return self.get_response(request)
+
         # Skip rate limiting for static files
         if request.path.startswith('/static/') or request.path.startswith('/media/'):
             return self.get_response(request)
-        
+
         # Apply global rate limit for anonymous users
         if not request.user or not request.user.is_authenticated:
             ip = get_client_ip(request)
             cache_key = f"global_rate:{ip}"
-            
-            # 100 requests per minute for anonymous users
+
+            # 500 requests per minute for anonymous users (increased from 100)
             current = cache.get(cache_key, 0)
-            if current >= 100:
+            if current >= 500:
                 # Django's cache doesn't have ttl(), use 60 seconds as default
                 ttl = 60
                 return JsonResponse({
