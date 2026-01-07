@@ -684,7 +684,14 @@ class TogetherProvider(BaseLLMProvider):
 # =============================================================================
 
 class GeminiProvider(BaseLLMProvider):
-    """Google Gemini provider - massive context windows"""
+    """
+    Google Gemini provider - massive context windows.
+
+    Session 698: Updated to use new google-genai SDK (GA as of May 2025).
+    The old google-generativeai library was deprecated Nov 30, 2025.
+
+    Supports both GEMINI_API_KEY and GOOGLE_AI_STUDIO_API_KEY env vars.
+    """
 
     @property
     def provider_name(self) -> str:
@@ -692,17 +699,22 @@ class GeminiProvider(BaseLLMProvider):
 
     def _initialize(self):
         try:
-            import google.generativeai as genai
-            api_key = self.api_key or os.getenv('GEMINI_API_KEY')
+            from google import genai
+
+            # Check for API key (support both env var names)
+            api_key = (
+                self.api_key or
+                os.getenv('GOOGLE_AI_STUDIO_API_KEY') or
+                os.getenv('GEMINI_API_KEY')
+            )
+
             if api_key and api_key not in ['', 'your-key-here']:
-                genai.configure(api_key=api_key)
-                self.genai = genai
-                self.client = True  # Marker that we're initialized
-                logger.info("✅ Gemini provider initialized")
+                self.client = genai.Client(api_key=api_key)
+                logger.info("✅ Gemini provider initialized (google-genai SDK)")
             else:
-                logger.warning("⚠️ Gemini API key not configured")
+                logger.warning("⚠️ Gemini API key not configured (set GOOGLE_AI_STUDIO_API_KEY or GEMINI_API_KEY)")
         except ImportError:
-            logger.warning("⚠️ Google generativeai library not installed")
+            logger.warning("⚠️ google-genai library not installed (pip install google-genai)")
 
     def is_available(self) -> bool:
         return self.client is not None
@@ -720,8 +732,6 @@ class GeminiProvider(BaseLLMProvider):
         start_time = time.time()
 
         try:
-            model = self.genai.GenerativeModel(model_id)
-
             # Build prompt
             full_prompt = ''
             if request.system_prompt:
@@ -733,22 +743,29 @@ class GeminiProvider(BaseLLMProvider):
             else:
                 full_prompt += request.prompt
 
-            generation_config = {
+            # New SDK uses client.models.generate_content()
+            config = {
                 'temperature': request.temperature,
                 'max_output_tokens': request.max_tokens,
             }
 
-            response = model.generate_content(
-                full_prompt,
-                generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=model_id,
+                contents=full_prompt,
+                config=config
             )
 
             content = response.text if hasattr(response, 'text') else ''
 
-            # Gemini doesn't provide detailed token counts in the same way
-            # Estimate based on characters
-            tokens_input = len(full_prompt) // 4
-            tokens_output = len(content) // 4
+            # Get token counts if available, otherwise estimate
+            usage = getattr(response, 'usage_metadata', None)
+            if usage:
+                tokens_input = getattr(usage, 'prompt_token_count', len(full_prompt) // 4)
+                tokens_output = getattr(usage, 'candidates_token_count', len(content) // 4)
+            else:
+                tokens_input = len(full_prompt) // 4
+                tokens_output = len(content) // 4
+
             cost = self._calculate_cost(model_id, tokens_input, tokens_output)
             latency_ms = int((time.time() - start_time) * 1000)
 
@@ -777,9 +794,12 @@ class GeminiProvider(BaseLLMProvider):
             )
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
+        # Pricing per 1M tokens (Jan 2026)
         pricing = {
             'gemini-2.0-flash': (0.075, 0.30),
+            'gemini-2.5-flash': (0.075, 0.30),
             'gemini-2.0-pro': (1.25, 5.00),
+            'gemini-2.5-pro': (1.25, 5.00),
             'gemini-pro': (0.50, 1.50),
         }
         input_price, output_price = pricing.get(model_id, (0.50, 1.50))

@@ -523,16 +523,16 @@ DEFAULT_MODELS = [
         'is_recommended': False,
     },
 
-    # Gemini Models
+    # Gemini Models (Session 698: Updated to available models)
     {
         'provider': 'gemini',
-        'model_id': 'gemini-2.0-flash',
-        'display_name': 'Gemini 2.0 Flash',
+        'model_id': 'gemini-2.5-flash',
+        'display_name': 'Gemini 2.5 Flash',
         'category': 'fast',
         'context_window': 1000000,
         'max_output_tokens': 8192,
         'speed_rating': 10,
-        'quality_rating': 7,
+        'quality_rating': 8,
         'cost_per_1m_input': 0.075,
         'cost_per_1m_output': 0.30,
         'specializations': ['quick_tasks', 'long_context', 'analysis'],
@@ -540,16 +540,16 @@ DEFAULT_MODELS = [
     },
     {
         'provider': 'gemini',
-        'model_id': 'gemini-2.0-pro',
-        'display_name': 'Gemini 2.0 Pro',
+        'model_id': 'gemini-3-flash-preview',
+        'display_name': 'Gemini 3 Flash (Preview)',
         'category': 'general',
-        'context_window': 2000000,
+        'context_window': 1000000,
         'max_output_tokens': 8192,
-        'speed_rating': 7,
+        'speed_rating': 9,
         'quality_rating': 9,
-        'cost_per_1m_input': 1.25,
-        'cost_per_1m_output': 5.00,
-        'specializations': ['analysis', 'research', 'long_context'],
+        'cost_per_1m_input': 0.15,
+        'cost_per_1m_output': 0.60,
+        'specializations': ['analysis', 'research', 'long_context', 'coding'],
         'is_recommended': True,
     },
 
@@ -671,10 +671,10 @@ DEFAULT_AGENT_LLM_CONFIGS = [
     {'agent_name': 'SEOOptimizerAgent', 'agent_category': 'content', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
 
     # Analysis/Research Agents → GPT-5.1 (strong analysis) or Gemini (long context)
-    {'agent_name': 'ResearchAgent', 'agent_category': 'research', 'primary': 'openai:gpt-5.1', 'fallback': 'gemini:gemini-2.0-pro'},
+    {'agent_name': 'ResearchAgent', 'agent_category': 'research', 'primary': 'openai:gpt-5.1', 'fallback': 'gemini:gemini-3-flash-preview'},
     {'agent_name': 'TrendAnalysisAgent', 'agent_category': 'analysis', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
     {'agent_name': 'MarketIntelligenceAgent', 'agent_category': 'analysis', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-sonnet-4-20250514'},
-    {'agent_name': 'CompetitorAnalysisAgent', 'agent_category': 'analysis', 'primary': 'gemini:gemini-2.0-pro', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'CompetitorAnalysisAgent', 'agent_category': 'analysis', 'primary': 'gemini:gemini-3-flash-preview', 'fallback': 'openai:gpt-5.1'},
 
     # Legal Agent → Claude (procedural, careful, good with rules)
     {'agent_name': 'LegalDocDrafterAgent', 'agent_category': 'legal', 'primary': 'anthropic:claude-sonnet-4-20250514', 'fallback': 'openai:gpt-5.1'},
