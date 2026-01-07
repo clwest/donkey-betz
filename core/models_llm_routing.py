@@ -725,4 +725,72 @@ DEFAULT_AGENT_LLM_CONFIGS = [
 
     # System Agent → Fast reliable model
     {'agent_name': 'SystemIntelligenceAgent', 'agent_category': 'system', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+
+    # ============================================================================
+    # SESSION 697: Additional Agent Configs (43 more agents)
+    # ============================================================================
+
+    # Executive/Strategy Agents → GPT-5.1 (good reasoning for leadership)
+    {'agent_name': 'CTOAgent', 'agent_category': 'executive', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'COOAgent', 'agent_category': 'executive', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'CreativeDirectorAgent', 'agent_category': 'executive', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'MeetingCoordinatorAgent', 'agent_category': 'executive', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+
+    # Content/Creative Agents → Claude (excellent writing)
+    {'agent_name': 'AudioAgent', 'agent_category': 'creation', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ThreeDAgent', 'agent_category': 'creation', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'BrandStrategyAgent', 'agent_category': 'content', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'MarketingStrategyAgent', 'agent_category': 'content', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'SocialMediaAgent', 'agent_category': 'content', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'TechnicalDocumentAgent', 'agent_category': 'content', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ContentAuditAgent', 'agent_category': 'content', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'ContentExecutorAgent', 'agent_category': 'content', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+
+    # Analysis/Research Agents → GPT-5.1 (strong analysis)
+    {'agent_name': 'CustomerResearchAgent', 'agent_category': 'analysis', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'OpportunityScoringAgent', 'agent_category': 'analysis', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+
+    # Narrative/Cultural Agents → Claude (nuanced understanding)
+    {'agent_name': 'CulturalImpactAgent', 'agent_category': 'narrative', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'NarrativeHistorianAgent', 'agent_category': 'narrative', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'TrendBreakDetectorAgent', 'agent_category': 'narrative', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+
+    # Editing/Technical Agents → Together AI Llama 70B (coding/technical)
+    {'agent_name': 'ImageEditingAgent', 'agent_category': 'editing', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'VideoEditingAgent', 'agent_category': 'editing', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ResolveAgent', 'agent_category': 'editing', 'primary': 'together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 'fallback': 'openai:gpt-5.1'},
+
+    # Blockchain/Security Agents → GPT-5.1 (careful analysis required)
+    {'agent_name': 'SmartContractAuditorAgent', 'agent_category': 'blockchain', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'TransactionMonitorAgent', 'agent_category': 'blockchain', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'WhaleWatcherAgent', 'agent_category': 'blockchain', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ExploitDetectorAgent', 'agent_category': 'blockchain', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+
+    # Market Monitoring Agents → GPT-5-mini (fast) or GPT-5.1 (analysis)
+    {'agent_name': 'InstitutionalWatcherAgent', 'agent_category': 'markets', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'MarketMovementMonitorAgent', 'agent_category': 'markets', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'MarketAnomalyDetectorAgent', 'agent_category': 'markets', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'SignalScannerAgent', 'agent_category': 'markets', 'primary': 'openai:gpt-5-mini', 'fallback': 'openai:gpt-5.1'},
+
+    # Orchestration/Workflow Agents → GPT-5-mini (fast routing)
+    {'agent_name': 'WorkflowOrchestrationAgent', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+    {'agent_name': 'OpportunityPipelineAgent', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+    {'agent_name': 'CampaignOrchestratorAgent', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+    {'agent_name': 'AISeriesWorkflowAgent', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+    {'agent_name': 'PodcastCoordinatorAgent', 'agent_category': 'orchestration', 'primary': 'openai:gpt-5-mini', 'fallback': 'anthropic:claude-3.5-haiku'},
+
+    # Debate/Discussion Agents → Claude (argumentative writing)
+    {'agent_name': 'DebateAdvocateAgent', 'agent_category': 'debate', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'DebateSkepticAgent', 'agent_category': 'debate', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ModeratorAgent', 'agent_category': 'debate', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'ContrarianAgent', 'agent_category': 'debate', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'TopicMinerAgent', 'agent_category': 'debate', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+    {'agent_name': 'PerformanceAnalystAgent', 'agent_category': 'debate', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
+
+    # Training/Generation Agents → Claude or Together AI
+    {'agent_name': 'CharacterTrainingAgent', 'agent_category': 'training', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+    {'agent_name': 'TrainedCreationAgent', 'agent_category': 'training', 'primary': 'anthropic:claude-3.5-sonnet', 'fallback': 'openai:gpt-5.1'},
+
+    # Security Agent → GPT-5.1 (careful analysis)
+    {'agent_name': 'MemoryIsolationAgent', 'agent_category': 'security', 'primary': 'openai:gpt-5.1', 'fallback': 'anthropic:claude-3.5-sonnet'},
 ]
