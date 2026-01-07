@@ -1,9 +1,9 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** January 6, 2026 - Session 701
-**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + HEART Service
+**Last Updated:** January 6, 2026 - Session 702
+**Status:** 100% Reality Score | Django Web App | ALL 6 PHASES COMPLETE + HEART + LUNGS Services
 
-## System Stats (Session 701)
+## System Stats (Session 702)
 | Component | Count | Details |
 |-----------|-------|---------|
 | **Agents** | 72 | All synced to database + workspace integration |
@@ -14,15 +14,16 @@
 | **Agent LLM Configs** | 75 | All agents mapped to optimal models (Session 699) |
 | **LLM API Endpoints** | 7 | Status, providers, models, configs, logs, analytics (Session 699) |
 | **ML Models** | 17 | 15 working (Sessions 677-685) |
-| **Database Models** | 338+ | +2 HEART models (HeartBeat, ComponentStatus) |
-| **Celery Tasks** | 129 | +run_heartbeat (every 60s) |
-| **Services** | 98 | +heart.py (HeartMonitorService) |
+| **Database Models** | 341+ | +3 LUNGS models (Budget, BreathCycle, RespiratoryStatus) |
+| **Celery Tasks** | 132 | +3 LUNGS tasks (breathing, forecast, reset) |
+| **Services** | 99 | +lungs.py (LungsCapacityService) |
 | **Discord Commands** | 112 | 29 Cog categories |
 | **Advisors** | 25 | Famous figures + domain experts |
 | **Sci-Fi Features** | 14 | All active |
 | **Running Pilots** | 18 | Auto-deployed via autonomous pipeline |
 | **OPEN Systems** | 7/7 | Full composability (Session 653) |
 
+**LUNGS Service:** Resource & capacity management - tracks token/cost budgets, 6 default budgets, alerts at 80%/95% (Session 702)
 **HEART Service:** Central health monitoring - checks Brain, Nervous System, Organs, Sensory, Skin, Memory every 60s (Session 701)
 **Enhanced Nervous System:** Multi-model LLM routing - coding agents use Together AI Llama 70B, creative use Claude (Session 697)
 **SKIN Layer:** All 72 agents can now write to real project workspaces with audit trail + rollback (Session 695)
@@ -68,6 +69,7 @@ open http://localhost:8000/ai-studio/
 | `core/celery.py` | Celery Beat schedules |
 | `core/assistant/tool_definitions.py` | GPT tool schemas |
 | `core/services/heart.py` | HEART Service - system health monitoring |
+| `core/services/lungs.py` | LUNGS Service - resource & capacity management |
 | `core/services/review_document.py` | Chief of Staff review generation |
 | `core/services/side_chat.py` | Pro/Con interrogation service |
 
@@ -178,6 +180,7 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **702** | **LUNGS Service** - Resource & capacity management (token/cost budgets, 6 defaults, alerts) | `SESSION_702_LUNGS_SERVICE.md` |
 | **701** | **HEART Service** - Central health monitoring (Brain, Nervous System, Organs, Sensory, Skin, Memory) | `SESSION_701_HEART_SERVICE.md` |
 | **700** | **LLM Routing UI + File Tree** - Hierarchical file tree for workspaces, frontend ready | `FRONTEND_INTEGRATION_NOTE.md` |
 | **699** | **LLM Routing API Endpoints** - 7 API endpoints + 75 agent configs (all agents mapped) | `FRONTEND_INTEGRATION_NOTE.md` |

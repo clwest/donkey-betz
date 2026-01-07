@@ -22283,3 +22283,166 @@ def run_heartbeat():
             'error': str(e),
             'is_alive': False,
         }
+
+
+# =============================================================================
+# SESSION 702: LUNGS SERVICE - RESOURCE & CAPACITY MANAGEMENT
+# =============================================================================
+
+@shared_task(name='core.tasks.check_breathing')
+def check_breathing():
+    """
+    Session 702: LUNGS Service - Check breathing status
+
+    Aggregates LLM usage from LLMCallLog, updates BreathCycle records,
+    and sends Discord alerts if thresholds are crossed.
+
+    Components checked:
+    - System budget utilization
+    - Per-provider budgets (OpenAI, Anthropic, etc.)
+    - Per-agent budgets (if configured)
+    - Spending velocity and forecasts
+
+    Schedule: Every 15 minutes (via Celery Beat)
+    """
+    from core.services.lungs import get_lungs_monitor
+    import redis
+    import json
+
+    logger.info("🫁 [LUNGS] Running breathing check...")
+
+    try:
+        lungs = get_lungs_monitor()
+        status = lungs.breathe()
+
+        # Log the result
+        logger.info(
+            f"🫁 [LUNGS] Breathing check complete: {status['overall_status'].upper()} "
+            f"(O2: {status['oxygen_level']:.1f}%) - {status['budgets_checked']} budgets checked"
+        )
+
+        # Log any alerts
+        for alert in status.get('alerts', []):
+            if alert['type'] == 'warning':
+                logger.warning(f"🫁 [LUNGS] Warning: {alert['message']}")
+            elif alert['type'] == 'critical':
+                logger.error(f"🫁 [LUNGS] CRITICAL: {alert['message']}")
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('lungs:status', json.dumps({
+                'oxygen_level': status['oxygen_level'],
+                'overall_status': status['overall_status'],
+                'can_breathe': status['can_breathe'],
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🫁 [LUNGS] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🫁 [LUNGS] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🫁 [LUNGS] Breathing check failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e),
+            'can_breathe': True,  # Fail open - don't block LLM calls
+        }
+
+
+@shared_task(name='core.tasks.daily_cost_forecast')
+def daily_cost_forecast():
+    """
+    Session 702: LUNGS Service - Daily cost forecast report
+
+    Generates a daily forecast report and posts to Discord.
+
+    Schedule: Daily at 8 AM (via Celery Beat)
+    """
+    from core.services.lungs import get_lungs_monitor
+    from core.models_lungs import Budget
+
+    logger.info("🫁 [LUNGS] Generating daily cost forecast...")
+
+    try:
+        lungs = get_lungs_monitor()
+
+        # Get velocity metrics
+        velocity = lungs.get_spending_velocity(hours=24)
+
+        # Get system budget forecast
+        system_budget = Budget.objects.filter(
+            scope='system',
+            period='daily',
+            is_active=True
+        ).first()
+
+        forecast_message = [
+            "📊 **Daily Cost Forecast Report**",
+            "",
+            f"**Last 24h Spending:**",
+            f"• Total Cost: ${velocity['total_cost']:.2f}",
+            f"• Total Tokens: {velocity['total_tokens']:,}",
+            f"• Total Calls: {velocity['total_calls']:,}",
+            f"• Cost/Hour: ${velocity['cost_per_hour']:.3f}",
+            "",
+        ]
+
+        if system_budget:
+            forecast = lungs.forecast_end_of_period(system_budget)
+            forecast_message.extend([
+                f"**System Daily Budget:**",
+                f"• Limit: ${float(system_budget.cost_limit):.2f}",
+                f"• Projected EOD: ${forecast['projected_cost']:.2f}",
+                f"• On Pace to Exceed: {'⚠️ YES' if forecast['on_pace_to_exceed'] else '✅ No'}",
+                f"• Confidence: {forecast['confidence']*100:.0f}%",
+            ])
+
+        # Post to Discord
+        try:
+            from core.services.discord_notifications import DiscordNotificationService
+            service = DiscordNotificationService()
+            service.send_system_status('\n'.join(forecast_message), color=0x3498DB)
+        except Exception as discord_error:
+            logger.warning(f"🫁 [LUNGS] Discord post failed: {discord_error}")
+
+        logger.info("🫁 [LUNGS] Daily forecast report complete")
+
+        return {
+            'velocity': velocity,
+            'forecast_sent': True,
+        }
+
+    except Exception as e:
+        logger.error(f"🫁 [LUNGS] Daily forecast failed: {e}")
+        return {'error': str(e)}
+
+
+@shared_task(name='core.tasks.reset_daily_respiratory_stats')
+def reset_daily_respiratory_stats():
+    """
+    Session 702: LUNGS Service - Reset daily respiratory stats at midnight.
+
+    Resets the daily counters in RespiratoryStatus records.
+
+    Schedule: Daily at midnight (via Celery Beat)
+    """
+    from core.models_lungs import RespiratoryStatus
+
+    logger.info("🫁 [LUNGS] Resetting daily respiratory stats...")
+
+    try:
+        count = 0
+        for status in RespiratoryStatus.objects.all():
+            status.reset_daily_stats()
+            status.save()
+            count += 1
+
+        logger.info(f"🫁 [LUNGS] Reset {count} respiratory status records")
+        return {'reset_count': count}
+
+    except Exception as e:
+        logger.error(f"🫁 [LUNGS] Daily reset failed: {e}")
+        return {'error': str(e)}

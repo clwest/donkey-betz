@@ -3521,6 +3521,33 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 702: LUNGS Service API (Resource & Capacity Management)
+# =========================================================================
+from core.views_lungs import (
+    lungs_breathe,
+    lungs_status,
+    lungs_oxygen,
+    lungs_budgets,
+    lungs_budget_detail,
+    lungs_forecast,
+    lungs_history,
+    lungs_can_breathe,
+    lungs_is_breathing,
+)
+
+urlpatterns += [
+    path('api/lungs/breathe/', lungs_breathe, name='lungs-breathe'),
+    path('api/lungs/status/', lungs_status, name='lungs-status'),
+    path('api/lungs/oxygen/', lungs_oxygen, name='lungs-oxygen'),
+    path('api/lungs/budgets/', lungs_budgets, name='lungs-budgets'),
+    path('api/lungs/budgets/<uuid:budget_id>/', lungs_budget_detail, name='lungs-budget-detail'),
+    path('api/lungs/forecast/', lungs_forecast, name='lungs-forecast'),
+    path('api/lungs/history/', lungs_history, name='lungs-history'),
+    path('api/lungs/can-breathe/', lungs_can_breathe, name='lungs-can-breathe'),
+    path('api/lungs/alive/', lungs_is_breathing, name='lungs-alive'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

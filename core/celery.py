@@ -1497,6 +1497,32 @@ app.conf.beat_schedule = {
             'queue': 'broadcast',  # High-frequency status task
         }
     },
+    # Session 702: LUNGS Service - Resource & Capacity Management
+    # The breathing of the AI body - monitors token/cost budgets
+    'lungs-service-breathing': {
+        'task': 'core.tasks.check_breathing',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 840,  # 14 minutes
+            'queue': 'default',
+        }
+    },
+    'lungs-daily-forecast': {
+        'task': 'core.tasks.daily_cost_forecast',
+        'schedule': crontab(hour=8, minute=0),  # Daily at 8 AM
+        'options': {
+            'expires': 3600,
+            'queue': 'default',
+        }
+    },
+    'lungs-daily-reset': {
+        'task': 'core.tasks.reset_daily_respiratory_stats',
+        'schedule': crontab(hour=0, minute=1),  # Daily at 00:01
+        'options': {
+            'expires': 3600,
+            'queue': 'default',
+        }
+    },
 }
 
 # Task routing configuration
