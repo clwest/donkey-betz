@@ -656,3 +656,134 @@ class RespiratoryStatusAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# =============================================================================
+# SESSION 703: CIRCULATORY SYSTEM ADMIN (Data Flow Monitoring)
+# =============================================================================
+
+from core.models_circulatory import FlowRoute, CirculationPulse, FlowStatus
+
+
+@admin.register(FlowRoute)
+class FlowRouteAdmin(admin.ModelAdmin):
+    """Admin interface for flow route configuration."""
+
+    list_display = (
+        'name', 'display_name', 'route_type', 'identifier',
+        'max_depth', 'max_latency_ms', 'is_active', 'is_critical'
+    )
+    list_filter = ('route_type', 'is_active', 'is_critical')
+    search_fields = ('name', 'display_name', 'identifier')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+    ordering = ('route_type', 'name')
+
+    fieldsets = (
+        ('Route Info', {
+            'fields': ('name', 'display_name', 'route_type', 'identifier')
+        }),
+        ('Thresholds', {
+            'fields': ('max_depth', 'max_latency_ms', 'min_throughput')
+        }),
+        ('Settings', {
+            'fields': ('is_active', 'is_critical', 'description')
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(CirculationPulse)
+class CirculationPulseAdmin(admin.ModelAdmin):
+    """Admin interface for circulation pulse records."""
+
+    list_display = (
+        'recorded_at', 'overall_status', 'flow_score',
+        'total_routes_checked', 'routes_healthy', 'routes_blocked',
+        'bottleneck_count', 'total_items_in_transit', 'check_duration_ms'
+    )
+    list_filter = ('overall_status', 'recorded_at')
+    search_fields = ()
+    readonly_fields = (
+        'id', 'overall_status', 'flow_score', 'total_routes_checked',
+        'routes_healthy', 'routes_slow', 'routes_congested', 'routes_blocked',
+        'total_items_in_transit', 'total_throughput', 'avg_latency_ms',
+        'max_latency_ms', 'bottlenecks', 'bottleneck_count', 'route_details',
+        'check_duration_ms', 'recorded_at'
+    )
+    date_hierarchy = 'recorded_at'
+    ordering = ('-recorded_at',)
+
+    fieldsets = (
+        ('Overall Status', {
+            'fields': ('overall_status', 'flow_score')
+        }),
+        ('Route Counts', {
+            'fields': ('total_routes_checked', 'routes_healthy', 'routes_slow',
+                       'routes_congested', 'routes_blocked')
+        }),
+        ('Flow Metrics', {
+            'fields': ('total_items_in_transit', 'total_throughput',
+                       'avg_latency_ms', 'max_latency_ms')
+        }),
+        ('Bottlenecks', {
+            'fields': ('bottleneck_count', 'bottlenecks')
+        }),
+        ('Details', {
+            'fields': ('route_details', 'check_duration_ms', 'recorded_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(FlowStatus)
+class FlowStatusAdmin(admin.ModelAdmin):
+    """Admin interface for flow status cache."""
+
+    list_display = (
+        'route', 'status', 'is_healthy', 'health_score',
+        'current_depth', 'current_throughput', 'current_latency_ms',
+        'active_workers', 'last_check'
+    )
+    list_filter = ('status', 'is_healthy')
+    search_fields = ('route__name', 'route__display_name')
+    readonly_fields = (
+        'route', 'status', 'is_healthy', 'health_score', 'current_depth',
+        'current_throughput', 'current_latency_ms', 'items_processed_24h',
+        'errors_24h', 'avg_latency_24h_ms', 'peak_depth_24h', 'peak_latency_24h_ms',
+        'active_workers', 'active_tasks', 'reserved_tasks', 'last_activity',
+        'last_check', 'status_changed_at', 'congestion_alert_sent',
+        'blocked_alert_sent', 'last_alert_at', 'details', 'error_message'
+    )
+    ordering = ('route__route_type', 'route__name')
+
+    fieldsets = (
+        ('Route Info', {
+            'fields': ('route',)
+        }),
+        ('Current Status', {
+            'fields': ('status', 'is_healthy', 'health_score')
+        }),
+        ('Current Metrics', {
+            'fields': ('current_depth', 'current_throughput', 'current_latency_ms')
+        }),
+        ('24h Metrics', {
+            'fields': ('items_processed_24h', 'errors_24h', 'avg_latency_24h_ms',
+                       'peak_depth_24h', 'peak_latency_24h_ms')
+        }),
+        ('Worker Info', {
+            'fields': ('active_workers', 'active_tasks', 'reserved_tasks')
+        }),
+        ('Timestamps', {
+            'fields': ('last_activity', 'last_check', 'status_changed_at')
+        }),
+        ('Alerts', {
+            'fields': ('congestion_alert_sent', 'blocked_alert_sent', 'last_alert_at')
+        }),
+        ('Details', {
+            'fields': ('details', 'error_message'),
+            'classes': ('collapse',)
+        }),
+    )

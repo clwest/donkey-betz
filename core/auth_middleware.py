@@ -201,7 +201,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/heart/component/',  # Component status detail
         '/api/heart/alive/',  # Quick alive check
 
-        # Session 703: LUNGS Service APIs (read-only resource monitoring for React frontend)
+        # Session 702: LUNGS Service APIs (read-only resource monitoring for React frontend)
         '/api/lungs/breathe/',  # Run full breathing check
         '/api/lungs/status/',  # Get cached respiratory status
         '/api/lungs/oxygen/',  # Oxygen levels (budget usage)
@@ -209,6 +209,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/lungs/forecast/',  # Spending forecast
         '/api/lungs/can-breathe/',  # Check if API call is allowed
         '/api/lungs/alive/',  # Quick alive check
+
+        # Session 703: CIRCULATORY System APIs (read-only data flow monitoring for React frontend)
+        '/api/circulatory/circulate/',  # Run full circulation check
+        '/api/circulatory/status/',  # Get cached flow status
+        '/api/circulatory/routes/',  # List all monitored routes
+        '/api/circulatory/bottlenecks/',  # Get current bottlenecks
+        '/api/circulatory/velocity/',  # Get flow velocity metrics
+        '/api/circulatory/history/',  # Get circulation pulse history
+        '/api/circulatory/is-flowing/',  # Quick alive check
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

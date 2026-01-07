@@ -1,99 +1,115 @@
-# Session 703 - Start Here
+# Session 704 - Start Here
 
-**Previous Session:** 702 (LUNGS Service + HEART UI Integration)
+**Previous Session:** 703 (CIRCULATORY SYSTEM - Data Flow Monitoring)
 **Date:** January 6, 2026
-**Status:** 100% Reality Score | HEART + LUNGS Services COMPLETE
+**Status:** 100% Reality Score | HEART + LUNGS + CIRCULATORY Services COMPLETE
 
 ---
 
-## Session 702 Summary
+## Session 703 Summary
 
-### Part 1: LUNGS Service - Resource & Capacity Management (Backend)
+### CIRCULATORY SYSTEM - Data Flow Monitoring (Backend)
 
-Implemented the **LUNGS** (Limits, Usage, Notifications, Governance, Spending) service - the resource management component that tracks token/cost consumption and enforces budgets.
+Implemented the **CIRCULATORY SYSTEM** - the data flow monitoring component that tracks the "blood flow" of data through Redis queues, Celery tasks, WebSocket channels, and event streams.
 
-### Part 2: HEART UI Integration (Frontend)
+### Human Body Metaphor
 
-Connected the HEART service to the React frontend:
-
-- **HeartWidget Component** - Reusable health display with gauge and 6 body part indicators
-- **Dashboard Integration** - Replaced static "System Status" with live HeartWidget
-- **Admin HEART Tab** - Detailed monitoring with body parts grid, history, architecture table
-- **heartApi** - 5 API endpoints (pulse, status, history, component, alive)
-- **Auth Middleware** - Added HEART endpoints to PUBLIC_PATHS
-
-See `docs/handoffs/SESSION_702_HEART_UI_INTEGRATION.md` for frontend details.
-
-**Human Body Architecture Now Complete:**
-
-| Body Part | Technical Component | Purpose |
-|-----------|---------------------|---------|
-| **CONSCIOUSNESS** | Human Operator | Final decisions, approvals |
-| **EYES/EARS** | HumanInterfaceLayer | Attention aggregation |
-| **BRAIN** | ThinkingAgent | Autonomous reasoning |
-| **HEART** | HeartMonitorService | Health monitoring (Session 701) |
-| **LUNGS** | LungsCapacityService | **Resource & capacity management (NEW)** |
-| **NERVOUS SYSTEM** | LLM/ML Routers | Signal routing |
-| **ORGANS** | 72 Specialized Agents | Work execution |
-| **SENSORY** | 77 Spiders | Data gathering |
-| **SKIN** | WorkspaceManager | Interface with reality |
-| **MEMORY** | Database & Redis | Persistence |
+| Circulation Concept | Technical Equivalent |
+|---------------------|---------------------|
+| **Blood** | Data flowing through the system |
+| **Blood Pressure** | Queue depth / backpressure |
+| **Circulation Time** | End-to-end latency |
+| **Clot/Blockage** | Bottlenecks in data flow |
+| **Flow Rate** | Throughput (items/second) |
 
 ### Files Created (5)
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `core/models_lungs.py` | ~250 | Budget, BreathCycle, RespiratoryStatus models |
-| `core/services/lungs.py` | ~450 | LungsCapacityService singleton |
-| `core/views_lungs.py` | ~350 | 9 API endpoints |
-| `core/management/commands/lungs_check.py` | ~443 | CLI command |
-| `core/migrations/0148_session_702_lungs_service.py` | ~300 | Database migration |
+| `core/models_circulatory.py` | ~200 | FlowRoute, CirculationPulse, FlowStatus models |
+| `core/services/circulatory.py` | ~550 | CirculatorySystemService singleton |
+| `core/views_circulatory.py` | ~350 | 8 API endpoints |
+| `core/management/commands/circulation_check.py` | ~420 | CLI management command |
+| `core/migrations/0149_session_703_circulatory_system.py` | ~280 | Database migration with 9 default routes |
 
-### Files Modified (4)
+### Files Modified (5)
 
 | File | Changes |
 |------|---------|
-| `core/urls.py` | Added 9 LUNGS API routes |
-| `core/tasks.py` | Added 3 Celery tasks |
-| `core/celery.py` | Added 3 Beat schedules |
-| `core/admin.py` | Registered 3 LUNGS models |
+| `core/urls.py` | Added 8 CIRCULATORY API routes |
+| `core/tasks.py` | Added `check_circulation` Celery task |
+| `core/celery.py` | Added Beat schedule (every 30 seconds) |
+| `core/admin.py` | Registered 3 CIRCULATORY models |
+| `core/auth_middleware.py` | Added 7 CIRCULATORY endpoints to PUBLIC_PATHS |
 
-### Default Budgets (6)
+### Default Routes (9)
 
-| Budget | Scope | Period | Limit |
-|--------|-------|--------|-------|
-| System Daily | system | daily | $50.00 |
-| System Monthly | system | monthly | $500.00 |
-| OpenAI Daily | provider/openai | daily | $30.00 |
-| Anthropic Daily | provider/anthropic | daily | $20.00 |
-| Together AI Daily | provider/together_ai | daily | $10.00 |
-| DeepSeek Daily | provider/deepseek | daily | $10.00 |
+| Route Name | Type | Max Depth | Critical |
+|------------|------|-----------|----------|
+| Redis Cache (DB 1) | redis_queue | 10000 | Yes |
+| Celery Broker (DB 2) | redis_queue | 5000 | Yes |
+| Celery Results (DB 3) | redis_queue | 10000 | No |
+| Celery Default | celery_queue | 1000 | Yes |
+| Celery Long Running | celery_queue | 100 | No |
+| Celery Broadcast | celery_queue | 500 | Yes |
+| WebSocket Channels | websocket | 1000 | No |
+| Event Spider Data | event_stream | 500 | No |
+| Event Opportunity Scored | event_stream | 200 | Yes |
+
+### Status Levels
+
+| Flow Score | Status | Meaning |
+|------------|--------|---------|
+| 80-100% | `flowing` | All routes healthy |
+| 50-79% | `slow` | Some latency issues |
+| 20-49% | `congested` | Queue depth warnings |
+| 0-19% | `blocked` | Critical flow issues |
 
 ### Test Results
 
 ```
 ============================================================
-  LUNGS SERVICE - Resource & Capacity Check
-  The Breathing of the AI Body
+  CIRCULATORY SYSTEM - Data Flow Health Check
+  The Blood Flow of the AI Body
 ============================================================
-  Overall Status: NORMAL (O2: 100.0%)
-  Respiratory Rate: 0.0 calls/min
-  Budgets Checked: 6
-  Can Breathe: Yes
-  Check Duration: 22ms
+  Overall Status: FLOWING
+  Flow Score: 88.9%
+  Is Flowing: Yes
+  Check Duration: 11985ms
 
-  Provider Budgets:
-  --------------------------------------------------------
-  OPENAI:       O2 Level: 100.0% | Status: NORMAL
-  ANTHROPIC:    O2 Level: 100.0% | Status: NORMAL
-  TOGETHER_AI:  O2 Level: 100.0% | Status: NORMAL
-  DEEPSEEK:     O2 Level: 100.0% | Status: NORMAL
+  Route Summary:
+  ----------------------------------------
+  Total Routes:   9
+  Healthy:        7
+  Slow:           0
+  Congested:      2
+  Blocked:        0
+
+  Bottlenecks Detected:
+  - celery_broadcast: High queue depth: 2719/500
+  - celery_long_running: High queue depth: 1044/100
 ============================================================
 ```
 
+**Human Body Architecture Now Complete:**
+
+| Body Part | Technical Component | Purpose | Session |
+|-----------|---------------------|---------|---------|
+| **CONSCIOUSNESS** | Human Operator | Final decisions, approvals | - |
+| **EYES/EARS** | HumanInterfaceLayer | Attention aggregation | - |
+| **BRAIN** | ThinkingAgent | Autonomous reasoning | - |
+| **HEART** | HeartMonitorService | Health monitoring | 701 |
+| **LUNGS** | LungsCapacityService | Resource & capacity management | 702 |
+| **CIRCULATORY** | CirculatorySystemService | **Data flow monitoring (NEW)** | **703** |
+| **NERVOUS SYSTEM** | LLM/ML Routers | Signal routing | - |
+| **ORGANS** | 72 Specialized Agents | Work execution | - |
+| **SENSORY** | 77 Spiders | Data gathering | - |
+| **SKIN** | WorkspaceManager | Interface with reality | 695 |
+| **MEMORY** | Database & Redis | Persistence | - |
+
 ---
 
-## System Stats (Session 702)
+## System Stats (Session 703)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
@@ -103,9 +119,9 @@ See `docs/handoffs/SESSION_702_HEART_UI_INTEGRATION.md` for frontend details.
 | LLM Providers | 6 | OpenAI, Anthropic, DeepSeek, Together AI, Gemini, Ollama |
 | LLM Models | 16 | GPT-5 family, Claude 4, Llama, DeepSeek V3, Gemini 2.5/3 |
 | Agent LLM Configs | 75 | All major agents configured |
-| Database Models | 341+ | +3 LUNGS models (Budget, BreathCycle, RespiratoryStatus) |
-| Services | 99 | +LungsCapacityService |
-| Celery Tasks | 132 | +3 LUNGS tasks |
+| Database Models | 344+ | +3 CIRCULATORY models (FlowRoute, CirculationPulse, FlowStatus) |
+| Services | 100 | +CirculatorySystemService |
+| Celery Tasks | 133 | +check_circulation |
 
 ---
 
@@ -115,27 +131,31 @@ See `docs/handoffs/SESSION_702_HEART_UI_INTEGRATION.md` for frontend details.
 # Start services
 make start && make celery
 
+# Run CIRCULATORY circulation check
+python manage.py circulation_check              # Full check
+python manage.py circulation_check --json       # JSON output
+python manage.py circulation_check --routes     # List all routes
+python manage.py circulation_check --bottlenecks # Show bottlenecks
+python manage.py circulation_check --velocity   # Flow velocity
+python manage.py circulation_check --history    # Pulse history
+python manage.py circulation_check --watch      # Continuous monitoring (30s)
+python manage.py circulation_check --route celery_default  # Specific route
+
 # Run LUNGS breathing check
-python manage.py lungs_check              # Full check
-python manage.py lungs_check --json       # JSON output
-python manage.py lungs_check --oxygen     # Oxygen levels only
-python manage.py lungs_check --forecast   # Spending forecast
-python manage.py lungs_check --velocity   # Spending velocity
-python manage.py lungs_check --budgets    # List all budgets
-python manage.py lungs_check --watch      # Continuous monitoring (15m)
+python manage.py lungs_check                    # Full check
+python manage.py lungs_check --oxygen           # Oxygen levels only
 
 # Run HEART health check
-python manage.py heart_check              # Full health check
-python manage.py heart_check --watch      # Continuous monitoring (60s)
+python manage.py heart_check                    # Full health check
 
-# LUNGS API endpoints
-curl http://localhost:8000/api/lungs/breathe/     # Run full check
-curl http://localhost:8000/api/lungs/status/      # Cached status
-curl http://localhost:8000/api/lungs/oxygen/      # Oxygen levels
-curl http://localhost:8000/api/lungs/budgets/     # List budgets
-curl http://localhost:8000/api/lungs/forecast/    # Spending forecast
-curl http://localhost:8000/api/lungs/can-breathe/ # Check if call allowed
-curl http://localhost:8000/api/lungs/alive/       # Quick alive check
+# CIRCULATORY API endpoints
+curl http://localhost:8000/api/circulatory/circulate/     # Run full check
+curl http://localhost:8000/api/circulatory/status/        # Cached status
+curl http://localhost:8000/api/circulatory/routes/        # List routes
+curl http://localhost:8000/api/circulatory/bottlenecks/   # Current bottlenecks
+curl http://localhost:8000/api/circulatory/velocity/      # Flow velocity
+curl http://localhost:8000/api/circulatory/history/       # Pulse history
+curl http://localhost:8000/api/circulatory/is-flowing/    # Quick alive check
 
 # Access AI Studio
 open http://localhost:8000/ai-studio/
@@ -143,36 +163,36 @@ open http://localhost:8000/ai-studio/
 
 ---
 
-## Session 703 Recommendations - Next Body Parts
+## Session 704 Recommendations - Next Body Parts
 
-With HEART and LUNGS complete, consider these remaining body parts:
+With HEART, LUNGS, and CIRCULATORY complete, consider these remaining body parts:
 
-### 1. CIRCULATORY SYSTEM - Data Flow Infrastructure
-- **Purpose:** Manage data flow between components (Redis as bloodstream)
-- **Features:** Data routing, queue management, flow monitoring
-- **Pattern:** Track data movement, detect bottlenecks, visualize flows
-
-### 2. SPINE - Central API Router
+### 1. SPINE - Central API Router
 - **Purpose:** Backbone routing for all API requests
 - **Features:** Request routing, load distribution, failover
 - **Pattern:** Central coordinator for all incoming traffic
 
-### 3. IMMUNE SYSTEM - Security & Threat Detection
+### 2. IMMUNE SYSTEM - Security & Threat Detection
 - **Purpose:** Monitor and protect against threats
 - **Features:** Rate limit abuse detection, suspicious pattern recognition
 - **Pattern:** Active defense layer for the platform
 
-### 4. DIGESTIVE SYSTEM - Data Ingestion Pipeline
+### 3. DIGESTIVE SYSTEM - Data Ingestion Pipeline
 - **Purpose:** Process and transform incoming data
 - **Features:** Spider data parsing, normalization, enrichment
 - **Pattern:** Transform raw data into usable intelligence
+
+### 4. NERVOUS SYSTEM Enhancement - Signal Routing
+- **Purpose:** Enhanced LLM/ML routing with health awareness
+- **Features:** Route requests based on HEART/LUNGS/CIRCULATORY status
+- **Pattern:** Intelligent routing that avoids overloaded paths
 
 ---
 
 ## Handoff Document
 
-See `docs/handoffs/SESSION_702_LUNGS_SERVICE.md` for complete implementation details.
+See `docs/handoffs/SESSION_703_CIRCULATORY_SYSTEM.md` for complete implementation details.
 
 ---
 
-**Session 702 Complete** - LUNGS Service (6 Budgets, 100% Oxygen)
+**Session 703 Complete** - CIRCULATORY SYSTEM (9 Routes, 88.9% Flow Score)

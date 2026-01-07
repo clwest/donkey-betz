@@ -3548,6 +3548,31 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 703: CIRCULATORY System API (Data Flow Monitoring)
+# =========================================================================
+from core.views_circulatory import (
+    circulate_view,
+    status_view as circulatory_status_view,
+    routes_list_view,
+    route_detail_view,
+    bottlenecks_view,
+    velocity_view,
+    history_view as circulatory_history_view,
+    is_flowing_view,
+)
+
+urlpatterns += [
+    path('api/circulatory/circulate/', circulate_view, name='circulatory-circulate'),
+    path('api/circulatory/status/', circulatory_status_view, name='circulatory-status'),
+    path('api/circulatory/routes/', routes_list_view, name='circulatory-routes'),
+    path('api/circulatory/routes/<uuid:route_id>/', route_detail_view, name='circulatory-route-detail'),
+    path('api/circulatory/bottlenecks/', bottlenecks_view, name='circulatory-bottlenecks'),
+    path('api/circulatory/velocity/', velocity_view, name='circulatory-velocity'),
+    path('api/circulatory/history/', circulatory_history_view, name='circulatory-history'),
+    path('api/circulatory/is-flowing/', is_flowing_view, name='circulatory-is-flowing'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.

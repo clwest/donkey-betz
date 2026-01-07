@@ -22446,3 +22446,75 @@ def reset_daily_respiratory_stats():
     except Exception as e:
         logger.error(f"🫁 [LUNGS] Daily reset failed: {e}")
         return {'error': str(e)}
+
+
+# =============================================================================
+# SESSION 703: CIRCULATORY SYSTEM - DATA FLOW MONITORING
+# =============================================================================
+
+@shared_task(name='core.tasks.check_circulation')
+def check_circulation():
+    """
+    Session 703: CIRCULATORY SYSTEM - Check data flow health
+
+    Monitors all data flow routes for healthy circulation:
+    - Redis queue depths and throughput
+    - Celery task flow and worker status
+    - WebSocket channel health
+    - Event stream consumer lag
+
+    Components checked:
+    - Redis Cache (DB 1), Broker (DB 2), Results (DB 3)
+    - Celery queues (default, long_running, broadcast)
+    - WebSocket channel layer
+    - Event streams (spider_data, opportunity_scored)
+
+    Schedule: Every 30 seconds (via Celery Beat)
+    """
+    from core.services.circulatory import get_circulatory_system
+    import redis
+    import json
+
+    logger.info("🩸 [CIRCULATORY] Running circulation check...")
+
+    try:
+        circulatory = get_circulatory_system()
+        status = circulatory.circulate()
+
+        # Log the result
+        logger.info(
+            f"🩸 [CIRCULATORY] Circulation check complete: {status['overall_status'].upper()} "
+            f"(Flow: {status['flow_score']:.1f}%) - {status['routes_checked']} routes checked"
+        )
+
+        # Log any bottlenecks
+        for bottleneck in status.get('bottlenecks', []):
+            severity = bottleneck.get('severity', 'info')
+            if severity == 'critical':
+                logger.error(f"🩸 [CIRCULATORY] BLOCKED: {bottleneck['route']} - {bottleneck['issue']}")
+            elif severity == 'warning':
+                logger.warning(f"🩸 [CIRCULATORY] Congested: {bottleneck['route']} - {bottleneck['issue']}")
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('circulatory:status', json.dumps({
+                'flow_score': status['flow_score'],
+                'overall_status': status['overall_status'],
+                'is_flowing': status['is_flowing'],
+                'bottleneck_count': status['bottleneck_count'],
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🩸 [CIRCULATORY] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🩸 [CIRCULATORY] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🩸 [CIRCULATORY] Circulation check failed: {e}")
+        return {
+            'status': 'blocked',
+            'error': str(e),
+            'is_flowing': False,
+        }
