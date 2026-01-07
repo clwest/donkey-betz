@@ -435,15 +435,17 @@ class DigestiveSystemService:
             ).count()
 
         # Calculate throughput (items per minute over last hour)
+        # Use processed_at timestamp to count items actually processed recently
         try:
             recent_processed = SpiderData.objects.filter(
                 is_processed=True,
-                created_at__gte=cutoff_1h
+                processed_at__gte=cutoff_1h
             ).count()
         except Exception:
+            # Fallback: count items created recently that are processed
             recent_processed = SpiderData.objects.filter(
-                created_at__gte=cutoff_1h,
-                relevance_score__isnull=False
+                is_processed=True,
+                created_at__gte=cutoff_1h
             ).count()
 
         throughput = recent_processed / 60.0  # items per minute
@@ -688,16 +690,17 @@ class DigestiveSystemService:
         items_ingested_1h = SpiderData.objects.filter(created_at__gte=cutoff_1h).count()
         intake_rate = items_ingested_1h / 60.0
 
-        # Processing rate (items processed per minute)
+        # Processing rate (items processed per minute) - use processed_at timestamp
         try:
             items_processed_1h = SpiderData.objects.filter(
-                created_at__gte=cutoff_1h,
+                processed_at__gte=cutoff_1h,
                 is_processed=True
             ).count()
         except Exception:
+            # Fallback to created_at
             items_processed_1h = SpiderData.objects.filter(
                 created_at__gte=cutoff_1h,
-                relevance_score__isnull=False
+                is_processed=True
             ).count()
         processing_rate = items_processed_1h / 60.0
 
