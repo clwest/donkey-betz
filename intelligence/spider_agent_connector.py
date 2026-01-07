@@ -195,11 +195,15 @@ class SpiderAgentConnector:
     def _create_agent_solution(self, agent: Agent, spider_data: SpiderData) -> Optional[AgentSolution]:
         """Create a solution based on spider data"""
         try:
-            # Parse spider data (use structured_data or content)
-            data = spider_data.structured_data if spider_data.structured_data else {}
+            # Parse spider data (use processed_data or raw_data from unified SpiderData model)
+            data = {}
+            if spider_data.processed_data:
+                data = spider_data.processed_data if isinstance(spider_data.processed_data, dict) else {}
+            elif spider_data.raw_data:
+                data = spider_data.raw_data if isinstance(spider_data.raw_data, dict) else {}
 
-            # Generate solution title and description
-            title = spider_data.title or data.get('title') or f"Opportunity from {spider_data.spider_name}"
+            # Generate solution title and description (unified model has no title field)
+            title = data.get('title') or f"Opportunity from {spider_data.spider_name}"
             description = data.get('description', f"Data collected by {spider_data.spider_name}")
 
             # Create code snippet if relevant data exists
