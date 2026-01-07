@@ -147,6 +147,7 @@ class BaseAgent(ABC, TimeTravelMixin):
         self._agent_model = None  # Cached Agent model instance
         self._mythology_enforcer = None  # Session 354: Mythology validation
         self._progress_service = None  # Session 489: Streaming progress
+        self._llm_router = None  # Session 697: Multi-model routing
 
     # ==================== Lazy-Loaded Services ====================
 
@@ -235,6 +236,23 @@ class BaseAgent(ABC, TimeTravelMixin):
             except ImportError:
                 logger.warning("StreamingProgressService not available")
         return self._progress_service
+
+    @property
+    def llm_router(self):
+        """
+        Session 697: Lazy-load AgentLLMRouter for multi-model routing.
+
+        Enables agents to use different LLMs (OpenAI, Anthropic, DeepSeek, Gemini, Ollama)
+        based on their configured optimal model. This is the Enhanced Nervous System
+        that routes neural signals (prompts) to the appropriate brain region (LLM).
+        """
+        if self._llm_router is None:
+            try:
+                from core.services.agent_llm_router import get_agent_llm_router
+                self._llm_router = get_agent_llm_router()
+            except ImportError:
+                logger.debug("AgentLLMRouter not available")
+        return self._llm_router
 
     # ==================== Abstract Methods ====================
 
@@ -1261,6 +1279,94 @@ Consider these trends when crafting the response to maximize relevance and engag
         except Exception as tracking_error:
             # Never let tracking failures break agent execution
             logger.debug(f"Analytics tracking failed (non-critical): {tracking_error}")
+
+    # ==================== Multi-Model Routing (Session 697) ====================
+
+    def _call_llm_routed(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        conversation_history: List[Dict[str, str]] = None,
+        task_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Session 697: Make an LLM call using the Enhanced Nervous System router.
+
+        This method routes the request to the optimal LLM model configured for
+        this agent. Different agents can use different models:
+        - CodeGeneratorAgent → DeepSeek Coder (specialized coding model)
+        - ContentWriterAgent → Claude (excellent creative writing)
+        - ResearchAgent → GPT-5.1 (strong analysis)
+        - ThinkingAgent → Claude Opus (deep reasoning)
+
+        Falls back to _call_openai if router is unavailable.
+
+        Args:
+            prompt: The user's prompt
+            system_prompt: Optional system prompt (defaults to self.system_prompt)
+            conversation_history: Optional previous messages
+            task_type: Optional task type for model override
+
+        Returns:
+            Dict with 'content', 'tool_calls', 'finish_reason', 'provider', 'model'
+        """
+        # Fall back to direct OpenAI if router not available
+        if not self.llm_router:
+            return self._call_openai(prompt, conversation_history)
+
+        try:
+            from core.services.llm_provider_registry import LLMRequest
+
+            # Build messages
+            messages = []
+            if conversation_history:
+                messages.extend(conversation_history)
+            messages.append({'role': 'user', 'content': prompt})
+
+            # Create request
+            request_system_prompt = system_prompt or self.system_prompt
+
+            # Convert tools to OpenAI format if present
+            tools = None
+            if self.tools:
+                tools = self.tools
+
+            # Route through the nervous system
+            response = self.llm_router.route_completion(
+                agent_name=self.name,
+                prompt=prompt,
+                system_prompt=request_system_prompt,
+                messages=messages,
+                task_type=task_type,
+                tools=tools,
+                max_tokens=6000,
+                user=self.user,
+            )
+
+            # Convert response to expected format
+            tool_calls = []
+            if response.tool_calls:
+                for tc in response.tool_calls:
+                    tool_calls.append({
+                        'id': tc.get('id', ''),
+                        'name': tc.get('function', {}).get('name', ''),
+                        'arguments': json.loads(tc.get('function', {}).get('arguments', '{}'))
+                    })
+
+            return {
+                'content': response.content,
+                'tool_calls': tool_calls,
+                'finish_reason': 'stop' if response.success else 'error',
+                'provider': response.provider,
+                'model': response.model,
+                'tokens_used': response.tokens_total,
+                'cost': response.cost,
+                'latency_ms': response.latency_ms,
+            }
+
+        except Exception as e:
+            logger.warning(f"Routed LLM call failed for {self.name}, falling back to OpenAI: {e}")
+            return self._call_openai(prompt, conversation_history)
 
     def _execute_tool_call(
         self,

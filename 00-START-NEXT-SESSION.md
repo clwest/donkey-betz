@@ -1,76 +1,90 @@
-# Session 697 - Start Here
+# Session 698 - Start Here
 
-**Previous Session:** 696 (SKIN Layer API)
+**Previous Session:** 697 (Enhanced Nervous System - Multi-Model LLM Routing)
 **Date:** January 6, 2026
-**Status:** 100% Reality Score | SKIN Layer + API COMPLETE | Human Body Metaphor COMPLETE
+**Status:** 100% Reality Score | Enhanced Nervous System COMPLETE
 
-> **READY FOR DEEP THINKING SESSION**
+> **NEXT STEPS:** Configure more agents, add DeepSeek API key, or build UI
 
 ---
 
-## Session 695-696 Summary: SKIN Layer Complete
+## Session 697 Summary: Enhanced Nervous System
 
 ### What Was Built
 
-**Session 695 - Backend:**
-- 3 database models (ProjectWorkspace, WorkspaceOperation, WorkspaceContext)
-- WorkspaceManager service (~850 lines)
-- workspace_tool for PA (12 actions)
-- All 72 agents now have workspace integration
-- 22 WORKSPACE_AWARE_AGENTS for file writing
+**Multi-Model LLM Routing - Agents can now use different LLMs:**
+- 4 database models (LLMProvider, LLMModel, AgentLLMConfig, LLMCallLog)
+- 5 provider implementations (OpenAI, Anthropic, DeepSeek, Gemini, Ollama)
+- Agent LLM Router service for intelligent routing
+- BaseAgent integration (_call_llm_routed method)
+- Management command for setup/status
 
-**Session 696 - API:**
-- 21 REST API endpoints
-- 8 serializers
-- 2 ViewSets + 3 standalone views
-- Full filtering, pagination, diff support
+**Agent → Model Mappings (22 configured):**
+- CodeGeneratorAgent → DeepSeek Coder
+- ContentWriterAgent → Claude 3.5 Sonnet
+- ThinkingAgent → Claude 3.5 Opus
+- PersonalAssistantAgent → GPT-5-mini
+- ResearchAgent → GPT-5.1
 
-### Human Body Metaphor (COMPLETE)
+### Human Body Metaphor Update
 
 | Layer | Component | Status |
 |-------|-----------|--------|
 | CONSCIOUSNESS | Human Operator | Session 686 |
 | EYES/EARS/HANDS | Human Interface Layer | Session 686 |
 | BRAIN | ThinkingAgent | Session 593 |
-| NERVOUS SYSTEM | Agent-Model Router | Session 677 |
+| **NERVOUS SYSTEM (LLM)** | **AgentLLMRouter** | **Session 697** |
+| NERVOUS SYSTEM (ML) | Agent-Model Router | Session 677 |
 | ORGANS | 72 Specialized Agents | Session 687 |
 | SENSORY INPUTS | 77 Spiders | Ongoing |
-| **SKIN** | **WorkspaceManager + API** | **Session 695-696** |
+| SKIN | WorkspaceManager + API | Session 695-696 |
 
 ---
 
-## System Stats (Session 696)
+## System Stats (Session 697)
 
 | Component | Count | Notes |
 |-----------|-------|-------|
 | Agents | 72 | All have workspace integration |
 | Spiders | 77 | 72 working |
 | PA Tools | 83 | +workspace_tool |
-| SKIN Models | 3 | ProjectWorkspace, WorkspaceOperation, WorkspaceContext |
-| Services | 95 | +workspace_manager.py |
-| Database Models | 332+ | +3 SKIN layer |
-| WORKSPACE_AWARE_AGENTS | 22 | Development, Content, Strategy, Research, etc. |
-| Workspace API Endpoints | 21 | Full CRUD + operations |
-| React Pages Audited | 10/12 | Assistant, Settings remaining |
+| LLM Providers | 5 | OpenAI, Anthropic, DeepSeek, Gemini, Ollama |
+| LLM Models | 13 | GPT-5 family, Claude family, etc. |
+| Agent LLM Configs | 22 | Configured for routing |
+| Database Models | 336+ | +4 LLM routing |
+| Services | 97 | +llm_provider_registry, agent_llm_router |
 
 ---
 
-## Key Files (SKIN Layer)
+## Key Files (Session 697)
 
 | File | Purpose |
 |------|---------|
-| `core/models_skin_layer.py` | 3 database models |
-| `core/services/workspace_manager.py` | Core SKIN services |
-| `core/views_workspace_api.py` | REST API (21 endpoints) |
-| `core/agents/base_agent.py` | Workspace methods for all agents |
-| `docs/designs/SKIN_LAYER_ARCHITECTURE.md` | Architecture doc |
+| `core/models_llm_routing.py` | 4 LLM routing models |
+| `core/services/llm_provider_registry.py` | 5 provider implementations |
+| `core/services/agent_llm_router.py` | Routing service |
+| `core/agents/base_agent.py` | +llm_router property |
+| `core/management/commands/setup_llm_routing.py` | Setup command |
+
+---
+
+## Provider Status
+
+```
+✅ OpenAI: configured (GPT-5-mini, GPT-5.1, GPT-5.2)
+✅ Anthropic: configured (Claude 3.5 Sonnet/Haiku/Opus)
+⚠️ DeepSeek: not configured (set DEEPSEEK_API_KEY)
+⚠️ Gemini: library missing (pip install google-generativeai)
+✅ Ollama: configured (local models)
+```
 
 ---
 
 ## Handoff Docs
 
-- `docs/handoffs/SESSION_695_SKIN_LAYER_COMPLETE.md`
+- `docs/handoffs/SESSION_697_ENHANCED_NERVOUS_SYSTEM.md`
 - `docs/handoffs/SESSION_696_WORKSPACE_API_COMPLETE.md`
+- `docs/handoffs/SESSION_695_SKIN_LAYER_COMPLETE.md`
 
 ---
 
@@ -80,30 +94,42 @@
 # Start services
 make start && make celery
 
-# Test workspace API
-curl -s http://localhost:8000/api/workspaces/ -H "Authorization: Token <token>"
+# Check LLM routing status
+python manage.py setup_llm_routing --check
 
-# Test via Django shell
-DJANGO_SETTINGS_MODULE=core.settings .venv/bin/python manage.py shell -c "
-from core.services.workspace_manager import get_workspace_manager
-from core.models import UnifiedUser
-user = UnifiedUser.objects.filter(is_superuser=True).first()
-manager = get_workspace_manager(user)
-workspace = manager.get_active_workspace()
-print(f'Active: {workspace.name if workspace else None}')
+# Test routing in shell
+python manage.py shell -c "
+from core.services.agent_llm_router import get_agent_llm_router
+router = get_agent_llm_router()
+print(router.get_agent_config('CodeGeneratorAgent'))
 "
+
+# Add DeepSeek support
+export DEEPSEEK_API_KEY="your-key"
+python manage.py setup_llm_routing
 ```
+
+---
+
+## Session 698 Ideas
+
+1. **Configure more agents** - Only 22/72 agents have LLM configs
+2. **Add DeepSeek API key** - Enable the cheap coding model
+3. **Install Gemini library** - Enable Gemini 2.0 models
+4. **LLM Routing UI** - Admin panel for agent-model mapping
+5. **Cost Dashboard** - Track LLM costs per agent
+6. **Enable routed calls** - Update agents to use _call_llm_routed
 
 ---
 
 ## Recent Commits
 
 ```
-98799bcc feat(Session 696): SKIN Layer REST API for Workspace Management
-26337d33 feat(Session 695): SKIN Layer - Project Execution System
-d760dae3 feat(Session 694): Enhanced Agents page Activity & Learning tabs
+[Pending commit for Session 697]
+ce783b1e docs(Session 694): Add handoff and Session 695 prep
+0f04249f refactor(Session 694): Remove Learning/Activity tabs from Intelligence
 ```
 
 ---
 
-**Ready for Session 697 - Deep Thinking Session**
+**Ready for Session 698**

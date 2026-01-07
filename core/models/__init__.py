@@ -56,6 +56,9 @@ from ..models_pilot_readiness import *
 # Import implementation pipeline models (Session 690)
 from ..models_implementation_pipeline import *
 
+# Import LLM routing models (Session 697)
+from ..models_llm_routing import *
+
 # Explicitly define what gets imported with "from core.models import *"
 __all__ = [
     # Base models
@@ -167,4 +170,10 @@ __all__ = [
     # Document Registry (Session 622)
     'Initiative',
     'InitiativeStage',
+
+    # LLM Routing (Session 697)
+    'LLMProvider',
+    'LLMModel',
+    'AgentLLMConfig',
+    'LLMCallLog',
 ]
