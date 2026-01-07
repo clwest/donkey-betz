@@ -28,6 +28,7 @@ import {
   Crown,
   Heart,
   Sparkles,
+  FileCheck,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -54,6 +55,7 @@ const navItems = [
   { path: '/advisors', label: 'Advisors', icon: Crown },
   { path: '/relationships', label: 'Bonds', icon: Heart },
   { path: '/neural-orchestra', label: 'Orchestra', icon: Sparkles },
+  { path: '/conversation-contract', label: 'Contract', icon: FileCheck },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },

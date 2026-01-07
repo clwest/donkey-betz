@@ -62,6 +62,7 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/autonomous/trigger-events/',  # Trigger events for Command Center
         '/api/agents/',  # Session 564: Agent list for Command Center
         '/api/agent-conversations/',  # Session 564: Conversations sub-tab
+        '/api/conversation-contract/',  # Session 717: Conversation Contract Analytics
         '/api/agent-dreams/',  # Session 564: Dreams sub-tab
         '/api/boardroom/',  # Session 564: Boardroom sub-tab
         '/api/pilot-gates/',  # Session 590: Pilot Readiness Gates
