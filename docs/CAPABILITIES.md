@@ -199,15 +199,18 @@ Multi-model LLM routing enables agents to use specialized LLMs for different tas
 | **DeepSeek** | DeepSeek Coder, Chat | ⚠️ Needs key | Coding alternative |
 | **Gemini** | Gemini 2.0 Flash/Pro | ⚠️ Needs lib | Long context |
 
-### Agent → Model Routing (22 Configured)
+### Agent → Model Routing (75 Configured)
 
 | Agent Category | Primary Model | Fallback | Cost/1M tokens |
 |----------------|---------------|----------|----------------|
-| **Development** (CodeGenerator, FullStack, DevOps) | Together AI Llama 70B | Claude 3.5 Sonnet | $0.88 |
-| **Content** (ContentWriter, Strategy, Brand) | Claude 3.5 Sonnet | GPT-5.1 | $3.00 |
-| **Research** (Research, TrendAnalysis, Market) | GPT-5.1 | Claude 3.5 Sonnet | $1.25 |
-| **Reasoning** (ThinkingAgent) | Claude 3.5 Opus | GPT-5.2 | $15.00 |
+| **Development** (CodeGenerator, FullStack, DevOps) | Together AI Llama 70B | Claude 4 Sonnet | $0.88 |
+| **Content** (ContentWriter, Strategy, Brand) | Claude 4 Sonnet | GPT-5.1 | $3.00 |
+| **Research** (Research, TrendAnalysis, Market) | GPT-5.1 | Claude 4 Sonnet | $1.25 |
+| **Reasoning** (ThinkingAgent) | Claude 4 Opus | GPT-5.2 | $15.00 |
 | **Fast/Routing** (PersonalAssistant, Orchestration) | GPT-5-mini | GPT-5.1 | $0.15 |
+| **Coordinators** (BlockchainAudit, StockAudit, etc.) | GPT-5-mini | GPT-5.1 | $0.15 |
+| **Betting** (ArbitrageDetector, SportsOddsAnalyst) | GPT-5.1 | GPT-5-mini | $1.25 |
+| **Business** (CompetitorAnalysis, BrandStrategy) | Claude 4 Sonnet | GPT-5.1 | $3.00 |
 
 ### Database Models (4)
 
@@ -244,6 +247,20 @@ print(response.cost)     # $0.0001
 # Check routing status
 python manage.py setup_llm_routing --check
 ```
+
+### LLM Routing API Endpoints (7 endpoints - Session 699)
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/v1/llm-routing/status/` | GET | Public | Overall system status |
+| `/api/v1/llm-routing/providers/` | GET | Public | List all 6 LLM providers |
+| `/api/v1/llm-routing/models/` | GET | Public | List all 16 models with costs |
+| `/api/v1/llm-routing/agent-configs/` | GET | Public | 75 agent-model mappings |
+| `/api/v1/llm-routing/logs/` | GET | Public | Call logs with filtering |
+| `/api/v1/llm-routing/cost-analytics/` | GET | Public | Cost analytics dashboard |
+| `/api/v1/llm-routing/agent-configs/<agent>/` | POST | Auth | Update agent config |
+
+**Key File:** `core/views_llm_routing.py` (~450 lines)
 
 ---
 
