@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import {
@@ -19,6 +20,12 @@ import {
   Activity,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import {
+  useUnifiedStore,
+  usePendingDecisionsCount,
+  useRunningPilotsCount,
+  useCriticalGatesCount,
+} from '@/stores/unifiedStore'
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -42,6 +49,34 @@ export default function Sidebar() {
   const { logout, user } = useAuthStore()
   const navigate = useNavigate()
 
+  // Unified store selectors for badges
+  const pendingDecisions = usePendingDecisionsCount()
+  const runningPilots = useRunningPilotsCount()
+  const criticalGates = useCriticalGatesCount()
+  const fetchAll = useUnifiedStore((s) => s.fetchAll)
+
+  // Fetch unified data on mount
+  useEffect(() => {
+    fetchAll()
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchAll, 60000)
+    return () => clearInterval(interval)
+  }, [fetchAll])
+
+  // Badge counts for specific pages
+  const getBadgeCount = (path: string): number | null => {
+    switch (path) {
+      case '/human':
+        return pendingDecisions > 0 ? pendingDecisions : null
+      case '/intelligence':
+        return runningPilots > 0 || criticalGates > 0
+          ? runningPilots + criticalGates
+          : null
+      default:
+        return null
+    }
+  }
+
   return (
     <aside className="flex w-64 flex-col border-r border-dark-border bg-dark-card">
       {/* Logo */}
@@ -51,18 +86,26 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navItems.map(({ path, label, icon: Icon }) => (
-          <NavLink
-            key={path}
-            to={path}
-            className={({ isActive }) =>
-              cn('nav-link', isActive && 'active')
-            }
-          >
-            <Icon size={20} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
+        {navItems.map(({ path, label, icon: Icon }) => {
+          const badge = getBadgeCount(path)
+          return (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) =>
+                cn('nav-link', isActive && 'active')
+              }
+            >
+              <Icon size={20} />
+              <span className="flex-1">{label}</span>
+              {badge !== null && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-xs font-medium text-white">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* User Section */}
