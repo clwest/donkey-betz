@@ -135,11 +135,10 @@ def advisor_consult(request):
     )
 
 
-@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def advisor_list(request):
-    """GET /api/v1/advisors/list/ — list active advisors."""
+    """GET /api/v1/advisors/list/ — list active advisors (public endpoint)."""
     try:
         qs = (
             Advisor.objects.filter(is_active=True)
@@ -162,11 +161,10 @@ def advisor_list(request):
         return JsonResponse({"success": False, "error": "Failed to retrieve advisors"}, status=500)
 
 
-@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def advisor_detail(request, advisor_id):
-    """GET /api/v1/advisors/<advisor_id>/ — get advisor details."""
+    """GET /api/v1/advisors/<advisor_id>/ — get advisor details (public endpoint)."""
     try:
         advisor = Advisor.objects.get(id=advisor_id, is_active=True)
     except Advisor.DoesNotExist:
