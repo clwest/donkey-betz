@@ -22591,3 +22591,98 @@ def check_spine_alignment():
             'error': str(e),
             'is_aligned': False,
         }
+
+
+# =============================================================================
+# Session 705: IMMUNE SYSTEM - Security & Threat Detection
+# =============================================================================
+
+@shared_task(name='core.tasks.immune_scan')
+def immune_scan():
+    """
+    Session 705: IMMUNE SYSTEM - Run security scan for threats
+
+    The IMMUNE SYSTEM is the defense layer of the AI body - detecting and
+    responding to threats, suspicious patterns, and malicious activity.
+
+    Monitors:
+    - Rate limit abuse and burst patterns
+    - Authentication attacks (brute force, credential stuffing)
+    - Injection attempts (SQL, XSS, path traversal)
+    - Scraping and bot activity
+    - Behavioral anomalies
+
+    Human body metaphor:
+    - Pathogens = Malicious requests, suspicious patterns
+    - Antibodies = Detection rules and patterns
+    - White Blood Cells = Active monitoring and response
+    - Fever = Elevated alert state
+    - Quarantine = Blocked/restricted entities
+
+    Schedule: Every 45 seconds (via Celery Beat)
+    """
+    from core.services.immune import get_immune_system
+    import redis
+    import json
+
+    logger.info("🛡️ [IMMUNE] Running security scan...")
+
+    try:
+        immune = get_immune_system()
+        status = immune.scan()
+
+        # Log the result
+        logger.info(
+            f"🛡️ [IMMUNE] Scan complete: {status['overall_status'].upper()} "
+            f"(Health: {status['health_score']:.1f}%) - "
+            f"Threat Level: {status.get('threat_level', 'none').upper()}"
+        )
+
+        # Log threat counts
+        if status.get('threats_detected_24h', 0) > 0:
+            logger.info(
+                f"🛡️ [IMMUNE] 24h threats: {status['threats_detected_24h']} detected, "
+                f"{status.get('threats_blocked_24h', 0)} blocked"
+            )
+
+        # Log quarantine status
+        if status.get('total_quarantined', 0) > 0:
+            logger.info(
+                f"🛡️ [IMMUNE] Quarantine: {status['total_quarantined']} entities "
+                f"({status.get('quarantined_ips', 0)} IPs, "
+                f"{status.get('quarantined_users', 0)} users)"
+            )
+
+        # Alert on critical status
+        if status['overall_status'] in ('overwhelmed', 'compromised'):
+            logger.error(
+                f"🛡️ [IMMUNE] CRITICAL: System status is {status['overall_status'].upper()}! "
+                f"Active threats: {status.get('active_threats', 0)}"
+            )
+
+        # Publish to Redis for WebSocket consumers
+        try:
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('immune:status', json.dumps({
+                'health_score': status['health_score'],
+                'overall_status': status['overall_status'],
+                'is_healthy': status.get('is_healthy', True),
+                'threat_level': status.get('threat_level', 'none'),
+                'active_threats': status.get('active_threats', 0),
+                'threats_detected_24h': status.get('threats_detected_24h', 0),
+                'total_quarantined': status.get('total_quarantined', 0),
+                'timestamp': status['timestamp'],
+            }))
+            logger.debug("🛡️ [IMMUNE] Status published to Redis")
+        except Exception as redis_error:
+            logger.warning(f"🛡️ [IMMUNE] Redis publish failed: {redis_error}")
+
+        return status
+
+    except Exception as e:
+        logger.error(f"🛡️ [IMMUNE] Security scan failed: {e}")
+        return {
+            'status': 'compromised',
+            'error': str(e),
+            'is_healthy': False,
+        }

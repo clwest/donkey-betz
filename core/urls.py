@@ -3600,6 +3600,35 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 705: IMMUNE System API (Security & Threat Detection)
+# =========================================================================
+from core.views_immune import (
+    scan_view as immune_scan_view,
+    immune_status_view,
+    patterns_list_view as immune_patterns_list_view,
+    pattern_detail_view as immune_pattern_detail_view,
+    threats_list_view,
+    quarantine_list_view,
+    quarantine_release_view,
+    is_healthy_view as immune_is_healthy_view,
+    check_request_view,
+    categories_view as immune_categories_view,
+)
+
+urlpatterns += [
+    path('api/immune/scan/', immune_scan_view, name='immune-scan'),
+    path('api/immune/status/', immune_status_view, name='immune-status'),
+    path('api/immune/patterns/', immune_patterns_list_view, name='immune-patterns'),
+    path('api/immune/patterns/<uuid:pattern_id>/', immune_pattern_detail_view, name='immune-pattern-detail'),
+    path('api/immune/threats/', threats_list_view, name='immune-threats'),
+    path('api/immune/quarantine/', quarantine_list_view, name='immune-quarantine'),
+    path('api/immune/quarantine/<str:entity_type>/<str:entity_value>/', quarantine_release_view, name='immune-quarantine-release'),
+    path('api/immune/is-healthy/', immune_is_healthy_view, name='immune-is-healthy'),
+    path('api/immune/check-request/', check_request_view, name='immune-check-request'),
+    path('api/immune/categories/', immune_categories_view, name='immune-categories'),
+]
+
+# =========================================================================
 # Session 688: React Frontend Catch-All (MUST BE LAST!)
 # =========================================================================
 # This catches all remaining routes and serves the React SPA.
