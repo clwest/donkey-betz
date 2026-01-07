@@ -3465,13 +3465,13 @@ workspace_router.register(r'workspaces', ProjectWorkspaceViewSet, basename='work
 workspace_router.register(r'workspace-operations', WorkspaceOperationViewSet, basename='workspace-operation')
 
 urlpatterns += [
-    # Workspace Router URLs
-    path('api/', include(workspace_router.urls)),
-
-    # Additional Workspace Endpoints
+    # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
     path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
     path('api/workspaces/<uuid:workspace_id>/file-history/', file_history, name='workspace-file-history'),
     path('api/workspace-operations/pending-reviews/', pending_reviews, name='workspace-pending-reviews'),
+
+    # Workspace Router URLs (generic patterns last)
+    path('api/', include(workspace_router.urls)),
 ]
 
 # =========================================================================
