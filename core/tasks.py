@@ -804,6 +804,7 @@ def process_core_spider_data():
     """
     from core.models_unified_system import SpiderData
     from intelligence.spider_agent_connector import SpiderAgentConnector
+    from django.utils import timezone
 
     logger.info("🍽️ [DIGESTIVE] Starting core spider data processing...")
 
@@ -833,9 +834,10 @@ def process_core_spider_data():
             # Route spider data to agents
             result = connector.route_spider_data(spider_data)
 
-            # Mark as processed
+            # Mark as processed with timestamp
             spider_data.is_processed = True
-            spider_data.save(update_fields=['is_processed'])
+            spider_data.processed_at = timezone.now()
+            spider_data.save(update_fields=['is_processed', 'processed_at'])
 
             results['processed'] += 1
             results['solutions_created'] += len(result.get('solutions_created', []))
@@ -848,7 +850,8 @@ def process_core_spider_data():
             # Still mark as processed to avoid infinite retry on bad data
             try:
                 spider_data.is_processed = True
-                spider_data.save(update_fields=['is_processed'])
+                spider_data.processed_at = timezone.now()
+                spider_data.save(update_fields=['is_processed', 'processed_at'])
             except Exception:
                 pass
 
