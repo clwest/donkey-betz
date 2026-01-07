@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi, lungsApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database
+  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'lungs' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -17,6 +17,7 @@ interface ActionResult {
 
 const tabs = [
   { id: 'heart' as TabType, label: 'HEART', icon: Heart },
+  { id: 'lungs' as TabType, label: 'LUNGS', icon: Wind },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
@@ -62,6 +63,26 @@ export default function AdminPage() {
     queryKey: ['heart-history'],
     queryFn: () => heartApi.history(24, 50),
     enabled: activeTab === 'heart',
+  })
+
+  // LUNGS Service queries (Session 703)
+  const { data: lungsStatusData, isLoading: loadingLungs, refetch: refetchLungs } = useQuery({
+    queryKey: ['lungs-status'],
+    queryFn: () => lungsApi.status(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'lungs',
+  })
+
+  const { data: lungsBudgetsData } = useQuery({
+    queryKey: ['lungs-budgets'],
+    queryFn: () => lungsApi.budgets(),
+    enabled: activeTab === 'lungs',
+  })
+
+  const { data: lungsForecastData } = useQuery({
+    queryKey: ['lungs-forecast'],
+    queryFn: () => lungsApi.forecast(),
+    enabled: activeTab === 'lungs',
   })
 
   // Fetch v1 health
@@ -134,6 +155,12 @@ export default function AdminPage() {
   const heartStatus = heartStatusData?.data || {}
   const heartHistory = heartHistoryData?.data?.heartbeats || []
   const heartComponents = heartStatus.components || {}
+
+  // LUNGS data (Session 703)
+  const lungsStatus = lungsStatusData?.data || {}
+  const lungsBudgets = lungsBudgetsData?.data?.budgets || []
+  const lungsForecasts = lungsForecastData?.data?.forecasts || []
+  const lungsProviders = lungsStatus.providers || {}
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -442,6 +469,300 @@ export default function AdminPage() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* LUNGS Tab - Session 703 */}
+      {activeTab === 'lungs' && (
+        <div className="space-y-6">
+          {loadingLungs ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Oxygen Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'h-12 w-12 rounded-lg flex items-center justify-center',
+                      (lungsStatus.system_oxygen || 100) >= 80 ? 'bg-accent-green/20' :
+                      (lungsStatus.system_oxygen || 100) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <Wind size={24} className={cn(
+                        (lungsStatus.system_oxygen || 100) >= 80 ? 'text-accent-green' :
+                        (lungsStatus.system_oxygen || 100) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Oxygen Level</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (lungsStatus.system_oxygen || 100) >= 80 ? 'text-accent-green' :
+                        (lungsStatus.system_oxygen || 100) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(lungsStatus.system_oxygen || 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="text-accent-cyan" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Cost Today</p>
+                      <p className="text-2xl font-bold">${(lungsStatus.total_cost_today || 0).toFixed(4)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Activity className="text-primary-400" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">API Calls Today</p>
+                      <p className="text-2xl font-bold">{lungsStatus.total_calls_today || 0}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-accent-green" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Status</p>
+                      <p className={cn(
+                        'text-lg font-bold capitalize',
+                        lungsStatus.system_status === 'normal' ? 'text-accent-green' :
+                        lungsStatus.system_status === 'warning' ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {lungsStatus.system_status || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Provider Oxygen Levels */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Provider Oxygen Levels</h3>
+                  <button
+                    onClick={() => refetchLungs()}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(lungsProviders).map(([provider, data]) => {
+                    const providerData = data as { oxygen_level: number; status: string; cost_today: number; calls_today: number }
+                    const oxygenLevel = providerData.oxygen_level || 100
+                    const status = providerData.status || 'normal'
+
+                    return (
+                      <div
+                        key={provider}
+                        className={cn(
+                          'p-4 rounded-lg border transition-colors',
+                          oxygenLevel >= 80 ? 'bg-accent-green/10 border-accent-green/30' :
+                          oxygenLevel >= 50 ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="font-semibold capitalize">{provider.replace('_', ' ')}</p>
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            status === 'normal' ? 'bg-accent-green/20 text-accent-green' :
+                            status === 'warning' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-accent-red/20 text-accent-red'
+                          )}>
+                            {status}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Oxygen</span>
+                            <span className={cn(
+                              'font-bold',
+                              oxygenLevel >= 80 ? 'text-accent-green' :
+                              oxygenLevel >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                            )}>
+                              {oxygenLevel.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="h-2 bg-dark-bg rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all',
+                                oxygenLevel >= 80 ? 'bg-accent-green' :
+                                oxygenLevel >= 50 ? 'bg-accent-amber' : 'bg-accent-red'
+                              )}
+                              style={{ width: `${oxygenLevel}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500 mt-2">
+                            <span>${(providerData.cost_today || 0).toFixed(4)}</span>
+                            <span>{providerData.calls_today || 0} calls</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Budget Overview */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Budget Configuration</h3>
+                {lungsBudgets.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-dark-border">
+                          <th className="text-left py-2 px-3 text-gray-400">Budget Name</th>
+                          <th className="text-left py-2 px-3 text-gray-400">Scope</th>
+                          <th className="text-left py-2 px-3 text-gray-400">Period</th>
+                          <th className="text-right py-2 px-3 text-gray-400">Limit</th>
+                          <th className="text-center py-2 px-3 text-gray-400">Warning</th>
+                          <th className="text-center py-2 px-3 text-gray-400">Critical</th>
+                          <th className="text-center py-2 px-3 text-gray-400">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lungsBudgets.map((budget: {
+                          id: string
+                          name: string
+                          scope: string
+                          scope_identifier: string
+                          period: string
+                          cost_limit: number
+                          warning_threshold: number
+                          critical_threshold: number
+                          is_active: boolean
+                        }) => (
+                          <tr key={budget.id} className="border-b border-dark-border/50 hover:bg-dark-bg/50">
+                            <td className="py-2 px-3 font-medium">{budget.name}</td>
+                            <td className="py-2 px-3 text-gray-400 capitalize">
+                              {budget.scope === 'provider' ? budget.scope_identifier.replace('_', ' ') : budget.scope}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400 capitalize">{budget.period}</td>
+                            <td className="py-2 px-3 text-right font-mono">${budget.cost_limit?.toFixed(2) || '0.00'}</td>
+                            <td className="py-2 px-3 text-center text-accent-amber">{((budget.warning_threshold || 0.8) * 100).toFixed(0)}%</td>
+                            <td className="py-2 px-3 text-center text-accent-red">{((budget.critical_threshold || 0.95) * 100).toFixed(0)}%</td>
+                            <td className="py-2 px-3 text-center">
+                              <span className={cn(
+                                'text-xs px-2 py-1 rounded',
+                                budget.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                              )}>
+                                {budget.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <DollarSign className="mx-auto mb-2" size={32} />
+                    <p>No budgets configured</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Spending Forecast */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Spending Forecast</h3>
+                {lungsForecasts.length > 0 ? (
+                  <div className="space-y-3">
+                    {lungsForecasts.map((forecast: {
+                      budget_name: string
+                      scope: string
+                      period: string
+                      limit: number
+                      projected_cost: number
+                      on_pace_to_exceed: boolean
+                      confidence: number
+                      period_elapsed_percent: number
+                    }) => (
+                      <div
+                        key={forecast.budget_name}
+                        className={cn(
+                          'p-4 rounded-lg border transition-colors',
+                          forecast.on_pace_to_exceed ? 'bg-accent-red/10 border-accent-red/30' : 'border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="font-medium">{forecast.budget_name}</p>
+                            <p className="text-xs text-gray-500">{forecast.scope} • {forecast.period}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {forecast.on_pace_to_exceed && (
+                              <span className="text-xs px-2 py-1 rounded bg-accent-red/20 text-accent-red flex items-center gap-1">
+                                <TrendingUp size={12} />
+                                Exceeding
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-400">Limit</p>
+                            <p className="font-mono font-bold">${forecast.limit.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Projected</p>
+                            <p className={cn(
+                              'font-mono font-bold',
+                              forecast.on_pace_to_exceed ? 'text-accent-red' : 'text-accent-green'
+                            )}>
+                              ${forecast.projected_cost.toFixed(4)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Period Elapsed</p>
+                            <p className="font-mono">{forecast.period_elapsed_percent.toFixed(1)}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <TrendingUp className="mx-auto mb-2" size={32} />
+                    <p>No forecast data available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* LUNGS Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">LUNGS Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The LUNGS (Limits, Usage, Notifications, Governance, Spending) service manages resource consumption and budget enforcement across all AI providers.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-cyan mb-1">Oxygen = Budget Remaining</p>
+                    <p className="text-xs text-gray-400">100% = No spending, 0% = Budget exhausted</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-amber mb-1">Warning Threshold</p>
+                    <p className="text-xs text-gray-400">Default 80% - alerts when budget usage reaches this level</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-red mb-1">Critical Threshold</p>
+                    <p className="text-xs text-gray-400">Default 95% - urgent alerts, may block new calls</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-green mb-1">Budget Periods</p>
+                    <p className="text-xs text-gray-400">Daily and Monthly limits per provider and system-wide</p>
+                  </div>
                 </div>
               </div>
             </>

@@ -577,6 +577,31 @@ export const heartApi = {
   alive: () => api.get('/heart/alive/'),
 }
 
+// Session 703: LUNGS Service API - Resource & Capacity Management
+export const lungsApi = {
+  // Run full breathing check (budget analysis)
+  breathe: () => api.get('/lungs/breathe/'),
+
+  // Get cached respiratory status (fast)
+  status: () => api.get('/lungs/status/'),
+
+  // Get oxygen levels (budget usage percentages)
+  oxygen: () => api.get('/lungs/oxygen/'),
+
+  // List all budgets with their limits and usage
+  budgets: () => api.get('/lungs/budgets/'),
+
+  // Get spending forecast
+  forecast: () => api.get('/lungs/forecast/'),
+
+  // Check if an API call is allowed (budget not exceeded)
+  canBreathe: (provider?: string, estimatedCost?: number) =>
+    api.get('/lungs/can-breathe/', { params: { provider, estimated_cost: estimatedCost } }),
+
+  // Quick alive check
+  alive: () => api.get('/lungs/alive/'),
+}
+
 // Session 700: LLM Routing API (from Backend Claude Session 699)
 export const llmRoutingApi = {
   // System status overview
