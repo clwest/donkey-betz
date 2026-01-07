@@ -466,3 +466,90 @@ export const adminApi = {
   // Agent Health
   agentHealth: () => api.get('/v1/agents/health/'),
 }
+
+// Session 696: SKIN Layer - Workspace Management API
+export const workspaceApi = {
+  // Workspace CRUD
+  list: () => api.get('/workspaces/'),
+  create: (data: { path: string; name?: string; description?: string }) =>
+    api.post('/workspaces/', data),
+  detail: (id: string) => api.get(`/workspaces/${id}/`),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/workspaces/${id}/`, data),
+  delete: (id: string) => api.delete(`/workspaces/${id}/`),
+
+  // Workspace Actions
+  activate: (id: string) => api.post(`/workspaces/${id}/activate/`),
+  scan: (id: string) => api.post(`/workspaces/${id}/scan/`),
+  getActive: () => api.get('/workspaces/active/'),
+  dashboard: () => api.get('/workspaces/dashboard/'),
+
+  // File Operations
+  files: (id: string, pattern?: string) =>
+    api.get(`/workspaces/${id}/files/`, { params: { pattern } }),
+  readFile: (id: string, path: string) =>
+    api.get(`/workspaces/${id}/file/`, { params: { path } }),
+  writeFile: (id: string, data: { path: string; content: string; agent?: string; description?: string }) =>
+    api.post(`/workspaces/${id}/write/`, data),
+
+  // Git Operations
+  gitStatus: (id: string) => api.get(`/workspaces/${id}/git-status/`),
+  gitCommit: (id: string, data: { message: string; files?: string[] }) =>
+    api.post(`/workspaces/${id}/git-commit/`, data),
+  gitBranch: (id: string, data: { branch_name: string; checkout?: boolean }) =>
+    api.post(`/workspaces/${id}/git-branch/`, data),
+
+  // Operations & Stats
+  operations: (id: string, params?: { type?: string; agent?: string; success?: boolean }) =>
+    api.get(`/workspaces/${id}/operations/`, { params }),
+  stats: (id: string) => api.get(`/workspaces/${id}/stats/`),
+}
+
+// Session 696: Workspace Operations API (Audit Trail)
+export const workspaceOperationsApi = {
+  list: (params?: { type?: string; agent?: string; success?: boolean; pending_review?: boolean; file_path?: string }) =>
+    api.get('/workspace-operations/', { params }),
+  detail: (id: string) => api.get(`/workspace-operations/${id}/`),
+  rollback: (id: string) => api.post(`/workspace-operations/${id}/rollback/`),
+  review: (id: string, data: { approved: boolean; notes?: string }) =>
+    api.post(`/workspace-operations/${id}/review/`, data),
+  pendingReviews: () => api.get('/workspace-operations/pending-reviews/'),
+}
+
+// Session 697: Multi-LLM Provider API
+export const llmApi = {
+  // Provider Management
+  providers: () => api.get('/v1/llm/providers/'),
+
+  // Intelligent Model Selection
+  selectModel: (data: {
+    task_type?: string
+    complexity?: 'low' | 'medium' | 'high'
+    budget_priority?: 'cost' | 'performance' | 'balanced'
+    content_length?: number
+  }) => api.post('/v1/llm/intelligent-selection/', data),
+
+  // Multi-Model Comparison
+  compareModels: (data: {
+    prompt: string
+    models?: string[]
+    parameters?: { temperature?: number; max_tokens?: number }
+  }) => api.post('/v1/llm/multi-model-compare/', data),
+
+  // Analytics
+  analytics: (timeRange?: string) =>
+    api.post('/v1/llm/analytics/', {}, { params: { time_range: timeRange } }),
+
+  // User Preferences
+  getPreferences: () => api.get('/v1/llm/preferences/'),
+  setPreferences: (data: {
+    default_model?: string
+    fallback_model?: string
+    budget_limit_daily?: number
+    quality_threshold?: number
+    speed_priority?: 'speed' | 'quality' | 'cost' | 'balanced'
+    auto_optimize?: boolean
+    preferred_providers?: string[]
+    task_specific_models?: Record<string, string>
+  }) => api.post('/v1/llm/preferences/', data),
+}

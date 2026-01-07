@@ -14,6 +14,7 @@ import {
   Radio,
   DollarSign,
   Shield,
+  FolderCog,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/human', label: 'Human', icon: User },
   { path: '/agents', label: 'Agents', icon: Bot },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
+  { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
   { path: '/legal', label: 'Legal', icon: Scale },
