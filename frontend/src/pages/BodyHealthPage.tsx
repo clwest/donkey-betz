@@ -1582,11 +1582,15 @@ function BrainDetailView() {
   )
 }
 
-// SKIN Detail View - Session 723
+// SKIN Detail View - Session 723 (Enhanced)
 function SkinDetailView() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['skinStatus'],
-    queryFn: () => skinApi.status(),
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null)
+
+  // Use feel() for full data instead of status()
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['skinFeel'],
+    queryFn: () => skinApi.feel(),
+    refetchInterval: 60000, // Refresh every minute
   })
 
   const { data: workspacesData } = useQuery({
@@ -1594,189 +1598,393 @@ function SkinDetailView() {
     queryFn: () => skinApi.workspaces(),
   })
 
-  const status = data?.data
+  const skin = data?.data
   const workspaces = workspacesData?.data?.workspaces || []
+  const selectedWs = workspaces.find((w: any) => w.id === selectedWorkspace)
 
   if (isLoading) return <DetailLoading />
+
+  // Helper to format bytes
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  // Helper for activity level color
+  const getActivityColor = (level: string) => {
+    switch (level) {
+      case 'dormant': return 'text-gray-500'
+      case 'low': return 'text-blue-400'
+      case 'normal': return 'text-green-400'
+      case 'high': return 'text-yellow-400'
+      case 'intense': return 'text-red-400'
+      default: return 'text-zinc-400'
+    }
+  }
 
   return (
     <div className="space-y-4">
       {/* Skin Health Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-zinc-300">Skin Health Overview</h3>
+          <button
+            onClick={() => refetch()}
+            className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Refresh
+          </button>
+        </div>
+        <div className="grid grid-cols-5 gap-3">
           <div className="text-center">
             <div className={cn(
-              'text-2xl font-bold uppercase',
-              status?.overall_status === 'healthy' ? 'text-green-400' :
-              status?.overall_status === 'active' ? 'text-green-400' :
-              status?.overall_status === 'sweating' ? 'text-yellow-400' :
-              status?.overall_status === 'irritated' ? 'text-orange-400' :
-              status?.overall_status === 'healing' ? 'text-blue-400' :
-              status?.overall_status === 'dormant' ? 'text-gray-400' : 'text-red-400'
+              'text-xl font-bold uppercase',
+              skin?.status === 'healthy' ? 'text-green-400' :
+              skin?.status === 'active' ? 'text-green-400' :
+              skin?.status === 'sweating' ? 'text-yellow-400' :
+              skin?.status === 'irritated' ? 'text-orange-400' :
+              skin?.status === 'healing' ? 'text-blue-400' :
+              skin?.status === 'dormant' ? 'text-gray-400' : 'text-red-400'
             )}>
-              {status?.overall_status || 'unknown'}
+              {skin?.status || 'unknown'}
             </div>
             <div className="text-xs text-zinc-500">Status</div>
           </div>
           <div className="text-center">
             <div className={cn(
-              'text-2xl font-bold',
-              (status?.health_score || 0) >= 80 ? 'text-green-400' :
-              (status?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+              'text-xl font-bold',
+              (skin?.health_score || 0) >= 80 ? 'text-green-400' :
+              (skin?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
             )}>
-              {status?.health_score?.toFixed(1) || 0}%
+              {skin?.health_score || 0}%
             </div>
-            <div className="text-xs text-zinc-500">Health Score</div>
+            <div className="text-xs text-zinc-500">Health</div>
           </div>
           <div className="text-center">
-            <div className={cn(
-              'text-2xl font-bold',
-              status?.is_healthy ? 'text-green-400' : 'text-yellow-400'
-            )}>
-              {status?.is_healthy ? 'HEALTHY' : 'CHECK'}
+            <div className={cn('text-xl font-bold', getActivityColor(skin?.activity?.level))}>
+              {skin?.activity?.level?.toUpperCase() || 'N/A'}
             </div>
-            <div className="text-xs text-zinc-500">Condition</div>
+            <div className="text-xs text-zinc-500">Activity</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-amber-400">
-              {status?.active_workspaces || 0}
+            <div className="text-xl font-bold text-amber-400">
+              {skin?.workspaces?.active || 0}/{skin?.workspaces?.total || 0}
             </div>
-            <div className="text-xs text-zinc-500">Active Workspaces</div>
+            <div className="text-xs text-zinc-500">Workspaces</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-cyan-400">
+              {skin?.check_duration_ms || 0}ms
+            </div>
+            <div className="text-xs text-zinc-500">Check Time</div>
           </div>
         </div>
       </div>
 
-      {/* Operations (24h) */}
+      {/* File Operations (24h) - Full Breakdown */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
           <FileEdit className="w-4 h-4 text-amber-400" />
-          Operations (24h)
+          File Operations (24h)
         </h3>
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
-            <div className="text-xl font-bold text-blue-400">
-              {status?.operations_24h?.toLocaleString() || 0}
+        <div className="grid grid-cols-6 gap-2">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-blue-400">
+              {skin?.operations_24h?.total || 0}
             </div>
-            <div className="text-xs text-zinc-500">Total Ops</div>
+            <div className="text-xs text-zinc-500">Total</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
-            <div className="text-xl font-bold text-green-400">
-              {status?.files_created_24h || 0}
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-green-400">
+              {skin?.file_activity_24h?.created || 0}
             </div>
-            <div className="text-xs text-zinc-500">Files Created</div>
+            <div className="text-xs text-zinc-500">Created</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
-            <div className="text-xl font-bold text-cyan-400">
-              {status?.files_modified_24h || 0}
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-cyan-400">
+              {skin?.file_activity_24h?.modified || 0}
             </div>
-            <div className="text-xs text-zinc-500">Files Modified</div>
+            <div className="text-xs text-zinc-500">Modified</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-red-400">
+              {skin?.file_activity_24h?.deleted || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Deleted</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-purple-400">
+              {skin?.file_activity_24h?.commands || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Commands</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-orange-400">
+              {skin?.file_activity_24h?.git_ops || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Git Ops</div>
+          </div>
+        </div>
+        {/* Metrics row */}
+        <div className="grid grid-cols-4 gap-2 mt-2">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
             <div className={cn(
-              'text-xl font-bold',
-              (status?.success_rate_24h || 100) >= 90 ? 'text-green-400' :
-              (status?.success_rate_24h || 100) >= 70 ? 'text-yellow-400' : 'text-red-400'
+              'text-lg font-bold',
+              (skin?.operations_24h?.success_rate || 100) >= 90 ? 'text-green-400' :
+              (skin?.operations_24h?.success_rate || 100) >= 70 ? 'text-yellow-400' : 'text-red-400'
             )}>
-              {status?.success_rate_24h?.toFixed(1) || 100}%
+              {skin?.operations_24h?.success_rate || 100}%
             </div>
             <div className="text-xs text-zinc-500">Success Rate</div>
           </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-pink-400">
+              {skin?.file_activity_24h?.lines_changed?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Lines Changed</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-teal-400">
+              {formatBytes(skin?.file_activity_24h?.bytes_written || 0)}
+            </div>
+            <div className="text-xs text-zinc-500">Bytes Written</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-indigo-400">
+              {skin?.activity?.avg_op_time_ms || 0}ms
+            </div>
+            <div className="text-xs text-zinc-500">Avg Op Time</div>
+          </div>
         </div>
       </div>
 
-      {/* Rollback Status */}
+      {/* Agent Activity */}
+      {skin?.agents && Object.keys(skin.agents.operation_counts || {}).length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-400" />
+            Agent Activity ({skin.agents.active_count} active)
+          </h3>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-zinc-500">Most Active:</span>
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
+              {skin.agents.most_active || 'None'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {Object.entries(skin.agents.operation_counts || {}).map(([agent, count]) => (
+              <div
+                key={agent}
+                className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-2 flex items-center justify-between"
+              >
+                <span className="text-xs text-zinc-400 truncate flex-1">{agent}</span>
+                <span className="text-sm font-bold text-zinc-300 ml-2">{count as number}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rollback & Recovery */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
         <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
           <RefreshCw className="w-4 h-4 text-purple-400" />
-          Rollback & Recovery
+          Healing & Recovery
         </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
-            <div className="text-xl font-bold text-purple-400">
-              {status?.rollbacks_available || 0}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-purple-400">
+              {skin?.healing?.rollbacks_available || 0}
             </div>
-            <div className="text-xs text-zinc-500">Available Rollbacks</div>
+            <div className="text-xs text-zinc-500">Available</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
             <div className={cn(
-              'text-xl font-bold',
-              (status?.errors_24h || 0) > 0 ? 'text-red-400' : 'text-green-400'
+              'text-lg font-bold',
+              (skin?.healing?.rollbacks_performed_24h || 0) > 0 ? 'text-blue-400' : 'text-zinc-500'
             )}>
-              {status?.errors_24h || 0}
+              {skin?.healing?.rollbacks_performed_24h || 0}
             </div>
-            <div className="text-xs text-zinc-500">Errors (24h)</div>
+            <div className="text-xs text-zinc-500">Performed</div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
             <div className={cn(
-              'text-xl font-bold',
-              (status?.pending_reviews || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+              'text-lg font-bold',
+              (skin?.healing?.pending_reviews || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
             )}>
-              {status?.pending_reviews || 0}
+              {skin?.healing?.pending_reviews || 0}
             </div>
-            <div className="text-xs text-zinc-500">Pending Reviews</div>
+            <div className="text-xs text-zinc-500">Pending Review</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 text-center">
+            <div className={cn(
+              'text-lg font-bold',
+              (skin?.issues?.permission_denials || 0) > 0 ? 'text-red-400' : 'text-green-400'
+            )}>
+              {skin?.issues?.permission_denials || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Denials</div>
           </div>
         </div>
       </div>
 
-      {/* Workspaces */}
+      {/* Workspace Selector */}
       {workspaces.length > 0 && (
         <div className="bg-zinc-800/50 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-amber-400" />
-            Active Workspaces ({workspaces.length})
-          </h3>
-          <div className="space-y-2">
-            {workspaces.slice(0, 5).map((workspace: any) => (
-              <div
-                key={workspace.id}
-                className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-3"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-zinc-300">
-                    {workspace.name || workspace.path?.split('/').pop() || 'Unnamed'}
-                  </span>
-                  <span className={cn(
-                    'px-2 py-0.5 rounded text-xs font-medium',
-                    workspace.is_active ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'
-                  )}>
-                    {workspace.is_active ? 'Active' : 'Inactive'}
-                  </span>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-amber-400" />
+              Workspaces ({workspaces.length})
+            </h3>
+            <select
+              value={selectedWorkspace || ''}
+              onChange={(e) => setSelectedWorkspace(e.target.value || null)}
+              className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              <option value="">All Workspaces</option>
+              {workspaces.map((ws: any) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.name} {ws.is_active ? '(Active)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Selected Workspace Details */}
+          {selectedWs ? (
+            <div className="bg-zinc-900/50 border border-amber-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="text-sm font-medium text-zinc-200">{selectedWs.name}</h4>
+                  <p className="text-xs text-zinc-500 truncate max-w-md">{selectedWs.root_path}</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div>
-                    <span className="text-zinc-500">Files:</span>
-                    <span className="ml-1 text-zinc-300">{workspace.file_count || 0}</span>
+                <span className={cn(
+                  'px-2 py-1 rounded text-xs font-medium',
+                  selectedWs.is_active ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'
+                )}>
+                  {selectedWs.workspace_type || 'local'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-blue-400">{selectedWs.operations_24h || 0}</div>
+                  <div className="text-xs text-zinc-500">Ops (24h)</div>
+                </div>
+                <div className="text-center">
+                  <div className={cn(
+                    'text-lg font-bold',
+                    (selectedWs.success_rate_24h || 100) >= 90 ? 'text-green-400' : 'text-yellow-400'
+                  )}>
+                    {selectedWs.success_rate_24h || 100}%
                   </div>
-                  <div>
-                    <span className="text-zinc-500">Ops:</span>
-                    <span className="ml-1 text-zinc-300">{workspace.operations_count || 0}</span>
+                  <div className="text-xs text-zinc-500">Success</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-purple-400">{selectedWs.total_operations || 0}</div>
+                  <div className="text-xs text-zinc-500">Total Ops</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-zinc-400">
+                    {selectedWs.last_operation
+                      ? new Date(selectedWs.last_operation).toLocaleDateString()
+                      : 'Never'}
                   </div>
-                  <div>
-                    <span className="text-zinc-500">Last:</span>
-                    <span className="ml-1 text-zinc-300">
-                      {workspace.last_activity
-                        ? new Date(workspace.last_activity).toLocaleDateString()
-                        : 'N/A'}
-                    </span>
-                  </div>
+                  <div className="text-xs text-zinc-500">Last Op</div>
                 </div>
               </div>
+            </div>
+          ) : (
+            /* All Workspaces List */
+            <div className="space-y-2">
+              {workspaces.map((workspace: any) => (
+                <div
+                  key={workspace.id}
+                  onClick={() => setSelectedWorkspace(workspace.id)}
+                  className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-3 cursor-pointer hover:border-amber-500/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-zinc-300">{workspace.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        'text-xs font-medium',
+                        (workspace.success_rate_24h || 100) >= 90 ? 'text-green-400' : 'text-yellow-400'
+                      )}>
+                        {workspace.success_rate_24h || 100}%
+                      </span>
+                      <span className={cn(
+                        'px-2 py-0.5 rounded text-xs font-medium',
+                        workspace.is_active ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700 text-zinc-500'
+                      )}>
+                        {workspace.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-xs">
+                    <div>
+                      <span className="text-zinc-500">Ops 24h:</span>
+                      <span className="ml-1 text-zinc-300">{workspace.operations_24h || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Total:</span>
+                      <span className="ml-1 text-zinc-300">{workspace.total_operations || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Type:</span>
+                      <span className="ml-1 text-zinc-300">{workspace.workspace_type || 'local'}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500">Last:</span>
+                      <span className="ml-1 text-zinc-300">
+                        {workspace.last_operation
+                          ? new Date(workspace.last_operation).toLocaleDateString()
+                          : 'Never'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent Errors */}
+      {skin?.issues?.recent_errors && skin.issues.recent_errors.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Recent Errors ({skin.issues.recent_errors.length})
+          </h3>
+          <div className="space-y-2">
+            {skin.issues.recent_errors.map((error: any, i: number) => (
+              <div key={i} className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-red-400">{error.operation_type}</span>
+                  <span className="text-xs text-zinc-500">
+                    {error.created_at ? new Date(error.created_at).toLocaleString() : 'Unknown'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 truncate">{error.file_path}</p>
+                <p className="text-xs text-red-300 mt-1">{error.error_message || 'Unknown error'}</p>
+                <p className="text-xs text-zinc-500 mt-1">Agent: {error.agent_name || 'Unknown'}</p>
+              </div>
             ))}
-            {workspaces.length > 5 && (
-              <p className="text-xs text-zinc-500 text-center">
-                +{workspaces.length - 5} more workspaces
-              </p>
-            )}
           </div>
         </div>
       )}
 
       {/* Skin Status - All Good */}
-      {(status?.health_score || 0) >= 70 && (status?.errors_24h || 0) === 0 && (
+      {(skin?.health_score || 0) >= 70 && (!skin?.issues?.recent_errors || skin.issues.recent_errors.length === 0) && (
         <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
           <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
           <p className="text-sm text-zinc-400">Skin functioning normally</p>
-          <p className="text-xs text-zinc-500">Workspace outputs healthy</p>
+          <p className="text-xs text-zinc-500">
+            {skin?.agents?.active_count || 0} agents working across {skin?.workspaces?.active || 0} workspaces
+          </p>
         </div>
       )}
     </div>
