@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle
+  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'lungs' | 'circulatory' | 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -19,6 +19,7 @@ const tabs = [
   { id: 'heart' as TabType, label: 'HEART', icon: Heart },
   { id: 'lungs' as TabType, label: 'LUNGS', icon: Wind },
   { id: 'circulatory' as TabType, label: 'CIRCULATORY', icon: GitBranch },
+  { id: 'spine' as TabType, label: 'SPINE', icon: Bone },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
@@ -113,6 +114,27 @@ export default function AdminPage() {
     queryFn: () => circulatoryApi.history(24, 50),
     enabled: activeTab === 'circulatory',
   })
+
+  // SPINE Service queries (Session 704)
+  const { data: spineAlignData, isLoading: loadingSpine, refetch: refetchSpine } = useQuery({
+    queryKey: ['spine-align'],
+    queryFn: () => spineApi.align(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'spine',
+  })
+
+  const { data: spineCategoriesData } = useQuery({
+    queryKey: ['spine-categories'],
+    queryFn: () => spineApi.categories(),
+    enabled: activeTab === 'spine',
+  })
+
+  // History query available for future use
+  // const { data: spineHistoryData } = useQuery({
+  //   queryKey: ['spine-history'],
+  //   queryFn: () => spineApi.history(24, 50),
+  //   enabled: activeTab === 'spine',
+  // })
 
   // Fetch v1 health
   const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
@@ -219,6 +241,17 @@ export default function AdminPage() {
   }))
   const circulatoryBottlenecks = circulatoryStatus.bottlenecks || circulatoryBottlenecksData?.data?.bottlenecks || []
   const circulatoryHistory = circulatoryHistoryData?.data?.history || []
+
+  // SPINE data (Session 704)
+  const spineStatus = spineAlignData?.data || {}
+  const spinePatterns = spineStatus.patterns || {}
+  const spinePatternsArray = Object.entries(spinePatterns).map(([pattern, data]) => ({
+    pattern,
+    ...(data as Record<string, unknown>),
+  }))
+  const spineCategories = spineCategoriesData?.data?.categories || {}
+  // const spineHistory = spineHistoryData?.data?.history || []  // Available for future use
+  const spineIntegrations = spineStatus.integrations || {}
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -1136,6 +1169,261 @@ export default function AdminPage() {
                   <div className="p-3 rounded-lg bg-dark-bg">
                     <p className="font-medium text-accent-amber mb-1">Blood Pressure = Queue Depth</p>
                     <p className="text-xs text-gray-400">High pressure indicates congestion, low indicates idle</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* SPINE Tab - Session 704 */}
+      {activeTab === 'spine' && (
+        <div className="space-y-6">
+          {loadingSpine ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Spine Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'h-12 w-12 rounded-lg flex items-center justify-center',
+                      (spineStatus.health_score || 0) >= 80 ? 'bg-accent-green/20' :
+                      (spineStatus.health_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <Bone size={24} className={cn(
+                        (spineStatus.health_score || 0) >= 80 ? 'text-accent-green' :
+                        (spineStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Health Score</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (spineStatus.health_score || 0) >= 80 ? 'text-accent-green' :
+                        (spineStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(spineStatus.health_score || 0).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Activity className="text-accent-cyan" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Status</p>
+                      <p className={cn(
+                        'text-lg font-bold capitalize',
+                        spineStatus.overall_status === 'aligned' ? 'text-accent-green' :
+                        spineStatus.overall_status === 'strained' ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {spineStatus.overall_status || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Route className="text-primary-400" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Patterns</p>
+                      <p className="text-2xl font-bold">
+                        {spineStatus.healthy_patterns || 0}/{spineStatus.total_patterns || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className={cn(
+                      (spineStatus.routing?.routes_blocked || 0) > 0 ? 'text-accent-red' : 'text-gray-500'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Blocked Routes</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (spineStatus.routing?.routes_blocked || 0) > 0 ? 'text-accent-red' : 'text-accent-green'
+                      )}>
+                        {spineStatus.routing?.routes_blocked || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Integration Status */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Integration Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {['heart', 'lungs', 'circulatory'].map((system) => {
+                    const integration = spineIntegrations[system] || {}
+                    const isHealthy = integration.is_healthy || integration.is_flowing
+                    const score = integration.health_score || integration.capacity_score || integration.flow_score || 0
+
+                    return (
+                      <div
+                        key={system}
+                        className={cn(
+                          'p-4 rounded-lg border',
+                          isHealthy ? 'bg-accent-green/10 border-accent-green/30' : 'bg-accent-amber/10 border-accent-amber/30'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-semibold capitalize">{system}</p>
+                          <span className={cn(
+                            'text-xs px-2 py-1 rounded capitalize',
+                            isHealthy ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-amber/20 text-accent-amber'
+                          )}>
+                            {integration.status || 'unknown'}
+                          </span>
+                        </div>
+                        <p className={cn(
+                          'text-2xl font-bold',
+                          score >= 80 ? 'text-accent-green' : score >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                        )}>
+                          {score.toFixed(0)}%
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Route Patterns */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Route Patterns ({spinePatternsArray.length})</h3>
+                  <button
+                    onClick={() => refetchSpine()}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {spinePatternsArray.map((route: {
+                    pattern: string
+                    display_name?: string
+                    category?: string
+                    priority?: string
+                    is_healthy?: boolean
+                    health_score?: number
+                    can_route?: boolean
+                    route_reason?: string
+                    total_requests?: number
+                    avg_latency_ms?: number
+                  }) => (
+                    <div
+                      key={route.pattern}
+                      className={cn(
+                        'p-3 rounded-lg border transition-colors',
+                        route.is_healthy ? 'bg-accent-green/5 border-accent-green/30' :
+                        route.can_route === false ? 'bg-accent-red/10 border-accent-red/30' : 'bg-accent-amber/10 border-accent-amber/30'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-sm truncate" title={route.pattern}>
+                          {route.display_name || route.pattern}
+                        </p>
+                        {route.priority === 'critical' && (
+                          <span className="text-xs px-1 py-0.5 rounded bg-accent-red/20 text-accent-red">Critical</span>
+                        )}
+                        {route.priority === 'high' && (
+                          <span className="text-xs px-1 py-0.5 rounded bg-accent-amber/20 text-accent-amber">High</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2 capitalize">{route.category || 'other'}</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={cn(
+                          route.can_route ? 'text-accent-green' : 'text-accent-red'
+                        )}>
+                          {route.can_route ? '✓ Routable' : '✗ Blocked'}
+                        </span>
+                        <span className={cn(
+                          'font-medium',
+                          (route.health_score || 0) >= 80 ? 'text-accent-green' :
+                          (route.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                        )}>
+                          {(route.health_score || 0).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {spinePatternsArray.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <Bone className="mx-auto mb-2" size={32} />
+                    <p>No route patterns configured</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Category Health */}
+              {Object.keys(spineCategories).length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Category Health</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(spineCategories).map(([category, data]: [string, unknown]) => {
+                      const catData = data as { health_score?: number; pattern_count?: number; healthy_count?: number }
+                      const score = catData.health_score || 0
+
+                      return (
+                        <div
+                          key={category}
+                          className={cn(
+                            'p-3 rounded-lg border',
+                            score >= 80 ? 'bg-accent-green/10 border-accent-green/30' :
+                            score >= 50 ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-accent-red/10 border-accent-red/30'
+                          )}
+                        >
+                          <p className="text-sm font-medium capitalize mb-1">{category.replace('_', ' ')}</p>
+                          <div className="flex items-center justify-between">
+                            <span className={cn(
+                              'text-xl font-bold',
+                              score >= 80 ? 'text-accent-green' : score >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                            )}>
+                              {score.toFixed(0)}%
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {catData.healthy_count || 0}/{catData.pattern_count || 0}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Spine Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Spine Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The SPINE is the backbone of the AI body - central API routing and coordination.
+                  It tracks route health, manages request flow, and coordinates with HEART, LUNGS, and CIRCULATORY.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-primary-400 mb-1">Aligned = Healthy</p>
+                    <p className="text-xs text-gray-400">All routes operational, no issues</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-amber mb-1">Strained = Degraded</p>
+                    <p className="text-xs text-gray-400">Some routes showing stress, monitoring closely</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-cyan mb-1">Compressed = High Load</p>
+                    <p className="text-xs text-gray-400">Heavy traffic, routing slowed to protect system</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-red mb-1">Injured = Critical</p>
+                    <p className="text-xs text-gray-400">Critical routes failing, immediate attention needed</p>
                   </div>
                 </div>
               </div>
