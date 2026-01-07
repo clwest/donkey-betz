@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
-  Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe
+  Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
+  Heart, Brain, Zap, Users, Eye, Hand, Database
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -15,11 +16,22 @@ interface ActionResult {
 }
 
 const tabs = [
-  { id: 'health' as TabType, label: 'System Health', icon: Activity },
+  { id: 'heart' as TabType, label: 'HEART', icon: Heart },
+  { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
   { id: 'agents' as TabType, label: 'Agents', icon: Bot },
 ]
+
+// Body part icons for HEART service
+const BODY_PARTS = {
+  brain: { icon: Brain, label: 'Brain', description: 'ThinkingAgent - autonomous reasoning' },
+  nervous_system: { icon: Zap, label: 'Nervous System', description: 'LLM/ML Routers - signal routing' },
+  organs: { icon: Users, label: 'Organs', description: '72 Agents - work execution' },
+  sensory: { icon: Eye, label: 'Sensory', description: '77 Spiders - data gathering' },
+  skin: { icon: Hand, label: 'Skin', description: 'Workspace Manager - reality interface' },
+  memory: { icon: Database, label: 'Memory', description: 'Database & Redis - persistence' },
+} as const
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
   return (
@@ -35,8 +47,22 @@ function Toast({ result, onClose }: { result: ActionResult; onClose: () => void 
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('health')
+  const [activeTab, setActiveTab] = useState<TabType>('heart')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
+
+  // HEART Service queries (Session 702)
+  const { data: heartStatusData, isLoading: loadingHeart, refetch: refetchHeart } = useQuery({
+    queryKey: ['heart-status'],
+    queryFn: () => heartApi.status(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'heart',
+  })
+
+  const { data: heartHistoryData } = useQuery({
+    queryKey: ['heart-history'],
+    queryFn: () => heartApi.history(24, 50),
+    enabled: activeTab === 'heart',
+  })
 
   // Fetch v1 health
   const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
@@ -96,6 +122,11 @@ export default function AdminPage() {
       setActionResult({ type: 'error', message: 'Failed to start agent cycle' })
     },
   })
+
+  // HEART data (Session 702)
+  const heartStatus = heartStatusData?.data || {}
+  const heartHistory = heartHistoryData?.data?.heartbeats || []
+  const heartComponents = heartStatus.components || {}
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -192,7 +223,221 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* System Health Tab */}
+      {/* HEART Tab - Session 702 */}
+      {activeTab === 'heart' && (
+        <div className="space-y-6">
+          {loadingHeart ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Health Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center', getStatusBg(heartStatus.overall_status || 'unknown'))}>
+                      <Heart size={24} className={cn(getStatusColor(heartStatus.overall_status || 'unknown'), 'animate-pulse')} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Health Score</p>
+                      <p className={cn('text-2xl font-bold', getStatusColor(heartStatus.overall_status || 'unknown'))}>
+                        {(heartStatus.health_score || 0).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Activity className="text-accent-cyan" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Status</p>
+                      <p className={cn('text-lg font-bold capitalize', getStatusColor(heartStatus.overall_status || 'unknown'))}>
+                        {heartStatus.overall_status || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-accent-green" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Components</p>
+                      <p className="text-2xl font-bold">
+                        {Object.values(heartComponents as Record<string, { is_healthy?: boolean }>).filter((c) => c?.is_healthy).length}/
+                        {Object.keys(heartComponents).length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Clock className="text-accent-amber" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Last Check</p>
+                      <p className="text-sm font-medium">
+                        {heartStatus.last_check ? new Date(heartStatus.last_check).toLocaleTimeString() : 'Never'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body Parts Grid */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Body Part Status</h3>
+                  <button
+                    onClick={() => refetchHeart()}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(Object.keys(BODY_PARTS) as Array<keyof typeof BODY_PARTS>).map((partKey) => {
+                    const part = BODY_PARTS[partKey]
+                    const status = heartComponents[partKey] || {}
+                    const Icon = part.icon
+                    const isHealthy = status.is_healthy
+                    const partStatus = status.status || 'unknown'
+
+                    return (
+                      <div
+                        key={partKey}
+                        className={cn(
+                          'p-4 rounded-lg border transition-colors',
+                          getStatusBg(partStatus),
+                          isHealthy ? 'border-accent-green/30' : isHealthy === false ? 'border-accent-red/30' : 'border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0', getStatusBg(partStatus))}>
+                            <Icon size={24} className={getStatusColor(partStatus)} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold">{part.label}</p>
+                              {isHealthy === true && <CheckCircle size={14} className="text-accent-green" />}
+                              {isHealthy === false && <XCircle size={14} className="text-accent-red" />}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{part.description}</p>
+                            {status.response_time_ms && (
+                              <p className="text-xs text-gray-400 mt-1">Response: {status.response_time_ms}ms</p>
+                            )}
+                            {status.details && (
+                              <div className="mt-2 text-xs text-gray-400">
+                                {Object.entries(status.details).slice(0, 3).map(([key, value]) => (
+                                  <p key={key} className="truncate">
+                                    {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {status.last_error && (
+                              <p className="text-xs text-accent-red mt-2 truncate" title={status.last_error}>
+                                {status.last_error}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Heartbeat History */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Heartbeat History (24h)</h3>
+                {heartHistory.length > 0 ? (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {heartHistory.slice(0, 20).map((beat: { id: string; health_score: number; overall_status: string; recorded_at: string; check_duration_ms: number; components_healthy: number; components_checked: number }, idx: number) => (
+                      <div
+                        key={beat.id || idx}
+                        className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', getStatusBg(beat.overall_status))}>
+                            <Heart size={14} className={getStatusColor(beat.overall_status)} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {beat.health_score.toFixed(0)}% - {beat.components_healthy}/{beat.components_checked} healthy
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(beat.recorded_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{beat.check_duration_ms}ms</span>
+                          <span className={cn('text-xs px-2 py-1 rounded capitalize', getStatusBg(beat.overall_status), getStatusColor(beat.overall_status))}>
+                            {beat.overall_status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Heart className="mx-auto mb-2" size={32} />
+                    <p>No heartbeat history yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Heartbeats are recorded every 60 seconds</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Human Body Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Human Body Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The platform uses the human body as an architectural metaphor. Each body part has specific responsibilities:
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-dark-border">
+                        <th className="text-left py-2 px-3 text-gray-400">Body Part</th>
+                        <th className="text-left py-2 px-3 text-gray-400">Component</th>
+                        <th className="text-left py-2 px-3 text-gray-400">Purpose</th>
+                        <th className="text-center py-2 px-3 text-gray-400">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-dark-border/50">
+                        <td className="py-2 px-3 font-medium">Consciousness</td>
+                        <td className="py-2 px-3 text-gray-400">Human Operator</td>
+                        <td className="py-2 px-3 text-gray-400">Final decisions & approvals</td>
+                        <td className="py-2 px-3 text-center"><span className="text-accent-green">Active</span></td>
+                      </tr>
+                      {(Object.keys(BODY_PARTS) as Array<keyof typeof BODY_PARTS>).map((partKey) => {
+                        const part = BODY_PARTS[partKey]
+                        const status = heartComponents[partKey] || {}
+                        return (
+                          <tr key={partKey} className="border-b border-dark-border/50">
+                            <td className="py-2 px-3 font-medium">{part.label}</td>
+                            <td className="py-2 px-3 text-gray-400">{status.display_name || partKey}</td>
+                            <td className="py-2 px-3 text-gray-400">{part.description}</td>
+                            <td className="py-2 px-3 text-center">
+                              <span className={cn('px-2 py-0.5 rounded text-xs capitalize', getStatusBg(status.status || 'unknown'), getStatusColor(status.status || 'unknown'))}>
+                                {status.status || 'unknown'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Services Tab (was System Health Tab) */}
       {activeTab === 'health' && (
         <div className="space-y-6">
           {loadingHealth ? (

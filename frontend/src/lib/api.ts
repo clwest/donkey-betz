@@ -554,6 +554,26 @@ export const llmApi = {
   }) => api.post('/v1/llm/preferences/', data),
 }
 
+// Session 701: HEART Service API - System Health Monitoring
+export const heartApi = {
+  // Run full health check on all components
+  pulse: () => api.get('/heart/pulse/'),
+
+  // Get cached vitals (fast)
+  status: () => api.get('/heart/status/'),
+
+  // Get heartbeat history
+  history: (hours = 24, limit = 100) =>
+    api.get('/heart/history/', { params: { hours, limit } }),
+
+  // Get specific component status
+  component: (name: 'brain' | 'nervous_system' | 'organs' | 'sensory' | 'skin' | 'memory') =>
+    api.get(`/heart/component/${name}/`),
+
+  // Quick alive check
+  alive: () => api.get('/heart/alive/'),
+}
+
 // Session 700: LLM Routing API (from Backend Claude Session 699)
 export const llmRoutingApi = {
   // System status overview
