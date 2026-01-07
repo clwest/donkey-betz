@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
 import {
@@ -91,6 +91,63 @@ function StatCard({ title, value, icon: Icon, color }: { title: string; value: s
   )
 }
 
+// Tree Node Item Component (separate component for proper key handling)
+function TreeNodeItem({
+  node,
+  depth,
+  expanded,
+  selectedPath,
+  onToggle,
+  onSelect
+}: {
+  node: FileNode
+  depth: number
+  expanded: Set<string>
+  selectedPath?: string
+  onToggle: (path: string) => void
+  onSelect: (path: string) => void
+}) {
+  const isExpanded = expanded.has(node.path)
+  const isSelected = selectedPath === node.path
+  const isDir = node.type === 'directory'
+
+  return (
+    <div>
+      <div
+        className={cn(
+          'flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-dark-border/50 transition-colors',
+          isSelected && 'bg-primary-500/20 text-primary-400'
+        )}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        onClick={() => isDir ? onToggle(node.path) : onSelect(node.path)}
+      >
+        {isDir ? (
+          isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+        ) : (
+          <span className="w-[14px]" />
+        )}
+        {isDir ? (
+          <Folder size={14} className="text-accent-amber" />
+        ) : (
+          <FileCode size={14} className="text-accent-cyan" />
+        )}
+        <span className="text-sm truncate">{node.name}</span>
+      </div>
+      {isDir && isExpanded && node.children && node.children.map(child => (
+        <TreeNodeItem
+          key={child.path}
+          node={child}
+          depth={depth + 1}
+          expanded={expanded}
+          selectedPath={selectedPath}
+          onToggle={onToggle}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  )
+}
+
 // File Tree Component
 function FileTree({ files, onSelect, selectedPath }: { files: FileNode[]; onSelect: (path: string) => void; selectedPath?: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -105,48 +162,19 @@ function FileTree({ files, onSelect, selectedPath }: { files: FileNode[]; onSele
     setExpanded(newExpanded)
   }
 
-  const renderNode = (node: FileNode, depth = 0) => {
-    const isExpanded = expanded.has(node.path)
-    const isSelected = selectedPath === node.path
-    const isDir = node.type === 'directory'
-
-    return (
-      <div key={node.path}>
-        <div
-          className={cn(
-            'flex items-center gap-2 px-2 py-1 cursor-pointer rounded hover:bg-dark-border/50 transition-colors',
-            isSelected && 'bg-primary-500/20 text-primary-400'
-          )}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
-          onClick={() => {
-            if (isDir) {
-              toggleExpand(node.path)
-            } else {
-              onSelect(node.path)
-            }
-          }}
-        >
-          {isDir ? (
-            <>
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <Folder size={14} className="text-accent-amber" />
-            </>
-          ) : (
-            <>
-              <span className="w-[14px]" />
-              <FileCode size={14} className="text-accent-cyan" />
-            </>
-          )}
-          <span className="text-sm truncate">{node.name}</span>
-        </div>
-        {isDir && isExpanded && node.children?.map(child => renderNode(child, depth + 1))}
-      </div>
-    )
-  }
-
   return (
     <div className="text-sm">
-      {files.map(file => renderNode(file))}
+      {files.map(file => (
+        <TreeNodeItem
+          key={file.path}
+          node={file}
+          depth={0}
+          expanded={expanded}
+          selectedPath={selectedPath}
+          onToggle={toggleExpand}
+          onSelect={onSelect}
+        />
+      ))}
     </div>
   )
 }
@@ -586,11 +614,11 @@ export default function WorkspacePage() {
   const pendingReviews = (pendingReviewsData?.data?.results || pendingReviewsData?.data || []) as WorkspaceOperation[]
   const dashboard = dashboardData?.data || {}
 
-  // Build simple file tree from files list
-  const files: FileNode[] = (filesData?.data?.files || []).map((f: { path: string; name: string; is_dir: boolean }) => ({
-    name: f.name,
-    path: f.path,
-    type: f.is_dir ? 'directory' : 'file',
+  // Build simple file tree from files list (API returns array of filename strings)
+  const files: FileNode[] = (filesData?.data?.files || []).map((filename: string) => ({
+    name: filename,
+    path: filename,
+    type: 'file' as const,
   }))
 
   const filteredOperations = operationFilter
