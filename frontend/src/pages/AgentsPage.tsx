@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -133,6 +133,29 @@ interface Conversation {
   messages: ConversationMessage[]
 }
 
+// Session 696: Decision interface for Decision Insights Panel
+interface Decision {
+  id: string
+  topic: string
+  decision_type: 'experiment' | 'pipeline' | 'guideline' | 'feature' | 'process'
+  decision_type_display: string
+  impact_area: string
+  impact_area_display: string
+  key_insights: string[]
+  recommended_stance: string
+  suggested_feature: string
+  rationale: string
+  participants: string[]
+  status: 'draft' | 'approved' | 'rejected' | 'implemented'
+  is_canonical: boolean
+  promoted_at: string | null
+  promoted_by: string | null
+  source_type: string
+  source_id: string | null
+  source_topic: string | null
+  created_at: string
+}
+
 interface Agent {
   name: string
   category: string
@@ -187,6 +210,8 @@ export default function AgentsPage() {
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null)
   // Session 695: Conversation Thread Viewer state
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  // Session 696: Decision Insights Panel state
+  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({
@@ -227,6 +252,14 @@ export default function AgentsPage() {
     refetchInterval: 60000,
   })
   const conversations: Conversation[] = conversationsResponse?.data?.conversations || []
+
+  // Session 696: Decisions for Decision Insights Panel
+  const { data: decisionsResponse } = useQuery({
+    queryKey: ['boardroom-decisions'],
+    queryFn: () => decisionsApi.list(50),
+    refetchInterval: 60000,
+  })
+  const decisions: Decision[] = decisionsResponse?.data?.decisions || []
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
@@ -650,12 +683,19 @@ export default function AgentsPage() {
                     : null
                   const isConversationClickable = activity.type === 'conversation' && matchingConversation
 
+                  // Session 696: Find matching decision for click handler
+                  const matchingDecision = activity.type === 'decision' && activity.id
+                    ? decisions.find(d => d.id === activity.id)
+                    : null
+                  const isDecisionClickable = activity.type === 'decision' && matchingDecision
+
                   return (
                   <div
                     key={`activity-${activity.id || activity.timestamp}-${idx}`}
                     onClick={
                       isDreamClickable ? () => setSelectedDream(matchingDream) :
                       isConversationClickable ? () => setSelectedConversation(matchingConversation) :
+                      isDecisionClickable ? () => setSelectedDecision(matchingDecision) :
                       undefined
                     }
                     className={cn(
@@ -664,6 +704,8 @@ export default function AgentsPage() {
                         ? "hover:border-accent-purple/50 cursor-pointer hover:bg-accent-purple/5"
                         : isConversationClickable
                         ? "hover:border-accent-cyan/50 cursor-pointer hover:bg-accent-cyan/5"
+                        : isDecisionClickable
+                        ? "hover:border-accent-amber/50 cursor-pointer hover:bg-accent-amber/5"
                         : "hover:border-primary-500/50"
                     )}
                   >
@@ -697,6 +739,12 @@ export default function AgentsPage() {
                           <span className="text-xs text-accent-cyan/60 flex items-center gap-1">
                             <Eye size={10} />
                             Click to view thread
+                          </span>
+                        )}
+                        {isDecisionClickable && (
+                          <span className="text-xs text-accent-amber/60 flex items-center gap-1">
+                            <Eye size={10} />
+                            Click for insights
                           </span>
                         )}
                         {/* Session 694: Show friendly timestamp */}
@@ -1330,6 +1378,165 @@ export default function AgentsPage() {
               </div>
               <button
                 onClick={() => setSelectedConversation(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 696: Decision Insights Panel Modal */}
+      {selectedDecision && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-amber/10 to-accent-green/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-2xl">🏛️</span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedDecision.status === 'approved' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedDecision.status === 'rejected' ? 'bg-accent-red/20 text-accent-red' :
+                    selectedDecision.status === 'implemented' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {selectedDecision.status}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber capitalize">
+                    {selectedDecision.decision_type_display || selectedDecision.decision_type}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-accent-blue/20 text-accent-blue capitalize">
+                    {selectedDecision.impact_area_display || selectedDecision.impact_area}
+                  </span>
+                  {selectedDecision.is_canonical && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple flex items-center gap-1">
+                      <Sparkles size={10} />
+                      Canon
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedDecision.topic}</h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Users size={14} />
+                  <span>{selectedDecision.participants.length} participants</span>
+                  <span className="text-gray-600">•</span>
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedDecision.created_at, 'full')}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedDecision(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Participants Strip */}
+            <div className="px-6 py-3 border-b border-dark-border bg-dark-hover/30 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500">Participants:</span>
+              {selectedDecision.participants.map((participant, idx) => (
+                <span
+                  key={idx}
+                  className="text-xs px-2 py-1 rounded-full bg-dark-card text-gray-300 flex items-center gap-1"
+                >
+                  <Bot size={10} />
+                  {participant}
+                </span>
+              ))}
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[55vh] space-y-6">
+              {/* Key Insights */}
+              {selectedDecision.key_insights && selectedDecision.key_insights.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-accent-amber mb-3 flex items-center gap-2">
+                    <Lightbulb size={14} />
+                    Key Insights
+                  </h3>
+                  <ul className="space-y-2">
+                    {selectedDecision.key_insights.map((insight, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2 text-sm text-gray-200 bg-dark-hover rounded-lg p-3"
+                      >
+                        <span className="text-accent-amber mt-0.5">•</span>
+                        <span>{typeof insight === 'string' ? insight : 'Insight'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Recommended Stance */}
+              {selectedDecision.recommended_stance && (
+                <div>
+                  <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
+                    <TrendingUp size={14} />
+                    Recommended Stance
+                  </h3>
+                  <div className="bg-accent-green/5 border border-accent-green/20 rounded-lg p-4 text-gray-200 text-sm leading-relaxed">
+                    {selectedDecision.recommended_stance}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Feature */}
+              {selectedDecision.suggested_feature && (
+                <div>
+                  <h3 className="text-sm font-medium text-accent-cyan mb-2 flex items-center gap-2">
+                    <Sparkles size={14} />
+                    Suggested Feature
+                  </h3>
+                  <div className="bg-accent-cyan/5 border border-accent-cyan/20 rounded-lg p-4 text-gray-200 text-sm leading-relaxed">
+                    {selectedDecision.suggested_feature}
+                  </div>
+                </div>
+              )}
+
+              {/* Rationale */}
+              {selectedDecision.rationale && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <Brain size={14} />
+                    Rationale
+                  </h3>
+                  <div className="bg-dark-hover rounded-lg p-4 text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedDecision.rationale}
+                  </div>
+                </div>
+              )}
+
+              {/* Source Link */}
+              {selectedDecision.source_topic && (
+                <div className="text-xs text-gray-500 flex items-center gap-2">
+                  <span>Source:</span>
+                  <span className="text-gray-400">{selectedDecision.source_type}</span>
+                  <span className="text-gray-600">•</span>
+                  <span className="text-gray-400">{selectedDecision.source_topic}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>ID: {selectedDecision.id.slice(0, 8)}...</span>
+                {selectedDecision.is_canonical && selectedDecision.promoted_at && (
+                  <>
+                    <span className="text-gray-600">•</span>
+                    <span className="text-accent-purple">
+                      Promoted: {formatTimestamp(selectedDecision.promoted_at, 'full')}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedDecision(null)}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
