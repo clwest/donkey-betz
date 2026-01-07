@@ -286,6 +286,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Agent Mood APIs (emotional state and personality for React frontend)
         '/api/agent-mood/',  # Mood overview, agent moods, rules, history
+
+        # Session 716: Time Capsules APIs (agent messages to the future for React frontend)
+        '/api/time-capsules/',  # Capsules overview, agent capsules, reveal, react
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)

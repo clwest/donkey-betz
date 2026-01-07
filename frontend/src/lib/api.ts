@@ -203,6 +203,31 @@ export const moodApi = {
     api.post('/agent-mood/trigger-from-memory/', data),
 }
 
+// Session 716: Time Capsules API - Agent messages to the future
+export const timeCapsuleApi = {
+  // Overview of all time capsules
+  overview: () => api.get('/time-capsules/'),
+
+  // Agent-specific capsules
+  agentCapsules: (agentId: string) => api.get(`/time-capsules/agent/${agentId}/`),
+
+  // Capsule operations
+  detail: (capsuleId: string) => api.get(`/time-capsules/${capsuleId}/`),
+  reveal: (capsuleId: string) => api.post(`/time-capsules/${capsuleId}/reveal/`),
+  react: (capsuleId: string, data: { reaction: string; message?: string }) =>
+    api.post(`/time-capsules/${capsuleId}/react/`, data),
+
+  // Ready to reveal
+  readyToReveal: () => api.get('/time-capsules/ready-to-reveal/'),
+
+  // Generate new capsule
+  generate: (data: { agent_id: string; open_after_days?: number }) =>
+    api.post('/time-capsules/generate/', data),
+
+  // Admin
+  expireOld: () => api.post('/time-capsules/expire-old/'),
+}
+
 // Session 696: Decisions API for Decision Insights Panel
 export const decisionsApi = {
   list: (limit = 50) => api.get(`/boardroom/decisions/?limit=${limit}`),

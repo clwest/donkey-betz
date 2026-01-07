@@ -22,6 +22,7 @@ import {
   Castle,
   Trophy,
   Smile,
+  Gift,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -42,6 +43,7 @@ const navItems = [
   { path: '/memory-palace', label: 'Memory Palace', icon: Castle },
   { path: '/evolution', label: 'Evolution', icon: Trophy },
   { path: '/agent-mood', label: 'Mood', icon: Smile },
+  { path: '/time-capsules', label: 'Capsules', icon: Gift },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
