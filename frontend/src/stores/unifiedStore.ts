@@ -1,5 +1,6 @@
 /**
  * Session 714: Unified Store - Shared state across all pages
+ * Session 715: Added request throttling to prevent 429 errors
  *
  * This store provides unified access to:
  * - Pending decisions (attention items needing human action)
@@ -13,6 +14,27 @@
 
 import { create } from 'zustand'
 import { humanApi, opportunitiesApi, pilotsApi } from '@/lib/api'
+
+// ============================================================================
+// Throttling Configuration
+// ============================================================================
+
+// Minimum time between fetches (in ms) - prevents rate limiting
+const MIN_FETCH_INTERVAL = 5000 // 5 seconds
+
+// Track in-flight requests to prevent duplicates
+const inFlightRequests: Record<string, boolean> = {
+  attention: false,
+  opportunities: false,
+  pilots: false,
+  gates: false,
+}
+
+// Check if enough time has passed since last fetch
+const canFetch = (lastFetch: Date | null): boolean => {
+  if (!lastFetch) return true
+  return Date.now() - lastFetch.getTime() > MIN_FETCH_INTERVAL
+}
 
 // ============================================================================
 // Types
@@ -141,8 +163,15 @@ export const useUnifiedStore = create<UnifiedState>((set, get) => ({
     gates: null,
   },
 
-  // Fetch attention stats
+  // Fetch attention stats (with throttling)
   fetchAttentionStats: async () => {
+    const state = get()
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.attention || !canFetch(state.lastFetch.attention)) {
+      return
+    }
+
+    inFlightRequests.attention = true
     set({ isLoadingAttention: true })
     try {
       const response = await humanApi.attentionStats()
@@ -160,11 +189,20 @@ export const useUnifiedStore = create<UnifiedState>((set, get) => ({
         isLoadingAttention: false,
         error: 'Failed to fetch attention stats',
       })
+    } finally {
+      inFlightRequests.attention = false
     }
   },
 
-  // Fetch top opportunities
+  // Fetch top opportunities (with throttling)
   fetchTopOpportunities: async (limit = 5) => {
+    const state = get()
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.opportunities || !canFetch(state.lastFetch.opportunities)) {
+      return
+    }
+
+    inFlightRequests.opportunities = true
     set({ isLoadingOpportunities: true })
     try {
       const response = await opportunitiesApi.top(limit)
@@ -181,11 +219,20 @@ export const useUnifiedStore = create<UnifiedState>((set, get) => ({
         isLoadingOpportunities: false,
         error: 'Failed to fetch opportunities',
       })
+    } finally {
+      inFlightRequests.opportunities = false
     }
   },
 
-  // Fetch running pilots
+  // Fetch running pilots (with throttling)
   fetchRunningPilots: async () => {
+    const state = get()
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.pilots || !canFetch(state.lastFetch.pilots)) {
+      return
+    }
+
+    inFlightRequests.pilots = true
     set({ isLoadingPilots: true })
     try {
       const response = await pilotsApi.dashboard()
@@ -206,11 +253,20 @@ export const useUnifiedStore = create<UnifiedState>((set, get) => ({
         isLoadingPilots: false,
         error: 'Failed to fetch pilots',
       })
+    } finally {
+      inFlightRequests.pilots = false
     }
   },
 
-  // Fetch critical gates
+  // Fetch critical gates (with throttling)
   fetchCriticalGates: async () => {
+    const state = get()
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.gates || !canFetch(state.lastFetch.gates)) {
+      return
+    }
+
+    inFlightRequests.gates = true
     set({ isLoadingGates: true })
     try {
       const response = await pilotsApi.gates()
@@ -233,6 +289,8 @@ export const useUnifiedStore = create<UnifiedState>((set, get) => ({
         isLoadingGates: false,
         error: 'Failed to fetch gates',
       })
+    } finally {
+      inFlightRequests.gates = false
     }
   },
 

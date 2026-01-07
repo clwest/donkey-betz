@@ -1,5 +1,6 @@
 /**
  * Session 713: Body Store - Shared body health state across all pages
+ * Session 715: Added request throttling to prevent 429 errors
  *
  * This store provides unified access to body vitals, alerts, and governance
  * status. All pages should use this store instead of making their own API calls.
@@ -7,6 +8,32 @@
 
 import { create } from 'zustand'
 import { bodyApi } from '@/lib/api'
+
+// ============================================================================
+// Throttling Configuration
+// ============================================================================
+
+// Minimum time between fetches (in ms) - prevents rate limiting
+const MIN_FETCH_INTERVAL = 5000 // 5 seconds
+
+// Track in-flight requests to prevent duplicates
+const inFlightRequests = {
+  vitals: false,
+  alerts: false,
+}
+
+// Track last fetch times
+const lastFetchTimes: Record<string, Date | null> = {
+  vitals: null,
+  alerts: null,
+}
+
+// Check if enough time has passed since last fetch
+const canFetch = (key: string): boolean => {
+  const lastFetch = lastFetchTimes[key]
+  if (!lastFetch) return true
+  return Date.now() - lastFetch.getTime() > MIN_FETCH_INTERVAL
+}
 
 // Body system status types
 export type BodyStatus = 'healthy' | 'degraded' | 'critical' | 'unknown'
@@ -95,8 +122,14 @@ export const useBodyStore = create<BodyState>((set, get) => ({
   blocksOperations: false,
   criticalSystems: [],
 
-  // Fetch body vitals from API
+  // Fetch body vitals from API (with throttling)
   fetchVitals: async () => {
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.vitals || !canFetch('vitals')) {
+      return
+    }
+
+    inFlightRequests.vitals = true
     set({ isLoading: true, error: null })
 
     try {
@@ -116,6 +149,7 @@ export const useBodyStore = create<BodyState>((set, get) => ({
       // Determine if operations should be blocked
       const blocksOperations = vitals.overall_health === 'critical' || criticalSystems.length >= 3
 
+      lastFetchTimes.vitals = new Date()
       set({
         vitals,
         lastFetch: new Date(),
@@ -130,11 +164,19 @@ export const useBodyStore = create<BodyState>((set, get) => ({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to fetch body vitals',
       })
+    } finally {
+      inFlightRequests.vitals = false
     }
   },
 
-  // Fetch alerts from API
+  // Fetch alerts from API (with throttling)
   fetchAlerts: async () => {
+    // Skip if request in flight or recently fetched
+    if (inFlightRequests.alerts || !canFetch('alerts')) {
+      return
+    }
+
+    inFlightRequests.alerts = true
     try {
       const response = await bodyApi.alerts('info', 50)
       const alerts: BodyAlert[] = (response.data?.alerts || []).map((a: Record<string, unknown>, idx: number) => ({
@@ -146,9 +188,12 @@ export const useBodyStore = create<BodyState>((set, get) => ({
         dismissed: false,
       }))
 
+      lastFetchTimes.alerts = new Date()
       set({ alerts })
     } catch (error) {
       console.error('Failed to fetch body alerts:', error)
+    } finally {
+      inFlightRequests.alerts = false
     }
   },
 
