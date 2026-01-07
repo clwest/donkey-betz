@@ -32,12 +32,25 @@ interface Model {
 }
 
 interface AgentConfig {
+  id: string
   agent_name: string
-  model_id: string
-  provider: string
-  display_name: string
-  reason?: string
-  updated_at: string
+  agent_category: string
+  is_active: boolean
+  primary_model: {
+    model_id: string
+    display_name: string
+    provider: string
+  }
+  fallback_model?: {
+    model_id: string
+    display_name: string
+    provider: string
+  }
+  temperature: number
+  max_tokens: number
+  total_calls: number
+  total_cost: number
+  notes?: string
 }
 
 interface CallLog {
@@ -200,20 +213,28 @@ function AgentConfigRow({ config }: { config: AgentConfig }) {
   return (
     <tr className="border-b border-dark-border hover:bg-dark-bg/30">
       <td className="px-4 py-3">
-        <span className="font-medium">{config.agent_name}</span>
+        <div>
+          <span className="font-medium">{config.agent_name}</span>
+          <p className="text-xs text-gray-500">{config.agent_category}</p>
+        </div>
       </td>
       <td className="px-4 py-3">
-        <span className="text-primary-400">{config.display_name}</span>
-        <p className="text-xs text-gray-500">{config.model_id}</p>
+        <span className="text-primary-400">{config.primary_model?.display_name}</span>
+        <p className="text-xs text-gray-500">{config.primary_model?.model_id}</p>
       </td>
       <td className="px-4 py-3">
-        <span className="text-gray-400">{config.provider}</span>
+        <span className="text-gray-400">{config.primary_model?.provider}</span>
+      </td>
+      <td className="px-4 py-3 text-sm">
+        <span className={cn(
+          'px-2 py-1 rounded text-xs',
+          config.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+        )}>
+          {config.is_active ? 'Active' : 'Inactive'}
+        </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-400">
-        {config.reason || '-'}
-      </td>
-      <td className="px-4 py-3 text-xs text-gray-500">
-        {new Date(config.updated_at).toLocaleDateString()}
+        {config.total_calls || 0} calls
       </td>
     </tr>
   )
@@ -578,10 +599,10 @@ export default function LLMRoutingPage() {
                 <thead>
                   <tr className="border-b border-dark-border text-left text-sm text-gray-400">
                     <th className="px-4 py-3 font-medium">Agent</th>
-                    <th className="px-4 py-3 font-medium">Model</th>
+                    <th className="px-4 py-3 font-medium">Primary Model</th>
                     <th className="px-4 py-3 font-medium">Provider</th>
-                    <th className="px-4 py-3 font-medium">Reason</th>
-                    <th className="px-4 py-3 font-medium">Updated</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Usage</th>
                   </tr>
                 </thead>
                 <tbody>
