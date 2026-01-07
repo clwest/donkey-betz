@@ -539,6 +539,31 @@ export default function AgentsPage() {
                                   <p className="text-sm text-gray-400 mt-1 line-clamp-2">
                                     {agent.description || 'No description available'}
                                   </p>
+                                  {/* Session 697: Always-visible keywords preview */}
+                                  {agent.keywords.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {agent.keywords.slice(0, 3).map((keyword) => (
+                                        <span
+                                          key={keyword}
+                                          className="text-xs px-1.5 py-0.5 rounded bg-accent-purple/10 text-accent-purple border border-accent-purple/20"
+                                        >
+                                          {keyword}
+                                        </span>
+                                      ))}
+                                      {agent.keywords.length > 3 && (
+                                        <span className="text-xs px-1.5 py-0.5 text-gray-500">
+                                          +{agent.keywords.length - 3} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* Session 697: Examples indicator */}
+                                  {agent.examples.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-1.5 text-xs text-accent-cyan">
+                                      <MessageSquare size={10} />
+                                      <span>{agent.examples.length} example{agent.examples.length > 1 ? 's' : ''}</span>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                   {agent.is_routable && (
@@ -555,17 +580,21 @@ export default function AgentsPage() {
                                 </div>
                               </div>
 
-                              {/* Expanded Agent Details */}
+                              {/* Expanded Agent Details - Session 697: Improved styling */}
                               {selectedAgent?.name === agent.name && (
-                                <div className="mt-3 pt-3 border-t border-dark-border space-y-2">
+                                <div className="mt-3 pt-3 border-t border-dark-border space-y-3">
+                                  {/* All Keywords */}
                                   {agent.keywords.length > 0 && (
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Keywords</p>
+                                      <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1">
+                                        <span className="h-1 w-1 rounded-full bg-accent-purple"></span>
+                                        All Keywords
+                                      </p>
                                       <div className="flex flex-wrap gap-1">
                                         {agent.keywords.map((keyword) => (
                                           <span
                                             key={keyword}
-                                            className="text-xs px-2 py-0.5 rounded bg-dark-card text-gray-400"
+                                            className="text-xs px-2 py-0.5 rounded bg-accent-purple/10 text-accent-purple border border-accent-purple/20"
                                           >
                                             {keyword}
                                           </span>
@@ -573,18 +602,45 @@ export default function AgentsPage() {
                                       </div>
                                     </div>
                                   )}
+                                  {/* Example Prompts */}
                                   {agent.examples.length > 0 && (
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Example prompts</p>
-                                      <ul className="text-xs text-gray-400 space-y-1">
+                                      <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1">
+                                        <span className="h-1 w-1 rounded-full bg-accent-cyan"></span>
+                                        Example Prompts
+                                      </p>
+                                      <div className="space-y-1.5">
                                         {agent.examples.map((example, i) => (
-                                          <li key={i} className="truncate">"{example}"</li>
+                                          <div
+                                            key={i}
+                                            className="text-xs p-2 rounded bg-accent-cyan/5 border border-accent-cyan/20 text-gray-300"
+                                          >
+                                            <span className="text-accent-cyan mr-1">→</span>
+                                            "{example}"
+                                          </div>
                                         ))}
-                                      </ul>
+                                      </div>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                                    <span>Priority: {agent.priority}</span>
+                                  {/* Agent Meta */}
+                                  <div className="flex items-center gap-3 pt-2 text-xs text-gray-500 border-t border-dark-border/50">
+                                    <span className="flex items-center gap-1">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-accent-amber"></span>
+                                      Priority: {agent.priority}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <span className={cn(
+                                        'h-1.5 w-1.5 rounded-full',
+                                        agent.is_active ? 'bg-accent-green' : 'bg-accent-red'
+                                      )}></span>
+                                      {agent.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                    {agent.is_routable && (
+                                      <span className="flex items-center gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-accent-green"></span>
+                                        Routable
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               )}
