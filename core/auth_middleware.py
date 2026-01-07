@@ -200,6 +200,15 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/heart/history/',  # Heartbeat history
         '/api/heart/component/',  # Component status detail
         '/api/heart/alive/',  # Quick alive check
+
+        # Session 703: LUNGS Service APIs (read-only resource monitoring for React frontend)
+        '/api/lungs/breathe/',  # Run full breathing check
+        '/api/lungs/status/',  # Get cached respiratory status
+        '/api/lungs/oxygen/',  # Oxygen levels (budget usage)
+        '/api/lungs/budgets/',  # List all budgets
+        '/api/lungs/forecast/',  # Spending forecast
+        '/api/lungs/can-breathe/',  # Check if API call is allowed
+        '/api/lungs/alive/',  # Quick alive check
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
