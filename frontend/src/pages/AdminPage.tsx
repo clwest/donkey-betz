@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi } from '@/lib/api'
+import { adminApi, dashboardApi, heartApi, lungsApi, circulatoryApi, spineApi, immuneApi } from '@/lib/api'
 import {
   Server, Activity, CheckCircle, XCircle,
   Loader2, RefreshCw, Settings, Play, Bug, Bot, Clock, Globe,
-  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route
+  Heart, Brain, Zap, Users, Eye, Hand, Database, Wind, DollarSign, TrendingUp, GitBranch, AlertTriangle, Bone, Route, Shield, ShieldAlert, ShieldCheck, Ban
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
-type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'health' | 'celery' | 'spiders' | 'agents'
+type TabType = 'heart' | 'lungs' | 'circulatory' | 'spine' | 'immune' | 'health' | 'celery' | 'spiders' | 'agents'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -20,6 +20,7 @@ const tabs = [
   { id: 'lungs' as TabType, label: 'LUNGS', icon: Wind },
   { id: 'circulatory' as TabType, label: 'CIRCULATORY', icon: GitBranch },
   { id: 'spine' as TabType, label: 'SPINE', icon: Bone },
+  { id: 'immune' as TabType, label: 'IMMUNE', icon: Shield },
   { id: 'health' as TabType, label: 'Services', icon: Activity },
   { id: 'celery' as TabType, label: 'Celery', icon: Clock },
   { id: 'spiders' as TabType, label: 'Spiders', icon: Bug },
@@ -135,6 +136,32 @@ export default function AdminPage() {
   //   queryFn: () => spineApi.history(24, 50),
   //   enabled: activeTab === 'spine',
   // })
+
+  // IMMUNE System queries (Session 705)
+  const { data: immuneScanData, isLoading: loadingImmune, refetch: refetchImmune } = useQuery({
+    queryKey: ['immune-scan'],
+    queryFn: () => immuneApi.scan(),
+    refetchInterval: 30000,
+    enabled: activeTab === 'immune',
+  })
+
+  const { data: immunePatternsData } = useQuery({
+    queryKey: ['immune-patterns'],
+    queryFn: () => immuneApi.patterns(),
+    enabled: activeTab === 'immune',
+  })
+
+  const { data: immuneThreatsData } = useQuery({
+    queryKey: ['immune-threats'],
+    queryFn: () => immuneApi.threats({ hours: 24, limit: 50 }),
+    enabled: activeTab === 'immune',
+  })
+
+  const { data: immuneQuarantineData } = useQuery({
+    queryKey: ['immune-quarantine'],
+    queryFn: () => immuneApi.quarantine(),
+    enabled: activeTab === 'immune',
+  })
 
   // Fetch v1 health
   const { data: healthData, isLoading: loadingHealth, refetch: refetchHealth } = useQuery({
@@ -252,6 +279,15 @@ export default function AdminPage() {
   const spineCategories = spineCategoriesData?.data?.categories || {}
   // const spineHistory = spineHistoryData?.data?.history || []  // Available for future use
   const spineIntegrations = spineStatus.integrations || {}
+
+  // IMMUNE data (Session 705)
+  const immuneStatus = immuneScanData?.data || {}
+  const immunePatterns = immunePatternsData?.data?.patterns || []
+  const immuneThreats = immuneThreatsData?.data?.threats || []
+  const immuneQuarantine = immuneQuarantineData?.data?.quarantine || []
+  // Available for future use:
+  // const immuneThreatsByCategory = immuneStatus.threats_by_category || {}
+  // const immuneThreatsBySeverity = immuneStatus.threats_by_severity || {}
 
   const health = healthData?.data || {}
   const healthServices = health.services || {}
@@ -1424,6 +1460,336 @@ export default function AdminPage() {
                   <div className="p-3 rounded-lg bg-dark-bg">
                     <p className="font-medium text-accent-red mb-1">Injured = Critical</p>
                     <p className="text-xs text-gray-400">Critical routes failing, immediate attention needed</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* IMMUNE Tab - Session 705 */}
+      {activeTab === 'immune' && (
+        <div className="space-y-6">
+          {loadingImmune ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : (
+            <>
+              {/* Overall Immune Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'h-12 w-12 rounded-lg flex items-center justify-center',
+                      (immuneStatus.health_score || 0) >= 80 ? 'bg-accent-green/20' :
+                      (immuneStatus.health_score || 0) >= 50 ? 'bg-accent-amber/20' : 'bg-accent-red/20'
+                    )}>
+                      <Shield size={24} className={cn(
+                        (immuneStatus.health_score || 0) >= 80 ? 'text-accent-green' :
+                        (immuneStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Health Score</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (immuneStatus.health_score || 0) >= 80 ? 'text-accent-green' :
+                        (immuneStatus.health_score || 0) >= 50 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(immuneStatus.health_score || 0).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <ShieldAlert className={cn(
+                      immuneStatus.threat_level === 'none' ? 'text-accent-green' :
+                      immuneStatus.threat_level === 'low' ? 'text-accent-cyan' :
+                      immuneStatus.threat_level === 'medium' ? 'text-accent-amber' : 'text-accent-red'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Threat Level</p>
+                      <p className={cn(
+                        'text-lg font-bold capitalize',
+                        immuneStatus.threat_level === 'none' ? 'text-accent-green' :
+                        immuneStatus.threat_level === 'low' ? 'text-accent-cyan' :
+                        immuneStatus.threat_level === 'medium' ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {immuneStatus.threat_level || 'None'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="text-primary-400" size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Active Patterns</p>
+                      <p className="text-2xl font-bold">
+                        {immuneStatus.patterns?.active || immunePatterns.length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex items-center gap-3">
+                    <Ban className={cn(
+                      (immuneQuarantine.length || 0) > 0 ? 'text-accent-red' : 'text-gray-500'
+                    )} size={24} />
+                    <div>
+                      <p className="text-sm text-gray-400">Quarantined</p>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        (immuneQuarantine.length || 0) > 0 ? 'text-accent-red' : 'text-accent-green'
+                      )}>
+                        {immuneQuarantine.length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Threat Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Threats (24h)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Detected</p>
+                      <p className="text-xl font-bold text-accent-amber">
+                        {immuneStatus.threats?.detected_24h || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Blocked</p>
+                      <p className="text-xl font-bold text-accent-red">
+                        {immuneStatus.threats?.blocked_24h || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Active</p>
+                      <p className="text-xl font-bold text-accent-cyan">
+                        {immuneStatus.threats?.active || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">False Positives</p>
+                      <p className="text-xl font-bold text-gray-400">
+                        {immuneStatus.threats?.false_positives_24h || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Responses (24h)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Auto Responses</p>
+                      <p className="text-xl font-bold text-accent-green">
+                        {immuneStatus.responses?.auto_24h || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Manual Reviews</p>
+                      <p className="text-xl font-bold text-primary-400">
+                        {immuneStatus.responses?.manual_24h || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Quarantined IPs</p>
+                      <p className="text-xl font-bold text-accent-red">
+                        {immuneStatus.quarantine?.ips || 0}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-dark-bg">
+                      <p className="text-sm text-gray-400">Quarantined Users</p>
+                      <p className="text-xl font-bold text-accent-amber">
+                        {immuneStatus.quarantine?.users || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Threat Patterns */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Threat Patterns ({immunePatterns.length})</h3>
+                  <button
+                    onClick={() => refetchImmune()}
+                    className="btn btn-secondary btn-sm flex items-center gap-2"
+                  >
+                    <RefreshCw size={14} />
+                    Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {immunePatterns.map((pattern: {
+                    id: string
+                    name: string
+                    display_name?: string
+                    category?: string
+                    severity?: string
+                    detection_type?: string
+                    is_active?: boolean
+                    auto_respond?: boolean
+                    total_detections?: number
+                    last_detection?: string
+                  }) => (
+                    <div
+                      key={pattern.id || pattern.name}
+                      className={cn(
+                        'p-3 rounded-lg border transition-colors',
+                        pattern.is_active ? 'bg-accent-green/5 border-accent-green/30' : 'bg-gray-500/10 border-gray-500/30'
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-sm truncate" title={pattern.name}>
+                          {pattern.display_name || pattern.name}
+                        </p>
+                        <span className={cn(
+                          'text-xs px-1 py-0.5 rounded capitalize',
+                          pattern.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                          pattern.severity === 'high' ? 'bg-accent-amber/20 text-accent-amber' :
+                          pattern.severity === 'medium' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-gray-500/20 text-gray-400'
+                        )}>
+                          {pattern.severity || 'low'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2 capitalize">{pattern.category?.replace('_', ' ') || 'other'}</p>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={cn(
+                          pattern.auto_respond ? 'text-accent-green' : 'text-gray-500'
+                        )}>
+                          {pattern.auto_respond ? '⚡ Auto-respond' : '👁 Monitor only'}
+                        </span>
+                        <span className="text-gray-400">
+                          {pattern.total_detections || 0} hits
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {immunePatterns.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <Shield className="mx-auto mb-2" size={32} />
+                    <p>No threat patterns configured</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Threats */}
+              {immuneThreats.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Recent Threats ({immuneThreats.length})</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {immuneThreats.slice(0, 10).map((threat: {
+                      id: string
+                      severity?: string
+                      category?: string
+                      source_ip?: string
+                      source_path?: string
+                      status?: string
+                      detected_at?: string
+                    }, idx: number) => (
+                      <div
+                        key={threat.id || idx}
+                        className={cn(
+                          'p-3 rounded-lg border',
+                          threat.severity === 'critical' ? 'bg-accent-red/10 border-accent-red/30' :
+                          threat.severity === 'high' ? 'bg-accent-amber/10 border-accent-amber/30' : 'bg-dark-bg border-dark-border'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded capitalize',
+                              threat.severity === 'critical' ? 'bg-accent-red/20 text-accent-red' :
+                              threat.severity === 'high' ? 'bg-accent-amber/20 text-accent-amber' : 'bg-gray-500/20 text-gray-400'
+                            )}>
+                              {threat.severity || 'low'}
+                            </span>
+                            <span className="text-sm font-medium capitalize">{threat.category?.replace('_', ' ') || 'Unknown'}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {threat.detected_at ? new Date(threat.detected_at).toLocaleString() : 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-400">
+                          {threat.source_ip && <span>IP: {threat.source_ip}</span>}
+                          {threat.source_path && <span className="ml-2">Path: {threat.source_path}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quarantine List */}
+              {immuneQuarantine.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">Quarantine ({immuneQuarantine.length})</h3>
+                  <div className="space-y-2">
+                    {immuneQuarantine.map((entry: {
+                      id: string
+                      entity_type?: string
+                      entity_value?: string
+                      reason?: string
+                      is_permanent?: boolean
+                      expires_at?: string
+                      created_at?: string
+                    }, idx: number) => (
+                      <div
+                        key={entry.id || idx}
+                        className="flex items-center justify-between p-3 rounded-lg bg-accent-red/10 border border-accent-red/30"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">
+                            <span className="text-gray-400 capitalize">{entry.entity_type}: </span>
+                            {entry.entity_value}
+                          </p>
+                          <p className="text-xs text-gray-500">{entry.reason || 'No reason specified'}</p>
+                        </div>
+                        <span className={cn(
+                          'text-xs px-2 py-1 rounded',
+                          entry.is_permanent ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-amber/20 text-accent-amber'
+                        )}>
+                          {entry.is_permanent ? 'Permanent' : `Expires: ${entry.expires_at ? new Date(entry.expires_at).toLocaleString() : 'Unknown'}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Immune Architecture */}
+              <div className="card">
+                <h3 className="text-lg font-semibold mb-4">Immune System Architecture</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  The IMMUNE system is the defense layer of the AI body - detecting and responding to threats,
+                  suspicious patterns, and malicious activity. Like biological immunity, it learns from threats
+                  and adapts its responses.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-green mb-1">Healthy = No Threats</p>
+                    <p className="text-xs text-gray-400">System clear, all patterns monitoring normally</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-cyan mb-1">Alert = Low Activity</p>
+                    <p className="text-xs text-gray-400">Minor suspicious activity detected, monitoring</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-amber mb-1">Elevated = Active Threats</p>
+                    <p className="text-xs text-gray-400">Threats detected, auto-responses engaged</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-dark-bg">
+                    <p className="font-medium text-accent-red mb-1">Compromised = Critical</p>
+                    <p className="text-xs text-gray-400">Severe threats, manual intervention required</p>
                   </div>
                 </div>
               </div>
