@@ -300,6 +300,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Session 716: Agent Relationships APIs (rivalries, alliances, bonds for React frontend)
         '/api/agent-relationships/',  # Relationships overview, agent relationships, alliances
+
+        # Session 716: Neural Orchestra APIs (AI consciousness visualization for React frontend)
+        '/api/neural-orchestra/',  # Health, ecosystem feed, agent stats, learning status/feed, debug
     ]
 
     # Session 528: Paths that allow session auth but DON'T require it (optional auth)
