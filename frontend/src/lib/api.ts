@@ -58,17 +58,26 @@ export const activityApi = {
 }
 
 // Session 695: Dreams API for Dream Gallery Modal
+// Session 716: Enhanced with trigger, rate, and preferences
 export const dreamsApi = {
-  list: (limit = 20) => api.get(`/agent-dreams/?limit=${limit}`),
+  list: (limit = 20, agentId?: string, unreadOnly = false) =>
+    api.get(`/agent-dreams/?limit=${limit}${agentId ? `&agent_id=${agentId}` : ''}${unreadOnly ? '&unread_only=true' : ''}`),
   detail: (dreamId: string) => api.get(`/agent-dreams/${dreamId}/`),
   react: (dreamId: string, reaction: string) => api.post(`/agent-dreams/${dreamId}/react/`, { reaction }),
+  rate: (dreamId: string, rating: number) => api.post(`/agent-dreams/${dreamId}/rate/`, { rating }),
   markShown: (dreamIds: string[]) => api.post('/agent-dreams/mark-shown/', { dream_ids: dreamIds }),
+  trigger: () => api.post('/agent-dreams/trigger/'),
+  preferences: () => api.get('/agent-dreams/preferences/'),
+  exploration: (explorationId: string) => api.get(`/agent-dreams/explorations/${explorationId}/`),
 }
 
 // Session 695: Conversations API for Conversation Thread Viewer
+// Session 716: Enhanced with trigger
 export const conversationsApi = {
-  list: (limit = 20) => api.get(`/agent-conversations/?limit=${limit}`),
+  list: (limit = 20, status?: string, todayOnly = false) =>
+    api.get(`/agent-conversations/?limit=${limit}${status ? `&status=${status}` : ''}${todayOnly ? '&today_only=true' : ''}`),
   detail: (conversationId: string) => api.get(`/agent-conversations/${conversationId}/`),
+  trigger: () => api.post('/agent-conversations/trigger/'),
 }
 
 // Session 715: Hive Mind API - Multi-agent collaborative sessions
