@@ -175,8 +175,8 @@ curl http://localhost:8000/health/ping/
 
 | Session | Focus | Handoff |
 |---------|-------|---------|
+| **697** | **Frontend Rich Data Display** - 6 UI enhancements exposing hidden API data (Dashboard stats, Knowledge Transfer Modal, Gate Checklist Viewer) + Multi-model LLM routing | `SESSION_697_FRONTEND_RICH_DATA.md`, `SESSION_697_ENHANCED_NERVOUS_SYSTEM.md` |
 | **695** | **SKIN Layer** - All 72 agents can write to real project workspaces | `SESSION_695_SKIN_LAYER_COMPLETE.md` |
-| **697** | **Enhanced Nervous System** - Multi-model LLM routing + Together AI integration | `SESSION_697_ENHANCED_NERVOUS_SYSTEM.md` |
 | **692** | **Prediction Detail Modal** - Clickable predictions, full text, 3 bug fixes | `SESSION_692_PREDICTION_DETAIL_MODAL.md` |
 | **691** | **Implementation Review UI** - Modal for viewing/acting on pilot implementations | `SESSION_691_IMPLEMENTATION_REVIEW_UI.md` |
 | **690** | **Implementation Pipeline** - Auto-generate and execute implementations for pilots | `SESSION_690_IMPLEMENTATION_PIPELINE.md` |
