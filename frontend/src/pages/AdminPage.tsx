@@ -2368,14 +2368,14 @@ export default function AdminPage() {
                   <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {recentAgentActivity.slice(0, 10).map((activity: {
-                      id: string
-                      agent_name?: string
-                      action?: string
-                      timestamp?: string
+                      agent?: string
+                      task?: string
+                      completed?: string
+                      duration?: number
                       success?: boolean
                     }, idx: number) => (
                       <div
-                        key={activity.id || idx}
+                        key={idx}
                         className="flex items-center justify-between p-2 rounded-lg bg-dark-bg"
                       >
                         <div className="flex items-center gap-2">
@@ -2389,12 +2389,15 @@ export default function AdminPage() {
                               <XCircle size={12} className="text-accent-red" />
                             )}
                           </div>
-                          <span className="text-sm font-medium">{activity.agent_name || 'Unknown'}</span>
-                          <span className="text-xs text-gray-500">{activity.action || 'executed'}</span>
+                          <span className="text-sm font-medium">{activity.agent || 'Unknown'}</span>
+                          <span className="text-xs text-gray-500 truncate max-w-[200px]" title={activity.task}>
+                            {activity.task || 'executed'}
+                          </span>
                         </div>
-                        <span className="text-xs text-gray-500">
-                          {activity.timestamp ? new Date(activity.timestamp).toLocaleTimeString() : ''}
-                        </span>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {activity.duration && <span>{activity.duration.toFixed(1)}s</span>}
+                          {activity.completed && <span>{new Date(activity.completed).toLocaleTimeString()}</span>}
+                        </div>
                       </div>
                     ))}
                   </div>
