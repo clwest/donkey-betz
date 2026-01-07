@@ -6,11 +6,16 @@ import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesAp
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, ChevronRight, Loader2,
-  Target, BarChart3, Globe, Bot, Sparkles, X, ExternalLink,
+  Target, BarChart3, Globe, Sparkles, X, ExternalLink,
   Rocket, Ban, DollarSign, Clock, Users, User, Wrench, Lightbulb, FileText, Flag,
-  Trash2, Tag, ArrowUp, Eye, Star, FlaskConical, AlertOctagon
+  Trash2, Tag, ArrowUp, Eye, Star, FlaskConical, AlertOctagon, Heart
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+// Session 713: Body governance for pilot blocking
+import { useBodyGovernance } from '@/stores/bodyStore'
+// Session 713: Cross-page navigation
+import EntityLink from '@/components/EntityLink'
+import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
 // Session 693: Removed 'agents' tab - redundant with main Agents page
 // Session 694: Removed 'learning' and 'activity' tabs - redundant with main Agents page
@@ -235,6 +240,9 @@ export default function IntelligencePage() {
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
   const queryClient = useQueryClient()
 
+  // Session 713: Body governance check for starting pilots
+  const { canStartPilot } = useBodyGovernance()
+
   // Core queries
   const { data: statusData, isLoading: loadingStatus } = useQuery({
     queryKey: ['intelligence-status'],
@@ -440,6 +448,9 @@ export default function IntelligencePage() {
 
   return (
     <div className="space-y-6">
+      {/* Session 713: Breadcrumb navigation */}
+      <CompactBreadcrumb currentPage="Intelligence" />
+
       {/* Command Center Header */}
       <div className="card bg-gradient-to-r from-primary-900/50 to-primary-800/30">
         <div className="flex items-center justify-between">
@@ -672,18 +683,38 @@ export default function IntelligencePage() {
                       </button>
                     )}
                     {/* approved + no running pilot → Start Pilot */}
+                    {/* Session 713: Check body governance before allowing pilot start */}
                     {gate.status === 'approved' && !gate.running_pilot && (
-                      <button
-                        className="btn btn-primary text-sm flex items-center gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          startPilotMutation.mutate(gate.id)
-                        }}
-                        disabled={isLoading}
-                      >
-                        {startPilotMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                        Start Pilot
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {!canStartPilot.allowed && (
+                          <span
+                            className="text-xs text-red-400 flex items-center gap-1"
+                            title={canStartPilot.reason}
+                          >
+                            <Heart size={12} className="animate-pulse" />
+                            Body Critical
+                          </span>
+                        )}
+                        <button
+                          className={cn(
+                            "btn text-sm flex items-center gap-1",
+                            canStartPilot.allowed ? "btn-primary" : "btn-secondary opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (canStartPilot.allowed) {
+                              startPilotMutation.mutate(gate.id)
+                            } else {
+                              setActionResult({ type: 'error', message: canStartPilot.reason || 'Body health critical - cannot start pilot' })
+                            }
+                          }}
+                          disabled={isLoading || !canStartPilot.allowed}
+                          title={canStartPilot.allowed ? 'Start pilot' : canStartPilot.reason}
+                        >
+                          {startPilotMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                          Start Pilot
+                        </button>
+                      </div>
                     )}
                     {/* approved + running pilot → Show pilot status */}
                     {gate.status === 'approved' && gate.running_pilot && (
@@ -1251,10 +1282,14 @@ export default function IntelligencePage() {
                   {/* Footer row */}
                   <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-border">
                     <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <Bot size={12} />
-                        {pred.agent_name || pred.source}
-                      </span>
+                      {/* Session 713: EntityLink for agent navigation */}
+                      <EntityLink
+                        type="agent"
+                        id={pred.agent_name || pred.source || ''}
+                        label={pred.agent_name || pred.source || 'Unknown'}
+                        iconSize={12}
+                        className="text-xs"
+                      />
                       <span className="flex items-center gap-1">
                         <Clock size={12} />
                         {pred.timeframe || 'quarter'}
@@ -1696,17 +1731,26 @@ export default function IntelligencePage() {
                           Mark Ready {gate.checklist_percentage < 100 && `(${Math.round(gate.checklist_percentage)}%)`}
                         </button>
                       )}
+                      {/* Session 713: Show body health warning on approve button */}
                       {gate.status === 'ready' && (
-                        <button
-                          onClick={async () => {
-                            approveGateMutation.mutate(gate.id)
-                            await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
-                          }}
-                          className="btn btn-primary flex items-center gap-2"
-                        >
-                          <CheckCircle size={16} />
-                          Approve & Start Pilot
-                        </button>
+                        <div className="flex flex-col items-end gap-2">
+                          {!canStartPilot.allowed && (
+                            <span className="text-xs text-amber-400 flex items-center gap-1">
+                              <Heart size={12} className="animate-pulse" />
+                              Warning: Body health may prevent pilot start
+                            </span>
+                          )}
+                          <button
+                            onClick={async () => {
+                              approveGateMutation.mutate(gate.id)
+                              await queryClient.refetchQueries({ queryKey: ['gate-detail', selectedGate] })
+                            }}
+                            className="btn btn-primary flex items-center gap-2"
+                          >
+                            <CheckCircle size={16} />
+                            Approve Gate
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2667,7 +2711,14 @@ export default function IntelligencePage() {
                 <div className="flex items-center gap-2">
                   <Brain size={18} className="text-primary-400" />
                   <span className="text-sm text-gray-400">Agent:</span>
-                  <span className="font-medium">{selectedPrediction.agent_name}</span>
+                  {/* Session 713: EntityLink for agent navigation */}
+                  <EntityLink
+                    type="agent"
+                    id={selectedPrediction.agent_name}
+                    label={selectedPrediction.agent_name}
+                    showIcon={false}
+                    className="font-medium"
+                  />
                 </div>
                 {selectedPrediction.agent_type && (
                   <span className="text-xs px-2 py-1 rounded bg-dark-bg text-gray-400">
