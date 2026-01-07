@@ -117,6 +117,8 @@ export const spidersApi = {
 export const pilotsApi = {
   dashboard: () => api.get('/pilots/dashboard/'),
   gates: () => api.get('/pilot-gates/'),  // List of gates, not dashboard
+  // Session 696: Pilot gates list with limit for Pilot Activity Modal
+  list: (limit = 50) => api.get(`/pilot-gates/?limit=${limit}`),
   progress: () => api.get('/pilots/progress/'),
   gateDetail: (gateId: string) => api.get(`/pilot-gates/${gateId}/`),
   updateGateStatus: (gateId: string, action: string, notes?: string) =>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, pilotsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
 import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -156,6 +156,50 @@ interface Decision {
   created_at: string
 }
 
+// Session 696: PilotGate interface for Pilot Activity Modal
+interface PilotChecklistItem {
+  id: string
+  item_type: string
+  title: string
+  description: string
+  status: 'pending' | 'completed'
+  is_required: boolean
+  generated_content: string | null
+  has_content: boolean
+}
+
+interface PilotLatency {
+  decision_to_readiness_hours: number | null
+  readiness_duration_hours: number | null
+  approval_wait_hours: number | null
+  total_gate_hours: number | null
+  pilot_duration_hours: number | null
+}
+
+interface PilotGate {
+  id: string
+  decision_id: string
+  decision_topic: string
+  decision_type: string
+  impact_area: string
+  status: 'not_started' | 'in_progress' | 'ready' | 'approved' | 'rejected'
+  risk_level: 'low' | 'medium' | 'high' | 'critical'
+  summary: string
+  checklist_total: number
+  checklist_completed: number
+  checklist_percentage: number
+  checklist_items: PilotChecklistItem[]
+  latency: PilotLatency
+  approved_by: string | null
+  created_at: string
+  running_pilot: {
+    id: string
+    name: string
+    status: string
+    started_at: string
+  } | null
+}
+
 interface Agent {
   name: string
   category: string
@@ -212,6 +256,8 @@ export default function AgentsPage() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   // Session 696: Decision Insights Panel state
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
+  // Session 696: Pilot Activity Modal state
+  const [selectedPilot, setSelectedPilot] = useState<PilotGate | null>(null)
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({
@@ -260,6 +306,14 @@ export default function AgentsPage() {
     refetchInterval: 60000,
   })
   const decisions: Decision[] = decisionsResponse?.data?.decisions || []
+
+  // Session 696: Pilots for Pilot Activity Modal
+  const { data: pilotsResponse } = useQuery({
+    queryKey: ['pilot-gates'],
+    queryFn: () => pilotsApi.list(50),
+    refetchInterval: 60000,
+  })
+  const pilots: PilotGate[] = pilotsResponse?.data?.gates || []
 
   // WebSocket connections
   const { status: agentWsStatus } = useAgentUpdates((update) => {
@@ -689,6 +743,12 @@ export default function AgentsPage() {
                     : null
                   const isDecisionClickable = activity.type === 'decision' && matchingDecision
 
+                  // Session 696: Find matching pilot for click handler
+                  const matchingPilot = activity.type === 'pilot' && activity.id
+                    ? pilots.find(p => p.id === activity.id)
+                    : null
+                  const isPilotClickable = activity.type === 'pilot' && matchingPilot
+
                   return (
                   <div
                     key={`activity-${activity.id || activity.timestamp}-${idx}`}
@@ -696,6 +756,7 @@ export default function AgentsPage() {
                       isDreamClickable ? () => setSelectedDream(matchingDream) :
                       isConversationClickable ? () => setSelectedConversation(matchingConversation) :
                       isDecisionClickable ? () => setSelectedDecision(matchingDecision) :
+                      isPilotClickable ? () => setSelectedPilot(matchingPilot) :
                       undefined
                     }
                     className={cn(
@@ -706,6 +767,8 @@ export default function AgentsPage() {
                         ? "hover:border-accent-cyan/50 cursor-pointer hover:bg-accent-cyan/5"
                         : isDecisionClickable
                         ? "hover:border-accent-amber/50 cursor-pointer hover:bg-accent-amber/5"
+                        : isPilotClickable
+                        ? "hover:border-accent-green/50 cursor-pointer hover:bg-accent-green/5"
                         : "hover:border-primary-500/50"
                     )}
                   >
@@ -745,6 +808,12 @@ export default function AgentsPage() {
                           <span className="text-xs text-accent-amber/60 flex items-center gap-1">
                             <Eye size={10} />
                             Click for insights
+                          </span>
+                        )}
+                        {isPilotClickable && (
+                          <span className="text-xs text-accent-green/60 flex items-center gap-1">
+                            <Eye size={10} />
+                            Click for details
                           </span>
                         )}
                         {/* Session 694: Show friendly timestamp */}
@@ -1537,6 +1606,242 @@ export default function AgentsPage() {
               </div>
               <button
                 onClick={() => setSelectedDecision(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 696: Pilot Activity Modal */}
+      {selectedPilot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-green/10 to-accent-cyan/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-2xl">🧪</span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedPilot.status === 'approved' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedPilot.status === 'ready' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                    selectedPilot.status === 'in_progress' ? 'bg-accent-amber/20 text-accent-amber' :
+                    selectedPilot.status === 'rejected' ? 'bg-accent-red/20 text-accent-red' :
+                    'bg-gray-500/20 text-gray-400'
+                  )}>
+                    {selectedPilot.status.replace('_', ' ')}
+                  </span>
+                  <span className={cn(
+                    'text-xs px-2 py-0.5 rounded capitalize',
+                    selectedPilot.risk_level === 'low' ? 'bg-accent-green/20 text-accent-green' :
+                    selectedPilot.risk_level === 'medium' ? 'bg-accent-amber/20 text-accent-amber' :
+                    selectedPilot.risk_level === 'high' ? 'bg-orange-500/20 text-orange-500' :
+                    'bg-accent-red/20 text-accent-red'
+                  )}>
+                    {selectedPilot.risk_level} risk
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-accent-blue/20 text-accent-blue capitalize">
+                    {selectedPilot.decision_type}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white">{selectedPilot.decision_topic}</h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedPilot.created_at, 'full')}</span>
+                  {selectedPilot.approved_by && (
+                    <>
+                      <span className="text-gray-600">•</span>
+                      <span>Approved by: {selectedPilot.approved_by}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPilot(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="px-6 py-4 border-b border-dark-border bg-dark-hover/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Checklist Progress</span>
+                <span className="text-sm font-medium">
+                  {selectedPilot.checklist_completed}/{selectedPilot.checklist_total} ({Math.round(selectedPilot.checklist_percentage)}%)
+                </span>
+              </div>
+              <div className="h-2 bg-dark-card rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full transition-all",
+                    selectedPilot.checklist_percentage === 100
+                      ? "bg-gradient-to-r from-accent-green to-accent-cyan"
+                      : "bg-gradient-to-r from-accent-amber to-accent-green"
+                  )}
+                  style={{ width: `${selectedPilot.checklist_percentage}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[50vh] space-y-6">
+              {/* Summary */}
+              {selectedPilot.summary && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                    <MessageSquare size={14} />
+                    Summary
+                  </h3>
+                  <div className="bg-dark-hover rounded-lg p-4 text-gray-200 text-sm leading-relaxed">
+                    {selectedPilot.summary}
+                  </div>
+                </div>
+              )}
+
+              {/* Running Pilot Info */}
+              {selectedPilot.running_pilot && (
+                <div className="bg-accent-green/5 border border-accent-green/20 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-accent-green mb-2 flex items-center gap-2">
+                    <Activity size={14} />
+                    Running Pilot
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Name:</span>
+                      <span className="ml-2 text-gray-200">{selectedPilot.running_pilot.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <span className="ml-2 text-gray-200 capitalize">{selectedPilot.running_pilot.status}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Started:</span>
+                      <span className="ml-2 text-gray-200">{formatTimestamp(selectedPilot.running_pilot.started_at, 'full')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Latency Metrics */}
+              {selectedPilot.latency && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                    <Clock size={14} />
+                    Pipeline Latency
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {selectedPilot.latency.decision_to_readiness_hours !== null && (
+                      <div className="bg-dark-hover rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-accent-cyan">
+                          {selectedPilot.latency.decision_to_readiness_hours.toFixed(1)}h
+                        </div>
+                        <div className="text-xs text-gray-500">Decision → Ready</div>
+                      </div>
+                    )}
+                    {selectedPilot.latency.approval_wait_hours !== null && (
+                      <div className="bg-dark-hover rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-accent-amber">
+                          {selectedPilot.latency.approval_wait_hours.toFixed(1)}h
+                        </div>
+                        <div className="text-xs text-gray-500">Approval Wait</div>
+                      </div>
+                    )}
+                    {selectedPilot.latency.total_gate_hours !== null && (
+                      <div className="bg-dark-hover rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-accent-green">
+                          {selectedPilot.latency.total_gate_hours.toFixed(1)}h
+                        </div>
+                        <div className="text-xs text-gray-500">Total Gate Time</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Checklist Items */}
+              {selectedPilot.checklist_items && selectedPilot.checklist_items.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                    <CheckCircle size={14} />
+                    Checklist Items
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedPilot.checklist_items.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        className={cn(
+                          "p-3 rounded-lg border transition-colors",
+                          item.status === 'completed'
+                            ? "border-accent-green/30 bg-accent-green/5"
+                            : "border-dark-border bg-dark-hover"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={cn(
+                            "h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
+                            item.status === 'completed'
+                              ? "bg-accent-green/20 text-accent-green"
+                              : "bg-dark-card text-gray-500"
+                          )}>
+                            {item.status === 'completed' ? (
+                              <CheckCircle size={12} />
+                            ) : (
+                              <span className="text-xs">{idx + 1}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                "font-medium text-sm",
+                                item.status === 'completed' ? "text-accent-green" : "text-gray-200"
+                              )}>
+                                {item.title}
+                              </span>
+                              {item.is_required && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent-red/20 text-accent-red">
+                                  Required
+                                </span>
+                              )}
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-dark-card text-gray-400 capitalize">
+                                {item.item_type.replace('_', ' ')}
+                              </span>
+                            </div>
+                            {item.description && (
+                              <p className="text-xs text-gray-400 mt-1">{item.description}</p>
+                            )}
+                            {item.has_content && item.generated_content && (
+                              <details className="mt-2">
+                                <summary className="text-xs text-accent-cyan cursor-pointer hover:text-accent-cyan/80">
+                                  View AI-generated content
+                                </summary>
+                                <div className="mt-2 p-3 bg-dark-card rounded text-xs text-gray-300 whitespace-pre-wrap max-h-40 overflow-auto">
+                                  {item.generated_content}
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>Gate ID: {selectedPilot.id.slice(0, 8)}...</span>
+                <span className="text-gray-600">•</span>
+                <span>Impact: {selectedPilot.impact_area}</span>
+              </div>
+              <button
+                onClick={() => setSelectedPilot(null)}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
