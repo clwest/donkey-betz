@@ -15,7 +15,7 @@ import {
   Heart, Wind, Droplets, Bone, Shield, Apple, Dumbbell,
   AlertTriangle, CheckCircle, XCircle, Activity, RefreshCw,
   Info, Clock, X, Zap, Server, Database, Cpu, DollarSign,
-  Users, Lock, GitBranch, Gauge, BarChart3, Timer
+  Users, GitBranch, Gauge, BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -388,57 +388,85 @@ function HeartDetailView() {
 
   return (
     <div className="space-y-4">
-      {/* Components Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {status?.components?.components && Object.entries(status.components.components).map(([name, comp]: [string, any]) => (
-          <div key={name} className="bg-zinc-800/50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              {name === 'brain' && <Cpu className="w-4 h-4 text-purple-400" />}
-              {name === 'memory' && <Database className="w-4 h-4 text-blue-400" />}
-              {name === 'nervous_system' && <Zap className="w-4 h-4 text-yellow-400" />}
-              {name === 'organs' && <Users className="w-4 h-4 text-green-400" />}
-              {name === 'sensory' && <Activity className="w-4 h-4 text-pink-400" />}
-              {name === 'skin' && <Server className="w-4 h-4 text-cyan-400" />}
-              {!['brain', 'memory', 'nervous_system', 'organs', 'sensory', 'skin'].includes(name) && <Activity className="w-4 h-4 text-zinc-400" />}
-              <span className="text-sm font-medium text-zinc-300 capitalize">{name.replace('_', ' ')}</span>
+      {/* Summary Stats */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_alive ? 'text-green-400' : 'text-red-400'
+            )}>
+              {status?.is_alive ? 'ALIVE' : 'DOWN'}
             </div>
-            <div className="flex items-center justify-between">
-              <span className={cn(
-                'text-sm capitalize',
-                comp?.status === 'healthy' || comp?.status === 'connected' ? 'text-green-500' :
-                comp?.status === 'degraded' ? 'text-yellow-500' : 'text-red-500'
-              )}>
-                {comp?.status || 'unknown'}
-              </span>
-              {(comp?.response_time_ms !== undefined || comp?.latency_ms !== undefined) && (
-                <span className="text-xs text-zinc-500">{comp.response_time_ms ?? comp.latency_ms}ms</span>
-              )}
-            </div>
+            <div className="text-xs text-zinc-500">Status</div>
           </div>
-        ))}
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.health_score || 0) >= 80 ? 'text-green-400' :
+              (status?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.health_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Health Score</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {status?.components?.components_healthy || 0}/{status?.components?.components_checked || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Components OK</div>
+          </div>
+        </div>
+        {status?.last_check && (
+          <div className="mt-3 text-center text-xs text-zinc-500">
+            Last check: {new Date(status.last_check).toLocaleString()}
+          </div>
+        )}
       </div>
 
-      {/* Health Score */}
+      {/* Components Grid */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zinc-400">Health Score</span>
-          <span className={cn(
-            'text-lg font-bold',
-            (status?.health_score || 0) >= 80 ? 'text-green-500' :
-            (status?.health_score || 0) >= 50 ? 'text-yellow-500' : 'text-red-500'
-          )}>
-            {status?.health_score?.toFixed(1) || 0}%
-          </span>
-        </div>
-        <div className="mt-2 h-2 bg-zinc-700 rounded-full overflow-hidden">
-          <div
-            className={cn(
-              'h-full rounded-full',
-              (status?.health_score || 0) >= 80 ? 'bg-green-500' :
-              (status?.health_score || 0) >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-            )}
-            style={{ width: `${status?.health_score || 0}%` }}
-          />
+        <h3 className="text-sm font-medium text-zinc-300 mb-3">System Components</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {status?.components?.components && Object.entries(status.components.components).map(([name, comp]: [string, any]) => (
+            <div key={name} className="bg-zinc-900/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {name === 'brain' && <Cpu className="w-4 h-4 text-purple-400" />}
+                  {name === 'memory' && <Database className="w-4 h-4 text-blue-400" />}
+                  {name === 'nervous_system' && <Zap className="w-4 h-4 text-yellow-400" />}
+                  {name === 'organs' && <Users className="w-4 h-4 text-green-400" />}
+                  {name === 'sensory' && <Activity className="w-4 h-4 text-pink-400" />}
+                  {name === 'skin' && <Server className="w-4 h-4 text-cyan-400" />}
+                  {!['brain', 'memory', 'nervous_system', 'organs', 'sensory', 'skin'].includes(name) && <Activity className="w-4 h-4 text-zinc-400" />}
+                  <span className="text-sm font-medium text-zinc-300">{comp?.name || name.replace('_', ' ')}</span>
+                </div>
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  comp?.status === 'healthy' || comp?.status === 'connected' ? 'bg-green-500/20 text-green-400' :
+                  comp?.status === 'degraded' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
+                )}>
+                  {comp?.status || 'unknown'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-zinc-500">
+                <span>{comp?.response_time_ms ?? 0}ms response</span>
+                <span>{comp?.uptime_percent_24h?.toFixed(1) || 100}% uptime (24h)</span>
+              </div>
+              {/* Component Details */}
+              {comp?.details && (
+                <div className="mt-2 pt-2 border-t border-zinc-700/50">
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(comp.details).map(([key, value]) => (
+                      <span key={key} className="text-xs px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">
+                        {key}: {typeof value === 'object' && value !== null ? (Array.isArray(value) ? value.length : Object.keys(value).length) : String(value ?? 'null')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -591,49 +619,119 @@ function CirculatoryDetailView() {
 
   if (isLoading) return <DetailLoading />
 
+  // Count route stats
+  const routes = status?.routes ? Object.entries(status.routes) : []
+  const healthyRoutes = routes.filter(([_, r]: [string, any]) => r?.is_healthy).length
+  const congestedRoutes = routes.filter(([_, r]: [string, any]) => r?.status === 'congested').length
+
   return (
     <div className="space-y-4">
-      {/* Flow Status */}
+      {/* Flow Status Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-            <GitBranch className="w-4 h-4" />
-            Data Flow Status
-          </h3>
-          <span className={cn(
-            'px-2 py-1 rounded text-xs font-medium',
-            status?.is_flowing ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-          )}>
-            {status?.is_flowing ? 'Flowing' : 'Blocked'}
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-pink-400">
-          {status?.overall_score?.toFixed(1) || 0}% Health
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_flowing ? 'text-green-400' : 'text-red-400'
+            )}>
+              {status?.is_flowing ? 'FLOWING' : 'BLOCKED'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.overall_score || 0) >= 80 ? 'text-green-400' :
+              (status?.overall_score || 0) >= 60 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.overall_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Health Score</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {healthyRoutes}/{routes.length}
+            </div>
+            <div className="text-xs text-zinc-500">Routes Healthy</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              congestedRoutes > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {congestedRoutes}
+            </div>
+            <div className="text-xs text-zinc-500">Congested</div>
+          </div>
         </div>
       </div>
 
-      {/* Routes */}
+      {/* All Routes - Full Details */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-zinc-300 mb-3">Active Routes</h3>
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <GitBranch className="w-4 h-4" />
+          All Data Routes ({routes.length})
+        </h3>
         <div className="space-y-2">
-          {status?.routes && Object.entries(status.routes).slice(0, 5).map(([name, route]: [string, any]) => (
-            <div key={name} className="flex items-center justify-between py-1 border-b border-zinc-700/50 last:border-0">
-              <span className="text-sm text-zinc-400">{route?.display_name || name}</span>
-              <div className="flex items-center gap-2">
+          {routes.map(([name, route]: [string, any]) => (
+            <div
+              key={name}
+              className={cn(
+                'p-3 rounded-lg border',
+                route?.status === 'congested' ? 'bg-yellow-500/5 border-yellow-500/30' :
+                !route?.is_healthy ? 'bg-red-500/5 border-red-500/30' :
+                'bg-zinc-900/50 border-zinc-700/50'
+              )}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-zinc-300">{route?.display_name || name}</span>
                 <span className={cn(
-                  'text-xs capitalize',
-                  route?.status === 'healthy' || route?.status === 'flowing' ? 'text-green-500' :
-                  route?.status === 'slow' ? 'text-yellow-500' : 'text-red-500'
+                  'px-2 py-0.5 rounded text-xs font-medium capitalize',
+                  route?.status === 'flowing' ? 'bg-green-500/20 text-green-400' :
+                  route?.status === 'congested' ? 'bg-yellow-500/20 text-yellow-400' :
+                  route?.status === 'slow' ? 'bg-orange-500/20 text-orange-400' :
+                  'bg-red-500/20 text-red-400'
                 )}>
                   {route?.status || 'unknown'}
                 </span>
-                {route?.latency_ms !== undefined && (
-                  <span className="text-xs text-zinc-500">{route.latency_ms}ms</span>
-                )}
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <div>
+                  <span className="text-zinc-500">Depth:</span>
+                  <span className={cn(
+                    'ml-1 font-medium',
+                    (route?.current_depth || 0) > 100 ? 'text-yellow-400' : 'text-zinc-300'
+                  )}>
+                    {route?.current_depth?.toLocaleString() || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Health:</span>
+                  <span className={cn(
+                    'ml-1 font-medium',
+                    (route?.health_score || 0) >= 80 ? 'text-green-400' :
+                    (route?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+                  )}>
+                    {route?.health_score?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Throughput:</span>
+                  <span className="ml-1 text-zinc-300">{route?.throughput?.toFixed(1) || 0}/s</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Latency:</span>
+                  <span className={cn(
+                    'ml-1 font-medium',
+                    (route?.latency_ms || 0) > 100 ? 'text-yellow-400' : 'text-zinc-300'
+                  )}>
+                    {route?.latency_ms?.toFixed(2) || 0}ms
+                  </span>
+                </div>
               </div>
             </div>
           ))}
-          {(!status?.routes || Object.keys(status.routes).length === 0) && (
+          {routes.length === 0 && (
             <p className="text-sm text-zinc-500">No routes configured</p>
           )}
         </div>
@@ -653,53 +751,139 @@ function SpineDetailView() {
 
   if (isLoading) return <DetailLoading />
 
+  const categories = status?.category_health ? Object.entries(status.category_health) : []
+
   return (
     <div className="space-y-4">
-      {/* Alignment Status */}
+      {/* Alignment Status Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-zinc-300">Spine Alignment</h3>
-          <span className={cn(
-            'px-2 py-1 rounded text-xs font-medium',
-            status?.is_aligned ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-          )}>
-            {status?.is_aligned ? 'Aligned' : 'Misaligned'}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-300">{status?.total_patterns || 0}</div>
-            <div className="text-xs text-zinc-500">Total Patterns</div>
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_aligned ? 'text-green-400' : 'text-red-400'
+            )}>
+              {status?.is_aligned ? 'ALIGNED' : 'MISALIGNED'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{status?.healthy_patterns || 0}</div>
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.health_score || 0) >= 80 ? 'text-green-400' :
+              (status?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.health_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Health Score</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {status?.healthy_patterns || 0}/{status?.total_patterns || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Patterns OK</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Route Status */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3">Route Status</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.routes_blocked || 0) > 0 ? 'text-red-400' : 'text-green-400'
+            )}>
+              {status?.routes_blocked || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Blocked</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.routes_rate_limited || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.routes_rate_limited || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Rate Limited</div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.fallbacks_active || 0) > 0 ? 'text-orange-400' : 'text-green-400'
+            )}>
+              {status?.fallbacks_active || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Fallbacks Active</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pattern Status */}
+      <div className="bg-zinc-800/50 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3">Pattern Health</h3>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-xl font-bold text-gray-300">{status?.total_patterns || 0}</div>
+            <div className="text-xs text-zinc-500">Total</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-green-400">{status?.healthy_patterns || 0}</div>
             <div className="text-xs text-zinc-500">Healthy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">{status?.degraded_patterns || 0}</div>
+            <div className="text-xl font-bold text-yellow-400">{status?.degraded_patterns || 0}</div>
             <div className="text-xs text-zinc-500">Degraded</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{status?.failed_patterns || 0}</div>
+            <div className="text-xl font-bold text-red-400">{status?.failed_patterns || 0}</div>
             <div className="text-xs text-zinc-500">Failed</div>
           </div>
         </div>
       </div>
 
+      {/* Category Health */}
+      {categories.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3">Category Health ({categories.length})</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {categories.map(([name, cat]: [string, any]) => (
+              <div key={name} className="bg-zinc-900/50 rounded-lg p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400 capitalize">{name}</span>
+                  <span className={cn(
+                    'text-xs font-medium',
+                    (cat?.health_score || 0) >= 80 ? 'text-green-400' :
+                    (cat?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+                  )}>
+                    {cat?.health_score?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">
+                  {cat?.pattern_count || 0} patterns
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Integration Status */}
       {status?.integrations && (
         <div className="bg-zinc-800/50 rounded-lg p-4">
           <h3 className="text-sm font-medium text-zinc-300 mb-3">Body Integrations</h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-4">
             {Object.entries(status.integrations).map(([name, state]) => (
-              <div key={name} className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400 capitalize">{name}</span>
-                <span className={cn(
-                  'text-sm capitalize',
-                  state === 'connected' || state === 'healthy' ? 'text-green-500' : 'text-red-500'
+              <div key={name} className="bg-zinc-900/50 rounded-lg p-3 text-center">
+                <div className={cn(
+                  'text-sm font-medium capitalize',
+                  state === 'connected' || state === 'healthy' || state === 'flowing' || state === 'normal'
+                    ? 'text-green-400' : 'text-red-400'
                 )}>
                   {String(state)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 capitalize mt-1">{name}</div>
               </div>
             ))}
           </div>
@@ -720,52 +904,151 @@ function ImmuneDetailView() {
 
   if (isLoading) return <DetailLoading />
 
+  const threatCategories = status?.threats_by_category ? Object.entries(status.threats_by_category) : []
+  const threatSeverities = status?.threats_by_severity ? Object.entries(status.threats_by_severity) : []
+
   return (
     <div className="space-y-4">
-      {/* Threat Level */}
+      {/* Threat Level Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-            <Lock className="w-4 h-4" />
-            Threat Level
-          </h3>
-          <span className={cn(
-            'px-2 py-1 rounded text-xs font-medium uppercase',
-            status?.threat_level === 'none' || status?.threat_level === 'low' ? 'bg-green-500/20 text-green-400' :
-            status?.threat_level === 'elevated' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'
-          )}>
-            {status?.threat_level || 'unknown'}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{status?.health_score?.toFixed(0) || 0}%</div>
-            <div className="text-xs text-zinc-500">Immune Health</div>
+            <div className={cn(
+              'text-2xl font-bold uppercase',
+              status?.threat_level === 'none' ? 'text-green-400' :
+              status?.threat_level === 'low' ? 'text-blue-400' :
+              status?.threat_level === 'elevated' ? 'text-yellow-400' :
+              status?.threat_level === 'high' ? 'text-orange-400' : 'text-red-400'
+            )}>
+              {status?.threat_level || 'unknown'}
+            </div>
+            <div className="text-xs text-zinc-500">Threat Level</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{status?.active_threats || 0}</div>
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.health_score || 0) >= 80 ? 'text-green-400' :
+              (status?.health_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.health_score?.toFixed(0) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Health Score</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.active_threats || 0) > 0 ? 'text-red-400' : 'text-green-400'
+            )}>
+              {status?.active_threats || 0}
+            </div>
             <div className="text-xs text-zinc-500">Active Threats</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.threats_detected_24h || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.threats_detected_24h || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Threats (24h)</div>
           </div>
         </div>
       </div>
+
+      {/* Defense Patterns */}
+      {status?.patterns && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Defense Patterns
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-blue-400">{status.patterns.active || 0}</div>
+              <div className="text-xs text-zinc-500">Active Patterns</div>
+            </div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className={cn(
+                'text-xl font-bold',
+                (status.patterns.triggered_24h || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+              )}>
+                {status.patterns.triggered_24h || 0}
+              </div>
+              <div className="text-xs text-zinc-500">Triggered (24h)</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quarantine */}
       {status?.quarantine && (
         <div className="bg-zinc-800/50 rounded-lg p-4">
           <h3 className="text-sm font-medium text-zinc-300 mb-3">Quarantine Status</h3>
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-xl font-bold text-zinc-300">{status.quarantine.total || 0}</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className={cn(
+                'text-xl font-bold',
+                (status.quarantine.total || 0) > 0 ? 'text-orange-400' : 'text-green-400'
+              )}>
+                {status.quarantine.total || 0}
+              </div>
               <div className="text-xs text-zinc-500">Total</div>
             </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-orange-400">{status.quarantine.ips || 0}</div>
-              <div className="text-xs text-zinc-500">IPs</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className={cn(
+                'text-xl font-bold',
+                (status.quarantine.ips || 0) > 0 ? 'text-red-400' : 'text-green-400'
+              )}>
+                {status.quarantine.ips || 0}
+              </div>
+              <div className="text-xs text-zinc-500">Blocked IPs</div>
             </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-purple-400">{status.quarantine.users || 0}</div>
-              <div className="text-xs text-zinc-500">Users</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className={cn(
+                'text-xl font-bold',
+                (status.quarantine.users || 0) > 0 ? 'text-purple-400' : 'text-green-400'
+              )}>
+                {status.quarantine.users || 0}
+              </div>
+              <div className="text-xs text-zinc-500">Blocked Users</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Threats by Category */}
+      {threatCategories.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3">Threats by Category</h3>
+          <div className="space-y-2">
+            {threatCategories.map(([category, count]) => (
+              <div key={category} className="flex items-center justify-between">
+                <span className="text-sm text-zinc-400 capitalize">{category.replace('_', ' ')}</span>
+                <span className="text-sm font-medium text-red-400">{String(count)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Threats by Severity */}
+      {threatSeverities.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3">Threats by Severity</h3>
+          <div className="grid grid-cols-4 gap-2">
+            {threatSeverities.map(([severity, count]) => (
+              <div key={severity} className="bg-zinc-900/50 rounded-lg p-2 text-center">
+                <div className={cn(
+                  'text-lg font-bold',
+                  severity === 'critical' ? 'text-red-400' :
+                  severity === 'high' ? 'text-orange-400' :
+                  severity === 'medium' ? 'text-yellow-400' : 'text-blue-400'
+                )}>
+                  {String(count)}
+                </div>
+                <div className="text-xs text-zinc-500 capitalize">{severity}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -784,24 +1067,53 @@ function DigestiveDetailView() {
 
   if (isLoading) return <DetailLoading />
 
+  const bottlenecks = status?.bottlenecks || []
+
   return (
     <div className="space-y-4">
-      {/* Digestion Score */}
+      {/* Digestion Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-zinc-300">Digestion Status</h3>
-          <span className={cn(
-            'px-2 py-1 rounded text-xs font-medium',
-            status?.is_digesting ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-          )}>
-            {status?.is_digesting ? 'Active' : 'Idle'}
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-orange-400 mb-2">
-          {status?.digestion_score?.toFixed(1) || 0}% Efficiency
-        </div>
-        <div className="text-sm text-zinc-500">
-          {status?.items_pending || 0} items pending in queue
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold uppercase',
+              status?.overall_status === 'healthy' ? 'text-green-400' :
+              status?.overall_status === 'sluggish' ? 'text-yellow-400' :
+              status?.overall_status === 'bloated' ? 'text-orange-400' : 'text-red-400'
+            )}>
+              {status?.overall_status || 'unknown'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.digestion_score || 0) >= 80 ? 'text-green-400' :
+              (status?.digestion_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.digestion_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Efficiency</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              status?.is_digesting ? 'text-green-400' : 'text-yellow-400'
+            )}>
+              {status?.is_digesting ? 'ACTIVE' : 'IDLE'}
+            </div>
+            <div className="text-xs text-zinc-500">Processing</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.items_pending || 0) > 100 ? 'text-red-400' :
+              (status?.items_pending || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.items_pending || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Pending</div>
+          </div>
         </div>
       </div>
 
@@ -809,17 +1121,17 @@ function DigestiveDetailView() {
       {status?.stages && (
         <div className="bg-zinc-800/50 rounded-lg p-4">
           <h3 className="text-sm font-medium text-zinc-300 mb-3">Pipeline Stages</h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2">
             {Object.entries(status.stages).map(([stage, state]) => (
-              <div key={stage} className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400 capitalize">{stage}</span>
-                <span className={cn(
-                  'text-sm capitalize',
-                  state === 'healthy' || state === 'active' ? 'text-green-500' :
-                  state === 'slow' || state === 'idle' ? 'text-yellow-500' : 'text-red-500'
+              <div key={stage} className="bg-zinc-900/50 rounded-lg p-3 text-center">
+                <div className={cn(
+                  'text-sm font-medium capitalize',
+                  state === 'healthy' || state === 'active' ? 'text-green-400' :
+                  state === 'sluggish' || state === 'slow' || state === 'idle' ? 'text-yellow-400' : 'text-red-400'
                 )}>
                   {String(state)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 capitalize mt-1">{stage}</div>
               </div>
             ))}
           </div>
@@ -834,18 +1146,67 @@ function DigestiveDetailView() {
             Metabolism Rates
           </h3>
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-xl font-bold text-blue-400">{status.metabolism.intake_rate || 0}/min</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-blue-400">
+                {typeof status.metabolism.intake_rate === 'number'
+                  ? status.metabolism.intake_rate.toFixed(1)
+                  : 0}/min
+              </div>
               <div className="text-xs text-zinc-500">Intake</div>
             </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-orange-400">{status.metabolism.processing_rate || 0}/min</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-orange-400">
+                {typeof status.metabolism.processing_rate === 'number'
+                  ? status.metabolism.processing_rate.toFixed(1)
+                  : 0}/min
+              </div>
               <div className="text-xs text-zinc-500">Processing</div>
             </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-green-400">{status.metabolism.output_rate || 0}/min</div>
+            <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+              <div className="text-xl font-bold text-green-400">
+                {typeof status.metabolism.output_rate === 'number'
+                  ? status.metabolism.output_rate.toFixed(1)
+                  : 0}/min
+              </div>
               <div className="text-xs text-zinc-500">Output</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottlenecks */}
+      {bottlenecks.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+            Bottlenecks Detected ({bottlenecks.length})
+          </h3>
+          <div className="space-y-2">
+            {bottlenecks.map((bottleneck: any, idx: number) => (
+              <div
+                key={idx}
+                className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-yellow-400">
+                    {bottleneck.stage || bottleneck.name || `Bottleneck ${idx + 1}`}
+                  </span>
+                  {bottleneck.severity && (
+                    <span className={cn(
+                      'px-2 py-0.5 rounded text-xs',
+                      bottleneck.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                      bottleneck.severity === 'medium' ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-yellow-500/20 text-yellow-400'
+                    )}>
+                      {bottleneck.severity}
+                    </span>
+                  )}
+                </div>
+                {bottleneck.message && (
+                  <p className="text-xs text-zinc-400 mt-1">{bottleneck.message}</p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -864,63 +1225,163 @@ function MuscularDetailView() {
 
   if (isLoading) return <DetailLoading />
 
+  const weakMuscles = status?.weak_muscles || []
+  const overworkedMuscles = status?.overworked_muscles || []
+
   return (
     <div className="space-y-4">
-      {/* Strength Score */}
+      {/* Strength Summary */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Agent Execution
-          </h3>
-          <span className={cn(
-            'px-2 py-1 rounded text-xs font-medium',
-            status?.is_strong ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-          )}>
-            {status?.is_strong ? 'Strong' : 'Fatigued'}
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-purple-400 mb-2">
-          {status?.strength_score?.toFixed(1) || 0}% Strength
-        </div>
-        <div className="text-sm text-zinc-500">
-          {status?.success_rate_24h?.toFixed(1) || 0}% success rate (24h)
+        <div className="grid grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold uppercase',
+              status?.overall_status === 'strong' ? 'text-green-400' :
+              status?.overall_status === 'fit' ? 'text-blue-400' :
+              status?.overall_status === 'fatigued' ? 'text-yellow-400' :
+              status?.overall_status === 'strained' ? 'text-orange-400' : 'text-red-400'
+            )}>
+              {status?.overall_status || 'unknown'}
+            </div>
+            <div className="text-xs text-zinc-500">Status</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.strength_score || 0) >= 80 ? 'text-green-400' :
+              (status?.strength_score || 0) >= 50 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.strength_score?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Strength</div>
+          </div>
+          <div className="text-center">
+            <div className={cn(
+              'text-2xl font-bold',
+              (status?.success_rate_24h || 0) >= 90 ? 'text-green-400' :
+              (status?.success_rate_24h || 0) >= 70 ? 'text-yellow-400' : 'text-red-400'
+            )}>
+              {status?.success_rate_24h?.toFixed(1) || 0}%
+            </div>
+            <div className="text-xs text-zinc-500">Success Rate</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {status?.total_executions_24h?.toLocaleString() || 0}
+            </div>
+            <div className="text-xs text-zinc-500">Executions (24h)</div>
+          </div>
         </div>
       </div>
 
       {/* Agent Stats */}
       <div className="bg-zinc-800/50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-zinc-300 mb-3">Agent Statistics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
+        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          Agent Statistics
+        </h3>
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
             <div className="text-xl font-bold text-zinc-300">{status?.total_agents || 0}</div>
             <div className="text-xs text-zinc-500">Total</div>
           </div>
-          <div className="text-center">
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
             <div className="text-xl font-bold text-green-400">{status?.active_agents || 0}</div>
             <div className="text-xs text-zinc-500">Active</div>
           </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-yellow-400">{status?.fatigued_agents || 0}</div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.fatigued_agents || 0) > 0 ? 'text-yellow-400' : 'text-green-400'
+            )}>
+              {status?.fatigued_agents || 0}
+            </div>
             <div className="text-xs text-zinc-500">Fatigued</div>
           </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-red-400">{status?.strained_agents || 0}</div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+            <div className={cn(
+              'text-xl font-bold',
+              (status?.strained_agents || 0) > 0 ? 'text-red-400' : 'text-green-400'
+            )}>
+              {status?.strained_agents || 0}
+            </div>
             <div className="text-xs text-zinc-500">Strained</div>
           </div>
         </div>
       </div>
 
-      {/* Executions */}
-      <div className="bg-zinc-800/50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
-          <Timer className="w-4 h-4" />
-          24h Executions
-        </h3>
-        <div className="text-2xl font-bold text-zinc-300">
-          {status?.total_executions_24h?.toLocaleString() || 0}
+      {/* Weak Muscles */}
+      {weakMuscles.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+            Weak Muscles ({weakMuscles.length})
+          </h3>
+          <div className="space-y-2">
+            {weakMuscles.map((muscle: any, idx: number) => (
+              <div
+                key={idx}
+                className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-yellow-400">
+                    {muscle.agent || muscle.name || `Agent ${idx + 1}`}
+                  </span>
+                  {muscle.success_rate !== undefined && (
+                    <span className="text-xs text-zinc-400">
+                      {muscle.success_rate?.toFixed(1)}% success rate
+                    </span>
+                  )}
+                </div>
+                {muscle.issue && (
+                  <p className="text-xs text-zinc-400 mt-1">{muscle.issue}</p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Overworked Muscles */}
+      {overworkedMuscles.length > 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-400" />
+            Overworked Muscles ({overworkedMuscles.length})
+          </h3>
+          <div className="space-y-2">
+            {overworkedMuscles.map((muscle: any, idx: number) => (
+              <div
+                key={idx}
+                className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-orange-400">
+                    {muscle.agent || muscle.name || `Agent ${idx + 1}`}
+                  </span>
+                  {muscle.executions_24h !== undefined && (
+                    <span className="text-xs text-zinc-400">
+                      {muscle.executions_24h?.toLocaleString()} executions
+                    </span>
+                  )}
+                </div>
+                {muscle.issue && (
+                  <p className="text-xs text-zinc-400 mt-1">{muscle.issue}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All Good Message */}
+      {weakMuscles.length === 0 && overworkedMuscles.length === 0 && (
+        <div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+          <p className="text-sm text-zinc-400">All agents performing well</p>
+          <p className="text-xs text-zinc-500">No weak or overworked muscles detected</p>
+        </div>
+      )}
     </div>
   )
 }
