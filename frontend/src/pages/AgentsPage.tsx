@@ -243,6 +243,8 @@ export default function AgentsPage() {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
   // Session 696: Experiment Modal state (for "pilot" activities)
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null)
+  // Session 697: Knowledge Transfer Modal state
+  const [selectedTransfer, setSelectedTransfer] = useState<LearningFeedItem | null>(null)
 
   // REST API queries - use comprehensive endpoint
   const { data: agentsResponse, isLoading } = useQuery<{ data: AgentsResponse }>({
@@ -1014,11 +1016,12 @@ export default function AgentsPage() {
                   return (
                     <div
                       key={`transfer-${transfer.id || idx}`}
+                      onClick={() => setSelectedTransfer(transfer)}
                       className={cn(
-                        "p-4 rounded-lg border transition-colors",
+                        "p-4 rounded-lg border transition-colors cursor-pointer group",
                         transfer.was_useful
-                          ? "border-accent-green/30 bg-accent-green/5 hover:border-accent-green/50"
-                          : "border-dark-border hover:border-accent-cyan/50"
+                          ? "border-accent-green/30 bg-accent-green/5 hover:border-accent-green/50 hover:bg-accent-green/10"
+                          : "border-dark-border hover:border-accent-cyan/50 hover:bg-accent-cyan/5"
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -1090,6 +1093,10 @@ export default function AgentsPage() {
                             <span className="flex items-center gap-1">
                               <Clock size={12} />
                               {formatTimestamp(transfer.timestamp, 'full')}
+                            </span>
+                            <span className="flex items-center gap-1 ml-auto text-accent-cyan opacity-60 group-hover:opacity-100">
+                              <Eye size={12} />
+                              Details
                             </span>
                           </div>
                         </div>
@@ -1778,6 +1785,200 @@ export default function AgentsPage() {
               </div>
               <button
                 onClick={() => setSelectedExperiment(null)}
+                className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 697: Knowledge Transfer Modal */}
+      {selectedTransfer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className={cn(
+              "flex items-start justify-between p-6 border-b border-dark-border",
+              selectedTransfer.was_useful
+                ? "bg-gradient-to-r from-accent-green/10 to-accent-cyan/10"
+                : "bg-gradient-to-r from-accent-cyan/10 to-accent-purple/10"
+            )}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-2xl">🧠</span>
+                  {selectedTransfer.was_useful !== undefined && (
+                    <span className={cn(
+                      'text-xs px-2 py-0.5 rounded flex items-center gap-1',
+                      selectedTransfer.was_useful
+                        ? 'bg-accent-green/20 text-accent-green'
+                        : 'bg-gray-500/20 text-gray-400'
+                    )}>
+                      <ThumbsUp size={10} />
+                      {selectedTransfer.was_useful ? 'Useful Transfer' : 'Low Impact'}
+                    </span>
+                  )}
+                  {selectedTransfer.knowledge_full?.knowledge_type && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-purple/20 text-accent-purple capitalize">
+                      {selectedTransfer.knowledge_full.knowledge_type}
+                    </span>
+                  )}
+                  {selectedTransfer.effectiveness_gain !== undefined && selectedTransfer.effectiveness_gain > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber flex items-center gap-1">
+                      <TrendingUp size={10} />
+                      +{(selectedTransfer.effectiveness_gain * 100).toFixed(1)}% effectiveness
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold text-white">
+                  {selectedTransfer.knowledge_full?.title?.replace(/^\[Learned\]\s*/g, '') || 'Knowledge Transfer'}
+                </h2>
+                <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                  <Clock size={14} />
+                  <span>{formatTimestamp(selectedTransfer.timestamp, 'full')}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTransfer(null)}
+                className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+              {/* Transfer Direction */}
+              <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-dark-hover/50">
+                <div className="text-center">
+                  <div className="h-12 w-12 rounded-full bg-accent-cyan/20 flex items-center justify-center mx-auto mb-2">
+                    <Bot size={20} className="text-accent-cyan" />
+                  </div>
+                  <div className="font-medium text-accent-cyan">{selectedTransfer.teacher?.replace('Agent', '') || 'Unknown'}</div>
+                  <div className="text-xs text-gray-500">Teacher</div>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="h-0.5 w-16 bg-gradient-to-r from-accent-cyan to-accent-green"></div>
+                  <Brain size={16} className="text-gray-400" />
+                  <div className="h-0.5 w-16 bg-gradient-to-r from-accent-cyan to-accent-green"></div>
+                </div>
+                <div className="text-center">
+                  <div className="h-12 w-12 rounded-full bg-accent-green/20 flex items-center justify-center mx-auto mb-2">
+                    <Bot size={20} className="text-accent-green" />
+                  </div>
+                  <div className="font-medium text-accent-green">{selectedTransfer.student?.replace('Agent', '') || 'Unknown'}</div>
+                  <div className="text-xs text-gray-500">Student</div>
+                </div>
+              </div>
+
+              {/* Metrics Row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 rounded-lg bg-dark-hover/50 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Confidence</div>
+                  <div className="text-lg font-bold text-accent-amber">
+                    {selectedTransfer.knowledge_full?.confidence
+                      ? `${(selectedTransfer.knowledge_full.confidence * 100).toFixed(0)}%`
+                      : '-'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-dark-hover/50 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Usefulness Score</div>
+                  <div className="text-lg font-bold text-accent-cyan">
+                    {selectedTransfer.usefulness_score !== undefined
+                      ? `${(selectedTransfer.usefulness_score * 100).toFixed(0)}%`
+                      : '-'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-dark-hover/50 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Effectiveness Gain</div>
+                  <div className={cn(
+                    "text-lg font-bold",
+                    selectedTransfer.effectiveness_gain && selectedTransfer.effectiveness_gain > 0
+                      ? "text-accent-green"
+                      : "text-gray-500"
+                  )}>
+                    {selectedTransfer.effectiveness_gain !== undefined
+                      ? selectedTransfer.effectiveness_gain > 0
+                        ? `+${(selectedTransfer.effectiveness_gain * 100).toFixed(1)}%`
+                        : '0%'
+                      : '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedTransfer.description && (
+                <div className="p-4 rounded-lg bg-dark-hover/30 border border-dark-border">
+                  <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                    <MessageSquare size={14} className="text-accent-cyan" />
+                    Description
+                  </h3>
+                  <p className="text-gray-200">{selectedTransfer.description}</p>
+                </div>
+              )}
+
+              {/* Full Summary */}
+              {selectedTransfer.knowledge_full?.summary && (
+                <div className="p-4 rounded-lg bg-dark-hover/30 border border-dark-border">
+                  <h3 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                    <Lightbulb size={14} className="text-accent-amber" />
+                    Summary
+                  </h3>
+                  <p className="text-gray-200 whitespace-pre-wrap">{selectedTransfer.knowledge_full.summary}</p>
+                </div>
+              )}
+
+              {/* Full Knowledge Text */}
+              {selectedTransfer.knowledge && selectedTransfer.knowledge !== selectedTransfer.knowledge_full?.summary && (
+                <details className="p-4 rounded-lg bg-dark-hover/30 border border-dark-border">
+                  <summary className="text-sm font-medium text-gray-300 cursor-pointer flex items-center gap-2">
+                    <Brain size={14} className="text-accent-purple" />
+                    Full Knowledge Content
+                  </summary>
+                  <p className="text-gray-200 whitespace-pre-wrap mt-3 pt-3 border-t border-dark-border">
+                    {selectedTransfer.knowledge}
+                  </p>
+                </details>
+              )}
+
+              {/* Key Insights */}
+              {(selectedTransfer.knowledge_full?.key_insights?.length || selectedTransfer.key_points?.length) && (
+                <div className="p-4 rounded-lg bg-dark-hover/30 border border-dark-border">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                    <Sparkles size={14} className="text-accent-green" />
+                    Key Insights
+                  </h3>
+                  <div className="space-y-2">
+                    {(selectedTransfer.knowledge_full?.key_insights || selectedTransfer.key_points || []).map((insight, idx) => {
+                      const displayText = typeof insight === 'string'
+                        ? insight
+                        : String((insight as Record<string, unknown>)?.type || (insight as Record<string, unknown>)?.insight || 'Insight')
+                      return (
+                        <div key={idx} className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-accent-green mt-2 flex-shrink-0"></div>
+                          <span className="text-gray-200">{displayText}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-dark-border bg-dark-hover/50">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span className="capitalize">{selectedTransfer.type?.replace('_', ' ') || 'Transfer'}</span>
+                {selectedTransfer.source && (
+                  <>
+                    <span className="text-gray-600">•</span>
+                    <span>{selectedTransfer.source}</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedTransfer(null)}
                 className="px-4 py-2 text-sm bg-dark-card hover:bg-dark-hover rounded-lg transition-colors"
               >
                 Close
