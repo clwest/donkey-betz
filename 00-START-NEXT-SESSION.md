@@ -1,6 +1,6 @@
-# Session 722 - Start Here
+# Session 724 - Start Here
 
-**Previous Session:** 721 (Body Health Deep Dive - All Detail Views Enhanced)
+**Previous Session:** 723 (Celery Health Fix + Session 722 Documentation)
 **Date:** January 7, 2026
 **Status:** 100% Reality Score | ALL SCI-FI FEATURES COMPLETE | 14/14 (100%)
 
@@ -21,24 +21,56 @@ This document contains:
 
 ---
 
-## Session 721 Accomplishments
+## Session 723 Accomplishments
 
-### Body Health Deep Dive - All 6 Detail Views Enhanced
+### Celery Worker Health Fix
 
-Comprehensive audit and fix of all Body Health system detail views to display complete API data:
+Diagnosed and fixed Celery worker issues causing 50% health score on Circulatory system:
 
-| System | New Data Now Displayed |
-|--------|------------------------|
-| **HEART** | `is_alive` status, `last_check` timestamp, `components_healthy/checked` count, `uptime_percent_24h` per component, component `details` object |
-| **CIRCULATORY** | All 9 routes (was truncated to 5), `current_depth`, `health_score`, `throughput` per route, congestion highlighting for unhealthy routes |
-| **SPINE** | `health_score`, `routes_blocked`, `routes_rate_limited`, `fallbacks_active`, all 11 `category_health` entries with pattern counts |
-| **IMMUNE** | `threats_detected_24h`, `patterns.active/triggered_24h`, `threats_by_category`, `threats_by_severity` breakdowns |
-| **DIGESTIVE** | `overall_status` text, `bottlenecks` array (when detected), improved grid layout for stages |
-| **MUSCULAR** | `overall_status` text, `weak_muscles` array, `overworked_muscles` array, "all good" message |
+| Issue | Resolution |
+|-------|------------|
+| Long-running worker hung (not responding to inspect) | Restarted with `make celery` |
+| 244 stale tasks in long_running queue | Purged with `celery purge` |
+| 2,374 stale tasks in broadcast queue | Purged with `celery purge` |
+| Circulatory showing 50% health | Now 100% after purge |
 
-**Commit:** `2284f640 feat(Session 721): Body Health detail views - complete data display`
+**Root Cause:** Worker was running (2GB RAM) but internally stuck - not picking up tasks from queues while Celery Beat kept scheduling new ones.
 
-**File Modified:** `frontend/src/pages/BodyHealthPage.tsx` (+647 lines, -186 lines)
+### Documentation Created
+
+- `docs/handoffs/SESSION_722_BRAIN_SYSTEM.md` - Complete handoff for BRAIN system
+
+---
+
+## Session 722 Accomplishments (Previous)
+
+### BRAIN System - 8th Body System Complete
+
+Built the complete BRAIN system - monitors cognitive processing and reasoning across the AI platform:
+
+| Component | Details |
+|-----------|---------|
+| **Models** | `CognitiveChannel`, `BrainPulse`, `CognitiveStatus` in `core/models_brain.py` |
+| **Service** | `BrainService` singleton in `core/services/brain.py` |
+| **API Views** | 5 endpoints in `core/views_brain.py` |
+| **Frontend** | `BrainDetailView` component, `brainApi` in api.ts |
+| **Migration** | `0154_session_722_brain_system.py` |
+| **Celery** | `check_brain` task running every 60 seconds |
+
+---
+
+## Body Health Systems - 8 Systems Complete
+
+| System | API | Frontend | Purpose |
+|--------|-----|----------|---------|
+| HEART | `/api/heart/status/` | HeartDetailView | Core platform health |
+| LUNGS | `/api/lungs/status/` | LungsDetailView | Resource/budget management |
+| CIRCULATORY | `/api/circulatory/status/` | CirculatoryDetailView | Data flow monitoring |
+| SPINE | `/api/spine/status/` | SpineDetailView | Central API routing |
+| IMMUNE | `/api/immune/status/` | ImmuneDetailView | Security & threat detection |
+| DIGESTIVE | `/api/digestive/status/` | DigestiveDetailView | Data ingestion & processing |
+| MUSCULAR | `/api/muscular/status/` | MuscularDetailView | Agent work execution |
+| BRAIN | `/api/brain/status/` | BrainDetailView | Cognitive processing |
 
 ---
 
@@ -46,38 +78,22 @@ Comprehensive audit and fix of all Body Health system detail views to display co
 
 | Feature | Backend | Frontend |
 |---------|---------|----------|
-| Agent Learning | Complete | **COMPLETE** (in Social) |
-| Agent Conversations | Complete | **COMPLETE** (Agent Social) |
-| Agent Dreams | Complete | **COMPLETE** (Agent Social) |
-| Hive Mind | Complete | **COMPLETE** (Session 715) |
-| Memory Palace | Complete | **COMPLETE** (Previous) |
-| Memory Clusters | Complete | **COMPLETE** (Session 718) |
-| Mood System | Complete | **COMPLETE** (Agent Mood) |
-| Rivalries/Alliances | Complete | **COMPLETE** (Relationships) |
-| Evolution System | Complete | **COMPLETE** (Evolution) |
-| Time Travel | Complete | **COMPLETE** (Time Travel) |
-| Personality Profiles | Complete | **COMPLETE** (in Mood) |
-| Time Capsules | Complete | **COMPLETE** (Time Capsules) |
-| Conversation Contract | Complete | **COMPLETE** (Session 717) |
-| Spider Integration | Complete | **COMPLETE** (Session 718) |
+| Agent Learning | Complete | Complete (in Social) |
+| Agent Conversations | Complete | Complete (Agent Social) |
+| Agent Dreams | Complete | Complete (Agent Social) |
+| Hive Mind | Complete | Complete (Session 715) |
+| Memory Palace | Complete | Complete |
+| Memory Clusters | Complete | Complete (Session 718) |
+| Mood System | Complete | Complete (Agent Mood) |
+| Rivalries/Alliances | Complete | Complete (Relationships) |
+| Evolution System | Complete | Complete (Evolution) |
+| Time Travel | Complete | Complete (Time Travel) |
+| Personality Profiles | Complete | Complete (in Mood) |
+| Time Capsules | Complete | Complete (Time Capsules) |
+| Conversation Contract | Complete | Complete (Session 717) |
+| Spider Integration | Complete | Complete (Session 718) |
 
 **Progress: 14/14 Complete (100%)**
-
----
-
-## Body Health Systems Status - ALL FULLY CONNECTED
-
-| System | API | Frontend | Status |
-|--------|-----|----------|--------|
-| HEART | `/api/heart/status/` | HeartDetailView | **Enhanced (Session 721)** |
-| LUNGS | `/api/lungs/status/` | LungsDetailView | Fixed (Session 720) |
-| CIRCULATORY | `/api/circulatory/status/` | CirculatoryDetailView | **Enhanced (Session 721)** |
-| SPINE | `/api/spine/status/` | SpineDetailView | **Enhanced (Session 721)** |
-| IMMUNE | `/api/immune/status/` | ImmuneDetailView | **Enhanced (Session 721)** |
-| DIGESTIVE | `/api/digestive/status/` | DigestiveDetailView | **Enhanced (Session 721)** |
-| MUSCULAR | `/api/muscular/status/` | MuscularDetailView | **Enhanced (Session 721)** |
-
-All 7 body systems now display complete API data with proper color-coding and conditional sections.
 
 ---
 
@@ -93,12 +109,12 @@ All 7 body systems now display complete API data with proper color-coding and co
 
 ---
 
-## Session 722 - What's Next?
+## Session 724 - What's Next?
 
-With Body Health fully enhanced and all Sci-Fi features complete:
+With 8 body systems complete and all Sci-Fi features done:
 
 ### 1. Body Health History & Trends
-- Add history charts for all body systems
+- Add history charts for all 8 body systems
 - Implement trend analysis over time
 - Show historical health scores
 
@@ -113,14 +129,14 @@ With Body Health fully enhanced and all Sci-Fi features complete:
 - Add empty state designs
 - Improve mobile responsiveness
 
-### 4. Integration Testing
+### 4. LLM Routing UI (Session 700 work)
+- Complete the LLM Routing page implementation
+- Wire up agent LLM configuration UI
+
+### 5. Integration Testing
 - End-to-end tests for new pages
 - API response validation
 - Performance benchmarks
-
-### 5. LLM Routing UI (Session 700 work)
-- Complete the LLM Routing page implementation
-- Wire up agent LLM configuration UI
 
 ---
 
@@ -133,7 +149,7 @@ make start && make celery
 # Access React frontend (Vite dev)
 open http://localhost:3000
 
-# Test body health APIs
+# Test body health APIs (all 8 systems)
 curl http://localhost:8000/api/heart/status/
 curl http://localhost:8000/api/lungs/status/
 curl http://localhost:8000/api/circulatory/status/
@@ -141,9 +157,16 @@ curl http://localhost:8000/api/spine/status/
 curl http://localhost:8000/api/immune/status/
 curl http://localhost:8000/api/digestive/status/
 curl http://localhost:8000/api/muscular/status/
+curl http://localhost:8000/api/brain/status/
 
-# Verify Celery is running
+# Check Celery health
 ps aux | grep celery
+redis-cli -n 2 LLEN long_running
+redis-cli -n 2 LLEN broadcast
+
+# Purge stale Celery tasks if needed
+.venv/bin/celery -A core purge -Q long_running -f
+.venv/bin/celery -A core purge -Q broadcast -f
 ```
 
 ---
@@ -151,9 +174,9 @@ ps aux | grep celery
 ## Recent Commits
 
 ```
-2284f640 feat(Session 721): Body Health detail views - complete data display
-d94f9b1c fix(Session 720): LUNGS detail view + Digestive system documentation
-2836394c docs(Session 719): Final session doc update with all 7 commits
+# Session 722-723 (to be committed)
+feat(Session 722): BRAIN system - 8th body system for cognitive processing
+fix(Session 723): Celery worker health - purge stale tasks
 ```
 
 ---
@@ -161,8 +184,9 @@ d94f9b1c fix(Session 720): LUNGS detail view + Digestive system documentation
 ## Handoff Documents
 
 - `docs/SESSION_713_UNIFIED_SYSTEM_ROADMAP.md` - Master roadmap
+- `docs/handoffs/SESSION_722_BRAIN_SYSTEM.md` - BRAIN system handoff
 - `docs/handoffs/SESSION_716_SCIFI_PAGES.md` - Phase 5 work
 
 ---
 
-**Session 721 Complete** - Body Health deep dive: all 6 detail views now display complete API data
+**Session 723 Complete** - Fixed Celery worker health issues, purged 2,612 stale tasks, documented Session 722 BRAIN system

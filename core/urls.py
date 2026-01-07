@@ -3687,6 +3687,26 @@ urlpatterns += [
 ]
 
 # =========================================================================
+# Session 721: BRAIN SYSTEM - Cognitive Processing & Reasoning
+# =========================================================================
+# Monitors LLM calls, conversations, agent thinking, and reasoning quality
+from core.views_brain import (
+    BrainStatusView,
+    BrainThinkView,
+    BrainVitalsView,
+    BrainHistoryView,
+    BrainIsThinkingView,
+)
+
+urlpatterns += [
+    path('api/brain/status/', BrainStatusView.as_view(), name='brain-status'),
+    path('api/brain/think/', BrainThinkView.as_view(), name='brain-think'),
+    path('api/brain/vitals/', BrainVitalsView.as_view(), name='brain-vitals'),
+    path('api/brain/history/', BrainHistoryView.as_view(), name='brain-history'),
+    path('api/brain/is-thinking/', BrainIsThinkingView.as_view(), name='brain-is-thinking'),
+]
+
+# =========================================================================
 # Session 710: BODY UNIFIED - Body Health Dashboard API
 # =========================================================================
 from core.views_body import (

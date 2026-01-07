@@ -1144,6 +1144,25 @@ export const muscularApi = {
   isStrong: () => api.get('/muscular/is-strong/'),
 }
 
+// Session 722: BRAIN System API - Cognitive Processing Monitoring
+export const brainApi = {
+  // Run full cognitive check (analyze LLM calls, conversations, reasoning)
+  think: (force = false) => api.get('/brain/think/', { params: { force } }),
+
+  // Get cached brain status (fast)
+  status: () => api.get('/brain/status/'),
+
+  // Get current vitals (cognitive score, active conversations, etc.)
+  vitals: () => api.get('/brain/vitals/'),
+
+  // Get brain pulse history
+  history: (hours = 24, limit = 100) =>
+    api.get('/brain/history/', { params: { hours, limit } }),
+
+  // Quick health check - is the brain actively thinking?
+  isThinking: () => api.get('/brain/is-thinking/'),
+}
+
 // Session 716: Advisors API - Famous figure consultations
 export const advisorsApi = {
   // List all active advisors
