@@ -434,23 +434,108 @@ class ProjectWorkspaceViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def files(self, request, pk=None):
-        """Browse workspace files"""
+        """Browse workspace files - returns hierarchical tree structure"""
         workspace = self.get_object()
-        manager = get_workspace_manager(request.user)
 
-        pattern = request.query_params.get('pattern', '**/*')
-        limit = int(request.query_params.get('limit', 100))
+        # Check if tree format is requested (default to tree)
+        format_type = request.query_params.get('format', 'tree')
+        max_depth = int(request.query_params.get('max_depth', 3))
 
         try:
-            files = manager.list_files(workspace, pattern=pattern)[:limit]
+            # Get workspace context which has the scanned file tree
+            try:
+                context = workspace.context
+            except WorkspaceContext.DoesNotExist:
+                # No scan yet - return empty tree
+                return Response({
+                    'workspace_id': str(workspace.id),
+                    'workspace_name': workspace.name,
+                    'tree': [],
+                    'total_files': 0,
+                    'total_directories': 0,
+                    'message': 'Workspace not scanned yet. Use POST /scan/ to scan.'
+                })
+
+            if format_type == 'flat':
+                # Return flat list (old behavior)
+                manager = get_workspace_manager(request.user)
+                pattern = request.query_params.get('pattern', '**/*')
+                limit = int(request.query_params.get('limit', 100))
+                files = manager.list_files(workspace, pattern=pattern)[:limit]
+                return Response({
+                    'workspace_id': str(workspace.id),
+                    'workspace_name': workspace.name,
+                    'pattern': pattern,
+                    'total_matches': len(files),
+                    'files': files
+                })
+
+            # Build hierarchical tree from file_tree dict
+            # file_tree is { "dir_path": ["file1.py", "file2.js"], ... }
+            file_tree = context.file_tree or {}
+
+            def build_tree(base_path='', depth=0):
+                """Recursively build tree structure"""
+                if depth > max_depth:
+                    return []
+
+                nodes = []
+                dirs_added = set()
+
+                # Get files in current directory
+                current_files = file_tree.get(base_path or '.', [])
+                for filename in sorted(current_files):
+                    file_path = f"{base_path}/{filename}" if base_path else filename
+                    nodes.append({
+                        'name': filename,
+                        'path': file_path,
+                        'type': 'file'
+                    })
+
+                # Get subdirectories
+                for dir_path, files in file_tree.items():
+                    if dir_path == '.' or dir_path == base_path:
+                        continue
+
+                    # Check if this directory is a direct child
+                    if base_path:
+                        if not dir_path.startswith(base_path + '/'):
+                            continue
+                        relative = dir_path[len(base_path) + 1:]
+                    else:
+                        relative = dir_path
+
+                    # Get immediate child directory
+                    parts = relative.split('/')
+                    immediate_child = parts[0]
+
+                    if immediate_child and immediate_child not in dirs_added:
+                        dirs_added.add(immediate_child)
+                        child_path = f"{base_path}/{immediate_child}" if base_path else immediate_child
+                        children = build_tree(child_path, depth + 1)
+                        nodes.append({
+                            'name': immediate_child,
+                            'path': child_path,
+                            'type': 'directory',
+                            'children': children
+                        })
+
+                # Sort: directories first, then files
+                nodes.sort(key=lambda x: (0 if x['type'] == 'directory' else 1, x['name'].lower()))
+                return nodes
+
+            tree = build_tree()
+
             return Response({
                 'workspace_id': str(workspace.id),
                 'workspace_name': workspace.name,
-                'pattern': pattern,
-                'total_matches': len(files),
-                'files': files
+                'tree': tree,
+                'total_files': context.total_files,
+                'total_directories': context.total_directories,
+                'last_scanned': context.last_scanned_at
             })
         except Exception as e:
+            logger.exception(f"Error getting workspace files: {e}")
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

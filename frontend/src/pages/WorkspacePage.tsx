@@ -614,12 +614,8 @@ export default function WorkspacePage() {
   const pendingReviews = (pendingReviewsData?.data?.results || pendingReviewsData?.data || []) as WorkspaceOperation[]
   const dashboard = dashboardData?.data || {}
 
-  // Build simple file tree from files list (API returns array of filename strings)
-  const files: FileNode[] = (filesData?.data?.files || []).map((filename: string) => ({
-    name: filename,
-    path: filename,
-    type: 'file' as const,
-  }))
+  // Use hierarchical tree from API (new format returns 'tree' with proper structure)
+  const files: FileNode[] = filesData?.data?.tree || []
 
   const filteredOperations = operationFilter
     ? operations.filter(op =>
