@@ -25,29 +25,46 @@ interface TimeSession {
   id: string
   agent_id: string
   agent_name: string
-  context: string
+  task_type: string
+  task_description: string
+  status: string
   started_at: string
   ended_at?: string
-  is_active: boolean
   is_bookmarked: boolean
-  decision_count: number
+  total_decisions: number
+  duration?: string
   decisions?: Decision[]
 }
 
 interface Decision {
   id: string
-  session_id: string
+  session_id?: string
+  agent_name?: string
+  sequence?: number
   decision_type: string
-  description: string
-  options_considered: string[]
-  chosen_option: string
-  reasoning: string
-  outcome?: string
-  success?: boolean
+  action_taken: string
+  reasoning?: string
+  alternatives?: string[]
+  context?: Record<string, unknown>
+  action_params?: Record<string, unknown>
+  confidence?: number
+  was_successful?: boolean
+  outcome_notes?: string
+  duration_ms?: number
   is_flagged: boolean
   flag_reason?: string
-  created_at: string
+  timestamp: string
+  thoughts?: Thought[]
   annotations?: Annotation[]
+}
+
+interface Thought {
+  id: string
+  sequence: number
+  type: string
+  content: string
+  importance: number
+  influences_decision: boolean
 }
 
 interface Annotation {
@@ -119,21 +136,30 @@ export default function TimeTravelPage() {
     staleTime: 30000,
   })
 
-  // Parse data
-  const sessions: TimeSession[] = overviewData?.sessions || overviewData || []
-  const flaggedDecisions: Decision[] = flaggedData?.decisions || flaggedData || []
-  const sessionDetail = sessionDetailData || selectedSession
+  // Parse data - API returns recent_sessions (not sessions) and flagged_decisions (not decisions)
+  const sessions: TimeSession[] = Array.isArray(overviewData?.recent_sessions)
+    ? overviewData.recent_sessions
+    : []
+  const flaggedDecisions: Decision[] = Array.isArray(flaggedData?.flagged_decisions)
+    ? flaggedData.flagged_decisions
+    : []
+  const sessionDetail = sessionDetailData?.session || selectedSession
+  const sessionDecisions = sessionDetailData?.decisions || []
+
+  // Get stats from overview
+  const overview = overviewData?.overview || {}
 
   // Filter sessions
   const filteredSessions = sessions.filter(session =>
     session.agent_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.context?.toLowerCase().includes(searchTerm.toLowerCase())
+    session.task_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    session.task_type?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Calculate stats
-  const totalSessions = sessions.length
-  const activeSessions = sessions.filter(s => s.is_active).length
-  const totalDecisions = sessions.reduce((sum, s) => sum + (s.decision_count || 0), 0)
+  // Calculate stats - use API overview stats when available
+  const totalSessions = overview.total_sessions ?? sessions.length
+  const activeSessions = sessions.filter(s => s.status === 'running').length
+  const totalDecisions = overview.total_decisions ?? sessions.reduce((sum, s) => sum + (s.total_decisions || 0), 0)
 
   // Select first session on load
   useEffect(() => {
@@ -284,12 +310,16 @@ export default function TimeTravelPage() {
                       {/* Status Icon */}
                       <div className={cn(
                         'p-3 rounded-full',
-                        session.is_active ? 'bg-green-500/20' : 'bg-gray-500/20'
+                        session.status === 'running' ? 'bg-green-500/20' :
+                        session.status === 'completed' ? 'bg-blue-500/20' :
+                        session.status === 'failed' ? 'bg-red-500/20' : 'bg-gray-500/20'
                       )}>
-                        {session.is_active ? (
+                        {session.status === 'running' ? (
                           <Play className="w-5 h-5 text-green-400" />
+                        ) : session.status === 'failed' ? (
+                          <AlertTriangle className="w-5 h-5 text-red-400" />
                         ) : (
-                          <History className="w-5 h-5 text-gray-400" />
+                          <History className="w-5 h-5 text-blue-400" />
                         )}
                       </div>
 
@@ -300,23 +330,28 @@ export default function TimeTravelPage() {
                           {session.is_bookmarked && (
                             <Bookmark size={14} className="text-yellow-400 fill-yellow-400" />
                           )}
-                          {session.is_active && (
+                          {session.status === 'running' && (
                             <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
-                              Active
+                              Running
+                            </span>
+                          )}
+                          {session.status === 'failed' && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                              Failed
                             </span>
                           )}
                         </div>
                         <p className="text-sm text-gray-400 truncate mt-1">
-                          {session.context || 'No context provided'}
+                          {session.task_description || session.task_type || 'No description'}
                         </p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <GitBranch size={12} />
-                            {session.decision_count} decisions
+                            {session.total_decisions} decisions
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {formatDuration(session.started_at, session.ended_at)}
+                            {session.duration || formatDuration(session.started_at, session.ended_at)}
                           </span>
                         </div>
                       </div>
@@ -360,15 +395,18 @@ export default function TimeTravelPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-white truncate">
-                              {decision.description}
+                              {decision.action_taken}
                             </span>
                             <Flag size={14} className="text-yellow-400" />
                           </div>
+                          {decision.agent_name && (
+                            <p className="text-xs text-gray-500">by {decision.agent_name}</p>
+                          )}
                           <p className="text-sm text-yellow-400/80 mt-1">
                             {decision.flag_reason || 'No reason provided'}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            {new Date(decision.created_at).toLocaleString()}
+                            {new Date(decision.timestamp).toLocaleString()}
                           </p>
                         </div>
                       </button>
@@ -406,9 +444,14 @@ export default function TimeTravelPage() {
                           <span className={cn('text-xs px-2 py-0.5 rounded', config.bgColor, config.color)}>
                             {config.label}
                           </span>
+                          {selectedDecision.confidence && (
+                            <span className="ml-2 text-xs text-gray-400">
+                              {Math.round(selectedDecision.confidence * 100)}% confidence
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <h3 className="font-medium text-white">{selectedDecision.description}</h3>
+                      <h3 className="font-medium text-white">{selectedDecision.action_taken}</h3>
                     </>
                   )
                 })()}
@@ -425,25 +468,38 @@ export default function TimeTravelPage() {
                 </div>
               )}
 
-              {/* Options Considered */}
-              {(selectedDecision.options_considered || []).length > 0 && (
+              {/* Alternatives Considered */}
+              {(selectedDecision.alternatives || []).length > 0 && (
                 <div className="bg-dark-card rounded-lg border border-dark-border p-4">
-                  <h4 className="font-medium text-white mb-2">Options Considered</h4>
+                  <h4 className="font-medium text-white mb-2">Alternatives Considered</h4>
                   <div className="space-y-2">
-                    {selectedDecision.options_considered.map((option, i) => (
+                    {selectedDecision.alternatives?.map((alt, i) => (
                       <div
                         key={i}
-                        className={cn(
-                          'p-2 rounded text-sm',
-                          option === selectedDecision.chosen_option
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                            : 'bg-dark-bg text-gray-300'
-                        )}
+                        className="p-2 rounded text-sm bg-dark-bg text-gray-300"
                       >
-                        {option === selectedDecision.chosen_option && (
-                          <CheckCircle size={14} className="inline mr-2" />
+                        {alt}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Thoughts/Internal Reasoning */}
+              {(selectedDecision.thoughts || []).length > 0 && (
+                <div className="bg-dark-card rounded-lg border border-dark-border p-4">
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    <Lightbulb size={16} className="text-purple-400" />
+                    Thought Process
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedDecision.thoughts?.map((thought) => (
+                      <div key={thought.id} className="p-2 rounded text-sm bg-dark-bg">
+                        <span className="text-xs text-purple-400 uppercase">{thought.type}</span>
+                        <p className="text-gray-300 mt-1">{thought.content}</p>
+                        {thought.influences_decision && (
+                          <span className="text-xs text-green-400">Influenced decision</span>
                         )}
-                        {option}
                       </div>
                     ))}
                   </div>
@@ -451,19 +507,26 @@ export default function TimeTravelPage() {
               )}
 
               {/* Outcome */}
-              {selectedDecision.outcome && (
+              {(selectedDecision.outcome_notes || selectedDecision.was_successful !== undefined) && (
                 <div className="bg-dark-card rounded-lg border border-dark-border p-4">
                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                    {selectedDecision.success ? (
+                    {selectedDecision.was_successful === true ? (
                       <CheckCircle size={16} className="text-green-400" />
-                    ) : selectedDecision.success === false ? (
+                    ) : selectedDecision.was_successful === false ? (
                       <XCircle size={16} className="text-red-400" />
                     ) : (
                       <AlertTriangle size={16} className="text-yellow-400" />
                     )}
                     Outcome
                   </h4>
-                  <p className="text-sm text-gray-300">{selectedDecision.outcome}</p>
+                  <p className="text-sm text-gray-300">
+                    {selectedDecision.outcome_notes || (selectedDecision.was_successful ? 'Successful' : 'Failed')}
+                  </p>
+                  {selectedDecision.duration_ms && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Duration: {selectedDecision.duration_ms}ms
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -474,10 +537,13 @@ export default function TimeTravelPage() {
                 <div className="text-center">
                   <div className={cn(
                     'inline-flex items-center justify-center w-16 h-16 rounded-full mb-4',
-                    sessionDetail?.is_active ? 'bg-green-500/20' : 'bg-purple-500/20'
+                    sessionDetail?.status === 'running' ? 'bg-green-500/20' :
+                    sessionDetail?.status === 'failed' ? 'bg-red-500/20' : 'bg-purple-500/20'
                   )}>
-                    {sessionDetail?.is_active ? (
+                    {sessionDetail?.status === 'running' ? (
                       <Play className="w-8 h-8 text-green-400" />
+                    ) : sessionDetail?.status === 'failed' ? (
+                      <AlertTriangle className="w-8 h-8 text-red-400" />
                     ) : (
                       <History className="w-8 h-8 text-purple-400" />
                     )}
@@ -486,9 +552,19 @@ export default function TimeTravelPage() {
                   <h3 className="text-lg font-medium text-white">{sessionDetail?.agent_name}</h3>
 
                   <div className="flex items-center justify-center gap-2 mt-2">
-                    {sessionDetail?.is_active && (
+                    {sessionDetail?.status === 'running' && (
                       <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
-                        Active
+                        Running
+                      </span>
+                    )}
+                    {sessionDetail?.status === 'completed' && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        Completed
+                      </span>
+                    )}
+                    {sessionDetail?.status === 'failed' && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                        Failed
                       </span>
                     )}
                     {sessionDetail?.is_bookmarked && (
@@ -499,19 +575,19 @@ export default function TimeTravelPage() {
                   </div>
 
                   <p className="text-sm text-gray-400 mt-3">
-                    {sessionDetail?.context || 'No context provided'}
+                    {sessionDetail?.task_description || sessionDetail?.task_type || 'No description'}
                   </p>
                 </div>
 
                 {/* Session Stats */}
                 <div className="grid grid-cols-2 gap-4 mt-6">
                   <div className="text-center p-3 bg-dark-bg rounded-lg">
-                    <div className="text-lg font-bold text-white">{sessionDetail?.decision_count || 0}</div>
+                    <div className="text-lg font-bold text-white">{sessionDetail?.total_decisions || sessionDecisions.length || 0}</div>
                     <div className="text-xs text-gray-400">Decisions</div>
                   </div>
                   <div className="text-center p-3 bg-dark-bg rounded-lg">
                     <div className="text-lg font-bold text-white">
-                      {formatDuration(sessionDetail?.started_at || '', sessionDetail?.ended_at)}
+                      {sessionDetail?.duration || formatDuration(sessionDetail?.started_at || '', sessionDetail?.ended_at)}
                     </div>
                     <div className="text-xs text-gray-400">Duration</div>
                   </div>
@@ -525,10 +601,10 @@ export default function TimeTravelPage() {
                   Decision Timeline
                 </h4>
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {(sessionDetail?.decisions || []).length === 0 ? (
+                  {sessionDecisions.length === 0 ? (
                     <p className="text-sm text-gray-400">No decisions recorded yet</p>
                   ) : (
-                    (sessionDetail?.decisions || []).map((decision: Decision) => {
+                    sessionDecisions.map((decision: Decision) => {
                       const config = getDecisionConfig(decision.decision_type)
                       const Icon = config.icon
 
@@ -541,20 +617,20 @@ export default function TimeTravelPage() {
                           <div className="flex items-center gap-2">
                             <Icon className={cn('w-4 h-4', config.color)} />
                             <span className="text-sm text-white truncate flex-1">
-                              {decision.description}
+                              {decision.action_taken}
                             </span>
                             {decision.is_flagged && (
                               <Flag size={12} className="text-yellow-400" />
                             )}
-                            {decision.success === true && (
+                            {decision.was_successful === true && (
                               <CheckCircle size={12} className="text-green-400" />
                             )}
-                            {decision.success === false && (
+                            {decision.was_successful === false && (
                               <XCircle size={12} className="text-red-400" />
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
-                            {new Date(decision.created_at).toLocaleTimeString()}
+                            {new Date(decision.timestamp).toLocaleTimeString()}
                           </p>
                         </button>
                       )
