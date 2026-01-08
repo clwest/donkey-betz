@@ -21,7 +21,7 @@ This document tracks ALL backend APIs that have NO corresponding frontend UI. Th
 | **Agent Monitoring** | 6 endpoints | ✅ COMPLETE | DONE |
 | **Agent Templates CRUD** | 5 endpoints | ⚠️ Read-only | MEDIUM |
 | **Agent Orchestrations** | 5 endpoints | ⚠️ Partial | MEDIUM |
-| **Agent Tools** | 3 endpoints | ❌ None | MEDIUM |
+| **Agent Tools** | 5 endpoints | ✅ COMPLETE | DONE |
 
 ---
 
@@ -171,6 +171,39 @@ ChannelMembership: 5 records
 
 ---
 
+## Agent Tools Registry - DONE
+
+**Status:** ✅ Implemented in Session 734
+
+### What It Is
+A registry of tools available to AI agents for task execution:
+- **Tools** - External services, APIs, and capabilities agents can use
+- **Configuration** - Tool-specific settings and parameters
+- **Usage Stats** - Tracking of tool usage, success rates, response times
+
+### Implementation (Session 734)
+- `agentToolsApi` added to `frontend/src/lib/api.ts` (5 endpoints)
+- `ToolsTab` component added to `AgentsPage.tsx` (~160 lines)
+- Accessible via Agents → Tools tab (no new route needed)
+
+**Features Delivered:**
+- **Tool List:** Filterable by tool type (dropdown)
+- **Tool Cards:** Display name, type, active status, usage stats
+- **Stats Display:** Usage count, success rate, avg response time
+- **Endpoint Info:** URL and supported operations count
+- **Empty State:** Friendly message when no tools configured
+
+### Backend APIs Connected
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/agents/tools/` | GET | List all tools |
+| `/api/v1/agents/tools/` | POST | Create tool |
+| `/api/v1/agents/tools/{id}/` | GET | Tool detail |
+| `/api/v1/agents/tools/{id}/` | PATCH | Update tool |
+| `/api/v1/agents/tools/{id}/` | DELETE | Delete tool |
+
+---
+
 ## Medium Priority Gaps
 
 ### 1. Agent Templates Management
@@ -228,31 +261,13 @@ export const agentOrchestrationsApi = {
 
 ---
 
-### 3. Agent Tools Registry
+### ~~3. Agent Tools Registry~~ - DONE (Session 734)
 
-**Backend:** `AgentToolViewSet` at `/api/v1/agents/tools/`
-
-**Current Frontend:** None
-
-**Missing:**
-- Browse available agent tools
-- Configure tool parameters
-- Enable/disable tools per agent
-
-**Frontend API Addition:**
-```typescript
-export const agentToolsApi = {
-  list: (params?: { category?: string; agent?: string }) =>
-    api.get('/v1/agents/tools/', { params }),
-  detail: (id: string) => api.get(`/v1/agents/tools/${id}/`),
-  configure: (id: string, data: { config: Record<string, unknown> }) =>
-    api.patch(`/v1/agents/tools/${id}/`, data),
-}
-```
+**Status:** ✅ Moved to Completed section - See "Agent Tools Registry - DONE" above
 
 ---
 
-### 4. Agent Monitoring Dashboard
+### 3. Agent Monitoring Dashboard
 
 **Backend:** Multiple endpoints at `/api/v1/agents/monitoring/`
 - `/monitoring/dashboard/` - Metrics dashboard
@@ -352,10 +367,10 @@ export const agentMonitoringApi = {
 | **Agent Monitoring** | ✅ 6 endpoints | ✅ COMPLETE | N/A (metrics) | **DONE** |
 | Agent Templates CRUD | ✅ 5 endpoints | ⚠️ Read-only | ✅ Has data | MEDIUM |
 | Agent Orchestrations | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | MEDIUM |
-| Agent Tools | ✅ 3 endpoints | ❌ Missing | ✅ Has data | MEDIUM |
+| **Agent Tools** | ✅ 5 endpoints | ✅ COMPLETE | ✅ Has data | **DONE** |
 | Agent Registry | ✅ 5 endpoints | ⚠️ Partial | ✅ Has data | LOW |
 
-**Total: 7 systems with 42+ backend API endpoints needing frontend exposure** (5 completed: RAG, Mythology, Agent Channels, Income Builder, Agent Monitoring)
+**Total: 8 systems with 47+ backend API endpoints with frontend exposure** (6 completed: RAG, Mythology, Agent Channels, Income Builder, Agent Monitoring, Agent Tools)
 
 ---
 
@@ -366,7 +381,8 @@ export const agentMonitoringApi = {
 3. ~~**Agent Channels** - DONE (Session 734) - "Slack for AI Agents" tab in AgentsPage~~
 4. ~~**Income Builder** - DONE (Session 734) - "Income Builder" tab in IntelligencePage~~
 5. ~~**Agent Monitoring** - DONE (Session 734) - "Monitoring" tab in AgentsPage~~
-6. **Agent Tools/Templates/Orchestrations** - MEDIUM - Agent management CRUD
+6. ~~**Agent Tools** - DONE (Session 734) - "Tools" tab in AgentsPage~~
+7. **Agent Templates/Orchestrations** - MEDIUM - Agent management CRUD
 
 ---
 
