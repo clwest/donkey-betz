@@ -18,7 +18,8 @@ from asgiref.sync import async_to_sync
 from core.models.agents_registry import (
     AgentExecution,
     AgentStatus,
-    AgentOrchestration
+    AgentOrchestration,
+    UnifiedAgentTemplate
 )
 from content.ai_providers import AIProviderManager
 
@@ -465,6 +466,26 @@ def execute_orchestration(self, orchestration_id: str):
                 return None  # Will be looked up by name
             return agent_info.get('agent_id')
 
+        # Session 735: Helper to find or create a template for an agent name
+        def get_or_create_template(agent_name):
+            """Find template by name or create a placeholder"""
+            template = UnifiedAgentTemplate.objects.filter(name=agent_name).first()
+            if not template:
+                # Try without 'Agent' suffix
+                template = UnifiedAgentTemplate.objects.filter(
+                    name=agent_name.replace('Agent', '')
+                ).first()
+            if not template:
+                # Create a placeholder template
+                template = UnifiedAgentTemplate.objects.create(
+                    name=agent_name,
+                    display_name=agent_name.replace('Agent', ' Agent'),
+                    description=f"Auto-created template for {agent_name}",
+                    specialization='general',
+                    is_active=True
+                )
+            return template
+
         # Execute agents based on strategy
         if orchestration.execution_strategy == 'sequential':
             # Sequential execution
@@ -478,21 +499,25 @@ def execute_orchestration(self, orchestration_id: str):
                 orchestration.progress_percentage = int((i / len(orchestration.agent_sequence)) * 100)
                 orchestration.save()
 
-                # Create execution record
+                # Get template for this agent
+                template = get_or_create_template(agent_name)
+
+                # Create execution record with correct field names
+                import uuid
                 execution = AgentExecution.objects.create(
+                    template=template,
                     user=orchestration.user,
                     parent_orchestration=orchestration,
-                    agent_id=get_agent_id(agent_info),
-                    user_prompt=prompt if i == 0 else f"Continue from: {previous_result[:100] if previous_result else 'previous step'}",
-                    execution_context={
+                    execution_id=f"orch_{orchestration.id}_{i}_{uuid.uuid4().hex[:6]}",
+                    task_description=prompt if i == 0 else f"Continue from: {previous_result[:100] if previous_result else 'previous step'}",
+                    context={
                         'orchestration_id': str(orchestration_id),
                         'step': i + 1,
                         'total_steps': len(orchestration.agent_sequence),
                         'previous_result': previous_result,
                         'agent_name': agent_name
                     },
-                    status=AgentStatus.RUNNING,
-                    execution_order=i + 1
+                    status=AgentStatus.RUNNING
                 )
 
                 # Mock execution (replace with actual agent execution)
@@ -501,7 +526,6 @@ def execute_orchestration(self, orchestration_id: str):
                     'data': f"Processed: {prompt[:50]}..." if prompt else "Processed workflow"
                 }
                 execution.status = AgentStatus.COMPLETED
-                execution.completed_at = timezone.now()
                 execution.save()
 
                 # Store in intermediate results
@@ -517,20 +541,23 @@ def execute_orchestration(self, orchestration_id: str):
         elif orchestration.execution_strategy == 'parallel':
             # Parallel execution (simplified - in production use celery group)
             executions = []
+            import uuid
             for i, agent_info in enumerate(orchestration.agent_sequence):
                 agent_name = get_agent_name(agent_info)
+                template = get_or_create_template(agent_name)
+
                 execution = AgentExecution.objects.create(
+                    template=template,
                     user=orchestration.user,
                     parent_orchestration=orchestration,
-                    agent_id=get_agent_id(agent_info),
-                    user_prompt=prompt,
-                    execution_context={
+                    execution_id=f"orch_{orchestration.id}_{i}_{uuid.uuid4().hex[:6]}",
+                    task_description=prompt,
+                    context={
                         'orchestration_id': str(orchestration_id),
                         'parallel': True,
                         'agent_name': agent_name
                     },
-                    status=AgentStatus.RUNNING,
-                    execution_order=i + 1
+                    status=AgentStatus.RUNNING
                 )
                 executions.append((execution, agent_name))
 
@@ -541,7 +568,6 @@ def execute_orchestration(self, orchestration_id: str):
                     'data': f"Processed: {prompt[:50]}..." if prompt else "Processed"
                 }
                 execution.status = AgentStatus.COMPLETED
-                execution.completed_at = timezone.now()
                 execution.save()
 
                 orchestration.intermediate_results.append({
