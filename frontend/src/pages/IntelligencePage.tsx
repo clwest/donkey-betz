@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSystemEvents } from '@/hooks/useWebSocket'
 // Session 693: Removed agentsApi - agents tab removed (redundant with main Agents page)
 // Session 694: Removed learningApi, activityApi - tabs removed (redundant with main Agents page)
-import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi } from '@/lib/api'
+import { intelligenceApi, pilotsApi, experimentsApi, spidersApi, opportunitiesApi, incomeBuilderApi } from '@/lib/api'
 import {
   Brain, TrendingUp, AlertTriangle, Zap, CheckCircle, XCircle,
   Play, Pause, RefreshCw, ChevronRight, Loader2,
@@ -21,7 +21,8 @@ import { CompactBreadcrumb } from '@/components/Breadcrumb'
 
 // Session 693: Removed 'agents' tab - redundant with main Agents page
 // Session 694: Removed 'learning' and 'activity' tabs - redundant with main Agents page
-type TabType = 'gates' | 'pilots' | 'experiments' | 'spiders' | 'predictions'
+// Session 734: Added 'income' tab for Income Builder
+type TabType = 'gates' | 'pilots' | 'experiments' | 'spiders' | 'predictions' | 'income'
 
 interface ActionResult {
   type: 'success' | 'error'
@@ -209,6 +210,21 @@ interface Prediction {
   views: number
 }
 
+// Session 734: Income Builder plan interface
+interface IncomePlan {
+  id: string
+  opportunity_title: string
+  focus_area: string
+  status: 'draft' | 'ready' | 'in_progress' | 'completed' | 'failed'
+  created_at: string
+  modified_at: string
+  has_quickstart: boolean
+  step_count: number
+  files: string[]
+  estimated_value?: number
+  progress_percentage?: number
+}
+
 // Session 693: Removed Agent interface - agents tab removed (redundant with main Agents page)
 
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
@@ -347,6 +363,13 @@ export default function IntelligencePage() {
     enabled: activeTab === 'predictions',
   })
 
+  // Session 734: Income Builder plans
+  const { data: incomePlansData, isLoading: loadingIncomePlans, refetch: refetchIncomePlans } = useQuery({
+    queryKey: ['income-plans'],
+    queryFn: () => incomeBuilderApi.listPlans(),
+    enabled: activeTab === 'income',
+  })
+
   // Mutations
   const approveGateMutation = useMutation({
     mutationFn: (gateId: string) => pilotsApi.updateGateStatus(gateId, 'approve', 'Approved via UI'),
@@ -445,6 +468,8 @@ export default function IntelligencePage() {
   // Session 694: Removed learningEvents and activityFeedItems - tabs moved to Agents page
   const spiders: Spider[] = spidersData?.data?.spiders || []
   const predictions: Prediction[] = predictionsData?.data?.predictions || []
+  // Session 734: Income Builder plans
+  const incomePlans: IncomePlan[] = incomePlansData?.data?.plans || []
 
   // Clear toast after 3 seconds
   if (actionResult) {
@@ -469,6 +494,7 @@ export default function IntelligencePage() {
     { key: 'experiments', label: 'Experiments', icon: BarChart3, count: experiments.filter(e => e.status === 'running').length },
     { key: 'spiders', label: 'Spiders', icon: Globe, count: spiders.filter(s => s.status === 'active').length },
     { key: 'predictions', label: 'Predictions', icon: Sparkles },
+    { key: 'income', label: 'Income Builder', icon: DollarSign, count: incomePlans.length },
     // Session 694: Removed learning and activity tabs - available on Agents page
   ]
 
@@ -1352,6 +1378,131 @@ export default function IntelligencePage() {
       )}
 
       {/* Session 693: Removed Agents Tab - redundant with main Agents page */}
+
+      {/* Session 734: Income Builder Tab */}
+      {activeTab === 'income' && (
+        <div className="space-y-6">
+          {/* Income Builder Header */}
+          <div className="card bg-gradient-to-r from-accent-green/10 to-accent-amber/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                  <DollarSign size={28} className="text-accent-green" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Income Builder</h3>
+                  <p className="text-gray-400">
+                    {incomePlans.length} action plans • Revenue generation strategies
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => refetchIncomePlans()}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <RefreshCw size={16} />
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Plans List */}
+          <div className="card">
+            <h4 className="text-lg font-semibold mb-4">Action Plans</h4>
+            {loadingIncomePlans ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            ) : incomePlans.length > 0 ? (
+              <div className="space-y-3">
+                {incomePlans.map((plan: IncomePlan) => (
+                  <div
+                    key={plan.id}
+                    className="p-4 rounded-lg border border-dark-border hover:border-primary-500 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className={cn(
+                          'h-10 w-10 rounded-lg flex items-center justify-center shrink-0',
+                          plan.status === 'completed' ? 'bg-accent-green/20' :
+                          plan.status === 'in_progress' ? 'bg-accent-cyan/20' :
+                          plan.status === 'failed' ? 'bg-accent-red/20' :
+                          'bg-accent-amber/20'
+                        )}>
+                          {plan.status === 'completed' ? <CheckCircle size={20} className="text-accent-green" /> :
+                           plan.status === 'in_progress' ? <Play size={20} className="text-accent-cyan" /> :
+                           plan.status === 'failed' ? <XCircle size={20} className="text-accent-red" /> :
+                           <FileText size={20} className="text-accent-amber" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold truncate">{plan.opportunity_title}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={cn(
+                              'text-xs px-2 py-0.5 rounded',
+                              plan.status === 'completed' ? 'bg-accent-green/20 text-accent-green' :
+                              plan.status === 'in_progress' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                              plan.status === 'failed' ? 'bg-accent-red/20 text-accent-red' :
+                              'bg-accent-amber/20 text-accent-amber'
+                            )}>
+                              {plan.status.replace('_', ' ')}
+                            </span>
+                            {plan.focus_area && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-primary-600/20 text-primary-400">
+                                {plan.focus_area}
+                              </span>
+                            )}
+                            {plan.has_quickstart && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-accent-cyan/20 text-accent-cyan">
+                                Quick Start
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                            <span>{plan.step_count} steps</span>
+                            <span>{plan.files.length} files</span>
+                            <span>{new Date(plan.modified_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {plan.estimated_value && (
+                        <div className="text-right shrink-0">
+                          <p className="text-lg font-bold text-accent-green">
+                            ${plan.estimated_value.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">est. value</p>
+                        </div>
+                      )}
+                    </div>
+                    {/* Progress bar if in progress */}
+                    {plan.status === 'in_progress' && plan.progress_percentage !== undefined && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-400">Progress</span>
+                          <span className="text-accent-cyan">{plan.progress_percentage}%</span>
+                        </div>
+                        <div className="h-1.5 bg-dark-border rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent-cyan transition-all"
+                            style={{ width: `${plan.progress_percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                <DollarSign className="mx-auto mb-3" size={48} />
+                <p className="text-lg font-medium">No Action Plans Yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Action plans are generated when you analyze revenue opportunities
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Opportunities Section (always visible at bottom) */}
       {opportunities.length > 0 && (
