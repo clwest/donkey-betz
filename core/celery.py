@@ -404,6 +404,14 @@ app.conf.beat_schedule = {
             'expires': 7200,  # 2 hours
         }
     },
+    # Session 728: Validate knowledge sources (set is_validated=True)
+    'validate-knowledge-sources': {
+        'task': 'core.tasks.validate_knowledge_sources',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM (after embeddings)
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
     # Session 417: Comprehensive Agent Activity Embeddings
     # Embed ALL agent activity (dreams, hive minds, knowledge) every 30 minutes
     'embed-agent-activity': {

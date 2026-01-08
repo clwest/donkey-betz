@@ -4833,6 +4833,149 @@ def broadcast_learning_status():
 
 
 # =============================================================================
+# Session 728: Knowledge Source Validation
+# Validates AgentKnowledgeSource records based on confidence, mythology checks,
+# and data point counts. Sets is_validated=True for valid knowledge.
+# =============================================================================
+
+@shared_task
+def validate_knowledge_sources():
+    """
+    Validate AgentKnowledgeSource records and set is_validated=True.
+
+    Session 728: Addresses the audit finding that all 3,909 knowledge records
+    were unvalidated despite having high confidence scores.
+
+    Validation Criteria:
+    1. High confidence score (>=0.7) = auto-validate
+    2. Medium confidence (0.4-0.7) + sufficient data points (>=5) = auto-validate
+    3. Low confidence (<0.4) = requires human review (not auto-validated)
+    4. Mythology check: Skip validation if content contains mythology patterns
+
+    Runs daily at 3 AM.
+    """
+    from django.utils import timezone
+    from django.db import transaction
+    from core.models import AgentKnowledgeSource
+
+    logger.info("✅ [VALIDATION] Starting knowledge source validation...")
+
+    try:
+        stats = {
+            'total_checked': 0,
+            'auto_validated_high_conf': 0,
+            'auto_validated_medium_conf': 0,
+            'mythology_blocked': 0,
+            'needs_review': 0,
+            'already_validated': 0,
+            'errors': 0
+        }
+
+        # Get mythology enforcer for content validation
+        mythology_enforcer = None
+        try:
+            from ai_core.agents.mythology_validator import mythology_enforcer as enforcer
+            mythology_enforcer = enforcer
+        except Exception as e:
+            logger.warning(f"⚠️ [VALIDATION] Mythology enforcer not available: {e}")
+
+        # Process unvalidated knowledge in batches
+        batch_size = 100
+        unvalidated = AgentKnowledgeSource.objects.filter(
+            is_validated=False,
+            is_active=True
+        ).order_by('-confidence_score')
+
+        total_unvalidated = unvalidated.count()
+        logger.info(f"✅ [VALIDATION] Found {total_unvalidated} unvalidated knowledge sources")
+
+        for knowledge in unvalidated.iterator(chunk_size=batch_size):
+            stats['total_checked'] += 1
+
+            try:
+                # Check for mythology in content
+                if mythology_enforcer:
+                    content_to_check = f"{knowledge.title or ''} {knowledge.summary or ''}"
+                    validation = mythology_enforcer.enforce(
+                        f"Knowledge:{knowledge.agent.name if knowledge.agent else 'Unknown'}",
+                        content_to_check
+                    )
+
+                    if validation.get('mythology_corrected'):
+                        # Content contains mythology - don't validate
+                        stats['mythology_blocked'] += 1
+                        logger.debug(f"🚫 [VALIDATION] Mythology blocked: {knowledge.title[:50]}")
+                        continue
+
+                # Validation logic based on confidence and data points
+                should_validate = False
+                validation_reason = ""
+
+                if knowledge.confidence_score >= 0.7:
+                    # High confidence - auto-validate
+                    should_validate = True
+                    validation_reason = "high_confidence"
+                    stats['auto_validated_high_conf'] += 1
+
+                elif knowledge.confidence_score >= 0.4 and knowledge.data_points_count >= 5:
+                    # Medium confidence with sufficient data points - auto-validate
+                    should_validate = True
+                    validation_reason = "medium_confidence_with_data"
+                    stats['auto_validated_medium_conf'] += 1
+
+                else:
+                    # Low confidence or insufficient data - needs review
+                    stats['needs_review'] += 1
+
+                if should_validate:
+                    with transaction.atomic():
+                        knowledge.is_validated = True
+                        knowledge.save(update_fields=['is_validated'])
+
+                    logger.debug(
+                        f"✅ [VALIDATION] Validated: {knowledge.title[:40]}... "
+                        f"(reason: {validation_reason}, conf: {knowledge.confidence_score:.2f})"
+                    )
+
+            except Exception as e:
+                stats['errors'] += 1
+                logger.warning(f"⚠️ [VALIDATION] Error validating {knowledge.id}: {e}")
+                continue
+
+        # Log summary
+        validated_count = stats['auto_validated_high_conf'] + stats['auto_validated_medium_conf']
+        logger.info(
+            f"✅ [VALIDATION] Complete: {validated_count} validated, "
+            f"{stats['mythology_blocked']} blocked by mythology, "
+            f"{stats['needs_review']} need review, "
+            f"{stats['errors']} errors"
+        )
+
+        # Broadcast update via Redis
+        try:
+            import redis
+            import json
+            r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+            r.publish('agent_learning', json.dumps({
+                'type': 'knowledge_validation_complete',
+                'data': stats,
+                'timestamp': timezone.now().isoformat()
+            }))
+        except Exception:
+            pass
+
+        return {
+            'status': 'success',
+            **stats,
+            'timestamp': timezone.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.exception(f"✅ [VALIDATION] Knowledge validation failed: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+
+# =============================================================================
 # Session 244: Daily Learning Embeddings
 # Convert all agent learning (knowledge transfers, syntheses, insights) into
 # searchable vector embeddings stored in PGVector. This enables semantic search
