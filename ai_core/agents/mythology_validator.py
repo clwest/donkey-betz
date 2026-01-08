@@ -3,14 +3,30 @@ Mythology Validator - Reality Enforcement System
 
 This module prevents AI agents from making unrealistic promises or claims.
 It validates agent outputs against reality constraints before returning to users.
+
+Session 728: Connected to mythology/ database models for persistent tracking.
 """
 
 import re
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Session 728: Database persistence service (lazy-loaded)
+_detection_service = None
+
+def get_detection_service():
+    """Lazy-load the MythologyDetectionService to avoid circular imports."""
+    global _detection_service
+    if _detection_service is None:
+        try:
+            from mythology.services import MythologyDetectionService
+            _detection_service = MythologyDetectionService()
+        except Exception as e:
+            logger.debug(f"Could not load MythologyDetectionService: {e}")
+    return _detection_service
 
 
 class MythologyValidator:
@@ -139,7 +155,8 @@ class MythologyValidator:
 
         if violations:
             self.validation_stats['violations_found'] += len(violations)
-            self.log_violation(agent_name, violations)
+            # Session 728: Pass output for database persistence
+            self.log_violation(agent_name, violations, output=output_str)
 
             # Correct the output
             corrected_output = self.correct_output(output, violations)
@@ -239,8 +256,13 @@ class MythologyValidator:
         warning += "The output has been adjusted to be more realistic."
         return warning
 
-    def log_violation(self, agent_name: str, violations: List[Dict]):
-        """Log violations for monitoring"""
+    def log_violation(self, agent_name: str, violations: List[Dict], output: str = None, user=None):
+        """
+        Log violations for monitoring and persist to database.
+
+        Session 728: Now persists to mythology/ database models.
+        """
+        # In-memory logging
         self.violation_log.append({
             'timestamp': datetime.now().isoformat(),
             'agent': agent_name,
@@ -249,6 +271,104 @@ class MythologyValidator:
         })
 
         logger.warning(f"🚨 Mythology violations detected in {agent_name}: {len(violations)} issues")
+
+        # Session 728: Persist to database
+        self._persist_to_database(agent_name, violations, output, user)
+
+    def _persist_to_database(self, agent_name: str, violations: List[Dict], output: str = None, user=None):
+        """
+        Persist violations to mythology database models.
+
+        Session 728: Connects validator to mythology/ app for tracking.
+        """
+        try:
+            detection_service = get_detection_service()
+            if not detection_service:
+                return
+
+            # Calculate risk score based on violations
+            risk_score = 0.0
+            severity_weights = {'critical': 0.4, 'high': 0.3, 'medium': 0.2, 'low': 0.1}
+            for v in violations:
+                risk_score += severity_weights.get(v.get('severity', 'medium'), 0.2)
+            risk_score = min(risk_score, 1.0)
+
+            # Determine overall severity
+            severities = [v.get('severity', 'medium') for v in violations]
+            if 'critical' in severities:
+                overall_severity = 'critical'
+            elif 'high' in severities:
+                overall_severity = 'high'
+            elif 'medium' in severities:
+                overall_severity = 'medium'
+            else:
+                overall_severity = 'low'
+
+            # Build detection result format expected by record_mythology_event
+            detection_result = {
+                'detected': True,
+                'patterns_found': [v.get('type', 'unknown') for v in violations],
+                'matches': {v.get('type', 'unknown'): [v.get('pattern', '')] for v in violations},
+                'risk_score': risk_score,
+                'severity': overall_severity,
+                'source_type': 'agent'
+            }
+
+            # Record to MythologyEvent
+            detection_service.record_mythology_event(
+                content=output or 'No output captured',
+                detection_result=detection_result,
+                user=user,
+                source_id=agent_name,
+                was_prevented=True  # We corrected the output
+            )
+
+            logger.info(f"📝 Mythology event recorded for {agent_name} (risk: {risk_score:.2f})")
+
+            # For high/critical violations, also create a FlaggedHallucination
+            if overall_severity in ['high', 'critical']:
+                self._create_flagged_hallucination(agent_name, violations, output, user, detection_result)
+
+        except Exception as e:
+            logger.debug(f"Could not persist mythology event: {e}")
+
+    def _create_flagged_hallucination(
+        self,
+        agent_name: str,
+        violations: List[Dict],
+        output: str,
+        user,
+        detection_result: Dict
+    ):
+        """
+        Create a FlaggedHallucination record for high-severity violations.
+
+        Session 728: Enables human review of serious mythology violations.
+        """
+        try:
+            from mythology.models import FlaggedHallucination
+
+            FlaggedHallucination.objects.create(
+                flagged_type='auto_detected',
+                original_prompt=f"Agent: {agent_name}",
+                flagged_content=output[:2000] if output else 'No content',
+                context=f"Violations: {[v.get('type') for v in violations]}",
+                patterns_detected=detection_result['patterns_found'],
+                risk_score=detection_result['risk_score'],
+                confidence_score=0.8,  # High confidence from pattern matching
+                detection_method='mythology_validator',
+                verification_status='pending',
+                priority=detection_result['severity'],
+                requires_immediate_attention=detection_result['severity'] == 'critical',
+                metadata={
+                    'agent_name': agent_name,
+                    'violations': violations,
+                    'validator_version': 'v2_session_728'
+                }
+            )
+            logger.info(f"🚩 FlaggedHallucination created for {agent_name}")
+        except Exception as e:
+            logger.debug(f"Could not create FlaggedHallucination: {e}")
 
     def get_stats(self) -> Dict[str, Any]:
         """Get validation statistics"""
