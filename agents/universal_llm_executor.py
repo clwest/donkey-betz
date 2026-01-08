@@ -19,7 +19,7 @@ warnings.warn(
 # Re-export from canonical location
 from core.services.universal_llm_executor import (
     UniversalLLMAgent,
-    UniversalLLMExecutor,
-    universal_executor,
-    execute_any_agent,
+    UniversalAgentExecutor,
+    get_universal_executor,
+    execute_agent_with_llm,
 )
