@@ -227,6 +227,21 @@ interface IncomePlan {
 
 // Session 693: Removed Agent interface - agents tab removed (redundant with main Agents page)
 
+// Session 734: Helper to strip HTML tags from scraped content
+function stripHtml(html: string | undefined | null): string {
+  if (!html) return ''
+  // Remove HTML tags and decode common entities
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
+}
+
 function Toast({ result, onClose }: { result: ActionResult; onClose: () => void }) {
   return (
     <div className={cn(
@@ -2004,7 +2019,7 @@ export default function IntelligencePage() {
                 <div className="p-6 space-y-6">
                   {/* Description */}
                   <div>
-                    <p className="text-gray-300">{opp.description}</p>
+                    <p className="text-gray-300">{stripHtml(opp.description)}</p>
                   </div>
 
                   {/* Score Section - Show breakdown only if detailed scores exist */}
