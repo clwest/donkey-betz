@@ -17,6 +17,14 @@ import warnings
 
 logger = logging.getLogger(__name__)
 
+# Session 730: Import pgvector for native vector operations
+try:
+    from pgvector.django import VectorField
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    VectorField = None
+
 # Import base models
 from .models.base.models import UnifiedBaseModel
 
@@ -3100,11 +3108,17 @@ class SpiderData(models.Model):
     insights = models.JSONField(default=list)
 
     # Session 293: Embeddings for semantic search
+    # Session 730: Migrated to pgvector VectorField
     # Aggregate embedding of all items in this spider data entry
-    embedding = models.JSONField(
+    embedding = VectorField(
+        dimensions=1536,
         null=True,
         blank=True,
-        help_text="Vector embedding for semantic search across all items"
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
     )
     # Individual item embeddings stored as dict: {item_index: embedding}
     item_embeddings = models.JSONField(
@@ -9506,10 +9520,16 @@ class AgentMemory(models.Model):
     )
 
     # Embedding for semantic search
-    embedding = models.JSONField(
+    # Session 730: Migrated to pgvector VectorField
+    embedding = VectorField(
+        dimensions=1536,
         null=True,
         blank=True,
-        help_text="Vector embedding for semantic retrieval"
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
     )
 
     # Memory connections (for the visual memory map)
@@ -9877,10 +9897,16 @@ class MemoryCluster(models.Model):
     icon = models.CharField(max_length=50, default='🧠')
 
     # Cluster centroid - the average embedding of all memories
-    centroid_embedding = models.JSONField(
+    # Session 730: Migrated to pgvector VectorField
+    centroid_embedding = VectorField(
+        dimensions=1536,
         null=True,
         blank=True,
-        help_text="Average embedding vector representing this cluster's center"
+        help_text="Cluster centroid embedding (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Cluster centroid embedding (JSON fallback)"
     )
 
     # Cluster quality metrics
@@ -13825,10 +13851,16 @@ class BusinessResearchResult(models.Model):
     )
 
     # Embedding for semantic search
-    embedding = models.JSONField(
+    # Session 730: Migrated to pgvector VectorField
+    embedding = VectorField(
+        dimensions=1536,
         null=True,
         blank=True,
-        help_text="Vector embedding of analysis for semantic search"
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
     )
 
     # Timestamps
@@ -16224,10 +16256,16 @@ class LegalResearchResult(models.Model):
     spider_data_count = models.IntegerField(default=0)
 
     # Embedding for semantic search
-    embedding = models.JSONField(
+    # Session 730: Migrated to pgvector VectorField
+    embedding = VectorField(
+        dimensions=1536,
         null=True,
         blank=True,
-        help_text="Vector embedding for semantic search"
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
     )
 
     # Execution metrics
@@ -16418,7 +16456,17 @@ class LegalMemory(models.Model):
     )
 
     # Embedding for retrieval
-    embedding = models.JSONField(null=True, blank=True)
+    # Session 730: Migrated to pgvector VectorField
+    embedding = VectorField(
+        dimensions=1536,
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
