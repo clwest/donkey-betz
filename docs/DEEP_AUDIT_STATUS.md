@@ -1,7 +1,7 @@
-# Deep Audit Status - Session 728
+# Deep Audit Status - Session 729
 
 **Last Updated:** January 7, 2026
-**Sessions:** 726 (Started), 727 (Main Audit), 728 (Fixes + Migration)
+**Sessions:** 726 (Started), 727 (Main Audit), 728 (Fixes + Migration), 729 (HIGH Priority Fixes)
 
 ---
 
@@ -9,16 +9,16 @@
 
 | Area | Original Score | Current Score | Status |
 |------|---------------|---------------|--------|
-| mythology/ | 30% | **70%** | ✅ FIXED |
+| mythology/ | 30% | **90%** | ✅ FIXED (10 patterns seeded, quarantine cleared) |
 | Memory System | 0% validated | **79%** | ✅ FIXED |
-| intelligence/ | 40% | **60%** | ⚠️ PARTIAL |
+| intelligence/ | 40% | **75%** | ✅ FIXED (app_label corrected) |
 | agents/ | 50% | **90%** | ✅ MIGRATED |
 | PA Tools | 95% | 95% | ✅ HEALTHY |
 | Services | 100% | 100% | ✅ HEALTHY |
 | Celery Tasks | 65% | **90%** | ✅ FIXED |
 | Intelligent Prompting | 85% | 85% | ✅ HEALTHY |
 
-**Average Reality Score: 84%** (up from ~60% pre-audit)
+**Average Reality Score: 88%** (up from ~60% pre-audit)
 
 ---
 
@@ -42,35 +42,17 @@
 | ✅ Deprecation shims created | 39 backwards-compatible shims in agents/ |
 | ✅ UI gaps documented | 6 backend APIs identified needing frontend exposure |
 
+### Session 729
+
+| Fix | Details |
+|-----|---------|
+| ✅ Intelligence app_label fixed | Changed `intelligence_rt` to `intelligence` in 9 model Meta classes |
+| ✅ MythPattern seeded | 10 detection patterns created (all PATTERN_TYPES covered) |
+| ✅ Quarantine cleared | 9 items reviewed and approved as false positives (overly aggressive regex) |
+
 ---
 
 ## Remaining Issues
-
-### HIGH Priority
-
-#### 1. Intelligence app_label Mismatch (NOT FIXED)
-**Location:** `intelligence/models.py`
-**Issue:** Models use `app_label = 'intelligence_rt'` instead of `'intelligence'`
-**Impact:** Potential migration/query issues
-**Fix:**
-```python
-# Change all occurrences in intelligence/models.py
-class Meta:
-    app_label = 'intelligence'  # NOT 'intelligence_rt'
-```
-**Lines affected:** 63, 146, 208, 282, 393
-
-#### 2. Mythology Pattern Seeding (NOT DONE)
-**Location:** `mythology/` app
-**Issue:** `MythPattern` table has 0 records - no patterns to detect
-**Impact:** Pattern-based detection not working
-**Fix:** Create management command `seed_mythology_patterns`
-
-#### 3. Mythology Quarantine Review (9 PENDING)
-**Location:** `MythologyQuarantine` (in core/)
-**Issue:** 9 items pending since December 26, 2025
-**Impact:** Potentially blocked learning transfers
-**Fix:** Review via admin or API
 
 ### MEDIUM Priority
 
@@ -138,25 +120,18 @@ print(f'ChannelMembership: {ChannelMembership.objects.count()}')
 
 ## Recommended Next Steps (Priority Order)
 
-### Immediate (Session 729)
+### Immediate (Session 729) - ✅ COMPLETED
 
-1. **Fix intelligence app_label** (~5 min)
-   - Change `intelligence_rt` to `intelligence` in 5 locations
-   - Run `makemigrations` and `migrate`
-
-2. **Review 9 quarantine items** (~10 min)
-   - Check what's blocked
-   - Approve/reject via admin
-
-3. **Seed mythology patterns** (~30 min)
-   - Create management command
-   - Add initial detection patterns
+1. ~~**Fix intelligence app_label**~~ ✅ Done - 9 Meta classes updated
+2. ~~**Review 9 quarantine items**~~ ✅ Done - All approved as false positives
+3. ~~**Seed mythology patterns**~~ ✅ Done - 10 patterns created
 
 ### Short-term
 
-4. **Create Agent Channels UI** (~2-4 hours)
-   - Add API to `frontend/src/lib/api.ts`
+4. **Create Agent Channels UI**
+   - Add `agentChannelsApi` to `frontend/src/lib/api.ts`
    - Create `AgentChannelsPage.tsx`
+   - See `docs/UI_GAPS_AGENTS_MIGRATION.md` for details
 
 5. **Monitor intelligence tables** (passive)
    - Check if ActionPlan, RevenueMetrics, EarningRecord populate
@@ -189,17 +164,19 @@ print(f'ChannelMembership: {ChannelMembership.objects.count()}')
 
 ## Summary
 
-**What's DONE:**
+**What's DONE (Sessions 727-729):**
 - ✅ Mythology validator connected to database
 - ✅ Knowledge validation task running (79% validated)
 - ✅ income_builder.py consolidated
 - ✅ 5 intelligence Celery tasks scheduled
 - ✅ agents/ migration complete (80% reduction)
 - ✅ UI gaps documented
+- ✅ Intelligence app_label fixed (Session 729)
+- ✅ 10 MythPattern records seeded (Session 729)
+- ✅ 9 quarantine items cleared (Session 729)
 
 **What's REMAINING:**
-- ❌ Intelligence app_label mismatch (HIGH)
-- ❌ Mythology pattern seeding (HIGH)
-- ❌ 9 quarantine items review (MEDIUM)
-- ❌ Agent Channels UI (MEDIUM)
-- ❌ Intelligence app consolidation (LOW)
+- ⚠️ Agent Channels UI (MEDIUM) - Backend complete, needs frontend
+- ⚠️ Intelligence app consolidation (LOW) - 66K lines could be reduced
+- ⚠️ Remaining agents/ migration (LOW) - ~10K lines, works via shims
+- ⚠️ Empty intelligence tables (MONITOR) - Celery tasks running, check in 24-48h
