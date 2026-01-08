@@ -32,6 +32,13 @@ Reviewed and approved all 9 pending MythologyQuarantine items:
 - Content was legitimate market research about HIPAA-compliant health platforms
 - Regex `(?:cure|heal|fix).*(?:disease|illness|condition)` flagged health industry discussions
 
+### 4. Spider Pipeline Fixed
+Diagnosed why intelligence tables (ActionPlan, RevenueMetrics, EarningRecord) were empty:
+- **Root cause:** `scan-spider-opportunities` task was missing from Celery Beat database
+- **SpiderData working:** 615 records in 24h, 77 spiders active
+- **Fix:** Added task to PeriodicTask table, restarted Celery Beat
+- **Result:** 150 new opportunities created, pipeline now flows every 15 minutes
+
 ### Reality Score Improvement
 - **Mythology:** 70% → **90%** (patterns seeded, quarantine cleared)
 - **Intelligence:** 60% → **75%** (app_label fixed)
