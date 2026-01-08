@@ -174,7 +174,8 @@ You execute complete workflow packages, not individual steps."""
     def legacy_agent(self):
         """Lazy-load the legacy WorkflowOrchestrationAgent."""
         if self._legacy_agent is None:
-            from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent as LegacyAgent
+            # Session 727: Migrated to core/services/
+            from core.services.workflow_orchestration_agent import WorkflowOrchestrationAgent as LegacyAgent
             self._legacy_agent = LegacyAgent(
                 user=self.user,
                 project_id=self.project_id
@@ -503,7 +504,8 @@ You execute complete workflow packages, not individual steps."""
         Returns:
             Dict with workflow info or None if not found
         """
-        from agents.workflow_orchestration_agent import WorkflowOrchestrationAgent as LegacyAgent
+        # Session 727: Migrated to core/services/
+        from core.services.workflow_orchestration_agent import WorkflowOrchestrationAgent as LegacyAgent
 
         if workflow_name not in LegacyAgent.WORKFLOWS:
             return None

@@ -157,6 +157,43 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=0, hour=3),  # 3 AM daily
         'args': (30,)  # Days before expiring
     },
+    # Session 727: Missing Intelligence Tasks (found in deep system audit)
+    # These tasks were defined but never scheduled, causing 0 records in ActionPlan, RevenueMetrics, etc.
+    'execute-action-plans': {
+        'task': 'intelligence.tasks.execute_action_plan',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # 30 minutes
+        }
+    },
+    'monitor-and-process-opportunities': {
+        'task': 'intelligence.tasks.monitor_and_process_opportunities',
+        'schedule': crontab(minute='*/20'),  # Every 20 minutes
+        'options': {
+            'expires': 1200,  # 20 minutes
+        }
+    },
+    'calculate-daily-revenue-metrics': {
+        'task': 'intelligence.tasks.calculate_daily_revenue_metrics',
+        'schedule': crontab(hour=1, minute=0),  # Daily at 1 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    'update-ml-model-feedback': {
+        'task': 'intelligence.tasks.update_ml_model_with_feedback',
+        'schedule': crontab(hour=6, minute=30),  # Daily at 6:30 AM
+        'options': {
+            'expires': 3600,  # 1 hour
+        }
+    },
+    'scan-spider-opportunities': {
+        'task': 'intelligence.tasks.scan_spider_opportunities',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+        'options': {
+            'expires': 900,  # 15 minutes
+        }
+    },
     # Session 6: Automated Spider Data Processing (legacy persistence.models.SpiderData)
     'process-spider-data-automatic': {
         'task': 'core.tasks.process_spider_data_automatic',

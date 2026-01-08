@@ -15,7 +15,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 
-from agents.workflow_engine import WorkflowEngine, IntentParser, CONTENT_CONFIGS
+# Session 727: Migrated to core/services/workflow_engine.py
+from core.services.workflow_engine import WorkflowEngine, IntentParser, CONTENT_CONFIGS
 
 logger = logging.getLogger(__name__)
 

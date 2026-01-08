@@ -150,7 +150,8 @@ You produce comprehensive pipeline reports with value calculations and recommend
     def legacy_orchestrator(self):
         """Lazy-load the legacy OpportunityPipelineOrchestrator."""
         if self._legacy_orchestrator is None:
-            from agents.opportunity_pipeline_orchestrator import OpportunityPipelineOrchestrator
+            # Session 727: Migrated to core/services/
+            from core.services.opportunity_pipeline_orchestrator import OpportunityPipelineOrchestrator
             self._legacy_orchestrator = OpportunityPipelineOrchestrator()
         return self._legacy_orchestrator
 
