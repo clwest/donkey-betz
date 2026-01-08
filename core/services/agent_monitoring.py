@@ -346,9 +346,9 @@ class PerformanceAnalyzer:
         
         # Get metrics for each agent type
         try:
-            from core.models.agents_registry import AgentTemplate
-            
-            for template in AgentTemplate.objects.filter(is_active=True):
+            from core.models.agents_registry import UnifiedAgentTemplate
+
+            for template in UnifiedAgentTemplate.objects.filter(is_active=True):
                 agent_stats = PerformanceAnalyzer.get_agent_stats(
                     template.name,
                     time_period=timedelta(hours=24)
@@ -423,23 +423,23 @@ class PerformanceAnalyzer:
         
         # Get metrics for all agents
         try:
-            from core.models.agents_registry import AgentTemplate, AgentExecution
-            
+            from core.models.agents_registry import UnifiedAgentTemplate, AgentExecution
+
             # Overall statistics
             total_executions = AgentExecution.objects.count()
             successful_executions = AgentExecution.objects.filter(
                 status='completed'
             ).count()
-            
+
             report['summary'] = {
                 'total_executions': total_executions,
                 'successful_executions': successful_executions,
                 'success_rate': successful_executions / total_executions if total_executions > 0 else 0,
-                'total_agents': AgentTemplate.objects.filter(is_active=True).count()
+                'total_agents': UnifiedAgentTemplate.objects.filter(is_active=True).count()
             }
             
             # Per-agent details
-            for template in AgentTemplate.objects.filter(is_active=True):
+            for template in UnifiedAgentTemplate.objects.filter(is_active=True):
                 stats = PerformanceAnalyzer.get_agent_stats(
                     template.name,
                     time_period
@@ -447,16 +447,19 @@ class PerformanceAnalyzer:
                 report['details'][template.name] = stats
                 
                 # Generate recommendations
-                if stats.get('avg_execution_time', 0) > 30:
+                avg_exec_time = stats.get('avg_execution_time') or 0
+                failure_rate = stats.get('failure_rate') or 0
+
+                if avg_exec_time > 30:
                     report['recommendations'].append(
                         f"Agent '{template.name}' has high average execution time "
-                        f"({stats['avg_execution_time']:.2f}s). Consider optimization."
+                        f"({avg_exec_time:.2f}s). Consider optimization."
                     )
-                
-                if stats.get('failure_rate', 0) > 0.1:
+
+                if failure_rate > 0.1:
                     report['recommendations'].append(
                         f"Agent '{template.name}' has high failure rate "
-                        f"({stats['failure_rate']:.1%}). Investigate errors."
+                        f"({failure_rate:.1%}). Investigate errors."
                     )
         
         except Exception as e:
