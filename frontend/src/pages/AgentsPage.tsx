@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi } from '@/lib/api'
+import { agentsApi, activityApi, dreamsApi, conversationsApi, decisionsApi, experimentsApi, agentChannelsApi, agentMonitoringApi, agentToolsApi } from '@/lib/api'
 import { useAgentUpdates, useLearningFeed, useSystemEvents, type AgentUpdate, type LearningEvent } from '@/hooks/useWebSocket'
-import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2 } from 'lucide-react'
+import { Bot, Activity, CheckCircle, Wifi, WifiOff, Zap, Search, ChevronDown, ChevronRight, Layers, MessageSquare, Brain, Sparkles, Users, Clock, RefreshCw, Trophy, ThumbsUp, TrendingUp, X, Eye, Lightbulb, Hash, Send, BarChart3, AlertTriangle, Cpu, Database, Loader2, Wrench, Power, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // Session 713: Cross-page navigation
 import { CompactBreadcrumb } from '@/components/Breadcrumb'
@@ -535,7 +535,7 @@ export default function AgentsPage() {
   const [realtimeUpdates, setRealtimeUpdates] = useState<AgentUpdate[]>([])
   const [learningEvents, setLearningEvents] = useState<LearningEvent[]>([])
   // Session 734: Added 'monitoring' tab
-  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring'>('directory')
+  const [activeTab, setActiveTab] = useState<'directory' | 'activity' | 'learning' | 'channels' | 'monitoring' | 'tools'>('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['creation', 'research', 'strategy']))
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
@@ -652,6 +652,18 @@ export default function AgentsPage() {
       return response.data?.data || response.data
     },
     enabled: activeTab === 'monitoring',
+  })
+
+  // Session 734: Agent Tools query
+  const [toolTypeFilter, setToolTypeFilter] = useState<string>('')
+  const { data: toolsData, isLoading: toolsLoading, refetch: refetchTools } = useQuery({
+    queryKey: ['agent-tools', toolTypeFilter],
+    queryFn: async () => {
+      const params = toolTypeFilter ? { tool_type: toolTypeFilter } : undefined
+      const response = await agentToolsApi.list(params)
+      return response.data?.results || response.data?.data?.results || response.data || []
+    },
+    enabled: activeTab === 'tools',
   })
 
   // WebSocket connections
@@ -818,7 +830,7 @@ export default function AgentsPage() {
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-dark-border pb-4">
-        {(['directory', 'activity', 'learning', 'channels', 'monitoring'] as const).map((tab) => (
+        {(['directory', 'activity', 'learning', 'channels', 'monitoring', 'tools'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1818,6 +1830,167 @@ export default function AgentsPage() {
               <p className="text-lg font-medium">No Monitoring Data</p>
               <p className="text-sm text-gray-500 mt-1">
                 Monitoring metrics will appear as agents execute tasks
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session 734: Tools Tab - Agent Tool Registry */}
+      {activeTab === 'tools' && (
+        <div className="space-y-6">
+          {/* Tools Header */}
+          <div className="card bg-gradient-to-r from-accent-amber/10 to-accent-purple/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg bg-accent-amber/20 flex items-center justify-center">
+                  <Wrench size={28} className="text-accent-amber" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Agent Tools</h3>
+                  <p className="text-gray-400">
+                    Tools and integrations available to agents
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Tool Type Filter */}
+                <select
+                  value={toolTypeFilter}
+                  onChange={(e) => setToolTypeFilter(e.target.value)}
+                  className="bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">All Types</option>
+                  <option value="api">API Integration</option>
+                  <option value="computation">Computation</option>
+                  <option value="data_processing">Data Processing</option>
+                  <option value="communication">Communication</option>
+                  <option value="content_generation">Content Generation</option>
+                  <option value="analysis">Analysis</option>
+                  <option value="monitoring">Monitoring</option>
+                  <option value="integration">System Integration</option>
+                </select>
+                <button
+                  onClick={() => refetchTools()}
+                  className="btn btn-secondary flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {toolsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin" size={32} />
+            </div>
+          ) : Array.isArray(toolsData) && toolsData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {toolsData.map((tool: {
+                id: string
+                name: string
+                display_name: string
+                description: string
+                tool_type: string
+                is_active: boolean
+                usage_count: number
+                success_rate: number
+                avg_response_time_ms: number
+                tool_version: string
+                endpoint_url?: string
+                supported_operations?: string[]
+              }) => (
+                <div
+                  key={tool.id}
+                  className={cn(
+                    "card hover:border-primary-500/50 transition-colors",
+                    !tool.is_active && "opacity-60"
+                  )}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center",
+                        tool.tool_type === 'api' ? 'bg-accent-cyan/20' :
+                        tool.tool_type === 'computation' ? 'bg-accent-purple/20' :
+                        tool.tool_type === 'data_processing' ? 'bg-accent-blue/20' :
+                        tool.tool_type === 'communication' ? 'bg-accent-green/20' :
+                        tool.tool_type === 'content_generation' ? 'bg-accent-pink/20' :
+                        tool.tool_type === 'analysis' ? 'bg-accent-amber/20' :
+                        'bg-gray-500/20'
+                      )}>
+                        {tool.tool_type === 'api' ? <ExternalLink size={20} className="text-accent-cyan" /> :
+                         tool.tool_type === 'computation' ? <Cpu size={20} className="text-accent-purple" /> :
+                         tool.tool_type === 'data_processing' ? <Database size={20} className="text-accent-blue" /> :
+                         tool.tool_type === 'communication' ? <MessageSquare size={20} className="text-accent-green" /> :
+                         tool.tool_type === 'content_generation' ? <Sparkles size={20} className="text-accent-pink" /> :
+                         tool.tool_type === 'analysis' ? <BarChart3 size={20} className="text-accent-amber" /> :
+                         <Wrench size={20} className="text-gray-400" />}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-white">{tool.display_name}</h4>
+                        <span className="text-xs text-gray-500 capitalize">{tool.tool_type.replace('_', ' ')}</span>
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-1 text-xs px-2 py-1 rounded",
+                      tool.is_active ? 'bg-accent-green/20 text-accent-green' : 'bg-gray-500/20 text-gray-400'
+                    )}>
+                      <Power size={12} />
+                      {tool.is_active ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                    {tool.description}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2 text-center border-t border-dark-border pt-3">
+                    <div>
+                      <p className="text-lg font-semibold text-white">{tool.usage_count.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Uses</p>
+                    </div>
+                    <div>
+                      <p className={cn(
+                        "text-lg font-semibold",
+                        tool.success_rate >= 0.9 ? 'text-accent-green' :
+                        tool.success_rate >= 0.7 ? 'text-accent-amber' : 'text-accent-red'
+                      )}>
+                        {(tool.success_rate * 100).toFixed(0)}%
+                      </p>
+                      <p className="text-xs text-gray-500">Success</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-white">{tool.avg_response_time_ms.toFixed(0)}ms</p>
+                      <p className="text-xs text-gray-500">Avg Time</p>
+                    </div>
+                  </div>
+
+                  {tool.endpoint_url && (
+                    <div className="mt-3 pt-3 border-t border-dark-border">
+                      <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                        <ExternalLink size={12} />
+                        {tool.endpoint_url}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                    <span>v{tool.tool_version}</span>
+                    {tool.supported_operations && tool.supported_operations.length > 0 && (
+                      <span>{tool.supported_operations.length} operations</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-center py-12 text-gray-400">
+              <Wrench className="mx-auto mb-3 opacity-50" size={48} />
+              <p className="text-lg font-medium">No Tools Registered</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Agent tools will appear here once configured
               </p>
             </div>
           )}
