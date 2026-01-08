@@ -758,30 +758,24 @@ class BodyVitalsService:
                 'alerts': []
             }
 
-            # Generate alerts based on nervous status
-            if status in ['damaged', 'numb', 'overloaded']:
+            # Only alert on actual critical states - not normal idle/reconnect behavior
+            # WebSocket connections naturally drop when idle and reconnect on demand
+            if status == 'damaged':
                 result['alerts'].append({
                     'system': 'nervous',
-                    'message': f"WebSocket communication: {status}",
-                    'severity': 'critical' if status == 'damaged' else 'warning',
-                    'severity_score': 3 if status == 'damaged' else 2
-                })
-            elif status == 'sluggish':
-                result['alerts'].append({
-                    'system': 'nervous',
-                    'message': "WebSocket communication is sluggish",
-                    'severity': 'warning',
-                    'severity_score': 2
-                })
-
-            # Alert if channel layer is disconnected
-            if not vitals.get('channel_layer_healthy', True):
-                result['alerts'].append({
-                    'system': 'nervous',
-                    'message': "Redis channel layer disconnected - WebSockets not working",
+                    'message': "WebSocket infrastructure damaged - check Redis and Daphne",
                     'severity': 'critical',
                     'severity_score': 3
                 })
+            elif status == 'overloaded':
+                result['alerts'].append({
+                    'system': 'nervous',
+                    'message': "WebSocket system overloaded - too many connections",
+                    'severity': 'warning',
+                    'severity_score': 2
+                })
+            # Note: 'numb', 'sluggish', 'dormant' are normal states when there's
+            # low/no WebSocket activity - no alert needed
 
             if include_details:
                 result['details'] = {
