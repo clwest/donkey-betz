@@ -31,6 +31,7 @@ import NeuralOrchestraPage from '@/pages/NeuralOrchestraPage'
 import ConversationContractPage from '@/pages/ConversationContractPage'
 import SpiderIntegrationPage from '@/pages/SpiderIntegrationPage'
 import DocumentsPage from '@/pages/DocumentsPage'
+import MythologyLabPage from '@/pages/MythologyLabPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -85,6 +86,7 @@ function App() {
         <Route path="conversation-contract" element={<ConversationContractPage />} />
         <Route path="spiders" element={<SpiderIntegrationPage />} />
         <Route path="documents" element={<DocumentsPage />} />
+        <Route path="mythology-lab" element={<MythologyLabPage />} />
       </Route>
     </Routes>
   )

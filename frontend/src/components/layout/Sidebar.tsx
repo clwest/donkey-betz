@@ -31,6 +31,7 @@ import {
   FileCheck,
   Bug,
   FileText,
+  Beaker,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -60,6 +61,7 @@ const navItems = [
   { path: '/conversation-contract', label: 'Contract', icon: FileCheck },
   { path: '/spiders', label: 'Spiders', icon: Bug },
   { path: '/documents', label: 'Documents', icon: FileText },
+  { path: '/mythology-lab', label: 'Mythology Lab', icon: Beaker },
   { path: '/workspace', label: 'Workspace', icon: FolderCog },
   { path: '/betting', label: 'Betting', icon: TrendingUp },
   { path: '/content', label: 'Content', icon: Palette },
