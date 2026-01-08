@@ -1,6 +1,7 @@
 # UI-Backend Connection Map
 
 **Created:** Session 309
+**Updated:** Session 731 (RAG/Embedding System Audit)
 **Purpose:** Map what's connected, what exists but isn't connected, and opportunities for integration
 
 ---
@@ -16,6 +17,8 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Agent Learning | 3 views | 10 endpoints | **100% Connected** |
 | Clean Agents | 11 agents | Router active | **100% Connected** |
 | Deprecated Agents | 14 agents | Learning hooks | **100% Connected** |
+| Memory Clusters | 1 tab | 10 endpoints | **100% Connected** |
+| **RAG/Documents** | **None** | **6 endpoints** | **0% Connected** |
 
 ---
 
@@ -97,6 +100,22 @@ The platform has **excellent coverage** - most UI components are properly wired 
 | Agent Context | `/api/agent-learning/context/{name}/` | CONNECTED |
 | Share Knowledge | `/api/agent-learning/share/{name}/` | CONNECTED |
 
+### Memory Clusters (Session 718)
+| UI Component | Backend API | Status |
+|--------------|-------------|--------|
+| Overview | `/api/memory-clusters/` | CONNECTED |
+| Agent Clusters | `/api/memory-clusters/agent/{id}/` | CONNECTED |
+| Cluster Detail | `/api/memory-clusters/cluster/{id}/` | CONNECTED |
+| Visualization | `/api/memory-clusters/visualization/` | CONNECTED |
+| Generate All | `/api/memory-clusters/generate-all/` | CONNECTED |
+| Add Memory | `/api/memory-clusters/cluster/{id}/add-memory/` | CONNECTED |
+| Remove Memory | `/api/memory-clusters/cluster/{id}/memory/{id}/` | CONNECTED |
+| Evolution | `/api/memory-clusters/evolution/{id}/` | CONNECTED |
+| Find Similar | `/api/memory-clusters/find-similar/` | CONNECTED |
+| Embedding Coverage | `/api/spider-health/embedding-coverage/` | CONNECTED |
+
+**Frontend:** MemoryPalacePage.tsx (Clusters tab), SpiderIntegrationPage.tsx
+
 ---
 
 ## 2. WEBSOCKET CONNECTIONS (Real-Time)
@@ -118,7 +137,53 @@ The platform has **excellent coverage** - most UI components are properly wired 
 
 ---
 
-## 3. OPPORTUNITIES FOR ENHANCEMENT
+## 3. NOT CONNECTED (Backend Exists, No Frontend)
+
+### RAG/Document Embedding System (Session 731 Audit)
+
+**Status:** Backend fully functional with 7,239 document embeddings, but NO frontend UI.
+
+| Backend API | Purpose | Priority | Frontend Needed |
+|-------------|---------|----------|-----------------|
+| `/api/v1/rag/upload-document/` | Upload documents for RAG processing | **HIGH** | File upload with drag-and-drop |
+| `/api/v1/rag/semantic-search/` | Semantic search across documents | **HIGH** | Search interface with results |
+| `/api/v1/rag/generate/` | Generate responses with RAG context | **HIGH** | Chat/query interface |
+| `/api/v1/rag/stats/` | Get embedding statistics | MEDIUM | Stats dashboard |
+| `/api/v1/rag/advanced-query/` | Multi-collection search | MEDIUM | Advanced search filters |
+| `/api/v1/rag/optimize/` | Optimize embedding storage | LOW | Admin action button |
+| `/api/v1/rag/collections/` | Manage knowledge collections | MEDIUM | Collection list/create UI |
+| `/api/v1/rag/documents/` | List/manage documents | MEDIUM | Document list with actions |
+
+**Recommended Frontend Implementation:**
+
+1. Add to `frontend/src/lib/api.ts`:
+```typescript
+export const ragApi = {
+  uploadDocument: (file: File, options?: { collection_id?: string }) =>
+    api.postForm('/v1/rag/upload-document/', { file, ...options }),
+  semanticSearch: (query: string, options?: { limit?: number, threshold?: number }) =>
+    api.post('/v1/rag/semantic-search/', { query, ...options }),
+  generate: (query: string, options?: { max_context_chunks?: number }) =>
+    api.post('/v1/rag/generate/', { query, ...options }),
+  stats: () => api.get('/v1/rag/stats/'),
+  listCollections: () => api.get('/v1/rag/collections/'),
+  listDocuments: () => api.get('/v1/rag/documents/'),
+};
+```
+
+2. Create `DocumentsPage.tsx` with:
+   - Document upload with drag-and-drop
+   - Processing status indicator
+   - Semantic search interface
+   - Collection management
+   - Document list with delete actions
+   - Embedding statistics display
+
+**Effort:** Medium - Backend complete, needs frontend page
+
+---
+
+## 4. OPPORTUNITIES FOR ENHANCEMENT
 
 ### A. Learning Infrastructure Display (Session 309)
 The learning hooks we just verified in Session 309 are creating:
@@ -186,7 +251,7 @@ MBTI-style personalities are implemented but could be more prominent:
 
 ---
 
-## 4. MINOR DISCONNECTIONS TO FIX
+## 5. MINOR DISCONNECTIONS TO FIX
 
 ### A. Memory Cluster Visualization Canvas
 - **UI:** Canvas element exists for visualization
@@ -205,26 +270,27 @@ MBTI-style personalities are implemented but could be more prominent:
 
 ---
 
-## 5. RECOMMENDED PRIORITIES
+## 6. RECOMMENDED PRIORITIES
 
 ### High Priority (Quick Wins)
-1. **Add Knowledge Flow Display** - Show the Session 309 learning data in UI
-2. **Clean vs Deprecated Agent Badge** - Visual indicator on agent cards
-3. **Personality Display on Agent Cards** - Already in DB, just display
+1. **RAG/Document Management UI** - Backend complete with 7,239 embeddings, needs frontend (Session 731)
+2. **Add Knowledge Flow Display** - Show the Session 309 learning data in UI
+3. **Clean vs Deprecated Agent Badge** - Visual indicator on agent cards
+4. **Personality Display on Agent Cards** - Already in DB, just display
 
 ### Medium Priority (Good ROI)
-4. **Knowledge Network Graph** - Visualize agent-to-agent knowledge sharing
-5. **Revenue Attribution Display** - Show which agents drive revenue
-6. **Memory Timeline View** - Chronological view of agent memories
+5. **Knowledge Network Graph** - Visualize agent-to-agent knowledge sharing
+6. **Revenue Attribution Display** - Show which agents drive revenue
+7. **Memory Timeline View** - Chronological view of agent memories
 
 ### Lower Priority (Nice to Have)
-7. **Advanced Time Travel Animations** - Smoother replay
-8. **3D Memory Palace Visualization** - More immersive UI
-9. **Real-time Collaboration Enhancements** - Multi-user features
+8. **Advanced Time Travel Animations** - Smoother replay
+9. **3D Memory Palace Visualization** - More immersive UI
+10. **Real-time Collaboration Enhancements** - Multi-user features
 
 ---
 
-## 6. ARCHITECTURE SUMMARY
+## 7. ARCHITECTURE SUMMARY
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -280,7 +346,7 @@ MBTI-style personalities are implemented but could be more prominent:
 
 ---
 
-## 7. NEXT STEPS
+## 8. NEXT STEPS
 
 1. **Choose enhancement priority** - Which opportunities to tackle first
 2. **Create specific tasks** - Break down chosen enhancements
@@ -289,4 +355,4 @@ MBTI-style personalities are implemented but could be more prominent:
 
 ---
 
-**Status:** Platform is 95%+ connected. Most work would be enhancements rather than fixes.
+**Status:** Platform is 95%+ connected. Main gap is RAG/Document UI (Session 731). Most work would be enhancements rather than fixes.
