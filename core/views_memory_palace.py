@@ -407,9 +407,10 @@ def connect_memories(request):
             return JsonResponse({'error': str(e)}, status=404)
 
         # Create the connection
+        # Session 729: Fixed field names (source_memory/target_memory → memory_from/memory_to)
         connection, created = MemoryConnection.objects.get_or_create(
-            source_memory=source,
-            target_memory=target,
+            memory_from=source,
+            memory_to=target,
             defaults={
                 'connection_type': connection_type,
                 'strength': strength
@@ -452,8 +453,9 @@ def get_memory_connections(request, memory_id):
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
         # Get outgoing connections
-        outgoing = MemoryConnection.objects.filter(source_memory=memory)
-        incoming = MemoryConnection.objects.filter(target_memory=memory)
+        # Session 729: Fixed field names (source_memory/target_memory → memory_from/memory_to)
+        outgoing = MemoryConnection.objects.filter(memory_from=memory)
+        incoming = MemoryConnection.objects.filter(memory_to=memory)
 
         return JsonResponse({
             'success': True,
@@ -463,8 +465,8 @@ def get_memory_connections(request, memory_id):
                 'outgoing': [
                     {
                         'id': str(c.id),
-                        'target_id': str(c.target_memory_id),
-                        'target_title': c.target_memory.title,
+                        'target_id': str(c.memory_to_id),
+                        'target_title': c.memory_to.title,
                         'type': c.connection_type,
                         'strength': c.strength
                     }
@@ -473,8 +475,8 @@ def get_memory_connections(request, memory_id):
                 'incoming': [
                     {
                         'id': str(c.id),
-                        'source_id': str(c.source_memory_id),
-                        'source_title': c.source_memory.title,
+                        'source_id': str(c.memory_from_id),
+                        'source_title': c.memory_from.title,
                         'type': c.connection_type,
                         'strength': c.strength
                     }
