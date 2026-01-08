@@ -9905,9 +9905,10 @@ def auto_connect_memories(memory_id: str, threshold: float = 0.7):
 
             if similarity >= threshold:
                 # Create connection if similarity is high enough
+                # Session 729: Fixed field names (source_memory/target_memory → memory_from/memory_to)
                 connection, created = MemoryConnection.objects.get_or_create(
-                    source_memory=memory,
-                    target_memory=other,
+                    memory_from=memory,
+                    memory_to=other,
                     defaults={
                         'connection_type': 'similar',
                         'strength': float(similarity)
