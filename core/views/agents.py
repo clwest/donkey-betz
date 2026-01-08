@@ -224,17 +224,63 @@ class AgentExecutionViewSet(viewsets.ModelViewSet):
 
 class AgentOrchestrationViewSet(viewsets.ModelViewSet):
     """ViewSet for managing agent orchestrations"""
-    
+
     queryset = AgentOrchestration.objects.all()
     serializer_class = AgentOrchestrationSerializer
     pagination_class = StandardResultsSetPagination
     permission_classes = [permissions.IsAuthenticated]  # Require authentication
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'execution_strategy']
-    
+
     def get_queryset(self):
-        # Filter by authenticated user
+        # Filter by authenticated user or show all for staff
+        if self.request.user.is_staff:
+            return self.queryset.select_related('user').order_by('-created_at')
         return self.queryset.filter(user=self.request.user).select_related('user').order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def execute(self, request, pk=None):
+        """
+        Execute an orchestration - run all agents in sequence/parallel.
+        Session 735: Added execute action for orchestrations.
+        """
+        from core.tasks_agents import execute_orchestration
+
+        orchestration = self.get_object()
+
+        # Check if already running
+        if orchestration.status == 'running':
+            return Response({
+                'success': False,
+                'error': 'Orchestration is already running'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update status to running
+        orchestration.status = 'running'
+        orchestration.current_agent_index = 0
+        orchestration.progress_percentage = 0
+        orchestration.save()
+
+        # Queue the orchestration execution
+        try:
+            execute_orchestration.delay(orchestration_id=str(orchestration.id))
+            logger.info(f"Queued orchestration execution: {orchestration.name}")
+
+            return Response({
+                'success': True,
+                'orchestration_id': str(orchestration.id),
+                'name': orchestration.name,
+                'status': 'running',
+                'message': f'Orchestration "{orchestration.name}" has been started'
+            }, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            logger.error(f"Failed to queue orchestration: {e}")
+            orchestration.status = 'failed'
+            orchestration.save()
+            return Response({
+                'success': False,
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AgentToolViewSet(viewsets.ModelViewSet):

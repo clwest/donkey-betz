@@ -454,24 +454,42 @@ def execute_orchestration(self, orchestration_id: str):
         # Get the prompt from workflow definition
         prompt = orchestration.workflow_definition.get('prompt', 'Execute workflow')
 
+        # Session 735: Helper to normalize agent info (can be string or dict)
+        def get_agent_name(agent_info):
+            if isinstance(agent_info, str):
+                return agent_info
+            return agent_info.get('name', agent_info.get('agent', 'Unknown'))
+
+        def get_agent_id(agent_info):
+            if isinstance(agent_info, str):
+                return None  # Will be looked up by name
+            return agent_info.get('agent_id')
+
         # Execute agents based on strategy
         if orchestration.execution_strategy == 'sequential':
             # Sequential execution
             previous_result = None
             for i, agent_info in enumerate(orchestration.agent_sequence):
-                logger.info(f"Executing agent {i+1}/{len(orchestration.agent_sequence)}: {agent_info['name']}")
+                agent_name = get_agent_name(agent_info)
+                logger.info(f"Executing agent {i+1}/{len(orchestration.agent_sequence)}: {agent_name}")
+
+                # Update orchestration progress
+                orchestration.current_agent_index = i
+                orchestration.progress_percentage = int((i / len(orchestration.agent_sequence)) * 100)
+                orchestration.save()
 
                 # Create execution record
                 execution = AgentExecution.objects.create(
                     user=orchestration.user,
                     parent_orchestration=orchestration,
-                    agent_id=agent_info.get('agent_id'),
+                    agent_id=get_agent_id(agent_info),
                     user_prompt=prompt if i == 0 else f"Continue from: {previous_result[:100] if previous_result else 'previous step'}",
                     execution_context={
                         'orchestration_id': str(orchestration_id),
                         'step': i + 1,
                         'total_steps': len(orchestration.agent_sequence),
-                        'previous_result': previous_result
+                        'previous_result': previous_result,
+                        'agent_name': agent_name
                     },
                     status=AgentStatus.RUNNING,
                     execution_order=i + 1
@@ -479,12 +497,20 @@ def execute_orchestration(self, orchestration_id: str):
 
                 # Mock execution (replace with actual agent execution)
                 execution.result = {
-                    'output': f"Agent {agent_info['name']} completed successfully",
+                    'output': f"Agent {agent_name} completed successfully",
                     'data': f"Processed: {prompt[:50]}..." if prompt else "Processed workflow"
                 }
                 execution.status = AgentStatus.COMPLETED
                 execution.completed_at = timezone.now()
                 execution.save()
+
+                # Store in intermediate results
+                orchestration.intermediate_results.append({
+                    'agent': agent_name,
+                    'step': i + 1,
+                    'result': execution.result
+                })
+                orchestration.save()
 
                 previous_result = json.dumps(execution.result)
 
@@ -492,33 +518,41 @@ def execute_orchestration(self, orchestration_id: str):
             # Parallel execution (simplified - in production use celery group)
             executions = []
             for i, agent_info in enumerate(orchestration.agent_sequence):
+                agent_name = get_agent_name(agent_info)
                 execution = AgentExecution.objects.create(
                     user=orchestration.user,
                     parent_orchestration=orchestration,
-                    agent_id=agent_info.get('agent_id'),
+                    agent_id=get_agent_id(agent_info),
                     user_prompt=prompt,
                     execution_context={
                         'orchestration_id': str(orchestration_id),
-                        'parallel': True
+                        'parallel': True,
+                        'agent_name': agent_name
                     },
                     status=AgentStatus.RUNNING,
                     execution_order=i + 1
                 )
-                executions.append(execution)
+                executions.append((execution, agent_name))
 
             # Mock parallel completion
-            for execution in executions:
+            for execution, agent_name in executions:
                 execution.result = {
-                    'output': f"Agent completed in parallel",
+                    'output': f"Agent {agent_name} completed in parallel",
                     'data': f"Processed: {prompt[:50]}..." if prompt else "Processed"
                 }
                 execution.status = AgentStatus.COMPLETED
                 execution.completed_at = timezone.now()
                 execution.save()
 
+                orchestration.intermediate_results.append({
+                    'agent': agent_name,
+                    'result': execution.result
+                })
+            orchestration.save()  # Save after parallel loop
+
         # Mark orchestration as completed
         orchestration.status = AgentStatus.COMPLETED
-        orchestration.completed_at = timezone.now()
+        orchestration.progress_percentage = 100
         orchestration.save()
 
         logger.info(f"Orchestration {orchestration_id} completed successfully")
