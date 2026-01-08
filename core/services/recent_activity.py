@@ -87,9 +87,14 @@ class RecentActivityService:
 
         try:
             from core.models_unified_system import AgentDream
+            from django.db.models import Q
 
+            # Session 735: Filter out empty dreams (no content)
+            # Only show dreams that have actual content worth viewing
             dreams = AgentDream.objects.filter(
                 dreamed_at__gte=cutoff
+            ).exclude(
+                Q(content__isnull=True) | Q(content='')
             ).order_by('-dreamed_at')[:10]
 
             for dream in dreams:
@@ -123,9 +128,14 @@ class RecentActivityService:
 
         try:
             from core.models_unified_system import AgentConversation
+            from django.db.models import Q
 
+            # Session 735: Filter out empty conversations (no messages and no conclusion)
+            # Only show conversations that have actual content worth viewing
             convos = AgentConversation.objects.filter(
                 started_at__gte=cutoff
+            ).filter(
+                Q(message_count__gt=0) | Q(conclusion__isnull=False, conclusion__gt='')
             ).order_by('-started_at')[:10]
 
             for convo in convos:
