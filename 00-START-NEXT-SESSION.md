@@ -1,8 +1,8 @@
-# Session 728 - Mythology + Knowledge Validation
+# Session 728 - Mythology + Knowledge + agents/ Migration
 
 **Previous Session:** 727 (Deep System Audit + Major Migration)
 **Date:** January 7, 2026
-**Status:** MYTHOLOGY FIXED + KNOWLEDGE VALIDATED (79%)
+**Status:** MYTHOLOGY FIXED + KNOWLEDGE VALIDATED + agents/ MIGRATED
 
 ---
 
@@ -56,6 +56,33 @@ Breakdown:
 - Needs human review: 822
 ```
 
+### 3. agents/ Migration Continued
+
+**Problem:** ~17,575 lines remaining in agents/ after Session 727.
+
+**Solution:** Migrated 9 files (~6,034 lines) to core/, deleted 1 duplicate.
+
+**Files Migrated:**
+| File | Lines | New Location |
+|------|-------|--------------|
+| `tasks.py` | 850 | `core/tasks_agents.py` |
+| `bookmaker_agent.py` | 1,173 | `core/agents/bookmaker_agent.py` |
+| `universal_integration.py` | 760 | `core/services/universal_integration.py` |
+| `metadata_tracking.py` | 656 | `core/services/metadata_tracking.py` |
+| `project_deployment.py` | 496 | `core/services/project_deployment.py` |
+| `agent_testing_system.py` | 514 | `core/services/agent_testing_system.py` |
+| `monitoring.py` | 512 | `core/services/agent_monitoring.py` |
+| `consumers.py` | 577 | `core/consumers_agents.py` |
+
+**Deleted (duplicate):**
+- `router.py` (1,057 lines) - superseded by `core/agent_router.py`
+
+**Results:**
+- Before: ~17,575 lines (after Session 727)
+- After: ~10,369 lines implementation + 39 shim files
+- Migrated: ~7,091 lines (including router deletion)
+- Total agents/ reduction: 52K → 10K (80% reduction)
+
 ---
 
 ## Updated Audit Progress
@@ -65,7 +92,7 @@ Breakdown:
 | **mythology/** | **FIXED** | **70%** | Validator now connected (Session 728) |
 | **Memory System** | **FIXED** | **85%** | 79% validated (3,087/3,909) - Session 728 |
 | **intelligence/** | COMPLETE | 50% | 66K lines, duplication FIXED (Session 727), partial usage |
-| **agents/** | IN PROGRESS | 72% | Migration in progress, ~17K lines remain (was 52K) |
+| **agents/** | **MIGRATED** | **85%** | ~10K lines remain (was 52K), 80% reduction, 39 shims |
 | **PA Tools** | COMPLETE | 95% | All 34 tools have handlers, minor inconsistencies |
 | **Services** | COMPLETE | 100% | All 123 services used, 0 orphaned |
 | **Celery Tasks** | COMPLETE | 90% | 182/274 scheduled (5 intelligence tasks ADDED in Session 727) |
@@ -319,13 +346,13 @@ Added 5 intelligence tasks to `core/celery.py`:
 | mythology/ | **70%** | FIXED: Validator connected (Session 728) |
 | Memory System | **85%** | FIXED: 79% validated (Session 728) |
 | intelligence/ | **50%** | 66K lines, duplication FIXED |
-| agents/ | **72%** | Migration in progress, ~17K lines remain |
+| agents/ | **85%** | MIGRATED: 52K → 10K lines (80% reduction) |
 | PA Tools | **95%** | Minor inconsistencies |
 | Services | **100%** | All connected |
 | Celery Tasks | **90%** | FIXED: +5 intelligence tasks scheduled |
 | Intelligent Prompting | **85%** | Dedicated endpoint disabled |
 
-**Average Reality Score: 81%** (improved from 79% after knowledge validation)
+**Average Reality Score: 83%** (improved from 81% after agents/ migration)
 
 ### Top Priority Fixes
 
