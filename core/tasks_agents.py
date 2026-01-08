@@ -8,6 +8,7 @@ import logging
 import json
 import traceback
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Dict, Any
 
 from celery import shared_task, Task
@@ -564,12 +565,17 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                         }
                     )
 
-                    # Extract result data
+                    # Extract result data - Session 735: Include cost and tokens
+                    agent_cost = getattr(agent_result, 'cost', 0.0) or 0.0
+                    agent_tokens = getattr(agent_result, 'tokens_used', 0) or 0
+
                     result_data = {
                         'success': agent_result.success,
                         'message': agent_result.message,
                         'data': agent_result.data if hasattr(agent_result, 'data') else None,
                         'execution_time_ms': agent_result.execution_time_ms,
+                        'cost': agent_cost,
+                        'tokens_used': agent_tokens,
                     }
 
                     execution.result = result_data
@@ -577,13 +583,14 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                     execution.completed_at = timezone.now()
                     execution.save()
 
-                    # Track metrics
+                    # Track metrics - Session 735: Accumulate cost
                     total_execution_time_ms += agent_result.execution_time_ms or 0
+                    total_cost += agent_cost
 
                     # Update accumulated context with this result
                     previous_result = agent_result.message or json.dumps(result_data)
 
-                    logger.info(f"✅ {agent_name} completed: success={agent_result.success}, time={agent_result.execution_time_ms}ms")
+                    logger.info(f"✅ {agent_name} completed: success={agent_result.success}, time={agent_result.execution_time_ms}ms, cost=${agent_cost:.4f}")
 
                 except AgentNotFoundError as e:
                     # Agent not in router - log but continue
@@ -676,7 +683,10 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                         execution.completed_at = timezone.now()
                         execution.save()
 
+                        # Session 735: Track time and cost
                         total_execution_time_ms += result_data.get('execution_time_ms', 0) or 0
+                        agent_cost = result_data.get('cost', 0.0) or 0.0
+                        total_cost += agent_cost
 
                         orchestration.intermediate_results.append({
                             'agent': agent_name,
@@ -684,7 +694,7 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
                             'status': execution.status,
                         })
 
-                        logger.info(f"✅ [Parallel] {agent_name} completed")
+                        logger.info(f"✅ [Parallel] {agent_name} completed, cost=${agent_cost:.4f}")
 
                     except Exception as e:
                         execution.result = {'success': False, 'error': str(e)}
@@ -694,14 +704,15 @@ Your task as {agent_name}: Build on the above and contribute your expertise."""
 
             orchestration.save()
 
-        # Mark orchestration as completed
+        # Mark orchestration as completed - Session 735: Save total_cost
         orchestration.status = AgentStatus.COMPLETED
         orchestration.progress_percentage = 100
         orchestration.total_execution_time = total_execution_time_ms / 1000.0  # Convert to seconds
+        orchestration.total_cost = Decimal(str(total_cost))  # Save accumulated cost
         orchestration.completed_at = timezone.now()
         orchestration.save()
 
-        logger.info(f"🎉 Orchestration {orchestration_id} completed successfully with REAL agent execution!")
+        logger.info(f"🎉 Orchestration {orchestration_id} completed successfully! Time: {total_execution_time_ms}ms, Cost: ${total_cost:.4f}")
 
         # Send WebSocket notification
         send_execution_update(str(orchestration_id), {

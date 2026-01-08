@@ -145,6 +145,7 @@ export const agentTemplatesApi = {
 }
 
 // Session 734: Agent Orchestrations API - Multi-agent workflow management
+// Session 735: Added output action for viewing full results
 export const agentOrchestrationsApi = {
   list: (params?: { status?: string; execution_strategy?: string }) =>
     api.get('/v1/agents/orchestrations/', { params }),
@@ -161,6 +162,7 @@ export const agentOrchestrationsApi = {
   delete: (id: string) => api.delete(`/v1/agents/orchestrations/${id}/`),
   execute: (id: string) => api.post(`/v1/agents/orchestrations/${id}/execute/`),
   reset: (id: string) => api.post(`/v1/agents/orchestrations/${id}/reset/`),
+  output: (id: string) => api.get(`/v1/agents/orchestrations/${id}/output/`),
 }
 
 export const activityApi = {

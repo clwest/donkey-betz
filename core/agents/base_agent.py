@@ -89,6 +89,9 @@ class AgentResult:
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
     # Session 400: Knowledge attribution for transparency
     knowledge_attribution: Optional[KnowledgeAttribution] = None
+    # Session 735: Cost and token tracking for orchestration
+    tokens_used: int = 0
+    cost: float = 0.0
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -101,6 +104,9 @@ class AgentResult:
             'execution_time_ms': self.execution_time_ms,
             'decisions_made': self.decisions_made,
             'tool_calls': self.tool_calls,
+            # Session 735: Include cost tracking
+            'tokens_used': self.tokens_used,
+            'cost': self.cost,
         }
         # Session 400: Include knowledge attribution if present
         if self.knowledge_attribution:

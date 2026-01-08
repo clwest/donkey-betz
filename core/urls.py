@@ -1230,7 +1230,7 @@ from core.views_llm_routing import (
 from core.views_advanced_workflows import (
     create_advanced_workflow, execute_advanced_workflow, get_workflow_execution_status,
     list_workflow_templates, create_workflow_from_template, workflow_analytics,
-    schedule_workflow, workflow_collaboration
+    schedule_workflow, workflow_collaboration, get_workflow_output
 )
 
 # Import new profile management and job application system views
@@ -3135,6 +3135,7 @@ urlpatterns = [
     path('api/v1/workflows/create-advanced/', create_advanced_workflow, name='create-advanced-workflow'),
     path('api/v1/workflows/execute-advanced/', execute_advanced_workflow, name='execute-advanced-workflow'),
     path('api/v1/workflows/execution/<str:execution_id>/status/', get_workflow_execution_status, name='workflow-execution-status'),
+    path('api/v1/workflows/execution/<str:execution_id>/output/', get_workflow_output, name='workflow-execution-output'),  # Session 735: View full output
     path('api/v1/workflows/templates-advanced/', list_workflow_templates, name='workflow-templates-advanced'),  # RENAMED to avoid conflict
     path('api/v1/workflows/from-template/', create_workflow_from_template, name='workflow-from-template'),
     path('api/v1/workflows/analytics/', workflow_analytics, name='workflow-analytics'),

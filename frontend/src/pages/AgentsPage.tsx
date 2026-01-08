@@ -757,6 +757,21 @@ export default function AgentsPage() {
     execution_strategy: 'sequential',
     agent_sequence: '' as string, // Comma-separated for input
   })
+  // Session 735: Output modal for viewing orchestration results
+  const [outputModalOpen, setOutputModalOpen] = useState(false)
+  const [selectedOrchestrationOutput, setSelectedOrchestrationOutput] = useState<{
+    orchestration: { id: string; name: string; status: string; total_execution_time?: number; total_cost?: number }
+    agent_outputs: Array<{
+      agent_name: string
+      execution_id: string
+      status: string
+      full_output: string
+      cost: number
+      tokens_used: number
+      execution_time_ms: number
+    }>
+    output_count: number
+  } | null>(null)
 
   const { data: orchestrationsData, isLoading: orchestrationsLoading, refetch: refetchOrchestrations } = useQuery({
     queryKey: ['agent-orchestrations', orchestrationStatusFilter],
@@ -808,6 +823,18 @@ export default function AgentsPage() {
   const resetOrchestrationMutation = useMutation({
     mutationFn: (id: string) => agentOrchestrationsApi.reset(id),
     onSuccess: () => refetchOrchestrations(),
+  })
+
+  // Session 735: Fetch orchestration output
+  const fetchOutputMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await agentOrchestrationsApi.output(id)
+      return response.data
+    },
+    onSuccess: (data) => {
+      setSelectedOrchestrationOutput(data)
+      setOutputModalOpen(true)
+    },
   })
 
   // WebSocket connections
@@ -2802,14 +2829,25 @@ export default function AgentsPage() {
                         </button>
                       )}
                       {(orchestration.status === 'failed' || orchestration.status === 'completed') && (
-                        <button
-                          onClick={() => resetOrchestrationMutation.mutate(orchestration.id)}
-                          disabled={resetOrchestrationMutation.isPending}
-                          className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-amber"
-                          title="Reset orchestration to run again"
-                        >
-                          <RefreshCw size={14} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => resetOrchestrationMutation.mutate(orchestration.id)}
+                            disabled={resetOrchestrationMutation.isPending}
+                            className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-amber"
+                            title="Reset orchestration to run again"
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                          {/* Session 735: View Output button */}
+                          <button
+                            onClick={() => fetchOutputMutation.mutate(orchestration.id)}
+                            disabled={fetchOutputMutation.isPending}
+                            className="p-1.5 rounded hover:bg-dark-border transition-colors text-gray-400 hover:text-accent-cyan"
+                            title="View output results"
+                          >
+                            <Eye size={14} />
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => {
@@ -2977,6 +3015,93 @@ export default function AgentsPage() {
                   <Loader2 size={16} className="animate-spin" />
                 )}
                 {editingOrchestration ? 'Save Changes' : 'Create Orchestration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session 735: Output Modal for viewing orchestration results */}
+      {outputModalOpen && selectedOrchestrationOutput && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-card border border-dark-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-6 border-b border-dark-border bg-gradient-to-r from-accent-cyan/10 to-accent-green/10">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📋</span>
+                  <h3 className="text-xl font-bold text-white">{selectedOrchestrationOutput.orchestration.name}</h3>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <span>Status: <span className={cn(
+                    selectedOrchestrationOutput.orchestration.status === 'completed' ? 'text-accent-green' : 'text-accent-red'
+                  )}>{selectedOrchestrationOutput.orchestration.status}</span></span>
+                  <span>Agents: {selectedOrchestrationOutput.output_count}</span>
+                  {selectedOrchestrationOutput.orchestration.total_execution_time && (
+                    <span>Time: {(selectedOrchestrationOutput.orchestration.total_execution_time / 60).toFixed(1)}m</span>
+                  )}
+                  {selectedOrchestrationOutput.orchestration.total_cost && selectedOrchestrationOutput.orchestration.total_cost > 0 && (
+                    <span>Cost: ${selectedOrchestrationOutput.orchestration.total_cost.toFixed(4)}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setOutputModalOpen(false)
+                  setSelectedOrchestrationOutput(null)
+                }}
+                className="p-2 rounded-lg hover:bg-dark-border transition-colors text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content - Agent Outputs */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              {selectedOrchestrationOutput.agent_outputs.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No agent outputs available.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedOrchestrationOutput.agent_outputs.map((output, idx) => (
+                    <div key={output.execution_id || idx} className="bg-dark-lighter rounded-lg border border-dark-border p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Bot size={16} className="text-accent-cyan" />
+                          <span className="font-medium text-white">{output.agent_name}</span>
+                          <span className={cn(
+                            'text-xs px-2 py-0.5 rounded',
+                            output.status === 'completed' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
+                          )}>{output.status}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          {output.execution_time_ms > 0 && <span>{(output.execution_time_ms / 1000).toFixed(1)}s</span>}
+                          {output.cost > 0 && <span>${output.cost.toFixed(4)}</span>}
+                          {output.tokens_used > 0 && <span>{output.tokens_used} tokens</span>}
+                        </div>
+                      </div>
+                      {output.full_output && (
+                        <div className="bg-dark-card rounded p-3 text-sm text-gray-300 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                          {output.full_output}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-dark-border">
+              <button
+                onClick={() => {
+                  setOutputModalOpen(false)
+                  setSelectedOrchestrationOutput(null)
+                }}
+                className="btn btn-secondary"
+              >
+                Close
               </button>
             </div>
           </div>
