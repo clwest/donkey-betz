@@ -97,6 +97,24 @@ export const agentMonitoringApi = {
   clearCache: () => api.post('/v1/agents/monitoring/cache/clear/'),
 }
 
+// Session 734: Agent Tools API - Tool registry and configuration
+export const agentToolsApi = {
+  list: (params?: { tool_type?: string; is_active?: boolean }) =>
+    api.get('/v1/agents/tools/', { params }),
+  detail: (id: string) => api.get(`/v1/agents/tools/${id}/`),
+  create: (data: {
+    name: string
+    display_name: string
+    description: string
+    tool_type: string
+    endpoint_url?: string
+    tool_config?: Record<string, unknown>
+  }) => api.post('/v1/agents/tools/', data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/v1/agents/tools/${id}/`, data),
+  delete: (id: string) => api.delete(`/v1/agents/tools/${id}/`),
+}
+
 export const activityApi = {
   recent: (limit = 20, hours = 72) => api.get(`/recent-activity/?limit=${limit}&hours=${hours}`),
   learning: (limit = 20) => api.get(`/agent-learning/activity/?limit=${limit}`),
