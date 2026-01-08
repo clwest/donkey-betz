@@ -599,7 +599,7 @@ export default function AgentsPage() {
   // Session 695: Dreams for Dream Gallery Modal
   const { data: dreamsResponse } = useQuery({
     queryKey: ['agent-dreams'],
-    queryFn: () => dreamsApi.list(50),
+    queryFn: () => dreamsApi.list({ limit: 50, timeRange: '7d' }),
     refetchInterval: 60000, // Refresh every minute
   })
   const dreams: Dream[] = dreamsResponse?.data?.dreams || []

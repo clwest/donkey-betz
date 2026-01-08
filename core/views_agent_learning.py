@@ -799,12 +799,14 @@ def get_knowledge_transfer_feed(request):
 @require_http_methods(["GET"])
 def get_agent_dreams(request):
     """
-    Get recent agent dreams.
+    Get recent agent dreams with time range filtering and pagination.
 
-    GET /api/agent-dreams/?limit=10
+    GET /api/agent-dreams/?limit=10&offset=0&time_range=24h
 
     Query params:
-    - limit: Max dreams to return (default 10)
+    - limit: Max dreams to return (default 20)
+    - offset: Number of dreams to skip for pagination (default 0)
+    - time_range: Time filter - '24h', '7d', '30d', 'all' (default '24h')
     - agent_id: Filter by specific agent
     - unread_only: Only show dreams not yet shown to user
     """
@@ -812,15 +814,28 @@ def get_agent_dreams(request):
         from django.utils import timezone
         from core.models import AgentDream
 
-        limit = int(request.GET.get('limit', 10))
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        time_range = request.GET.get('time_range', '24h')
         agent_id = request.GET.get('agent_id')
         unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
 
-        # Get dreams from the last 24 hours
-        cutoff = timezone.now() - timezone.timedelta(hours=24)
-        dreams = AgentDream.objects.filter(
-            dreamed_at__gte=cutoff
-        ).select_related('agent').order_by('-dreamed_at')
+        # Calculate time cutoff based on time_range parameter
+        time_deltas = {
+            '24h': timezone.timedelta(hours=24),
+            '7d': timezone.timedelta(days=7),
+            '30d': timezone.timedelta(days=30),
+            'all': None
+        }
+        delta = time_deltas.get(time_range, timezone.timedelta(hours=24))
+
+        # Build base queryset
+        dreams = AgentDream.objects.select_related('agent').order_by('-dreamed_at')
+
+        # Apply time filter unless 'all'
+        if delta:
+            cutoff = timezone.now() - delta
+            dreams = dreams.filter(dreamed_at__gte=cutoff)
 
         if agent_id:
             dreams = dreams.filter(agent_id=agent_id)
@@ -828,15 +843,20 @@ def get_agent_dreams(request):
         if unread_only:
             dreams = dreams.filter(shown_to_user=False)
 
-        dreams = dreams[:limit]
+        # Get total count before pagination
+        total_count = dreams.count()
 
-        # Count totals
+        # Apply pagination
+        dreams = dreams[offset:offset + limit]
+
+        # Count totals for 24h (for backwards compatibility)
+        today_cutoff = timezone.now() - timezone.timedelta(hours=24)
         today_count = AgentDream.objects.filter(
-            dreamed_at__gte=cutoff
+            dreamed_at__gte=today_cutoff
         ).count()
 
         unread_count = AgentDream.objects.filter(
-            dreamed_at__gte=cutoff,
+            dreamed_at__gte=today_cutoff,
             shown_to_user=False
         ).count()
 
@@ -861,8 +881,14 @@ def get_agent_dreams(request):
         return JsonResponse({
             'success': True,
             'dreams': dreams_data,
+            'total_count': total_count,
             'today_count': today_count,
-            'unread_count': unread_count
+            'unread_count': unread_count,
+            'pagination': {
+                'limit': limit,
+                'offset': offset,
+                'has_more': offset + limit < total_count
+            }
         })
 
     except Exception as e:

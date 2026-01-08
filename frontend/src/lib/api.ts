@@ -169,9 +169,27 @@ export const activityApi = {
 
 // Session 695: Dreams API for Dream Gallery Modal
 // Session 716: Enhanced with trigger, rate, and preferences
+// Session 735: Added time_range and pagination support
+export type TimeRange = '24h' | '7d' | '30d' | 'all'
+
 export const dreamsApi = {
-  list: (limit = 20, agentId?: string, unreadOnly = false) =>
-    api.get(`/agent-dreams/?limit=${limit}${agentId ? `&agent_id=${agentId}` : ''}${unreadOnly ? '&unread_only=true' : ''}`),
+  list: (params?: {
+    limit?: number
+    offset?: number
+    timeRange?: TimeRange
+    agentId?: string
+    unreadOnly?: boolean
+  }) => {
+    const { limit = 20, offset = 0, timeRange = '24h', agentId, unreadOnly = false } = params || {}
+    const queryParams = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      time_range: timeRange,
+    })
+    if (agentId) queryParams.append('agent_id', agentId)
+    if (unreadOnly) queryParams.append('unread_only', 'true')
+    return api.get(`/agent-dreams/?${queryParams.toString()}`)
+  },
   detail: (dreamId: string) => api.get(`/agent-dreams/${dreamId}/`),
   react: (dreamId: string, reaction: string) => api.post(`/agent-dreams/${dreamId}/react/`, { reaction }),
   rate: (dreamId: string, rating: number) => api.post(`/agent-dreams/${dreamId}/rate/`, { rating }),
