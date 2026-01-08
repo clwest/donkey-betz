@@ -244,6 +244,14 @@ app.conf.beat_schedule = {
             'expires': 1800,  # Expire after 30 minutes
         }
     },
+    # Session 729: Conversation Memory Embedding Backfill
+    'backfill-conversation-embeddings': {
+        'task': 'core.tasks.backfill_conversation_embeddings',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {
+            'expires': 1800,  # Expire after 30 minutes
+        }
+    },
     # Session 210: Style Evolution Tracking
     'record-style-evolution': {
         'task': 'core.tasks.record_all_user_style_evolution',
