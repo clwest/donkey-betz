@@ -393,6 +393,31 @@ export const intelligenceApi = {
   predictions: () => api.get('/v1/intelligence/predictions/'),
 }
 
+// Session 734: Income Builder API - Revenue generation and action plans
+export const incomeBuilderApi = {
+  // Analysis and opportunities
+  analyze: () => api.get('/v1/intelligence/income-builder/'),
+  realOpportunities: () => api.get('/v1/intelligence/real-income-builder/'),
+  analyzeOpportunities: () => api.get('/v1/intelligence/real-income-builder/analyze/'),
+
+  // Action plans
+  getActionPlan: () => api.get('/v1/intelligence/income-builder/action-plan/'),
+  createActionPlan: (data: { opportunity_id?: string; focus_area?: string }) =>
+    api.post('/v1/intelligence/income-builder/action-plan/', data),
+  listPlans: () => api.get('/v1/intelligence/income-builder/plans/'),
+  executePlan: (planId: string) =>
+    api.post('/v1/intelligence/income-builder/execute/', { plan_id: planId }),
+
+  // Generated files
+  viewFile: (filename: string) => api.get(`/v1/intelligence/income-builder/file/${filename}/`),
+
+  // Automation
+  analyzePlanForAutomation: (planId: string) =>
+    api.post('/v1/intelligence/income-builder/analyze-plan/', { plan_id: planId }),
+  executePlanAutomation: (planId: string) =>
+    api.post('/v1/intelligence/income-builder/process-plan/', { plan_id: planId }),
+}
+
 // Session 688: Opportunity detail and actions
 export const opportunitiesApi = {
   list: (params?: { status?: string; category?: string; min_score?: number }) =>
