@@ -10,6 +10,14 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+# Session 730: Import pgvector for native vector operations
+try:
+    from pgvector.django import VectorField
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    VectorField = None
+
 User = get_user_model()
 
 
@@ -221,7 +229,17 @@ class CodeEmbedding(models.Model):
     code_hash = models.CharField(max_length=64, db_index=True)  # SHA-256
     
     # Embedding Data
-    embedding_vector = models.JSONField()  # Store as JSON array
+    # Session 730: Migrated to pgvector VectorField
+    embedding_vector = VectorField(
+        dimensions=1536,
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
+    )
     embedding_model = models.CharField(max_length=100, default='text-embedding-3-small')
     
     # Metadata

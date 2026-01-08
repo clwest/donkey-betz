@@ -634,13 +634,16 @@ class DocumentEmbedding(UnifiedBaseModel):
     )
 
     # Session 179: Vector embedding storage
-    # Note: pgvector VectorField available but requires PostgreSQL pgvector extension
-    # to be fully installed (both CREATE EXTENSION and shared library).
-    # Currently using JSONField which works with Python-based similarity search.
-    # When pgvector shared library is installed, change to:
-    #   embedding_vector = VectorField(dimensions=3072)
-    embedding_vector = models.JSONField(
-        help_text="The actual embedding vector as JSON array. Supports pgvector upgrade."
+    # Session 730: Migrated to pgvector VectorField for native PostgreSQL vector ops
+    embedding_vector = VectorField(
+        dimensions=1536,
+        null=True,
+        blank=True,
+        help_text="Vector embedding for semantic search (pgvector)"
+    ) if HAS_PGVECTOR else models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Vector embedding (JSON fallback)"
     )
 
     embedding_dimension = models.PositiveIntegerField(
