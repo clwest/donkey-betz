@@ -106,6 +106,93 @@ interface QuarantineItem {
 }
 
 // =============================================================================
+// Pattern Definitions - Human readable labels and descriptions
+// =============================================================================
+
+const PATTERN_INFO: Record<string, { label: string; description: string; icon: string }> = {
+  // Myth categories detected in events
+  time_myth: {
+    label: 'Time Claim',
+    description: 'Unrealistic timeframes or instant success claims',
+    icon: '⏰',
+  },
+  dangerous_myth: {
+    label: 'Dangerous Content',
+    description: 'Potentially harmful or misleading information',
+    icon: '⚠️',
+  },
+  financial_myth: {
+    label: 'Financial Claim',
+    description: 'Unverified financial projections or guarantees',
+    icon: '💰',
+  },
+  technical_myth: {
+    label: 'Technical Claim',
+    description: 'Exaggerated or false technical capabilities',
+    icon: '🔧',
+  },
+  // Standard pattern types from MythPattern model
+  capability_exaggeration: {
+    label: 'Capability Exaggeration',
+    description: 'Exaggerated claims about AI, systems, or products',
+    icon: '📈',
+  },
+  confidence_decay: {
+    label: 'Confidence Issue',
+    description: 'Inappropriate confidence in uncertain claims',
+    icon: '🎯',
+  },
+  context_loss: {
+    label: 'Missing Context',
+    description: 'Important context or caveats omitted',
+    icon: '📝',
+  },
+  false_action_claims: {
+    label: 'False Action',
+    description: 'Claims of actions not actually performed',
+    icon: '🚫',
+  },
+  false_authority: {
+    label: 'False Authority',
+    description: 'Claims of false credentials or endorsements',
+    icon: '🏅',
+  },
+  false_technology: {
+    label: 'False Tech Claim',
+    description: 'False claims about technological capabilities',
+    icon: '💻',
+  },
+  numeric_inflation: {
+    label: 'Number Inflation',
+    description: 'Exaggerated numeric claims or statistics',
+    icon: '🔢',
+  },
+  semantic_drift: {
+    label: 'Semantic Drift',
+    description: 'Terms shifting meaning inappropriately',
+    icon: '🔄',
+  },
+  temporal_confusion: {
+    label: 'Time Confusion',
+    description: 'Unrealistic time claims or instant success promises',
+    icon: '📅',
+  },
+  unverified_stats: {
+    label: 'Unverified Stats',
+    description: 'Statistics without sources or verification',
+    icon: '📊',
+  },
+}
+
+function getPatternInfo(pattern: string): { label: string; description: string; icon: string } {
+  return PATTERN_INFO[pattern] || {
+    label: pattern.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    description: 'Pattern detected in content',
+    icon: '🔍',
+  }
+}
+
+// =============================================================================
 // Utility Components
 // =============================================================================
 
@@ -244,14 +331,18 @@ function EventRow({
           {/* Patterns Detected */}
           {event.patterns_detected && event.patterns_detected.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {event.patterns_detected.map((pattern, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400 border border-dark-border"
-                >
-                  {pattern}
-                </span>
-              ))}
+              {event.patterns_detected.map((pattern, idx) => {
+                const info = getPatternInfo(pattern)
+                return (
+                  <span
+                    key={idx}
+                    className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400 border border-dark-border"
+                    title={info.description}
+                  >
+                    {info.icon} {info.label}
+                  </span>
+                )
+              })}
             </div>
           )}
 
@@ -307,16 +398,23 @@ function EventRow({
 
           {event.patterns_detected && event.patterns_detected.length > 0 && (
             <div>
-              <div className="text-xs text-gray-500 mb-2">All Patterns Detected</div>
-              <div className="flex flex-wrap gap-2">
-                {event.patterns_detected.map((pattern, idx) => (
-                  <span
-                    key={idx}
-                    className="text-sm px-3 py-1 rounded bg-dark-bg text-gray-300 border border-dark-border"
-                  >
-                    {pattern}
-                  </span>
-                ))}
+              <div className="text-xs text-gray-500 mb-2">Patterns Detected</div>
+              <div className="space-y-2">
+                {event.patterns_detected.map((pattern, idx) => {
+                  const info = getPatternInfo(pattern)
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-3 p-2 rounded bg-dark-bg border border-dark-border"
+                    >
+                      <span className="text-lg">{info.icon}</span>
+                      <div>
+                        <div className="text-sm font-medium text-gray-300">{info.label}</div>
+                        <div className="text-xs text-gray-500">{info.description}</div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
