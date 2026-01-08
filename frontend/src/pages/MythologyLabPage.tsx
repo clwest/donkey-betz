@@ -340,9 +340,20 @@ function EventRow({
           {event.metadata && Object.keys(event.metadata).length > 0 && (
             <div>
               <div className="text-xs text-gray-500 mb-2">Additional Metadata</div>
-              <pre className="text-xs text-gray-400 bg-dark-bg rounded p-3 overflow-x-auto">
-                {JSON.stringify(event.metadata, null, 2)}
-              </pre>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-dark-bg rounded p-3">
+                {Object.entries(event.metadata).map(([key, value]) => (
+                  <div key={key} className="text-sm">
+                    <div className="text-gray-500 text-xs capitalize">{key.replace(/_/g, ' ')}</div>
+                    <div className="text-gray-300 font-medium">
+                      {typeof value === 'boolean'
+                        ? (value ? 'Yes' : 'No')
+                        : typeof value === 'object'
+                          ? JSON.stringify(value)
+                          : String(value)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
