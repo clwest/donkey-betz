@@ -1265,6 +1265,50 @@ export const relationshipsApi = {
     api.post(`/agent-relationships/alliances/${allianceId}/disband/`),
 }
 
+// Session 732: RAG/Document Embedding System API
+export const ragApi = {
+  // Document upload
+  uploadDocument: (file: File, options?: { collection_id?: string; embedding_model?: string }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options?.collection_id) formData.append('collection_id', options.collection_id)
+    if (options?.embedding_model) formData.append('embedding_model', options.embedding_model)
+    return api.post('/v1/rag/upload-document/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // Semantic search
+  semanticSearch: (query: string, options?: { limit?: number; similarity_threshold?: number }) =>
+    api.post('/v1/rag/semantic-search/', { query, ...options }),
+
+  // Generate response with RAG context
+  generate: (query: string, options?: { max_context_chunks?: number }) =>
+    api.post('/v1/rag/generate/', { query, ...options }),
+
+  // Statistics
+  stats: () => api.get('/v1/rag/stats/'),
+
+  // Advanced multi-collection query
+  advancedQuery: (query: string, collection_ids?: string[]) =>
+    api.post('/v1/rag/advanced-query/', { query, collection_ids }),
+
+  // Optimize embedding storage
+  optimize: () => api.post('/v1/rag/optimize/'),
+
+  // Collections management
+  listCollections: () => api.get('/v1/rag/collections/'),
+  createCollection: (data: { name: string; description?: string }) =>
+    api.post('/v1/rag/collections/', data),
+  deleteCollection: (id: string) => api.delete(`/v1/rag/collections/${id}/`),
+
+  // Documents management
+  listDocuments: (params?: { collection_id?: string; limit?: number }) =>
+    api.get('/v1/rag/documents/', { params }),
+  documentDetail: (id: string) => api.get(`/v1/rag/documents/${id}/`),
+  deleteDocument: (id: string) => api.delete(`/v1/rag/documents/${id}/`),
+}
+
 // Session 716: Neural Orchestra API - AI consciousness visualization
 export const neuralOrchestraApi = {
   // Get real-time ecosystem live feed (consciousness insights, system activity)
