@@ -74,6 +74,12 @@ Conducted deep audit of Memory System (9 models, 3 services, 4 Celery tasks):
 - **Fix:** Added creation to `AgentRouter._complete_execution()`
 - **Result:** All agent executions now recorded for intelligent recommendations
 
+**Bug 3: Memory Similarity Threshold Too High (FIXED)**
+- **Issue:** `get_memory_context()` used 0.4 threshold but best matches were 0.13-0.33
+- **Impact:** 100% empty returns from memory context retrieval
+- **Fix:** Lowered threshold from 0.4 to 0.2 in `memory_embedding_service.py`
+- **Result:** Memory context now returns relevant memories (67% success rate)
+
 **Audit Report:** `docs/audits/SESSION_729_MEMORY_SYSTEM_AUDIT.md`
 
 ### Reality Score Improvement
