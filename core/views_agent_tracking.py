@@ -13,7 +13,8 @@ from django.shortcuts import get_object_or_404
 
 from content.models import CreativeProject
 from core.models.agents_registry import AgentContribution
-from agents.services import AgentContributionService
+# Session 727: Migrated to core/services/agent_contribution.py
+from core.services.agent_contribution import AgentContributionService
 
 logger = logging.getLogger(__name__)
 

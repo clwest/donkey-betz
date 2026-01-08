@@ -14,11 +14,12 @@ warnings.warn(
 )
 
 # Re-export AudioAgent as AudioGenerationAgent for backwards compatibility
-from agents._deprecated.audio_agent import AudioAgent as AudioGenerationAgent
+# Session 727: Updated to use canonical core.agents path
+from core.agents.audio_agent import AudioAgent as AudioGenerationAgent
 
 # Also export get_audio_agent if it exists
 try:
-    from agents._deprecated.audio_agent import get_audio_agent
+    from core.agents.audio_agent import get_audio_agent
 except ImportError:
     get_audio_agent = None
 

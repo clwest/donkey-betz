@@ -15,6 +15,7 @@ warnings.warn(
 )
 
 # Re-export VideoAgent as VideoGenerationAgent for backwards compatibility
-from agents._deprecated.video_agent import VideoAgent as VideoGenerationAgent
+# Session 727: Updated to use canonical core.agents path
+from core.agents.video_agent import VideoAgent as VideoGenerationAgent
 
 __all__ = ['VideoGenerationAgent']

@@ -3,7 +3,8 @@ Django management command to start the live learning demonstration
 """
 
 from django.core.management.base import BaseCommand
-from agents.live_learning_orchestrator import LiveLearningOrchestrator
+# Session 727: Migrated to core/services/live_learning_orchestrator.py
+from core.services.live_learning_orchestrator import LiveLearningOrchestrator
 import asyncio
 
 

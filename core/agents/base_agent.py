@@ -48,7 +48,8 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from openai import OpenAI
 
-from agents.time_travel_mixin import TimeTravelMixin
+# Session 727: Migrated TimeTravelMixin to core/agents
+from core.agents.time_travel_mixin import TimeTravelMixin
 
 logger = logging.getLogger(__name__)
 

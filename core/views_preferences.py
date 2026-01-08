@@ -23,7 +23,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
-from agents.preference_manager import AgentPreferenceManager
+# Session 727: Migrated to core/services/preference_manager.py
+from core.services.preference_manager import AgentPreferenceManager
 
 logger = logging.getLogger(__name__)
 
