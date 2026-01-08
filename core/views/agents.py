@@ -282,6 +282,41 @@ class AgentOrchestrationViewSet(viewsets.ModelViewSet):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['post'])
+    def reset(self, request, pk=None):
+        """
+        Reset an orchestration to pending status so it can be run again.
+        Session 735: Added reset action for orchestrations.
+        """
+        orchestration = self.get_object()
+
+        # Can't reset if currently running
+        if orchestration.status == 'running':
+            return Response({
+                'success': False,
+                'error': 'Cannot reset a running orchestration. Wait for it to complete or fail.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reset to initial state
+        orchestration.status = 'pending'
+        orchestration.current_agent_index = 0
+        orchestration.progress_percentage = 0
+        orchestration.intermediate_results = []
+        orchestration.final_result = None
+        orchestration.total_execution_time = None
+        orchestration.total_cost = None
+        orchestration.save()
+
+        logger.info(f"Reset orchestration: {orchestration.name}")
+
+        return Response({
+            'success': True,
+            'orchestration_id': str(orchestration.id),
+            'name': orchestration.name,
+            'status': 'pending',
+            'message': f'Orchestration "{orchestration.name}" has been reset and is ready to run'
+        })
+
 
 class AgentToolViewSet(viewsets.ModelViewSet):
     """ViewSet for managing agent tools"""

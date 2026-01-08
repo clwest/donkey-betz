@@ -160,6 +160,7 @@ export const agentOrchestrationsApi = {
     api.patch(`/v1/agents/orchestrations/${id}/`, data),
   delete: (id: string) => api.delete(`/v1/agents/orchestrations/${id}/`),
   execute: (id: string) => api.post(`/v1/agents/orchestrations/${id}/execute/`),
+  reset: (id: string) => api.post(`/v1/agents/orchestrations/${id}/reset/`),
 }
 
 export const activityApi = {
