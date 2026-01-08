@@ -125,7 +125,7 @@ def execute_agent(self, execution_id: str, **kwargs):
         }
 
         # Prepare GPT-5-mini compatible prompt with platform awareness
-        from agents.platform_integration import inject_platform_tools_prompt
+        from core.services.platform_integration import inject_platform_tools_prompt
 
         base_prompt = agent_template.system_prompt if agent_template.system_prompt else "Business specialist."
         platform_tools = inject_platform_tools_prompt()

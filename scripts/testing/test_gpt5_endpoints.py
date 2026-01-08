@@ -30,7 +30,7 @@ from core.llm_enforcer import get_llm_enforcer
 from core.opportunity_ai_analyzer import OpportunityAIAnalyzer
 from intelligence.personal_assistant_interviewer import PersonalAssistantInterviewer
 from core.personal_ai_assistant_enhanced import EnhancedPersonalAIAssistant
-from agents.content_executor import DonkeyBetzContentExecutor
+from core.services.content_executor import DonkeyBetzContentExecutor
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
