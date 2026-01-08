@@ -2775,7 +2775,7 @@ export default function AgentsPage() {
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-white">
-                        {orchestration.total_cost ? `$${orchestration.total_cost.toFixed(2)}` : '—'}
+                        {orchestration.total_cost ? `$${Number(orchestration.total_cost).toFixed(2)}` : '—'}
                       </p>
                       <p className="text-xs text-gray-500">Cost</p>
                     </div>
